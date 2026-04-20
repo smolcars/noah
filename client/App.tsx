@@ -12,7 +12,7 @@ import { Uniwind } from "uniwind";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { queryClient } from "~/queryClient";
 import { APP_VARIANT } from "~/config";
-const isSentryDisabled = __DEV__ || APP_VARIANT === "regtest" || APP_VARIANT === "signet";
+const isSentryDisabled = __DEV__ || APP_VARIANT === "regtest";
 
 if (!isSentryDisabled) {
   Sentry.init({
