@@ -27,7 +27,7 @@ export const MOVEMENT_STATUS_LABELS: Record<MovementStatus, string> = {
   pending: "Pending",
   successful: "Successful",
   failed: "Failed",
-  cancelled: "Cancelled",
+  canceled: "Canceled",
 };
 
 export const formatMovementKindLabel = (kind?: MovementKind): string | undefined => {
