@@ -67,7 +67,7 @@ export interface WalletServerAccessTokenOptions {
   serverAccessToken?: string | null;
 }
 
-export const isArkServerAccessTokenEnabled = APP_VARIANT === "mainnet" || APP_VARIANT === "regtest";
+export const isArkServerAccessTokenEnabled = APP_VARIANT === "mainnet";
 
 const normalizeServerAccessToken = (token: string | null | undefined): string | null => {
   const trimmed = token?.trim();
