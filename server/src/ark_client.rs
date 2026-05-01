@@ -58,7 +58,10 @@ async fn establish_connection_and_process(
     ark_server_url: &str,
 ) -> anyhow::Result<()> {
     let network = app_state.config.network()?;
-    let connection = ServerConnection::connect(ark_server_url, network)
+    let connection = ServerConnection::builder()
+        .address(ark_server_url)
+        .network(network)
+        .connect()
         .await
         .map_err(|e| anyhow::anyhow!("Failed to connect: {e:#}"))?;
     let mut client = connection.client;

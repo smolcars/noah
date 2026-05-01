@@ -275,8 +275,8 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "ark-lib"
-version = "0.1.2"
-source = "git+https://gitlab.com/ark-bitcoin/bark?tag=server-0.1.2#2b8d0198919396994752614b351009b58f5fc085"
+version = "0.1.4"
+source = "git+https://gitlab.com/ark-bitcoin/bark?tag=server-0.1.4#12e45db7cd0e2ae4a34f80738bbcb5f92bc8e7b8"
 dependencies = [
  "async-trait",
  "bark-bitcoin-ext",
@@ -907,8 +907,8 @@ dependencies = [
 
 [[package]]
 name = "bark-bitcoin-ext"
-version = "0.1.2"
-source = "git+https://gitlab.com/ark-bitcoin/bark?tag=server-0.1.2#2b8d0198919396994752614b351009b58f5fc085"
+version = "0.1.4"
+source = "git+https://gitlab.com/ark-bitcoin/bark?tag=server-0.1.4#12e45db7cd0e2ae4a34f80738bbcb5f92bc8e7b8"
 dependencies = [
  "bitcoin",
  "lazy_static",
@@ -919,8 +919,8 @@ dependencies = [
 
 [[package]]
 name = "bark-server-rpc"
-version = "0.1.2"
-source = "git+https://gitlab.com/ark-bitcoin/bark?tag=server-0.1.2#2b8d0198919396994752614b351009b58f5fc085"
+version = "0.1.4"
+source = "git+https://gitlab.com/ark-bitcoin/bark?tag=server-0.1.4#12e45db7cd0e2ae4a34f80738bbcb5f92bc8e7b8"
 dependencies = [
  "ark-lib",
  "bitcoin",

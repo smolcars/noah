@@ -330,10 +330,12 @@ impl MailboxTransport for Beta8MailboxTransport {
         };
 
         let network = app_state.config.network()?;
-        let mut client: MailboxServiceClient<_> =
-            ServerConnection::connect(&app_state.config.ark_server_url, network)
-                .await?
-                .mailbox_client;
+        let mut client: MailboxServiceClient<_> = ServerConnection::builder()
+            .address(&app_state.config.ark_server_url)
+            .network(network)
+            .connect()
+            .await?
+            .mailbox_client;
 
         let mut checkpoint = mailbox.last_checkpoint as u64;
         let suppress_catchup_notifications =
