@@ -3,6 +3,14 @@ network = "regtest"
 vtxo_lifetime = 480
 min_board_amount = "20000 sat"
 vtxo_exit_delta = 12
+
+# The maximum transaction depth of the arkoor part of VTXOs that server cosigns
+# Maximum exit depth (genesis chain length) allowed for a VTXO.
+# Once a VTXO's exit depth reaches this value the server will refuse to
+# cosign further OOR transactions spending it. Clients should refresh
+# their VTXOs into a round before this limit is reached.
+max_vtxo_exit_depth = 100
+
 # The maximum number of outputs per input of an arkoor tx
 max_arkoor_fanout = 4
 

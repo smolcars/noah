@@ -73,7 +73,7 @@ services:
         condition: service_healthy
 
   captaind:
-    image: niteshbalusu/captaind:nightly-2026-04-29
+    image: niteshbalusu/captaind:nightly-2026-04-30
     volumes:
       - captaind:/data/captaind
       - ./captaind.toml:/data/captaind/captaind.toml

@@ -67,6 +67,8 @@ export interface WalletServerAccessTokenOptions {
   serverAccessToken?: string | null;
 }
 
+export const isArkServerAccessTokenEnabled = APP_VARIANT === "mainnet" || APP_VARIANT === "regtest";
+
 const normalizeServerAccessToken = (token: string | null | undefined): string | null => {
   const trimmed = token?.trim();
   return trimmed ? trimmed : null;
@@ -89,7 +91,7 @@ const syncNativeServerAccessToken = async (token: string | null): Promise<void> 
 };
 
 export const saveArkServerAccessToken = async (token: string): Promise<Result<void, Error>> => {
-  if (APP_VARIANT !== "mainnet") {
+  if (!isArkServerAccessTokenEnabled) {
     return ok(undefined);
   }
 
@@ -118,7 +120,7 @@ export const clearArkServerAccessToken = async (): Promise<Result<void, Error>> 
 const getWalletCreationOptions = async (
   options?: WalletServerAccessTokenOptions,
 ): Promise<Result<WalletCreationOptions, Error>> => {
-  if (APP_VARIANT !== "mainnet") {
+  if (!isArkServerAccessTokenEnabled) {
     return ok(ACTIVE_WALLET_CONFIG);
   }
 
@@ -156,7 +158,7 @@ const createWalletFromMnemonic = async (
   mnemonic: string,
   options?: WalletServerAccessTokenOptions,
 ): Promise<Result<void, Error>> => {
-  if (APP_VARIANT === "mainnet" && options && "serverAccessToken" in options) {
+  if (isArkServerAccessTokenEnabled && options && "serverAccessToken" in options) {
     const saveResult = await saveArkServerAccessToken(options.serverAccessToken ?? "");
     if (saveResult.isErr()) {
       return err(saveResult.error);
@@ -233,7 +235,7 @@ export const restoreWallet = async (
   mnemonic: string,
   options?: WalletServerAccessTokenOptions,
 ): Promise<Result<boolean, Error>> => {
-  if (APP_VARIANT === "mainnet" && options && "serverAccessToken" in options) {
+  if (isArkServerAccessTokenEnabled && options && "serverAccessToken" in options) {
     const saveResult = await saveArkServerAccessToken(options.serverAccessToken ?? "");
     if (saveResult.isErr()) {
       return err(saveResult.error);

@@ -18,6 +18,7 @@ import {
   maintenanceWithOnchainDelegated,
   clearArkServerAccessToken,
   closeWalletIfLoaded,
+  isArkServerAccessTokenEnabled,
   loadWalletIfNeeded,
   saveArkServerAccessToken,
 } from "~/lib/walletApi";
@@ -35,7 +36,6 @@ import {
   SelectValue,
   type Option,
 } from "~/components/ui/select";
-import { APP_VARIANT } from "~/config";
 import { getArkServerAccessToken } from "~/lib/crypto";
 
 const log = logger("DebugScreen");
@@ -123,7 +123,7 @@ const DebugScreen = () => {
   const selectedActionConfig = DEBUG_ACTIONS.find((a) => a.id === selectedAction);
 
   const refreshArkServerAccessTokenStatus = useCallback(async () => {
-    if (APP_VARIANT !== "mainnet") {
+    if (!isArkServerAccessTokenEnabled) {
       return;
     }
 
@@ -330,7 +330,7 @@ const DebugScreen = () => {
       title: normalizedToken ? "Token Saved" : "Token Cleared",
       description: normalizedToken
         ? "The wallet is using the updated Ark server access token."
-        : "The wallet is using the default mainnet Ark server config.",
+        : "The wallet is using the default Ark server config.",
     });
   };
 
@@ -355,7 +355,7 @@ const DebugScreen = () => {
 
     showAlert({
       title: "Token Cleared",
-      description: "The wallet is using the default mainnet Ark server config.",
+      description: "The wallet is using the default Ark server config.",
     });
   };
 
@@ -369,7 +369,7 @@ const DebugScreen = () => {
       </View>
 
       <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
-        {APP_VARIANT === "mainnet" && (
+        {isArkServerAccessTokenEnabled && (
           <View className="mb-8 mt-6 rounded-lg border border-input p-4">
             <Label className="mb-2 text-xl text-foreground">Ark Server Access Token</Label>
             <Text className="mb-4 text-sm text-muted-foreground">
@@ -378,7 +378,7 @@ const DebugScreen = () => {
             <Input
               value={arkServerAccessToken}
               onChangeText={setArkServerAccessTokenInput}
-              placeholder="Enter mainnet access token"
+              placeholder="Enter Ark server access token"
               className="mb-4 h-12"
               autoCapitalize="none"
               autoCorrect={false}

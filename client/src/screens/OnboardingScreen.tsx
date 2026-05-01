@@ -7,7 +7,7 @@ import { NoahButton } from "../components/ui/NoahButton";
 import { Text } from "../components/ui/text";
 import { useCreateWallet } from "../hooks/useWallet";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
-import { APP_VARIANT } from "~/config";
+import { isArkServerAccessTokenEnabled } from "~/lib/walletApi";
 
 const OnboardingScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<OnboardingStackParamList>>();
@@ -20,7 +20,7 @@ const OnboardingScreen = () => {
   }, [isSuccess, navigation]);
 
   const handleCreateWallet = () => {
-    if (APP_VARIANT === "mainnet") {
+    if (isArkServerAccessTokenEnabled) {
       navigation.navigate("ArkServerAccessToken", { mode: "create" });
       return;
     }

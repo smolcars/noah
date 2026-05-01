@@ -28,6 +28,7 @@ const ArkServerAccessTokenScreen = ({ navigation, route }: Props) => {
   } = useCreateWallet();
   const { mutate: restoreWallet, isPending: isRestoring } = useRestoreWallet();
   const isPending = isCreating || isRestoring;
+  const hasToken = token.trim().length > 0;
 
   useEffect(() => {
     if (isCreateSuccess) {
@@ -66,10 +67,7 @@ const ArkServerAccessTokenScreen = ({ navigation, route }: Props) => {
 
             <View className="w-full items-center pt-8">
               <Text className="mb-4 text-center text-lg text-muted-foreground">
-                Enter your mainnet Ark server access token if you have one.
-              </Text>
-              <Text className="mb-8 text-center text-sm text-muted-foreground">
-                You can skip this while IP allowlisting is active, or add a token later from Debug.
+                Enter your Ark server access token if you have one.
               </Text>
 
               <Input
@@ -85,7 +83,11 @@ const ArkServerAccessTokenScreen = ({ navigation, route }: Props) => {
 
               <View className="h-6" />
 
-              <NoahButton onPress={handleContinue} disabled={isPending} isLoading={isPending}>
+              <NoahButton
+                onPress={handleContinue}
+                disabled={isPending || !hasToken}
+                isLoading={isPending}
+              >
                 Continue
               </NoahButton>
 
