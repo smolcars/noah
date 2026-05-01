@@ -85,7 +85,7 @@ open class HybridNoahToolsSpec_cxx {
     }
   }
 
-  
+
 
   /**
    * Get the memory size of the Swift class (plus size of any other allocations)
@@ -114,7 +114,7 @@ open class HybridNoahToolsSpec_cxx {
   }
 
   // Properties
-  
+
 
   // Methods
   @inline(__always)
@@ -128,7 +128,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__string_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func getAppLogs() -> bridge.Result_std__shared_ptr_Promise_std__vector_std__string____ {
     do {
@@ -153,7 +153,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__shared_ptr_Promise_std__vector_std__string____(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func createBackup(mnemonic: std.string) -> bridge.Result_std__shared_ptr_Promise_std__string___ {
     do {
@@ -172,7 +172,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__shared_ptr_Promise_std__string___(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func restoreBackup(encryptedData: std.string, mnemonic: std.string) -> bridge.Result_std__shared_ptr_Promise_bool___ {
     do {
@@ -191,7 +191,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__shared_ptr_Promise_bool___(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func nativePost(url: std.string, body: std.string, headers: bridge.std__unordered_map_std__string__std__string_, timeoutSeconds: Double) -> bridge.Result_std__shared_ptr_Promise_HttpResponse___ {
     do {
@@ -218,7 +218,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__shared_ptr_Promise_HttpResponse___(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func nativeGet(url: std.string, headers: bridge.std__unordered_map_std__string__std__string_, timeoutSeconds: Double) -> bridge.Result_std__shared_ptr_Promise_HttpResponse___ {
     do {
@@ -245,7 +245,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__shared_ptr_Promise_HttpResponse___(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func nativeLog(level: std.string, tag: std.string, message: std.string) -> bridge.Result_void_ {
     do {
@@ -256,7 +256,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_void_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func playAudio(filePath: std.string) -> bridge.Result_std__shared_ptr_Promise_void___ {
     do {
@@ -275,7 +275,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func pauseAudio() -> bridge.Result_void_ {
     do {
@@ -286,7 +286,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_void_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func stopAudio() -> bridge.Result_void_ {
     do {
@@ -297,7 +297,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_void_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func resumeAudio() -> bridge.Result_void_ {
     do {
@@ -308,7 +308,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_void_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func seekAudio(positionSeconds: Double) -> bridge.Result_void_ {
     do {
@@ -319,7 +319,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_void_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func getAudioDuration() -> bridge.Result_double_ {
     do {
@@ -331,7 +331,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_double_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func getAudioPosition() -> bridge.Result_double_ {
     do {
@@ -343,7 +343,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_double_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func isAudioPlaying() -> bridge.Result_bool_ {
     do {
@@ -355,7 +355,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_bool_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func updateWidgetData(totalBalance: Double, onchainBalance: Double, offchainBalance: Double, pendingBalance: Double, closestExpiryBlocks: Double, expiryThreshold: Double, appGroup: std.string) -> bridge.Result_void_ {
     do {
@@ -366,7 +366,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_void_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func isGooglePlayServicesAvailable() -> bridge.Result_bool_ {
     do {
@@ -378,7 +378,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_bool_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func registerUnifiedPush() -> bridge.Result_void_ {
     do {
@@ -389,7 +389,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_void_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func getUnifiedPushEndpoint() -> bridge.Result_std__string_ {
     do {
@@ -401,7 +401,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__string_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func getUnifiedPushDistributors() -> bridge.Result_std__vector_UnifiedPushDistributor__ {
     do {
@@ -419,7 +419,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__vector_UnifiedPushDistributor__(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func setUnifiedPushDistributor(distributorId: bridge.std__optional_std__variant_nitro__NullType__std__string__) -> bridge.Result_void_ {
     do {
@@ -449,11 +449,30 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_void_(__exceptionPtr)
     }
   }
-  
+
   @inline(__always)
   public final func storeNativeMnemonic(mnemonic: std.string) -> bridge.Result_std__shared_ptr_Promise_void___ {
     do {
       let __result = try self.__implementation.storeNativeMnemonic(mnemonic: String(mnemonic))
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_void__ in
+        let __promise = bridge.create_std__shared_ptr_Promise_void__()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_void__(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve() })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
+    }
+  }
+
+  @inline(__always)
+  public final func storeNativeServerAccessToken(token: std.string) -> bridge.Result_std__shared_ptr_Promise_void___ {
+    do {
+      let __result = try self.__implementation.storeNativeServerAccessToken(token: String(token))
       let __resultCpp = { () -> bridge.std__shared_ptr_Promise_void__ in
         let __promise = bridge.create_std__shared_ptr_Promise_void__()
         let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_void__(__promise)

@@ -12,10 +12,15 @@ import logger from "~/lib/log";
 const log = logger("crypto");
 import * as Keychain from "react-native-keychain";
 import { APP_VARIANT } from "~/config";
-import { AUTH_TOKEN_KEYCHAIN_SERVICE, KEYCHAIN_USERNAME } from "~/constants";
+import {
+  ARK_SERVER_ACCESS_TOKEN_KEYCHAIN_SERVICE,
+  AUTH_TOKEN_KEYCHAIN_SERVICE,
+  KEYCHAIN_USERNAME,
+} from "~/constants";
 
 const MNEMONIC_KEYCHAIN_SERVICE = `com.noah.mnemonic.${APP_VARIANT}`;
 let inMemoryServerAuthToken: string | null = null;
+let inMemoryArkServerAccessToken: string | null | undefined;
 
 const decodeBase64Url = (value: string): Result<string, Error> => {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -157,6 +162,64 @@ export const resetServerAuthToken = async (): Promise<Result<void, Error>> => {
   }
 
   inMemoryServerAuthToken = null;
+  return ok(undefined);
+};
+
+export const setArkServerAccessToken = async (token: string): Promise<Result<void, Error>> => {
+  const trimmed = token.trim();
+  if (!trimmed) {
+    return resetArkServerAccessToken();
+  }
+
+  const result = await ResultAsync.fromPromise(
+    Keychain.setGenericPassword(KEYCHAIN_USERNAME, trimmed, {
+      service: ARK_SERVER_ACCESS_TOKEN_KEYCHAIN_SERVICE,
+    }),
+    (e) => e as Error,
+  );
+
+  if (result.isErr()) {
+    log.w("Failed to store Ark server access token", [result.error]);
+    return err(result.error);
+  }
+
+  inMemoryArkServerAccessToken = trimmed;
+  return ok(undefined);
+};
+
+export const getArkServerAccessToken = async (): Promise<Result<string | null, Error>> => {
+  if (inMemoryArkServerAccessToken !== undefined) {
+    return ok(inMemoryArkServerAccessToken);
+  }
+
+  const credentialsResult = await ResultAsync.fromPromise(
+    Keychain.getGenericPassword({ service: ARK_SERVER_ACCESS_TOKEN_KEYCHAIN_SERVICE }),
+    (e) => e as Error,
+  );
+
+  if (credentialsResult.isErr()) {
+    log.w("Failed to read Ark server access token", [credentialsResult.error]);
+    return err(credentialsResult.error);
+  }
+
+  const credentials = credentialsResult.value;
+  const token = credentials && credentials.password ? credentials.password : null;
+  inMemoryArkServerAccessToken = token;
+  return ok(token);
+};
+
+export const resetArkServerAccessToken = async (): Promise<Result<void, Error>> => {
+  const result = await ResultAsync.fromPromise(
+    Keychain.resetGenericPassword({ service: ARK_SERVER_ACCESS_TOKEN_KEYCHAIN_SERVICE }),
+    (e) => e as Error,
+  );
+
+  if (result.isErr()) {
+    log.w("Failed to clear Ark server access token", [result.error]);
+    return err(result.error);
+  }
+
+  inMemoryArkServerAccessToken = null;
   return ok(undefined);
 };
 

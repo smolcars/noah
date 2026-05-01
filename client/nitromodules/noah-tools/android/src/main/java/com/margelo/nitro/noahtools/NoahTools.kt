@@ -264,4 +264,38 @@ class NoahTools : HybridNoahToolsSpec() {
             }
         }
     }
+
+    override fun storeNativeServerAccessToken(token: String): Promise<Unit> {
+        return Promise.async {
+            val context = NitroModules.applicationContext ?: return@async
+            val variant = when (context.packageName) {
+                "com.noahwallet.regtest" -> "regtest"
+                "com.noahwallet.signet" -> "signet"
+                else -> "mainnet"
+            }
+
+            try {
+                val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+
+                val prefs = EncryptedSharedPreferences.create(
+                    "noah_native_secrets",
+                    masterKeyAlias,
+                    context,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+
+                val trimmedToken = token.trim()
+                prefs.edit().apply {
+                    if (trimmedToken.isEmpty()) {
+                        remove("server_access_token_$variant")
+                    } else {
+                        putString("server_access_token_$variant", trimmedToken)
+                    }
+                }.apply()
+            } catch (e: Exception) {
+                throw Exception("Failed to store native server access token: ${e.message}", e)
+            }
+        }
+    }
 }

@@ -22,6 +22,7 @@ import {
   vtxos as vtxosNitro,
   getExpiringVtxos as getExpiringVtxosNitro,
   type BarkArkInfo,
+  type BarkCreateOpts,
   type OnchainBalanceResult,
   type OffchainBalanceResult,
   KeyPairResult,
@@ -38,15 +39,19 @@ import {
 } from "../constants";
 import {
   deriveStoreNextKeypair,
+  getArkServerAccessToken,
   peakKeyPair,
   getMnemonic,
+  resetArkServerAccessToken,
   resetServerAuthToken,
+  setArkServerAccessToken,
   setMnemonic,
 } from "./crypto";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import logger from "~/lib/log";
-import { storeNativeMnemonic } from "noah-tools";
+import { storeNativeMnemonic, storeNativeServerAccessToken } from "noah-tools";
 import { useWalletStore } from "~/store/walletStore";
+import { APP_VARIANT } from "~/config";
 
 const log = logger("walletApi");
 
@@ -56,7 +61,110 @@ export interface MailboxAuthorizationResult {
   encoded: string;
 }
 
-const createWalletFromMnemonic = async (mnemonic: string): Promise<Result<void, Error>> => {
+type WalletCreationOptions = Omit<BarkCreateOpts, "mnemonic">;
+
+export interface WalletServerAccessTokenOptions {
+  serverAccessToken?: string | null;
+}
+
+export const isArkServerAccessTokenEnabled = APP_VARIANT === "mainnet";
+
+const normalizeServerAccessToken = (token: string | null | undefined): string | null => {
+  const trimmed = token?.trim();
+  return trimmed ? trimmed : null;
+};
+
+const syncNativeServerAccessToken = async (token: string | null): Promise<void> => {
+  if (hasGooglePlayServices()) {
+    return;
+  }
+
+  const nativeResult = await ResultAsync.fromPromise(
+    storeNativeServerAccessToken(token ?? ""),
+    (e) => e as Error,
+  );
+  if (nativeResult.isErr()) {
+    log.w("Failed to store Ark server access token natively for push service", [
+      nativeResult.error,
+    ]);
+  }
+};
+
+export const saveArkServerAccessToken = async (token: string): Promise<Result<void, Error>> => {
+  if (!isArkServerAccessTokenEnabled) {
+    return ok(undefined);
+  }
+
+  const normalized = normalizeServerAccessToken(token);
+  const storeResult = normalized
+    ? await setArkServerAccessToken(normalized)
+    : await resetArkServerAccessToken();
+  if (storeResult.isErr()) {
+    return err(storeResult.error);
+  }
+
+  await syncNativeServerAccessToken(normalized);
+  return ok(undefined);
+};
+
+export const clearArkServerAccessToken = async (): Promise<Result<void, Error>> => {
+  const resetResult = await resetArkServerAccessToken();
+  if (resetResult.isErr()) {
+    return err(resetResult.error);
+  }
+
+  await syncNativeServerAccessToken(null);
+  return ok(undefined);
+};
+
+const getWalletCreationOptions = async (
+  options?: WalletServerAccessTokenOptions,
+): Promise<Result<WalletCreationOptions, Error>> => {
+  if (!isArkServerAccessTokenEnabled) {
+    return ok(ACTIVE_WALLET_CONFIG);
+  }
+
+  const token =
+    options && "serverAccessToken" in options
+      ? normalizeServerAccessToken(options.serverAccessToken)
+      : null;
+  const tokenResult =
+    options && "serverAccessToken" in options ? ok(token) : await getArkServerAccessToken();
+
+  if (tokenResult.isErr()) {
+    return err(tokenResult.error);
+  }
+
+  const normalizedToken = normalizeServerAccessToken(tokenResult.value);
+  if (!normalizedToken) {
+    return ok(ACTIVE_WALLET_CONFIG);
+  }
+
+  const activeConfig = ACTIVE_WALLET_CONFIG.config;
+  if (!activeConfig) {
+    return ok(ACTIVE_WALLET_CONFIG);
+  }
+
+  return ok({
+    ...ACTIVE_WALLET_CONFIG,
+    config: {
+      ...activeConfig,
+      server_access_token: normalizedToken,
+    },
+  });
+};
+
+const createWalletFromMnemonic = async (
+  mnemonic: string,
+  options?: WalletServerAccessTokenOptions,
+): Promise<Result<void, Error>> => {
+  if (isArkServerAccessTokenEnabled && options && "serverAccessToken" in options) {
+    const saveResult = await saveArkServerAccessToken(options.serverAccessToken ?? "");
+    if (saveResult.isErr()) {
+      return err(saveResult.error);
+    }
+  }
+
   const isLoadedResult = await ResultAsync.fromPromise(isWalletLoadedNitro(), (e) => e as Error);
   if (isLoadedResult.isErr()) return err(isLoadedResult.error);
 
@@ -65,8 +173,13 @@ const createWalletFromMnemonic = async (mnemonic: string): Promise<Result<void, 
     if (closeResult.isErr()) return err(closeResult.error);
   }
 
+  const configResult = await getWalletCreationOptions(options);
+  if (configResult.isErr()) {
+    return err(configResult.error);
+  }
+
   const createResult = await ResultAsync.fromPromise(
-    createWalletNitro(ARK_DATA_PATH, { ...ACTIVE_WALLET_CONFIG, mnemonic }),
+    createWalletNitro(ARK_DATA_PATH, { ...configResult.value, mnemonic }),
     (e) => e as Error,
   );
 
@@ -90,7 +203,7 @@ const createWalletFromMnemonic = async (mnemonic: string): Promise<Result<void, 
     }
   }
 
-  const loadResult = await loadWallet(mnemonic);
+  const loadResult = await loadWallet(mnemonic, options);
   if (loadResult.isErr()) {
     return err(loadResult.error);
   }
@@ -108,15 +221,27 @@ const createWalletFromMnemonic = async (mnemonic: string): Promise<Result<void, 
   return ok(undefined);
 };
 
-export const createWallet = async (): Promise<Result<void, Error>> => {
+export const createWallet = async (
+  options?: WalletServerAccessTokenOptions,
+): Promise<Result<void, Error>> => {
   const mnemonicResult = await ResultAsync.fromPromise(createMnemonic(), (e) => e as Error);
   if (mnemonicResult.isErr()) {
     return err(mnemonicResult.error);
   }
-  return createWalletFromMnemonic(mnemonicResult.value);
+  return createWalletFromMnemonic(mnemonicResult.value, options);
 };
 
-export const restoreWallet = async (mnemonic: string): Promise<Result<boolean, Error>> => {
+export const restoreWallet = async (
+  mnemonic: string,
+  options?: WalletServerAccessTokenOptions,
+): Promise<Result<boolean, Error>> => {
+  if (isArkServerAccessTokenEnabled && options && "serverAccessToken" in options) {
+    const saveResult = await saveArkServerAccessToken(options.serverAccessToken ?? "");
+    if (saveResult.isErr()) {
+      return err(saveResult.error);
+    }
+  }
+
   const setResult = await ResultAsync.fromPromise(setMnemonic(mnemonic), (e) => e as Error);
   if (setResult.isErr()) {
     return err(setResult.error);
@@ -131,14 +256,22 @@ export const restoreWallet = async (mnemonic: string): Promise<Result<boolean, E
       log.w("Failed to store mnemonic natively for push service", [storeNativeResult.error]);
     }
   }
-  return loadWallet(mnemonic);
+  return loadWallet(mnemonic, options);
 };
 
-const loadWallet = async (mnemonic: string): Promise<Result<boolean, Error>> => {
+const loadWallet = async (
+  mnemonic: string,
+  options?: WalletServerAccessTokenOptions,
+): Promise<Result<boolean, Error>> => {
+  const configResult = await getWalletCreationOptions(options);
+  if (configResult.isErr()) {
+    return err(configResult.error);
+  }
+
   const loadResult = await ResultAsync.fromPromise(
     loadWalletNitro(ARK_DATA_PATH, {
       mnemonic,
-      ...ACTIVE_WALLET_CONFIG,
+      ...configResult.value,
     }),
     (e) => e as Error,
   );
@@ -334,10 +467,7 @@ export const getExpiringVtxos = async () => {
 export const getMailboxAuthorization = async (
   authorizationExpiry: number,
 ): Promise<Result<MailboxAuthorizationResult, Error>> => {
-  return ResultAsync.fromPromise(
-    mailboxAuthorizationNitro(authorizationExpiry),
-    (e) => e as Error,
-  );
+  return ResultAsync.fromPromise(mailboxAuthorizationNitro(authorizationExpiry), (e) => e as Error);
 };
 
 /**
@@ -375,6 +505,12 @@ export const clearStaleKeychain = async (): Promise<Result<void, Error>> => {
   if (tokenResetResult.isErr()) {
     log.w("Failed to clear server auth token", [tokenResetResult.error]);
     return err(tokenResetResult.error);
+  }
+
+  const arkTokenResetResult = await clearArkServerAccessToken();
+  if (arkTokenResetResult.isErr()) {
+    log.w("Failed to clear Ark server access token", [arkTokenResetResult.error]);
+    return err(arkTokenResetResult.error);
   }
 
   log.i("Cleared stale keychain mnemonic after reinstall detection");

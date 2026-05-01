@@ -124,6 +124,13 @@ class NoahTools: HybridNoahToolsSpec {
         promise.resolve()
         return promise
     }
+
+    func storeNativeServerAccessToken(token: String) throws -> Promise<Void> {
+        // This is Android-only, no-op on iOS
+        let promise = Promise<Void>()
+        promise.resolve()
+        return promise
+    }
 }
 
 // Include the extensions from other files

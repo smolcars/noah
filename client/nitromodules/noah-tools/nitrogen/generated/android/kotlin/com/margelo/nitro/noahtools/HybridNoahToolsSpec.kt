@@ -44,96 +44,100 @@ abstract class HybridNoahToolsSpec: HybridObject() {
   }
 
   // Properties
-  
+
 
   // Methods
   @DoNotStrip
   @Keep
   abstract fun getAppVariant(): String
-  
+
   @DoNotStrip
   @Keep
   abstract fun getAppLogs(): Promise<Array<String>>
-  
+
   @DoNotStrip
   @Keep
   abstract fun createBackup(mnemonic: String): Promise<String>
-  
+
   @DoNotStrip
   @Keep
   abstract fun restoreBackup(encryptedData: String, mnemonic: String): Promise<Boolean>
-  
+
   @DoNotStrip
   @Keep
   abstract fun nativePost(url: String, body: String, headers: Map<String, String>, timeoutSeconds: Double): Promise<HttpResponse>
-  
+
   @DoNotStrip
   @Keep
   abstract fun nativeGet(url: String, headers: Map<String, String>, timeoutSeconds: Double): Promise<HttpResponse>
-  
+
   @DoNotStrip
   @Keep
   abstract fun nativeLog(level: String, tag: String, message: String): Unit
-  
+
   @DoNotStrip
   @Keep
   abstract fun playAudio(filePath: String): Promise<Unit>
-  
+
   @DoNotStrip
   @Keep
   abstract fun pauseAudio(): Unit
-  
+
   @DoNotStrip
   @Keep
   abstract fun stopAudio(): Unit
-  
+
   @DoNotStrip
   @Keep
   abstract fun resumeAudio(): Unit
-  
+
   @DoNotStrip
   @Keep
   abstract fun seekAudio(positionSeconds: Double): Unit
-  
+
   @DoNotStrip
   @Keep
   abstract fun getAudioDuration(): Double
-  
+
   @DoNotStrip
   @Keep
   abstract fun getAudioPosition(): Double
-  
+
   @DoNotStrip
   @Keep
   abstract fun isAudioPlaying(): Boolean
-  
+
   @DoNotStrip
   @Keep
   abstract fun updateWidgetData(totalBalance: Double, onchainBalance: Double, offchainBalance: Double, pendingBalance: Double, closestExpiryBlocks: Double, expiryThreshold: Double, appGroup: String): Unit
-  
+
   @DoNotStrip
   @Keep
   abstract fun isGooglePlayServicesAvailable(): Boolean
-  
+
   @DoNotStrip
   @Keep
   abstract fun registerUnifiedPush(): Unit
-  
+
   @DoNotStrip
   @Keep
   abstract fun getUnifiedPushEndpoint(): String
-  
+
   @DoNotStrip
   @Keep
   abstract fun getUnifiedPushDistributors(): Array<UnifiedPushDistributor>
-  
+
   @DoNotStrip
   @Keep
   abstract fun setUnifiedPushDistributor(distributorId: Variant_NullType_String?): Unit
-  
+
   @DoNotStrip
   @Keep
   abstract fun storeNativeMnemonic(mnemonic: String): Promise<Unit>
+
+  @DoNotStrip
+  @Keep
+  abstract fun storeNativeServerAccessToken(token: String): Promise<Unit>
 
   private external fun initHybrid(): HybridData
 
