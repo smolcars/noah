@@ -9,7 +9,7 @@ permissions:
 jobs:
   deploy:
     name: Deploy mainnet app
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     environment: production
     concurrency: fly-mainnet-deploy
     steps:

@@ -15,7 +15,7 @@ on:
 
 jobs:
   changes:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       server_changed: ${{ steps.set_changed.outputs.server_changed }}
     steps:
@@ -49,7 +49,7 @@ jobs:
   server_build_and_test:
     needs: changes
     if: needs.changes.outputs.server_changed == 'true'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     services:
       postgres:
         image: postgres:16-alpine
@@ -87,7 +87,7 @@ jobs:
         run: cargo build --release --bin noah-cli
 
   server_gate:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [changes, server_build_and_test]
     if: always()
     steps:
