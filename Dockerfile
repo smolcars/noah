@@ -4,7 +4,7 @@ ARG RUST_VERSION=1.95
 ARG DEBIAN_RELEASE=bookworm
 
 # Stage 1: cargo-chef base image
-FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION} AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION}-${DEBIAN_RELEASE} AS chef
 WORKDIR /app
 
 # Stage 2: Analyze dependencies
@@ -34,7 +34,7 @@ RUN cargo build --release
 
 # Stage 5: Runtime image
 FROM debian:${DEBIAN_RELEASE}-slim AS runtime
-RUN apt-get update && apt-get install -y ca-certificates curl pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/target/release/server /usr/local/bin/
 COPY --from=builder /app/target/release/noah-cli /usr/local/bin/
