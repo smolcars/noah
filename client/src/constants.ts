@@ -20,6 +20,7 @@ export const AUTO_BACKUP_IN_PROGRESS_TIMEOUT_MS = 30 * 1000; // 30 seconds
 
 export const MNEMONIC_KEYCHAIN_SERVICE = `com.noah.mnemonic.${APP_VARIANT}`;
 export const AUTH_TOKEN_KEYCHAIN_SERVICE = `com.noah.auth-token.${APP_VARIANT}`;
+export const ARK_SERVER_ACCESS_TOKEN_KEYCHAIN_SERVICE = `com.noah.ark-server-access-token.${APP_VARIANT}`;
 export const KEYCHAIN_USERNAME = "noah";
 
 export const PLATFORM = Platform.OS;

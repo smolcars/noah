@@ -16,6 +16,7 @@ import { Text } from "~/components/ui/text";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
 import { useWalletStore } from "~/store/walletStore";
+import { APP_VARIANT } from "~/config";
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, "RestoreWallet">;
 
@@ -27,7 +28,16 @@ const RestoreWalletScreen = ({ navigation }: Props) => {
 
   const handleRestore = async () => {
     if (mnemonic) {
-      restoreWallet(mnemonic.trim());
+      const trimmedMnemonic = mnemonic.trim();
+      if (APP_VARIANT === "mainnet") {
+        navigation.navigate("ArkServerAccessToken", {
+          mode: "restore",
+          mnemonic: trimmedMnemonic,
+        });
+        return;
+      }
+
+      restoreWallet({ mnemonic: trimmedMnemonic });
     }
   };
 

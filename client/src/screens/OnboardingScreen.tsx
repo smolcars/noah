@@ -7,6 +7,7 @@ import { NoahButton } from "../components/ui/NoahButton";
 import { Text } from "../components/ui/text";
 import { useCreateWallet } from "../hooks/useWallet";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
+import { APP_VARIANT } from "~/config";
 
 const OnboardingScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<OnboardingStackParamList>>();
@@ -17,6 +18,15 @@ const OnboardingScreen = () => {
       navigation.navigate("Mnemonic", { fromOnboarding: true });
     }
   }, [isSuccess, navigation]);
+
+  const handleCreateWallet = () => {
+    if (APP_VARIANT === "mainnet") {
+      navigation.navigate("ArkServerAccessToken", { mode: "create" });
+      return;
+    }
+
+    createWallet(undefined);
+  };
 
   return (
     <View className="flex-1 items-center justify-center bg-background p-5">
@@ -32,7 +42,7 @@ const OnboardingScreen = () => {
       ) : (
         <View>
           <View className="flex-row justify-center">
-            <NoahButton onPress={() => createWallet()} size="lg">
+            <NoahButton onPress={handleCreateWallet} size="lg">
               Create Wallet
             </NoahButton>
             <View style={{ width: 20 }} />

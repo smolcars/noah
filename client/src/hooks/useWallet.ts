@@ -14,6 +14,7 @@ import {
   getExpiringVtxos,
   closeWalletIfLoaded,
   sync,
+  type WalletServerAccessTokenOptions,
 } from "../lib/walletApi";
 import { restoreWallet as restoreWalletAction } from "../lib/backupService";
 import { deregister } from "../lib/api";
@@ -29,8 +30,8 @@ export function useCreateWallet() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async () => {
-      const result = await createWalletAction();
+    mutationFn: async (options?: WalletServerAccessTokenOptions) => {
+      const result = await createWalletAction(options);
       if (result.isErr()) {
         throw result.error;
       }
@@ -234,8 +235,11 @@ export function useRestoreWallet() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async (mnemonic: string) => {
-      const result = await restoreWalletAction(mnemonic);
+    mutationFn: async ({
+      mnemonic,
+      serverAccessToken,
+    }: { mnemonic: string } & WalletServerAccessTokenOptions) => {
+      const result = await restoreWalletAction(mnemonic, { serverAccessToken });
       if (result.isErr()) {
         throw result.error;
       }

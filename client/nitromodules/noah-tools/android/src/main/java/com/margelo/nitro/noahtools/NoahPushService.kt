@@ -419,6 +419,7 @@ class NoahPushService : PushService() {
                 String::class.java,
                 String::class.java,
                 String::class.java,
+                String::class.java,
                 Integer::class.javaObjectType,
                 java.lang.Long::class.java,
                 Integer::class.javaObjectType,
@@ -486,6 +487,7 @@ class NoahPushService : PushService() {
         return try {
             configConstructor.newInstance(
                 variantJson.optNullableString("ark"),
+                readServerAccessTokenFromStorage(context, appVariant),
                 variantJson.optNullableString("esplora"),
                 variantJson.optNullableString("bitcoind"),
                 variantJson.optNullableString("bitcoindCookie"),
@@ -502,6 +504,31 @@ class NoahPushService : PushService() {
                 "error",
                 "NoahPushService",
                 "Failed to construct bark config for $appVariant: ${e.message}"
+            )
+            null
+        }
+    }
+
+    private fun readServerAccessTokenFromStorage(context: Context, appVariant: String): String? {
+        if (appVariant != "mainnet") return null
+
+        return try {
+            val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+
+            val prefs = EncryptedSharedPreferences.create(
+                "noah_native_secrets",
+                masterKeyAlias,
+                context,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+
+            prefs.getString("server_access_token_$appVariant", null)?.takeIf { it.isNotEmpty() }
+        } catch (e: Exception) {
+            NoahToolsLogging.performNativeLog(
+                "error",
+                "NoahPushService",
+                "Error retrieving server access token from native storage: ${e.message}"
             )
             null
         }

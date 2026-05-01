@@ -117,4 +117,8 @@ export function storeNativeMnemonic(mnemonic: string): Promise<void> {
   return NoahToolsHybridObject.storeNativeMnemonic(mnemonic);
 }
 
+export function storeNativeServerAccessToken(token: string): Promise<void> {
+  return NoahToolsHybridObject.storeNativeServerAccessToken(token);
+}
+
 export type { HttpResponse } from "./NoahTools.nitro";

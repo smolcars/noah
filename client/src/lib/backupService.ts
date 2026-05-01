@@ -11,7 +11,11 @@ import {
   updateBackupSettings,
 } from "./api";
 import { getMnemonic, setMnemonic } from "./crypto";
-import { loadWalletIfNeeded } from "./walletApi";
+import {
+  loadWalletIfNeeded,
+  saveArkServerAccessToken,
+  type WalletServerAccessTokenOptions,
+} from "./walletApi";
 import { useWalletStore } from "~/store/walletStore";
 import { useBackupStore } from "~/store/backupStore";
 import logger from "~/lib/log";
@@ -160,9 +164,19 @@ export class BackupService {
   }
 }
 
-export const restoreWallet = async (mnemonic: string): Promise<Result<void, Error>> => {
+export const restoreWallet = async (
+  mnemonic: string,
+  options?: WalletServerAccessTokenOptions,
+): Promise<Result<void, Error>> => {
   try {
     updateProgress("Starting restore...", 0);
+    if (options && "serverAccessToken" in options) {
+      const tokenResult = await saveArkServerAccessToken(options.serverAccessToken ?? "");
+      if (tokenResult.isErr()) {
+        return err(tokenResult.error);
+      }
+    }
+
     const backupService = new BackupService();
     const restoreResult = await backupService.restoreBackup(mnemonic);
 
