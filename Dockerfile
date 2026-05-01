@@ -1,11 +1,10 @@
 # Keep builder and runtime on the same Debian release so the compiled
 # binaries do not require a newer glibc than the runtime image provides.
-ARG RUST_VERSION=1.91.1
+ARG RUST_VERSION=1.95
 ARG DEBIAN_RELEASE=bookworm
 
-# Stage 1: Install cargo-chef
-FROM rust:${RUST_VERSION}-${DEBIAN_RELEASE} AS chef
-RUN cargo install cargo-chef
+# Stage 1: cargo-chef base image
+FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION} AS chef
 WORKDIR /app
 
 # Stage 2: Analyze dependencies
