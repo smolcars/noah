@@ -43,7 +43,6 @@ const SendScreen = () => {
     isDestinationFocused,
     setIsDestinationFocused,
     lightningAddressSuggestions,
-    isLoadingLightningAddressSuggestions,
     handleSelectLightningAddressSuggestion,
     amount,
     setAmount,
@@ -234,12 +233,6 @@ const SendScreen = () => {
                   }}
                 >
                   <View className="flex-row items-center gap-3">
-                    <View
-                      className="h-9 w-9 items-center justify-center rounded-full"
-                      style={{ backgroundColor: `${COLORS.BITCOIN_ORANGE}20` }}
-                    >
-                      <Icon name="at-outline" size={18} color={COLORS.BITCOIN_ORANGE} />
-                    </View>
                     {destination && !isDestinationFocused ? (
                       <Pressable className="flex-1" onPress={focusDestinationInput}>
                         <Text
@@ -314,22 +307,11 @@ const SendScreen = () => {
                           >
                             {suggestion}
                           </Text>
-                          <Text className="mt-0.5 text-xs text-muted-foreground">
-                            Lightning address
-                          </Text>
                         </View>
-                        <Text className="text-sm font-semibold text-muted-foreground">Use</Text>
                       </Pressable>
                     ))}
                   </View>
                 )}
-                {isDestinationFocused &&
-                  isLoadingLightningAddressSuggestions &&
-                  lightningAddressSuggestions.length === 0 && (
-                    <View className="mt-3 rounded-[18px] border border-border/60 bg-card/70 px-4 py-3">
-                      <Text className="text-sm text-muted-foreground">Looking up address...</Text>
-                    </View>
-                  )}
                 {!bip321Data ? (
                   <View className="mt-4 rounded-[20px] border border-border/60 bg-card/70 px-4 py-3">
                     <TextInput
