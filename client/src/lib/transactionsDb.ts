@@ -7,18 +7,34 @@ import { runMigrations } from "./migrations";
 const log = logger("transactionsDb");
 
 let db: SQLite.SQLiteDatabase | null = null;
+let openingDb: Promise<SQLite.SQLiteDatabase> | null = null;
 
 export const openDatabase = async () => {
   if (db) {
     return db;
   }
+
+  if (openingDb) {
+    return openingDb;
+  }
+
+  openingDb = openAndMigrateDatabase();
+
+  try {
+    db = await openingDb;
+    return db;
+  } finally {
+    openingDb = null;
+  }
+};
+
+const openAndMigrateDatabase = async () => {
   const newDb = await SQLite.openDatabaseAsync("noah_wallet.sqlite", {}, ARK_DATA_PATH);
   await newDb.execAsync("PRAGMA journal_mode = WAL;");
 
   await runMigrations(newDb);
 
-  db = newDb;
-  return db;
+  return newDb;
 };
 
 export type OffboardingRequest = {

@@ -27,15 +27,16 @@ export const useReceiveScreen = () => {
   };
 
   const amountSat = useMemo(() => {
-    if (!btcPrice) return 0;
     const amountFloat = parseFloat(amount);
     if (isNaN(amountFloat)) return 0;
 
     if (currency === "SATS") {
       return Math.round(amountFloat);
-    } else {
-      return Math.round((amountFloat / btcPrice) * 100000000);
     }
+
+    if (!btcPrice) return 0;
+
+    return Math.round((amountFloat / btcPrice) * 100000000);
   }, [amount, currency, btcPrice]);
 
   return {

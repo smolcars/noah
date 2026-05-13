@@ -135,6 +135,7 @@ const SendScreen = () => {
           <ScrollView
             className="flex-1"
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             contentContainerStyle={{
               paddingBottom: Math.max(bottomTabBarHeight, 20) + 112,
             }}
@@ -223,7 +224,7 @@ const SendScreen = () => {
                 </Text>
 
                 <View
-                  className="mt-4 rounded-[24px] border px-4 py-3"
+                  className="mt-4 rounded-[22px] border px-4 py-3"
                   style={{
                     borderColor: isDestinationFocused
                       ? COLORS.BITCOIN_ORANGE
@@ -231,8 +232,7 @@ const SendScreen = () => {
                     backgroundColor: `${colors.card}CC`,
                   }}
                 >
-                  <View className="flex-row items-center gap-2">
-                    <Icon name="paper-plane-outline" size={16} color={iconColor} />
+                  <View className="flex-row items-center gap-3">
                     {destination && !isDestinationFocused ? (
                       <Pressable className="flex-1" onPress={focusDestinationInput}>
                         <Text
@@ -246,7 +246,7 @@ const SendScreen = () => {
                     ) : (
                       <TextInput
                         ref={destinationInputRef}
-                        className="flex-1 text-base text-foreground"
+                        className="min-h-9 flex-1 text-base text-foreground"
                         placeholder="Address, invoice, or lightning address"
                         placeholderTextColor={colors.mutedForeground}
                         autoCorrect={false}
@@ -258,25 +258,56 @@ const SendScreen = () => {
                         style={{ minWidth: 0, flexShrink: 1 }}
                       />
                     )}
-                    <TouchableOpacity onPress={handlePaste} className="rounded-full px-2 py-2">
-                      <Text className="text-sm font-semibold text-primary">Paste</Text>
+                    <TouchableOpacity
+                      onPress={handlePaste}
+                      className="rounded-full px-3 py-2"
+                      style={{ backgroundColor: `${colors.foreground}0D` }}
+                    >
+                      <Text className="text-sm font-semibold text-foreground">Paste</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
 
                 {isDestinationFocused && lightningAddressSuggestions.length > 0 && (
-                  <View className="mt-3 overflow-hidden rounded-[20px] border border-border/70 bg-card/80">
+                  <View
+                    className="mt-3 overflow-hidden rounded-[18px] border"
+                    style={{
+                      borderColor: `${colors.mutedForeground}24`,
+                      backgroundColor: colors.card,
+                    }}
+                  >
                     {lightningAddressSuggestions.map((suggestion, index) => (
                       <Pressable
                         key={suggestion}
-                        className={`px-4 py-3 ${
+                        className={`flex-row items-center gap-3 px-4 py-3 ${
                           index < lightningAddressSuggestions.length - 1
                             ? "border-b border-border/60"
                             : ""
                         }`}
-                        onPressIn={() => handleSelectLightningAddressSuggestion(suggestion)}
+                        onPress={() => {
+                          handleSelectLightningAddressSuggestion(suggestion);
+                          Keyboard.dismiss();
+                        }}
                       >
-                        <Text className="text-foreground">{suggestion}</Text>
+                        <View
+                          className="h-8 w-8 items-center justify-center rounded-full"
+                          style={{ backgroundColor: `${COLORS.BITCOIN_ORANGE}18` }}
+                        >
+                          <Icon
+                            name="flash-outline"
+                            size={15}
+                            color={COLORS.BITCOIN_ORANGE}
+                          />
+                        </View>
+                        <View className="min-w-0 flex-1">
+                          <Text
+                            className="text-[15px] font-semibold text-foreground"
+                            numberOfLines={1}
+                            ellipsizeMode="middle"
+                          >
+                            {suggestion}
+                          </Text>
+                        </View>
                       </Pressable>
                     ))}
                   </View>

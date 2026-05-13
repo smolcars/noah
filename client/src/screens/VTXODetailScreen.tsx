@@ -1,4 +1,4 @@
-import { View, Pressable, ScrollView } from "react-native";
+import { View, Pressable, ScrollView, Linking } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { Text } from "../components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
@@ -10,6 +10,7 @@ import { COLORS } from "~/lib/styleConstants";
 import type { BarkVtxo } from "react-native-nitro-ark";
 import { useGetBlockHeight } from "~/hooks/useMarketData";
 import { formatBip177 } from "~/lib/utils";
+import { getMempoolTxUrl } from "~/constants";
 
 type VTXOWithStatus = BarkVtxo & {
   isExpiring: boolean;
@@ -19,10 +20,12 @@ const VTXODetailRow = ({
   label,
   value,
   copyable = false,
+  explorerUrl,
 }: {
   label: string;
   value: string;
   copyable?: boolean;
+  explorerUrl?: string | null;
 }) => {
   const [copied, setCopied] = useState(false);
   const iconColor = useIconColor();
@@ -39,22 +42,35 @@ const VTXODetailRow = ({
   return (
     <View className="flex-row justify-between items-center py-3 border-b border-border/10 last:border-b-0">
       <Text className="text-muted-foreground text-sm">{label}</Text>
-      {copyable ? (
-        <Pressable onPress={onCopy} className="flex-row items-center gap-x-2 flex-shrink-0">
-          <Text
-            className="text-foreground text-sm text-right"
-            ellipsizeMode="middle"
-            numberOfLines={1}
-            style={{ maxWidth: 150 }}
-          >
-            {value}
-          </Text>
-          {copied ? (
-            <Icon name="checkmark-circle-outline" size={16} color={COLORS.SUCCESS} />
-          ) : (
-            <Icon name="copy-outline" size={16} color={iconColor} />
-          )}
-        </Pressable>
+      {copyable || explorerUrl ? (
+        <View className="flex-row items-center gap-x-3 flex-shrink-0">
+          {copyable ? (
+            <Pressable onPress={onCopy} className="flex-row items-center gap-x-2 flex-shrink-0">
+              <Text
+                className="text-foreground text-sm text-right"
+                ellipsizeMode="middle"
+                numberOfLines={1}
+                style={{ maxWidth: 150 }}
+              >
+                {value}
+              </Text>
+              {copied ? (
+                <Icon name="checkmark-circle-outline" size={16} color={COLORS.SUCCESS} />
+              ) : (
+                <Icon name="copy-outline" size={16} color={iconColor} />
+              )}
+            </Pressable>
+          ) : null}
+          {explorerUrl ? (
+            <Pressable
+              onPress={() => Linking.openURL(explorerUrl)}
+              hitSlop={10}
+              className="h-8 w-8 items-center justify-center rounded-full bg-background"
+            >
+              <Icon name="open-outline" size={17} color={COLORS.BITCOIN_ORANGE} />
+            </Pressable>
+          ) : null}
+        </View>
       ) : (
         <Text
           className="text-foreground text-sm text-right"
@@ -75,6 +91,7 @@ const VTXODetailScreen = () => {
   const iconColor = useIconColor();
   const { data: blockHeight } = useGetBlockHeight();
   const { vtxo } = route.params as { vtxo: VTXOWithStatus };
+  const anchorExplorerUrl = getMempoolTxUrl(vtxo.anchor_point);
 
   const getStatusColor = (vtxo: VTXOWithStatus) => {
     if (vtxo.state === "Locked") return "text-gray-500";
@@ -154,7 +171,12 @@ const VTXODetailScreen = () => {
           <View className="bg-card p-4 rounded-lg mb-4">
             <Text className="text-foreground text-lg font-semibold mb-3">Vtxo Details</Text>
             <VTXODetailRow label="Point" value={vtxo.point} copyable />
-            <VTXODetailRow label="Anchor Point" value={vtxo.anchor_point} copyable />
+            <VTXODetailRow
+              label="Anchor Point"
+              value={vtxo.anchor_point}
+              copyable
+              explorerUrl={anchorExplorerUrl}
+            />
             <VTXODetailRow label="Server Public Key" value={vtxo.server_pubkey} copyable />
           </View>
         </ScrollView>

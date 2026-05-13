@@ -123,6 +123,21 @@ export function useAutoBoardThreshold(enabled = true) {
   });
 }
 
+export function useArkInfo(enabled = true) {
+  return useQuery({
+    queryKey: ["ark-info"],
+    queryFn: async () => {
+      const result = await getArkInfo();
+      if (result.isErr()) {
+        throw result.error;
+      }
+      return result.value;
+    },
+    enabled,
+    retry: false,
+  });
+}
+
 export function useGetVtxos() {
   return useQuery({
     queryKey: ["vtxos"],

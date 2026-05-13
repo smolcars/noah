@@ -30,6 +30,7 @@ import { useAlert } from "~/contexts/AlertProvider";
 import logger from "~/lib/log";
 import { HomeStackParamList } from "~/Navigators";
 import { BoardResult } from "react-native-nitro-ark";
+import { useTransactionStore } from "~/store/transactionStore";
 
 const log = logger("BoardArkScreen");
 
@@ -257,6 +258,7 @@ const BoardArkScreen = () => {
   const { showAlert } = useAlert();
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const iconColor = useIconColor();
+  const isAutoBoardingEnabled = useTransactionStore((state) => state.isAutoBoardingEnabled);
   const { data: balance, isLoading: isBalanceLoading } = useBalance();
   const {
     mutate: boardArk,
@@ -476,10 +478,13 @@ const BoardArkScreen = () => {
                   isLoading={isBalanceLoading}
                 />
                 <View className="mb-4">
-                  <Text className="text-lg text-amber-600 dark:text-amber-400 mb-2">
-                    Important: Please only input an external address like your cold storage wallet,
-                    DO NOT use Noah wallet address, if you do, you will be boarding into Ark again.
-                  </Text>
+                  {isAutoBoardingEnabled ? (
+                    <Text className="text-lg text-amber-600 dark:text-amber-400 mb-2">
+                      Important: Please only input an external address like your cold storage
+                      wallet, DO NOT use Noah wallet address, if you do, you will be boarding into
+                      Ark again.
+                    </Text>
+                  ) : null}
 
                   <Input
                     value={address}
