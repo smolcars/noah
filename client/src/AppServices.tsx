@@ -18,6 +18,8 @@ const log = logger("AppServices");
 
 const AppServices = memo(() => {
   const [isReady, setIsReady] = useState(false);
+  const [hasReportedAutoBoardThresholdError, setHasReportedAutoBoardThresholdError] =
+    useState(false);
 
   const { isAutoBoardingEnabled, hasAttemptedAutoBoarding, setHasAttemptedAutoBoarding } =
     useTransactionStore();
@@ -77,13 +79,19 @@ const AppServices = memo(() => {
     }
 
     if (isAutoBoardThresholdError) {
-      setHasAttemptedAutoBoarding(true);
-      log.e("Auto-boarding failed to load Ark info", [autoBoardThresholdError]);
-      showAlert({
-        title: "Auto-Boarding Failed",
-        description: "Unable to load Ark server info. Please try again later.",
-      });
+      if (!hasReportedAutoBoardThresholdError) {
+        setHasReportedAutoBoardThresholdError(true);
+        log.e("Auto-boarding failed to load Ark info", [autoBoardThresholdError]);
+        showAlert({
+          title: "Auto-Boarding Failed",
+          description: "Unable to load Ark server info. Please try again later.",
+        });
+      }
       return;
+    }
+
+    if (hasReportedAutoBoardThresholdError) {
+      setHasReportedAutoBoardThresholdError(false);
     }
 
     if (autoBoardThreshold === undefined || onchainConfirmedBalance < autoBoardThreshold) {
@@ -133,6 +141,7 @@ const AppServices = memo(() => {
     balance,
     autoBoardThreshold,
     autoBoardThresholdError,
+    hasReportedAutoBoardThresholdError,
     isAutoBoardThresholdError,
     boardAllArk,
     isBoardingAll,
