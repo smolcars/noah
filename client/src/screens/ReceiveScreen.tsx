@@ -48,7 +48,7 @@ const log = logger("ReceiveScreen");
 
 type ActiveReceiveSession = {
   sessionId: number;
-  amountSat: number;
+  amountSat: number | null;
   paymentHash?: string;
   arkAddress?: string;
 };
@@ -60,7 +60,7 @@ type ReceiveRailGeneration = {
 };
 
 type GeneratedReceiveRequest = ReceiveRailGeneration & {
-  amountSat: number;
+  amountSat: number | null;
 };
 
 type IdleDeadlineLike = {
@@ -109,13 +109,9 @@ const buildReceiveRequestUri = ({
   lightningInvoice,
   onchainAddress,
 }: ReceiveRailGeneration & { amountSat: number | null }) => {
-  if (amountSat === null) {
-    return undefined;
-  }
-
   const params: string[] = [];
 
-  if (amountSat >= minAmount) {
+  if (amountSat !== null && amountSat >= minAmount) {
     params.push(`amount=${satsToBtc(amountSat)}`);
   }
 
@@ -123,7 +119,7 @@ const buildReceiveRequestUri = ({
     params.push(`ark=${arkAddress.toUpperCase()}`);
   }
 
-  if (lightningInvoice?.payment_request) {
+  if (amountSat !== null && amountSat >= minAmount && lightningInvoice?.payment_request) {
     params.push(`lightning=${lightningInvoice.payment_request.toUpperCase()}`);
   }
 
@@ -234,6 +230,8 @@ const ReceiveScreen = () => {
   const isGenerated = Boolean(bip321Uri);
   const isClearDisabled = isLoading || (!isGenerated && amount === "");
   const isAmountLocked = isLoading || isGenerated;
+  const hasEnteredAmount = amount.trim().length > 0;
+  const isEnteredAmountInvalid = hasEnteredAmount && amountSat < minAmount;
   const displayAmount = amount === "" ? (currency === "USD" ? "0.00" : "0") : amount;
   const [isAmountFocused, setIsAmountFocused] = useState(false);
 
@@ -415,7 +413,11 @@ const ReceiveScreen = () => {
         0,
       );
 
-      handleReceiveComplete(receivedAmountSat > 0 ? receivedAmountSat : activeSession.amountSat);
+      if (receivedAmountSat > 0) {
+        handleReceiveComplete(receivedAmountSat);
+      } else if (activeSession.amountSat !== null) {
+        handleReceiveComplete(activeSession.amountSat);
+      }
     },
     [handleReceiveComplete],
   );
@@ -433,6 +435,10 @@ const ReceiveScreen = () => {
 
       const movement = event.movement;
       if (!movement || movement.status !== "successful" || !isLightningReceiveMovement(movement)) {
+        return;
+      }
+
+      if (activeSession.amountSat === null) {
         return;
       }
 
@@ -523,15 +529,7 @@ const ReceiveScreen = () => {
   const handleGenerate = () => {
     Keyboard.dismiss();
 
-    if (!amountSat) {
-      showAlert({
-        title: "Invalid Amount",
-        description: "Please enter an amount.",
-      });
-      return;
-    }
-
-    if (amountSat < minAmount) {
+    if (hasEnteredAmount && amountSat < minAmount) {
       showAlert({
         title: "Invalid Amount",
         description: `The minimum amount is ${minAmount} sats.`,
@@ -539,59 +537,72 @@ const ReceiveScreen = () => {
       return;
     }
 
+    const requestAmountSat = hasEnteredAmount ? amountSat : null;
+
     cancelReceiveSession({ resetAmount: false });
-    setGeneratedRequest({ amountSat });
+    setGeneratedRequest({ amountSat: requestAmountSat });
     activeReceiveSessionRef.current = {
       sessionId: receiveSessionIdRef.current,
-      amountSat,
+      amountSat: requestAmountSat,
     };
 
     const sessionId = receiveSessionIdRef.current;
+    const lightningInvoiceTask =
+      requestAmountSat === null
+        ? Promise.resolve<Bolt11Invoice | undefined>(undefined)
+        : generateLightningInvoice(requestAmountSat);
 
-    void Promise.allSettled([
+    const generationTasks = [
       generateOnchainAddress(),
       generateOffchainAddress(),
-      generateLightningInvoice(amountSat),
-    ]).then(([nextOnchainAddressResult, nextArkAddressResult, nextLightningInvoiceResult]) => {
-      if (activeReceiveSessionRef.current?.sessionId !== sessionId) {
-        return;
-      }
+      lightningInvoiceTask,
+    ] as const;
 
-      if (nextOnchainAddressResult.status === "rejected") {
-        log.w("Receive rail generation failed", ["onchain", nextOnchainAddressResult.reason]);
-      }
+    void Promise.allSettled(generationTasks).then(
+      ([nextOnchainAddressResult, nextArkAddressResult, nextLightningInvoiceResult]) => {
+        if (activeReceiveSessionRef.current?.sessionId !== sessionId) {
+          return;
+        }
 
-      if (nextArkAddressResult.status === "rejected") {
-        log.w("Receive rail generation failed", ["ark", nextArkAddressResult.reason]);
-      }
+        if (nextOnchainAddressResult.status === "rejected") {
+          log.w("Receive rail generation failed", ["onchain", nextOnchainAddressResult.reason]);
+        }
 
-      if (nextLightningInvoiceResult.status === "rejected") {
-        log.w("Receive rail generation failed", ["lightning", nextLightningInvoiceResult.reason]);
-      }
+        if (nextArkAddressResult.status === "rejected") {
+          log.w("Receive rail generation failed", ["ark", nextArkAddressResult.reason]);
+        }
 
-      const nextOnchainAddress =
-        nextOnchainAddressResult.status === "fulfilled"
-          ? nextOnchainAddressResult.value
-          : undefined;
-      const nextArkAddress =
-        nextArkAddressResult.status === "fulfilled" ? nextArkAddressResult.value : undefined;
-      const nextLightningInvoice =
-        nextLightningInvoiceResult.status === "fulfilled"
-          ? nextLightningInvoiceResult.value
-          : undefined;
+        if (nextLightningInvoiceResult.status === "rejected") {
+          log.w("Receive rail generation failed", [
+            "lightning",
+            nextLightningInvoiceResult.reason,
+          ]);
+        }
 
-      if (!nextOnchainAddress && !nextArkAddress && !nextLightningInvoice) {
-        cancelReceiveSession({ resetAmount: false });
-        return;
-      }
+        const nextOnchainAddress =
+          nextOnchainAddressResult.status === "fulfilled"
+            ? nextOnchainAddressResult.value
+            : undefined;
+        const nextArkAddress =
+          nextArkAddressResult.status === "fulfilled" ? nextArkAddressResult.value : undefined;
+        const nextLightningInvoice =
+          nextLightningInvoiceResult.status === "fulfilled"
+            ? nextLightningInvoiceResult.value
+            : undefined;
 
-      setGeneratedRequest({
-        amountSat,
-        onchainAddress: nextOnchainAddress,
-        arkAddress: nextArkAddress,
-        lightningInvoice: nextLightningInvoice,
-      });
-    });
+        if (!nextOnchainAddress && !nextArkAddress && !nextLightningInvoice) {
+          cancelReceiveSession({ resetAmount: false });
+          return;
+        }
+
+        setGeneratedRequest({
+          amountSat: requestAmountSat,
+          onchainAddress: nextOnchainAddress,
+          arkAddress: nextArkAddress,
+          lightningInvoice: nextLightningInvoice,
+        });
+      },
+    );
   };
 
   const handleClear = () => {
@@ -718,7 +729,7 @@ const ReceiveScreen = () => {
                   <Text className="text-sm text-muted-foreground">
                     {isGenerated
                       ? "Payment request is live"
-                      : `Minimum receive amount: ${formatBip177(minAmount)}`}
+                      : "Amount optional for Ark and on-chain"}
                   </Text>
                 </View>
               </View>
@@ -814,7 +825,7 @@ const ReceiveScreen = () => {
               <NoahButton
                 onPress={handleGenerate}
                 isLoading={isLoading}
-                disabled={isLoading || amount === "" || amountSat < minAmount}
+                disabled={isLoading || isEnteredAmountInvalid}
                 className="h-14 flex-1 rounded-2xl"
               >
                 {isGenerated ? "New request" : "Generate request"}
