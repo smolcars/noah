@@ -14,8 +14,10 @@ import {
   getExpiringVtxos,
   closeWalletIfLoaded,
   sync,
+  getArkInfo,
   type WalletServerAccessTokenOptions,
 } from "../lib/walletApi";
+import { getAutoBoardThreshold } from "~/lib/autoBoarding";
 import { restoreWallet as restoreWalletAction } from "../lib/backupService";
 import { deregister } from "../lib/api";
 import { queryClient } from "~/queryClient";
@@ -102,6 +104,21 @@ export function useBalance() {
       return { onchain: onchainResult.value, offchain: offchainResult.value };
     },
     enabled: isInitialized,
+    retry: false,
+  });
+}
+
+export function useAutoBoardThreshold(enabled = true) {
+  return useQuery({
+    queryKey: ["auto-board-threshold"],
+    queryFn: async () => {
+      const result = await getArkInfo();
+      if (result.isErr()) {
+        throw result.error;
+      }
+      return getAutoBoardThreshold(result.value);
+    },
+    enabled,
     retry: false,
   });
 }

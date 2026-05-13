@@ -15,7 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { OnboardingStackParamList, SettingsStackParamList } from "../Navigators";
 import Icon from "@react-native-vector-icons/ionicons";
-import { useDeleteWallet, useSuspendWallet } from "../hooks/useWallet";
+import { useAutoBoardThreshold, useDeleteWallet, useSuspendWallet } from "../hooks/useWallet";
 import { useExportDatabase } from "../hooks/useExportDatabase";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { copyToClipboard } from "../lib/clipboardUtils";
@@ -32,6 +32,7 @@ import { performServerRegistration } from "../lib/server";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { revokeMailboxAuthorization } from "~/lib/api";
+import { formatAutoBoardThreshold } from "~/lib/autoBoarding";
 
 type Setting = {
   id:
@@ -104,6 +105,11 @@ const SettingsScreen = () => {
     setMailboxAuthorizationEnabled,
   } = useServerStore();
   const { isAutoBoardingEnabled, setAutoBoardingEnabled } = useTransactionStore();
+  const {
+    data: autoBoardThreshold,
+    isError: isAutoBoardThresholdError,
+    isLoading: isAutoBoardThresholdLoading,
+  } = useAutoBoardThreshold(isInitialized);
   const [showResetSuccess, setShowResetSuccess] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
   const [showMailboxSuccess, setShowMailboxSuccess] = useState(false);
@@ -119,6 +125,12 @@ const SettingsScreen = () => {
 
   const navigation =
     useNavigation<NativeStackNavigationProp<SettingsStackParamList & OnboardingStackParamList>>();
+
+  const autoBoardDescription = isAutoBoardThresholdError
+    ? "Auto-board threshold unavailable"
+    : isAutoBoardThresholdLoading || autoBoardThreshold === undefined
+      ? "Loading auto-board threshold..."
+      : `Automatically board to Ark when onchain balance reaches ${formatAutoBoardThreshold(autoBoardThreshold)}`;
 
   useEffect(() => {
     const check = async () => {
@@ -501,7 +513,7 @@ const SettingsScreen = () => {
               <View className="flex-1">
                 <Label className="text-foreground text-lg">Auto-Board to Ark</Label>
                 <Text className="text-base mt-1 text-muted-foreground">
-                  Automatically board to Ark when onchain balance exceeds 20k sats
+                  {autoBoardDescription}
                 </Text>
               </View>
               <Switch

@@ -6,13 +6,13 @@ import { usePushNotifications } from "~/hooks/usePushNotifications";
 import { useMailboxAuthorization } from "~/hooks/useMailboxAuthorization";
 import { useAutoBackup } from "~/hooks/useAutoBackup";
 import { useTransactionStore } from "~/store/transactionStore";
-import { useBalance } from "~/hooks/useWallet";
+import { useAutoBoardThreshold, useBalance } from "~/hooks/useWallet";
 import { useBoardAllAmountArk } from "~/hooks/usePayments";
 import { useAlert } from "~/contexts/AlertProvider";
 import { addOnboardingRequest } from "~/lib/transactionsDb";
 import { reportLastLogin } from "~/lib/api";
 import logger from "~/lib/log";
-import { MIN_AUTO_BOARD_AMOUNT } from "./constants";
+import { AUTO_BOARD_FLOOR_AMOUNT, formatAutoBoardThreshold } from "~/lib/autoBoarding";
 
 const log = logger("AppServices");
 
@@ -24,6 +24,18 @@ const AppServices = memo(() => {
   const { data: balance } = useBalance();
   const { mutate: boardAllArk, isPending: isBoardingAll } = useBoardAllAmountArk();
   const { showAlert } = useAlert();
+  const shouldLoadAutoBoardThreshold =
+    isReady &&
+    isAutoBoardingEnabled &&
+    !!balance &&
+    balance.onchain.confirmed >= AUTO_BOARD_FLOOR_AMOUNT &&
+    !isBoardingAll &&
+    !hasAttemptedAutoBoarding;
+  const {
+    data: autoBoardThreshold,
+    error: autoBoardThresholdError,
+    isError: isAutoBoardThresholdError,
+  } = useAutoBoardThreshold(shouldLoadAutoBoardThreshold);
 
   // Initialize all app-level services here
   useSyncManager(60_000);
@@ -60,9 +72,30 @@ const AppServices = memo(() => {
 
     const onchainConfirmedBalance = balance.onchain.confirmed;
 
-    if (onchainConfirmedBalance >= MIN_AUTO_BOARD_AMOUNT) {
+    if (onchainConfirmedBalance < AUTO_BOARD_FLOOR_AMOUNT) {
+      return;
+    }
+
+    if (isAutoBoardThresholdError) {
       setHasAttemptedAutoBoarding(true);
-      log.d("Auto-boarding triggered", [`Balance: ${onchainConfirmedBalance} sats`]);
+      log.e("Auto-boarding failed to load Ark info", [autoBoardThresholdError]);
+      showAlert({
+        title: "Auto-Boarding Failed",
+        description: "Unable to load Ark server info. Please try again later.",
+      });
+      return;
+    }
+
+    if (autoBoardThreshold === undefined || onchainConfirmedBalance < autoBoardThreshold) {
+      return;
+    }
+
+    if (onchainConfirmedBalance >= autoBoardThreshold) {
+      setHasAttemptedAutoBoarding(true);
+      log.d("Auto-boarding triggered", [
+        `Balance: ${onchainConfirmedBalance} sats`,
+        `Threshold: ${autoBoardThreshold} sats`,
+      ]);
 
       boardAllArk(undefined, {
         onSuccess: async (data) => {
@@ -85,7 +118,7 @@ const AppServices = memo(() => {
 
           showAlert({
             title: "Auto-Boarded to Ark",
-            description: `Successfully boarded ${onchainConfirmedBalance.toLocaleString()} sats to Ark.`,
+            description: `Successfully boarded ${formatAutoBoardThreshold(onchainConfirmedBalance)} to Ark.`,
           });
         },
         onError: (error) => {
@@ -98,6 +131,9 @@ const AppServices = memo(() => {
     isAutoBoardingEnabled,
     hasAttemptedAutoBoarding,
     balance,
+    autoBoardThreshold,
+    autoBoardThresholdError,
+    isAutoBoardThresholdError,
     boardAllArk,
     isBoardingAll,
     setHasAttemptedAutoBoarding,
