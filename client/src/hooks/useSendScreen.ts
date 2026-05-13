@@ -114,7 +114,10 @@ export const useSendScreen = () => {
     reset,
   } = useSend(finalDestinationType);
 
-  const { suggestions: lightningAddressSuggestions } = useLightningAddressSuggestions({
+  const {
+    suggestions: lightningAddressSuggestions,
+    isLoadingSuggestions: isLoadingLightningAddressSuggestions,
+  } = useLightningAddressSuggestions({
     destination,
     isDestinationFocused,
   });
@@ -347,6 +350,7 @@ export const useSendScreen = () => {
     isDestinationFocused,
     setIsDestinationFocused,
     lightningAddressSuggestions,
+    isLoadingLightningAddressSuggestions,
     handleSelectLightningAddressSuggestion,
     amount,
     setAmount,
