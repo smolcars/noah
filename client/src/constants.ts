@@ -173,6 +173,23 @@ export const getBlockheightEndpoint = () => {
   }
 };
 
+export const getMempoolTxUrl = (anchorPoint: string): string | null => {
+  const txid = anchorPoint.split(":")[0];
+  if (!txid) {
+    return null;
+  }
+
+  switch (APP_VARIANT) {
+    case "mainnet":
+      return `https://mempool.space/tx/${txid}`;
+    case "signet":
+    case "regtest":
+      return `https://mempool.space/signet/tx/${txid}`;
+    default:
+      return null;
+  }
+};
+
 export const isValidLightningAddress = (url: string): boolean => {
   if (!isEmail(url)) {
     return false;
