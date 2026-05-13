@@ -44,6 +44,7 @@ type Setting = {
     | "staticVtxoPubkey"
     | "resetRegistration"
     | "backup"
+    | "arkInfo"
     | "vtxos"
     | "feedback"
     | "unifiedPush"
@@ -214,6 +215,8 @@ const SettingsScreen = () => {
       // This is handled by the AlertDialog now
     } else if (item.id === "backup") {
       navigation.navigate("BackupSettings");
+    } else if (item.id === "arkInfo") {
+      navigation.navigate("ArkInfo");
     } else if (item.id === "vtxos") {
       navigation.navigate("VTXOs");
     } else if (item.id === "feedback") {
@@ -235,6 +238,15 @@ const SettingsScreen = () => {
       title: "Public Key",
       value: derivedKeyPair.public_key,
       isPressable: false,
+    });
+  }
+
+  if (isInitialized) {
+    infoData.push({
+      id: "arkInfo",
+      title: "Ark Info",
+      description: "View Ark server parameters and limits.",
+      isPressable: true,
     });
   }
 
