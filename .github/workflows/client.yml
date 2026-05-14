@@ -1,5 +1,12 @@
 name: CI
 
+env:
+  # Self-hosted runners persist /nix/store; avoid stale Magic Nix Cache hooks/proxies.
+  NIX_CONFIG: |
+    post-build-hook =
+    extra-substituters =
+    substituters = https://cache.nixos.org/
+
 on:
   pull_request:
   workflow_call:
@@ -87,12 +94,6 @@ jobs:
     steps:
       - name: 🏗 Checkout code
         uses: actions/checkout@v4
-
-      # - name: Install Nix
-      #   uses: DeterminateSystems/nix-installer-action@main
-
-      # - name: Enable Nix Magic Cache
-      #   uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: 📦 Install signet app dependencies
         run: nix develop .# --command bash -c "bun install --frozen-lockfile"
