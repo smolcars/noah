@@ -1,5 +1,12 @@
 name: Maestro Test iOS
 
+env:
+  # Self-hosted runners persist /nix/store; avoid stale Magic Nix Cache hooks/proxies.
+  NIX_CONFIG: |
+    post-build-hook =
+    extra-substituters =
+    substituters = https://cache.nixos.org/
+
 on:
   pull_request:
     paths:
