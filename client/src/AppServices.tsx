@@ -1,5 +1,4 @@
 import { memo, useEffect, useState } from "react";
-import uuid from "react-native-uuid";
 import { useSyncManager } from "~/hooks/useSyncManager";
 import { useServerRegistration } from "~/hooks/useServerRegistration";
 import { usePushNotifications } from "~/hooks/usePushNotifications";
@@ -9,7 +8,6 @@ import { useTransactionStore } from "~/store/transactionStore";
 import { useAutoBoardThreshold, useBalance } from "~/hooks/useWallet";
 import { useBoardAllAmountArk } from "~/hooks/usePayments";
 import { useAlert } from "~/contexts/AlertProvider";
-import { addOnboardingRequest } from "~/lib/transactionsDb";
 import { reportLastLogin } from "~/lib/api";
 import logger from "~/lib/log";
 import { AUTO_BOARD_FLOOR_AMOUNT, formatAutoBoardThreshold } from "~/lib/autoBoarding";
@@ -106,23 +104,8 @@ const AppServices = memo(() => {
       ]);
 
       boardAllArk(undefined, {
-        onSuccess: async (data) => {
+        onSuccess: () => {
           log.d("Auto-boarding successful");
-
-          const onboardingRequestId = uuid.v4();
-
-          const addResult = await addOnboardingRequest({
-            request_id: onboardingRequestId,
-            date: new Date().toISOString(),
-            status: "completed",
-            onchain_txid: data.funding_txid,
-          });
-
-          if (addResult.isErr()) {
-            log.e("Failed to store auto-boarding request in database", [addResult.error]);
-          } else {
-            log.d("Successfully stored auto-boarding request", [onboardingRequestId]);
-          }
 
           showAlert({
             title: "Auto-Boarded to Ark",

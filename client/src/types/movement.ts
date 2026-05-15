@@ -4,6 +4,7 @@ export const MOVEMENT_KIND_VALUES = [
   "arkoor-receive",
   "onboard",
   "offboard",
+  "send-onchain",
   "exit",
   "lightning-receive",
 ] as const;
@@ -13,6 +14,7 @@ export const MOVEMENT_KIND_LABELS: Record<MovementKind, string> = {
   "arkoor-receive": "Ark Receive",
   onboard: "Board",
   offboard: "Offboard",
+  "send-onchain": "Onchain Send",
   exit: "Ark Exit",
   "lightning-receive": "Lightning Receive",
 };

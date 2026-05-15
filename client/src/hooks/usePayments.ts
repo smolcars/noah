@@ -105,6 +105,7 @@ export function useBoardArk() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["balance"] });
+      queryClient.invalidateQueries({ queryKey: ["boarding-transactions"] });
     },
     onError: (error: Error) => {
       showAlert({ title: "Boarding Failed", description: error.message });
@@ -125,6 +126,7 @@ export function useBoardAllAmountArk() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["balance"] });
+      queryClient.invalidateQueries({ queryKey: ["boarding-transactions"] });
     },
     onError: (error: Error) => {
       showAlert({ title: "Boarding Failed", description: error.message });
@@ -145,6 +147,7 @@ export function useOffboardAllArk() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["balance"] });
+      queryClient.invalidateQueries({ queryKey: ["boarding-transactions"] });
     },
     onError: (error: Error) => {
       showAlert({ title: "Offboarding Failed", description: error.message });

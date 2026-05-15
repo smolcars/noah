@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import uuid from "react-native-uuid";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
@@ -21,7 +20,6 @@ import { NoahButton } from "../components/ui/NoahButton";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
 import { useBalance } from "../hooks/useWallet";
 import { useBoardAllAmountArk, useBoardArk, useOffboardAllArk } from "../hooks/usePayments";
-import { addOffboardingRequest, addOnboardingRequest } from "../lib/transactionsDb";
 import { copyToClipboard } from "../lib/clipboardUtils";
 import { cn, formatBip177, isNetworkMatch } from "../lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
@@ -287,54 +285,6 @@ const BoardArkScreen = () => {
   // Use custom hook for parsing results
   const { parsedData, setParsedData } = useParsedBoardingResult(boardResult, boardAllResult);
 
-  // Store onboarding request in database when successful
-  useEffect(() => {
-    const storeOnboardingRequest = async () => {
-      if (parsedData && flow === "onboard") {
-        const onboardingRequestId = uuid.v4();
-
-        const addResult = await addOnboardingRequest({
-          request_id: onboardingRequestId,
-          date: new Date().toISOString(),
-          status: "completed",
-          onchain_txid: parsedData.funding_txid,
-        });
-
-        if (addResult.isErr()) {
-          log.e("Failed to store onboarding request in database", [addResult.error]);
-        } else {
-          log.d("Successfully stored onboarding request", [onboardingRequestId]);
-        }
-      }
-    };
-
-    storeOnboardingRequest();
-  }, [parsedData, flow]);
-
-  // Store offboarding transaction in database when successful
-  useEffect(() => {
-    const storeOffboardingRequest = async () => {
-      if (offboardResult) {
-        const offboardingRequestId = uuid.v4();
-
-        const addResult = await addOffboardingRequest({
-          request_id: offboardingRequestId,
-          date: new Date().toISOString(),
-          status: "completed",
-          onchain_txid: offboardResult,
-        });
-
-        if (addResult.isErr()) {
-          log.e("Failed to store offboarding request in database", [addResult.error]);
-        } else {
-          log.d("Successfully stored offboarding request", [offboardingRequestId]);
-        }
-      }
-    };
-
-    storeOffboardingRequest();
-  }, [offboardResult]);
-
   const onchainBalance = balance?.onchain.confirmed ?? 0;
   const onchainPendingBalance =
     (balance?.onchain.immature ?? 0) +
@@ -514,7 +464,7 @@ const BoardArkScreen = () => {
               {flow === "onboard" ? "Board Ark" : "Offboard Ark"}
             </NoahButton>
 
-            {/* Onboarding Transaction Result */}
+            {/* Boarding Transaction Result */}
             {parsedData && flow === "onboard" && (
               <TransactionResult
                 parsedData={parsedData}

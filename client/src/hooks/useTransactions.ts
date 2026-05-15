@@ -10,26 +10,32 @@ import logger from "~/lib/log";
 import {
   BARK_SUBSYSTEM,
   type BarkSubsystemId,
+  getMovementDestinationValue,
   getMovementSubsystemId,
   getMovementSubsystemKind,
   getMovementSubsystemName,
+  isBoardingHistoryMovement,
 } from "~/lib/barkMovement";
 
 const log = logger("useTransactions");
 
 const SUBSYSTEM_KIND_TO_MOVEMENT_KIND: Partial<Record<BarkSubsystemId, MovementKind>> = {
   [`${BARK_SUBSYSTEM.BOARD.name}:${BARK_SUBSYSTEM.BOARD.kind}`]: "onboard",
+  [`${BARK_SUBSYSTEM.OFFBOARD.name}:${BARK_SUBSYSTEM.OFFBOARD.kind}`]: "offboard",
+  [`${BARK_SUBSYSTEM.SEND_ONCHAIN.name}:${BARK_SUBSYSTEM.SEND_ONCHAIN.kind}`]: "send-onchain",
   [`${BARK_SUBSYSTEM.ARKOOR_RECEIVE.name}:${BARK_SUBSYSTEM.ARKOOR_RECEIVE.kind}`]:
     "arkoor-receive",
   [`${BARK_SUBSYSTEM.ROUND_OFFBOARD.name}:${BARK_SUBSYSTEM.ROUND_OFFBOARD.kind}`]: "offboard",
   [`${BARK_SUBSYSTEM.ROUND_SEND_ONCHAIN.name}:${BARK_SUBSYSTEM.ROUND_SEND_ONCHAIN.kind}`]:
-    "offboard",
+    "send-onchain",
   [`${BARK_SUBSYSTEM.EXIT_START.name}:${BARK_SUBSYSTEM.EXIT_START.kind}`]: "exit",
   [`${BARK_SUBSYSTEM.LIGHTNING_RECEIVE.name}:${BARK_SUBSYSTEM.LIGHTNING_RECEIVE.kind}`]:
     "lightning-receive",
 };
 
 const OUTGOING_SUBSYSTEM_KEYS = new Set<BarkSubsystemId>([
+  `${BARK_SUBSYSTEM.OFFBOARD.name}:${BARK_SUBSYSTEM.OFFBOARD.kind}`,
+  `${BARK_SUBSYSTEM.SEND_ONCHAIN.name}:${BARK_SUBSYSTEM.SEND_ONCHAIN.kind}`,
   `${BARK_SUBSYSTEM.ROUND_OFFBOARD.name}:${BARK_SUBSYSTEM.ROUND_OFFBOARD.kind}`,
   `${BARK_SUBSYSTEM.ROUND_SEND_ONCHAIN.name}:${BARK_SUBSYSTEM.ROUND_SEND_ONCHAIN.kind}`,
   `${BARK_SUBSYSTEM.ARKOOR_SEND.name}:${BARK_SUBSYSTEM.ARKOOR_SEND.kind}`,
@@ -122,7 +128,10 @@ const hasBitcoinAddressDestination = (movement: BarkMovement, isOutgoing: boolea
     return false;
   }
 
-  return destinations.some((destination) => validateBitcoinAddress(destination.destination).valid);
+  return destinations.some((destination) => {
+    const destinationValue = getMovementDestinationValue(destination);
+    return destinationValue ? validateBitcoinAddress(destinationValue).valid : false;
+  });
 };
 
 const determineTransactionType = (
@@ -164,8 +173,8 @@ const determineTransactionType = (
   if (
     movementKind === "offboard" ||
     movementKind === "onboard" ||
-    movementKind === "exit" ||
-    subsystemKind === BARK_SUBSYSTEM.ROUND_SEND_ONCHAIN.kind
+    movementKind === "send-onchain" ||
+    movementKind === "exit"
   ) {
     return "Onchain";
   }
@@ -195,9 +204,10 @@ const transformMovementToTransaction = async (movement: BarkMovement): Promise<T
     btcPrice = btcPriceResult.value;
   }
 
-  const destination = isOutgoing
+  const destinationEntry = isOutgoing
     ? movement.sent_to?.[0]?.destination
     : movement.received_on?.[0]?.destination;
+  const destination = getMovementDestinationValue({ destination: destinationEntry });
 
   return {
     id: `movement-${movement.id}`,
@@ -218,8 +228,14 @@ const transformMovementToTransaction = async (movement: BarkMovement): Promise<T
     intendedBalanceSat: movement.intended_balance_sat,
     effectiveBalanceSat: movement.effective_balance_sat,
     offchainFeeSat: movement.offchain_fee_sat,
-    sentTo: movement.sent_to,
-    receivedOn: movement.received_on,
+    sentTo: movement.sent_to.map((destination) => ({
+      destination: getMovementDestinationValue(destination) ?? "",
+      amount_sat: destination.amount_sat,
+    })),
+    receivedOn: movement.received_on.map((destination) => ({
+      destination: getMovementDestinationValue(destination) ?? "",
+      amount_sat: destination.amount_sat,
+    })),
     inputVtxos: movement.input_vtxos,
     outputVtxos: movement.output_vtxos,
     exitedVtxos: movement.exited_vtxos,
@@ -228,6 +244,10 @@ const transformMovementToTransaction = async (movement: BarkMovement): Promise<T
 
 const shouldIncludeMovement = (movement: BarkMovement): boolean => {
   if (movement.status === "failed") {
+    return false;
+  }
+
+  if (isBoardingHistoryMovement(movement)) {
     return false;
   }
 

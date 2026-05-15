@@ -1,8 +1,7 @@
-import { View, Pressable } from "react-native";
+import { View, Pressable, ActivityIndicator } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Share from "react-native-share";
-import { ConfirmationDialog } from "~/components/ConfirmationDialog";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FlashList } from "@shopify/flash-list";
 import { Text } from "../components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
@@ -15,98 +14,43 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Result, ResultAsync } from "neverthrow";
 import { CACHES_DIRECTORY_PATH } from "~/constants";
 import RNFSTurbo from "react-native-fs-turbo";
-import {
-  getOnboardingRequests,
-  getOffboardingRequests,
-  type OnboardingRequest,
-  type OffboardingRequest,
-} from "~/lib/transactionsDb";
+import { useBoardingTransactions } from "~/hooks/useBoardingTransactions";
+import type { BoardingTransaction } from "~/types/boardingTransaction";
+import { formatMovementStatusLabel } from "~/types/movement";
+import { formatBip177 } from "~/lib/utils";
 import logger from "~/lib/log";
 
 const log = logger("BoardingTransactionsScreen");
 
-type BoardingTransaction = (OnboardingRequest | OffboardingRequest) & {
-  type: "onboarding" | "offboarding";
+type BoardingTransactionFilter = "all" | BoardingTransaction["type"];
+
+const formatBoardingType = (type: BoardingTransaction["type"]) =>
+  type === "onboarding" ? "Boarding" : "Offboarding";
+
+const formatBoardingFilter = (filter: BoardingTransactionFilter) =>
+  filter === "all" ? "All" : formatBoardingType(filter);
+
+const formatBoardingStatus = (status: BoardingTransaction["status"]) => {
+  return formatMovementStatusLabel(status) ?? status;
 };
 
 const BoardingTransactionsScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const iconColor = useIconColor();
-  const [transactions, setTransactions] = useState<BoardingTransaction[]>([]);
-  const [filter, setFilter] = useState<"all" | "onboarding" | "offboarding">("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Load boarding transactions
-  const loadTransactions = async () => {
-    setIsLoading(true);
-    try {
-      const [onboardingResult, offboardingResult] = await Promise.all([
-        getOnboardingRequests(),
-        getOffboardingRequests(),
-      ]);
-
-      const boardingTransactions: BoardingTransaction[] = [];
-
-      if (onboardingResult.isOk()) {
-        const onboardingTxs = onboardingResult.value.map((tx) => ({
-          ...tx,
-          type: "onboarding" as const,
-        }));
-        boardingTransactions.push(...onboardingTxs);
-      } else {
-        log.e("Failed to load onboarding requests", [onboardingResult.error]);
-      }
-
-      if (offboardingResult.isOk()) {
-        const offboardingTxs = offboardingResult.value.map((tx) => ({
-          ...tx,
-          type: "offboarding" as const,
-        }));
-        boardingTransactions.push(...offboardingTxs);
-      } else {
-        log.e("Failed to load offboarding requests", [offboardingResult.error]);
-      }
-
-      // Sort by date descending
-      boardingTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setTransactions(boardingTransactions);
-      setIsLoading(false);
-    } catch (error) {
-      log.e("Failed to load boarding transactions", [error]);
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadTransactions();
-  }, []);
-
-  const handleDeleteRequest = (id: string) => {
-    setSelectedTransactionId(id);
-    setDialogOpen(true);
-  };
-
-  const deleteTransaction = async () => {
-    if (selectedTransactionId) {
-      // TODO: Implement delete functionality for boarding transactions
-      // For now, just close the dialog
-      setSelectedTransactionId(null);
-      setDialogOpen(false);
-    }
-  };
+  const { data: transactions = [], isLoading, isError, refetch } = useBoardingTransactions();
+  const [filter, setFilter] = useState<BoardingTransactionFilter>("all");
 
   const exportToCSV = async () => {
-    const csvHeader = "Request ID,Date,Type,Status,Onchain TXID\n";
+    const csvHeader = "Movement ID,Date,Type,Status,Amount (sats),Transaction ID,Destination\n";
     const csvRows = filteredTransactions
       .map((transaction) => {
         const date = new Date(transaction.date).toISOString().split("T")[0];
-        const type = transaction.type === "onboarding" ? "Onboarding" : "Offboarding";
-        const status = transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1);
-        const onchainTxid = transaction.onchain_txid || "";
+        const type = formatBoardingType(transaction.type);
+        const status = formatBoardingStatus(transaction.status);
+        const txid = transaction.txid || "";
+        const destination = transaction.destination || "";
 
-        return `${transaction.request_id},${date},${type},${status},${onchainTxid}`;
+        return `${transaction.movementId},${date},${type},${status},${transaction.amountSat},${txid},${destination}`;
       })
       .join("\n");
 
@@ -151,11 +95,6 @@ const BoardingTransactionsScreen = () => {
     )();
   };
 
-  const onCancelDelete = () => {
-    setDialogOpen(false);
-    setSelectedTransactionId(null);
-  };
-
   const filteredTransactions =
     filter === "all" ? transactions : transactions.filter((t) => t.type === filter);
 
@@ -172,12 +111,14 @@ const BoardingTransactionsScreen = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed":
+      case "successful":
         return "text-green-500";
       case "pending":
         return "text-yellow-500";
       case "failed":
         return "text-red-500";
+      case "canceled":
+        return "text-muted-foreground";
       default:
         return "text-muted-foreground";
     }
@@ -186,15 +127,6 @@ const BoardingTransactionsScreen = () => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NoahSafeAreaView className="flex-1 bg-background">
-        <ConfirmationDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          title="Delete Transaction"
-          description="Are you sure you want to delete this boarding transaction? This action cannot be undone."
-          onConfirm={deleteTransaction}
-          onCancel={onCancelDelete}
-          confirmText="Delete"
-        />
         <View className="p-4 flex-1">
           <View className="flex-row items-center justify-between mb-8">
             <View className="flex-row items-center">
@@ -219,14 +151,23 @@ const BoardingTransactionsScreen = () => {
                     filter === f ? "text-primary-foreground" : "text-foreground"
                   }`}
                 >
-                  {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+                  {formatBoardingFilter(f)}
                 </Text>
               </Pressable>
             ))}
           </View>
           {isLoading ? (
             <View className="flex-1 items-center justify-center">
-              <Text className="text-muted-foreground">Loading boarding transactions...</Text>
+              <ActivityIndicator size="large" />
+            </View>
+          ) : isError ? (
+            <View className="flex-1 items-center justify-center">
+              <Text className="text-muted-foreground mb-4">
+                Failed to load boarding transactions
+              </Text>
+              <Pressable onPress={() => refetch()} className="px-4 py-2 bg-primary rounded-lg">
+                <Text className="text-primary-foreground">Retry</Text>
+              </Pressable>
             </View>
           ) : filteredTransactions.length === 0 ? (
             <View className="flex-1 items-center justify-center">
@@ -238,45 +179,51 @@ const BoardingTransactionsScreen = () => {
           ) : (
             <FlashList
               data={filteredTransactions}
-              renderItem={({ item }: { item: BoardingTransaction }) => (
-                <View style={{ marginBottom: 8 }}>
-                  <Pressable
-                    onPress={() =>
-                      navigation.navigate("BoardingTransactionDetail", { transaction: item })
-                    }
-                    onLongPress={() => handleDeleteRequest(item.request_id)}
-                  >
-                    <View className="flex-row items-center p-4 bg-card rounded-lg">
-                      <View className="mr-4">
-                        <Icon
-                          name={getIconForType(item.type)}
-                          size={24}
-                          color={item.type === "onboarding" ? "green" : "orange"}
-                        />
-                      </View>
-                      <View className="flex-1">
-                        <View className="flex-row justify-between items-center">
-                          <Label className="text-foreground text-base">
-                            {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-                          </Label>
-                          <Text className={`text-sm font-medium ${getStatusColor(item.status)}`}>
-                            {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                          </Text>
+              renderItem={({ item }: { item: BoardingTransaction }) => {
+                const statusLabel = formatBoardingStatus(item.status);
+
+                return (
+                  <View style={{ marginBottom: 8 }}>
+                    <Pressable
+                      onPress={() =>
+                        navigation.navigate("BoardingTransactionDetail", { transaction: item })
+                      }
+                    >
+                      <View className="flex-row items-center p-4 bg-card rounded-lg">
+                        <View className="mr-4">
+                          <Icon
+                            name={getIconForType(item.type)}
+                            size={24}
+                            color={item.type === "onboarding" ? "green" : "orange"}
+                          />
                         </View>
-                        <Text className="text-muted-foreground text-sm mt-1">
-                          {new Date(item.date).toLocaleString()}
-                        </Text>
-                        {item.onchain_txid && (
-                          <Text className="text-muted-foreground text-xs mt-1" numberOfLines={1}>
-                            TXID: {item.onchain_txid}
+                        <View className="flex-1">
+                          <View className="flex-row justify-between items-center">
+                            <Label className="text-foreground text-base">
+                              {formatBoardingType(item.type)}
+                            </Label>
+                            <Text className={`text-sm font-medium ${getStatusColor(item.status)}`}>
+                              {statusLabel}
+                            </Text>
+                          </View>
+                          <Text className="text-foreground text-sm mt-1">
+                            {formatBip177(item.amountSat)}
                           </Text>
-                        )}
+                          <Text className="text-muted-foreground text-sm mt-1">
+                            {new Date(item.date).toLocaleString()}
+                          </Text>
+                          {item.txid && (
+                            <Text className="text-muted-foreground text-xs mt-1" numberOfLines={1}>
+                              TXID: {item.txid}
+                            </Text>
+                          )}
+                        </View>
                       </View>
-                    </View>
-                  </Pressable>
-                </View>
-              )}
-              keyExtractor={(item: BoardingTransaction) => item.request_id}
+                    </Pressable>
+                  </View>
+                );
+              }}
+              keyExtractor={(item: BoardingTransaction) => item.id}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 50 }}
             />

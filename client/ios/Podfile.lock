@@ -233,8 +233,6 @@ PODS:
     - ReactCommon
   - ExpoNotifications (55.0.12):
     - ExpoModulesCore
-  - ExpoSQLite (55.0.10):
-    - ExpoModulesCore
   - ExpoSystemUI (55.0.9):
     - ExpoModulesCore
   - ExpoTaskManager (55.0.9):
@@ -247,7 +245,7 @@ PODS:
     - hermes-engine/Pre-built (= 0.14.1)
   - hermes-engine/Pre-built (0.14.1)
   - MMKVCore (2.2.4)
-  - NitroArk (0.0.103):
+  - NitroArk (0.0.104):
     - hermes-engine
     - NitroModules
     - RCTRequired
@@ -2746,7 +2744,6 @@ DEPENDENCIES:
   - ExpoModulesCore (from `../../node_modules/expo-modules-core`)
   - ExpoModulesJSI (from `../../node_modules/expo-modules-core`)
   - ExpoNotifications (from `../../node_modules/expo-notifications/ios`)
-  - ExpoSQLite (from `../../node_modules/expo-sqlite/ios`)
   - ExpoSystemUI (from `../../node_modules/expo-system-ui/ios`)
   - ExpoTaskManager (from `../../node_modules/expo-task-manager/ios`)
   - EXUpdatesInterface (from `../../node_modules/expo-updates-interface/ios`)
@@ -2906,8 +2903,6 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/expo-modules-core"
   ExpoNotifications:
     :path: "../../node_modules/expo-notifications/ios"
-  ExpoSQLite:
-    :path: "../../node_modules/expo-sqlite/ios"
   ExpoSystemUI:
     :path: "../../node_modules/expo-system-ui/ios"
   ExpoTaskManager:
@@ -3132,14 +3127,13 @@ SPEC CHECKSUMS:
   ExpoModulesCore: 9f7715884df4159d9a8862dc322c5d834aebe921
   ExpoModulesJSI: bd2650f43a2c0d3fb753f33b70fa0972602f51d5
   ExpoNotifications: f38ce09b263075e560f3e5d99c31523d892ba7fe
-  ExpoSQLite: c01882b3ce0d20ad2351213dbd081a6e0e1f8837
   ExpoSystemUI: c4c5b9ba9a5a4713c70f3d68c3bcf3221f2198f2
   ExpoTaskManager: 1a197d3c489d5ed7ae824f7d6b98404e3a662ff2
   EXUpdatesInterface: 26412751a0f7a7130614655929e316f684552aab
   FBLazyVector: 32e9ed0301d0fcbc1b2b341dd7fcbf291f51eb83
   hermes-engine: 9288d96d73c49b8a0e1a8af173848fff3c6852e6
   MMKVCore: f2dd4c9befea04277a55e84e7812f930537993df
-  NitroArk: c7a965501c1b0f22bbb056daf237f3ac29bb5f60
+  NitroArk: 922c44082f4fe52806576e88379cb729140c4716
   NitroMmkv: 8a41b343ffcd651bfb1ec9d50a8c15f488b37aae
   NitroModules: 241bcd942565edae90e699f1d2a610adc79ffb6f
   NoahTools: efea1336628719c3ab4a565f3c03d2deeadd3d14
