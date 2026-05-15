@@ -102,6 +102,26 @@ impl<'a> MailboxAuthorizationRepository<'a> {
         Ok(record)
     }
 
+    pub async fn has_active_authorization(&self, pubkey: &str, now: i64) -> Result<bool> {
+        let exists = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS (
+                SELECT 1
+                FROM mailbox_authorizations
+                WHERE pubkey = $1
+                  AND enabled = TRUE
+                  AND authorization_hex IS NOT NULL
+                  AND authorization_expires_at IS NOT NULL
+                  AND authorization_expires_at > $2
+            )",
+        )
+        .bind(pubkey)
+        .bind(now)
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(exists)
+    }
+
     pub async fn find_all_enabled(&self) -> Result<Vec<ActiveMailboxAuthorization>> {
         let records = sqlx::query_as::<_, ActiveMailboxAuthorization>(
             "SELECT

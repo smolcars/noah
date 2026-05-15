@@ -1,8 +1,13 @@
+use crate::db::{
+    mailbox_authorization_repo::MailboxAuthorizationRepository,
+    push_token_repo::PushTokenRepository,
+};
 use crate::routes::public_api_v0::{GetK1, LnurlpDefaultResponse};
-use crate::tests::common::setup_public_test_app;
-use crate::types::{AppVersionCheckPayload, AppVersionInfo};
+use crate::tests::common::{TestUser, create_test_user, setup_public_test_app};
+use crate::types::{ApiErrorResponse, AppVersionCheckPayload, AppVersionInfo};
 use axum::body::Body;
 use axum::http::{self, Request, StatusCode};
+use chrono::Utc;
 use http_body_util::BodyExt;
 use tower::ServiceExt;
 
@@ -36,6 +41,80 @@ async fn test_lnurlp_request_default() {
 
     assert_eq!(res.tag, "payRequest");
     assert_eq!(res.callback, "https://localhost/.well-known/lnurlp/test");
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_lnurlp_invoice_request_rejects_missing_mailbox_authorization() {
+    let (app, app_state, _guard) = setup_public_test_app().await;
+    let user = TestUser::new();
+    let pubkey = user.pubkey().to_string();
+    create_test_user(&app_state, &user, None).await;
+
+    PushTokenRepository::new(&app_state.db_pool)
+        .upsert(&pubkey, "ExpoPushToken[test-token]")
+        .await
+        .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::GET)
+                .uri("/.well-known/lnurlp/test?amount=330000")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let err: ApiErrorResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(err.code, "INVALID_ARGUMENT");
+    assert_eq!(
+        err.message,
+        "Lightning payments require mailbox notifications to be enabled."
+    );
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_lnurlp_invoice_request_rejects_expired_mailbox_authorization() {
+    let (app, app_state, _guard) = setup_public_test_app().await;
+    let user = TestUser::new();
+    let pubkey = user.pubkey().to_string();
+    create_test_user(&app_state, &user, None).await;
+
+    PushTokenRepository::new(&app_state.db_pool)
+        .upsert(&pubkey, "ExpoPushToken[test-token]")
+        .await
+        .unwrap();
+    MailboxAuthorizationRepository::new(&app_state.db_pool)
+        .upsert(&pubkey, "deadbeef", "cafebabe", Utc::now().timestamp() - 60)
+        .await
+        .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::GET)
+                .uri("/.well-known/lnurlp/test?amount=330000")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let err: ApiErrorResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(err.code, "INVALID_ARGUMENT");
+    assert_eq!(
+        err.message,
+        "Lightning payments require mailbox notifications to be enabled."
+    );
 }
 
 #[tracing_test::traced_test]
