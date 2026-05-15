@@ -1,6 +1,6 @@
 {
   "name": "noah",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
