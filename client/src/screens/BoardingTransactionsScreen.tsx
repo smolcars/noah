@@ -19,6 +19,7 @@ import type { BoardingTransaction } from "~/types/boardingTransaction";
 import { formatMovementStatusLabel } from "~/types/movement";
 import { formatBip177 } from "~/lib/utils";
 import logger from "~/lib/log";
+import { HistoryRefreshButton } from "~/components/HistoryRefreshButton";
 
 const log = logger("BoardingTransactionsScreen");
 
@@ -37,7 +38,13 @@ const formatBoardingStatus = (status: BoardingTransaction["status"]) => {
 const BoardingTransactionsScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const iconColor = useIconColor();
-  const { data: transactions = [], isLoading, isError, refetch } = useBoardingTransactions();
+  const {
+    data: transactions = [],
+    isLoading,
+    isError,
+    isRefetching,
+    refetch,
+  } = useBoardingTransactions();
   const [filter, setFilter] = useState<BoardingTransactionFilter>("all");
 
   const exportToCSV = async () => {
@@ -98,6 +105,10 @@ const BoardingTransactionsScreen = () => {
   const filteredTransactions =
     filter === "all" ? transactions : transactions.filter((t) => t.type === filter);
 
+  const handleRefresh = async () => {
+    await refetch();
+  };
+
   const getIconForType = (type: BoardingTransaction["type"]) => {
     switch (type) {
       case "onboarding":
@@ -135,9 +146,17 @@ const BoardingTransactionsScreen = () => {
               </Pressable>
               <Text className="text-2xl font-bold text-foreground">Boarding History</Text>
             </View>
-            <Pressable onPress={exportToCSV} className="p-2">
-              <Icon name="download-outline" size={24} color={iconColor} />
-            </Pressable>
+            <View className="flex-row items-center gap-2">
+              <HistoryRefreshButton isRefreshing={isRefetching} onRefresh={handleRefresh} />
+              <Pressable
+                onPress={exportToCSV}
+                accessibilityRole="button"
+                accessibilityLabel="Export boarding history"
+                className="h-10 w-10 items-center justify-center rounded-full"
+              >
+                <Icon name="download-outline" size={24} color={iconColor} />
+              </Pressable>
+            </View>
           </View>
           <View className="flex-row justify-around mb-4">
             {(["all", "onboarding", "offboarding"] as const).map((f) => (
