@@ -25,7 +25,7 @@ use crate::{
     AppState,
     db::mailbox_authorization_repo::{ActiveMailboxAuthorization, MailboxAuthorizationRepository},
     errors::ApiError,
-    push::{PushNotificationData, send_push_notification},
+    push::{PushNotificationData, send_expo_push_notification, send_push_notification},
     types::{LightningClaimRequestNotification, NotificationData},
 };
 
@@ -485,7 +485,7 @@ async fn process_mailbox_message(
                 "mailbox incoming lightning payment received; sending claim push notification"
             );
 
-            send_push_notification(
+            send_expo_push_notification(
                 app_state.clone(),
                 notification,
                 Some(mailbox.pubkey.to_string()),
