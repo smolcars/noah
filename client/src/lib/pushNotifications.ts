@@ -5,15 +5,23 @@ import * as TaskManager from "expo-task-manager";
 import Constants from "expo-constants";
 import logger from "~/lib/log";
 import { captureException } from "@sentry/react-native";
-import { submitInvoiceTask, triggerBackupTask, maintenanceTask } from "./tasks";
+import {
+  claimLightningReceivesTask,
+  maintenanceTask,
+  submitInvoiceTask,
+  triggerBackupTask,
+} from "./tasks";
 import { registerPushToken, reportJobStatus, heartbeatResponse } from "~/lib/api";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import { NotificationData, ReportType } from "~/types/serverTypes";
-import { tryClaimAllLightningReceives } from "./paymentsApi";
 import { useWalletStore } from "~/store/walletStore";
 import { formatBip177 } from "./utils";
 import { updateWidget } from "~/hooks/useWidget";
 import { hasGooglePlayServices } from "~/constants";
+import {
+  getStoredLightningReceiveAmount,
+  removeStoredLightningReceiveAmount,
+} from "./lightningReceiveAmounts";
 
 const log = logger("pushNotifications");
 
@@ -187,21 +195,27 @@ async function handleNotificationData(notificationData: NotificationData) {
     case "lightning_claim_request": {
       log.i("Received lightning claim request", [notificationData]);
       log.i("Claiming pending lightning receives", [notificationData.payment_hash]);
-      const claimResult = await tryClaimAllLightningReceives(false);
+      const claimResult = await claimLightningReceivesTask();
       if (claimResult.isErr()) {
         throw claimResult.error;
       }
       log.i("Successfully claimed pending lightning receives", [notificationData.payment_hash]);
 
-      const notificationId = await scheduleLightningPaymentNotification(
-        notificationData.amount_sat,
-      );
+      const amountSat =
+        notificationData.amount_sat ??
+        (notificationData.payment_hash
+          ? getStoredLightningReceiveAmount(notificationData.payment_hash)
+          : null);
+      const notificationId = await scheduleLightningPaymentNotification(amountSat);
       log.i("Local notification scheduled for lightning payment", [
         notificationId,
         notificationData.payment_hash,
-        notificationData.amount_sat,
+        amountSat,
       ]);
 
+      if (notificationData.payment_hash) {
+        removeStoredLightningReceiveAmount(notificationData.payment_hash);
+      }
       await updateWidget();
       break;
     }

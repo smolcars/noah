@@ -1,10 +1,11 @@
 import { loadWalletIfNeeded, maintenanceWithOnchainDelegated } from "./walletApi";
 import logger from "~/lib/log";
-import { bolt11Invoice } from "./paymentsApi";
+import { bolt11Invoice, tryClaimAllLightningReceives } from "./paymentsApi";
 import { err, ok, Result } from "neverthrow";
 import { BackupService } from "~/lib/backupService";
 import { submitInvoice as submitInvoiceApi } from "./api";
 import { Bolt11Invoice } from "react-native-nitro-ark";
+import { storeLightningReceiveAmount } from "./lightningReceiveAmounts";
 
 const log = logger("tasks");
 
@@ -55,9 +56,27 @@ export async function submitInvoiceTask(
     return err(responseResult.error);
   }
 
+  storeLightningReceiveAmount(invoiceResult.value.payment_hash, sats);
   log.d("[Submit Invoice Job] completed");
 
   return ok(invoiceResult.value);
+}
+
+export async function claimLightningReceivesTask(): Promise<Result<void, Error>> {
+  const loadResult = await loadWalletIfNeeded();
+  if (loadResult.isErr()) {
+    log.e("Failed to load wallet for claiming lightning receives", [loadResult.error]);
+    return err(loadResult.error);
+  }
+
+  const claimResult = await tryClaimAllLightningReceives(false);
+  if (claimResult.isErr()) {
+    log.e("Failed to claim lightning receives", [claimResult.error]);
+    return err(claimResult.error);
+  }
+
+  log.d("[Claim Lightning Receives Job] completed");
+  return ok(undefined);
 }
 
 // Shared backup function that can be used by both hooks and background tasks
