@@ -101,11 +101,13 @@ export type LightningAddressSuggestionsResponse = {
  */
 suggestions: Array<string>, };
 
+export type LightningClaimRequestNotification = { payment_hash: string | null, amount_sat: number | null, };
+
 export type LightningInvoiceRequestNotification = { transaction_id: string, amount: number, };
 
 export type MaintenanceNotification = { notification_k1: string, };
 
-export type NotificationData = { "notification_type": "maintenance" } & MaintenanceNotification | { "notification_type": "lightning_invoice_request" } & LightningInvoiceRequestNotification | { "notification_type": "backup_trigger" } & BackupTriggerNotification | { "notification_type": "heartbeat" } & HeartbeatNotification;
+export type NotificationData = { "notification_type": "maintenance" } & MaintenanceNotification | { "notification_type": "lightning_invoice_request" } & LightningInvoiceRequestNotification | { "notification_type": "lightning_claim_request" } & LightningClaimRequestNotification | { "notification_type": "backup_trigger" } & BackupTriggerNotification | { "notification_type": "heartbeat" } & HeartbeatNotification;
 
 /**
  * Defines the payload for a user registration request.

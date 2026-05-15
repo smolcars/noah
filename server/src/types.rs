@@ -310,6 +310,14 @@ pub struct LightningInvoiceRequestNotification {
 
 #[derive(Debug, Serialize, Deserialize, TS, Clone)]
 #[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct LightningClaimRequestNotification {
+    pub payment_hash: Option<String>,
+    #[ts(type = "number | null")]
+    pub amount_sat: Option<u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS, Clone)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 pub struct BackupTriggerNotification {
     pub notification_k1: String,
 }
@@ -386,6 +394,7 @@ impl NotificationRequestData {
 pub enum NotificationData {
     Maintenance(MaintenanceNotification),
     LightningInvoiceRequest(LightningInvoiceRequestNotification),
+    LightningClaimRequest(LightningClaimRequestNotification),
     BackupTrigger(BackupTriggerNotification),
     Heartbeat(HeartbeatNotification),
 }
@@ -402,12 +411,14 @@ impl NotificationData {
     ///
     /// # Examples
     /// - `BackupTrigger` → `"backup_trigger"`
+    /// - `LightningClaimRequest` → `"lightning_claim_request"`
     /// - `LightningInvoiceRequest` → `"lightning_invoice_request"`
     /// - `Maintenance` → `"maintenance"`
     pub fn notification_type(&self) -> &'static str {
         match self {
             NotificationData::Maintenance(_) => "maintenance",
             NotificationData::LightningInvoiceRequest(_) => "lightning_invoice_request",
+            NotificationData::LightningClaimRequest(_) => "lightning_claim_request",
             NotificationData::BackupTrigger(_) => "backup_trigger",
             NotificationData::Heartbeat(_) => "heartbeat",
         }
@@ -426,7 +437,9 @@ impl NotificationData {
         match self {
             NotificationData::Maintenance(n) => n.notification_k1 = k1,
             NotificationData::BackupTrigger(n) => n.notification_k1 = k1,
-            NotificationData::Heartbeat(_) | NotificationData::LightningInvoiceRequest(_) => {}
+            NotificationData::Heartbeat(_)
+            | NotificationData::LightningInvoiceRequest(_)
+            | NotificationData::LightningClaimRequest(_) => {}
         }
     }
 }

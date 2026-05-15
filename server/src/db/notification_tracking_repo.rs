@@ -123,7 +123,8 @@ impl<'a> NotificationTrackingRepository<'a> {
                 .fetch_one(self.pool)
                 .await?
             }
-            NotificationData::LightningInvoiceRequest(_) => None,
+            NotificationData::LightningInvoiceRequest(_)
+            | NotificationData::LightningClaimRequest(_) => None,
         };
 
         Ok(last_sent)

@@ -9,7 +9,7 @@ import { submitInvoiceTask, triggerBackupTask, maintenanceTask } from "./tasks";
 import { registerPushToken, reportJobStatus, heartbeatResponse } from "~/lib/api";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import { NotificationData, ReportType } from "~/types/serverTypes";
-import { tryClaimLightningReceive } from "./paymentsApi";
+import { tryClaimAllLightningReceives } from "./paymentsApi";
 import { useWalletStore } from "~/store/walletStore";
 import { formatBip177 } from "./utils";
 import { updateWidget } from "~/hooks/useWidget";
@@ -28,6 +28,211 @@ export type RegisterForPushResult =
   | { kind: "device_not_supported" };
 
 const BACKGROUND_NOTIFICATION_TASK = "BACKGROUND-NOTIFICATION-TASK";
+const DEFAULT_NOTIFICATION_CHANNEL_ID = "default";
+const KNOWN_NOTIFICATION_TYPES = new Set<string>([
+  "maintenance",
+  "lightning_invoice_request",
+  "lightning_claim_request",
+  "backup_trigger",
+  "heartbeat",
+]);
+
+async function ensureDefaultNotificationChannel() {
+  if (Platform.OS !== "android") {
+    return;
+  }
+
+  await Notifications.setNotificationChannelAsync(DEFAULT_NOTIFICATION_CHANNEL_ID, {
+    name: "default",
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: "#FF231F7C",
+  });
+}
+
+async function scheduleLightningPaymentNotification(amountSat: number | null): Promise<string> {
+  await ensureDefaultNotificationChannel();
+
+  return Notifications.scheduleNotificationAsync({
+    content: {
+      title: "Lightning Payment Received! ⚡",
+      body:
+        amountSat === null
+          ? "Your Lightning payment was claimed."
+          : `You received ${formatBip177(amountSat)}`,
+      sound: "default",
+      priority: Notifications.AndroidNotificationPriority.MAX,
+      data: {
+        notification_type: "lightning_payment_received",
+      },
+    },
+    trigger: Platform.OS === "android" ? { channelId: DEFAULT_NOTIFICATION_CHANNEL_ID } : null,
+  });
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function isKnownNotificationType(value: string): boolean {
+  return KNOWN_NOTIFICATION_TYPES.has(value);
+}
+
+function extractNotificationPayload(payload: unknown): unknown {
+  const record = asRecord(payload);
+  if (!record) {
+    return null;
+  }
+
+  if (
+    typeof record.notification_type === "string" &&
+    isKnownNotificationType(record.notification_type)
+  ) {
+    return record;
+  }
+
+  if ("body" in record) {
+    return record.body;
+  }
+
+  if (typeof record.dataString === "string") {
+    return record.dataString;
+  }
+
+  const nestedData = asRecord(record.data);
+  if (nestedData) {
+    if (
+      typeof nestedData.notification_type === "string" &&
+      isKnownNotificationType(nestedData.notification_type)
+    ) {
+      return nestedData;
+    }
+
+    if ("body" in nestedData) {
+      return nestedData.body;
+    }
+
+    if (typeof nestedData.dataString === "string") {
+      return nestedData.dataString;
+    }
+
+    const launchPayload = asRecord(nestedData.UIApplicationLaunchOptionsRemoteNotificationKey);
+    if (launchPayload && "body" in launchPayload) {
+      return launchPayload.body;
+    }
+  }
+
+  const launchPayload = asRecord(record.UIApplicationLaunchOptionsRemoteNotificationKey);
+  if (launchPayload && "body" in launchPayload) {
+    return launchPayload.body;
+  }
+
+  return null;
+}
+
+function parseNotificationData(payload: unknown): Result<NotificationData | null, Error> {
+  return Result.fromThrowable(
+    () => {
+      const rawPayload = extractNotificationPayload(payload);
+      if (!rawPayload) {
+        return null;
+      }
+
+      const parsed =
+        typeof rawPayload === "string" ? (JSON.parse(rawPayload) as unknown) : rawPayload;
+      const parsedRecord = asRecord(parsed);
+
+      if (
+        !parsedRecord ||
+        typeof parsedRecord.notification_type !== "string" ||
+        !KNOWN_NOTIFICATION_TYPES.has(parsedRecord.notification_type)
+      ) {
+        return null;
+      }
+
+      return parsedRecord as NotificationData;
+    },
+    (e) => new Error(`Failed to parse notification data: ${e}`),
+  )();
+}
+
+async function handleNotificationData(notificationData: NotificationData) {
+  switch (notificationData.notification_type) {
+    case "maintenance": {
+      const result = await maintenanceTask();
+      // Also perform a sync after maintenance
+      await handleTaskCompletion("maintenance", result, notificationData.notification_k1);
+
+      // Refresh widget after maintenance
+      await updateWidget();
+      break;
+    }
+
+    case "lightning_invoice_request": {
+      log.i("Received lightning invoice request", [notificationData]);
+      const invoiceResult = await submitInvoiceTask(
+        notificationData.transaction_id,
+        notificationData.amount,
+      );
+      if (invoiceResult.isErr()) {
+        throw invoiceResult.error;
+      }
+      break;
+    }
+
+    case "lightning_claim_request": {
+      log.i("Received lightning claim request", [notificationData]);
+      log.i("Claiming pending lightning receives", [notificationData.payment_hash]);
+      const claimResult = await tryClaimAllLightningReceives(false);
+      if (claimResult.isErr()) {
+        throw claimResult.error;
+      }
+      log.i("Successfully claimed pending lightning receives", [notificationData.payment_hash]);
+
+      const notificationId = await scheduleLightningPaymentNotification(
+        notificationData.amount_sat,
+      );
+      log.i("Local notification scheduled for lightning payment", [
+        notificationId,
+        notificationData.payment_hash,
+        notificationData.amount_sat,
+      ]);
+
+      await updateWidget();
+      break;
+    }
+
+    case "backup_trigger": {
+      const result = await triggerBackupTask();
+      await handleTaskCompletion("backup", result, notificationData.notification_k1);
+      log.d("Backup task completed");
+      break;
+    }
+
+    case "heartbeat": {
+      log.i("Received heartbeat notification", [notificationData]);
+      const heartbeatResult = await heartbeatResponse({
+        notification_id: notificationData.notification_id,
+      });
+
+      if (heartbeatResult.isErr()) {
+        log.w("Failed to respond to heartbeat", [heartbeatResult.error]);
+      } else {
+        log.d("Successfully responded to heartbeat", [notificationData.notification_id]);
+      }
+      break;
+    }
+
+    default: {
+      const _exhaustiveCheck: never = notificationData;
+      log.w("Unknown notification type received", [_exhaustiveCheck]);
+    }
+  }
+}
 
 /**
  * Reports job completion status to the server.
@@ -95,28 +300,7 @@ TaskManager.defineTask<Notifications.NotificationTaskPayload>(
         return;
       }
 
-      const notificationDataResult = Result.fromThrowable(
-        () => {
-          const typedData = data as {
-            data?: {
-              body?: unknown;
-              // iOS cold-launch wraps the notification payload under this key
-              // due to a bug in expo-task-manager's EXTaskService.m which passes
-              // the entire launchOptions dictionary instead of extracting the
-              // notification userInfo.
-              UIApplicationLaunchOptionsRemoteNotificationKey?: { body?: unknown };
-            };
-          };
-          const rawBody =
-            typedData?.data?.body ??
-            typedData?.data?.UIApplicationLaunchOptionsRemoteNotificationKey?.body;
-          if (typeof rawBody === "string") {
-            return JSON.parse(rawBody) as NotificationData;
-          }
-          return rawBody as NotificationData;
-        },
-        (e) => new Error(`Failed to parse notification data: ${e}`),
-      )();
+      const notificationDataResult = parseNotificationData(data);
 
       if (notificationDataResult.isErr()) {
         captureException(notificationDataResult.error);
@@ -126,88 +310,13 @@ TaskManager.defineTask<Notifications.NotificationTaskPayload>(
 
       const notificationData = notificationDataResult.value;
 
-      if (!notificationData || !notificationData.notification_type) {
+      if (!notificationData) {
         log.w("[Background Job] No data or type received", [notificationData]);
         return;
       }
 
       const taskResult = await ResultAsync.fromPromise(
-        (async () => {
-          switch (notificationData.notification_type) {
-            case "maintenance": {
-              const result = await maintenanceTask();
-              // Also perform a sync after maintenance
-              await handleTaskCompletion(
-                "maintenance",
-                result,
-                notificationData.notification_k1,
-              );
-
-              // Refresh widget after maintenance
-              await updateWidget();
-              break;
-            }
-
-            case "lightning_invoice_request": {
-              log.i("Received lightning invoice request", [notificationData]);
-              const invoiceResult = await submitInvoiceTask(
-                notificationData.transaction_id,
-                notificationData.amount,
-              );
-
-              // Wait for the invoice to be paid
-              // This is a terrible solution, but it is what it is for now
-              if (invoiceResult.isOk()) {
-                const claimResult = await tryClaimLightningReceive(
-                  invoiceResult.value.payment_hash,
-                  true,
-                );
-
-                if (claimResult.isOk() && claimResult.value && claimResult.value.finished_at) {
-                  const sats = notificationData.amount / 1000;
-                  await Notifications.scheduleNotificationAsync({
-                    content: {
-                      title: "Lightning Payment Received! ⚡",
-                      body: `You received ${formatBip177(sats)}`,
-                    },
-                    trigger: null,
-                  });
-                  log.d("Local notification triggered for payment", [sats]);
-
-                  // Refresh widget after lightning payment
-                  await updateWidget();
-                }
-              }
-              break;
-            }
-
-            case "backup_trigger": {
-              const result = await triggerBackupTask();
-              await handleTaskCompletion("backup", result, notificationData.notification_k1);
-              log.d("Backup task completed");
-              break;
-            }
-
-            case "heartbeat": {
-              log.i("Received heartbeat notification", [notificationData]);
-              const heartbeatResult = await heartbeatResponse({
-                notification_id: notificationData.notification_id,
-              });
-
-              if (heartbeatResult.isErr()) {
-                log.w("Failed to respond to heartbeat", [heartbeatResult.error]);
-              } else {
-                log.d("Successfully responded to heartbeat", [notificationData.notification_id]);
-              }
-              break;
-            }
-
-            default: {
-              const _exhaustiveCheck: never = notificationData;
-              log.w("Unknown notification type received", [_exhaustiveCheck]);
-            }
-          }
-        })(),
+        handleNotificationData(notificationData),
         (e) =>
           new Error(
             `Failed to handle background notification: ${e instanceof Error ? e.message : String(e)}`,
@@ -239,8 +348,40 @@ TaskManager.defineTask<Notifications.NotificationTaskPayload>(
 
 Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
 
+Notifications.addNotificationReceivedListener((notification) => {
+  const notificationDataResult = parseNotificationData(notification.request.content.data);
+  if (notificationDataResult.isErr()) {
+    captureException(notificationDataResult.error);
+    log.e("[Foreground Notification] error", [notificationDataResult.error]);
+    return;
+  }
+
+  const notificationData = notificationDataResult.value;
+  if (!notificationData) {
+    return;
+  }
+
+  void (async () => {
+    useWalletStore.getState().setBackgroundJobRunning(true);
+
+    try {
+      await handleNotificationData(notificationData);
+    } catch (e) {
+      const error =
+        e instanceof Error
+          ? e
+          : new Error(`Failed to handle foreground notification: ${String(e)}`);
+      captureException(error);
+      log.e("[Foreground Notification] error", [error]);
+    } finally {
+      useWalletStore.getState().setBackgroundJobRunning(false);
+    }
+  })();
+});
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
+    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
     shouldShowBanner: true,
@@ -269,14 +410,7 @@ export async function getPushPermissionStatus(): Promise<Result<PushPermissionSt
 export async function registerForPushNotificationsAsync(): Promise<
   Result<RegisterForPushResult, Error>
 > {
-  if (Platform.OS === "android") {
-    Notifications.setNotificationChannelAsync("default", {
-      name: "default",
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#FF231F7C",
-    });
-  }
+  await ensureDefaultNotificationChannel();
 
   // If the device is not a physical device, return a non-supported status
   if (!Device.isDevice) {

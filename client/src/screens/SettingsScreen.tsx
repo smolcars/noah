@@ -555,8 +555,8 @@ const SettingsScreen = () => {
               <View className="flex-1">
                 <Label className="text-foreground text-lg">Mailbox Notifications</Label>
                 <Text className="text-base mt-1 text-muted-foreground">
-                  Allow the Noah server to monitor your Ark mailbox so it can send push
-                  notifications for wallet activity.
+                  Allow Noah to monitor your Ark mailbox so it can wake this app to claim
+                  Lightning payments in the background.
                 </Text>
               </View>
               <Switch

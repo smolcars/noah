@@ -26,6 +26,7 @@ use crate::{
     db::mailbox_authorization_repo::{ActiveMailboxAuthorization, MailboxAuthorizationRepository},
     errors::ApiError,
     push::{PushNotificationData, send_push_notification},
+    types::{LightningClaimRequestNotification, NotificationData},
 };
 
 #[derive(Debug, Clone)]
@@ -470,11 +471,58 @@ async fn process_mailbox_message(
     }
 
     match &message.message {
+        Some(Message::IncomingLightningPayment(lightning_payment)) if send_notifications => {
+            let payment_hash = hex::encode(&lightning_payment.payment_hash);
+            let notification = build_lightning_claim_notification(payment_hash)?;
+
+            tracing::info!(
+                service = "mailbox_worker",
+                pubkey = %mailbox.pubkey,
+                checkpoint = message.checkpoint,
+                notification_kind = "lightning_claim_request",
+                silent = true,
+                content_available = true,
+                "mailbox incoming lightning payment received; sending claim push notification"
+            );
+
+            send_push_notification(
+                app_state.clone(),
+                notification,
+                Some(mailbox.pubkey.to_string()),
+            )
+            .await?;
+        }
         Some(Message::Arkoor(arkoor)) if send_notifications && !arkoor.vtxos.is_empty() => {
+            tracing::info!(
+                service = "mailbox_worker",
+                pubkey = %mailbox.pubkey,
+                checkpoint = message.checkpoint,
+                vtxo_count = arkoor.vtxos.len(),
+                "mailbox arkoor message received"
+            );
+
             for raw_vtxo in &arkoor.vtxos {
                 let Some(notification) = build_receive_notification(raw_vtxo)? else {
                     continue;
                 };
+                let notification_kind = if notification.content_available
+                    && notification.title.is_none()
+                    && notification.body.is_none()
+                {
+                    "lightning_claim_request"
+                } else {
+                    "visible_receive"
+                };
+
+                tracing::info!(
+                    service = "mailbox_worker",
+                    pubkey = %mailbox.pubkey,
+                    checkpoint = message.checkpoint,
+                    notification_kind,
+                    silent = notification.title.is_none() && notification.body.is_none(),
+                    content_available = notification.content_available,
+                    "sending mailbox push notification"
+                );
 
                 send_push_notification(
                     app_state.clone(),
@@ -502,6 +550,26 @@ fn should_suppress_catchup_notifications(last_checkpoint: i64) -> bool {
     last_checkpoint == 0
 }
 
+fn build_lightning_claim_notification(
+    payment_hash: String,
+) -> Result<PushNotificationData, ApiError> {
+    let data = serde_json::to_string(&NotificationData::LightningClaimRequest(
+        LightningClaimRequestNotification {
+            payment_hash: Some(payment_hash),
+            amount_sat: None,
+        },
+    ))
+    .map_err(|e| ApiError::SerializeErr(e.to_string()))?;
+
+    Ok(PushNotificationData {
+        title: None,
+        body: None,
+        data,
+        priority: Priority::High,
+        content_available: true,
+    })
+}
+
 fn build_receive_notification(raw_vtxo: &[u8]) -> Result<Option<PushNotificationData>, ApiError> {
     let mut cursor = std::io::Cursor::new(raw_vtxo);
     let vtxo: Vtxo<Full> = Vtxo::decode(&mut cursor)
@@ -509,22 +577,17 @@ fn build_receive_notification(raw_vtxo: &[u8]) -> Result<Option<PushNotification
 
     let amount_sats = vtxo.amount().to_sat();
 
-    let body = match vtxo.policy_type() {
-        VtxoPolicyKind::Pubkey => Some(format!("You received {} sats via Ark.", amount_sats)),
-        VtxoPolicyKind::ServerHtlcRecv => {
-            Some(format!("You received {} sats via Lightning.", amount_sats))
-        }
-        VtxoPolicyKind::ServerHtlcSend => None,
-        _ => None,
-    };
-
-    Ok(body.map(|body| PushNotificationData {
-        title: Some("Payment received".to_string()),
-        body: Some(body),
-        data: "{}".to_string(),
-        priority: Priority::High,
-        content_available: false,
-    }))
+    match vtxo.policy_type() {
+        VtxoPolicyKind::Pubkey => Ok(Some(PushNotificationData {
+            title: Some("Payment received".to_string()),
+            body: Some(format!("You received {} sats via Ark.", amount_sats)),
+            data: "{}".to_string(),
+            priority: Priority::High,
+            content_available: false,
+        })),
+        VtxoPolicyKind::ServerHtlcRecv | VtxoPolicyKind::ServerHtlcSend => Ok(None),
+        _ => Ok(None),
+    }
 }
 
 async fn renew_mailbox_claim(
@@ -623,17 +686,38 @@ mod tests {
     }
 
     #[test]
-    fn build_receive_notification_for_lightning_receive_vtxo() {
+    fn build_lightning_claim_notification_for_incoming_lightning_payment() {
+        let payment_hash = "00".repeat(32);
+
+        let notification = build_lightning_claim_notification(payment_hash.clone())
+            .expect("lightning claim notification should build");
+
+        assert_eq!(notification.title, None);
+        assert_eq!(notification.body, None);
+        assert_eq!(notification.priority, Priority::High);
+        assert!(notification.content_available);
+
+        let data: NotificationData =
+            serde_json::from_str(&notification.data).expect("notification data should decode");
+        assert!(matches!(
+            data,
+            NotificationData::LightningClaimRequest(LightningClaimRequestNotification {
+                payment_hash: Some(hash),
+                amount_sat: None,
+            }) if hash == payment_hash
+        ));
+    }
+
+    #[test]
+    fn build_receive_notification_skips_lightning_receive_vtxo() {
         let raw = VTXO_VECTORS.round2_vtxo.serialize();
 
-        let notification = build_receive_notification(&raw)
-            .expect("lightning receive vtxo should decode")
-            .expect("lightning receive vtxo should notify");
+        let notification =
+            build_receive_notification(&raw).expect("lightning receive vtxo should decode");
 
-        assert_eq!(notification.title.as_deref(), Some("Payment received"));
-        assert_eq!(
-            notification.body.as_deref(),
-            Some("You received 10000 sats via Lightning.")
+        assert!(
+            notification.is_none(),
+            "lightning receive should use its mailbox event"
         );
     }
 

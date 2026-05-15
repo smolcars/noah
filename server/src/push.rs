@@ -18,6 +18,18 @@ fn is_expo_token(token: &str) -> bool {
             .is_match(token)
 }
 
+fn notification_type_for_log(data: &str) -> String {
+    serde_json::from_str::<serde_json::Value>(data)
+        .ok()
+        .and_then(|value| {
+            value
+                .get("notification_type")
+                .and_then(|notification_type| notification_type.as_str())
+                .map(str::to_string)
+        })
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
 #[derive(Serialize, Clone, Debug)]
 pub struct PushNotificationData {
     pub title: Option<String>,
@@ -206,12 +218,18 @@ async fn send_push_notification_internal(
     } else {
         push_token_repo.find_all().await?
     };
+    let notification_type = notification_type_for_log(&data.data);
 
     if push_tokens.is_empty() {
+        tracing::warn!(
+            notification_type,
+            "send_push_notification: no push tokens found for notification"
+        );
         return Ok(());
     }
 
-    tracing::debug!(
+    tracing::info!(
+        notification_type,
         "send_push_notification: Sending to {} tokens",
         push_tokens.len()
     );
@@ -282,9 +300,9 @@ async fn send_push_notification_internal(
             .await;
     }
 
-    tracing::debug!(
-        "send_push_notification: Sent push notification with data: {:?}",
-        data.data
+    tracing::info!(
+        notification_type,
+        "send_push_notification: Sent push notification"
     );
 
     Ok(())
