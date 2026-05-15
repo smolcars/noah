@@ -18,13 +18,20 @@ import RNFSTurbo from "react-native-fs-turbo";
 import logger from "~/lib/log";
 import { formatBip177 } from "~/lib/utils";
 import { useTransactions } from "~/hooks/useTransactions";
+import { HistoryRefreshButton } from "~/components/HistoryRefreshButton";
 
 const log = logger("TransactionsScreen");
 
 const TransactionsScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const iconColor = useIconColor();
-  const { data: transactions = [], isLoading, isError, refetch } = useTransactions();
+  const {
+    data: transactions = [],
+    isLoading,
+    isError,
+    isRefetching,
+    refetch,
+  } = useTransactions();
   const [filter, setFilter] = useState<PaymentTypes | "all" | "Lightning">("all");
 
   const filteredTransactions =
@@ -33,6 +40,10 @@ const TransactionsScreen = () => {
       : filter === "Lightning"
         ? transactions.filter((t) => t.type === "Bolt11" || t.type === "Lnurl")
         : transactions.filter((t) => t.type === filter);
+
+  const handleRefresh = async () => {
+    await refetch();
+  };
 
   const exportToCSV = async () => {
     const csvHeader =
@@ -122,9 +133,17 @@ const TransactionsScreen = () => {
               </Pressable>
               <Text className="text-2xl font-bold text-foreground">Transactions</Text>
             </View>
-            <Pressable onPress={exportToCSV} className="p-2">
-              <Icon name="download-outline" size={24} color={iconColor} />
-            </Pressable>
+            <View className="flex-row items-center gap-2">
+              <HistoryRefreshButton isRefreshing={isRefetching} onRefresh={handleRefresh} />
+              <Pressable
+                onPress={exportToCSV}
+                accessibilityRole="button"
+                accessibilityLabel="Export transactions"
+                className="h-10 w-10 items-center justify-center rounded-full"
+              >
+                <Icon name="download-outline" size={24} color={iconColor} />
+              </Pressable>
+            </View>
           </View>
           <View className="flex-row justify-around mb-4">
             {(["all", "Lightning", "Arkoor", "Onchain"] as const).map((f) => (

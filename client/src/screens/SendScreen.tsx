@@ -72,6 +72,9 @@ const SendScreen = () => {
     destinationType,
     showSuccess,
     handleCloseSuccess,
+    feeEstimate,
+    isEstimatingFee,
+    feeEstimateError,
   } = useSendScreen();
   const displayAmount = amount === "" ? (currency === "USD" ? "0.00" : "0") : amount;
 
@@ -363,6 +366,9 @@ const SendScreen = () => {
           onConfirm={handleConfirmSend}
           onCancel={handleCancelConfirmation}
           isLoading={isSending}
+          feeEstimate={feeEstimate}
+          isEstimatingFee={isEstimatingFee}
+          feeEstimateError={feeEstimateError}
         />
       </BottomSheet>
 

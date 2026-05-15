@@ -43,7 +43,7 @@ import { useThemeColors } from "~/hooks/useTheme";
 import { PortalHost } from "@rn-primitives/portal";
 import AppServices from "~/AppServices";
 import { Transaction } from "~/types/transaction";
-import { OnboardingRequest, OffboardingRequest } from "~/lib/transactionsDb";
+import type { BoardingTransaction } from "~/types/boardingTransaction";
 import { getMnemonic } from "~/lib/crypto";
 import { walletDataExists, clearStaleKeychain } from "~/lib/walletApi";
 import VTXOsScreen, { type VTXOWithStatus } from "~/screens/VTXOsScreen";
@@ -58,9 +58,6 @@ import { PermissionStatus } from "expo-notifications";
 import logger from "~/lib/log";
 
 // Param list types
-type BoardingTransaction = (OnboardingRequest | OffboardingRequest) & {
-  type: "onboarding" | "offboarding";
-};
 export type TabParamList = {
   Home: NavigatorScreenParams<HomeStackParamList> | undefined;
   Receive: undefined;

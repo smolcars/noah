@@ -1,4 +1,4 @@
-import { View, Pressable } from "react-native";
+import { View, Pressable, ScrollView, Linking } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { Text } from "../components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
@@ -7,23 +7,21 @@ import { useIconColor } from "../hooks/useTheme";
 import { copyToClipboard } from "../lib/clipboardUtils";
 import { useState } from "react";
 import { COLORS } from "~/lib/styleConstants";
-
-type BoardingTransaction = {
-  request_id: string;
-  date: string;
-  status: "pending" | "completed" | "failed";
-  onchain_txid?: string;
-  type: "onboarding" | "offboarding";
-};
+import type { BoardingTransaction } from "~/types/boardingTransaction";
+import { formatMovementStatusLabel } from "~/types/movement";
+import { formatBip177 } from "~/lib/utils";
+import { getMempoolTxUrl } from "~/constants";
 
 const BoardingTransactionDetailRow = ({
   label,
   value,
   copyable = false,
+  explorerUrl,
 }: {
   label: string;
   value: string;
   copyable?: boolean;
+  explorerUrl?: string | null;
 }) => {
   const [copied, setCopied] = useState(false);
   const iconColor = useIconColor();
@@ -40,22 +38,35 @@ const BoardingTransactionDetailRow = ({
   return (
     <View className="flex-row justify-between items-center py-3 border-b border-border/10 last:border-b-0">
       <Text className="text-muted-foreground text-sm">{label}</Text>
-      {copyable ? (
-        <Pressable onPress={onCopy} className="flex-row items-center gap-x-2 flex-shrink-0">
-          <Text
-            className="text-foreground text-sm text-right"
-            ellipsizeMode="middle"
-            numberOfLines={1}
-            style={{ maxWidth: 150 }}
-          >
-            {value}
-          </Text>
-          {copied ? (
-            <Icon name="checkmark-circle-outline" size={16} color={COLORS.SUCCESS} />
-          ) : (
-            <Icon name="copy-outline" size={16} color={iconColor} />
-          )}
-        </Pressable>
+      {copyable || explorerUrl ? (
+        <View className="flex-row items-center gap-x-3 flex-shrink-0">
+          {copyable ? (
+            <Pressable onPress={onCopy} className="flex-row items-center gap-x-2 flex-shrink-0">
+              <Text
+                className="text-foreground text-sm text-right"
+                ellipsizeMode="middle"
+                numberOfLines={1}
+                style={{ maxWidth: 150 }}
+              >
+                {value}
+              </Text>
+              {copied ? (
+                <Icon name="checkmark-circle-outline" size={16} color={COLORS.SUCCESS} />
+              ) : (
+                <Icon name="copy-outline" size={16} color={iconColor} />
+              )}
+            </Pressable>
+          ) : null}
+          {explorerUrl ? (
+            <Pressable
+              onPress={() => Linking.openURL(explorerUrl)}
+              hitSlop={10}
+              className="h-8 w-8 items-center justify-center rounded-full bg-background"
+            >
+              <Icon name="open-outline" size={17} color={COLORS.BITCOIN_ORANGE} />
+            </Pressable>
+          ) : null}
+        </View>
       ) : (
         <Text
           className="text-foreground text-sm text-right"
@@ -70,20 +81,31 @@ const BoardingTransactionDetailRow = ({
   );
 };
 
+const formatBoardingType = (type: BoardingTransaction["type"]) =>
+  type === "onboarding" ? "Boarding" : "Offboarding";
+
+const formatBoardingStatus = (transaction: BoardingTransaction) => {
+  return formatMovementStatusLabel(transaction.status) ?? transaction.status;
+};
+
 const BoardingTransactionDetailScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const iconColor = useIconColor();
   const { transaction } = route.params as { transaction: BoardingTransaction };
+  const explorerUrl = transaction.txid ? getMempoolTxUrl(transaction.txid) : null;
+  const statusLabel = formatBoardingStatus(transaction);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed":
+      case "successful":
         return "text-green-500";
       case "pending":
         return "text-yellow-500";
       case "failed":
         return "text-red-500";
+      case "canceled":
+        return "text-muted-foreground";
       default:
         return "text-muted-foreground";
     }
@@ -91,7 +113,7 @@ const BoardingTransactionDetailScreen = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "completed":
+      case "successful":
         return "checkmark-circle-outline";
       case "pending":
         return "time-outline";
@@ -112,13 +134,17 @@ const BoardingTransactionDetailScreen = () => {
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
-      <View className="p-4 flex-1">
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
+        showsVerticalScrollIndicator={false}
+      >
         <View className="flex-row items-center mb-8">
           <Pressable onPress={() => navigation.goBack()} className="mr-4">
             <Icon name="arrow-back-outline" size={24} color={iconColor} />
           </Pressable>
           <Text className="text-2xl font-bold text-foreground">
-            {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)} Details
+            {formatBoardingType(transaction.type)} Details
           </Text>
         </View>
 
@@ -131,75 +157,113 @@ const BoardingTransactionDetailScreen = () => {
             />
           </View>
           <Text className="text-3xl font-bold text-foreground mb-2">
-            {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+            {formatBoardingType(transaction.type)}
           </Text>
-          <View className="flex-row items-center">
-            <Icon
-              name={getStatusIcon(transaction.status)}
-              size={20}
-              color={
-                getStatusColor(transaction.status).includes("green")
-                  ? "#22c55e"
-                  : getStatusColor(transaction.status).includes("yellow")
+          {statusLabel ? (
+            <View className="flex-row items-center">
+              <Icon
+                name={getStatusIcon(transaction.status)}
+                size={20}
+                color={
+                  getStatusColor(transaction.status).includes("yellow")
                     ? "#eab308"
                     : getStatusColor(transaction.status).includes("red")
                       ? "#ef4444"
-                      : "#6b7280"
-              }
-            />
-            <Text className={`text-xl font-medium ml-2 ${getStatusColor(transaction.status)}`}>
-              {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-            </Text>
-          </View>
+                      : getStatusColor(transaction.status).includes("green")
+                        ? "#22c55e"
+                        : "#6b7280"
+                }
+              />
+              <Text className={`text-xl font-medium ml-2 ${getStatusColor(transaction.status)}`}>
+                {statusLabel}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <View className="bg-card p-4 rounded-lg mb-4">
           <BoardingTransactionDetailRow
-            label="Request ID"
-            value={transaction.request_id}
+            label="Movement ID"
+            value={transaction.movementId.toString()}
             copyable
           />
           <BoardingTransactionDetailRow
             label="Date & time"
             value={new Date(transaction.date).toLocaleString()}
           />
+          <BoardingTransactionDetailRow label="Type" value={formatBoardingType(transaction.type)} />
+          <BoardingTransactionDetailRow label="Status" value={statusLabel} />
           <BoardingTransactionDetailRow
-            label="Type"
-            value={transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
-          />
-          <BoardingTransactionDetailRow
-            label="Status"
-            value={transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+            label="Amount"
+            value={formatBip177(transaction.amountSat)}
           />
         </View>
 
-        {transaction.onchain_txid && (
+        {(transaction.txid || transaction.destination) && (
           <View className="bg-card p-4 rounded-lg mb-4">
             <Text className="text-foreground text-lg font-semibold mb-3">Onchain Transaction</Text>
-            <BoardingTransactionDetailRow
-              label="Transaction ID"
-              value={transaction.onchain_txid}
-              copyable
-            />
+            {transaction.txid ? (
+              <BoardingTransactionDetailRow
+                label="Transaction ID"
+                value={transaction.txid}
+                copyable
+                explorerUrl={explorerUrl}
+              />
+            ) : null}
+            {transaction.destination ? (
+              <BoardingTransactionDetailRow
+                label="Destination"
+                value={transaction.destination}
+                copyable
+              />
+            ) : null}
           </View>
         )}
+
+        <View className="bg-card p-4 rounded-lg mb-4">
+          <Text className="text-foreground text-lg font-semibold mb-3">Movement</Text>
+          {typeof transaction.intendedBalanceSat === "number" ? (
+            <BoardingTransactionDetailRow
+              label="Intended Delta"
+              value={formatBip177(transaction.intendedBalanceSat)}
+            />
+          ) : null}
+          {typeof transaction.effectiveBalanceSat === "number" ? (
+            <BoardingTransactionDetailRow
+              label="Effective Delta"
+              value={formatBip177(transaction.effectiveBalanceSat)}
+            />
+          ) : null}
+          {typeof transaction.offchainFeeSat === "number" ? (
+            <BoardingTransactionDetailRow
+              label="Offchain Fee"
+              value={formatBip177(transaction.offchainFeeSat)}
+            />
+          ) : null}
+          {typeof transaction.onchainFeeSat === "number" ? (
+            <BoardingTransactionDetailRow
+              label="Onchain Fee"
+              value={formatBip177(transaction.onchainFeeSat)}
+            />
+          ) : null}
+        </View>
 
         <View className="bg-card p-4 rounded-lg">
           <Text className="text-foreground text-lg font-semibold mb-3">Description</Text>
           <Text className="text-muted-foreground text-sm">
             {transaction.type === "onboarding"
-              ? "Onboarding transaction to enter the Ark network. Your Bitcoin was moved from the onchain wallet to the offchain Ark balance."
+              ? "Boarding transaction to enter the Ark network. Your Bitcoin was moved from the onchain wallet to the offchain Ark balance."
               : "Offboarding transaction to exit the Ark network. Your Ark balance was converted back to onchain Bitcoin."}
           </Text>
           {transaction.status === "pending" && (
             <Text className="text-yellow-500 text-sm mt-2">
               {transaction.type === "onboarding"
-                ? "This onboarding request is being processed. It will be completed when the next Ark round starts."
+                ? "This boarding request is being processed. It will be completed when the next Ark round starts."
                 : "This offboarding request is being processed. It will be completed when the next Ark round starts."}
             </Text>
           )}
         </View>
-      </View>
+      </ScrollView>
     </NoahSafeAreaView>
   );
 };

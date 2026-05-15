@@ -1,9 +1,21 @@
 import type { BarkMovement } from "react-native-nitro-ark";
 
+type MovementDestinationLike = {
+  destination: unknown;
+};
+
 export const BARK_SUBSYSTEM = {
   BOARD: {
     name: "bark.board",
     kind: "board",
+  },
+  OFFBOARD: {
+    name: "bark.offboard",
+    kind: "offboard",
+  },
+  SEND_ONCHAIN: {
+    name: "bark.offboard",
+    kind: "send_onchain",
   },
   ARKOOR_RECEIVE: {
     name: "bark.arkoor",
@@ -115,4 +127,67 @@ export const isLightningReceiveMovement = (
   }
 
   return getMovementSubsystemId(movement) === toSubsystemId(BARK_SUBSYSTEM.LIGHTNING_RECEIVE);
+};
+
+export const isBoardMovement = (
+  movement: BarkMovement | undefined,
+): movement is BarkMovementWithTypedSubsystem<
+  typeof BARK_SUBSYSTEM.BOARD.name,
+  typeof BARK_SUBSYSTEM.BOARD.kind
+> => {
+  if (!movement) {
+    return false;
+  }
+
+  return getMovementSubsystemId(movement) === toSubsystemId(BARK_SUBSYSTEM.BOARD);
+};
+
+export const isOffboardMovement = (movement: BarkMovement | undefined): boolean => {
+  if (!movement) {
+    return false;
+  }
+
+  const subsystemId = getMovementSubsystemId(movement);
+  return (
+    subsystemId === toSubsystemId(BARK_SUBSYSTEM.OFFBOARD) ||
+    subsystemId === toSubsystemId(BARK_SUBSYSTEM.ROUND_OFFBOARD)
+  );
+};
+
+export const isSendOnchainMovement = (movement: BarkMovement | undefined): boolean => {
+  if (!movement) {
+    return false;
+  }
+
+  const subsystemId = getMovementSubsystemId(movement);
+  return (
+    subsystemId === toSubsystemId(BARK_SUBSYSTEM.SEND_ONCHAIN) ||
+    subsystemId === toSubsystemId(BARK_SUBSYSTEM.ROUND_SEND_ONCHAIN)
+  );
+};
+
+export const isBoardingHistoryMovement = (movement: BarkMovement | undefined): boolean =>
+  isBoardMovement(movement) || isOffboardMovement(movement);
+
+export const getMovementDestinationValue = (
+  destination: MovementDestinationLike | undefined,
+): string | undefined => {
+  if (!destination) {
+    return undefined;
+  }
+
+  if (typeof destination.destination === "string") {
+    return destination.destination;
+  }
+
+  if (
+    destination.destination &&
+    typeof destination.destination === "object" &&
+    "value" in destination.destination
+  ) {
+    const value = destination.destination.value;
+    return typeof value === "string" ? value : undefined;
+  }
+
+  return undefined;
 };

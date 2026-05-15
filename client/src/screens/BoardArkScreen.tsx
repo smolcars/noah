@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Pressable,
@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import uuid from "react-native-uuid";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
@@ -20,8 +19,12 @@ import { APP_VARIANT } from "../config";
 import { NoahButton } from "../components/ui/NoahButton";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
 import { useBalance } from "../hooks/useWallet";
-import { useBoardAllAmountArk, useBoardArk, useOffboardAllArk } from "../hooks/usePayments";
-import { addOffboardingRequest, addOnboardingRequest } from "../lib/transactionsDb";
+import {
+  useBoardAllAmountArk,
+  useBoardArk,
+  useOffboardAllArk,
+  useOffboardAllFeeEstimate,
+} from "../hooks/usePayments";
 import { copyToClipboard } from "../lib/clipboardUtils";
 import { cn, formatBip177, isNetworkMatch } from "../lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
@@ -31,6 +34,7 @@ import logger from "~/lib/log";
 import { HomeStackParamList } from "~/Navigators";
 import { BoardResult } from "react-native-nitro-ark";
 import { useTransactionStore } from "~/store/transactionStore";
+import { FeeEstimateSummary } from "~/components/FeeEstimateSummary";
 
 const log = logger("BoardArkScreen");
 
@@ -80,21 +84,38 @@ const BalanceDisplay = ({
   amount,
   pendingAmount,
   isLoading,
+  compact = false,
 }: {
   title: string;
   amount: number;
   pendingAmount?: number;
   isLoading: boolean;
+  compact?: boolean;
 }) => (
-  <View className="mb-8">
-    <Text className="text-lg text-muted-foreground">{title}</Text>
+  <View className={compact ? "mb-5" : "mb-8"}>
+    <Text className={compact ? "text-sm text-muted-foreground" : "text-lg text-muted-foreground"}>
+      {title}
+    </Text>
     {isLoading ? (
       <NoahActivityIndicator className="mt-2" />
     ) : (
       <>
-        <Text className="text-3xl font-bold text-foreground mt-1">{formatBip177(amount)}</Text>
+        <Text
+          className={cn(
+            "font-bold text-foreground mt-1",
+            compact ? "text-2xl" : "text-3xl",
+          )}
+        >
+          {formatBip177(amount)}
+        </Text>
         {pendingAmount !== undefined && pendingAmount > 0 && (
-          <Text className="text-xl text-muted-foreground mt-1">
+          <Text
+            className={
+              compact
+                ? "text-sm text-muted-foreground mt-1"
+                : "text-xl text-muted-foreground mt-1"
+            }
+          >
             {formatBip177(pendingAmount)} pending
           </Text>
         )}
@@ -105,7 +126,7 @@ const BalanceDisplay = ({
 
 // Flow toggle component
 const FlowToggle = ({ flow, onFlowChange }: { flow: Flow; onFlowChange: (flow: Flow) => void }) => (
-  <View className="flex flex-row justify-around rounded-lg bg-muted p-1 mb-8">
+  <View className="flex flex-row justify-around rounded-lg bg-muted p-1 mb-6">
     <Pressable
       onPress={() => onFlowChange("onboard")}
       className={cn(
@@ -284,56 +305,55 @@ const BoardArkScreen = () => {
   const [isMaxAmount, setIsMaxAmount] = useState(false);
   const [address, setAddress] = useState("");
 
+  const validOffboardEstimateAddress = useMemo(() => {
+    if (flow !== "offboard") {
+      return null;
+    }
+
+    const trimmedAddress = address.trim();
+    if (!trimmedAddress) {
+      return null;
+    }
+
+    const btcValidation = validateBitcoinAddress(trimmedAddress);
+    if (!btcValidation.valid || !isNetworkMatch(btcValidation.network, "onchain")) {
+      return null;
+    }
+
+    return trimmedAddress;
+  }, [address, flow]);
+
+  const [debouncedOffboardEstimateAddress, setDebouncedOffboardEstimateAddress] = useState<
+    string | null
+  >(null);
+
+  useEffect(() => {
+    if (!validOffboardEstimateAddress) {
+      setDebouncedOffboardEstimateAddress(null);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setDebouncedOffboardEstimateAddress(validOffboardEstimateAddress);
+    }, 350);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [validOffboardEstimateAddress]);
+
+  const offboardFeeEstimateQuery = useOffboardAllFeeEstimate(debouncedOffboardEstimateAddress);
+
+  useEffect(() => {
+    if (!offboardFeeEstimateQuery.error) {
+      return;
+    }
+
+    log.w("Failed to estimate offboarding fee", [offboardFeeEstimateQuery.error]);
+  }, [offboardFeeEstimateQuery.error]);
+
   // Use custom hook for parsing results
   const { parsedData, setParsedData } = useParsedBoardingResult(boardResult, boardAllResult);
-
-  // Store onboarding request in database when successful
-  useEffect(() => {
-    const storeOnboardingRequest = async () => {
-      if (parsedData && flow === "onboard") {
-        const onboardingRequestId = uuid.v4();
-
-        const addResult = await addOnboardingRequest({
-          request_id: onboardingRequestId,
-          date: new Date().toISOString(),
-          status: "completed",
-          onchain_txid: parsedData.funding_txid,
-        });
-
-        if (addResult.isErr()) {
-          log.e("Failed to store onboarding request in database", [addResult.error]);
-        } else {
-          log.d("Successfully stored onboarding request", [onboardingRequestId]);
-        }
-      }
-    };
-
-    storeOnboardingRequest();
-  }, [parsedData, flow]);
-
-  // Store offboarding transaction in database when successful
-  useEffect(() => {
-    const storeOffboardingRequest = async () => {
-      if (offboardResult) {
-        const offboardingRequestId = uuid.v4();
-
-        const addResult = await addOffboardingRequest({
-          request_id: offboardingRequestId,
-          date: new Date().toISOString(),
-          status: "completed",
-          onchain_txid: offboardResult,
-        });
-
-        if (addResult.isErr()) {
-          log.e("Failed to store offboarding request in database", [addResult.error]);
-        } else {
-          log.d("Successfully stored offboarding request", [offboardingRequestId]);
-        }
-      }
-    };
-
-    storeOffboardingRequest();
-  }, [offboardResult]);
 
   const onchainBalance = balance?.onchain.confirmed ?? 0;
   const onchainPendingBalance =
@@ -426,7 +446,7 @@ const BoardArkScreen = () => {
             keyboardShouldPersistTaps="handled"
           >
             {/* Header */}
-            <View className="flex-row items-center justify-between mb-8">
+            <View className="flex-row items-center justify-between mb-6">
               <View className="flex-row items-center">
                 <Pressable onPress={() => navigation.goBack()} className="mr-4">
                   <Icon name="arrow-back-outline" size={24} color={iconColor} />
@@ -468,7 +488,7 @@ const BoardArkScreen = () => {
               </>
             ) : (
               <>
-                <Text className="text-muted-foreground text-center mb-8">
+                <Text className="text-muted-foreground text-center mb-5">
                   Exit Ark and send your off-chain balance to an on-chain Bitcoin address.
                 </Text>
                 <BalanceDisplay
@@ -476,24 +496,56 @@ const BoardArkScreen = () => {
                   amount={offchainBalance}
                   pendingAmount={offchainPendingBalance}
                   isLoading={isBalanceLoading}
+                  compact
                 />
-                <View className="mb-4">
-                  {isAutoBoardingEnabled ? (
-                    <Text className="text-lg text-amber-600 dark:text-amber-400 mb-2">
-                      Important: Please only input an external address like your cold storage
-                      wallet, DO NOT use Noah wallet address, if you do, you will be boarding into
-                      Ark again.
-                    </Text>
-                  ) : null}
+                <View className="mb-2">
+                  <Text className="mb-2 text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
+                    Destination
+                  </Text>
+                  <View className="rounded-2xl border border-border bg-card px-4 py-3">
+                    <Input
+                      value={address}
+                      onChangeText={setAddress}
+                      placeholder="Enter Bitcoin address"
+                      className="border-0 bg-transparent p-0 text-foreground"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
 
-                  <Input
-                    value={address}
-                    onChangeText={setAddress}
-                    placeholder="Enter Bitcoin address"
-                    className="border-border bg-card p-4 rounded-lg text-foreground"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
+                  {isAutoBoardingEnabled ? (
+                    <View className="mt-3 flex-row items-start rounded-2xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                      <Icon
+                        name="alert-circle-outline"
+                        size={17}
+                        color="#d97706"
+                        style={{ marginTop: 1, marginRight: 8 }}
+                      />
+                      <View className="flex-1">
+                        <Text className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                          Use an external address
+                        </Text>
+                        <Text className="mt-0.5 text-xs leading-4 text-amber-700/90 dark:text-amber-200/90">
+                          Sending to your Noah wallet address can board the funds back into Ark.
+                        </Text>
+                      </View>
+                    </View>
+                  ) : null}
+                  {validOffboardEstimateAddress ? (
+                    <FeeEstimateSummary
+                      estimate={offboardFeeEstimateQuery.data}
+                      isLoading={
+                        offboardFeeEstimateQuery.isFetching ||
+                        debouncedOffboardEstimateAddress !== validOffboardEstimateAddress
+                      }
+                      error={offboardFeeEstimateQuery.error}
+                      netLabel="You receive"
+                      feeLabel="Estimated fee"
+                      grossLabel="Total offboarded"
+                      compact
+                      unavailableText="Fee estimate unavailable. The final fee will be calculated when you offboard."
+                    />
+                  ) : null}
                 </View>
               </>
             )}
@@ -509,12 +561,12 @@ const BoardArkScreen = () => {
                 (flow === "onboard" && (!amount || onchainBalance === 0)) ||
                 (flow === "offboard" && (offchainBalance === 0 || !address))
               }
-              className="mt-8"
+              className={flow === "offboard" ? "mt-5" : "mt-8"}
             >
               {flow === "onboard" ? "Board Ark" : "Offboard Ark"}
             </NoahButton>
 
-            {/* Onboarding Transaction Result */}
+            {/* Boarding Transaction Result */}
             {parsedData && flow === "onboard" && (
               <TransactionResult
                 parsedData={parsedData}

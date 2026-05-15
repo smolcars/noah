@@ -17,6 +17,10 @@ import {
   onchainAddress as onchainAddressNitro,
   payLightningInvoice as payLightningInvoiceNitro,
   onchainSend as onchainSendNitro,
+  estimateArkoorPaymentFee as estimateArkoorPaymentFeeNitro,
+  estimateLightningSendFee as estimateLightningSendFeeNitro,
+  estimateSendOnchain as estimateSendOnchainNitro,
+  estimateOffboardAll as estimateOffboardAllNitro,
   history as historyNitro,
   tryClaimAllLightningReceives as tryClaimAllLightningReceivesNitro,
   tryClaimLightningReceive as tryClaimLightningReceiveNitro,
@@ -24,13 +28,14 @@ import {
   NewAddressResult,
   BarkMovement,
   BarkNotificationEvent,
+  BarkFeeEstimate,
   Bolt11Invoice,
   BoardResult,
   LightningReceive,
 } from "react-native-nitro-ark";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 
-export type { ArkoorPaymentResult, OnchainPaymentResult, LightningSendResult };
+export type { ArkoorPaymentResult, OnchainPaymentResult, LightningSendResult, BarkFeeEstimate };
 export type { BarkNotificationEvent };
 
 export type BarkNotificationSubscription = {
@@ -156,6 +161,58 @@ export const onchainSend = async ({
     );
 
     return e;
+  });
+};
+
+export const estimateArkoorPaymentFee = async (
+  amountSat: number,
+): Promise<Result<BarkFeeEstimate, Error>> => {
+  return ResultAsync.fromPromise(estimateArkoorPaymentFeeNitro(amountSat), (error) => {
+    return new Error(
+      `Failed to estimate Ark payment fee: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  });
+};
+
+export const estimateLightningSendFee = async (
+  amountSat: number,
+): Promise<Result<BarkFeeEstimate, Error>> => {
+  return ResultAsync.fromPromise(estimateLightningSendFeeNitro(amountSat), (error) => {
+    return new Error(
+      `Failed to estimate lightning send fee: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  });
+};
+
+export const estimateSendOnchainFee = async ({
+  destination,
+  amountSat,
+}: {
+  destination: string;
+  amountSat: number;
+}): Promise<Result<BarkFeeEstimate, Error>> => {
+  return ResultAsync.fromPromise(estimateSendOnchainNitro(destination, amountSat), (error) => {
+    return new Error(
+      `Failed to estimate onchain send fee: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  });
+};
+
+export const estimateOffboardAllFee = async (
+  destinationAddress: string,
+): Promise<Result<BarkFeeEstimate, Error>> => {
+  return ResultAsync.fromPromise(estimateOffboardAllNitro(destinationAddress), (error) => {
+    return new Error(
+      `Failed to estimate offboarding fee: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
   });
 };
 
