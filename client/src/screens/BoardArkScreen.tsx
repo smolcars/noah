@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Pressable,
@@ -19,7 +19,12 @@ import { APP_VARIANT } from "../config";
 import { NoahButton } from "../components/ui/NoahButton";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
 import { useBalance } from "../hooks/useWallet";
-import { useBoardAllAmountArk, useBoardArk, useOffboardAllArk } from "../hooks/usePayments";
+import {
+  useBoardAllAmountArk,
+  useBoardArk,
+  useOffboardAllArk,
+  useOffboardAllFeeEstimate,
+} from "../hooks/usePayments";
 import { copyToClipboard } from "../lib/clipboardUtils";
 import { cn, formatBip177, isNetworkMatch } from "../lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
@@ -29,6 +34,7 @@ import logger from "~/lib/log";
 import { HomeStackParamList } from "~/Navigators";
 import { BoardResult } from "react-native-nitro-ark";
 import { useTransactionStore } from "~/store/transactionStore";
+import { FeeEstimateSummary } from "~/components/FeeEstimateSummary";
 
 const log = logger("BoardArkScreen");
 
@@ -282,6 +288,53 @@ const BoardArkScreen = () => {
   const [isMaxAmount, setIsMaxAmount] = useState(false);
   const [address, setAddress] = useState("");
 
+  const validOffboardEstimateAddress = useMemo(() => {
+    if (flow !== "offboard") {
+      return null;
+    }
+
+    const trimmedAddress = address.trim();
+    if (!trimmedAddress) {
+      return null;
+    }
+
+    const btcValidation = validateBitcoinAddress(trimmedAddress);
+    if (!btcValidation.valid || !isNetworkMatch(btcValidation.network, "onchain")) {
+      return null;
+    }
+
+    return trimmedAddress;
+  }, [address, flow]);
+
+  const [debouncedOffboardEstimateAddress, setDebouncedOffboardEstimateAddress] = useState<
+    string | null
+  >(null);
+
+  useEffect(() => {
+    if (!validOffboardEstimateAddress) {
+      setDebouncedOffboardEstimateAddress(null);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setDebouncedOffboardEstimateAddress(validOffboardEstimateAddress);
+    }, 350);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [validOffboardEstimateAddress]);
+
+  const offboardFeeEstimateQuery = useOffboardAllFeeEstimate(debouncedOffboardEstimateAddress);
+
+  useEffect(() => {
+    if (!offboardFeeEstimateQuery.error) {
+      return;
+    }
+
+    log.w("Failed to estimate offboarding fee", [offboardFeeEstimateQuery.error]);
+  }, [offboardFeeEstimateQuery.error]);
+
   // Use custom hook for parsing results
   const { parsedData, setParsedData } = useParsedBoardingResult(boardResult, boardAllResult);
 
@@ -444,6 +497,20 @@ const BoardArkScreen = () => {
                     autoCapitalize="none"
                     autoCorrect={false}
                   />
+                  {validOffboardEstimateAddress ? (
+                    <FeeEstimateSummary
+                      estimate={offboardFeeEstimateQuery.data}
+                      isLoading={
+                        offboardFeeEstimateQuery.isFetching ||
+                        debouncedOffboardEstimateAddress !== validOffboardEstimateAddress
+                      }
+                      error={offboardFeeEstimateQuery.error}
+                      netLabel="You receive"
+                      feeLabel="Estimated fee"
+                      grossLabel="Total offboarded"
+                      unavailableText="Fee estimate unavailable. The final fee will be calculated when you offboard."
+                    />
+                  ) : null}
                 </View>
               </>
             )}

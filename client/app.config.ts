@@ -15,7 +15,6 @@ const config: { expo: ExpoConfig } = {
       },
     },
     plugins: [
-      "expo-sqlite",
       [
         "expo-local-authentication",
         {

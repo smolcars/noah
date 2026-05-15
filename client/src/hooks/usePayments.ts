@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAlert } from "~/contexts/AlertProvider";
 import {
   newAddress,
@@ -14,8 +14,13 @@ import {
   type ArkoorPaymentResult,
   type LightningSendResult,
   type OnchainPaymentResult,
+  type BarkFeeEstimate,
   boardAllArk,
   offboardAllArk,
+  estimateArkoorPaymentFee,
+  estimateLightningSendFee,
+  estimateSendOnchainFee,
+  estimateOffboardAllFee,
 } from "../lib/paymentsApi";
 import { queryClient } from "~/queryClient";
 import { DestinationTypes } from "~/lib/sendUtils";
@@ -164,6 +169,72 @@ type SendVariables = {
 };
 
 type SendResult = ArkoorPaymentResult | LightningSendResult | OnchainPaymentResult;
+
+export type SendFeeEstimateParams =
+  | {
+      method: "ark" | "lightning";
+      amountSat: number;
+    }
+  | {
+      method: "onchain";
+      destination: string;
+      amountSat: number;
+    };
+
+const readEstimateResult = async (
+  estimatePromise: Promise<Result<BarkFeeEstimate, Error>>,
+): Promise<BarkFeeEstimate> => {
+  const result = await estimatePromise;
+  if (result.isErr()) {
+    throw result.error;
+  }
+
+  return result.value;
+};
+
+export function useSendFeeEstimate(params: SendFeeEstimateParams | null) {
+  return useQuery({
+    queryKey: ["fee-estimate", "send", params],
+    queryFn: async () => {
+      if (!params) {
+        throw new Error("Fee estimate parameters are required");
+      }
+
+      switch (params.method) {
+        case "ark":
+          return readEstimateResult(estimateArkoorPaymentFee(params.amountSat));
+        case "lightning":
+          return readEstimateResult(estimateLightningSendFee(params.amountSat));
+        case "onchain":
+          return readEstimateResult(
+            estimateSendOnchainFee({
+              destination: params.destination,
+              amountSat: params.amountSat,
+            }),
+          );
+      }
+    },
+    enabled: params !== null && params.amountSat > 0,
+    staleTime: 20 * 1000,
+    retry: false,
+  });
+}
+
+export function useOffboardAllFeeEstimate(destinationAddress: string | null) {
+  return useQuery({
+    queryKey: ["fee-estimate", "offboard-all", destinationAddress],
+    queryFn: async () => {
+      if (!destinationAddress) {
+        throw new Error("Destination address is required");
+      }
+
+      return readEstimateResult(estimateOffboardAllFee(destinationAddress));
+    },
+    enabled: !!destinationAddress,
+    staleTime: 20 * 1000,
+    retry: false,
+  });
+}
 
 const awaitLightningPayment = async (
   paymentPromise: Promise<Result<LightningSendResult, Error>>,

@@ -8,6 +8,8 @@ import { DestinationTypes, ParsedBip321 } from "~/lib/sendUtils";
 import { useThemeColors } from "~/hooks/useTheme";
 import { COLORS } from "~/lib/styleConstants";
 import { Bip321Picker } from "./Bip321Picker";
+import { FeeEstimateSummary } from "./FeeEstimateSummary";
+import type { BarkFeeEstimate } from "~/lib/paymentsApi";
 
 interface SendConfirmationProps {
   destination: string;
@@ -21,6 +23,9 @@ interface SendConfirmationProps {
   onConfirm: () => void;
   onCancel: () => void;
   isLoading?: boolean;
+  feeEstimate?: BarkFeeEstimate;
+  isEstimatingFee?: boolean;
+  feeEstimateError?: Error | null;
 }
 
 const truncateValue = (value: string) => {
@@ -43,6 +48,9 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
   onConfirm,
   onCancel,
   isLoading = false,
+  feeEstimate,
+  isEstimatingFee = false,
+  feeEstimateError = null,
 }) => {
   const colors = useThemeColors();
 
@@ -105,33 +113,33 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
   return (
     <View>
       <View className="items-center">
-        <Text className="text-center text-3xl font-bold text-foreground">Confirm send</Text>
-        <Text className="mt-3 max-w-[280px] text-center text-base leading-6 text-muted-foreground">
-          Review the route and destination before broadcasting the payment.
+        <Text className="text-center text-2xl font-bold text-foreground">Confirm send</Text>
+        <Text className="mt-1 max-w-[280px] text-center text-sm text-muted-foreground">
+          Review the route and fee before sending.
         </Text>
       </View>
 
-      <View className="mt-8 items-center">
-        <Text className="text-center text-4xl font-bold text-foreground">
+      <View className="mt-4 items-center">
+        <Text className="text-center text-3xl font-bold text-foreground">
           {formatBip177(amount)}
         </Text>
         {btcPrice ? (
-          <Text className="mt-3 text-lg font-medium text-muted-foreground">
+          <Text className="mt-1 text-sm font-medium text-muted-foreground">
             ≈ ${formatNumber(usdAmount)}
           </Text>
         ) : null}
       </View>
 
       <View
-        className="mt-8 rounded-[24px] border px-5 py-5"
+        className="mt-5 rounded-[20px] border px-4 py-4"
         style={{
           borderColor: `${colors.mutedForeground}22`,
           backgroundColor: `${colors.card}CC`,
         }}
       >
         <View className="flex-row items-center justify-between">
-          <Text className="text-sm font-medium uppercase tracking-[2px] text-muted-foreground">
-            Payment route
+          <Text className="text-xs font-medium uppercase tracking-[2px] text-muted-foreground">
+            Route
           </Text>
           {destinationType !== "bip321" ? (
             <Text className="text-sm font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
@@ -146,42 +154,49 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
             selectedPaymentMethod={selectedPaymentMethod}
             onSelect={onSelectPaymentMethod}
             showSectionHeader={false}
-            showSelectedDestination={true}
+            showSelectedDestination={false}
           />
         ) : (
-          <View className="mt-4 h-px bg-border" />
+          <View className="mt-3 h-px bg-border" />
         )}
 
-        {destinationType !== "bip321" ? (
-          <View className="py-4">
-            <Text className="text-sm font-medium uppercase tracking-[2px] text-muted-foreground">
-              Destination
-            </Text>
-            <Text className="mt-2 text-sm leading-6 text-foreground">
-              {truncateValue(resolvedDestination)}
-            </Text>
-          </View>
-        ) : null}
+        <View className="py-3">
+          <Text className="text-xs font-medium uppercase tracking-[2px] text-muted-foreground">
+            Destination
+          </Text>
+          <Text className="mt-1 text-sm leading-5 text-foreground">
+            {truncateValue(resolvedDestination)}
+          </Text>
+        </View>
 
         {comment ? (
           <>
             <View className="h-px bg-border" />
-            <View className="py-4">
-              <Text className="text-sm font-medium uppercase tracking-[2px] text-muted-foreground">
+            <View className="pt-3">
+              <Text className="text-xs font-medium uppercase tracking-[2px] text-muted-foreground">
                 Note
               </Text>
-              <Text className="mt-2 text-sm leading-6 text-foreground">{comment}</Text>
+              <Text className="mt-1 text-sm leading-5 text-foreground" numberOfLines={2}>
+                {comment}
+              </Text>
             </View>
           </>
         ) : null}
       </View>
 
-      <View className="mt-8 flex-row gap-3">
+      <FeeEstimateSummary
+        estimate={feeEstimate}
+        isLoading={isEstimatingFee}
+        error={feeEstimateError}
+        compact
+      />
+
+      <View className="mt-5 flex-row gap-3">
         <Button
           onPress={onCancel}
           variant="outline"
           disabled={isLoading}
-          className="flex-1 rounded-2xl py-4"
+          className="flex-1 rounded-2xl py-3"
         >
           <Text className="font-semibold">Cancel</Text>
         </Button>
@@ -189,7 +204,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
           onPress={onConfirm}
           isLoading={isLoading}
           disabled={isLoading}
-          className="flex-1 rounded-2xl py-4"
+          className="flex-1 rounded-2xl py-3"
         >
           Confirm & Send
         </NoahButton>

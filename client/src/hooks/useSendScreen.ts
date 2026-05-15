@@ -8,7 +8,7 @@ import {
   type DestinationTypes,
   ParsedBip321,
 } from "../lib/sendUtils";
-import { useSend } from "./usePayments";
+import { useSend, useSendFeeEstimate, type SendFeeEstimateParams } from "./usePayments";
 import { type PaymentResult } from "../lib/paymentsApi";
 import { useQRCodeScanner } from "~/hooks/useQRCodeScanner";
 import { useBtcToUsdRate } from "./useMarketData";
@@ -128,6 +128,84 @@ export const useSendScreen = () => {
     }
     return 0;
   }, [amount, currency, btcPrice]);
+
+  const feeEstimateParams = useMemo<SendFeeEstimateParams | null>(() => {
+    if (!showConfirmation) {
+      return null;
+    }
+
+    if (!amountSat || amountSat <= 0) {
+      return null;
+    }
+
+    if (destinationType === "bip321" && bip321Data) {
+      switch (selectedPaymentMethod) {
+        case "ark":
+          return bip321Data.arkAddress ? { method: "ark", amountSat } : null;
+        case "lightning":
+          return bip321Data.lightningInvoice ? { method: "lightning", amountSat } : null;
+        case "offer":
+          return bip321Data.offer ? { method: "lightning", amountSat } : null;
+        case "onchain":
+          return bip321Data.onchainAddress
+            ? { method: "onchain", destination: bip321Data.onchainAddress, amountSat }
+            : null;
+      }
+    }
+
+    const cleanedDestination = destination.replace(/^(bitcoin:|lightning:)/i, "");
+
+    switch (finalDestinationType) {
+      case "ark":
+        return { method: "ark", amountSat };
+      case "lightning":
+      case "lnurl":
+      case "offer":
+        return { method: "lightning", amountSat };
+      case "onchain":
+        return cleanedDestination
+          ? { method: "onchain", destination: cleanedDestination, amountSat }
+          : null;
+      default:
+        return null;
+    }
+  }, [
+    amountSat,
+    bip321Data,
+    destination,
+    destinationType,
+    finalDestinationType,
+    selectedPaymentMethod,
+    showConfirmation,
+  ]);
+
+  const [debouncedFeeEstimateParams, setDebouncedFeeEstimateParams] =
+    useState<SendFeeEstimateParams | null>(null);
+
+  useEffect(() => {
+    if (!feeEstimateParams) {
+      setDebouncedFeeEstimateParams(null);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setDebouncedFeeEstimateParams(feeEstimateParams);
+    }, 350);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [feeEstimateParams]);
+
+  const feeEstimateQuery = useSendFeeEstimate(debouncedFeeEstimateParams);
+
+  useEffect(() => {
+    if (!feeEstimateQuery.error) {
+      return;
+    }
+
+    log.w("Failed to estimate send fee", [feeEstimateQuery.error]);
+  }, [feeEstimateQuery.error]);
 
   const toggleCurrency = useCallback(() => {
     if (currency === "SATS") {
@@ -378,5 +456,8 @@ export const useSendScreen = () => {
     destinationType,
     showSuccess,
     handleCloseSuccess,
+    feeEstimate: feeEstimateQuery.data,
+    isEstimatingFee: feeEstimateQuery.isFetching,
+    feeEstimateError: feeEstimateQuery.error,
   };
 };
