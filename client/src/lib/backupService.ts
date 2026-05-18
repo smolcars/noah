@@ -20,7 +20,7 @@ import { useWalletStore } from "~/store/walletStore";
 import { useBackupStore } from "~/store/backupStore";
 import logger from "~/lib/log";
 import ky from "ky";
-import { hasGooglePlayServices } from "~/constants";
+import { shouldUseUnifiedPush } from "~/constants";
 import { redactSensitiveErrorMessage } from "~/lib/errorUtils";
 
 const updateProgress = (step: string, progress: number) => {
@@ -194,7 +194,7 @@ export const restoreWallet = async (
       return err(setMnemonicResult.error);
     }
 
-    if (!hasGooglePlayServices()) {
+    if (shouldUseUnifiedPush()) {
       const storeNativeResult = await ResultAsync.fromPromise(
         storeNativeMnemonic(mnemonic),
         (e) => e as Error,

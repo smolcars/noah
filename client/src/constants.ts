@@ -26,12 +26,10 @@ export const PLATFORM = Platform.OS;
 export const DOCUMENT_DIRECTORY_PATH = RNFSTurbo.DocumentDirectoryPath;
 export const CACHES_DIRECTORY_PATH = RNFSTurbo.CachesDirectoryPath;
 
-export const hasGooglePlayServices = () => {
-  if (PLATFORM === "ios") {
-    return true;
-  }
-  return PLATFORM === "android" && Device.isDevice && isGooglePlayServicesAvailable();
-};
+// Devices that don't have Google Play Services available should use Unified Push
+// Emulators are excluded in this check and only real devices matter.
+export const shouldUseUnifiedPush = () =>
+  PLATFORM === "android" && Device.isDevice && !isGooglePlayServicesAvailable();
 
 const REGTEST_URL = process.env.EXPO_PUBLIC_REGTEST_URL
   ? process.env.EXPO_PUBLIC_REGTEST_URL

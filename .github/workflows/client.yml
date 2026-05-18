@@ -37,7 +37,7 @@ jobs:
       client_changed: ${{ steps.set_changed.outputs.client_changed }}
     steps:
       - name: 🏗 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🔎 Detect client-related changes
         id: filter
@@ -71,7 +71,7 @@ jobs:
     if: needs.changes.outputs.client_changed == 'true'
     steps:
       - name: 🏗 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 📦 Install signet app dependencies
         run: nix develop .# --command bash -c "bun install --frozen-lockfile"
@@ -93,7 +93,7 @@ jobs:
       aab_artifact_name: ${{ steps.aab_meta.outputs.artifact_name }}
     steps:
       - name: 🏗 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 📦 Install signet app dependencies
         run: nix develop .# --command bash -c "bun install --frozen-lockfile"

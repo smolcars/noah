@@ -7,7 +7,7 @@
     },
     "client": {
       "name": "noah",
-      "version": "0.0.13",
+      "version": "0.0.14",
       "dependencies": {
         "@bottom-tabs/react-navigation": "^1.1.0",
         "@react-native-clipboard/clipboard": "^1.16.3",
@@ -63,9 +63,9 @@
         "react-native-fs-turbo": "^0.5.0",
         "react-native-gesture-handler": "~2.30.0",
         "react-native-keychain": "^10.0.0",
-        "react-native-mmkv": "^4.1.2",
-        "react-native-nitro-ark": "0.0.104",
-        "react-native-nitro-modules": "0.33.7",
+        "react-native-mmkv": "^4.3.1",
+        "react-native-nitro-ark": "0.0.106",
+        "react-native-nitro-modules": "0.35.6",
         "react-native-qrcode-svg": "^6.3.21",
         "react-native-quick-base64": "^2.2.2",
         "react-native-reanimated": "~4.2.1",
@@ -1672,11 +1672,11 @@
 
     "react-native-keychain": ["react-native-keychain@10.0.0", "", {}, "sha512-YzPKSAnSzGEJ12IK6CctNLU79T1W15WDrElRQ+1/FsOazGX9ucFPTQwgYe8Dy8jiSEDJKM4wkVa3g4lD2Z+Pnw=="],
 
-    "react-native-mmkv": ["react-native-mmkv@4.1.2", "", { "peerDependencies": { "react": "*", "react-native": "*", "react-native-nitro-modules": "*" } }, "sha512-6LHb2DQBXuo96Aues13EugmlWw/HAYuh3KoJoQNrC4JsBwn3J3KiRYAg2mCm5Je0VYq2YsmbgZG7XJwX/WFYZA=="],
+    "react-native-mmkv": ["react-native-mmkv@4.3.1", "", { "peerDependencies": { "react": "*", "react-native": "*", "react-native-nitro-modules": "*" } }, "sha512-APyGGaaHtayVgT18dBM8QGGZKr9pGfSTiBwbbPNzhGGfJQSU7awLGRGq879OqYl31HmVks9hOBLCs+qfgacRZg=="],
 
-    "react-native-nitro-ark": ["react-native-nitro-ark@0.0.104", "", { "peerDependencies": { "react": "*", "react-native": "*", "react-native-nitro-modules": "^0.33.7" } }, "sha512-BtpmM/HI2mGfW6zfpZtMbMS36WUSVTES2l3+iMJpCmEIxvLviwRX1fvgOpgw8cT4NJpnh5vDKlel1GYOrsJmgA=="],
+    "react-native-nitro-ark": ["react-native-nitro-ark@0.0.106", "", { "peerDependencies": { "react": "*", "react-native": "*", "react-native-nitro-modules": "^0.35.6" } }, "sha512-ZB3glWk6zB7SeRnWDo3z2pI+3iQk0IRSPSZCtwbr9e+YXfuY6ZqYs1lmMGF8ufejcnxgcK3NrdtXjFZfJjtkTQ=="],
 
-    "react-native-nitro-modules": ["react-native-nitro-modules@0.33.7", "", { "peerDependencies": { "react": "*", "react-native": "*" } }, "sha512-WepMobWe4j1Ae5GQ5RxYGBdBpJBwzP6zaOxJ7r6nhbY5iyl01DL3Gsh4gk8edzNFRuAh1rvXDAHIipq8SahxeQ=="],
+    "react-native-nitro-modules": ["react-native-nitro-modules@0.35.6", "", { "peerDependencies": { "react": "*", "react-native": "*" } }, "sha512-3Cb7s+O5tpZ6RdIiPOB/wi3IMfBxD6tl6VDF8gJ5zvM/BEGTWxwMMLjzmWmsYPKekdbYBznF6qp2d2SxixPy8g=="],
 
     "react-native-qrcode-svg": ["react-native-qrcode-svg@6.3.21", "", { "dependencies": { "prop-types": "^15.8.0", "qrcode": "^1.5.4", "text-encoding": "^0.7.0" }, "peerDependencies": { "react": "*", "react-native": ">=0.63.4", "react-native-svg": ">=14.0.0" } }, "sha512-6vcj4rcdpWedvphDR+NSJcudJykNuLgNGFwm2p4xYjR8RdyTzlrELKI5LkO4ANS9cQUbqsfkpippPv64Q2tUtA=="],
 
