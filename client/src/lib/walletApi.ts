@@ -35,7 +35,7 @@ import {
   DOCUMENT_DIRECTORY_PATH,
   MNEMONIC_KEYCHAIN_SERVICE,
   ACTIVE_WALLET_CONFIG,
-  hasGooglePlayServices,
+  shouldUseUnifiedPush,
 } from "../constants";
 import {
   deriveStoreNextKeypair,
@@ -75,7 +75,7 @@ const normalizeServerAccessToken = (token: string | null | undefined): string | 
 };
 
 const syncNativeServerAccessToken = async (token: string | null): Promise<void> => {
-  if (hasGooglePlayServices()) {
+  if (!shouldUseUnifiedPush()) {
     return;
   }
 
@@ -193,7 +193,7 @@ const createWalletFromMnemonic = async (
     return err(setMnemonicResult.error);
   }
 
-  if (!hasGooglePlayServices()) {
+  if (shouldUseUnifiedPush()) {
     const storeNativeResult = await ResultAsync.fromPromise(
       storeNativeMnemonic(mnemonic),
       (e) => e as Error,
@@ -247,7 +247,7 @@ export const restoreWallet = async (
     return err(setResult.error);
   }
 
-  if (!hasGooglePlayServices()) {
+  if (shouldUseUnifiedPush()) {
     const storeNativeResult = await ResultAsync.fromPromise(
       storeNativeMnemonic(mnemonic),
       (e) => e as Error,

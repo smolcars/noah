@@ -2,7 +2,7 @@ import { Pressable, ScrollView, View, Switch, Image } from "react-native";
 import Constants from "expo-constants";
 import { useWalletStore } from "../store/walletStore";
 import { useBiometrics } from "../hooks/useBiometrics";
-import { ACTIVE_WALLET_CONFIG, PLATFORM, hasGooglePlayServices } from "../constants";
+import { ACTIVE_WALLET_CONFIG, PLATFORM, shouldUseUnifiedPush } from "../constants";
 import { useServerStore } from "../store/serverStore";
 import { useTransactionStore } from "../store/transactionStore";
 import { APP_VARIANT } from "../config";
@@ -303,7 +303,7 @@ const SettingsScreen = () => {
       isPressable: true,
     });
 
-    if (!hasGooglePlayServices()) {
+    if (shouldUseUnifiedPush()) {
       walletData.push({
         id: "unifiedPush",
         title: "UnifiedPush Setup",

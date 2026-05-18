@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: 🏗 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Blacksmith Builder
         uses: useblacksmith/setup-docker-builder@v1

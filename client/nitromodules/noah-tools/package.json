@@ -1,22 +1,22 @@
 {
   "name": "noah-tools",
   "version": "0.0.0",
-  "description": "Auxiliary tools for Noah",
+  "author": " <> ()",
   "main": "src/index",
   "codegenConfig": {
     "name": "NoahToolsSpec",
     "type": "modules",
     "jsSrcsDir": "src"
   },
-  "scripts": {
-    "nitrogen": "rm -rf nitrogen && bunx nitrogen"
-  },
-  "author": " <> ()",
-  "license": "UNLICENSED",
-  "homepage": "#readme",
   "create-react-native-library": {
     "languages": "kotlin-swift",
     "type": "nitro-module",
     "version": "0.51.1"
+  },
+  "description": "Auxiliary tools for Noah",
+  "homepage": "#readme",
+  "license": "UNLICENSED",
+  "scripts": {
+    "nitrogen": "rm -rf nitrogen && bunx nitrogen"
   }
 }

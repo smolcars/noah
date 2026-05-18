@@ -21,7 +21,7 @@ import { sendVerificationEmail, verifyEmail } from "~/lib/api";
 import { useServerRegistrationMutation } from "~/hooks/useServerRegistration";
 import { useServerStore } from "~/store/serverStore";
 import type { OnboardingStackParamList, SettingsStackParamList } from "../Navigators";
-import { hasGooglePlayServices } from "~/constants";
+import { shouldUseUnifiedPush } from "~/constants";
 import logger from "~/lib/log";
 
 type EmailVerificationParams = {
@@ -71,7 +71,7 @@ const EmailVerificationScreen = () => {
   });
 
   const navigateToNextOnboardingStep = useCallback(() => {
-    if (!hasGooglePlayServices()) {
+    if (shouldUseUnifiedPush()) {
       navigation.navigate("UnifiedPush", { fromOnboarding: true });
     } else {
       navigation.navigate("LightningAddress", { fromOnboarding: true });

@@ -17,7 +17,7 @@ import { NotificationData, ReportType } from "~/types/serverTypes";
 import { useWalletStore } from "~/store/walletStore";
 import { formatBip177 } from "./utils";
 import { updateWidget } from "~/hooks/useWidget";
-import { hasGooglePlayServices } from "~/constants";
+import { shouldUseUnifiedPush } from "~/constants";
 import {
   getStoredLightningReceiveAmount,
   removeStoredLightningReceiveAmount,
@@ -443,7 +443,7 @@ export async function registerForPushNotificationsAsync(): Promise<
   }
 
   // Prefer UnifiedPush endpoint on Android real device without Play Services.
-  if (!hasGooglePlayServices()) {
+  if (shouldUseUnifiedPush()) {
     try {
       const { getUnifiedPushEndpoint } = await import("noah-tools");
       const unifiedEndpoint = getUnifiedPushEndpoint();

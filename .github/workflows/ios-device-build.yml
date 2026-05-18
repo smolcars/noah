@@ -26,7 +26,7 @@ jobs:
       ipa_filename: ${{ steps.set_outputs.outputs.ipa_filename }}
     steps:
       - name: 🏗 Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 📦 Install dependencies
         run: nix develop .# --command bash -c "bun install --frozen-lockfile"
