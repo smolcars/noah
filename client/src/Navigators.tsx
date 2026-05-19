@@ -48,6 +48,8 @@ import { getMnemonic } from "~/lib/crypto";
 import { walletDataExists, clearStaleKeychain } from "~/lib/walletApi";
 import VTXOsScreen, { type VTXOWithStatus } from "~/screens/VTXOsScreen";
 import VTXODetailScreen from "~/screens/VTXODetailScreen";
+import UnilateralExitScreen from "~/screens/UnilateralExitScreen";
+import ExitVtxoDetailScreen from "~/screens/ExitVtxoDetailScreen";
 import PushNotificationsRequiredScreen from "~/screens/PushNotificationsRequiredScreen";
 import UnifiedPushScreen from "~/screens/UnifiedPushScreen";
 import {
@@ -74,6 +76,8 @@ export type SettingsStackParamList = {
   ArkInfo: undefined;
   VTXOs: undefined;
   VTXODetail: { vtxo: VTXOWithStatus };
+  UnilateralExit: { vtxoIds?: string[] } | undefined;
+  ExitVtxoDetail: { vtxoId: string };
   NoahStory: undefined;
   UnifiedPush: { fromOnboarding?: boolean } | undefined;
   Debug: undefined;
@@ -131,6 +135,16 @@ const SettingsStackNav = () => (
     <Stack.Screen
       name="VTXODetail"
       component={VTXODetailScreen}
+      options={{ animation: "default" }}
+    />
+    <Stack.Screen
+      name="UnilateralExit"
+      component={UnilateralExitScreen}
+      options={{ animation: "default" }}
+    />
+    <Stack.Screen
+      name="ExitVtxoDetail"
+      component={ExitVtxoDetailScreen}
       options={{ animation: "default" }}
     />
     <Stack.Screen name="NoahStory" component={NoahStoryScreen} options={{ animation: "default" }} />
