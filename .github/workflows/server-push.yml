@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - "v*"
     paths:
       - "server/**"
       - "fly/**"
@@ -93,3 +95,20 @@ jobs:
       - run: flyctl deploy --config fly/signet.fly.toml --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_SIGNET_API_TOKEN }}
+
+  mainnet-fly-deploy:
+    name: Deploy mainnet to Fly
+    needs: fly-deploy
+    if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    environment: production
+    concurrency: fly-mainnet-deploy
+    steps:
+      - uses: actions/checkout@v6
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl config validate --strict --config fly/mainnet.fly.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_MAINNET_API_TOKEN }}
+      - run: flyctl deploy --config fly/mainnet.fly.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_MAINNET_API_TOKEN }}
