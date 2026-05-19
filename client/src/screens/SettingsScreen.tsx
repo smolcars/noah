@@ -46,6 +46,7 @@ type Setting = {
     | "backup"
     | "arkInfo"
     | "vtxos"
+    | "emergencyExit"
     | "feedback"
     | "unifiedPush"
     | "debug";
@@ -219,6 +220,8 @@ const SettingsScreen = () => {
       navigation.navigate("ArkInfo");
     } else if (item.id === "vtxos") {
       navigation.navigate("VTXOs");
+    } else if (item.id === "emergencyExit") {
+      navigation.navigate("UnilateralExit");
     } else if (item.id === "feedback") {
       setShowFeedback(true);
     } else if (item.id === "unifiedPush") {
@@ -294,6 +297,12 @@ const SettingsScreen = () => {
       id: "vtxos",
       title: "Show VTXOs",
       description: "VTXOs are to Ark like UTXOs are to Bitcoin",
+      isPressable: true,
+    });
+    walletData.push({
+      id: "emergencyExit",
+      title: "Emergency Exit",
+      description: "Recover funds if the Ark server is unavailable.",
       isPressable: true,
     });
     walletData.push({

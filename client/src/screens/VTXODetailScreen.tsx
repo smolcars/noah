@@ -1,5 +1,6 @@
 import { View, Pressable, ScrollView, Linking } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Text } from "../components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import Icon from "@react-native-vector-icons/ionicons";
@@ -11,6 +12,8 @@ import type { BarkVtxo } from "react-native-nitro-ark";
 import { useGetBlockHeight } from "~/hooks/useMarketData";
 import { formatBip177 } from "~/lib/utils";
 import { getMempoolTxUrl } from "~/constants";
+import { NoahButton } from "~/components/ui/NoahButton";
+import type { SettingsStackParamList } from "~/Navigators";
 
 type VTXOWithStatus = BarkVtxo & {
   isExpiring: boolean;
@@ -87,7 +90,7 @@ const VTXODetailRow = ({
 
 const VTXODetailScreen = () => {
   const route = useRoute();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const iconColor = useIconColor();
   const { data: blockHeight } = useGetBlockHeight();
   const { vtxo } = route.params as { vtxo: VTXOWithStatus };
@@ -178,6 +181,21 @@ const VTXODetailScreen = () => {
               explorerUrl={anchorExplorerUrl}
             />
             <VTXODetailRow label="Server Public Key" value={vtxo.server_pubkey} copyable />
+          </View>
+
+          <View className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+            <Text className="text-base font-semibold text-amber-700 dark:text-amber-300">
+              Emergency exit
+            </Text>
+            <Text className="mt-1 text-sm leading-5 text-amber-700/90 dark:text-amber-200/90">
+              Use only if the Ark server is unavailable and normal offboarding cannot be used.
+            </Text>
+            <NoahButton
+              className="mt-4"
+              onPress={() => navigation.navigate("UnilateralExit", { vtxoIds: [vtxo.point] })}
+            >
+              Exit This VTXO
+            </NoahButton>
           </View>
         </ScrollView>
       </View>
