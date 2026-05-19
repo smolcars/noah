@@ -8,6 +8,9 @@ env:
     substituters = https://cache.nixos.org/
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       git_ref:
@@ -28,7 +31,11 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          git_ref="${{ inputs.git_ref }}"
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            git_ref="${{ github.ref }}"
+          else
+            git_ref="${{ inputs.git_ref }}"
+          fi
           repo_url="${{ github.server_url }}/${{ github.repository }}.git"
           auth_repo_url="${repo_url/https:\/\//https:\/\/x-access-token:${GITHUB_TOKEN}@}"
 
