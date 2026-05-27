@@ -110,8 +110,8 @@ const config: { expo: ExpoConfig } = {
 };
 
 // WARNING: Do not change these values manually. Use the `just bump` command instead.
-config.expo.version = "0.0.14";
-config.expo.android!.versionCode = 16;
-config.expo.ios!.buildNumber = "16";
+config.expo.version = "0.0.15";
+config.expo.android!.versionCode = 17;
+config.expo.ios!.buildNumber = "17";
 
 export default config;
