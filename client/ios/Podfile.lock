@@ -239,6 +239,8 @@ PODS:
     - RNWorklets
   - ExpoNotifications (56.0.14):
     - ExpoModulesCore
+  - ExpoSplashScreen (56.0.10):
+    - ExpoModulesCore
   - ExpoSystemUI (56.0.5):
     - ExpoModulesCore
   - ExpoTaskManager (56.0.15):
@@ -2759,6 +2761,7 @@ DEPENDENCIES:
   - ExpoModulesWorklets (from `../../node_modules/expo-modules-core`)
   - ExpoModulesWorkletsAdapter (from `../../node_modules/expo-modules-core`)
   - ExpoNotifications (from `../../node_modules/expo-notifications/ios`)
+  - ExpoSplashScreen (from `../../node_modules/expo-splash-screen/ios`)
   - ExpoSystemUI (from `../../node_modules/expo-system-ui/ios`)
   - ExpoTaskManager (from `../../node_modules/expo-task-manager/ios`)
   - EXUpdatesInterface (from `../../node_modules/expo-updates-interface/ios`)
@@ -2923,6 +2926,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/expo-modules-core"
   ExpoNotifications:
     :path: "../../node_modules/expo-notifications/ios"
+  ExpoSplashScreen:
+    :path: "../../node_modules/expo-splash-screen/ios"
   ExpoSystemUI:
     :path: "../../node_modules/expo-system-ui/ios"
   ExpoTaskManager:
@@ -3151,6 +3156,7 @@ SPEC CHECKSUMS:
   ExpoModulesWorklets: 56a42d08cc43bfc0fb6bbe8edd02be5c33944a04
   ExpoModulesWorkletsAdapter: f1d4ff0b7c0d711ef423d6a0fccf37914cb2457c
   ExpoNotifications: dbe006328cf468a95d37479ba6fbf8299bce05eb
+  ExpoSplashScreen: 6deba2c0000d89a38dc192ebbee1656a0fbb0b70
   ExpoSystemUI: 5b9bfd2ccc7933ee41711b8cddabecd1eed697e2
   ExpoTaskManager: c9a49511701f26ee0ebb232a0d204054d8c5cbc9
   EXUpdatesInterface: 211042a76ef49beec0de793aa4439de3164c4fd4
