@@ -15,6 +15,7 @@ const config: { expo: ExpoConfig } = {
       },
     },
     plugins: [
+      ["expo-asset"],
       [
         "expo-local-authentication",
         {
