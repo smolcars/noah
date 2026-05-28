@@ -59,9 +59,9 @@ jobs:
       - name: 🔧 Setup Regtest Environment
         run: cd scripts && docker-compose pull && docker-compose build && ./ark-dev.sh setup-everything
 
-      - name: 📱 Boot iOS Simulator (iPhone 16)
+      - name: 📱 Boot iOS Simulator (iPhone 17 Pro)
         run: |
-          DEVICE_ID=$(xcrun simctl list devices available | grep "iPhone 16" | head -n 1 | awk -F "[()]" '{print $2}')
+          DEVICE_ID=$(xcrun simctl list devices available | grep "iPhone 17 Pro" | head -n 1 | awk -F "[()]" '{print $2}')
           if [ -z "$DEVICE_ID" ]; then
             echo "No available simulator found for the criteria."
             exit 1
