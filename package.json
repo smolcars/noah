@@ -18,6 +18,7 @@
     "check": "bun client check"
   },
   "patchedDependencies": {
+    "expo-modules-jsi@56.0.7": "patches/expo-modules-jsi@56.0.7.patch",
     "react-native-worklets-core@1.6.2": "patches/react-native-worklets-core@1.6.2.patch"
   }
 }
