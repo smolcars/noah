@@ -28,6 +28,8 @@ declare module "*.svg" {
   export default value;
 }
 
+declare module "*.css";
+
 declare module "*.m4a" {
   const value: number;
   export default value;
