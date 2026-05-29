@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
-import { authorizeMailbox } from "~/lib/api";
-import { getMailboxAuthorization, loadWalletIfNeeded } from "~/lib/walletApi";
+import { loadWalletIfNeeded } from "~/lib/walletApi";
 import logger from "~/lib/log";
 import { useServerStore } from "~/store/serverStore";
+import { authorizeMailboxForServer, MAILBOX_AUTH_TTL_SECS } from "~/lib/server";
 
 const log = logger("useMailboxAuthorization");
 
-// Keep a buffer below the server's 90-day hard cap so device/server clock skew
-// does not cause the authorization request to be rejected.
-const MAILBOX_AUTH_TTL_SECS = 89 * 24 * 60 * 60;
 const MAILBOX_AUTH_REFRESH_WINDOW_SECS = 7 * 24 * 60 * 60;
 
 export const useMailboxAuthorization = (isReady: boolean) => {
@@ -17,7 +14,6 @@ export const useMailboxAuthorization = (isReady: boolean) => {
     isRegisteredWithServer,
     mailboxAuthorizationExpiry,
     isMailboxAuthorizationEnabled,
-    setMailboxAuthorizationExpiry,
   } = useServerStore();
 
   useEffect(() => {
@@ -51,17 +47,14 @@ export const useMailboxAuthorization = (isReady: boolean) => {
       }
 
       const requestedExpiry = now + MAILBOX_AUTH_TTL_SECS;
-      const mailboxAuthorizationResult = await getMailboxAuthorization(requestedExpiry);
-      if (mailboxAuthorizationResult.isErr()) {
-        log.w("Failed to generate mailbox authorization", [mailboxAuthorizationResult.error]);
-        return;
-      }
-      if (shouldAbort()) {
-        return;
-      }
-      const authorizeResult = await authorizeMailbox(mailboxAuthorizationResult.value);
+      const authorizeResult = await authorizeMailboxForServer({
+        requestedExpiry,
+        shouldAbort,
+      });
       if (authorizeResult.isErr()) {
-        log.w("Failed to store mailbox authorization on server", [authorizeResult.error]);
+        if (!shouldAbort()) {
+          log.w("Failed to grant mailbox authorization on server", [authorizeResult.error]);
+        }
         return;
       }
 
@@ -69,10 +62,7 @@ export const useMailboxAuthorization = (isReady: boolean) => {
         return;
       }
 
-      setMailboxAuthorizationExpiry(mailboxAuthorizationResult.value.expiry);
-      log.d("Successfully granted mailbox authorization", [
-        mailboxAuthorizationResult.value.expiry,
-      ]);
+      log.d("Successfully granted mailbox authorization", [authorizeResult.value]);
     };
 
     registerMailboxAuthorization();
@@ -86,7 +76,6 @@ export const useMailboxAuthorization = (isReady: boolean) => {
     isMailboxAuthorizationEnabled,
     mailboxAuthorizationExpiry,
     refreshTick,
-    setMailboxAuthorizationExpiry,
   ]);
 
   useEffect(() => {

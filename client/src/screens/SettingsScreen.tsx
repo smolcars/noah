@@ -25,7 +25,7 @@ import logoImageLight from "../../assets/All_Files/light_dark_tinted/icon_clear_
 import { COLORS } from "~/lib/styleConstants";
 import { useIconColor, useTheme } from "~/hooks/useTheme";
 import { FeedbackModal } from "~/components/FeedbackModal";
-import { performServerRegistration } from "../lib/server";
+import { resetAndReRegisterWithServer } from "../lib/server";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { revokeMailboxAuthorization } from "~/lib/api";
@@ -67,7 +67,6 @@ const SettingsScreen = () => {
   const suspendWalletMutation = useSuspendWallet();
   const [versionTapCount, setVersionTapCount] = useState(0);
   const {
-    resetRegistration,
     isMailboxAuthorizationEnabled,
     setMailboxAuthorizationExpiry,
     setMailboxAuthorizationEnabled,
@@ -299,10 +298,9 @@ const SettingsScreen = () => {
           title="Reset Server Registration"
           description="Are you sure you want to reset your server registration? This will not delete your wallet, but you will need to register with the server again."
           onConfirm={async () => {
-            resetRegistration();
             setResetError(null);
             setShowResetSuccess(false);
-            const result = await performServerRegistration(null);
+            const result = await resetAndReRegisterWithServer();
             if (result.isOk()) {
               setShowResetSuccess(true);
               setTimeout(() => {
