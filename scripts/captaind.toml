@@ -1,8 +1,18 @@
 data_dir = "/data/captaind"
+# The bitcoin network this server runs on
 network = "regtest"
+
+# The lifetime of VTXOs in blocks
 vtxo_lifetime = 480
+
+# Maximum value of VTXOs
+#max_vtxo_amount = "1000000 sat"
+
+# Minimum amount required for board transactions
 min_board_amount = "20000 sat"
-vtxo_exit_delta = 12
+
+# The time between execution of each exit clause of the VTXO, in blocks
+vtxo_exit_delta = 144
 
 # The maximum transaction depth of the arkoor part of VTXOs that server cosigns
 # Maximum exit depth (genesis chain length) allowed for a VTXO.
@@ -14,12 +24,16 @@ max_vtxo_exit_depth = 100
 # The maximum number of outputs per input of an arkoor tx
 max_arkoor_fanout = 4
 
-max_arkoor_depth = 5
-required_board_confirmations = 1
+# Number of confirmation required for a board tx to be accepted as a VTXO
+required_board_confirmations = 3
+
 # Minimum number of confirmations for a UTXO to be considered trusted.
 min_trusted_confs = 2
 
+# Whether to provide rich errors and stacktraces in RPC error returns
 rpc_rich_errors = true
+
+# The interval to update the tx index
 txindex_check_interval = "30s"
 # The interval at which the SyncManager polls for new blocks
 sync_manager_block_poll_interval = "100ms"
@@ -27,10 +41,23 @@ sync_manager_block_poll_interval = "100ms"
 # The minimum balance to maintain for the forfeit watcher, if running
 watchman_min_balance = "1 btc"
 
+# The interval to rebroadcast transactions
 transaction_rebroadcast_interval = "1m"
+
+# A public service announcement to send on each client-server handshake request
+#
+# Clients are supposed to display this message to their users.
+#handshake_psa = "Welcome to the most Awesome Ark Server!"
+
+# Endpoint for OpenTelemetry collector
+#otel_collector_endpoint = "http://127.0.0.1:4000"
+# Probability of enabling OpenTelemetry tracing
+#otel_tracing_sampler = "0.5"
+# The name of your deployment used by OpenTelemetry
 otel_deployment_name = "my_regtest"
+
 # The maximum number of items we return to mailbox queries
-read_mailbox_max_items = 100
+max_read_mailbox_items = 100
 
 
 ##########
@@ -49,7 +76,9 @@ round_sign_time = "2s"
 # The amount of round cosign nonces we require users to provide
 #
 # This effectively caps the maximum number of leaf VTXOs in a round.
-nb_round_nonces = 64
+# So, by default, the maximum number of output VTXOs in a round is:
+#   `radix ^ nb_round_nonces` (= 4 ^ 8 = 65 536)
+nb_round_nonces = 8
 
 # The duration after which to drop forfeit nonces
 round_forfeit_nonces_timeout = "30s"
@@ -61,6 +90,7 @@ round_forfeit_nonces_timeout = "30s"
 
 # The time after which we drop offboard sessions and release locked VTXOs
 offboard_session_timeout = "30s"
+
 # The time in which a fee rate is considered valid for performing an offboard.
 #
 # This allows us to handle the case where clients don't receive up-to-date fee rates due to
@@ -71,29 +101,6 @@ offboard_session_timeout = "30s"
 # being limited by that.
 offboard_acceptable_fee_rate_duration = "15m"
 
-
-#############
-# LIGHTNING #
-#############
-
-# FIXME Expiry delta of HTLCs
-htlc_expiry_delta = 40
-
-htlc_send_expiry_delta = 258
-
-# Maximum CLTV delta server will allow clients to request an
-# invoice generation with.
-max_user_invoice_cltv_delta = 250
-
-# The duration after which a generated invoice will expire.
-invoice_expiry = "10m"
-
-# The duration for which the server will hold inbound HTLC(s) while
-# waiting for a user to claim a lightning receive.
-# After this timeout the server will fail the HTLC(s) back to the sender and
-# also cancel the hold invoice.
-receive_htlc_forward_timeout = "30s"
-
 # Interval to retry connecting to disconnected CLN nodes
 cln_reconnect_interval = "10s"
 
@@ -103,14 +110,11 @@ invoice_check_interval = "3s"
 # The time we give xpay to try finish a payment
 cln_xpay_timeout = "60s"
 
-# Minimum interval to keep between two consecutive checks of an invoice
-invoice_recheck_delay = "2s"
-
 # FIXME
 invoice_check_base_delay = "10s"
 
 # FIXME
-invoice_check_max_delay = "10m"
+max_invoice_check_delay = "10m"
 
 # FIXME
 invoice_poll_interval = "30s"
@@ -122,8 +126,33 @@ htlc_settlement_poll_interval = "60s"
 track_all_base_delay = "1s"
 
 # Maximum delay for TrackAll stream reconnection backoff
-track_all_max_delay = "60s"
+max_track_all_delay = "60s"
 
+# The number of blocks to keep between Lightning and Ark HTLCs expiries.
+htlc_expiry_delta = 40
+
+# The number of blocks after which an HTLC-send VTXO expires once granted.
+# When granting an HTLC-send VTXO, the Server doesn't know the lightning
+# route yet, so it needs this config to be sufficiently high to account
+# for the worst routing scenario.
+htlc_send_expiry_delta = 258
+
+# Maximum CLTV delta server will allow clients to request an
+# invoice generation with.
+max_user_invoice_cltv_delta = 250
+
+# The duration after which a generated invoice will expire.
+invoice_expiry = "48h"
+
+# The duration for which the server will hold inbound HTLC(s) while
+# waiting for a user to claim a lightning receive.
+# After this timeout the server will fail the HTLC(s) back to the sender and
+# also cancel the hold invoice.
+receive_htlc_forward_timeout = "3min"
+
+# Indicates whether the Ark server requires clients to either
+# provide a VTXO ownership proof, or a lightning receive token
+# when preparing a lightning claim.
 ln_receive_anti_dos_required = false
 
 # The fraction of the fee we charge that we allow CLN to claim at most
@@ -194,6 +223,29 @@ ppm_expiry_table = [
   { expiry_blocks_threshold = 2161, ppm = 8000 }, # 2160 < exp: 8,000 ppm (0.8%)
 ]
 
+#############
+# VTXO POOL #
+#############
+
+[vtxopool]
+# The target set of VTXOs to maintain in the pool
+# Format: "<amount>:<count>", f.e. "1000sat:50"
+vtxo_targets = ["1000sat:10", "10000sat:10"]
+# At what % of the target should new VTXOs be issued
+#
+# Once one of the target amounts falls below target, all amounts
+# will be replenished.
+vtxo_target_issue_threshold = 80
+# The lifetime in blocks of the VTXOs in the pool
+vtxo_lifetime = 432
+# Time in blocks before the expiry to no longer use VTXOs
+vtxo_pre_expiry = 144
+# Maximum depth for pool VTXOs
+max_vtxo_arkoor_depth = 3
+# The interval at which to check if an issuance should be made
+issue_interval = "1m"
+
+
 #################
 # FEE ESTIMATOR #
 #################
@@ -212,7 +264,7 @@ fallback_fee_rate_slow = "4sat/vb"
 
 
 [bitcoind]
-url = "bitcoind:18443"
+url = "http://bitcoind:18443"
 rpc_user = "second"
 rpc_pass = "ark"
 
@@ -241,23 +293,3 @@ hold_invoice.uri = "https://cln:9988"
 hold_invoice.server_cert_path = "/data/cln/regtest/hold/ca.pem"
 hold_invoice.client_cert_path = "/data/cln/regtest/hold/client.pem"
 hold_invoice.client_key_path = "/data/cln/regtest/hold/client-key.pem"
-
-[vtxopool]
-# The target set of VTXOs to maintain in the pool
-# Format: "<amount>:<count>", f.e. "1000sat:50"
-vtxo_targets = ["1000sat:10", "10000sat:10"]
-# At what % of the target should new VTXOs be issued
-#
-# Once one of the target amounts falls below target, all amounts
-# will be replenished.
-vtxo_target_issue_threshold = 80
-# The lifetime in blocks of the VTXOs in the pool
-vtxo_lifetime = 432
-# Time in blocks before the expiry to no longer use VTXOs
-vtxo_pre_expiry = 144
-# Maximum depth for pool VTXOs
-vtxo_max_arkoor_depth = 3
-# Fallback feerate for VTXO pool issuance txs
-issue_tx_fallback_feerate = "250sat/kwu"
-# The interval at which to check if an issuance should be made
-issue_interval = "1m"

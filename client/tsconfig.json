@@ -5,10 +5,11 @@
     "strictNullChecks": true,
     "noImplicitAny": true,
     "moduleResolution": "bundler",
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "~/*": ["src/*"]
-    }
+      "~/*": ["src/*"],
+    },
   },
-  "include": ["**/*.ts", "**/*.tsx", "uniwind-env.d.ts"]
+  "include": ["**/*.ts", "**/*.tsx", "uniwind-env.d.ts"],
 }

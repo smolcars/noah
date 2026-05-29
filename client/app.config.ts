@@ -15,6 +15,22 @@ const config: { expo: ExpoConfig } = {
       },
     },
     plugins: [
+      ["expo-asset"],
+      [
+        "expo-splash-screen",
+        {
+          backgroundColor: "#000000",
+          resizeMode: "contain",
+          ios: {
+            image: "./assets/All_Files/splash_screens/splash_screen_ios.png",
+            enableFullScreenImage_legacy: true,
+          },
+          android: {
+            image: "./assets/All_Files/splash_screens/splash_screen_android.png",
+          },
+        },
+      ],
+      ["@sentry/react-native"],
       [
         "expo-local-authentication",
         {
@@ -77,11 +93,6 @@ const config: { expo: ExpoConfig } = {
       infoPlist: {
         UIBackgroundModes: ["remote-notification", "fetch"],
       },
-      splash: {
-        image: "./assets/All_Files/splash_screens/splash_screen_ios.png",
-        resizeMode: "contain",
-        backgroundColor: "#000000",
-      },
       icon: "./assets/noah.icon",
     },
     android: {
@@ -91,11 +102,6 @@ const config: { expo: ExpoConfig } = {
         backgroundColor: "#000000",
       },
       package: "com.noahwallet",
-      splash: {
-        image: "./assets/All_Files/splash_screens/splash_screen_android.png",
-        resizeMode: "contain",
-        backgroundColor: "#000000",
-      },
       softwareKeyboardLayoutMode: "pan",
     },
     androidStatusBar: {

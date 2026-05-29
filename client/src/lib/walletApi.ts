@@ -161,20 +161,28 @@ const createWalletFromMnemonic = async (
   if (isArkServerAccessTokenEnabled && options && "serverAccessToken" in options) {
     const saveResult = await saveArkServerAccessToken(options.serverAccessToken ?? "");
     if (saveResult.isErr()) {
+      log.error("Failed to save ARK server access token", [saveResult.error]);
       return err(saveResult.error);
     }
   }
 
   const isLoadedResult = await ResultAsync.fromPromise(isWalletLoadedNitro(), (e) => e as Error);
-  if (isLoadedResult.isErr()) return err(isLoadedResult.error);
+  if (isLoadedResult.isErr()) {
+    log.error("Failed to check if wallet is loaded", [isLoadedResult.error]);
+    return err(isLoadedResult.error);
+  }
 
   if (isLoadedResult.value) {
     const closeResult = await ResultAsync.fromPromise(closeWalletNitro(), (e) => e as Error);
-    if (closeResult.isErr()) return err(closeResult.error);
+    if (closeResult.isErr()) {
+      log.error("Failed to close wallet", [closeResult.error]);
+      return err(closeResult.error);
+    }
   }
 
   const configResult = await getWalletCreationOptions(options);
   if (configResult.isErr()) {
+    log.error("Failed to get wallet creation options", [configResult.error]);
     return err(configResult.error);
   }
 
@@ -184,12 +192,14 @@ const createWalletFromMnemonic = async (
   );
 
   if (createResult.isErr()) {
+    log.error("Failed to create wallet", [createResult.error]);
     return err(createResult.error);
   }
 
   const setMnemonicResult = await ResultAsync.fromPromise(setMnemonic(mnemonic), (e) => e as Error);
 
   if (setMnemonicResult.isErr()) {
+    log.error("Failed to set mnemonic", [setMnemonicResult.error]);
     return err(setMnemonicResult.error);
   }
 
@@ -205,16 +215,19 @@ const createWalletFromMnemonic = async (
 
   const loadResult = await loadWallet(mnemonic, options);
   if (loadResult.isErr()) {
+    log.error("Failed to load wallet", [loadResult.error]);
     return err(loadResult.error);
   }
 
   const deriveResult = await deriveStoreNextKeypair();
   if (deriveResult.isErr()) {
+    log.error("Failed to derive store next keypair", [deriveResult.error]);
     return err(deriveResult.error);
   }
 
   const keypairResult = await peakKeyPair(0);
   if (keypairResult.isErr()) {
+    log.error("Failed to peak keypair", [keypairResult.error]);
     return err(keypairResult.error);
   }
 
@@ -226,6 +239,7 @@ export const createWallet = async (
 ): Promise<Result<void, Error>> => {
   const mnemonicResult = await ResultAsync.fromPromise(createMnemonic(), (e) => e as Error);
   if (mnemonicResult.isErr()) {
+    log.error("Failed to create mnemonic", [mnemonicResult.error]);
     return err(mnemonicResult.error);
   }
   return createWalletFromMnemonic(mnemonicResult.value, options);
@@ -238,12 +252,14 @@ export const restoreWallet = async (
   if (isArkServerAccessTokenEnabled && options && "serverAccessToken" in options) {
     const saveResult = await saveArkServerAccessToken(options.serverAccessToken ?? "");
     if (saveResult.isErr()) {
+      log.error("Failed to save ARK server access token", [saveResult.error]);
       return err(saveResult.error);
     }
   }
 
   const setResult = await ResultAsync.fromPromise(setMnemonic(mnemonic), (e) => e as Error);
   if (setResult.isErr()) {
+    log.error("Failed to set mnemonic", [setResult.error]);
     return err(setResult.error);
   }
 
