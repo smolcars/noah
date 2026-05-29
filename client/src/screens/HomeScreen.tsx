@@ -157,6 +157,14 @@ const HomeScreen = () => {
             <Text className="text-sm text-muted-foreground text-center mt-4">
               Go to Settings → Danger Zone to resume your wallet.
             </Text>
+            <Pressable
+              onPress={() => navigation.navigate("Settings")}
+              accessibilityRole="button"
+              accessibilityLabel="Open settings"
+              className="mt-6 rounded-2xl bg-primary px-5 py-3"
+            >
+              <Text className="font-semibold text-primary-foreground">Open Settings</Text>
+            </Pressable>
           </View>
         </View>
       </NoahSafeAreaView>
