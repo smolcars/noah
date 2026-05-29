@@ -32,15 +32,18 @@ impl<'a> HeartbeatRepository<'a> {
         Ok(notification_id)
     }
 
-    /// Marks a heartbeat notification as responded
-    pub async fn mark_as_responded(&self, notification_id: &str) -> Result<bool> {
+    /// Marks a heartbeat notification as responded for the owning user.
+    pub async fn mark_as_responded(&self, notification_id: &str, pubkey: &str) -> Result<bool> {
         let result = sqlx::query(
             "UPDATE heartbeat_notifications
              SET responded_at = now(), status = $1
-             WHERE notification_id = $2 AND status = $3",
+             WHERE notification_id = $2
+               AND pubkey = $3
+               AND status = $4",
         )
         .bind(HeartbeatStatus::Responded.to_string())
         .bind(notification_id)
+        .bind(pubkey)
         .bind(HeartbeatStatus::Pending.to_string())
         .execute(self.pool)
         .await?;

@@ -120,7 +120,7 @@ async fn test_heartbeat_response_already_responded() {
 
     // Mark it as responded first
     heartbeat_repo
-        .mark_as_responded(&notification_id)
+        .mark_as_responded(&notification_id, &user.pubkey().to_string())
         .await
         .unwrap();
 
@@ -146,6 +146,64 @@ async fn test_heartbeat_response_already_responded() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_heartbeat_response_rejects_other_users_notification() {
+    let (app, app_state, _guard) = setup_test_app().await;
+
+    let owner = TestUser::new();
+    create_test_user(&app_state, &owner, None).await;
+
+    let responder = TestUser::new_with_key(&[0xab; 32]);
+    sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, NULL)")
+        .bind(responder.pubkey().to_string())
+        .bind("responder@localhost")
+        .execute(&app_state.db_pool)
+        .await
+        .unwrap();
+    let responder_access_token = responder.access_token(&app_state);
+
+    let heartbeat_repo = HeartbeatRepository::new(&app_state.db_pool);
+    let notification_id = heartbeat_repo
+        .create_notification(&owner.pubkey().to_string())
+        .await
+        .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/heartbeat_response")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", responder_access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "notification_id": notification_id
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+    let (status, responded_at): (String, Option<chrono::DateTime<Utc>>) = sqlx::query_as(
+        "SELECT status, responded_at FROM heartbeat_notifications WHERE notification_id = $1",
+    )
+    .bind(&notification_id)
+    .fetch_one(&app_state.db_pool)
+    .await
+    .unwrap();
+
+    assert_eq!(status, HeartbeatStatus::Pending.to_string());
+    assert!(responded_at.is_none());
 }
 
 #[tracing_test::traced_test]

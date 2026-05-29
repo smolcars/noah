@@ -563,7 +563,7 @@ pub async fn heartbeat_response(
     let heartbeat_repo = HeartbeatRepository::new(&state.db_pool);
 
     let updated = heartbeat_repo
-        .mark_as_responded(&payload.notification_id)
+        .mark_as_responded(&payload.notification_id, &auth_payload.key)
         .await?;
 
     if !updated {

@@ -3,19 +3,19 @@
 /**
  * Represents a structured API error response.
  */
-export type ApiErrorResponse = {
+export type ApiErrorResponse = { 
 /**
  * Always "ERROR" for error responses.
  */
-status: string,
+status: string, 
 /**
  * Stable machine-readable error code.
  */
-code: string,
+code: string, 
 /**
  * User-facing error message.
  */
-message: string,
+message: string, 
 /**
  * Safe error reason for compatibility.
  */
@@ -37,15 +37,15 @@ export type AuthLoginResponse = { access_token: string, token_type: string, expi
 /**
  * Defines the payload for granting mailbox authorization to the server.
  */
-export type AuthorizeMailboxPayload = {
+export type AuthorizeMailboxPayload = { 
 /**
  * Ark mailbox identifier scoped to the loaded wallet.
  */
-mailbox_id: string,
+mailbox_id: string, 
 /**
  * Authorization expiry as a Unix timestamp in seconds.
  */
-expiry: number,
+expiry: number, 
 /**
  * Hex-encoded mailbox authorization.
  */
@@ -86,7 +86,7 @@ export type HeartbeatResponsePayload = { notification_id: string, };
 /**
  * Defines the payload for querying lightning address suggestions.
  */
-export type LightningAddressSuggestionsPayload = {
+export type LightningAddressSuggestionsPayload = { 
 /**
  * Partial lightning address typed in the send screen.
  */
@@ -95,7 +95,7 @@ query: string, };
 /**
  * Represents autocomplete suggestions for lightning addresses.
  */
-export type LightningAddressSuggestionsResponse = {
+export type LightningAddressSuggestionsResponse = { 
 /**
  * Ordered suggestion list.
  */
@@ -112,15 +112,15 @@ export type NotificationData = { "notification_type": "maintenance" } & Maintena
 /**
  * Defines the payload for a user registration request.
  */
-export type RegisterPayload = {
+export type RegisterPayload = { 
 /**
  * User chosen lightning address
  */
-ln_address: string | null,
+ln_address: string | null, 
 /**
  * Optional device information.
  */
-device_info: DeviceInfo | null,
+device_info: DeviceInfo | null, 
 /**
  * Optional Ark address
  */
@@ -129,7 +129,7 @@ ark_address: string | null, };
 /**
  * Defines the payload for registering a push notification token.
  */
-export type RegisterPushToken = {
+export type RegisterPushToken = { 
 /**
  * The Expo push token for the user's device.
  */
@@ -138,31 +138,31 @@ push_token: string, };
 /**
  * Represents the response for an user registration.
  */
-export type RegisterResponse = {
+export type RegisterResponse = { 
 /**
  * The status of the request, either "OK" or "ERROR".
  */
-status: string,
+status: string, 
 /**
  * An optional event indicating the outcome of the authentication.
  */
-event: AuthEvent | null,
+event: AuthEvent | null, 
 /**
  * An optional reason for an error, if one occurred.
  */
-reason: string | null,
+reason: string | null, 
 /**
  * The user's lightning address.
  */
-lightning_address: string | null,
+lightning_address: string | null, 
 /**
  * The user's optional display name.
  */
-display_name: string | null,
+display_name: string | null, 
 /**
  * Whether the user's email is verified.
  */
-is_email_verified: boolean,
+is_email_verified: boolean, 
 /**
  * The user's current operational lifecycle status.
  */
@@ -182,11 +182,11 @@ export type SendEmailVerificationPayload = { email: string, };
 /**
  * Defines the payload for submitting a BOLT11 invoice.
  */
-export type SubmitInvoicePayload = {
+export type SubmitInvoicePayload = { 
 /**
  * The BOLT11 invoice to be paid.
  */
-invoice: string,
+invoice: string, 
 /**
  * The unique identifier for the payment transaction.
  */
@@ -195,7 +195,7 @@ transaction_id: string, };
 /**
  * Defines the payload for updating a user's lightning address.
  */
-export type UpdateLnAddressPayload = {
+export type UpdateLnAddressPayload = { 
 /**
  * The new lightning address for the user.
  */
@@ -204,7 +204,7 @@ ln_address: string, };
 /**
  * Defines the payload for updating a user's profile.
  */
-export type UpdateProfilePayload = {
+export type UpdateProfilePayload = { 
 /**
  * The user's optional display name. Null or empty clears the name.
  */
@@ -215,15 +215,15 @@ export type UploadUrlResponse = { upload_url: string, s3_key: string, };
 /**
  * Represents the response for a user's information.
  */
-export type UserInfoResponse = {
+export type UserInfoResponse = { 
 /**
  * The user's lightning address.
  */
-lightning_address: string,
+lightning_address: string, 
 /**
  * The user's optional display name.
  */
-display_name: string | null,
+display_name: string | null, 
 /**
  * The user's current operational lifecycle status.
  */
