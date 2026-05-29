@@ -127,6 +127,7 @@ impl<'a> UserRepository<'a> {
                 "SELECT lightning_address
                 FROM users
                 WHERE lightning_address IS NOT NULL
+                  AND status = 'active'
                   AND lightning_address_domain = $1
                   AND lightning_address_username LIKE $2
                 ORDER BY
@@ -157,6 +158,7 @@ impl<'a> UserRepository<'a> {
                     similarity(lightning_address_username, $3) AS similarity_score
                 FROM users
                 WHERE lightning_address IS NOT NULL
+                  AND status = 'active'
                   AND lightning_address_domain = $1
                   AND (
                       lightning_address_username LIKE $2
