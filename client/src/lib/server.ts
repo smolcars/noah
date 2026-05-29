@@ -2,6 +2,7 @@ import { registerWithServer } from "~/lib/api";
 import * as Device from "expo-device";
 import logger from "~/lib/log";
 import { useServerStore } from "~/store/serverStore";
+import { useProfileStore } from "~/store/profileStore";
 import { type Result, err } from "neverthrow";
 import { RegisterResponse } from "~/types/serverTypes";
 import Constants from "expo-constants";
@@ -13,6 +14,7 @@ export const performServerRegistration = async (
   ln_address: string | null,
 ): Promise<Result<RegisterResponse, Error>> => {
   const { setRegisteredWithServer, setEmailVerified } = useServerStore.getState();
+  const { setDisplayName } = useProfileStore.getState();
 
   const addressResult = await peakAddress(0);
   if (addressResult.isErr()) {
@@ -39,9 +41,10 @@ export const performServerRegistration = async (
     return result;
   }
 
-  const { lightning_address, is_email_verified } = result.value;
+  const { lightning_address, display_name, is_email_verified } = result.value;
   log.d("Successfully registered with server", [is_email_verified]);
   setRegisteredWithServer(true, lightning_address, true);
+  setDisplayName(display_name ?? "");
   setEmailVerified(is_email_verified);
   return result;
 };

@@ -207,7 +207,7 @@ const SettingsScreen = () => {
     profileData.push({
       id: "profile",
       title: "Profile",
-      description: "Manage your Lightning address, name, avatar, and public key.",
+      description: "Manage your Lightning address, name, and public key.",
       isPressable: true,
     });
 

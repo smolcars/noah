@@ -1,19 +1,16 @@
-import React, { useState } from "react";
-import { Image, Pressable, ScrollView, View } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import RNFSTurbo from "react-native-fs-turbo";
+import React, { useEffect, useRef, useState } from "react";
+import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
-import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Text } from "~/components/ui/text";
 import type { SettingsStackParamList } from "~/Navigators";
+import { updateProfile } from "~/lib/api";
 import { copyToClipboard } from "~/lib/clipboardUtils";
 import { COLORS } from "~/lib/styleConstants";
-import { DOCUMENT_DIRECTORY_PATH } from "~/constants";
 import { useIconColor, useThemeColors } from "~/hooks/useTheme";
 import { useDeriveKeyPairFromMnemonic } from "~/hooks/useCrypto";
 import { useProfileStore } from "~/store/profileStore";
@@ -71,52 +68,56 @@ const ProfileScreen = () => {
   const colors = useThemeColors();
   const lightningAddress = useServerStore((state) => state.lightningAddress);
   const displayName = useProfileStore((state) => state.displayName);
-  const avatarUri = useProfileStore((state) => state.avatarUri);
   const setDisplayName = useProfileStore((state) => state.setDisplayName);
-  const setAvatarUri = useProfileStore((state) => state.setAvatarUri);
   const { data: derivedKeyPair } = useDeriveKeyPairFromMnemonic();
-  const initials = displayName.trim().slice(0, 2).toUpperCase() || "N";
+  const [draftDisplayName, setDraftDisplayName] = useState(displayName);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [isEditingName, setIsEditingName] = useState(false);
+  const nameInputRef = useRef<TextInput>(null!);
 
-  const deleteLocalAvatar = (uri: string | null) => {
-    if (!uri?.includes("noah-profile-avatar")) {
+  useEffect(() => {
+    setDraftDisplayName(displayName);
+  }, [displayName]);
+
+  const normalizedDisplayName = draftDisplayName.trim();
+
+  const saveDisplayName = async () => {
+    setSaveStatus("saving");
+
+    const result = await updateProfile({
+      display_name: normalizedDisplayName.length > 0 ? normalizedDisplayName : null,
+    });
+
+    if (result.isErr()) {
+      log.w("Failed to update profile", [result.error]);
+      setSaveStatus("error");
       return;
     }
 
-    try {
-      RNFSTurbo.unlink(uri.replace("file://", ""));
-    } catch (error) {
-      log.w("Failed to remove local avatar", [error]);
+    setDisplayName(normalizedDisplayName);
+    setSaveStatus("saved");
+    setIsEditingName(false);
+    nameInputRef.current?.blur();
+  };
+
+  const handleNameAction = () => {
+    if (isEditingName && saveStatus !== "saving") {
+      void saveDisplayName();
+      return;
     }
+
+    setIsEditingName(true);
+    requestAnimationFrame(() => nameInputRef.current?.focus());
   };
 
-  const chooseAvatar = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
-    });
-
-    if (!result.canceled && result.assets?.[0]?.uri) {
-      const sourceUri = result.assets[0].uri;
-      const extension = sourceUri.split(".").pop()?.split("?")[0] || "jpg";
-      const destinationPath = `${DOCUMENT_DIRECTORY_PATH}/noah-profile-avatar-${Date.now()}.${extension}`;
-
-      try {
-        RNFSTurbo.copyFile(sourceUri.replace("file://", ""), destinationPath);
-        deleteLocalAvatar(avatarUri);
-        setAvatarUri(`file://${destinationPath}`);
-      } catch (error) {
-        log.w("Failed to persist selected avatar", [error]);
-        setAvatarUri(sourceUri);
-      }
-    }
-  };
-
-  const removeAvatar = () => {
-    deleteLocalAvatar(avatarUri);
-    setAvatarUri(null);
-  };
+  const nameActionIcon =
+    isEditingName || saveStatus === "saving" ? "save-outline" : "create-outline";
+  const nameActionColor =
+    saveStatus === "error"
+      ? "#ef4444"
+      : isEditingName
+        ? COLORS.BITCOIN_ORANGE
+        : iconColor;
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
@@ -133,54 +134,51 @@ const ProfileScreen = () => {
             <Text className="text-2xl font-bold text-foreground">Profile</Text>
           </View>
 
-          <View className="mt-8 items-center">
-            <Pressable onPress={chooseAvatar}>
-              {avatarUri ? (
-                <Image source={{ uri: avatarUri }} className="h-28 w-28 rounded-full" />
-              ) : (
-                <View
-                  className="h-28 w-28 items-center justify-center rounded-full border"
-                  style={{
-                    borderColor: `${colors.mutedForeground}24`,
-                    backgroundColor: `${colors.card}CC`,
-                  }}
-                >
-                  <Text className="text-4xl font-bold text-foreground">{initials}</Text>
-                </View>
-              )}
-            </Pressable>
-            <View className="mt-4 flex-row gap-3">
-              <Button onPress={chooseAvatar} variant="outline" className="h-11 rounded-2xl">
-                <Text>{avatarUri ? "Change Avatar" : "Set Avatar"}</Text>
-              </Button>
-              {avatarUri ? (
-                <Button
-                  onPress={removeAvatar}
-                  variant="ghost"
-                  className="h-11 rounded-2xl"
-                >
-                  <Text>Remove</Text>
-                </Button>
-              ) : null}
-            </View>
-          </View>
-
           <View className="mt-8">
             <Label className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
               Name
             </Label>
-            <Input
-              value={displayName}
-              onChangeText={setDisplayName}
-              placeholder="Add a display name"
-              className="mt-3 h-14 rounded-2xl px-4"
-              maxLength={48}
-              autoCapitalize="words"
-              autoCorrect={false}
-            />
-            <Text className="mt-2 text-sm text-muted-foreground">
-              Saved locally on this device until profile sync is added.
-            </Text>
+            <View className="mt-3">
+              <Input
+                ref={nameInputRef}
+                value={draftDisplayName}
+                onChangeText={(value) => {
+                  setDraftDisplayName(value);
+                  setSaveStatus("idle");
+                }}
+                placeholder="Add a display name"
+                editable={saveStatus !== "saving"}
+                className="h-14 rounded-2xl py-0 pl-4 pr-14"
+                style={{
+                  borderColor:
+                    saveStatus === "error" ? "#ef4444" : `${colors.mutedForeground}24`,
+                  backgroundColor: `${colors.card}CC`,
+                  color: colors.foreground,
+                }}
+                maxLength={80}
+                autoCapitalize="words"
+                autoCorrect={false}
+                returnKeyType="done"
+                onFocus={() => {
+                  if (!isEditingName) {
+                    nameInputRef.current?.blur();
+                  }
+                }}
+                onSubmitEditing={() => {
+                  if (isEditingName) {
+                    void saveDisplayName();
+                  }
+                }}
+              />
+              <Pressable
+                onPress={handleNameAction}
+                disabled={saveStatus === "saving"}
+                accessibilityLabel={isEditingName ? "Save name" : "Edit name"}
+                className="absolute right-2 top-2 h-10 w-10 items-center justify-center rounded-full"
+              >
+                <Icon name={nameActionIcon} size={22} color={nameActionColor} />
+              </Pressable>
+            </View>
           </View>
 
           <View className="mt-8">

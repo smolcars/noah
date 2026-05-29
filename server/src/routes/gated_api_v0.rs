@@ -12,7 +12,7 @@ use crate::types::{
     DefaultSuccessPayload, DeleteBackupPayload, DownloadUrlResponse, GetDownloadUrlPayload,
     HeartbeatResponsePayload, LightningAddressSuggestionsPayload,
     LightningAddressSuggestionsResponse, ReportJobStatusPayload, ReportStatus,
-    SubmitInvoicePayload, UserInfoResponse,
+    SubmitInvoicePayload, UpdateProfilePayload, UserInfoResponse,
 };
 use crate::{
     AppState,
@@ -288,7 +288,10 @@ pub async fn get_user_info(
         "User does not have a lightning address".to_string(),
     ))?;
 
-    Ok(Json(UserInfoResponse { lightning_address }))
+    Ok(Json(UserInfoResponse {
+        lightning_address,
+        display_name: user.display_name,
+    }))
 }
 
 /// Updates a user's lightning address.
@@ -317,6 +320,24 @@ pub async fn update_ln_address(
         }
         return Err(e.into());
     }
+
+    Ok(Json(DefaultSuccessPayload { success: true }))
+}
+
+/// Updates a user's profile fields.
+pub async fn update_profile(
+    State(state): State<AppState>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
+    Json(payload): Json<UpdateProfilePayload>,
+) -> anyhow::Result<Json<DefaultSuccessPayload>, ApiError> {
+    if let Err(e) = payload.validate() {
+        return Err(ApiError::InvalidArgument(e.to_string()));
+    }
+
+    let user_repo = UserRepository::new(&state.db_pool);
+    user_repo
+        .update_display_name(&auth_payload.key, payload.display_name.as_deref())
+        .await?;
 
     Ok(Json(DefaultSuccessPayload { success: true }))
 }

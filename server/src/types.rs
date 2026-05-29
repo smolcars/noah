@@ -96,6 +96,8 @@ pub struct RegisterResponse {
     pub reason: Option<String>,
     /// The user's lightning address.
     pub lightning_address: Option<String>,
+    /// The user's optional display name.
+    pub display_name: Option<String>,
     /// Whether the user's email is verified.
     pub is_email_verified: bool,
 }
@@ -148,10 +150,13 @@ pub struct AuthorizeMailboxPayload {
 }
 
 /// Represents the response for a user's information.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 pub struct UserInfoResponse {
     /// The user's lightning address.
     pub lightning_address: String,
+    /// The user's optional display name.
+    pub display_name: Option<String>,
 }
 
 /// Defines the payload for submitting a BOLT11 invoice.
@@ -171,6 +176,15 @@ pub struct UpdateLnAddressPayload {
     /// The new lightning address for the user.
     #[validate(custom(function = "validate_lightning_address"))]
     pub ln_address: String,
+}
+
+/// Defines the payload for updating a user's profile.
+#[derive(Serialize, Deserialize, TS, Validate)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct UpdateProfilePayload {
+    /// The user's optional display name. Null or empty clears the name.
+    #[validate(length(max = 80))]
+    pub display_name: Option<String>,
 }
 
 /// Defines the payload for querying lightning address suggestions.

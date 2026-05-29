@@ -396,6 +396,7 @@ pub async fn register(
             event: None,
             reason: Some("User already registered".to_string()),
             lightning_address: user.lightning_address,
+            display_name: user.display_name,
             is_email_verified: user.is_email_verified,
         }));
     }
@@ -454,6 +455,7 @@ pub async fn register(
         event: Some(AuthEvent::Registered),
         reason: None,
         lightning_address: Some(ln_address),
+        display_name: None,
         is_email_verified: false,
     }))
 }

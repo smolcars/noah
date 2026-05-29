@@ -35,18 +35,14 @@ const zustandStorage: StateStorage = {
 
 interface ProfileState {
   displayName: string;
-  avatarUri: string | null;
   setDisplayName: (displayName: string) => void;
-  setAvatarUri: (avatarUri: string | null) => void;
 }
 
 export const useProfileStore = create<ProfileState>()(
   persist(
     (set) => ({
       displayName: "",
-      avatarUri: null,
       setDisplayName: (displayName) => set({ displayName }),
-      setAvatarUri: (avatarUri) => set({ avatarUri }),
     }),
     {
       name: "profile-storage",
