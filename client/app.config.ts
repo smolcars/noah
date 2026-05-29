@@ -20,13 +20,21 @@ const config: { expo: ExpoConfig } = {
         "expo-splash-screen",
         {
           backgroundColor: "#000000",
-          resizeMode: "contain",
+          image: "./assets/1024_no_background.png",
+          imageWidth: 200,
+          dark: {
+            backgroundColor: "#000000",
+            image: "./assets/1024_no_background.png",
+          },
           ios: {
-            image: "./assets/All_Files/splash_screens/splash_screen_ios.png",
-            enableFullScreenImage_legacy: true,
+            backgroundColor: "#000000",
+            image: "./assets/1024_no_background.png",
+            imageWidth: 200,
           },
           android: {
-            image: "./assets/All_Files/splash_screens/splash_screen_android.png",
+            backgroundColor: "#000000",
+            image: "./assets/1024_no_background.png",
+            imageWidth: 200,
           },
         },
       ],
