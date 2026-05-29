@@ -77,7 +77,7 @@ jobs:
             sleep 2
           fi
 
-          echo "Booting iPhone 16 simulator with DEVICE_ID=$DEVICE_ID..."
+          echo "Booting iPhone 17 Pro simulator with DEVICE_ID=$DEVICE_ID..."
           xcrun simctl boot "$DEVICE_ID"
 
           TIMEOUT=120

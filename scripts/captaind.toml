@@ -212,7 +212,7 @@ fallback_fee_rate_slow = "4sat/vb"
 
 
 [bitcoind]
-url = "bitcoind:18443"
+url = "http://bitcoind:18443"
 rpc_user = "second"
 rpc_pass = "ark"
 
