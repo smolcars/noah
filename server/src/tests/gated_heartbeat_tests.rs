@@ -8,10 +8,10 @@ use tower::ServiceExt;
 use crate::db::{
     heartbeat_repo::HeartbeatRepository,
     mailbox_authorization_repo::MailboxAuthorizationRepository,
-    push_token_repo::PushTokenRepository,
+    push_token_repo::PushTokenRepository, user_repo::UserRepository,
 };
 use crate::tests::common::{TestUser, create_test_user, setup_test_app};
-use crate::types::{DefaultSuccessPayload, HeartbeatStatus};
+use crate::types::{DefaultSuccessPayload, HeartbeatStatus, UserStatus};
 
 #[tracing_test::traced_test]
 #[tokio::test]
@@ -715,4 +715,11 @@ async fn test_check_and_deregister_inactive_users_removes_mailbox_authorization(
         heartbeat_count, 0,
         "Heartbeat notifications should be deleted"
     );
+
+    let user_record = UserRepository::new(&app_state.db_pool)
+        .find_by_pubkey(&pubkey)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(user_record.status, UserStatus::Deregistered);
 }

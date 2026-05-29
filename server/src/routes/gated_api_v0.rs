@@ -12,7 +12,7 @@ use crate::types::{
     DefaultSuccessPayload, DeleteBackupPayload, DownloadUrlResponse, GetDownloadUrlPayload,
     HeartbeatResponsePayload, LightningAddressSuggestionsPayload,
     LightningAddressSuggestionsResponse, ReportJobStatusPayload, ReportStatus,
-    SubmitInvoicePayload, UpdateProfilePayload, UserInfoResponse,
+    SubmitInvoicePayload, UpdateProfilePayload, UserInfoResponse, UserStatus,
 };
 use crate::{
     AppState,
@@ -99,6 +99,11 @@ pub async fn register_push_token(
         .upsert(&auth_payload.key, &payload.push_token)
         .await?;
 
+    let user_repo = UserRepository::new(&app_state.db_pool);
+    user_repo
+        .set_status(&auth_payload.key, UserStatus::Active)
+        .await?;
+
     // TODO: Implement logic to send notification only once.
     // let app_state_clone = app_state.clone();
     // let pubkey = auth_payload.key.clone();
@@ -170,6 +175,11 @@ pub async fn authorize_mailbox(
             &payload.encoded,
             payload.expiry,
         )
+        .await?;
+
+    let user_repo = UserRepository::new(&app_state.db_pool);
+    user_repo
+        .set_status(&auth_payload.key, UserStatus::Active)
         .await?;
 
     Ok(Json(DefaultSuccessPayload { success: true }))
@@ -291,6 +301,7 @@ pub async fn get_user_info(
     Ok(Json(UserInfoResponse {
         lightning_address,
         display_name: user.display_name,
+        user_status: user.status,
     }))
 }
 
@@ -529,6 +540,7 @@ pub async fn deregister(
     // Use a transaction to ensure all or nothing is deleted
     let mut tx = state.db_pool.begin().await?;
 
+    UserRepository::set_status_tx(&mut tx, &pubkey, UserStatus::Deregistered).await?;
     PushTokenRepository::delete_by_pubkey(&mut tx, &pubkey).await?;
     MailboxAuthorizationRepository::delete_by_pubkey(&mut tx, &pubkey).await?;
     HeartbeatRepository::delete_by_pubkey_tx(&mut tx, &pubkey).await?;
@@ -540,7 +552,7 @@ pub async fn deregister(
 
 pub async fn heartbeat_response(
     State(state): State<AppState>,
-    Extension(_auth_payload): Extension<AuthenticatedUser>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
     event: Option<Extension<WideEventHandle>>,
     Json(payload): Json<HeartbeatResponsePayload>,
 ) -> anyhow::Result<Json<DefaultSuccessPayload>, ApiError> {
@@ -559,6 +571,11 @@ pub async fn heartbeat_response(
             "Heartbeat notification not found or already responded".to_string(),
         ));
     }
+
+    let user_repo = UserRepository::new(&state.db_pool);
+    user_repo
+        .set_status(&auth_payload.key, UserStatus::Active)
+        .await?;
 
     Ok(Json(DefaultSuccessPayload { success: true }))
 }

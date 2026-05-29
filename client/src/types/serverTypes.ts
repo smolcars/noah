@@ -162,7 +162,11 @@ display_name: string | null,
 /**
  * Whether the user's email is verified.
  */
-is_email_verified: boolean, };
+is_email_verified: boolean,
+/**
+ * The user's current operational lifecycle status.
+ */
+user_status: UserStatus, };
 
 export type ReportJobStatusPayload = { notification_k1: string, report_type: ReportType, status: ReportStatus, error_message: string | null, };
 
@@ -219,7 +223,13 @@ lightning_address: string,
 /**
  * The user's optional display name.
  */
-display_name: string | null, };
+display_name: string | null,
+/**
+ * The user's current operational lifecycle status.
+ */
+user_status: UserStatus, };
+
+export type UserStatus = "active" | "inactive" | "deregistered";
 
 /**
  * Defines the payload for verifying an email with a code.

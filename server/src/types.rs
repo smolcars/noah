@@ -100,6 +100,46 @@ pub struct RegisterResponse {
     pub display_name: Option<String>,
     /// Whether the user's email is verified.
     pub is_email_verified: bool,
+    /// The user's current operational lifecycle status.
+    pub user_status: UserStatus,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub enum UserStatus {
+    Active,
+    Inactive,
+    Deregistered,
+}
+
+impl UserStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            UserStatus::Active => "active",
+            UserStatus::Inactive => "inactive",
+            UserStatus::Deregistered => "deregistered",
+        }
+    }
+}
+
+impl std::fmt::Display for UserStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for UserStatus {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "active" => Ok(UserStatus::Active),
+            "inactive" => Ok(UserStatus::Inactive),
+            "deregistered" => Ok(UserStatus::Deregistered),
+            _ => Err(anyhow::anyhow!("Invalid user status: {}", value)),
+        }
+    }
 }
 
 /// Defines device information captured during registration.
@@ -157,6 +197,8 @@ pub struct UserInfoResponse {
     pub lightning_address: String,
     /// The user's optional display name.
     pub display_name: Option<String>,
+    /// The user's current operational lifecycle status.
+    pub user_status: UserStatus,
 }
 
 /// Defines the payload for submitting a BOLT11 invoice.

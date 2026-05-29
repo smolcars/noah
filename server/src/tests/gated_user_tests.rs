@@ -12,7 +12,7 @@ use crate::db::mailbox_authorization_repo::MailboxAuthorizationRepository;
 use crate::db::push_token_repo::PushTokenRepository;
 use crate::db::user_repo::UserRepository;
 use crate::tests::common::{TestUser, create_test_user, setup_test_app};
-use crate::types::UserInfoResponse;
+use crate::types::{UserInfoResponse, UserStatus};
 
 #[tracing_test::traced_test]
 #[tokio::test]
@@ -35,6 +35,7 @@ async fn test_get_user_info() {
     tx.commit().await.unwrap();
 
     let response = app
+        .clone()
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
@@ -57,6 +58,7 @@ async fn test_get_user_info() {
 
     assert_eq!(res.lightning_address, "existing@localhost");
     assert_eq!(res.display_name, None);
+    assert_eq!(res.user_status, UserStatus::Active);
 }
 
 #[tracing_test::traced_test]
@@ -80,6 +82,7 @@ async fn test_update_ln_address() {
     tx.commit().await.unwrap();
 
     let response = app
+        .clone()
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
@@ -313,6 +316,7 @@ async fn test_deregister_user() {
 
     // 2. Call deregister endpoint
     let response = app
+        .clone()
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
@@ -353,7 +357,8 @@ async fn test_deregister_user() {
         .find_by_pubkey(&user.pubkey().to_string())
         .await
         .unwrap();
-    assert!(user_record.is_some(), "User should not be deleted");
+    let user_record = user_record.expect("User should not be deleted");
+    assert_eq!(user_record.status, UserStatus::Deregistered);
 
     let backup_repo = BackupRepository::new(&app_state.db_pool);
     let metadata = backup_repo
@@ -379,6 +384,75 @@ async fn test_deregister_user() {
         heartbeat_count, 0,
         "Heartbeat notifications should be deleted"
     );
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/user_info")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(
+        response.status(),
+        StatusCode::OK,
+        "Deregistered users should still be able to make authenticated requests"
+    );
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_register_push_token_reactivates_deregistered_user() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    let access_token = user.access_token(&app_state);
+    let pubkey = user.pubkey().to_string();
+
+    let mut tx = app_state.db_pool.begin().await.unwrap();
+    UserRepository::create(&mut tx, &pubkey, "test@localhost", None)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+
+    let user_repo = UserRepository::new(&app_state.db_pool);
+    user_repo
+        .set_status(&pubkey, UserStatus::Deregistered)
+        .await
+        .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/register_push_token")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "push_token": "ExpoPushToken[test-token]"
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let user_record = user_repo.find_by_pubkey(&pubkey).await.unwrap().unwrap();
+    assert_eq!(user_record.status, UserStatus::Active);
 }
 
 #[tracing_test::traced_test]

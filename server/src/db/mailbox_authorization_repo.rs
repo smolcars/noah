@@ -125,16 +125,18 @@ impl<'a> MailboxAuthorizationRepository<'a> {
     pub async fn find_all_enabled(&self) -> Result<Vec<ActiveMailboxAuthorization>> {
         let records = sqlx::query_as::<_, ActiveMailboxAuthorization>(
             "SELECT
-                pubkey,
-                mailbox_id,
-                authorization_hex,
-                authorization_expires_at,
-                auth_version,
-                last_checkpoint
-             FROM mailbox_authorizations
-             WHERE enabled = TRUE
-               AND authorization_hex IS NOT NULL
-               AND authorization_expires_at IS NOT NULL",
+                ma.pubkey,
+                ma.mailbox_id,
+                ma.authorization_hex,
+                ma.authorization_expires_at,
+                ma.auth_version,
+                ma.last_checkpoint
+             FROM mailbox_authorizations ma
+             INNER JOIN users u ON ma.pubkey = u.pubkey
+             WHERE ma.enabled = TRUE
+               AND ma.authorization_hex IS NOT NULL
+               AND ma.authorization_expires_at IS NOT NULL
+               AND u.status = 'active'",
         )
         .fetch_all(self.pool)
         .await?;
@@ -151,16 +153,18 @@ impl<'a> MailboxAuthorizationRepository<'a> {
     ) -> Result<Vec<ActiveMailboxAuthorization>> {
         let records = sqlx::query_as::<_, ActiveMailboxAuthorization>(
             "WITH candidates AS (
-                SELECT pubkey
-                FROM mailbox_authorizations
-                WHERE enabled = TRUE
-                  AND status = 'active'
-                  AND authorization_hex IS NOT NULL
-                  AND authorization_expires_at IS NOT NULL
-                  AND authorization_expires_at > $1
-                  AND (next_retry_at IS NULL OR next_retry_at <= $2)
-                  AND (lease_expires_at IS NULL OR lease_expires_at <= $2)
-                ORDER BY COALESCE(last_connected_at, to_timestamp(0)) ASC, updated_at ASC
+                SELECT ma.pubkey
+                FROM mailbox_authorizations ma
+                INNER JOIN users u ON ma.pubkey = u.pubkey
+                WHERE ma.enabled = TRUE
+                  AND ma.status = 'active'
+                  AND ma.authorization_hex IS NOT NULL
+                  AND ma.authorization_expires_at IS NOT NULL
+                  AND ma.authorization_expires_at > $1
+                  AND (ma.next_retry_at IS NULL OR ma.next_retry_at <= $2)
+                  AND (ma.lease_expires_at IS NULL OR ma.lease_expires_at <= $2)
+                  AND u.status = 'active'
+                ORDER BY COALESCE(ma.last_connected_at, to_timestamp(0)) ASC, ma.updated_at ASC
                 LIMIT $4
                 FOR UPDATE SKIP LOCKED
              )

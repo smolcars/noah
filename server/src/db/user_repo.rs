@@ -1,5 +1,7 @@
 use anyhow::Result;
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::{PgPool, Postgres, Row, Transaction, postgres::PgRow};
+
+use crate::types::UserStatus;
 
 #[derive(Debug, Clone)]
 pub struct LightningAddressTakenError;
@@ -25,7 +27,7 @@ impl std::error::Error for DuplicateArkAddressError {}
 
 // This struct represents a user record from the database.
 // It's a good practice to have a model struct for each of your database tables.
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug)]
 pub struct User {
     pub pubkey: String,
     pub lightning_address: Option<String>,
@@ -33,6 +35,29 @@ pub struct User {
     pub display_name: Option<String>,
     pub email: Option<String>,
     pub is_email_verified: bool,
+    pub status: UserStatus,
+}
+
+impl<'r> sqlx::FromRow<'r, PgRow> for User {
+    fn from_row(row: &'r PgRow) -> std::result::Result<Self, sqlx::Error> {
+        let status: String = row.try_get("status")?;
+        let status = status
+            .parse::<UserStatus>()
+            .map_err(|e| sqlx::Error::ColumnDecode {
+                index: "status".to_string(),
+                source: e.into(),
+            })?;
+
+        Ok(Self {
+            pubkey: row.try_get("pubkey")?,
+            lightning_address: row.try_get("lightning_address")?,
+            ark_address: row.try_get("ark_address")?,
+            display_name: row.try_get("display_name")?,
+            email: row.try_get("email")?,
+            is_email_verified: row.try_get("is_email_verified")?,
+            status,
+        })
+    }
 }
 
 // A struct to encapsulate user-related database operations
@@ -50,7 +75,7 @@ impl<'a> UserRepository<'a> {
     /// Finds a user by their public key.
     pub async fn find_by_pubkey(&self, pubkey: &str) -> Result<Option<User>> {
         let user = sqlx::query_as::<_, User>(
-            "SELECT pubkey, lightning_address, ark_address, display_name, email, is_email_verified FROM users WHERE pubkey = $1",
+            "SELECT pubkey, lightning_address, ark_address, display_name, email, is_email_verified, status FROM users WHERE pubkey = $1",
         )
         .bind(pubkey)
         .fetch_optional(self.pool)
@@ -77,7 +102,7 @@ impl<'a> UserRepository<'a> {
     /// Finds a user by their lightning address.
     pub async fn find_by_lightning_address(&self, ln_address: &str) -> Result<Option<User>> {
         let user = sqlx::query_as::<_, User>(
-            "SELECT pubkey, lightning_address, ark_address, display_name, email, is_email_verified FROM users WHERE lightning_address = $1",
+            "SELECT pubkey, lightning_address, ark_address, display_name, email, is_email_verified, status FROM users WHERE lightning_address = $1",
         )
         .bind(ln_address)
         .fetch_optional(self.pool)
@@ -252,6 +277,40 @@ impl<'a> UserRepository<'a> {
                 .await?;
 
         Ok(exists)
+    }
+
+    pub async fn set_status(&self, pubkey: &str, status: UserStatus) -> Result<()> {
+        sqlx::query(
+            "UPDATE users
+             SET status = $1, status_changed_at = now(), updated_at = now()
+             WHERE pubkey = $2
+               AND status <> $1",
+        )
+        .bind(status.as_str())
+        .bind(pubkey)
+        .execute(self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn set_status_tx(
+        tx: &mut Transaction<'_, Postgres>,
+        pubkey: &str,
+        status: UserStatus,
+    ) -> Result<()> {
+        sqlx::query(
+            "UPDATE users
+             SET status = $1, status_changed_at = now(), updated_at = now()
+             WHERE pubkey = $2
+               AND status <> $1",
+        )
+        .bind(status.as_str())
+        .bind(pubkey)
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
     }
 
     /// Updates a user's email address. Empty strings are converted to NULL.

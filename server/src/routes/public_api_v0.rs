@@ -28,7 +28,7 @@ use crate::{
         AppVersionCheckPayload, AppVersionInfo, AuthEvent, AuthLoginPayload, AuthLoginResponse,
         AuthenticatedUser, EmailVerificationResponse, LightningInvoiceRequestNotification,
         NotificationData, RegisterPayload, RegisterResponse, SendEmailVerificationPayload,
-        VerifyEmailPayload,
+        UserStatus, VerifyEmailPayload,
     },
     utils::{make_k1, verify_auth},
     wide_event::WideEventHandle,
@@ -189,6 +189,17 @@ pub async fn lnurlp_request(
         .await?
         .ok_or_else(|| ApiError::InvalidArgument("User not found".to_string()))?;
     let pubkey = user.pubkey.clone();
+
+    if user.status != UserStatus::Active {
+        tracing::warn!(
+            pubkey = %pubkey,
+            user_status = %user.status,
+            "Lightning LNURL request rejected because user is not active"
+        );
+        return Err(ApiError::InvalidArgument(
+            "Lightning payments are not available for this user right now.".to_string(),
+        ));
+    }
 
     if query.amount.is_none() {
         let metadata = serde_json::json!([
@@ -398,6 +409,7 @@ pub async fn register(
             lightning_address: user.lightning_address,
             display_name: user.display_name,
             is_email_verified: user.is_email_verified,
+            user_status: user.status,
         }));
     }
 
@@ -457,6 +469,7 @@ pub async fn register(
         lightning_address: Some(ln_address),
         display_name: None,
         is_email_verified: false,
+        user_status: UserStatus::Active,
     }))
 }
 

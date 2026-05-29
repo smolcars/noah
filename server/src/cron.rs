@@ -4,10 +4,10 @@ use crate::{
         backup_repo::BackupRepository, heartbeat_repo::HeartbeatRepository,
         job_status_repo::JobStatusRepository,
         mailbox_authorization_repo::MailboxAuthorizationRepository,
-        push_token_repo::PushTokenRepository,
+        push_token_repo::PushTokenRepository, user_repo::UserRepository,
     },
     notification_coordinator::{NotificationCoordinator, NotificationRequest},
-    types::{HeartbeatNotification, NotificationRequestData},
+    types::{HeartbeatNotification, NotificationRequestData, UserStatus},
 };
 use expo_push_notification_client::Priority;
 use tokio_cron_scheduler::{Job, JobScheduler};
@@ -105,6 +105,13 @@ pub async fn check_and_deregister_inactive_users(app_state: AppState) -> anyhow:
 
         // Use a transaction to ensure all or nothing is deleted
         let mut tx = app_state.db_pool.begin().await?;
+
+        if let Err(e) =
+            UserRepository::set_status_tx(&mut tx, &pubkey, UserStatus::Deregistered).await
+        {
+            tracing::error!(job = "deregister_inactive", pubkey = %pubkey, step = "user_status", error = %e, "status update failed");
+            continue;
+        }
 
         if let Err(e) = PushTokenRepository::delete_by_pubkey(&mut tx, &pubkey).await {
             tracing::error!(job = "deregister_inactive", pubkey = %pubkey, step = "push_token", error = %e, "delete failed");

@@ -1,10 +1,10 @@
 use crate::db::{
     mailbox_authorization_repo::MailboxAuthorizationRepository,
-    push_token_repo::PushTokenRepository,
+    push_token_repo::PushTokenRepository, user_repo::UserRepository,
 };
 use crate::routes::public_api_v0::{GetK1, LnurlpDefaultResponse};
 use crate::tests::common::{TestUser, create_test_user, setup_public_test_app};
-use crate::types::{ApiErrorResponse, AppVersionCheckPayload, AppVersionInfo};
+use crate::types::{ApiErrorResponse, AppVersionCheckPayload, AppVersionInfo, UserStatus};
 use axum::body::Body;
 use axum::http::{self, Request, StatusCode};
 use chrono::Utc;
@@ -41,6 +41,41 @@ async fn test_lnurlp_request_default() {
 
     assert_eq!(res.tag, "payRequest");
     assert_eq!(res.callback, "https://localhost/.well-known/lnurlp/test");
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_lnurlp_request_rejects_deregistered_user() {
+    let (app, app_state, _guard) = setup_public_test_app().await;
+    let user = TestUser::new();
+    let pubkey = user.pubkey().to_string();
+    create_test_user(&app_state, &user, None).await;
+
+    UserRepository::new(&app_state.db_pool)
+        .set_status(&pubkey, UserStatus::Deregistered)
+        .await
+        .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::GET)
+                .uri("/.well-known/lnurlp/test")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let err: ApiErrorResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(err.code, "INVALID_ARGUMENT");
+    assert_eq!(
+        err.message,
+        "Lightning payments are not available for this user right now."
+    );
 }
 
 #[tracing_test::traced_test]

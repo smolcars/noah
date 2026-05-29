@@ -57,10 +57,14 @@ impl<'a> PushTokenRepository<'a> {
 
     /// Finds all `(pubkey, push_token)` pairs in the database.
     pub async fn find_all_with_pubkeys(&self) -> Result<Vec<(String, String)>> {
-        let rows =
-            sqlx::query_as::<_, (String, String)>("SELECT pubkey, push_token FROM push_tokens")
-                .fetch_all(self.pool)
-                .await?;
+        let rows = sqlx::query_as::<_, (String, String)>(
+            "SELECT pt.pubkey, pt.push_token
+             FROM push_tokens pt
+             INNER JOIN users u ON pt.pubkey = u.pubkey
+             WHERE u.status = 'active'",
+        )
+        .fetch_all(self.pool)
+        .await?;
 
         Ok(rows)
     }

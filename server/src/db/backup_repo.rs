@@ -229,7 +229,11 @@ impl<'a> BackupRepository<'a> {
     /// Finds all pubkeys that have backups enabled.
     pub async fn find_pubkeys_with_backup_enabled(&self) -> Result<Vec<String>> {
         let pubkeys = sqlx::query_scalar::<_, String>(
-            "SELECT pubkey FROM backup_settings WHERE backup_enabled = TRUE",
+            "SELECT bs.pubkey
+             FROM backup_settings bs
+             INNER JOIN users u ON bs.pubkey = u.pubkey
+             WHERE bs.backup_enabled = TRUE
+               AND u.status = 'active'",
         )
         .fetch_all(self.pool)
         .await?;

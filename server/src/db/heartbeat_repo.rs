@@ -121,7 +121,8 @@ impl<'a> HeartbeatRepository<'a> {
         let pubkeys = sqlx::query_scalar::<_, String>(
             "SELECT DISTINCT pt.pubkey
              FROM push_tokens pt
-             INNER JOIN users u ON pt.pubkey = u.pubkey",
+             INNER JOIN users u ON pt.pubkey = u.pubkey
+             WHERE u.status = 'active'",
         )
         .fetch_all(self.pool)
         .await?;
@@ -151,9 +152,11 @@ impl<'a> HeartbeatRepository<'a> {
     pub async fn get_users_to_deregister(&self) -> Result<Vec<String>> {
         let pubkeys = sqlx::query_scalar::<_, String>(
             "WITH recent_heartbeats AS (
-                SELECT pubkey, status, sent_at,
-                       ROW_NUMBER() OVER (PARTITION BY pubkey ORDER BY sent_at DESC) as rn
-                FROM heartbeat_notifications
+                SELECT hn.pubkey, hn.status, hn.sent_at,
+                       ROW_NUMBER() OVER (PARTITION BY hn.pubkey ORDER BY hn.sent_at DESC) as rn
+                FROM heartbeat_notifications hn
+                INNER JOIN users u ON hn.pubkey = u.pubkey
+                WHERE u.status = 'active'
             ),
             consecutive_missed AS (
                 SELECT pubkey,
