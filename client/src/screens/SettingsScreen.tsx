@@ -2,10 +2,9 @@ import { Pressable, ScrollView, View, Switch, Image } from "react-native";
 import Constants from "expo-constants";
 import { useWalletStore } from "../store/walletStore";
 import { useBiometrics } from "../hooks/useBiometrics";
-import { ACTIVE_WALLET_CONFIG, PLATFORM, shouldUseUnifiedPush } from "../constants";
+import { PLATFORM, shouldUseUnifiedPush } from "../constants";
 import { useServerStore } from "../store/serverStore";
 import { useTransactionStore } from "../store/transactionStore";
-import { APP_VARIANT } from "../config";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -18,11 +17,9 @@ import Icon from "@react-native-vector-icons/ionicons";
 import { useAutoBoardThreshold, useDeleteWallet, useSuspendWallet } from "../hooks/useWallet";
 import { useExportDatabase } from "../hooks/useExportDatabase";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
-import { copyToClipboard } from "../lib/clipboardUtils";
 import { ConfirmationDialog, DangerZoneRow } from "../components/ConfirmationDialog";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AlertTriangle, CheckCircle } from "lucide-react-native";
-import { useDeriveKeyPairFromMnemonic } from "~/hooks/useCrypto";
 import logoImageDark from "../../assets/1024_no_background.png";
 import logoImageLight from "../../assets/All_Files/light_dark_tinted/icon_clear_tinted_ios.png";
 import { COLORS } from "~/lib/styleConstants";
@@ -36,12 +33,9 @@ import { formatAutoBoardThreshold } from "~/lib/autoBoarding";
 
 type Setting = {
   id:
-    | "bitcoind"
-    | "ark"
-    | "esplora"
+    | "profile"
     | "showMnemonic"
     | "showLogs"
-    | "staticVtxoPubkey"
     | "resetRegistration"
     | "backup"
     | "arkInfo"
@@ -56,39 +50,12 @@ type Setting = {
   isPressable: boolean;
 };
 
-const CopyableSettingRow = ({ label, value }: { label: string; value: string }) => {
-  const [copied, setCopied] = useState(false);
-
-  const onCopy = async () => {
-    await copyToClipboard(value, {
-      onCopy: () => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      },
-    });
-  };
-
-  return (
-    <Pressable
-      onPress={onCopy}
-      className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center"
-    >
-      <View className="flex-1">
-        <Label className="text-foreground text-lg">{label}</Label>
-        <Text className={`text-base mt-1 text-muted-foreground`}>{copied ? "Copied!" : value}</Text>
-      </View>
-      {copied && <Icon name="checkmark-circle" size={24} color={COLORS.BITCOIN_ORANGE} />}
-    </Pressable>
-  );
-};
-
 const SettingsScreen = () => {
   const iconColor = useIconColor();
   const { isDark } = useTheme();
   const logoImage = isDark ? logoImageDark : logoImageLight;
   const [confirmText, setConfirmText] = useState("");
   const [showFeedback, setShowFeedback] = useState(false);
-  const [copiedLightningAddress, setCopiedLightningAddress] = useState(false);
   const {
     isInitialized,
     setBiometricsEnabled,
@@ -100,7 +67,6 @@ const SettingsScreen = () => {
   const suspendWalletMutation = useSuspendWallet();
   const [versionTapCount, setVersionTapCount] = useState(0);
   const {
-    lightningAddress,
     resetRegistration,
     isMailboxAuthorizationEnabled,
     setMailboxAuthorizationExpiry,
@@ -121,7 +87,6 @@ const SettingsScreen = () => {
   const deleteWalletMutation = useDeleteWallet();
   const { isExporting, showExportSuccess, showExportError, exportError, exportDatabase } =
     useExportDatabase();
-  const { data: derivedKeyPair } = useDeriveKeyPairFromMnemonic();
   const tabBarHeight = useBottomTabBarHeight();
   const { bottom: safeBottomInset } = useSafeAreaInsets();
 
@@ -208,7 +173,9 @@ const SettingsScreen = () => {
   const handlePress = (item: Setting) => {
     if (!item.isPressable) return;
 
-    if (item.id === "showMnemonic") {
+    if (item.id === "profile") {
+      navigation.navigate("Profile");
+    } else if (item.id === "showMnemonic") {
       navigation.navigate("Mnemonic", { fromOnboarding: false });
     } else if (item.id === "showLogs") {
       navigation.navigate("Logs");
@@ -231,58 +198,25 @@ const SettingsScreen = () => {
     }
   };
 
+  const profileData: Setting[] = [];
   const infoData: Setting[] = [];
   const walletData: Setting[] = [];
   const debugData: Setting[] = [];
 
-  if (isInitialized && derivedKeyPair?.public_key) {
-    infoData.push({
-      id: "staticVtxoPubkey",
-      title: "Public Key",
-      value: derivedKeyPair.public_key,
-      isPressable: false,
-    });
-  }
-
   if (isInitialized) {
+    profileData.push({
+      id: "profile",
+      title: "Profile",
+      description: "Manage your Lightning address, name, and public key.",
+      isPressable: true,
+    });
+
     infoData.push({
       id: "arkInfo",
       title: "Ark Info",
-      description: "View Ark server parameters and limits.",
+      description: "View Ark server, wallet, and explorer configuration.",
       isPressable: true,
     });
-  }
-
-  if (APP_VARIANT === "regtest") {
-    infoData.push(
-      {
-        id: "bitcoind",
-        title: "Bitcoind RPC",
-        value: ACTIVE_WALLET_CONFIG.config?.bitcoind,
-        isPressable: false,
-      },
-      {
-        id: "ark",
-        title: "Ark Server",
-        value: ACTIVE_WALLET_CONFIG.config?.ark,
-        isPressable: false,
-      },
-    );
-  } else {
-    infoData.push(
-      {
-        id: "esplora",
-        title: "Esplora Server",
-        value: ACTIVE_WALLET_CONFIG.config?.esplora,
-        isPressable: false,
-      },
-      {
-        id: "ark",
-        title: "Ark Server",
-        value: ACTIVE_WALLET_CONFIG.config?.ark,
-        isPressable: false,
-      },
-    );
   }
 
   if (isInitialized) {
@@ -350,15 +284,6 @@ const SettingsScreen = () => {
   }
 
   const renderSettingItem = (item: Setting) => {
-    if (
-      item.id === "staticVtxoPubkey" ||
-      item.id === "ark" ||
-      item.id === "esplora" ||
-      item.id === "bitcoind"
-    ) {
-      return <CopyableSettingRow key={item.id} label={item.title} value={item.value!} />;
-    }
-
     if (item.id === "resetRegistration") {
       return (
         <ConfirmationDialog
@@ -480,7 +405,19 @@ const SettingsScreen = () => {
           </Pressable>
         </View>
 
-        {(lightningAddress || infoData.length > 0) && (
+        {profileData.length > 0 && (
+          <View className="mb-6">
+            <Text
+              className="text-lg font-bold text-foreground mb-2"
+              style={{ color: COLORS.BITCOIN_ORANGE }}
+            >
+              Account
+            </Text>
+            {profileData.map(renderSettingItem)}
+          </View>
+        )}
+
+        {infoData.length > 0 && (
           <View className="mb-6">
             <Text
               className="text-lg font-bold text-foreground mb-2"
@@ -488,35 +425,6 @@ const SettingsScreen = () => {
             >
               Info
             </Text>
-            {lightningAddress && (
-              <Pressable
-                onPress={() => navigation.navigate("LightningAddress", { fromOnboarding: false })}
-                onLongPress={async () => {
-                  await copyToClipboard(lightningAddress, {
-                    onCopy: () => {
-                      setCopiedLightningAddress(true);
-                      setTimeout(() => setCopiedLightningAddress(false), 2000);
-                    },
-                  });
-                }}
-                className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center"
-              >
-                <View className="flex-1">
-                  <View className="flex-row items-center">
-                    <Label className="text-foreground text-lg">Lightning Address</Label>
-                    <Text className="text-xs text-zinc-500 ml-2">(Long press to copy)</Text>
-                  </View>
-                  <Text className="text-base mt-1 text-muted-foreground">
-                    {copiedLightningAddress ? "Copied!" : lightningAddress}
-                  </Text>
-                </View>
-                {copiedLightningAddress ? (
-                  <Icon name="checkmark-circle" size={24} color={COLORS.BITCOIN_ORANGE} />
-                ) : (
-                  <Icon name="chevron-forward-outline" size={24} color={iconColor} />
-                )}
-              </Pressable>
-            )}
             {infoData.map(renderSettingItem)}
           </View>
         )}

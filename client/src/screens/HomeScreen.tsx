@@ -1,8 +1,7 @@
 import { View, ScrollView, RefreshControl, Pressable } from "react-native";
-import { useNavigation, useIsFocused } from "@react-navigation/native";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { NoahButton } from "../components/ui/NoahButton";
-import type { HomeStackParamList } from "../Navigators";
+import type { HomeStackParamList, TabParamList } from "../Navigators";
 import { Text } from "../components/ui/text";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../components/ui/collapsible";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
@@ -13,8 +12,6 @@ import { useIconColor } from "../hooks/useTheme";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
 import { useBalance, useLoadWallet, useWalletSync } from "../hooks/useWallet";
 import Icon from "@react-native-vector-icons/ionicons";
-import { useQRCodeScanner } from "~/hooks/useQRCodeScanner";
-import { QRCodeScanner } from "~/components/QRCodeScanner";
 import { APP_VARIANT } from "~/config";
 import { BITCOIN_FACTS, PLATFORM } from "~/constants";
 import { useAppVersionCheck } from "~/hooks/useAppVersionCheck";
@@ -39,11 +36,39 @@ import { updateWidget, useWidget } from "~/hooks/useWidget";
 import { formatBip177 } from "~/lib/utils";
 import { calculateBalances } from "~/lib/balanceUtils";
 import { onchainSync, sync } from "~/lib/walletApi";
+import { useTransactions } from "~/hooks/useTransactions";
+import { Transaction } from "~/types/transaction";
+
+const getTransactionIcon = (type: Transaction["type"]) => {
+  switch (type) {
+    case "Bolt11":
+    case "Lnurl":
+      return "flash-outline";
+    case "Arkoor":
+      return "boat-outline";
+    case "Onchain":
+      return "cube-outline";
+    default:
+      return "cash-outline";
+  }
+};
+
+const getTransactionLabel = (transaction: Transaction) => {
+  if (transaction.type === "Bolt11" || transaction.type === "Lnurl") {
+    return "Lightning";
+  }
+
+  if (transaction.type === "Arkoor") {
+    return "Ark";
+  }
+
+  return transaction.type;
+};
 
 const HomeScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
-  const isFocused = useIsFocused();
   const iconColor = useIconColor();
+  const parentNavigation = navigation.getParent<NavigationProp<TabParamList>>();
   const { walletError, isWalletSuspended } = useWalletStore();
   const { safelyExecuteWhenReady, isBackgroundJobRunning } = useBackgroundJobCoordination();
   const { data: balance, refetch, error, isLoading: isBalanceLoading } = useBalance();
@@ -55,6 +80,8 @@ const HomeScreen = () => {
   const bottomTabBarHeight = useBottomTabBarHeight();
   const { isUpdateRequired, minimumVersion, currentVersion } = useAppVersionCheck();
   const { isEmailVerified } = useServerStore();
+  const { data: transactions = [], isLoading: isTransactionsLoading } = useTransactions();
+  const recentTransactions = transactions.slice(0, 3);
 
   const handleEmailVerificationPress = useCallback(() => {
     navigation.navigate("EmailVerification", { fromSettings: true });
@@ -80,6 +107,17 @@ const HomeScreen = () => {
     getRandomFact();
   }, [refetch, getRandomFact, safelyExecuteWhenReady, loadWallet]);
 
+  const openHistory = () => {
+    parentNavigation?.navigate("History", { screen: "TransactionsList" });
+  };
+
+  const openTransaction = (transaction: Transaction) => {
+    parentNavigation?.navigate("History", {
+      screen: "TransactionDetail",
+      params: { transaction },
+    });
+  };
+
   const isLoading = isBalanceLoading || isSyncPending || isRateLoading;
   const balances = balance ? calculateBalances(balance) : null;
   const totalBalance = balances?.totalBalance ?? 0;
@@ -96,23 +134,6 @@ const HomeScreen = () => {
       transform: [{ rotate: withTiming(isOpen ? "180deg" : "0deg") }],
     };
   }, [isOpen]);
-
-  const { showCamera, setShowCamera, handleScanPress, codeScanner } = useQRCodeScanner({
-    onScan: (value) => {
-      navigation.navigate("Send", { destination: value });
-    },
-  });
-
-  // Close scanner when navigating away from the screen
-  useEffect(() => {
-    if (!isFocused && showCamera) {
-      setShowCamera(false);
-    }
-  }, [isFocused, showCamera, setShowCamera]);
-
-  if (showCamera) {
-    return <QRCodeScanner codeScanner={codeScanner} onClose={() => setShowCamera(false)} />;
-  }
 
   if (isWalletSuspended) {
     return (
@@ -136,6 +157,14 @@ const HomeScreen = () => {
             <Text className="text-sm text-muted-foreground text-center mt-4">
               Go to Settings → Danger Zone to resume your wallet.
             </Text>
+            <Pressable
+              onPress={() => navigation.navigate("Settings")}
+              accessibilityRole="button"
+              accessibilityLabel="Open settings"
+              className="mt-6 rounded-2xl bg-primary px-5 py-3"
+            >
+              <Text className="font-semibold text-primary-foreground">Open Settings</Text>
+            </Pressable>
           </View>
         </View>
       </NoahSafeAreaView>
@@ -160,9 +189,22 @@ const HomeScreen = () => {
             </View>
           )}
         </View>
-        <Pressable onPress={() => navigation.navigate("Transactions")}>
-          <Icon name="list" size={28} color={iconColor} />
-        </Pressable>
+        <View className="flex-row items-center gap-4">
+          <Pressable
+            onPress={() => navigation.navigate("QRHub")}
+            accessibilityRole="button"
+            accessibilityLabel="Open QR code"
+          >
+            <Icon name="qr-code-outline" size={28} color={iconColor} />
+          </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate("Settings")}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile and settings"
+          >
+            <Icon name="person-circle-outline" size={30} color={iconColor} />
+          </Pressable>
+        </View>
       </View>
       <ScrollView
         contentContainerStyle={{
@@ -196,9 +238,11 @@ const HomeScreen = () => {
             </View>
           </View>
         )}
-        <View className="items-center justify-center flex-1">
+        <View className="px-5 pt-16 pb-10">
           {isLoading && !balance ? (
-            <NoahActivityIndicator size="large" />
+            <View className="items-center justify-center py-28">
+              <NoahActivityIndicator size="large" />
+            </View>
           ) : (error || walletError) && !balance ? (
             <Alert variant="destructive" icon={AlertCircle}>
               <AlertTitle>Error</AlertTitle>
@@ -210,7 +254,7 @@ const HomeScreen = () => {
             </Alert>
           ) : (
             <>
-              <Collapsible open={isOpen} onOpenChange={setIsOpen} className="items-center">
+              <Collapsible open={isOpen} onOpenChange={setIsOpen} className="items-center pb-10">
                 <CollapsibleTrigger asChild>
                   <Pressable>
                     <View className="items-center">
@@ -307,14 +351,78 @@ const HomeScreen = () => {
                   </Animated.View>
                 </CollapsibleContent>
               </Collapsible>
-              <NoahButton onPress={handleScanPress} className="mt-8">
-                📷 Scan QR Code
-              </NoahButton>
+
+              <View className="gap-4">
+                <View className="rounded-[18px] border border-border/60 bg-card/70 px-4 py-4">
+                  <View className="mb-3 flex-row items-center justify-between">
+                    <Text className="text-base font-bold text-foreground">Recent Activity</Text>
+                    <Pressable onPress={openHistory}>
+                      <Text className="text-sm font-semibold text-primary">View all</Text>
+                    </Pressable>
+                  </View>
+
+                  {isTransactionsLoading ? (
+                    <View className="items-center py-6">
+                      <NoahActivityIndicator size="small" />
+                    </View>
+                  ) : recentTransactions.length === 0 ? (
+                    <View className="py-5">
+                      <Text className="text-sm font-semibold text-foreground">
+                        No activity yet
+                      </Text>
+                      <Text className="mt-1 text-sm text-muted-foreground">
+                        Receive or send bitcoin to start your history.
+                      </Text>
+                    </View>
+                  ) : (
+                    recentTransactions.map((transaction, index) => (
+                      <Pressable
+                        key={transaction.id}
+                        onPress={() => openTransaction(transaction)}
+                        className={`flex-row items-center py-3 ${
+                          index < recentTransactions.length - 1 ? "border-b border-border/60" : ""
+                        }`}
+                      >
+                        <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-background">
+                          <Icon
+                            name={getTransactionIcon(transaction.type)}
+                            size={20}
+                            color={transaction.direction === "outgoing" ? "#ef4444" : "#22c55e"}
+                          />
+                        </View>
+                        <View className="min-w-0 flex-1">
+                          <Text className="text-sm font-semibold text-foreground">
+                            {getTransactionLabel(transaction)}
+                          </Text>
+                          <Text className="mt-1 text-xs text-muted-foreground">
+                            {new Date(transaction.date).toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </Text>
+                        </View>
+                        <Text
+                          className={`text-sm font-bold ${
+                            transaction.direction === "outgoing"
+                              ? "text-red-500"
+                              : "text-green-500"
+                          }`}
+                        >
+                          {`${transaction.direction === "outgoing" ? "-" : "+"}${formatBip177(transaction.amount)}`}
+                        </Text>
+                      </Pressable>
+                    ))
+                  )}
+                </View>
+              </View>
             </>
           )}
         </View>
-        <View className="p-4 items-center justify-center mb-16">
-          <Text className="text-muted-foreground text-center text-xs">{fact}</Text>
+        <View
+          className="p-4 items-center justify-center mb-16"
+          style={{ marginTop: "auto" }}
+        >
+          <Text className="text-center text-xs text-muted-foreground">{fact}</Text>
         </View>
       </ScrollView>
     </NoahSafeAreaView>

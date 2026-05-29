@@ -66,7 +66,7 @@ async function scheduleLightningPaymentNotification(amountSat: number | null): P
       title: "Lightning Payment Received! ⚡",
       body:
         amountSat === null
-          ? "Your Lightning payment was claimed."
+          ? "You received a Lightning payment."
           : `You received ${formatBip177(amountSat)}`,
       sound: "default",
       priority: Notifications.AndroidNotificationPriority.MAX,

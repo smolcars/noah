@@ -30,6 +30,7 @@ pub struct User {
     pub pubkey: String,
     pub lightning_address: Option<String>,
     pub ark_address: Option<String>,
+    pub display_name: Option<String>,
     pub email: Option<String>,
     pub is_email_verified: bool,
 }
@@ -49,7 +50,7 @@ impl<'a> UserRepository<'a> {
     /// Finds a user by their public key.
     pub async fn find_by_pubkey(&self, pubkey: &str) -> Result<Option<User>> {
         let user = sqlx::query_as::<_, User>(
-            "SELECT pubkey, lightning_address, ark_address, email, is_email_verified FROM users WHERE pubkey = $1",
+            "SELECT pubkey, lightning_address, ark_address, display_name, email, is_email_verified FROM users WHERE pubkey = $1",
         )
         .bind(pubkey)
         .fetch_optional(self.pool)
@@ -76,7 +77,7 @@ impl<'a> UserRepository<'a> {
     /// Finds a user by their lightning address.
     pub async fn find_by_lightning_address(&self, ln_address: &str) -> Result<Option<User>> {
         let user = sqlx::query_as::<_, User>(
-            "SELECT pubkey, lightning_address, ark_address, email, is_email_verified FROM users WHERE lightning_address = $1",
+            "SELECT pubkey, lightning_address, ark_address, display_name, email, is_email_verified FROM users WHERE lightning_address = $1",
         )
         .bind(ln_address)
         .fetch_optional(self.pool)
@@ -221,6 +222,25 @@ impl<'a> UserRepository<'a> {
                 Err(e.into())
             }
         }
+    }
+
+    /// Updates a user's optional display name. Empty strings are converted to NULL.
+    pub async fn update_display_name(
+        &self,
+        pubkey: &str,
+        display_name: Option<&str>,
+    ) -> Result<()> {
+        let normalized_display_name = display_name
+            .map(str::trim)
+            .filter(|value| !value.is_empty());
+
+        sqlx::query("UPDATE users SET display_name = $1, updated_at = now() WHERE pubkey = $2")
+            .bind(normalized_display_name)
+            .bind(pubkey)
+            .execute(self.pool)
+            .await?;
+
+        Ok(())
     }
 
     /// Checks if a user exists by their public key.

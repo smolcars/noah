@@ -9,8 +9,8 @@ import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
 import { type Transaction, type PaymentTypes } from "../types/transaction";
 import { Label } from "~/components/ui/label";
-import { useNavigation } from "@react-navigation/native";
-import { HomeStackParamList } from "~/Navigators";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
+import { TabParamList, TransactionsStackParamList } from "~/Navigators";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Result, ResultAsync } from "neverthrow";
 import { CACHES_DIRECTORY_PATH } from "~/constants";
@@ -23,7 +23,8 @@ import { HistoryRefreshButton } from "~/components/HistoryRefreshButton";
 const log = logger("TransactionsScreen");
 
 const TransactionsScreen = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<TransactionsStackParamList>>();
+  const parentNavigation = navigation.getParent<NavigationProp<TabParamList>>();
   const iconColor = useIconColor();
   const {
     data: transactions = [],
@@ -43,6 +44,20 @@ const TransactionsScreen = () => {
 
   const handleRefresh = async () => {
     await refetch();
+  };
+
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    if (parentNavigation?.canGoBack()) {
+      parentNavigation.goBack();
+      return;
+    }
+
+    parentNavigation?.navigate("Home");
   };
 
   const exportToCSV = async () => {
@@ -128,7 +143,7 @@ const TransactionsScreen = () => {
         <View className="p-4 flex-1">
           <View className="flex-row items-center justify-between mb-8">
             <View className="flex-row items-center">
-              <Pressable onPress={() => navigation.goBack()} className="mr-4">
+              <Pressable onPress={handleBack} className="mr-4">
                 <Icon name="arrow-back-outline" size={24} color={iconColor} />
               </Pressable>
               <Text className="text-2xl font-bold text-foreground">Transactions</Text>

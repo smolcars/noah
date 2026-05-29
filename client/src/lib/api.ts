@@ -30,11 +30,13 @@ import {
   LightningAddressSuggestionsPayload,
   LightningAddressSuggestionsResponse,
   UpdateLnAddressPayload,
+  UpdateProfilePayload,
   UploadUrlResponse,
   ReportJobStatusPayload,
   DefaultSuccessPayload,
   SubmitInvoicePayload,
   RegisterPayload,
+  UserInfoResponse,
   SendEmailVerificationPayload,
   VerifyEmailPayload,
   EmailVerificationResponse,
@@ -336,6 +338,11 @@ export const registerWithServer = (payload: RegisterPayload) =>
 
 export const updateLightningAddress = (payload: UpdateLnAddressPayload) =>
   post<UpdateLnAddressPayload, DefaultSuccessPayload>("/update_ln_address", payload);
+
+export const updateProfile = (payload: UpdateProfilePayload) =>
+  post<UpdateProfilePayload, DefaultSuccessPayload>("/update_profile", payload);
+
+export const getUserInfo = () => post<object, UserInfoResponse>("/user_info", {});
 
 export const getLightningAddressSuggestions = (payload: LightningAddressSuggestionsPayload) =>
   post<LightningAddressSuggestionsPayload, LightningAddressSuggestionsResponse>(

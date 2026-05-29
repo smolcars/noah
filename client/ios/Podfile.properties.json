@@ -4,5 +4,7 @@
   "newArchEnabled": "true",
   "apple.extraPods": "[{\"name\":\"SDWebImage\",\"modular_headers\":true},{\"name\":\"SDWebImageSVGCoder\",\"modular_headers\":true}]",
   "apple.privacyManifestAggregationEnabled": "true",
-  "ios.forceStaticLinking": "[]"
+  "ios.forceStaticLinking": "[]",
+  "expo.inlineModules.watchedDirectories": "[]",
+  "EXPO_USE_PRECOMPILED_MODULES": "true"
 }

@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { validateBitcoinAddress } from "bip-321";
 import { history } from "~/lib/paymentsApi";
+import { loadWalletIfNeeded } from "~/lib/walletApi";
+import { useWalletStore } from "~/store/walletStore";
 import type { Transaction, PaymentTypes } from "~/types/transaction";
 import type { BarkMovement, MovementStatus } from "react-native-nitro-ark";
 import type { MovementKind } from "~/types/movement";
@@ -259,6 +261,15 @@ const shouldIncludeMovement = (movement: BarkMovement): boolean => {
 };
 
 const fetchAndTransformTransactions = async (): Promise<Transaction[]> => {
+  const loadWalletResult = await loadWalletIfNeeded();
+  if (loadWalletResult.isErr()) {
+    throw loadWalletResult.error;
+  }
+
+  if (!loadWalletResult.value) {
+    return [];
+  }
+
   const movementsResult = await history();
 
   if (movementsResult.isErr()) {
@@ -277,12 +288,18 @@ const fetchAndTransformTransactions = async (): Promise<Transaction[]> => {
   return transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 };
 
-export const useTransactions = () => {
+export const useTransactions = (options?: { enabled?: boolean }) => {
+  const { isInitialized, isWalletLoaded, isWalletSuspended } = useWalletStore();
+  const enabled =
+    (options?.enabled ?? true) && isInitialized && isWalletLoaded && !isWalletSuspended;
+
   return useQuery({
     queryKey: ["transactions"],
     queryFn: fetchAndTransformTransactions,
+    enabled,
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
+    retry: false,
   });
 };
 

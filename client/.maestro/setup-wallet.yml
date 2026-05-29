@@ -35,10 +35,10 @@ appId: com.noahwallet.regtest
 - tapOn: "Skip"
 
 # Home screen
-- assertVisible: "📷 Scan QR Code"
+- assertVisible: "History"
 
 # Clean up: Delete the wallet
-- tapOn: "Settings"
+- tapOn: "Open profile and settings"
 - scrollUntilVisible:
     element: "Delete Wallet"
     direction: DOWN

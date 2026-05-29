@@ -56,6 +56,7 @@ async fn test_get_user_info() {
     let res: UserInfoResponse = serde_json::from_slice(&body).unwrap();
 
     assert_eq!(res.lightning_address, "existing@localhost");
+    assert_eq!(res.display_name, None);
 }
 
 #[tracing_test::traced_test]
@@ -112,6 +113,156 @@ async fn test_update_ln_address() {
         updated_user.lightning_address,
         Some("new@localhost".to_string())
     );
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_update_profile_display_name() {
+    let (app, app_state, _guard) = setup_test_app().await;
+
+    let user = TestUser::new();
+    let access_token = user.access_token(&app_state);
+
+    let mut tx = app_state.db_pool.begin().await.unwrap();
+    UserRepository::create(
+        &mut tx,
+        &user.pubkey().to_string(),
+        "existing@localhost",
+        None,
+    )
+    .await
+    .unwrap();
+    tx.commit().await.unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/update_profile")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "display_name": "  Nitesh  "
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let user_repo = UserRepository::new(&app_state.db_pool);
+    let updated_user = user_repo
+        .find_by_pubkey(&user.pubkey().to_string())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(updated_user.display_name, Some("Nitesh".to_string()));
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_update_profile_clears_empty_display_name() {
+    let (app, app_state, _guard) = setup_test_app().await;
+
+    let user = TestUser::new();
+    let access_token = user.access_token(&app_state);
+
+    let mut tx = app_state.db_pool.begin().await.unwrap();
+    UserRepository::create(
+        &mut tx,
+        &user.pubkey().to_string(),
+        "existing@localhost",
+        None,
+    )
+    .await
+    .unwrap();
+    tx.commit().await.unwrap();
+
+    let user_repo = UserRepository::new(&app_state.db_pool);
+    user_repo
+        .update_display_name(&user.pubkey().to_string(), Some("Noah User"))
+        .await
+        .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/update_profile")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "display_name": ""
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let updated_user = user_repo
+        .find_by_pubkey(&user.pubkey().to_string())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(updated_user.display_name, None);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_update_profile_rejects_long_display_name() {
+    let (app, app_state, _guard) = setup_test_app().await;
+
+    let user = TestUser::new();
+    let access_token = user.access_token(&app_state);
+
+    let mut tx = app_state.db_pool.begin().await.unwrap();
+    UserRepository::create(
+        &mut tx,
+        &user.pubkey().to_string(),
+        "existing@localhost",
+        None,
+    )
+    .await
+    .unwrap();
+    tx.commit().await.unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/update_profile")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "display_name": "x".repeat(81)
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 }
 
 #[tracing_test::traced_test]
