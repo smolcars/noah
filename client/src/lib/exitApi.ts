@@ -75,7 +75,10 @@ export const startExitForEntireWallet = async (): Promise<Result<void, Error>> =
 
 export const startExitForVtxos = async (vtxoIds: string[]): Promise<Result<void, Error>> => {
   log.i("Starting exit for selected VTXOs", [{ vtxo_ids: vtxoIds }]);
-  const result = await ResultAsync.fromPromise(NitroArk.startExitForVtxos(vtxoIds), (e) => e as Error);
+  const result = await ResultAsync.fromPromise(
+    NitroArk.startExitForVtxos(vtxoIds),
+    (e) => e as Error,
+  );
 
   if (result.isErr()) {
     log.e("Failed to start exit for selected VTXOs", [{ vtxo_ids: vtxoIds }, result.error]);
@@ -97,24 +100,12 @@ export const syncExit = async (): Promise<Result<void, Error>> => {
   return result;
 };
 
-export const syncNoProgress = async (): Promise<Result<void, Error>> => {
-  log.d("Syncing exits without progress");
-  const result = await ResultAsync.fromPromise(NitroArk.syncNoProgress(), (e) => e as Error);
-
-  if (result.isErr()) {
-    log.e("Failed to sync exits without progress", [result.error]);
-  } else {
-    log.d("Synced exits without progress");
-  }
-  return result;
-};
-
 export const progressExits = async (
   feeRateSatPerKvb?: number,
 ): Promise<Result<ExitProgressStatusResult[], Error>> => {
   log.i("Progressing exits", [{ fee_rate_sat_per_kvb: feeRateSatPerKvb }]);
 
-  const syncResult = await syncNoProgress();
+  const syncResult = await syncExit();
   if (syncResult.isErr()) {
     log.e("Failed to sync exits before progressing", [
       { fee_rate_sat_per_kvb: feeRateSatPerKvb },
@@ -261,7 +252,10 @@ export const drainExits = async (
 
 export const extractTransaction = async (psbt: string): Promise<Result<string, Error>> => {
   log.d("Extracting claim transaction from PSBT");
-  const result = await ResultAsync.fromPromise(NitroArk.extractTransaction(psbt), (e) => e as Error);
+  const result = await ResultAsync.fromPromise(
+    NitroArk.extractTransaction(psbt),
+    (e) => e as Error,
+  );
 
   if (result.isErr()) {
     log.e("Failed to extract claim transaction from PSBT", [result.error]);
@@ -273,7 +267,10 @@ export const extractTransaction = async (psbt: string): Promise<Result<string, E
 
 export const broadcastTransaction = async (txHex: string): Promise<Result<string, Error>> => {
   log.i("Broadcasting claim transaction", [{ tx_hex_length: txHex.length }]);
-  const result = await ResultAsync.fromPromise(NitroArk.broadcastTransaction(txHex), (e) => e as Error);
+  const result = await ResultAsync.fromPromise(
+    NitroArk.broadcastTransaction(txHex),
+    (e) => e as Error,
+  );
 
   if (result.isErr()) {
     log.e("Failed to broadcast claim transaction", [result.error]);

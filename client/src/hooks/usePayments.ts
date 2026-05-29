@@ -240,15 +240,20 @@ const awaitLightningPayment = async (
   paymentPromise: Promise<Result<LightningSendResult, Error>>,
 ): Promise<LightningSendResult> => {
   const result = await paymentPromise;
+
   if (result.isErr()) {
+    log.e("awaitLightningPayment error", [result.error]);
     throw result.error;
   }
   if (result.value.preimage) {
     return result.value;
   }
 
+  log.d("awaitLightningPayment value", [result.value]);
+
   const checkResult = await checkLightningPayment(result.value.payment_hash, true);
   if (checkResult.isErr()) {
+    log.e("checkLightningPayment error", [checkResult.error]);
     throw checkResult.error;
   }
   if (!checkResult.value) {
