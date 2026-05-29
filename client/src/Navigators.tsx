@@ -34,6 +34,8 @@ import ArkServerAccessTokenScreen from "~/screens/ArkServerAccessTokenScreen";
 import ArkInfoScreen from "~/screens/ArkInfoScreen";
 import NoahStoryScreen from "~/screens/NoahStoryScreen";
 import DebugScreen from "~/screens/DebugScreen";
+import QRHubScreen from "~/screens/QRHubScreen";
+import ProfileScreen from "~/screens/ProfileScreen";
 import WalletLoader from "~/components/WalletLoader";
 import { useWalletStore } from "~/store/walletStore";
 import { useServerStore } from "~/store/serverStore";
@@ -64,11 +66,12 @@ export type TabParamList = {
   Home: NavigatorScreenParams<HomeStackParamList> | undefined;
   Receive: undefined;
   Send: { destination?: string };
-  Settings: undefined;
+  History: NavigatorScreenParams<TransactionsStackParamList> | undefined;
 };
 
 export type SettingsStackParamList = {
   SettingsList: undefined;
+  Profile: undefined;
   Mnemonic: { fromOnboarding: boolean };
   Logs: undefined;
   LightningAddress: { fromOnboarding?: boolean };
@@ -97,19 +100,25 @@ export type OnboardingStackParamList = {
 export type HomeStackParamList = {
   HomeStack: undefined;
   BoardArk: undefined;
+  QRHub: undefined;
+  Settings: NavigatorScreenParams<SettingsStackParamList> | undefined;
   Send: { destination: string };
-  Transactions: undefined;
-  TransactionDetail: { transaction: Transaction };
   BoardingTransactions: undefined;
   BoardingTransactionDetail: { transaction: BoardingTransaction };
   ReceiveSuccess: { amountSat: number };
   EmailVerification: { fromSettings?: boolean } | undefined;
 };
 
+export type TransactionsStackParamList = {
+  TransactionsList: undefined;
+  TransactionDetail: { transaction: Transaction };
+};
+
 const Tab = createNativeBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<SettingsStackParamList>();
 const OnboardingStack = createNativeStackNavigator<OnboardingStackParamList>();
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+const TransactionsStack = createNativeStackNavigator<TransactionsStackParamList>();
 
 const SettingsStackNav = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -118,6 +127,7 @@ const SettingsStackNav = () => (
       component={SettingsScreen}
       options={{ animation: "default" }}
     />
+    <Stack.Screen name="Profile" component={ProfileScreen} options={{ animation: "default" }} />
     <Stack.Screen name="Mnemonic" component={MnemonicScreen} options={{ animation: "default" }} />
     <Stack.Screen name="Logs" component={LogScreen} options={{ animation: "default" }} />
     <Stack.Screen
@@ -170,18 +180,18 @@ const HomeStackScreen = () => (
       options={{ headerShown: false, animation: "default" }}
     />
     <HomeStack.Screen
+      name="QRHub"
+      component={QRHubScreen}
+      options={{ headerShown: false, animation: "default" }}
+    />
+    <HomeStack.Screen
+      name="Settings"
+      component={SettingsStackNav}
+      options={{ headerShown: false, animation: "default" }}
+    />
+    <HomeStack.Screen
       name="Send"
       component={SendScreen}
-      options={{ headerShown: false, animation: "default" }}
-    />
-    <HomeStack.Screen
-      name="Transactions"
-      component={TransactionsScreen}
-      options={{ headerShown: false, animation: "default" }}
-    />
-    <HomeStack.Screen
-      name="TransactionDetail"
-      component={TransactionDetailScreen}
       options={{ headerShown: false, animation: "default" }}
     />
     <HomeStack.Screen
@@ -205,6 +215,21 @@ const HomeStackScreen = () => (
       options={{ headerShown: false, animation: "default" }}
     />
   </HomeStack.Navigator>
+);
+
+const TransactionsStackScreen = () => (
+  <TransactionsStack.Navigator>
+    <TransactionsStack.Screen
+      name="TransactionsList"
+      component={TransactionsScreen}
+      options={{ headerShown: false, animation: "default" }}
+    />
+    <TransactionsStack.Screen
+      name="TransactionDetail"
+      component={TransactionDetailScreen}
+      options={{ headerShown: false, animation: "default" }}
+    />
+  </TransactionsStack.Navigator>
 );
 
 const OnboardingStackScreen = () => (
@@ -259,8 +284,8 @@ type PreloadedIcons = {
   arrowDownOutline: ImageSourcePropType;
   arrowUp: ImageSourcePropType;
   arrowUpOutline: ImageSourcePropType;
-  settings: ImageSourcePropType;
-  settingsOutline: ImageSourcePropType;
+  history: ImageSourcePropType;
+  historyOutline: ImageSourcePropType;
 };
 
 const preloadAndroidIcons = async (): Promise<PreloadedIcons> => {
@@ -271,8 +296,8 @@ const preloadAndroidIcons = async (): Promise<PreloadedIcons> => {
     arrowDownOutline,
     arrowUp,
     arrowUpOutline,
-    settings,
-    settingsOutline,
+    history,
+    historyOutline,
   ] = await Promise.all([
     Icon.getImageSource("home", 24),
     Icon.getImageSource("home-outline", 24),
@@ -280,8 +305,8 @@ const preloadAndroidIcons = async (): Promise<PreloadedIcons> => {
     Icon.getImageSource("arrow-down-outline", 24),
     Icon.getImageSource("arrow-up", 24),
     Icon.getImageSource("arrow-up-outline", 24),
-    Icon.getImageSource("settings", 24),
-    Icon.getImageSource("settings-outline", 24),
+    Icon.getImageSource("time", 24),
+    Icon.getImageSource("time-outline", 24),
   ]);
   return {
     home: home!,
@@ -290,8 +315,8 @@ const preloadAndroidIcons = async (): Promise<PreloadedIcons> => {
     arrowDownOutline: arrowDownOutline!,
     arrowUp: arrowUp!,
     arrowUpOutline: arrowUpOutline!,
-    settings: settings!,
-    settingsOutline: settingsOutline!,
+    history: history!,
+    historyOutline: historyOutline!,
   };
 };
 
@@ -309,7 +334,7 @@ const AppTabs = ({ preloadedIcons }: { preloadedIcons: PreloadedIcons }) => {
       }}
       tabBarInactiveTintColor={themedColors.tabBarInactive}
       hapticFeedbackEnabled
-      disablePageAnimations={true}
+      disablePageAnimations={false}
     >
       <Tab.Screen
         name="Home"
@@ -373,15 +398,15 @@ const AppTabs = ({ preloadedIcons }: { preloadedIcons: PreloadedIcons }) => {
         }}
       />
       <Tab.Screen
-        name="Settings"
-        component={SettingsStackNav}
+        name="History"
+        component={TransactionsStackScreen}
         options={{
           lazy: true,
           tabBarIcon: ({ focused }) => {
             if (isIos) {
-              return { sfSymbol: "gear" };
+              return { sfSymbol: "clock.arrow.circlepath" };
             }
-            return focused ? preloadedIcons!.settings : preloadedIcons!.settingsOutline;
+            return focused ? preloadedIcons!.history : preloadedIcons!.historyOutline;
           },
         }}
         listeners={({ navigation }) => ({
@@ -391,16 +416,16 @@ const AppTabs = ({ preloadedIcons }: { preloadedIcons: PreloadedIcons }) => {
               const state = navigation.getState();
               const route = state.routes[state.index];
 
-              // If we're on the Settings tab and in a nested screen, prevent default and reset
-              if (route.name === "Settings" && route.state?.index && route.state.index > 0) {
+              // If we're on the History tab and in a nested screen, prevent default and reset
+              if (route.name === "History" && route.state?.index && route.state.index > 0) {
                 // Prevent default action only when we need to reset
                 e.preventDefault();
 
-                // Navigate to Settings twice to reset the stack
-                navigation.navigate("Settings");
+                // Navigate to History twice to reset the stack
+                navigation.navigate("History");
                 // Request animation frame to ensure smooth reset
                 requestAnimationFrame(() => {
-                  navigation.navigate("Settings");
+                  navigation.navigate("History");
                 });
               }
             }

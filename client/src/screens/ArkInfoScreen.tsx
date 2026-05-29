@@ -12,6 +12,13 @@ import { copyToClipboard } from "~/lib/clipboardUtils";
 import { COLORS } from "~/lib/styleConstants";
 import { useIconColor, useThemeColors } from "~/hooks/useTheme";
 import type { SettingsStackParamList } from "~/Navigators";
+import {
+  ACTIVE_WALLET_CONFIG,
+  getBlockheightEndpoint,
+  mempoolHistoricalPriceEndpoint,
+  mempoolPriceEndpoint,
+} from "~/constants";
+import { APP_VARIANT } from "~/config";
 
 type NavigationProp = NativeStackNavigationProp<SettingsStackParamList, "ArkInfo">;
 
@@ -22,6 +29,10 @@ type InfoRow = {
   value: ArkInfoValue;
   copyable?: boolean;
   unit?: string;
+};
+
+type OptionalInfoRow = Omit<InfoRow, "value"> & {
+  value?: ArkInfoValue | null;
 };
 
 const formatNumber = (value: number) => value.toLocaleString();
@@ -115,6 +126,21 @@ const InfoSection = ({ title, rows }: { title: string; rows: InfoRow[] }) => {
   );
 };
 
+const compactRows = (rows: OptionalInfoRow[]): InfoRow[] =>
+  rows.filter((row): row is InfoRow => row.value !== undefined && row.value !== null);
+
+const getMempoolExplorerBaseUrl = () => {
+  switch (APP_VARIANT) {
+    case "mainnet":
+      return "https://mempool.space";
+    case "signet":
+    case "regtest":
+      return "https://mempool.space/signet";
+    default:
+      return null;
+  }
+};
+
 const buildSections = (arkInfo: BarkArkInfo) => [
   {
     title: "Keys",
@@ -156,11 +182,34 @@ const buildSections = (arkInfo: BarkArkInfo) => [
   },
 ];
 
+const buildConfigurationSections = () => [
+  {
+    title: "Wallet endpoints",
+    rows: compactRows([
+      { label: "Ark server", value: ACTIVE_WALLET_CONFIG.config?.ark, copyable: true },
+      { label: "Esplora API", value: ACTIVE_WALLET_CONFIG.config?.esplora, copyable: true },
+      { label: "Bitcoind RPC", value: ACTIVE_WALLET_CONFIG.config?.bitcoind, copyable: true },
+    ]),
+  },
+  {
+    title: "Explorer APIs",
+    rows: compactRows([
+      { label: "Block height API", value: getBlockheightEndpoint(), copyable: true },
+      { label: "Mempool explorer", value: getMempoolExplorerBaseUrl(), copyable: true },
+      { label: "Price API", value: mempoolPriceEndpoint, copyable: true },
+      { label: "Historical price API", value: mempoolHistoricalPriceEndpoint, copyable: true },
+    ]),
+  },
+];
+
 const ArkInfoScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const iconColor = useIconColor();
   const colors = useThemeColors();
   const { data: arkInfo, isLoading, isError, error, refetch, isFetching } = useArkInfo();
+  const sections = arkInfo
+    ? [...buildSections(arkInfo), ...buildConfigurationSections()]
+    : buildConfigurationSections();
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
@@ -219,16 +268,14 @@ const ArkInfoScreen = () => {
             </View>
           ) : null}
 
-          {arkInfo
-            ? buildSections(arkInfo).map((section, index, sections) => (
-                <View
-                  key={section.title}
-                  className={index === sections.length - 1 ? "mb-10" : undefined}
-                >
-                  <InfoSection title={section.title} rows={section.rows} />
-                </View>
-              ))
-            : null}
+          {sections.map((section, index, allSections) => (
+            <View
+              key={section.title}
+              className={index === allSections.length - 1 ? "mb-10" : undefined}
+            >
+              <InfoSection title={section.title} rows={section.rows} />
+            </View>
+          ))}
         </View>
       </ScrollView>
     </NoahSafeAreaView>
