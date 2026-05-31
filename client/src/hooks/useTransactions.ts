@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { validateBitcoinAddress } from "bip-321";
+import ky from "ky";
+import { getEsploraApiBaseUrl } from "~/constants";
 import { history, onchainTransactions } from "~/lib/paymentsApi";
 import { loadWalletIfNeeded } from "~/lib/walletApi";
 import { useWalletStore } from "~/store/walletStore";
@@ -21,6 +23,15 @@ import {
 
 const log = logger("useTransactions");
 const UNKNOWN_ONCHAIN_DATE_ISO = new Date(0).toISOString();
+
+type EsploraTransactionResponse = {
+  status?: {
+    confirmed?: boolean;
+    block_height?: number;
+    block_hash?: string;
+    block_time?: number;
+  };
+};
 
 const SUBSYSTEM_KIND_TO_MOVEMENT_KIND: Partial<Record<BarkSubsystemId, MovementKind>> = {
   [`${BARK_SUBSYSTEM.BOARD.name}:${BARK_SUBSYSTEM.BOARD.kind}`]: "onboard",
@@ -259,20 +270,62 @@ const getOnchainTransactionLabel = (transaction: OnchainTransactionInfo): string
   return "Unconfirmed";
 };
 
-const transformOnchainTransaction = (transaction: OnchainTransactionInfo): Transaction => {
+const getOnchainTransactionBlockTime = async (
+  transaction: OnchainTransactionInfo,
+): Promise<number | undefined> => {
+  if (!transaction.has_confirmation) {
+    return undefined;
+  }
+
+  const esploraBaseUrl = getEsploraApiBaseUrl();
+  if (!esploraBaseUrl) {
+    return undefined;
+  }
+
+  try {
+    const response = await ky
+      .get(`${esploraBaseUrl}/tx/${transaction.txid}`)
+      .json<EsploraTransactionResponse>();
+
+    if (!response.status?.confirmed || typeof response.status.block_time !== "number") {
+      return undefined;
+    }
+
+    return response.status.block_time;
+  } catch (error) {
+    log.w("Failed to fetch onchain transaction timestamp", [transaction.txid, error]);
+    return undefined;
+  }
+};
+
+const transformOnchainTransaction = async (
+  transaction: OnchainTransactionInfo,
+): Promise<Transaction> => {
   const isOutgoing = transaction.balance_change_sat < 0;
+  const blockTime = await getOnchainTransactionBlockTime(transaction);
+  const date = blockTime ? new Date(blockTime * 1000).toISOString() : UNKNOWN_ONCHAIN_DATE_ISO;
+
+  let btcPrice: number | undefined;
+  if (blockTime) {
+    const btcPriceResult = await getHistoricalBtcToUsdRate(date);
+    if (btcPriceResult.isOk()) {
+      btcPrice = btcPriceResult.value;
+    }
+  }
 
   return {
     id: `onchain-wallet-${transaction.txid}`,
     txid: transaction.txid,
     txHex: transaction.tx_hex,
     amount: Math.abs(transaction.balance_change_sat),
-    date: UNKNOWN_ONCHAIN_DATE_ISO,
-    dateLabel: getOnchainTransactionLabel(transaction),
+    date,
+    dateLabel: blockTime ? undefined : getOnchainTransactionLabel(transaction),
+    sortTimestamp: blockTime ? blockTime * 1000 : undefined,
     sortHeight: transaction.has_confirmation ? transaction.confirmation_height : undefined,
     direction: isOutgoing ? "outgoing" : "incoming",
     type: "Onchain",
     source: "onchain-wallet",
+    btcPrice,
     description: "",
     balanceChangeSat: transaction.balance_change_sat,
     hasOnchainFee: transaction.has_onchain_fee,
@@ -292,17 +345,23 @@ const compareTransactions = (a: Transaction, b: Transaction): number => {
   const bIsOnchainWallet = b.source === "onchain-wallet";
   const aIsUnconfirmedOnchainWallet = aIsOnchainWallet && !a.hasConfirmation;
   const bIsUnconfirmedOnchainWallet = bIsOnchainWallet && !b.hasConfirmation;
+  const aHasReliableTimestamp = typeof a.sortTimestamp === "number" && a.sortTimestamp > 0;
+  const bHasReliableTimestamp = typeof b.sortTimestamp === "number" && b.sortTimestamp > 0;
 
   if (aIsUnconfirmedOnchainWallet !== bIsUnconfirmedOnchainWallet) {
     return aIsUnconfirmedOnchainWallet ? -1 : 1;
+  }
+
+  if (aHasReliableTimestamp && bHasReliableTimestamp) {
+    return (b.sortTimestamp ?? 0) - (a.sortTimestamp ?? 0);
   }
 
   if (aIsOnchainWallet && bIsOnchainWallet) {
     return (b.sortHeight ?? 0) - (a.sortHeight ?? 0);
   }
 
-  if (aIsOnchainWallet !== bIsOnchainWallet) {
-    return aIsOnchainWallet ? 1 : -1;
+  if (aHasReliableTimestamp !== bHasReliableTimestamp) {
+    return aHasReliableTimestamp ? -1 : 1;
   }
 
   const aSortTimestamp = a.sortTimestamp ?? new Date(a.date).getTime();
@@ -359,7 +418,9 @@ const fetchAndTransformTransactions = async (): Promise<Transaction[]> => {
   }
 
   const movementTransactions = await Promise.all(movements.map(transformMovementToTransaction));
-  const onchainWalletTransactions = walletTransactions.map(transformOnchainTransaction);
+  const onchainWalletTransactions = await Promise.all(
+    walletTransactions.map(transformOnchainTransaction),
+  );
 
   return [...movementTransactions, ...onchainWalletTransactions].sort(compareTransactions);
 };
