@@ -17,6 +17,7 @@ import {
   onchainAddress as onchainAddressNitro,
   payLightningInvoice as payLightningInvoiceNitro,
   onchainSend as onchainSendNitro,
+  sendOnchain as sendOnchainNitro,
   estimateArkoorPaymentFee as estimateArkoorPaymentFeeNitro,
   estimateLightningSendFee as estimateLightningSendFeeNitro,
   estimateSendOnchain as estimateSendOnchainNitro,
@@ -43,7 +44,13 @@ export type BarkNotificationSubscription = {
   isActive(): boolean;
 };
 
-export type PaymentResult = ArkoorPaymentResult | OnchainPaymentResult | LightningPayment;
+export type OnchainSendSource = "onchain" | "offchain";
+
+export type NoahOnchainPaymentResult = OnchainPaymentResult & {
+  source: OnchainSendSource;
+};
+
+export type PaymentResult = ArkoorPaymentResult | NoahOnchainPaymentResult | LightningPayment;
 
 export const newAddress = async (): Promise<Result<NewAddressResult, Error>> => {
   return ResultAsync.fromPromise(
@@ -154,14 +161,37 @@ export const onchainSend = async ({
 }: {
   destination: string;
   amountSat: number;
-}): Promise<Result<OnchainPaymentResult, Error>> => {
+}): Promise<Result<NoahOnchainPaymentResult, Error>> => {
   return ResultAsync.fromPromise(onchainSendNitro(destination, amountSat), (error) => {
     const e = new Error(
       `Failed to send onchain funds: ${error instanceof Error ? error.message : String(error)}`,
     );
 
     return e;
-  });
+  }).map((result) => ({ ...result, source: "onchain" }));
+};
+
+export const sendOnchainFromOffchain = async ({
+  destination,
+  amountSat,
+}: {
+  destination: string;
+  amountSat: number;
+}): Promise<Result<NoahOnchainPaymentResult, Error>> => {
+  return ResultAsync.fromPromise(sendOnchainNitro(destination, amountSat), (error) => {
+    const e = new Error(
+      `Failed to send onchain funds from Ark balance: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+
+    return e;
+  }).map((txid) => ({
+    txid,
+    amount_sat: amountSat,
+    destination_address: destination,
+    source: "offchain",
+  }));
 };
 
 export const estimateArkoorPaymentFee = async (

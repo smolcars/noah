@@ -6,13 +6,15 @@ import {
   boardArk,
   bolt11Invoice,
   onchainSend,
+  sendOnchainFromOffchain,
   sendArkoorPayment,
   payLightningInvoice,
   payLightningAddress,
   payLightningOffer,
   type ArkoorPaymentResult,
   type LightningPayment,
-  type OnchainPaymentResult,
+  type NoahOnchainPaymentResult,
+  type OnchainSendSource,
   type BarkFeeEstimate,
   boardAllArk,
   offboardAllArk,
@@ -164,10 +166,11 @@ type SendVariables = {
   amountSat: number | undefined;
   resolvedAmountSat: number;
   comment: string | null;
+  onchainSource?: OnchainSendSource;
   btcPrice?: number;
 };
 
-type SendResult = ArkoorPaymentResult | LightningPayment | OnchainPaymentResult;
+type SendResult = ArkoorPaymentResult | LightningPayment | NoahOnchainPaymentResult;
 
 export type SendFeeEstimateParams =
   | {
@@ -176,6 +179,7 @@ export type SendFeeEstimateParams =
     }
   | {
       method: "onchain";
+      source: "offchain";
       destination: string;
       amountSat: number;
     };
@@ -258,7 +262,7 @@ export function useSend(destinationType: DestinationTypes) {
 
   return useMutation<SendResult, Error, SendVariables>({
     mutationFn: async (variables) => {
-      const { destination, amountSat, comment } = variables;
+      const { destination, amountSat, comment, onchainSource } = variables;
       if (amountSat === undefined && destinationType !== "lightning") {
         throw new Error("Amount is required");
       }
@@ -269,7 +273,10 @@ export function useSend(destinationType: DestinationTypes) {
           if (amountSat === undefined) {
             throw new Error("Amount is required for onchain payments");
           }
-          result = await onchainSend({ destination, amountSat });
+          result =
+            onchainSource === "offchain"
+              ? await sendOnchainFromOffchain({ destination, amountSat })
+              : await onchainSend({ destination, amountSat });
           break;
         case "ark":
           if (amountSat === undefined) {
@@ -327,7 +334,7 @@ async function handleNoahWalletPayment(
   destination: string,
   amountSat: number,
   comment: string | null,
-): Promise<Result<ArkoorPaymentResult | LightningPayment | OnchainPaymentResult, Error> | null> {
+): Promise<Result<ArkoorPaymentResult | LightningPayment | NoahOnchainPaymentResult, Error> | null> {
   try {
     const [user, domain] = destination.split("@");
     const lnurlEndpoint = `https://${domain}/.well-known/lnurlp/${user}`;
