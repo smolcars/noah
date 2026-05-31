@@ -250,8 +250,8 @@ export const useSendScreen = () => {
         };
       }
 
-      // Check for lightning payment (has invoice)
-      if ("invoice" in res) {
+      // Check for lightning payment
+      if ("payment_hash" in res) {
         if (!res.preimage) {
           log.e("Lightning payment result missing preimage", [res]);
           showAlert({
@@ -268,8 +268,8 @@ export const useSendScreen = () => {
 
         return {
           success: true,
-          amount_sat: res.amount,
-          destination: res.invoice,
+          amount_sat: res.amount ?? amountSat,
+          destination: res.invoice ?? res.payment_hash,
           preimage: res.preimage,
           type: "Lightning",
         };

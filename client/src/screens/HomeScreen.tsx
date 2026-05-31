@@ -79,7 +79,7 @@ const HomeScreen = () => {
   const [fact, setFact] = useState("");
   const bottomTabBarHeight = useBottomTabBarHeight();
   const { isUpdateRequired, minimumVersion, currentVersion } = useAppVersionCheck();
-  const { isEmailVerified } = useServerStore();
+  const { isEmailVerified, isEmailPromptDismissed, setEmailPromptDismissed } = useServerStore();
   const { data: transactions = [], isLoading: isTransactionsLoading } = useTransactions();
   const recentTransactions = transactions.slice(0, 3);
 
@@ -200,9 +200,9 @@ const HomeScreen = () => {
           <Pressable
             onPress={() => navigation.navigate("Settings")}
             accessibilityRole="button"
-            accessibilityLabel="Open profile and settings"
+            accessibilityLabel="Open settings"
           >
-            <Icon name="person-circle-outline" size={30} color={iconColor} />
+            <Icon name="settings-outline" size={28} color={iconColor} />
           </Pressable>
         </View>
       </View>
@@ -228,7 +228,12 @@ const HomeScreen = () => {
             minimumVersion={minimumVersion || "0.0.1"}
           />
         )}
-        {!isEmailVerified && <EmailVerificationBanner onPress={handleEmailVerificationPress} />}
+        {!isEmailVerified && !isEmailPromptDismissed && (
+          <EmailVerificationBanner
+            onPress={handleEmailVerificationPress}
+            onDismiss={() => setEmailPromptDismissed(true)}
+          />
+        )}
         <BackupStatusBanner />
         {isBackgroundJobRunning && (
           <View className="px-4 py-2 bg-blue-500/20 border-b border-blue-500/40">
@@ -367,9 +372,7 @@ const HomeScreen = () => {
                     </View>
                   ) : recentTransactions.length === 0 ? (
                     <View className="py-5">
-                      <Text className="text-sm font-semibold text-foreground">
-                        No activity yet
-                      </Text>
+                      <Text className="text-sm font-semibold text-foreground">No activity yet</Text>
                       <Text className="mt-1 text-sm text-muted-foreground">
                         Receive or send bitcoin to start your history.
                       </Text>
@@ -403,9 +406,7 @@ const HomeScreen = () => {
                         </View>
                         <Text
                           className={`text-sm font-bold ${
-                            transaction.direction === "outgoing"
-                              ? "text-red-500"
-                              : "text-green-500"
+                            transaction.direction === "outgoing" ? "text-red-500" : "text-green-500"
                           }`}
                         >
                           {`${transaction.direction === "outgoing" ? "-" : "+"}${formatBip177(transaction.amount)}`}
@@ -418,10 +419,7 @@ const HomeScreen = () => {
             </>
           )}
         </View>
-        <View
-          className="p-4 items-center justify-center mb-16"
-          style={{ marginTop: "auto" }}
-        >
+        <View className="p-4 items-center justify-center mb-16" style={{ marginTop: "auto" }}>
           <Text className="text-center text-xs text-muted-foreground">{fact}</Text>
         </View>
       </ScrollView>

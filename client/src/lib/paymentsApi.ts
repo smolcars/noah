@@ -12,7 +12,7 @@ import {
   bolt11Invoice as bolt11InvoiceNitro,
   type ArkoorPaymentResult,
   type OnchainPaymentResult,
-  type LightningSendResult,
+  type LightningPayment,
   newAddress as newAddressNitro,
   onchainAddress as onchainAddressNitro,
   payLightningInvoice as payLightningInvoiceNitro,
@@ -35,7 +35,7 @@ import {
 } from "react-native-nitro-ark";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 
-export type { ArkoorPaymentResult, OnchainPaymentResult, LightningSendResult, BarkFeeEstimate };
+export type { ArkoorPaymentResult, OnchainPaymentResult, LightningPayment, BarkFeeEstimate };
 export type { BarkNotificationEvent };
 
 export type BarkNotificationSubscription = {
@@ -43,7 +43,7 @@ export type BarkNotificationSubscription = {
   isActive(): boolean;
 };
 
-export type PaymentResult = ArkoorPaymentResult | OnchainPaymentResult | LightningSendResult;
+export type PaymentResult = ArkoorPaymentResult | OnchainPaymentResult | LightningPayment;
 
 export const newAddress = async (): Promise<Result<NewAddressResult, Error>> => {
   return ResultAsync.fromPromise(
@@ -127,8 +127,8 @@ export const sendArkoorPayment = async (
 export const payLightningInvoice = async (
   destination: string,
   amountSat: number | undefined,
-): Promise<Result<LightningSendResult, Error>> => {
-  return ResultAsync.fromPromise(payLightningInvoiceNitro(destination, amountSat), (error) => {
+): Promise<Result<LightningPayment, Error>> => {
+  return ResultAsync.fromPromise(payLightningInvoiceNitro(destination, true, amountSat), (error) => {
     const e = new Error(
       `Failed to send bolt11 payment: ${error instanceof Error ? error.message : String(error)}`,
     );
@@ -139,8 +139,8 @@ export const payLightningInvoice = async (
 export const payLightningOffer = async (
   destination: string,
   amountSat: number | undefined,
-): Promise<Result<LightningSendResult, Error>> => {
-  return ResultAsync.fromPromise(payLightningOfferNitro(destination, amountSat), (error) => {
+): Promise<Result<LightningPayment, Error>> => {
+  return ResultAsync.fromPromise(payLightningOfferNitro(destination, true, amountSat), (error) => {
     const e = new Error(
       `Failed to send bolt12 payment: ${error instanceof Error ? error.message : String(error)}`,
     );
@@ -220,8 +220,8 @@ export const payLightningAddress = async (
   addr: string,
   amountSat: number,
   comment: string,
-): Promise<Result<LightningSendResult, Error>> => {
-  return ResultAsync.fromPromise(payLightningAddressNitro(addr, amountSat, comment), (error) => {
+): Promise<Result<LightningPayment, Error>> => {
+  return ResultAsync.fromPromise(payLightningAddressNitro(addr, amountSat, comment, true), (error) => {
     const e = new Error(
       `Failed to send to lightning address: ${
         error instanceof Error ? error.message : String(error)
@@ -235,7 +235,7 @@ export const payLightningAddress = async (
 export const checkLightningPayment = async (
   paymentHash: string,
   wait: boolean = false,
-): Promise<Result<string | null, Error>> => {
+): Promise<Result<LightningPayment, Error>> => {
   return ResultAsync.fromPromise(checkLightningPaymentNitro(paymentHash, wait), (error) => {
     const e = new Error(
       `Failed to check lightning payment: ${

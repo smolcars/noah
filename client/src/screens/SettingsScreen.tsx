@@ -34,6 +34,7 @@ import { formatAutoBoardThreshold } from "~/lib/autoBoarding";
 type Setting = {
   id:
     | "profile"
+    | "emergencyEmail"
     | "showMnemonic"
     | "showLogs"
     | "resetRegistration"
@@ -67,6 +68,7 @@ const SettingsScreen = () => {
   const suspendWalletMutation = useSuspendWallet();
   const [versionTapCount, setVersionTapCount] = useState(0);
   const {
+    isEmailVerified,
     isMailboxAuthorizationEnabled,
     setMailboxAuthorizationExpiry,
     setMailboxAuthorizationEnabled,
@@ -174,6 +176,8 @@ const SettingsScreen = () => {
 
     if (item.id === "profile") {
       navigation.navigate("Profile");
+    } else if (item.id === "emergencyEmail") {
+      navigation.navigate("EmailVerification", { fromSettings: true });
     } else if (item.id === "showMnemonic") {
       navigation.navigate("Mnemonic", { fromOnboarding: false });
     } else if (item.id === "showLogs") {
@@ -208,6 +212,14 @@ const SettingsScreen = () => {
       title: "Profile",
       description: "Manage your Lightning address, name, and public key.",
       isPressable: true,
+    });
+    profileData.push({
+      id: "emergencyEmail",
+      title: "Emergency Email",
+      description: isEmailVerified
+        ? "Email alerts are enabled for urgent wallet communication."
+        : "Optional alerts for urgent wallet communication.",
+      isPressable: !isEmailVerified,
     });
 
     infoData.push({
@@ -439,9 +451,7 @@ const SettingsScreen = () => {
             <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
               <View className="flex-1">
                 <Label className="text-foreground text-lg">Auto-Board to Ark</Label>
-                <Text className="text-base mt-1 text-muted-foreground">
-                  {autoBoardDescription}
-                </Text>
+                <Text className="text-base mt-1 text-muted-foreground">{autoBoardDescription}</Text>
               </View>
               <Switch
                 value={isAutoBoardingEnabled}
@@ -470,8 +480,8 @@ const SettingsScreen = () => {
               <View className="flex-1">
                 <Label className="text-foreground text-lg">Mailbox Notifications</Label>
                 <Text className="text-base mt-1 text-muted-foreground">
-                  Allow Noah to monitor your Ark mailbox so it can wake this app to claim
-                  Lightning payments in the background.
+                  Allow Noah to monitor your Ark mailbox so it can wake this app to claim Lightning
+                  payments in the background.
                 </Text>
               </View>
               <Switch

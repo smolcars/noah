@@ -78,6 +78,10 @@ const EmailVerificationScreen = () => {
     }
   }, [navigation]);
 
+  const handleSkip = () => {
+    navigateToNextOnboardingStep();
+  };
+
   const isValidEmail = (emailInput: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(emailInput);
@@ -191,14 +195,14 @@ const EmailVerificationScreen = () => {
           <Pressable onPress={() => navigation.goBack()} className="mr-4">
             <Icon name="arrow-back-outline" size={24} color={iconColor} />
           </Pressable>
-          <Text className="text-2xl font-bold text-foreground">Verify Your Email</Text>
+          <Text className="text-2xl font-bold text-foreground">Emergency Email</Text>
         </View>
 
         {!codeSent ? (
           <>
             <Text className="text-muted-foreground mb-6">
-              Enter your email address to receive a verification code. This helps us keep your
-              account secure.
+              Email is optional. Noah uses it only for urgent wallet safety messages, such as when
+              your VTXOs are close to expiring and you need to come online to refresh them.
             </Text>
 
             <View className="bg-card rounded-2xl border border-border p-5 space-y-5">
@@ -227,6 +231,13 @@ const EmailVerificationScreen = () => {
             >
               Send Verification Code
             </NoahButton>
+            {!fromSettings && (
+              <Pressable onPress={handleSkip} className="mt-5 items-center">
+                <Text className="text-muted-foreground font-semibold">
+                  Continue without email
+                </Text>
+              </Pressable>
+            )}
           </>
         ) : (
           <>
@@ -298,9 +309,11 @@ const EmailVerificationScreen = () => {
           </>
         )}
 
-        <Text className="text-xs text-muted-foreground text-center mt-8">
-          The verification code will expire in 10 minutes.
-        </Text>
+        {codeSent && (
+          <Text className="text-xs text-muted-foreground text-center mt-8">
+            The verification code will expire in 10 minutes.
+          </Text>
+        )}
       </View>
     </NoahSafeAreaView>
   );
