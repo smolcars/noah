@@ -34,6 +34,7 @@ interface SendConfirmationProps {
   feeEstimateError?: Error | null;
   feeEstimateUnavailableText?: string | null;
   feeEstimateNote?: string | null;
+  feeEstimateWarning?: string | null;
 }
 
 const truncateValue = (value: string) => {
@@ -67,6 +68,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
   feeEstimateError = null,
   feeEstimateUnavailableText = null,
   feeEstimateNote = null,
+  feeEstimateWarning = null,
 }) => {
   const colors = useThemeColors();
   const isOnchainDestination =
@@ -267,6 +269,14 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
         note={feeEstimateNote}
         compact
       />
+
+      {feeEstimateWarning ? (
+        <View className="mt-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+          <Text className="text-sm leading-5 text-amber-700 dark:text-amber-200">
+            {feeEstimateWarning}
+          </Text>
+        </View>
+      ) : null}
 
       <View className="mt-5 flex-row gap-3">
         <Button

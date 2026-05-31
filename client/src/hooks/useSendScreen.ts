@@ -18,7 +18,7 @@ import { useQRCodeScanner } from "~/hooks/useQRCodeScanner";
 import { useBtcToUsdRate } from "./useMarketData";
 import { useBalance } from "./useWallet";
 import { useLightningAddressSuggestions } from "./useLightningAddressSuggestions";
-import { satsToUsd, usdToSats } from "../lib/utils";
+import { formatBip177, satsToUsd, usdToSats } from "../lib/utils";
 import logger from "~/lib/log";
 
 const log = logger("useSendScreen");
@@ -292,6 +292,29 @@ export const useSendScreen = () => {
 
     return `Regular fee rate: ${formatFeeRate(estimate.fee_rate_sat_vb)} sat/vB. Estimated as a ${estimate.estimated_vbytes} vB 2-in/2-out SegWit transaction.`;
   }, [feeEstimateQuery.data, isOnchainSend, resolvedOnchainSource]);
+
+  const feeEstimateWarning = useMemo(() => {
+    if (!isOnchainSend || resolvedOnchainSource === null || !feeEstimateQuery.data) {
+      return null;
+    }
+
+    const sourceBalance =
+      resolvedOnchainSource === "offchain" ? offchainWalletBalance : onchainWalletBalance;
+    const estimatedTotal = feeEstimateQuery.data.gross_amount_sat;
+
+    if (estimatedTotal <= sourceBalance) {
+      return null;
+    }
+
+    const sourceLabel = resolvedOnchainSource === "offchain" ? "Ark" : "onchain";
+    return `Estimated total is ${formatBip177(estimatedTotal)}, but your ${sourceLabel} balance is ${formatBip177(sourceBalance)}. The send may fail if the final fee is not lower.`;
+  }, [
+    feeEstimateQuery.data,
+    isOnchainSend,
+    offchainWalletBalance,
+    onchainWalletBalance,
+    resolvedOnchainSource,
+  ]);
 
   useEffect(() => {
     if (!feeEstimateQuery.error) {
@@ -596,5 +619,6 @@ export const useSendScreen = () => {
     feeEstimateError: feeEstimateQuery.error,
     feeEstimateUnavailableText: null,
     feeEstimateNote,
+    feeEstimateWarning,
   };
 };
