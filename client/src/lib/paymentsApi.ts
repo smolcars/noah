@@ -12,11 +12,14 @@ import {
   bolt11Invoice as bolt11InvoiceNitro,
   type ArkoorPaymentResult,
   type OnchainPaymentResult,
-  type LightningSendResult,
+  type LightningPayment,
   newAddress as newAddressNitro,
   onchainAddress as onchainAddressNitro,
   payLightningInvoice as payLightningInvoiceNitro,
   onchainSend as onchainSendNitro,
+  sendOnchain as sendOnchainNitro,
+  onchainFeeRates as onchainFeeRatesNitro,
+  onchainTransactions as onchainTransactionsNitro,
   estimateArkoorPaymentFee as estimateArkoorPaymentFeeNitro,
   estimateLightningSendFee as estimateLightningSendFeeNitro,
   estimateSendOnchain as estimateSendOnchainNitro,
@@ -29,13 +32,22 @@ import {
   BarkMovement,
   BarkNotificationEvent,
   BarkFeeEstimate,
+  BarkFeeRates,
+  OnchainTransactionInfo,
   Bolt11Invoice,
   BoardResult,
   LightningReceive,
 } from "react-native-nitro-ark";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 
-export type { ArkoorPaymentResult, OnchainPaymentResult, LightningSendResult, BarkFeeEstimate };
+export type {
+  ArkoorPaymentResult,
+  OnchainPaymentResult,
+  LightningPayment,
+  BarkFeeEstimate,
+  BarkFeeRates,
+  OnchainTransactionInfo,
+};
 export type { BarkNotificationEvent };
 
 export type BarkNotificationSubscription = {
@@ -43,7 +55,18 @@ export type BarkNotificationSubscription = {
   isActive(): boolean;
 };
 
-export type PaymentResult = ArkoorPaymentResult | OnchainPaymentResult | LightningSendResult;
+export type OnchainSendSource = "onchain" | "offchain";
+
+export type NoahOnchainPaymentResult = OnchainPaymentResult & {
+  source: OnchainSendSource;
+};
+
+export type PaymentResult = ArkoorPaymentResult | NoahOnchainPaymentResult | LightningPayment;
+
+export type OnchainWalletFeeEstimate = BarkFeeEstimate & {
+  fee_rate_sat_vb: number;
+  estimated_vbytes: number;
+};
 
 export const newAddress = async (): Promise<Result<NewAddressResult, Error>> => {
   return ResultAsync.fromPromise(
@@ -127,8 +150,8 @@ export const sendArkoorPayment = async (
 export const payLightningInvoice = async (
   destination: string,
   amountSat: number | undefined,
-): Promise<Result<LightningSendResult, Error>> => {
-  return ResultAsync.fromPromise(payLightningInvoiceNitro(destination, amountSat), (error) => {
+): Promise<Result<LightningPayment, Error>> => {
+  return ResultAsync.fromPromise(payLightningInvoiceNitro(destination, true, amountSat), (error) => {
     const e = new Error(
       `Failed to send bolt11 payment: ${error instanceof Error ? error.message : String(error)}`,
     );
@@ -139,8 +162,8 @@ export const payLightningInvoice = async (
 export const payLightningOffer = async (
   destination: string,
   amountSat: number | undefined,
-): Promise<Result<LightningSendResult, Error>> => {
-  return ResultAsync.fromPromise(payLightningOfferNitro(destination, amountSat), (error) => {
+): Promise<Result<LightningPayment, Error>> => {
+  return ResultAsync.fromPromise(payLightningOfferNitro(destination, true, amountSat), (error) => {
     const e = new Error(
       `Failed to send bolt12 payment: ${error instanceof Error ? error.message : String(error)}`,
     );
@@ -154,14 +177,37 @@ export const onchainSend = async ({
 }: {
   destination: string;
   amountSat: number;
-}): Promise<Result<OnchainPaymentResult, Error>> => {
+}): Promise<Result<NoahOnchainPaymentResult, Error>> => {
   return ResultAsync.fromPromise(onchainSendNitro(destination, amountSat), (error) => {
     const e = new Error(
       `Failed to send onchain funds: ${error instanceof Error ? error.message : String(error)}`,
     );
 
     return e;
-  });
+  }).map((result) => ({ ...result, source: "onchain" }));
+};
+
+export const sendOnchainFromOffchain = async ({
+  destination,
+  amountSat,
+}: {
+  destination: string;
+  amountSat: number;
+}): Promise<Result<NoahOnchainPaymentResult, Error>> => {
+  return ResultAsync.fromPromise(sendOnchainNitro(destination, amountSat), (error) => {
+    const e = new Error(
+      `Failed to send onchain funds from Ark balance: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+
+    return e;
+  }).map((txid) => ({
+    txid,
+    amount_sat: amountSat,
+    destination_address: destination,
+    source: "offchain",
+  }));
 };
 
 export const estimateArkoorPaymentFee = async (
@@ -204,6 +250,50 @@ export const estimateSendOnchainFee = async ({
   });
 };
 
+const STANDARD_SEGWIT_INPUT_VBYTES = 68;
+const STANDARD_SEGWIT_OUTPUT_VBYTES = 31;
+const STANDARD_TX_OVERHEAD_VBYTES = 10;
+const ONCHAIN_WALLET_ESTIMATE_INPUTS = 2;
+const ONCHAIN_WALLET_ESTIMATE_OUTPUTS = 2;
+
+export const ONCHAIN_WALLET_ESTIMATE_VBYTES =
+  STANDARD_TX_OVERHEAD_VBYTES +
+  ONCHAIN_WALLET_ESTIMATE_INPUTS * STANDARD_SEGWIT_INPUT_VBYTES +
+  ONCHAIN_WALLET_ESTIMATE_OUTPUTS * STANDARD_SEGWIT_OUTPUT_VBYTES;
+
+export const onchainFeeRates = async (): Promise<Result<BarkFeeRates, Error>> => {
+  return ResultAsync.fromPromise(onchainFeeRatesNitro(), (error) => {
+    return new Error(
+      `Failed to fetch onchain fee rates: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  });
+};
+
+export const estimateOnchainWalletSendFee = async ({
+  amountSat,
+}: {
+  amountSat: number;
+}): Promise<Result<OnchainWalletFeeEstimate, Error>> => {
+  const ratesResult = await onchainFeeRates();
+  if (ratesResult.isErr()) {
+    return err(ratesResult.error);
+  }
+
+  const feeRateSatVb = ratesResult.value.regular;
+  const feeSat = Math.ceil(feeRateSatVb * ONCHAIN_WALLET_ESTIMATE_VBYTES);
+
+  return ok({
+    gross_amount_sat: amountSat + feeSat,
+    fee_sat: feeSat,
+    net_amount_sat: amountSat,
+    vtxos_spent: [],
+    fee_rate_sat_vb: feeRateSatVb,
+    estimated_vbytes: ONCHAIN_WALLET_ESTIMATE_VBYTES,
+  });
+};
+
 export const estimateOffboardAllFee = async (
   destinationAddress: string,
 ): Promise<Result<BarkFeeEstimate, Error>> => {
@@ -220,8 +310,8 @@ export const payLightningAddress = async (
   addr: string,
   amountSat: number,
   comment: string,
-): Promise<Result<LightningSendResult, Error>> => {
-  return ResultAsync.fromPromise(payLightningAddressNitro(addr, amountSat, comment), (error) => {
+): Promise<Result<LightningPayment, Error>> => {
+  return ResultAsync.fromPromise(payLightningAddressNitro(addr, amountSat, comment, true), (error) => {
     const e = new Error(
       `Failed to send to lightning address: ${
         error instanceof Error ? error.message : String(error)
@@ -235,7 +325,7 @@ export const payLightningAddress = async (
 export const checkLightningPayment = async (
   paymentHash: string,
   wait: boolean = false,
-): Promise<Result<string | null, Error>> => {
+): Promise<Result<LightningPayment, Error>> => {
   return ResultAsync.fromPromise(checkLightningPaymentNitro(paymentHash, wait), (error) => {
     const e = new Error(
       `Failed to check lightning payment: ${
@@ -261,6 +351,18 @@ export const history = async (): Promise<Result<BarkMovement[], Error>> => {
   return ResultAsync.fromPromise(historyNitro(), (error) => {
     const e = new Error(
       `Failed to get movements: ${error instanceof Error ? error.message : String(error)}`,
+    );
+
+    return e;
+  });
+};
+
+export const onchainTransactions = async (): Promise<Result<OnchainTransactionInfo[], Error>> => {
+  return ResultAsync.fromPromise(onchainTransactionsNitro(), (error) => {
+    const e = new Error(
+      `Failed to get onchain wallet transactions: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     );
 
     return e;

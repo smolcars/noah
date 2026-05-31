@@ -9,11 +9,16 @@ import {
   ParsedBip321,
 } from "../lib/sendUtils";
 import { useSend, useSendFeeEstimate, type SendFeeEstimateParams } from "./usePayments";
-import { type PaymentResult } from "../lib/paymentsApi";
+import {
+  type OnchainWalletFeeEstimate,
+  type OnchainSendSource,
+  type PaymentResult,
+} from "../lib/paymentsApi";
 import { useQRCodeScanner } from "~/hooks/useQRCodeScanner";
 import { useBtcToUsdRate } from "./useMarketData";
+import { useBalance } from "./useWallet";
 import { useLightningAddressSuggestions } from "./useLightningAddressSuggestions";
-import { satsToUsd, usdToSats } from "../lib/utils";
+import { formatBip177, satsToUsd, usdToSats } from "../lib/utils";
 import logger from "~/lib/log";
 
 const log = logger("useSendScreen");
@@ -29,10 +34,33 @@ type DisplayResult = {
 
 type SendScreenRouteProp = RouteProp<{ params: { destination?: string } }, "params">;
 
+const formatFeeRate = (feeRateSatVb: number) => {
+  if (Number.isInteger(feeRateSatVb)) {
+    return feeRateSatVb.toString();
+  }
+
+  return feeRateSatVb.toFixed(2).replace(/\.?0+$/, "");
+};
+
+const isOnchainWalletFeeEstimate = (
+  estimate: unknown,
+): estimate is OnchainWalletFeeEstimate => {
+  if (!estimate || typeof estimate !== "object") {
+    return false;
+  }
+
+  const maybeEstimate = estimate as Partial<OnchainWalletFeeEstimate>;
+  return (
+    typeof maybeEstimate.fee_rate_sat_vb === "number" &&
+    typeof maybeEstimate.estimated_vbytes === "number"
+  );
+};
+
 export const useSendScreen = () => {
   const route = useRoute<SendScreenRouteProp>();
   const { showAlert } = useAlert();
   const { data: btcPrice } = useBtcToUsdRate();
+  const { data: balance } = useBalance();
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
   const [isAmountEditable, setIsAmountEditable] = useState(true);
@@ -45,6 +73,9 @@ export const useSendScreen = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
     "ark" | "lightning" | "onchain" | "offer"
   >("onchain");
+  const [selectedOnchainSource, setSelectedOnchainSource] = useState<OnchainSendSource | null>(
+    null,
+  );
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isDestinationFocused, setIsDestinationFocused] = useState(false);
@@ -129,6 +160,45 @@ export const useSendScreen = () => {
     return 0;
   }, [amount, currency, btcPrice]);
 
+  const isOnchainSend = finalDestinationType === "onchain";
+  const onchainWalletBalance = balance?.onchain.confirmed ?? 0;
+  const offchainWalletBalance = balance?.offchain.spendable ?? 0;
+
+  const onchainSourceOptions = useMemo<OnchainSendSource[]>(() => {
+    if (!isOnchainSend || amountSat <= 0 || !balance) {
+      return [];
+    }
+
+    const options: OnchainSendSource[] = [];
+    if (offchainWalletBalance >= amountSat) {
+      options.push("offchain");
+    }
+    if (onchainWalletBalance >= amountSat) {
+      options.push("onchain");
+    }
+    return options;
+  }, [amountSat, balance, isOnchainSend, offchainWalletBalance, onchainWalletBalance]);
+
+  useEffect(() => {
+    if (!isOnchainSend || amountSat <= 0) {
+      setSelectedOnchainSource(null);
+      return;
+    }
+
+    if (
+      selectedOnchainSource !== null &&
+      !onchainSourceOptions.includes(selectedOnchainSource)
+    ) {
+      setSelectedOnchainSource(null);
+    }
+  }, [amountSat, isOnchainSend, onchainSourceOptions, selectedOnchainSource]);
+
+  const resolvedOnchainSource =
+    selectedOnchainSource ?? (onchainSourceOptions.length === 1 ? onchainSourceOptions[0] : null);
+
+  const isOnchainSourceSelectionRequired =
+    isOnchainSend && onchainSourceOptions.length > 1 && resolvedOnchainSource === null;
+
   const feeEstimateParams = useMemo<SendFeeEstimateParams | null>(() => {
     if (!showConfirmation) {
       return null;
@@ -147,8 +217,13 @@ export const useSendScreen = () => {
         case "offer":
           return bip321Data.offer ? { method: "lightning", amountSat } : null;
         case "onchain":
-          return bip321Data.onchainAddress
-            ? { method: "onchain", destination: bip321Data.onchainAddress, amountSat }
+          return bip321Data.onchainAddress && resolvedOnchainSource !== null
+            ? {
+                method: "onchain",
+                source: resolvedOnchainSource,
+                destination: bip321Data.onchainAddress,
+                amountSat,
+              }
             : null;
       }
     }
@@ -163,8 +238,13 @@ export const useSendScreen = () => {
       case "offer":
         return { method: "lightning", amountSat };
       case "onchain":
-        return cleanedDestination
-          ? { method: "onchain", destination: cleanedDestination, amountSat }
+        return cleanedDestination && resolvedOnchainSource !== null
+          ? {
+              method: "onchain",
+              source: resolvedOnchainSource,
+              destination: cleanedDestination,
+              amountSat,
+            }
           : null;
       default:
         return null;
@@ -175,6 +255,7 @@ export const useSendScreen = () => {
     destination,
     destinationType,
     finalDestinationType,
+    resolvedOnchainSource,
     selectedPaymentMethod,
     showConfirmation,
   ]);
@@ -198,6 +279,42 @@ export const useSendScreen = () => {
   }, [feeEstimateParams]);
 
   const feeEstimateQuery = useSendFeeEstimate(debouncedFeeEstimateParams);
+
+  const feeEstimateNote = useMemo(() => {
+    if (!isOnchainSend || resolvedOnchainSource !== "onchain") {
+      return null;
+    }
+
+    const estimate = feeEstimateQuery.data;
+    if (!isOnchainWalletFeeEstimate(estimate)) {
+      return null;
+    }
+
+    return `Regular fee rate: ${formatFeeRate(estimate.fee_rate_sat_vb)} sat/vB. Estimated as a ${estimate.estimated_vbytes} vB 2-in/2-out SegWit transaction.`;
+  }, [feeEstimateQuery.data, isOnchainSend, resolvedOnchainSource]);
+
+  const feeEstimateWarning = useMemo(() => {
+    if (!isOnchainSend || resolvedOnchainSource === null || !feeEstimateQuery.data) {
+      return null;
+    }
+
+    const sourceBalance =
+      resolvedOnchainSource === "offchain" ? offchainWalletBalance : onchainWalletBalance;
+    const estimatedTotal = feeEstimateQuery.data.gross_amount_sat;
+
+    if (estimatedTotal <= sourceBalance) {
+      return null;
+    }
+
+    const sourceLabel = resolvedOnchainSource === "offchain" ? "Ark" : "onchain";
+    return `Estimated total is ${formatBip177(estimatedTotal)}, but your ${sourceLabel} balance is ${formatBip177(sourceBalance)}. The send may fail if the final fee is not lower.`;
+  }, [
+    feeEstimateQuery.data,
+    isOnchainSend,
+    offchainWalletBalance,
+    onchainWalletBalance,
+    resolvedOnchainSource,
+  ]);
 
   useEffect(() => {
     if (!feeEstimateQuery.error) {
@@ -236,7 +353,7 @@ export const useSendScreen = () => {
           amount_sat: res.amount_sat,
           destination: res.destination_address,
           txid: res.txid,
-          type: "Onchain",
+          type: res.source === "offchain" ? "Onchain from Ark" : "Onchain",
         };
       }
 
@@ -250,8 +367,8 @@ export const useSendScreen = () => {
         };
       }
 
-      // Check for lightning payment (has invoice)
-      if ("invoice" in res) {
+      // Check for lightning payment
+      if ("payment_hash" in res) {
         if (!res.preimage) {
           log.e("Lightning payment result missing preimage", [res]);
           showAlert({
@@ -268,8 +385,8 @@ export const useSendScreen = () => {
 
         return {
           success: true,
-          amount_sat: res.amount,
-          destination: res.invoice,
+          amount_sat: res.amount ?? amountSat,
+          destination: res.invoice ?? res.payment_hash,
           preimage: res.preimage,
           type: "Lightning",
         };
@@ -313,6 +430,22 @@ export const useSendScreen = () => {
       showAlert({ title: "Invalid Amount", description: "Please enter a valid amount." });
       return;
     }
+    if (isOnchainSend) {
+      if (!balance) {
+        showAlert({
+          title: "Balance Unavailable",
+          description: "Unable to check wallet balances. Please try again.",
+        });
+        return;
+      }
+      if (onchainSourceOptions.length === 0) {
+        showAlert({
+          title: "Insufficient Funds",
+          description: "Neither your Ark balance nor onchain wallet can cover this payment.",
+        });
+        return;
+      }
+    }
 
     // Show confirmation instead of sending immediately
     setIsDestinationFocused(false);
@@ -346,6 +479,13 @@ export const useSendScreen = () => {
         });
         return;
       }
+      if (newDestinationType === "onchain" && resolvedOnchainSource === null) {
+        showAlert({
+          title: "Choose Send Source",
+          description: "Choose whether to send from your Ark balance or onchain wallet.",
+        });
+        return;
+      }
 
       send({
         destination: destinationToSend,
@@ -356,10 +496,19 @@ export const useSendScreen = () => {
             : amountSat,
         resolvedAmountSat: amountSat,
         comment: comment || null,
+        onchainSource:
+          newDestinationType === "onchain" ? resolvedOnchainSource ?? undefined : undefined,
         btcPrice,
       });
     } else {
       const cleanedDestination = destination.replace(/^(bitcoin:|lightning:)/i, "");
+      if (finalDestinationType === "onchain" && resolvedOnchainSource === null) {
+        showAlert({
+          title: "Choose Send Source",
+          description: "Choose whether to send from your Ark balance or onchain wallet.",
+        });
+        return;
+      }
 
       send({
         destination: cleanedDestination,
@@ -367,6 +516,8 @@ export const useSendScreen = () => {
           finalDestinationType === "lightning" && !isAmountEditable ? undefined : amountSat,
         resolvedAmountSat: amountSat,
         comment: comment || null,
+        onchainSource:
+          finalDestinationType === "onchain" ? resolvedOnchainSource ?? undefined : undefined,
         btcPrice,
       });
     }
@@ -452,6 +603,13 @@ export const useSendScreen = () => {
     bip321Data,
     selectedPaymentMethod,
     setSelectedPaymentMethod,
+    onchainSourceOptions,
+    selectedOnchainSource: resolvedOnchainSource,
+    setSelectedOnchainSource,
+    resolvedOnchainSource,
+    isOnchainSourceSelectionRequired,
+    onchainWalletBalance,
+    offchainWalletBalance,
     showConfirmation,
     destinationType,
     showSuccess,
@@ -459,5 +617,8 @@ export const useSendScreen = () => {
     feeEstimate: feeEstimateQuery.data,
     isEstimatingFee: feeEstimateQuery.isFetching,
     feeEstimateError: feeEstimateQuery.error,
+    feeEstimateUnavailableText: null,
+    feeEstimateNote,
+    feeEstimateWarning,
   };
 };

@@ -67,6 +67,12 @@ const SendScreen = () => {
     bip321Data,
     selectedPaymentMethod,
     setSelectedPaymentMethod,
+    onchainSourceOptions,
+    selectedOnchainSource,
+    setSelectedOnchainSource,
+    isOnchainSourceSelectionRequired,
+    onchainWalletBalance,
+    offchainWalletBalance,
     handleClear,
     showConfirmation,
     destinationType,
@@ -75,6 +81,9 @@ const SendScreen = () => {
     feeEstimate,
     isEstimatingFee,
     feeEstimateError,
+    feeEstimateUnavailableText,
+    feeEstimateNote,
+    feeEstimateWarning,
   } = useSendScreen();
   const displayAmount = amount === "" ? (currency === "USD" ? "0.00" : "0") : amount;
 
@@ -363,12 +372,21 @@ const SendScreen = () => {
           bip321Data={bip321Data}
           selectedPaymentMethod={selectedPaymentMethod}
           onSelectPaymentMethod={setSelectedPaymentMethod}
+          onchainSourceOptions={onchainSourceOptions}
+          selectedOnchainSource={selectedOnchainSource}
+          onSelectOnchainSource={setSelectedOnchainSource}
+          onchainWalletBalance={onchainWalletBalance}
+          offchainWalletBalance={offchainWalletBalance}
           onConfirm={handleConfirmSend}
           onCancel={handleCancelConfirmation}
+          isConfirmDisabled={isOnchainSourceSelectionRequired}
           isLoading={isSending}
           feeEstimate={feeEstimate}
           isEstimatingFee={isEstimatingFee}
           feeEstimateError={feeEstimateError}
+          feeEstimateUnavailableText={feeEstimateUnavailableText}
+          feeEstimateNote={feeEstimateNote}
+          feeEstimateWarning={feeEstimateWarning}
         />
       </BottomSheet>
 

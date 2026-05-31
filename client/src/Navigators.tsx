@@ -74,6 +74,7 @@ export type SettingsStackParamList = {
   Profile: undefined;
   Mnemonic: { fromOnboarding: boolean };
   Logs: undefined;
+  EmailVerification: { fromSettings?: boolean } | undefined;
   LightningAddress: { fromOnboarding?: boolean };
   BackupSettings: undefined;
   ArkInfo: undefined;
@@ -92,7 +93,7 @@ export type OnboardingStackParamList = {
   ArkServerAccessToken: { mode: "create" } | { mode: "restore"; mnemonic: string };
   Mnemonic: { fromOnboarding: boolean };
   RestoreWallet: undefined;
-  EmailVerification: undefined;
+  EmailVerification: { fromSettings?: boolean } | undefined;
   LightningAddress: { fromOnboarding: boolean };
   UnifiedPush: { fromOnboarding?: boolean } | undefined;
 };
@@ -130,6 +131,11 @@ const SettingsStackNav = () => (
     <Stack.Screen name="Profile" component={ProfileScreen} options={{ animation: "default" }} />
     <Stack.Screen name="Mnemonic" component={MnemonicScreen} options={{ animation: "default" }} />
     <Stack.Screen name="Logs" component={LogScreen} options={{ animation: "default" }} />
+    <Stack.Screen
+      name="EmailVerification"
+      component={EmailVerificationScreen}
+      options={{ animation: "default" }}
+    />
     <Stack.Screen
       name="LightningAddress"
       component={LightningAddressScreen}

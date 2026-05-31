@@ -5,8 +5,8 @@ use axum::{
 };
 
 use crate::{
-    AppState, auth::verify_access_token, db::user_repo::UserRepository, errors::ApiError,
-    types::AuthenticatedUser, utils::verify_user_exists, wide_event::WideEventHandle,
+    AppState, auth::verify_access_token, errors::ApiError, types::AuthenticatedUser,
+    utils::verify_user_exists, wide_event::WideEventHandle,
 };
 
 pub async fn auth_middleware(
@@ -87,47 +87,6 @@ pub async fn user_exists_middleware(
             "User existence check failed: User not found in database"
         );
         return Err(ApiError::UserNotFound.into_response());
-    }
-
-    Ok(next.run(request).await)
-}
-
-pub async fn email_verified_middleware(
-    State(state): State<AppState>,
-    request: Request,
-    next: Next,
-) -> Result<Response, Response> {
-    let authenticated_user = match request.extensions().get::<AuthenticatedUser>() {
-        Some(payload) => payload,
-        None => {
-            return Err(ApiError::ServerErr(
-                "Authentication failed. Please try again.".to_string(),
-            )
-            .into_response());
-        }
-    };
-
-    let user_repo = UserRepository::new(&state.db_pool);
-    let is_verified = user_repo
-        .is_email_verified(&authenticated_user.key)
-        .await
-        .map_err(|e| {
-            tracing::error!(error = %e, "Email verification check failed");
-            ApiError::ServerErr("Failed to check email verification status".to_string())
-                .into_response()
-        })?;
-
-    if let Some(event) = request.extensions().get::<WideEventHandle>() {
-        event.set_email_verified(is_verified);
-    }
-
-    if !is_verified {
-        // TODO: Temporarily just logging instead of blocking - re-enable blocking later
-        tracing::warn!(
-            path = %request.uri().path(),
-            "Email not verified (allowing request temporarily)"
-        );
-        // return Err(ApiError::InvalidArgument("Email not verified".to_string()).into_response());
     }
 
     Ok(next.run(request).await)

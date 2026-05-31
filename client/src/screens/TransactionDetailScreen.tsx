@@ -100,6 +100,7 @@ const TransactionDetailScreen = () => {
     ? (transaction.amount * 0.00000001 * transaction.btcPrice).toFixed(2)
     : "N/A";
   const bitcoinPrice = transaction.btcPrice ? transaction.btcPrice.toLocaleString() : "N/A";
+  const transactionDateLabel = transaction.dateLabel ?? new Date(transaction.date).toLocaleString();
   const movementStatusLabel = formatMovementStatusLabel(transaction.movementStatus);
   const movementKindLabel = formatMovementKindLabel(transaction.movementKind);
   const hasMovementDetails = Boolean(
@@ -112,6 +113,7 @@ const TransactionDetailScreen = () => {
       typeof transaction.offchainFeeSat === "number" ||
       typeof transaction.movementId === "number",
   );
+  const hasOnchainWalletDetails = transaction.source === "onchain-wallet";
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
@@ -141,6 +143,46 @@ const TransactionDetailScreen = () => {
             value={`${formatBip177(transaction.amount)} ($${fiatAmount})`}
           />
         </View>
+
+        {hasOnchainWalletDetails ? (
+          <View className="bg-card p-4 rounded-lg mb-4">
+            <Text className="text-lg font-semibold text-foreground mb-3">
+              Onchain Wallet Transaction
+            </Text>
+            <TransactionDetailRow
+              label="Status"
+              value={transaction.hasConfirmation ? "Confirmed" : "Unconfirmed"}
+            />
+            {typeof transaction.balanceChangeSat === "number" ? (
+              <TransactionDetailRow
+                label="Balance Δ"
+                value={formatBip177(transaction.balanceChangeSat)}
+              />
+            ) : null}
+            {transaction.hasOnchainFee && typeof transaction.onchainFeeSat === "number" ? (
+              <TransactionDetailRow
+                label="Onchain Fee"
+                value={formatBip177(transaction.onchainFeeSat)}
+              />
+            ) : null}
+            {typeof transaction.confirmationHeight === "number" ? (
+              <TransactionDetailRow
+                label="Confirmation Height"
+                value={transaction.confirmationHeight.toString()}
+              />
+            ) : null}
+            {transaction.confirmationHash ? (
+              <TransactionDetailRow
+                label="Confirmation Hash"
+                value={transaction.confirmationHash}
+                copyable
+              />
+            ) : null}
+            {transaction.txHex ? (
+              <TransactionDetailRow label="Raw Transaction" value={transaction.txHex} copyable />
+            ) : null}
+          </View>
+        ) : null}
 
         {hasMovementDetails ? (
           <View className="bg-card p-4 rounded-lg mb-4">
@@ -194,8 +236,8 @@ const TransactionDetailScreen = () => {
             <TransactionDetailRow label="Note" value={transaction.description} />
           ) : null}
           <TransactionDetailRow
-            label="Date & time"
-            value={new Date(transaction.date).toLocaleString()}
+            label={transaction.dateLabel ? "Confirmation" : "Date & time"}
+            value={transactionDateLabel}
           />
           <TransactionDetailRow label="Payment ID" value={transaction.id} copyable />
           {transaction.txid ? (

@@ -233,24 +233,18 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
     let user_exists_layer =
         middleware::from_fn_with_state(app_state.clone(), app_middleware::user_exists_middleware);
 
-    // Middleware that checks if user's email is verified
-    let email_verified_layer = middleware::from_fn_with_state(
-        app_state.clone(),
-        app_middleware::email_verified_middleware,
-    );
-
     // Create rate limiters
     let public_rate_limiter = rate_limit::create_public_rate_limiter();
     let auth_login_rate_limiter = rate_limit::create_public_rate_limiter();
     let auth_rate_limiter = rate_limit::create_auth_rate_limiter();
 
-    // Email verification routes - need auth and user to exist, but NOT email verification
+    // Optional email setup routes need auth and a registered user.
     let email_verification_router = Router::new()
         .route("/email/send_verification", post(send_verification_email))
         .route("/email/verify", post(verify_email))
         .layer(user_exists_layer.clone());
 
-    // Fully gated routes - need auth, user to exist, AND email to be verified
+    // Gated routes need auth and a registered user. Email is optional.
     let gated_router = Router::new()
         .route("/register_push_token", post(register_push_token))
         .route("/mailbox/authorize", post(authorize_mailbox))
@@ -270,7 +264,6 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         .route("/report_job_status", post(report_job_status))
         .route("/heartbeat_response", post(heartbeat_response))
         .route("/report_last_login", post(report_last_login))
-        .layer(email_verified_layer)
         .layer(user_exists_layer);
 
     // Routes that need auth but user may not exist (like registration)

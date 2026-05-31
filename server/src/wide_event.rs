@@ -17,7 +17,6 @@ pub struct WideEvent {
 
     pub public_key: Option<String>,
     pub ln_address: Option<String>,
-    pub email_verified: Option<bool>,
 
     pub outcome: Option<String>,
     pub error_type: Option<String>,
@@ -53,10 +52,6 @@ impl WideEvent {
 
     pub fn set_ln_address(&mut self, ln_address: &str) {
         self.ln_address = Some(ln_address.to_string());
-    }
-
-    pub fn set_email_verified(&mut self, verified: bool) {
-        self.email_verified = Some(verified);
     }
 
     pub fn set_status(&mut self, status_code: u16) {
@@ -161,10 +156,6 @@ impl WideEventHandle {
 
     pub fn set_ln_address(&self, ln_address: &str) {
         self.with(|e| e.set_ln_address(ln_address));
-    }
-
-    pub fn set_email_verified(&self, verified: bool) {
-        self.with(|e| e.set_email_verified(verified));
     }
 
     pub fn add_context<V: Serialize>(&self, key: &str, value: V) {

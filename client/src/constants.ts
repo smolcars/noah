@@ -171,6 +171,20 @@ export const getBlockheightEndpoint = () => {
   }
 };
 
+export const getEsploraApiBaseUrl = (): string | null => {
+  if (APP_VARIANT === "regtest") {
+    return null;
+  }
+
+  const esplora = ACTIVE_WALLET_CONFIG.config?.esplora;
+  if (!esplora) {
+    return null;
+  }
+
+  const withProtocol = /^https?:\/\//.test(esplora) ? esplora : `https://${esplora}`;
+  return withProtocol.replace(/\/+$/, "");
+};
+
 export const getMempoolTxUrl = (anchorPoint: string): string | null => {
   const txid = anchorPoint.split(":")[0];
   if (!txid) {
