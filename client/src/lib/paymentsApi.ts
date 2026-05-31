@@ -18,6 +18,7 @@ import {
   payLightningInvoice as payLightningInvoiceNitro,
   onchainSend as onchainSendNitro,
   sendOnchain as sendOnchainNitro,
+  onchainFeeRates as onchainFeeRatesNitro,
   estimateArkoorPaymentFee as estimateArkoorPaymentFeeNitro,
   estimateLightningSendFee as estimateLightningSendFeeNitro,
   estimateSendOnchain as estimateSendOnchainNitro,
@@ -30,13 +31,20 @@ import {
   BarkMovement,
   BarkNotificationEvent,
   BarkFeeEstimate,
+  BarkFeeRates,
   Bolt11Invoice,
   BoardResult,
   LightningReceive,
 } from "react-native-nitro-ark";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 
-export type { ArkoorPaymentResult, OnchainPaymentResult, LightningPayment, BarkFeeEstimate };
+export type {
+  ArkoorPaymentResult,
+  OnchainPaymentResult,
+  LightningPayment,
+  BarkFeeEstimate,
+  BarkFeeRates,
+};
 export type { BarkNotificationEvent };
 
 export type BarkNotificationSubscription = {
@@ -231,6 +239,47 @@ export const estimateSendOnchainFee = async ({
         error instanceof Error ? error.message : String(error)
       }`,
     );
+  });
+};
+
+const STANDARD_SEGWIT_INPUT_VBYTES = 68;
+const STANDARD_SEGWIT_OUTPUT_VBYTES = 31;
+const STANDARD_TX_OVERHEAD_VBYTES = 10;
+const ONCHAIN_WALLET_ESTIMATE_INPUTS = 2;
+const ONCHAIN_WALLET_ESTIMATE_OUTPUTS = 2;
+
+export const ONCHAIN_WALLET_ESTIMATE_VBYTES =
+  STANDARD_TX_OVERHEAD_VBYTES +
+  ONCHAIN_WALLET_ESTIMATE_INPUTS * STANDARD_SEGWIT_INPUT_VBYTES +
+  ONCHAIN_WALLET_ESTIMATE_OUTPUTS * STANDARD_SEGWIT_OUTPUT_VBYTES;
+
+export const onchainFeeRates = async (): Promise<Result<BarkFeeRates, Error>> => {
+  return ResultAsync.fromPromise(onchainFeeRatesNitro(), (error) => {
+    return new Error(
+      `Failed to fetch onchain fee rates: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  });
+};
+
+export const estimateOnchainWalletSendFee = async ({
+  amountSat,
+}: {
+  amountSat: number;
+}): Promise<Result<BarkFeeEstimate, Error>> => {
+  const ratesResult = await onchainFeeRates();
+  if (ratesResult.isErr()) {
+    return err(ratesResult.error);
+  }
+
+  const feeSat = Math.ceil(ratesResult.value.regular * ONCHAIN_WALLET_ESTIMATE_VBYTES);
+
+  return ok({
+    gross_amount_sat: amountSat + feeSat,
+    fee_sat: feeSat,
+    net_amount_sat: amountSat,
+    vtxos_spent: [],
   });
 };
 

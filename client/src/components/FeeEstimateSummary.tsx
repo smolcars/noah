@@ -16,6 +16,7 @@ type FeeEstimateSummaryProps = {
   feeLabel?: string;
   grossLabel?: string;
   unavailableText?: string;
+  note?: string | null;
 };
 
 const FeeEstimateRow = ({
@@ -43,6 +44,7 @@ export const FeeEstimateSummary = ({
   feeLabel = "Estimated fee",
   grossLabel = "Total deducted",
   unavailableText = "Fee estimate unavailable. The final fee will be calculated when you send.",
+  note = null,
 }: FeeEstimateSummaryProps) => {
   const colors = useThemeColors();
 
@@ -90,6 +92,7 @@ export const FeeEstimateSummary = ({
               {estimate.vtxos_spent.length === 1 ? "" : "s"}
             </Text>
           ) : null}
+          {note ? <Text className="mt-2 text-xs text-muted-foreground">{note}</Text> : null}
         </>
       ) : error ? (
         <Text className="text-sm leading-5" style={{ color: COLORS.BITCOIN_ORANGE }}>

@@ -21,6 +21,7 @@ import {
   estimateArkoorPaymentFee,
   estimateLightningSendFee,
   estimateSendOnchainFee,
+  estimateOnchainWalletSendFee,
   estimateOffboardAllFee,
 } from "../lib/paymentsApi";
 import { queryClient } from "~/queryClient";
@@ -179,7 +180,7 @@ export type SendFeeEstimateParams =
     }
   | {
       method: "onchain";
-      source: "offchain";
+      source: OnchainSendSource;
       destination: string;
       amountSat: number;
     };
@@ -209,12 +210,14 @@ export function useSendFeeEstimate(params: SendFeeEstimateParams | null) {
         case "lightning":
           return readEstimateResult(estimateLightningSendFee(params.amountSat));
         case "onchain":
-          return readEstimateResult(
-            estimateSendOnchainFee({
-              destination: params.destination,
-              amountSat: params.amountSat,
-            }),
-          );
+          return params.source === "offchain"
+            ? readEstimateResult(
+                estimateSendOnchainFee({
+                  destination: params.destination,
+                  amountSat: params.amountSat,
+                }),
+              )
+            : readEstimateResult(estimateOnchainWalletSendFee({ amountSat: params.amountSat }));
       }
     },
     enabled: params !== null && params.amountSat > 0,

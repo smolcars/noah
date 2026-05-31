@@ -82,6 +82,7 @@ const SendScreen = () => {
     isEstimatingFee,
     feeEstimateError,
     feeEstimateUnavailableText,
+    feeEstimateNote,
   } = useSendScreen();
   const displayAmount = amount === "" ? (currency === "USD" ? "0.00" : "0") : amount;
 
@@ -383,6 +384,7 @@ const SendScreen = () => {
           isEstimatingFee={isEstimatingFee}
           feeEstimateError={feeEstimateError}
           feeEstimateUnavailableText={feeEstimateUnavailableText}
+          feeEstimateNote={feeEstimateNote}
         />
       </BottomSheet>
 

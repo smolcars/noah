@@ -9,7 +9,11 @@ import {
   ParsedBip321,
 } from "../lib/sendUtils";
 import { useSend, useSendFeeEstimate, type SendFeeEstimateParams } from "./usePayments";
-import { type OnchainSendSource, type PaymentResult } from "../lib/paymentsApi";
+import {
+  ONCHAIN_WALLET_ESTIMATE_VBYTES,
+  type OnchainSendSource,
+  type PaymentResult,
+} from "../lib/paymentsApi";
 import { useQRCodeScanner } from "~/hooks/useQRCodeScanner";
 import { useBtcToUsdRate } from "./useMarketData";
 import { useBalance } from "./useWallet";
@@ -173,9 +177,9 @@ export const useSendScreen = () => {
   const isOnchainSourceSelectionRequired =
     isOnchainSend && onchainSourceOptions.length > 1 && resolvedOnchainSource === null;
 
-  const onchainWalletFeeUnavailableText =
+  const feeEstimateNote =
     isOnchainSend && resolvedOnchainSource === "onchain"
-      ? "Fee estimate unavailable. The final onchain wallet fee will be calculated when you send."
+      ? `Regular fee rate, estimated as a ${ONCHAIN_WALLET_ESTIMATE_VBYTES} vB 2-in/2-out SegWit transaction.`
       : null;
 
   const feeEstimateParams = useMemo<SendFeeEstimateParams | null>(() => {
@@ -196,10 +200,10 @@ export const useSendScreen = () => {
         case "offer":
           return bip321Data.offer ? { method: "lightning", amountSat } : null;
         case "onchain":
-          return bip321Data.onchainAddress && resolvedOnchainSource === "offchain"
+          return bip321Data.onchainAddress && resolvedOnchainSource !== null
             ? {
                 method: "onchain",
-                source: "offchain",
+                source: resolvedOnchainSource,
                 destination: bip321Data.onchainAddress,
                 amountSat,
               }
@@ -217,8 +221,13 @@ export const useSendScreen = () => {
       case "offer":
         return { method: "lightning", amountSat };
       case "onchain":
-        return cleanedDestination && resolvedOnchainSource === "offchain"
-          ? { method: "onchain", source: "offchain", destination: cleanedDestination, amountSat }
+        return cleanedDestination && resolvedOnchainSource !== null
+          ? {
+              method: "onchain",
+              source: resolvedOnchainSource,
+              destination: cleanedDestination,
+              amountSat,
+            }
           : null;
       default:
         return null;
@@ -555,6 +564,7 @@ export const useSendScreen = () => {
     feeEstimate: feeEstimateQuery.data,
     isEstimatingFee: feeEstimateQuery.isFetching,
     feeEstimateError: feeEstimateQuery.error,
-    feeEstimateUnavailableText: onchainWalletFeeUnavailableText,
+    feeEstimateUnavailableText: null,
+    feeEstimateNote,
   };
 };
