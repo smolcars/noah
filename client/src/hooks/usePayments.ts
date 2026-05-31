@@ -16,6 +16,7 @@ import {
   type NoahOnchainPaymentResult,
   type OnchainSendSource,
   type BarkFeeEstimate,
+  type OnchainWalletFeeEstimate,
   boardAllArk,
   offboardAllArk,
   estimateArkoorPaymentFee,
@@ -185,9 +186,11 @@ export type SendFeeEstimateParams =
       amountSat: number;
     };
 
-const readEstimateResult = async (
-  estimatePromise: Promise<Result<BarkFeeEstimate, Error>>,
-): Promise<BarkFeeEstimate> => {
+export type SendFeeEstimate = BarkFeeEstimate | OnchainWalletFeeEstimate;
+
+const readEstimateResult = async <T extends SendFeeEstimate>(
+  estimatePromise: Promise<Result<T, Error>>,
+): Promise<T> => {
   const result = await estimatePromise;
   if (result.isErr()) {
     throw result.error;

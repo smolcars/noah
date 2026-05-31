@@ -10,7 +10,7 @@ import {
 } from "../lib/sendUtils";
 import { useSend, useSendFeeEstimate, type SendFeeEstimateParams } from "./usePayments";
 import {
-  ONCHAIN_WALLET_ESTIMATE_VBYTES,
+  type OnchainWalletFeeEstimate,
   type OnchainSendSource,
   type PaymentResult,
 } from "../lib/paymentsApi";
@@ -33,6 +33,24 @@ type DisplayResult = {
 };
 
 type SendScreenRouteProp = RouteProp<{ params: { destination?: string } }, "params">;
+
+const formatFeeRate = (feeRateSatVb: number) => {
+  if (Number.isInteger(feeRateSatVb)) {
+    return feeRateSatVb.toString();
+  }
+
+  return feeRateSatVb.toFixed(2).replace(/\.?0+$/, "");
+};
+
+const isOnchainWalletFeeEstimate = (
+  estimate: unknown,
+): estimate is OnchainWalletFeeEstimate => {
+  const maybeEstimate = estimate as Partial<OnchainWalletFeeEstimate>;
+  return (
+    typeof maybeEstimate.fee_rate_sat_vb === "number" &&
+    typeof maybeEstimate.estimated_vbytes === "number"
+  );
+};
 
 export const useSendScreen = () => {
   const route = useRoute<SendScreenRouteProp>();
@@ -177,11 +195,6 @@ export const useSendScreen = () => {
   const isOnchainSourceSelectionRequired =
     isOnchainSend && onchainSourceOptions.length > 1 && resolvedOnchainSource === null;
 
-  const feeEstimateNote =
-    isOnchainSend && resolvedOnchainSource === "onchain"
-      ? `Regular fee rate, estimated as a ${ONCHAIN_WALLET_ESTIMATE_VBYTES} vB 2-in/2-out SegWit transaction.`
-      : null;
-
   const feeEstimateParams = useMemo<SendFeeEstimateParams | null>(() => {
     if (!showConfirmation) {
       return null;
@@ -262,6 +275,19 @@ export const useSendScreen = () => {
   }, [feeEstimateParams]);
 
   const feeEstimateQuery = useSendFeeEstimate(debouncedFeeEstimateParams);
+
+  const feeEstimateNote = useMemo(() => {
+    if (!isOnchainSend || resolvedOnchainSource !== "onchain") {
+      return null;
+    }
+
+    const estimate = feeEstimateQuery.data;
+    if (!isOnchainWalletFeeEstimate(estimate)) {
+      return null;
+    }
+
+    return `Regular fee rate: ${formatFeeRate(estimate.fee_rate_sat_vb)} sat/vB. Estimated as a ${estimate.estimated_vbytes} vB 2-in/2-out SegWit transaction.`;
+  }, [feeEstimateQuery.data, isOnchainSend, resolvedOnchainSource]);
 
   useEffect(() => {
     if (!feeEstimateQuery.error) {

@@ -60,6 +60,11 @@ export type NoahOnchainPaymentResult = OnchainPaymentResult & {
 
 export type PaymentResult = ArkoorPaymentResult | NoahOnchainPaymentResult | LightningPayment;
 
+export type OnchainWalletFeeEstimate = BarkFeeEstimate & {
+  fee_rate_sat_vb: number;
+  estimated_vbytes: number;
+};
+
 export const newAddress = async (): Promise<Result<NewAddressResult, Error>> => {
   return ResultAsync.fromPromise(
     newAddressNitro(),
@@ -267,19 +272,22 @@ export const estimateOnchainWalletSendFee = async ({
   amountSat,
 }: {
   amountSat: number;
-}): Promise<Result<BarkFeeEstimate, Error>> => {
+}): Promise<Result<OnchainWalletFeeEstimate, Error>> => {
   const ratesResult = await onchainFeeRates();
   if (ratesResult.isErr()) {
     return err(ratesResult.error);
   }
 
-  const feeSat = Math.ceil(ratesResult.value.regular * ONCHAIN_WALLET_ESTIMATE_VBYTES);
+  const feeRateSatVb = ratesResult.value.regular;
+  const feeSat = Math.ceil(feeRateSatVb * ONCHAIN_WALLET_ESTIMATE_VBYTES);
 
   return ok({
     gross_amount_sat: amountSat + feeSat,
     fee_sat: feeSat,
     net_amount_sat: amountSat,
     vtxos_spent: [],
+    fee_rate_sat_vb: feeRateSatVb,
+    estimated_vbytes: ONCHAIN_WALLET_ESTIMATE_VBYTES,
   });
 };
 
