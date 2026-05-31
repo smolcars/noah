@@ -45,6 +45,10 @@ const formatFeeRate = (feeRateSatVb: number) => {
 const isOnchainWalletFeeEstimate = (
   estimate: unknown,
 ): estimate is OnchainWalletFeeEstimate => {
+  if (!estimate || typeof estimate !== "object") {
+    return false;
+  }
+
   const maybeEstimate = estimate as Partial<OnchainWalletFeeEstimate>;
   return (
     typeof maybeEstimate.fee_rate_sat_vb === "number" &&
