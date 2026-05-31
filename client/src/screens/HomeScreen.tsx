@@ -398,10 +398,11 @@ const HomeScreen = () => {
                             {getTransactionLabel(transaction)}
                           </Text>
                           <Text className="mt-1 text-xs text-muted-foreground">
-                            {new Date(transaction.date).toLocaleDateString(undefined, {
-                              month: "short",
-                              day: "numeric",
-                            })}
+                            {transaction.dateLabel ??
+                              new Date(transaction.date).toLocaleDateString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                              })}
                           </Text>
                         </View>
                         <Text

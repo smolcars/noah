@@ -9,9 +9,14 @@ export type Transaction = {
   type: PaymentTypes;
   amount: number;
   date: string;
+  dateLabel?: string;
+  sortTimestamp?: number;
+  sortHeight?: number;
   description?: string;
   direction: "incoming" | "outgoing";
+  source?: "ark" | "onchain-wallet";
   txid?: string;
+  txHex?: string;
   preimage?: string;
   destination?: string;
   btcPrice?: number;
@@ -29,6 +34,12 @@ export type Transaction = {
   inputVtxos?: string[];
   outputVtxos?: string[];
   exitedVtxos?: string[];
+  balanceChangeSat?: number;
+  hasOnchainFee?: boolean;
+  onchainFeeSat?: number;
+  hasConfirmation?: boolean;
+  confirmationHeight?: number;
+  confirmationHash?: string;
 };
 
 export type MovementDestination = {

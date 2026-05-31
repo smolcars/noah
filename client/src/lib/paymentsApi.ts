@@ -19,6 +19,7 @@ import {
   onchainSend as onchainSendNitro,
   sendOnchain as sendOnchainNitro,
   onchainFeeRates as onchainFeeRatesNitro,
+  onchainTransactions as onchainTransactionsNitro,
   estimateArkoorPaymentFee as estimateArkoorPaymentFeeNitro,
   estimateLightningSendFee as estimateLightningSendFeeNitro,
   estimateSendOnchain as estimateSendOnchainNitro,
@@ -32,6 +33,7 @@ import {
   BarkNotificationEvent,
   BarkFeeEstimate,
   BarkFeeRates,
+  OnchainTransactionInfo,
   Bolt11Invoice,
   BoardResult,
   LightningReceive,
@@ -44,6 +46,7 @@ export type {
   LightningPayment,
   BarkFeeEstimate,
   BarkFeeRates,
+  OnchainTransactionInfo,
 };
 export type { BarkNotificationEvent };
 
@@ -348,6 +351,18 @@ export const history = async (): Promise<Result<BarkMovement[], Error>> => {
   return ResultAsync.fromPromise(historyNitro(), (error) => {
     const e = new Error(
       `Failed to get movements: ${error instanceof Error ? error.message : String(error)}`,
+    );
+
+    return e;
+  });
+};
+
+export const onchainTransactions = async (): Promise<Result<OnchainTransactionInfo[], Error>> => {
+  return ResultAsync.fromPromise(onchainTransactionsNitro(), (error) => {
+    const e = new Error(
+      `Failed to get onchain wallet transactions: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     );
 
     return e;

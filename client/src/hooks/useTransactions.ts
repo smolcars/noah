@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { validateBitcoinAddress } from "bip-321";
-import { history } from "~/lib/paymentsApi";
+import { history, onchainTransactions } from "~/lib/paymentsApi";
 import { loadWalletIfNeeded } from "~/lib/walletApi";
 import { useWalletStore } from "~/store/walletStore";
 import type { Transaction, PaymentTypes } from "~/types/transaction";
-import type { BarkMovement, MovementStatus } from "react-native-nitro-ark";
+import type { BarkMovement, MovementStatus, OnchainTransactionInfo } from "react-native-nitro-ark";
 import type { MovementKind } from "~/types/movement";
 import { INCOMING_MOVEMENT_KINDS } from "~/types/movement";
 import { getHistoricalBtcToUsdRate } from "~/hooks/useMarketData";
@@ -20,6 +20,7 @@ import {
 } from "~/lib/barkMovement";
 
 const log = logger("useTransactions");
+const UNKNOWN_ONCHAIN_DATE_ISO = new Date(0).toISOString();
 
 const SUBSYSTEM_KIND_TO_MOVEMENT_KIND: Partial<Record<BarkSubsystemId, MovementKind>> = {
   [`${BARK_SUBSYSTEM.BOARD.name}:${BARK_SUBSYSTEM.BOARD.kind}`]: "onboard",
@@ -216,8 +217,10 @@ const transformMovementToTransaction = async (movement: BarkMovement): Promise<T
     txid,
     amount,
     date: dateIso,
+    sortTimestamp: new Date(dateIso).getTime(),
     direction,
     type: transactionType,
+    source: "ark",
     btcPrice,
     description: "",
     destination: destination ?? "",
@@ -242,6 +245,69 @@ const transformMovementToTransaction = async (movement: BarkMovement): Promise<T
     outputVtxos: movement.output_vtxos,
     exitedVtxos: movement.exited_vtxos,
   };
+};
+
+const shouldIncludeOnchainTransaction = (transaction: OnchainTransactionInfo): boolean => {
+  return transaction.balance_change_sat !== 0;
+};
+
+const getOnchainTransactionLabel = (transaction: OnchainTransactionInfo): string => {
+  if (transaction.has_confirmation) {
+    return `Confirmed at block ${transaction.confirmation_height}`;
+  }
+
+  return "Unconfirmed";
+};
+
+const transformOnchainTransaction = (transaction: OnchainTransactionInfo): Transaction => {
+  const isOutgoing = transaction.balance_change_sat < 0;
+
+  return {
+    id: `onchain-wallet-${transaction.txid}`,
+    txid: transaction.txid,
+    txHex: transaction.tx_hex,
+    amount: Math.abs(transaction.balance_change_sat),
+    date: UNKNOWN_ONCHAIN_DATE_ISO,
+    dateLabel: getOnchainTransactionLabel(transaction),
+    sortHeight: transaction.has_confirmation ? transaction.confirmation_height : undefined,
+    direction: isOutgoing ? "outgoing" : "incoming",
+    type: "Onchain",
+    source: "onchain-wallet",
+    description: "",
+    balanceChangeSat: transaction.balance_change_sat,
+    hasOnchainFee: transaction.has_onchain_fee,
+    onchainFeeSat: transaction.has_onchain_fee ? transaction.onchain_fee_sat : undefined,
+    hasConfirmation: transaction.has_confirmation,
+    confirmationHeight: transaction.has_confirmation
+      ? transaction.confirmation_height
+      : undefined,
+    confirmationHash: transaction.has_confirmation
+      ? transaction.confirmation_hash
+      : undefined,
+  };
+};
+
+const compareTransactions = (a: Transaction, b: Transaction): number => {
+  const aIsOnchainWallet = a.source === "onchain-wallet";
+  const bIsOnchainWallet = b.source === "onchain-wallet";
+  const aIsUnconfirmedOnchainWallet = aIsOnchainWallet && !a.hasConfirmation;
+  const bIsUnconfirmedOnchainWallet = bIsOnchainWallet && !b.hasConfirmation;
+
+  if (aIsUnconfirmedOnchainWallet !== bIsUnconfirmedOnchainWallet) {
+    return aIsUnconfirmedOnchainWallet ? -1 : 1;
+  }
+
+  if (aIsOnchainWallet && bIsOnchainWallet) {
+    return (b.sortHeight ?? 0) - (a.sortHeight ?? 0);
+  }
+
+  if (aIsOnchainWallet !== bIsOnchainWallet) {
+    return aIsOnchainWallet ? 1 : -1;
+  }
+
+  const aSortTimestamp = a.sortTimestamp ?? new Date(a.date).getTime();
+  const bSortTimestamp = b.sortTimestamp ?? new Date(b.date).getTime();
+  return bSortTimestamp - aSortTimestamp;
 };
 
 const shouldIncludeMovement = (movement: BarkMovement): boolean => {
@@ -270,22 +336,32 @@ const fetchAndTransformTransactions = async (): Promise<Transaction[]> => {
     return [];
   }
 
-  const movementsResult = await history();
+  const [movementsResult, onchainTransactionsResult] = await Promise.all([
+    history(),
+    onchainTransactions(),
+  ]);
 
   if (movementsResult.isErr()) {
     log.e("Failed to fetch movements:", [movementsResult.error]);
     throw movementsResult.error;
   }
 
-  const movements = movementsResult.value.filter(shouldIncludeMovement);
+  if (onchainTransactionsResult.isErr()) {
+    log.e("Failed to fetch onchain wallet transactions:", [onchainTransactionsResult.error]);
+    throw onchainTransactionsResult.error;
+  }
 
-  if (movements.length === 0) {
+  const movements = movementsResult.value.filter(shouldIncludeMovement);
+  const walletTransactions = onchainTransactionsResult.value.filter(shouldIncludeOnchainTransaction);
+
+  if (movements.length === 0 && walletTransactions.length === 0) {
     return [];
   }
 
-  const transactions = await Promise.all(movements.map(transformMovementToTransaction));
+  const movementTransactions = await Promise.all(movements.map(transformMovementToTransaction));
+  const onchainWalletTransactions = walletTransactions.map(transformOnchainTransaction);
 
-  return transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  return [...movementTransactions, ...onchainWalletTransactions].sort(compareTransactions);
 };
 
 export const useTransactions = (options?: { enabled?: boolean }) => {

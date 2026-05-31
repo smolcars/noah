@@ -65,7 +65,7 @@ const TransactionsScreen = () => {
       "Payment ID,Date,Type,Direction,Amount (₿),BTC Price,Transaction ID,Destination\n";
     const csvRows = filteredTransactions
       .map((transaction) => {
-        const date = new Date(transaction.date).toISOString().split("T")[0];
+        const date = transaction.dateLabel ?? new Date(transaction.date).toISOString().split("T")[0];
         const type =
           transaction.type === "Bolt11" || transaction.type === "Lnurl"
             ? "Lightning"
@@ -237,7 +237,7 @@ const TransactionsScreen = () => {
                             </View>
                           </View>
                           <Text className="text-muted-foreground text-sm mt-1">
-                            {new Date(item.date).toLocaleString()}
+                            {item.dateLabel ?? new Date(item.date).toLocaleString()}
                           </Text>
                         </View>
                       </View>
