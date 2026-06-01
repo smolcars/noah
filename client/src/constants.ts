@@ -92,8 +92,8 @@ export const SIGNET_CONFIG: WalletCreationOptions = {
   signet: true,
   bitcoin: false,
   config: {
-    esplora: "esplora.signet.2nd.dev",
-    ark: "ark.signet.2nd.dev",
+    esplora: "https://esplora.signet.2nd.dev",
+    ark: "https://ark.signet.2nd.dev",
     vtxo_refresh_expiry_threshold: 48,
     fallback_fee_rate: 10000,
     htlc_recv_claim_delta: 18,
