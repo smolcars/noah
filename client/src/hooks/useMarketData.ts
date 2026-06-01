@@ -7,6 +7,7 @@ import {
 } from "~/constants";
 import ky from "ky";
 import logger from "~/lib/log";
+import { encodeUtf8ToBase64 } from "~/lib/base64";
 
 const log = logger("useMarketData");
 
@@ -57,7 +58,7 @@ export const getBlockHeight = async (): Promise<Result<number, Error>> => {
             method: "getblockcount",
           },
           headers: {
-            Authorization: `Basic ${btoa(`${auth.username}:${auth.password}`)}`,
+            Authorization: `Basic ${encodeUtf8ToBase64(`${auth.username}:${auth.password}`)}`,
           },
         })
         .json<{ result: number }>(),

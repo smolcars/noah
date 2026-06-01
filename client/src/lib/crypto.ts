@@ -5,9 +5,9 @@ import {
   verifyMessage as verifyMessageNitro,
   type KeyPairResult,
 } from "react-native-nitro-ark";
-import { atob } from "react-native-quick-base64";
 import { Result, ok, err, ResultAsync } from "neverthrow";
 import logger from "~/lib/log";
+import { decodeBase64ToUtf8 } from "~/lib/base64";
 
 const log = logger("crypto");
 import * as Keychain from "react-native-keychain";
@@ -27,7 +27,7 @@ const decodeBase64Url = (value: string): Result<string, Error> => {
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
 
   return Result.fromThrowable(
-    () => atob(padded),
+    () => decodeBase64ToUtf8(padded),
     (e) => new Error(`Failed to decode JWT payload: ${(e as Error).message}`),
   )();
 };
