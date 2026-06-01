@@ -1,0 +1,61 @@
+# email-verification.yml
+
+appId: com.noahwallet.regtest
+---
+- runScript: scripts/lightning-address.js
+
+- launchApp:
+    clearState: true
+
+- tapOn: "Create Wallet"
+- assertVisible: "Your Recovery Phrase"
+- tapOn: "I Have Saved It, Continue"
+
+# Emergency Email screen
+- extendedWaitUntil:
+    visible: "Emergency Email"
+    timeout: 10000
+- tapOn:
+    text: "your@email.com"
+    optional: true
+- inputText: "maestro@example.com"
+- tapOn: "Send Verification Code"
+
+# Verification Code screen
+- extendedWaitUntil:
+    visible: "Enter Verification Code"
+    timeout: 10000
+- inputText: "000000"
+- tapOn: "Verify Email"
+
+# Lightning Address screen
+- extendedWaitUntil:
+    visible: "Choose your Lightning Address"
+    timeout: 10000
+- tapOn:
+    point: "50%,33%"
+- eraseText: 40
+- inputText: ${output.lightningUsername}
+- assertVisible: ${output.lightningUsername}
+- tapOn: "Save"
+- extendedWaitUntil:
+    visible: "Success!"
+    timeout: 10000
+
+# Home screen
+- extendedWaitUntil:
+    visible: "History"
+    timeout: 10000
+
+# Clean up: Delete the wallet
+- tapOn: "Open settings"
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+- tapOn: "Delete Wallet"
+- tapOn:
+    text: 'Type "delete" to confirm'
+- inputText: "delete"
+- tapOn: "Confirm"
+- assertVisible: "Welcome to Noah"
