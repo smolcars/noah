@@ -9,24 +9,9 @@ appId: com.noahwallet.regtest
 - assertVisible: "Your Recovery Phrase"
 - tapOn: "I Have Saved It, Continue"
 
-# Email Verification screen
-- assertVisible: "Verify Your Email"
-- tapOn:
-    text: "your@email.com"
-    optional: true
-- inputText: "test@example.com"
-- tapOn: "Send Verification Code"
-
-# Wait for code entry screen
-- extendedWaitUntil:
-    visible: "Enter Verification Code"
-    timeout: 10000
-
-# Tap on code field to focus it, then enter test verification code
-- tapOn:
-    id: "verification-code-input"
-- inputText: "000000"
-- tapOn: "Verify Email"
+# Emergency Email screen
+- assertVisible: "Emergency Email"
+- tapOn: "Continue without email"
 
 # Lightning Address screen
 - extendedWaitUntil:
@@ -38,11 +23,11 @@ appId: com.noahwallet.regtest
 - assertVisible: "History"
 
 # Clean up: Delete the wallet
-- tapOn: "Open profile and settings"
-- scrollUntilVisible:
-    element: "Delete Wallet"
-    direction: DOWN
-    timeout: 10000
+- tapOn: "Open settings"
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
 - tapOn: "Delete Wallet"
 - tapOn:
     text: 'Type "delete" to confirm'
