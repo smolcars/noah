@@ -1,25 +1,39 @@
-import { useState } from "react";
-import { useCameraPermission, useCodeScanner } from "react-native-vision-camera";
+import { useCallback, useState } from "react";
+import {
+  isScannedCode,
+  useCameraPermission,
+  useObjectOutput,
+} from "react-native-vision-camera";
+import type { ScannedObject, ScannedObjectType } from "react-native-vision-camera";
 import { useAlert } from "~/contexts/AlertProvider";
 
 type QRCodeScannerOptions = {
   onScan: (value: string) => void;
 };
 
+const QR_SCANNER_OBJECT_TYPES: ScannedObjectType[] = ["qr", "ean-13"];
+
 export const useQRCodeScanner = ({ onScan }: QRCodeScannerOptions) => {
   const [showCamera, setShowCamera] = useState(false);
   const { hasPermission, requestPermission } = useCameraPermission();
   const { showAlert } = useAlert();
 
-  const codeScanner = useCodeScanner({
-    codeTypes: ["qr", "ean-13"],
-    onCodeScanned: (codes) => {
-      if (codes.length > 0 && codes[0].value) {
-        const scannedValue = codes[0].value;
-        onScan(scannedValue);
-        setShowCamera(false);
+  const handleObjectsScanned = useCallback(
+    (objects: ScannedObject[]) => {
+      const scannedCode = objects.find(isScannedCode);
+      if (!scannedCode?.value) {
+        return;
       }
+
+      onScan(scannedCode.value);
+      setShowCamera(false);
     },
+    [onScan],
+  );
+
+  const objectOutput = useObjectOutput({
+    types: QR_SCANNER_OBJECT_TYPES,
+    onObjectsScanned: handleObjectsScanned,
   });
 
   const handleScanPress = async () => {
@@ -40,6 +54,6 @@ export const useQRCodeScanner = ({ onScan }: QRCodeScannerOptions) => {
     showCamera,
     setShowCamera,
     handleScanPress,
-    codeScanner,
+    objectOutput,
   };
 };
