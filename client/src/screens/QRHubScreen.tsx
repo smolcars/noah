@@ -33,7 +33,7 @@ const QRHubScreen = () => {
   const [mode, setMode] = useState<QRMode>("my-code");
   const [copied, setCopied] = useState(false);
 
-  const { showCamera, setShowCamera, handleScanPress, scannerOutput } = useQRCodeScanner({
+  const { showCamera, setShowCamera, handleScanPress, codeScanner } = useQRCodeScanner({
     onScan: (value) => {
       navigation.navigate("Send", { destination: value });
     },
@@ -46,7 +46,7 @@ const QRHubScreen = () => {
   }, [isFocused, setShowCamera, showCamera]);
 
   if (showCamera) {
-    return <QRCodeScanner scannerOutput={scannerOutput} onClose={() => setShowCamera(false)} />;
+    return <QRCodeScanner codeScanner={codeScanner} onClose={() => setShowCamera(false)} />;
   }
 
   const copyLightningAddress = async () => {

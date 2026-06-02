@@ -559,7 +559,7 @@ export const useSendScreen = () => {
     setIsDestinationFocused(false);
   }, []);
 
-  const { showCamera, setShowCamera, handleScanPress, scannerOutput } = useQRCodeScanner({
+  const { showCamera, setShowCamera, handleScanPress, codeScanner } = useQRCodeScanner({
     onScan: (value) => {
       setDestination(value);
     },
@@ -594,7 +594,7 @@ export const useSendScreen = () => {
     showCamera,
     setShowCamera,
     handleScanPress,
-    scannerOutput,
+    codeScanner,
     currency,
     toggleCurrency,
     amountSat,
