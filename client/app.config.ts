@@ -83,13 +83,6 @@ const config: { expo: ExpoConfig } = {
           },
         },
       ],
-      [
-        "react-native-vision-camera",
-        {
-          cameraPermissionText: "$(PRODUCT_NAME) needs access to your Camera.",
-          enableCodeScanner: true,
-        },
-      ],
       "expo-notifications",
       "./plugins/withNoahAndroidPrebuildFix.js",
       "./plugins/withNoahIosPrebuildFix.js",
@@ -99,6 +92,7 @@ const config: { expo: ExpoConfig } = {
       bundleIdentifier: "com.noahwallet.mainnet",
       scheme: "com.noahwallet.mainnet",
       infoPlist: {
+        NSCameraUsageDescription: "$(PRODUCT_NAME) needs access to your Camera.",
         UIBackgroundModes: ["remote-notification", "fetch"],
       },
       icon: "./assets/noah.icon",
@@ -110,6 +104,7 @@ const config: { expo: ExpoConfig } = {
         backgroundColor: "#000000",
       },
       package: "com.noahwallet",
+      permissions: ["CAMERA"],
       softwareKeyboardLayoutMode: "pan",
     },
     androidStatusBar: {
