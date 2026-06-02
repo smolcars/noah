@@ -22,6 +22,7 @@ import {
   onchainTransactions as onchainTransactionsNitro,
   estimateArkoorPaymentFee as estimateArkoorPaymentFeeNitro,
   estimateLightningSendFee as estimateLightningSendFeeNitro,
+  estimateBoardOffchainFee as estimateBoardOffchainFeeNitro,
   estimateSendOnchain as estimateSendOnchainNitro,
   estimateOffboardAll as estimateOffboardAllNitro,
   history as historyNitro,
@@ -67,6 +68,15 @@ export type OnchainWalletFeeEstimate = BarkFeeEstimate & {
   fee_rate_sat_vb: number;
   estimated_vbytes: number;
 };
+
+export type StandardOnchainWalletFeeEstimate = {
+  fee_sat: number;
+  fee_rate_sat_vb: number;
+  estimated_vbytes: number;
+  fee_rate_tier: OnchainFeeRateTier;
+};
+
+export type OnchainFeeRateTier = keyof Pick<BarkFeeRates, "fast" | "regular" | "slow">;
 
 export const newAddress = async (): Promise<Result<NewAddressResult, Error>> => {
   return ResultAsync.fromPromise(
@@ -123,6 +133,18 @@ export const boardAllArk = async (): Promise<Result<BoardResult, Error>> => {
       `Failed to board funds: ${error instanceof Error ? error.message : String(error)}`,
     );
     return e;
+  });
+};
+
+export const estimateBoardOffchainFee = async (
+  amountSat: number,
+): Promise<Result<BarkFeeEstimate, Error>> => {
+  return ResultAsync.fromPromise(estimateBoardOffchainFeeNitro(amountSat), (error) => {
+    return new Error(
+      `Failed to estimate boarding fee: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
   });
 };
 
@@ -276,13 +298,12 @@ export const estimateOnchainWalletSendFee = async ({
 }: {
   amountSat: number;
 }): Promise<Result<OnchainWalletFeeEstimate, Error>> => {
-  const ratesResult = await onchainFeeRates();
-  if (ratesResult.isErr()) {
-    return err(ratesResult.error);
+  const standardFeeResult = await estimateStandardOnchainTxFee("regular");
+  if (standardFeeResult.isErr()) {
+    return err(standardFeeResult.error);
   }
 
-  const feeRateSatVb = ratesResult.value.regular;
-  const feeSat = Math.ceil(feeRateSatVb * ONCHAIN_WALLET_ESTIMATE_VBYTES);
+  const { fee_sat: feeSat, fee_rate_sat_vb: feeRateSatVb } = standardFeeResult.value;
 
   return ok({
     gross_amount_sat: amountSat + feeSat,
@@ -291,6 +312,27 @@ export const estimateOnchainWalletSendFee = async ({
     vtxos_spent: [],
     fee_rate_sat_vb: feeRateSatVb,
     estimated_vbytes: ONCHAIN_WALLET_ESTIMATE_VBYTES,
+  });
+};
+
+export const estimateStandardOnchainTxFee = async (
+  feeRateTier: OnchainFeeRateTier,
+): Promise<
+  Result<StandardOnchainWalletFeeEstimate, Error>
+> => {
+  const ratesResult = await onchainFeeRates();
+  if (ratesResult.isErr()) {
+    return err(ratesResult.error);
+  }
+
+  const feeRateSatVb = ratesResult.value[feeRateTier];
+  const feeSat = Math.ceil(feeRateSatVb * ONCHAIN_WALLET_ESTIMATE_VBYTES);
+
+  return ok({
+    fee_sat: feeSat,
+    fee_rate_sat_vb: feeRateSatVb,
+    estimated_vbytes: ONCHAIN_WALLET_ESTIMATE_VBYTES,
+    fee_rate_tier: feeRateTier,
   });
 };
 

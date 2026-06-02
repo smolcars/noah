@@ -16,6 +16,7 @@ import { Pressable, View } from "react-native";
 import { Label } from "./ui/label";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
+import { cn } from "~/lib/utils";
 
 type DangerZoneRowProps = {
   title: string;
@@ -60,10 +61,18 @@ type ConfirmationDialogProps = {
   onCancel?: () => void;
   children?: React.ReactNode;
   confirmText?: string;
+  cancelText?: string;
   confirmVariant?: "default" | "destructive";
   isConfirmDisabled?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  contentClassName?: string;
+  headerClassName?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
+  footerClassName?: string;
+  cancelClassName?: string;
+  actionClassName?: string;
   /** Haptic feedback type for confirm action (default: Success for default variant, Warning for destructive) */
   confirmHapticType?: Haptics.NotificationFeedbackType;
   /** Haptic feedback type for cancel action (default: Light) */
@@ -80,10 +89,18 @@ export const ConfirmationDialog = ({
   onCancel,
   children,
   confirmText = "Confirm",
+  cancelText = "Cancel",
   confirmVariant = "destructive",
   isConfirmDisabled,
   open,
   onOpenChange,
+  contentClassName,
+  headerClassName,
+  titleClassName,
+  descriptionClassName,
+  footerClassName,
+  cancelClassName,
+  actionClassName,
   confirmHapticType,
   cancelHapticType = Haptics.ImpactFeedbackStyle.Light,
   enableHaptics = true,
@@ -110,20 +127,22 @@ export const ConfirmationDialog = ({
     onCancel?.();
   };
   const content = (
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>{title}</AlertDialogTitle>
-        <AlertDialogDescription>{description}</AlertDialogDescription>
+    <AlertDialogContent className={contentClassName}>
+      <AlertDialogHeader className={headerClassName}>
+        <AlertDialogTitle className={titleClassName}>{title}</AlertDialogTitle>
+        <AlertDialogDescription className={descriptionClassName}>
+          {description}
+        </AlertDialogDescription>
       </AlertDialogHeader>
       {children}
-      <AlertDialogFooter className="flex-row space-x-2">
-        <AlertDialogCancel onPress={handleCancel} className="flex-1">
-          <Text>Cancel</Text>
+      <AlertDialogFooter className={cn("flex-row space-x-2", footerClassName)}>
+        <AlertDialogCancel onPress={handleCancel} className={cn("flex-1", cancelClassName)}>
+          <Text>{cancelText}</Text>
         </AlertDialogCancel>
         <AlertDialogAction
           variant={confirmVariant}
           onPress={handleConfirm}
-          className="flex-1"
+          className={cn("flex-1", actionClassName)}
           disabled={isConfirmDisabled}
         >
           <Text>{confirmText}</Text>

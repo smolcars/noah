@@ -29,7 +29,10 @@ import { resetAndReRegisterWithServer } from "../lib/server";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { revokeMailboxAuthorization } from "~/lib/api";
-import { formatAutoBoardThreshold } from "~/lib/autoBoarding";
+import {
+  AUTO_BOARD_ONCHAIN_BUFFER_AMOUNT,
+  formatAutoBoardThreshold,
+} from "~/lib/autoBoarding";
 
 type Setting = {
   id:
@@ -98,7 +101,7 @@ const SettingsScreen = () => {
     ? "Auto-board threshold unavailable"
     : isAutoBoardThresholdLoading || autoBoardThreshold === undefined
       ? "Loading auto-board threshold..."
-      : `Automatically board to Ark when onchain balance reaches ${formatAutoBoardThreshold(autoBoardThreshold)}`;
+      : `Ask to board to Ark when onchain balance can cover ${formatAutoBoardThreshold(autoBoardThreshold)}, estimated fees, and a ${formatAutoBoardThreshold(AUTO_BOARD_ONCHAIN_BUFFER_AMOUNT)} reserve.`;
 
   useEffect(() => {
     const check = async () => {
