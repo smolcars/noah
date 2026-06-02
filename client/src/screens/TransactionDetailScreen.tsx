@@ -1,4 +1,4 @@
-import { View, Pressable, ScrollView } from "react-native";
+import { View, Pressable, ScrollView, Linking } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { Text } from "../components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
@@ -10,15 +10,18 @@ import { useState } from "react";
 import { COLORS } from "~/lib/styleConstants";
 import { formatBip177 } from "~/lib/utils";
 import { formatMovementKindLabel, formatMovementStatusLabel } from "~/types/movement";
+import { getMempoolTxUrl } from "~/constants";
 
 const TransactionDetailRow = ({
   label,
   value,
   copyable = false,
+  explorerUrl,
 }: {
   label: string;
   value: string;
   copyable?: boolean;
+  explorerUrl?: string | null;
 }) => {
   const [copied, setCopied] = useState(false);
   const iconColor = useIconColor();
@@ -35,22 +38,35 @@ const TransactionDetailRow = ({
   return (
     <View className="flex-row justify-between items-center py-3 border-b border-border/10 last:border-b-0">
       <Text className="text-muted-foreground text-sm">{label}</Text>
-      {copyable ? (
-        <Pressable onPress={onCopy} className="flex-row items-center gap-x-2 flex-shrink-0">
-          <Text
-            className="text-foreground text-sm text-right"
-            ellipsizeMode="middle"
-            numberOfLines={1}
-            style={{ maxWidth: 150 }}
-          >
-            {value}
-          </Text>
-          {copied ? (
-            <Icon name="checkmark-circle-outline" size={16} color={COLORS.SUCCESS} />
-          ) : (
-            <Icon name="copy-outline" size={16} color={iconColor} />
-          )}
-        </Pressable>
+      {copyable || explorerUrl ? (
+        <View className="flex-row items-center gap-x-3 flex-shrink-0">
+          {copyable ? (
+            <Pressable onPress={onCopy} className="flex-row items-center gap-x-2 flex-shrink-0">
+              <Text
+                className="text-foreground text-sm text-right"
+                ellipsizeMode="middle"
+                numberOfLines={1}
+                style={{ maxWidth: 150 }}
+              >
+                {value}
+              </Text>
+              {copied ? (
+                <Icon name="checkmark-circle-outline" size={16} color={COLORS.SUCCESS} />
+              ) : (
+                <Icon name="copy-outline" size={16} color={iconColor} />
+              )}
+            </Pressable>
+          ) : null}
+          {explorerUrl ? (
+            <Pressable
+              onPress={() => Linking.openURL(explorerUrl)}
+              hitSlop={10}
+              className="h-8 w-8 items-center justify-center rounded-full bg-background"
+            >
+              <Icon name="open-outline" size={17} color={COLORS.BITCOIN_ORANGE} />
+            </Pressable>
+          ) : null}
+        </View>
       ) : (
         <Text
           className="text-foreground text-sm text-right"
@@ -105,15 +121,21 @@ const TransactionDetailScreen = () => {
   const movementKindLabel = formatMovementKindLabel(transaction.movementKind);
   const hasMovementDetails = Boolean(
     movementStatusLabel ||
-      movementKindLabel ||
-      transaction.subsystemName ||
-      transaction.subsystemKind ||
-      typeof transaction.intendedBalanceSat === "number" ||
-      typeof transaction.effectiveBalanceSat === "number" ||
-      typeof transaction.offchainFeeSat === "number" ||
-      typeof transaction.movementId === "number",
+    movementKindLabel ||
+    transaction.subsystemName ||
+    transaction.subsystemKind ||
+    typeof transaction.intendedBalanceSat === "number" ||
+    typeof transaction.effectiveBalanceSat === "number" ||
+    typeof transaction.offchainFeeSat === "number" ||
+    typeof transaction.movementId === "number",
   );
   const hasOnchainWalletDetails = transaction.source === "onchain-wallet";
+  const onchainExplorerUrl =
+    hasOnchainWalletDetails && transaction.txid ? getMempoolTxUrl(transaction.txid) : null;
+  const arkSendOnchainExplorerUrl =
+    !hasOnchainWalletDetails && transaction.movementKind === "send-onchain" && transaction.txid
+      ? getMempoolTxUrl(transaction.txid)
+      : null;
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
@@ -149,6 +171,14 @@ const TransactionDetailScreen = () => {
             <Text className="text-lg font-semibold text-foreground mb-3">
               Onchain Wallet Transaction
             </Text>
+            {transaction.txid ? (
+              <TransactionDetailRow
+                label="Transaction ID"
+                value={transaction.txid}
+                copyable
+                explorerUrl={onchainExplorerUrl}
+              />
+            ) : null}
             <TransactionDetailRow
               label="Status"
               value={transaction.hasConfirmation ? "Confirmed" : "Unconfirmed"}
@@ -240,8 +270,13 @@ const TransactionDetailScreen = () => {
             value={transactionDateLabel}
           />
           <TransactionDetailRow label="Payment ID" value={transaction.id} copyable />
-          {transaction.txid ? (
-            <TransactionDetailRow label="Transaction ID" value={transaction.txid} copyable />
+          {transaction.txid && !hasOnchainWalletDetails ? (
+            <TransactionDetailRow
+              label="Transaction ID"
+              value={transaction.txid}
+              copyable
+              explorerUrl={arkSendOnchainExplorerUrl}
+            />
           ) : null}
           {transaction.preimage ? (
             <TransactionDetailRow label="Preimage" value={transaction.preimage} copyable />

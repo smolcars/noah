@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { AlertCircle, CheckCircle, CloudUpload } from "lucide-react-native";
 import { Text } from "~/components/ui/text";
-import { NoahButton } from "~/components/ui/NoahButton";
 import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
 import { useBackupStore } from "~/store/backupStore";
 import { useServerStore } from "~/store/serverStore";
@@ -15,6 +14,14 @@ import logger from "~/lib/log";
 import { redactSensitiveErrorMessage } from "~/lib/errorUtils";
 
 const log = logger("BackupStatusBanner");
+
+type BannerTone = "info" | "success" | "failed";
+
+const formatBackupTime = (timestamp: number) =>
+  new Date(timestamp).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 
 export const BackupStatusBanner: React.FC = () => {
   const { isBackupEnabled } = useServerStore();
@@ -65,12 +72,14 @@ export const BackupStatusBanner: React.FC = () => {
   const showFailed = lastBackupStatus === "failed";
   const showStale = !showInProgress && !showFailed && isStale;
 
-  const { title, message, icon } = (() => {
+  const { title, message, icon, tone, actionLabel } = (() => {
     if (showInProgress) {
       return {
-        title: "Backing up your wallet",
-        message: "This runs in the background. You can keep using the app.",
-        icon: <CloudUpload size={20} color="#60a5fa" />,
+        title: "Backing up wallet",
+        message: "Running in background",
+        icon: <NoahActivityIndicator size="small" />,
+        tone: "info" as BannerTone,
+        actionLabel: null,
       };
     }
 
@@ -78,15 +87,19 @@ export const BackupStatusBanner: React.FC = () => {
       return {
         title: "Backup failed",
         message: lastBackupError ?? "An unknown error occurred while backing up.",
-        icon: <AlertCircle size={20} color="#ef4444" />,
+        icon: <AlertCircle size={16} color="#ef4444" />,
+        tone: "failed" as BannerTone,
+        actionLabel: "Retry",
       };
     }
 
     if (showSuccess) {
       return {
         title: "Backup completed",
-        message: "Your wallet has been backed up successfully.",
-        icon: <CheckCircle size={20} color="#22c55e" />,
+        message: lastBackupAt ? `Last backup ${formatBackupTime(lastBackupAt)}` : "Saved",
+        icon: <CheckCircle size={16} color="#22c55e" />,
+        tone: "success" as BannerTone,
+        actionLabel: null,
       };
     }
 
@@ -94,9 +107,13 @@ export const BackupStatusBanner: React.FC = () => {
     return {
       title: isFirstBackup ? "Backup pending" : "Backup recommended",
       message: isFirstBackup
-        ? "We haven't backed up this wallet yet. We'll do it in the background."
-        : "Your last backup is older than our freshness window.",
-      icon: <CloudUpload size={20} color="#60a5fa" />,
+        ? "Waiting for first backup"
+        : lastBackupAt
+          ? `Last backup ${formatBackupTime(lastBackupAt)}`
+          : "Backup is due",
+      icon: <CloudUpload size={16} color="#60a5fa" />,
+      tone: "info" as BannerTone,
+      actionLabel: "Back up",
     };
   })();
 
@@ -123,31 +140,54 @@ export const BackupStatusBanner: React.FC = () => {
       });
   };
 
+  const containerClassName =
+    tone === "failed"
+      ? "border-red-500/30 bg-red-500/5"
+      : tone === "success"
+        ? "border-green-500/25 bg-green-500/5"
+        : "border-border/70 bg-card/70";
+
+  const iconContainerClassName =
+    tone === "failed"
+      ? "bg-red-500/10"
+      : tone === "success"
+        ? "bg-green-500/10"
+        : "bg-blue-500/10";
+
+  const actionTextClassName = tone === "failed" ? "text-red-500" : "text-foreground";
+
   return (
-    <View className="mx-4 mt-4 mb-2">
-      <View className="bg-card border border-border rounded-xl p-4">
-        <View className="flex-row items-center gap-2 mb-2">
+    <View className="mx-4 mt-3 mb-1">
+      <View
+        className={`min-h-[52px] flex-row items-center rounded-xl border px-3 py-2 ${containerClassName}`}
+      >
+        <View
+          className={`mr-3 h-8 w-8 items-center justify-center rounded-full ${iconContainerClassName}`}
+        >
           {icon}
-          <Text className="text-base font-semibold text-foreground">{title}</Text>
         </View>
-        <Text className="text-sm text-muted-foreground">{message}</Text>
-        {lastBackupAt && (showSuccess || showStale) && (
-          <Text className="text-xs text-muted-foreground mt-2">
-            Last backup: {new Date(lastBackupAt).toLocaleString()}
+
+        <View className="min-w-0 flex-1">
+          <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
+            {title}
           </Text>
-        )}
-        {showInProgress && (
-          <View className="flex-row items-center gap-2 mt-3">
-            <NoahActivityIndicator size="small" />
-            <Text className="text-xs text-muted-foreground">Running in the background...</Text>
-          </View>
-        )}
-        {(showFailed || showStale) && (
-          <View className="mt-3">
-            <NoahButton onPress={handleBackupNow} disabled={isRetrying}>
-              <Text>{showFailed ? "Retry Backup" : "Backup Now"}</Text>
-            </NoahButton>
-          </View>
+          <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+            {message}
+          </Text>
+        </View>
+
+        {actionLabel && (
+          <Pressable
+            onPress={handleBackupNow}
+            disabled={isRetrying}
+            accessibilityRole="button"
+            accessibilityLabel={actionLabel}
+            className="ml-3 h-8 items-center justify-center rounded-full border border-border/70 bg-background/60 px-3 active:opacity-80 disabled:opacity-50"
+          >
+            <Text className={`text-xs font-semibold ${actionTextClassName}`}>
+              {isRetrying ? "Working" : actionLabel}
+            </Text>
+          </Pressable>
         )}
       </View>
     </View>
