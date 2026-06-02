@@ -18,12 +18,14 @@ import { validateBitcoinAddress } from "bip-321";
 import { APP_VARIANT } from "../config";
 import { NoahButton } from "../components/ui/NoahButton";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
-import { useBalance } from "../hooks/useWallet";
+import { useArkInfo, useBalance } from "../hooks/useWallet";
 import {
   useBoardAllAmountArk,
   useBoardArk,
+  useBoardArkFeeEstimate,
   useOffboardAllArk,
   useOffboardAllFeeEstimate,
+  type BoardArkFeeEstimateResult,
 } from "../hooks/usePayments";
 import { copyToClipboard } from "../lib/clipboardUtils";
 import { cn, formatBip177, isNetworkMatch } from "../lib/utils";
@@ -201,6 +203,127 @@ const OnboardForm = ({
   </View>
 );
 
+const BoardFeeEstimateSummary = ({
+  result,
+  isLoading,
+  error,
+  isWaitingForDebounce,
+}: {
+  result?: BoardArkFeeEstimateResult;
+  isLoading: boolean;
+  error: Error | null;
+  isWaitingForDebounce: boolean;
+}) => {
+  if (!result && !isLoading && !error && !isWaitingForDebounce) {
+    return null;
+  }
+
+  const estimate = result?.kind === "estimate" ? result.estimate : null;
+  const unavailable = result?.kind === "unavailable" ? result.unavailable : null;
+
+  return (
+    <View className="mt-3 rounded-[18px] border border-border/70 bg-card/70 px-3 py-3">
+      <View className="mb-1 flex-row items-center justify-between">
+        <Text className="text-xs font-semibold uppercase tracking-[2px] text-muted-foreground">
+          Rough fee estimate
+        </Text>
+        {isLoading || isWaitingForDebounce ? <NoahActivityIndicator size="small" /> : null}
+      </View>
+
+      {estimate ? (
+        <>
+          {estimate.is_max_amount ? (
+            <Text className="mb-2 text-xs leading-5 text-muted-foreground">
+              Max estimate leaves room for the onchain transaction fee.
+            </Text>
+          ) : null}
+          <View className="flex-row items-center justify-between py-1">
+            <Text className="text-sm text-muted-foreground">Amount to board</Text>
+            <Text className="text-sm font-semibold text-foreground">
+              {formatBip177(estimate.gross_amount_sat)}
+            </Text>
+          </View>
+          <View className="h-px bg-border/70" />
+          <View className="flex-row items-center justify-between py-1">
+            <Text className="text-sm text-muted-foreground">Ark boarding fee</Text>
+            <Text className="text-sm font-semibold text-red-500">
+              {formatBip177(estimate.fee_sat)}
+            </Text>
+          </View>
+          <View className="h-px bg-border/70" />
+          <View className="flex-row items-center justify-between py-1">
+            <Text className="text-sm text-muted-foreground">Estimated onchain fee</Text>
+            <Text className="text-sm font-semibold text-red-500">
+              {formatBip177(estimate.estimated_onchain_fee_sat)}
+            </Text>
+          </View>
+          <View className="h-px bg-border/70" />
+          <View className="flex-row items-center justify-between py-1">
+            <Text className="text-sm text-muted-foreground">Stays in onchain wallet</Text>
+            <Text
+              className={cn(
+                "text-sm font-semibold",
+                estimate.estimated_remaining_onchain_sat < 0 ? "text-red-500" : "text-foreground",
+              )}
+            >
+              {formatBip177(estimate.estimated_remaining_onchain_sat)}
+            </Text>
+          </View>
+          <View className="h-px bg-border/70" />
+          <View className="flex-row items-center justify-between py-1">
+            <Text className="text-sm text-muted-foreground">Ark amount after fee</Text>
+            <Text className="text-sm font-semibold text-green-500">
+              {formatBip177(estimate.net_amount_sat)}
+            </Text>
+          </View>
+          <Text className="mt-2 text-xs leading-5 text-muted-foreground">
+            Onchain fee uses the regular fee rate and a {estimate.estimated_vbytes} vB 2-in/2-out
+            SegWit estimate.
+          </Text>
+        </>
+      ) : unavailable ? (
+        <>
+          <Text className="text-sm leading-5 text-muted-foreground">
+            Max leaves {formatBip177(unavailable.boardable_amount_sat)} after the estimated onchain
+            fee, which is below Ark&apos;s minimum board amount.
+          </Text>
+          <View className="mt-2 h-px bg-border/70" />
+          <View className="flex-row items-center justify-between py-1">
+            <Text className="text-sm text-muted-foreground">Minimum board amount</Text>
+            <Text className="text-sm font-semibold text-foreground">
+              {formatBip177(unavailable.minimum_board_amount_sat)}
+            </Text>
+          </View>
+          <View className="h-px bg-border/70" />
+          <View className="flex-row items-center justify-between py-1">
+            <Text className="text-sm text-muted-foreground">Estimated onchain fee</Text>
+            <Text className="text-sm font-semibold text-red-500">
+              {formatBip177(unavailable.estimated_onchain_fee_sat)}
+            </Text>
+          </View>
+          <View className="h-px bg-border/70" />
+          <View className="flex-row items-center justify-between py-1">
+            <Text className="text-sm text-muted-foreground">Minimum balance needed</Text>
+            <Text className="text-sm font-semibold text-foreground">
+              {formatBip177(unavailable.minimum_required_balance_sat)}
+            </Text>
+          </View>
+          <Text className="mt-2 text-xs leading-5 text-muted-foreground">
+            Onchain fee uses the regular fee rate and a {unavailable.estimated_vbytes} vB 2-in/2-out
+            SegWit estimate.
+          </Text>
+        </>
+      ) : error ? (
+        <Text className="text-sm leading-5 text-muted-foreground">
+          Fee estimate unavailable. The final fee will be calculated when you board.
+        </Text>
+      ) : (
+        <Text className="text-sm text-muted-foreground">Estimating fees...</Text>
+      )}
+    </View>
+  );
+};
+
 // Transaction result component
 const TransactionResult = ({
   parsedData,
@@ -304,6 +427,29 @@ const BoardArkScreen = () => {
   const [amount, setAmount] = useState("");
   const [isMaxAmount, setIsMaxAmount] = useState(false);
   const [address, setAddress] = useState("");
+  const { data: arkInfo } = useArkInfo(flow === "onboard");
+
+  const onchainBalance = balance?.onchain.confirmed ?? 0;
+  const onchainPendingBalance =
+    (balance?.onchain.immature ?? 0) +
+    (balance?.onchain.trusted_pending ?? 0) +
+    (balance?.onchain.untrusted_pending ?? 0);
+
+  const offchainBalance = balance?.offchain.spendable ?? 0;
+  const offchainPendingBalance =
+    (balance?.offchain.pending_lightning_send ?? 0) +
+    (balance?.offchain.pending_in_round ?? 0) +
+    (balance?.offchain.pending_exit ?? 0);
+
+  const boardAmountSat = useMemo(() => {
+    const trimmedAmount = amount.trim();
+    if (!/^\d+$/.test(trimmedAmount)) {
+      return null;
+    }
+
+    const parsedAmount = Number(trimmedAmount);
+    return Number.isSafeInteger(parsedAmount) && parsedAmount > 0 ? parsedAmount : null;
+  }, [amount]);
 
   const validOffboardEstimateAddress = useMemo(() => {
     if (flow !== "offboard") {
@@ -326,6 +472,45 @@ const BoardArkScreen = () => {
   const [debouncedOffboardEstimateAddress, setDebouncedOffboardEstimateAddress] = useState<
     string | null
   >(null);
+  const [debouncedBoardEstimateParams, setDebouncedBoardEstimateParams] = useState<{
+    amountSat: number;
+    confirmedOnchainBalanceSat: number;
+    isMaxAmount: boolean;
+    minimumBoardAmountSat: number;
+  } | null>(null);
+
+  const boardEstimateParams = useMemo(() => {
+    if (
+      flow !== "onboard" ||
+      boardAmountSat === null ||
+      onchainBalance <= 0 ||
+      !arkInfo
+    ) {
+      return null;
+    }
+
+    return {
+      amountSat: boardAmountSat,
+      confirmedOnchainBalanceSat: onchainBalance,
+      isMaxAmount,
+      minimumBoardAmountSat: arkInfo.min_board_amount,
+    };
+  }, [arkInfo, boardAmountSat, flow, isMaxAmount, onchainBalance]);
+
+  useEffect(() => {
+    if (!boardEstimateParams) {
+      setDebouncedBoardEstimateParams(null);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setDebouncedBoardEstimateParams(boardEstimateParams);
+    }, 350);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [boardEstimateParams]);
 
   useEffect(() => {
     if (!validOffboardEstimateAddress) {
@@ -342,7 +527,16 @@ const BoardArkScreen = () => {
     };
   }, [validOffboardEstimateAddress]);
 
+  const boardFeeEstimateQuery = useBoardArkFeeEstimate(debouncedBoardEstimateParams);
   const offboardFeeEstimateQuery = useOffboardAllFeeEstimate(debouncedOffboardEstimateAddress);
+
+  useEffect(() => {
+    if (!boardFeeEstimateQuery.error) {
+      return;
+    }
+
+    log.w("Failed to estimate boarding fee", [boardFeeEstimateQuery.error]);
+  }, [boardFeeEstimateQuery.error]);
 
   useEffect(() => {
     if (!offboardFeeEstimateQuery.error) {
@@ -354,18 +548,6 @@ const BoardArkScreen = () => {
 
   // Use custom hook for parsing results
   const { parsedData, setParsedData } = useParsedBoardingResult(boardResult, boardAllResult);
-
-  const onchainBalance = balance?.onchain.confirmed ?? 0;
-  const onchainPendingBalance =
-    (balance?.onchain.immature ?? 0) +
-    (balance?.onchain.trusted_pending ?? 0) +
-    (balance?.onchain.untrusted_pending ?? 0);
-
-  const offchainBalance = balance?.offchain.spendable ?? 0;
-  const offchainPendingBalance =
-    (balance?.offchain.pending_lightning_send ?? 0) +
-    (balance?.offchain.pending_in_round ?? 0) +
-    (balance?.offchain.pending_exit ?? 0);
 
   const handlePress = () => {
     Keyboard.dismiss();
@@ -485,6 +667,14 @@ const BoardArkScreen = () => {
                   onchainBalance={onchainBalance}
                   setIsMaxAmount={setIsMaxAmount}
                 />
+                {boardEstimateParams ? (
+                  <BoardFeeEstimateSummary
+                    result={boardFeeEstimateQuery.data}
+                    isLoading={boardFeeEstimateQuery.isFetching}
+                    error={boardFeeEstimateQuery.error}
+                    isWaitingForDebounce={debouncedBoardEstimateParams !== boardEstimateParams}
+                  />
+                ) : null}
               </>
             ) : (
               <>
