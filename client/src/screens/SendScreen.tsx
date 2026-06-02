@@ -58,7 +58,7 @@ const SendScreen = () => {
     showCamera,
     setShowCamera,
     handleScanPress,
-    objectOutput,
+    scannerOutput,
     currency,
     toggleCurrency,
     amountSat,
@@ -126,7 +126,7 @@ const SendScreen = () => {
   }, [isFocused, showCamera, setShowCamera]);
 
   if (showCamera) {
-    return <QRCodeScanner objectOutput={objectOutput} onClose={() => setShowCamera(false)} />;
+    return <QRCodeScanner scannerOutput={scannerOutput} onClose={() => setShowCamera(false)} />;
   }
 
   return (

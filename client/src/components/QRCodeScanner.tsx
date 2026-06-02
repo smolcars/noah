@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { View, Pressable, StyleSheet } from "react-native";
 import { Camera, useCameraDevice } from "react-native-vision-camera";
-import type { CameraObjectOutput } from "react-native-vision-camera";
+import type { CameraOutput } from "react-native-vision-camera";
 import { useIsFocused } from "@react-navigation/native";
 import { NoahSafeAreaView } from "./NoahSafeAreaView";
 import { Text } from "./ui/text";
@@ -9,14 +9,14 @@ import { Button } from "./ui/button";
 import Icon from "@react-native-vector-icons/ionicons";
 
 type QRCodeScannerProps = {
-  objectOutput: CameraObjectOutput;
+  scannerOutput: CameraOutput;
   onClose: () => void;
 };
 
-export const QRCodeScanner = ({ objectOutput, onClose }: QRCodeScannerProps) => {
+export const QRCodeScanner = ({ scannerOutput, onClose }: QRCodeScannerProps) => {
   const device = useCameraDevice("back");
   const isFocused = useIsFocused();
-  const outputs = useMemo(() => [objectOutput], [objectOutput]);
+  const outputs = useMemo(() => [scannerOutput], [scannerOutput]);
 
   if (!device) {
     return (
