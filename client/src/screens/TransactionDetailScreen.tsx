@@ -203,7 +203,7 @@ const TransactionDetailScreen = () => {
             ) : null}
             {transaction.confirmationHash ? (
               <TransactionDetailRow
-                label="Confirmation Hash"
+                label="Block Hash"
                 value={transaction.confirmationHash}
                 copyable
               />
