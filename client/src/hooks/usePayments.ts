@@ -24,6 +24,9 @@ import {
   estimateSendOnchainFee,
   estimateOnchainWalletSendFee,
   estimateOffboardAllFee,
+  estimateBoardOffchainFee,
+  estimateStandardOnchainTxFee,
+  type StandardOnchainWalletFeeEstimate,
 } from "../lib/paymentsApi";
 import { queryClient } from "~/queryClient";
 import { DestinationTypes } from "~/lib/sendUtils";
@@ -188,7 +191,7 @@ export type SendFeeEstimateParams =
 
 export type SendFeeEstimate = BarkFeeEstimate | OnchainWalletFeeEstimate;
 
-const readEstimateResult = async <T extends SendFeeEstimate>(
+const readEstimateResult = async <T>(
   estimatePromise: Promise<Result<T, Error>>,
 ): Promise<T> => {
   const result = await estimatePromise;
@@ -224,6 +227,95 @@ export function useSendFeeEstimate(params: SendFeeEstimateParams | null) {
       }
     },
     enabled: params !== null && params.amountSat > 0,
+    staleTime: 20 * 1000,
+    retry: false,
+  });
+}
+
+export type BoardArkFeeEstimate = BarkFeeEstimate & {
+  estimated_onchain_fee_sat: number;
+  estimated_remaining_onchain_sat: number;
+  fee_rate_sat_vb: StandardOnchainWalletFeeEstimate["fee_rate_sat_vb"];
+  estimated_vbytes: StandardOnchainWalletFeeEstimate["estimated_vbytes"];
+  fee_rate_tier: StandardOnchainWalletFeeEstimate["fee_rate_tier"];
+  is_max_amount: boolean;
+};
+
+export type BoardArkFeeEstimateUnavailable = {
+  reason: "below_minimum_board_amount";
+  minimum_board_amount_sat: number;
+  boardable_amount_sat: number;
+  estimated_onchain_fee_sat: number;
+  minimum_required_balance_sat: number;
+  estimated_vbytes: number;
+  fee_rate_sat_vb: number;
+  fee_rate_tier: StandardOnchainWalletFeeEstimate["fee_rate_tier"];
+  is_max_amount: boolean;
+};
+
+export type BoardArkFeeEstimateResult =
+  | { kind: "estimate"; estimate: BoardArkFeeEstimate }
+  | { kind: "unavailable"; unavailable: BoardArkFeeEstimateUnavailable };
+
+type BoardArkFeeEstimateParams = {
+  amountSat: number;
+  confirmedOnchainBalanceSat: number;
+  isMaxAmount: boolean;
+  minimumBoardAmountSat: number;
+};
+
+export function useBoardArkFeeEstimate(params: BoardArkFeeEstimateParams | null) {
+  return useQuery({
+    queryKey: ["fee-estimate", "board-ark", params],
+    queryFn: async (): Promise<BoardArkFeeEstimateResult> => {
+      if (!params) {
+        throw new Error("Boarding fee estimate parameters are required");
+      }
+
+      const onchainEstimate = await readEstimateResult(estimateStandardOnchainTxFee("regular"));
+      const grossBoardAmountSat = params.isMaxAmount
+        ? Math.max(params.confirmedOnchainBalanceSat - onchainEstimate.fee_sat, 0)
+        : params.amountSat;
+
+      if (grossBoardAmountSat < params.minimumBoardAmountSat) {
+        return {
+          kind: "unavailable",
+          unavailable: {
+            reason: "below_minimum_board_amount",
+            minimum_board_amount_sat: params.minimumBoardAmountSat,
+            boardable_amount_sat: grossBoardAmountSat,
+            estimated_onchain_fee_sat: onchainEstimate.fee_sat,
+            minimum_required_balance_sat: params.minimumBoardAmountSat + onchainEstimate.fee_sat,
+            estimated_vbytes: onchainEstimate.estimated_vbytes,
+            fee_rate_sat_vb: onchainEstimate.fee_rate_sat_vb,
+            fee_rate_tier: onchainEstimate.fee_rate_tier,
+            is_max_amount: params.isMaxAmount,
+          },
+        };
+      }
+
+      const boardEstimate = await readEstimateResult(estimateBoardOffchainFee(grossBoardAmountSat));
+
+      return {
+        kind: "estimate",
+        estimate: {
+          ...boardEstimate,
+          estimated_onchain_fee_sat: onchainEstimate.fee_sat,
+          estimated_remaining_onchain_sat:
+            params.confirmedOnchainBalanceSat -
+            boardEstimate.gross_amount_sat -
+            onchainEstimate.fee_sat,
+          fee_rate_sat_vb: onchainEstimate.fee_rate_sat_vb,
+          estimated_vbytes: onchainEstimate.estimated_vbytes,
+          fee_rate_tier: onchainEstimate.fee_rate_tier,
+          is_max_amount: params.isMaxAmount,
+        },
+      };
+    },
+    enabled:
+      params !== null &&
+      params.amountSat > 0 &&
+      params.confirmedOnchainBalanceSat > 0,
     staleTime: 20 * 1000,
     retry: false,
   });
