@@ -256,6 +256,9 @@ export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) 
         onOpenChange={(open) => {
           setIsAutoBoardDialogOpen(open);
           if (!open) {
+            if (autoBoardPlan) {
+              setHasAttemptedAutoBoarding(true);
+            }
             setAutoBoardPlan(null);
           }
         }}

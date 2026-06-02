@@ -250,6 +250,7 @@ export type BoardArkFeeEstimateUnavailable = {
   estimated_vbytes: number;
   fee_rate_sat_vb: number;
   fee_rate_tier: StandardOnchainWalletFeeEstimate["fee_rate_tier"];
+  is_max_amount: boolean;
 };
 
 export type BoardArkFeeEstimateResult =
@@ -288,6 +289,7 @@ export function useBoardArkFeeEstimate(params: BoardArkFeeEstimateParams | null)
             estimated_vbytes: onchainEstimate.estimated_vbytes,
             fee_rate_sat_vb: onchainEstimate.fee_rate_sat_vb,
             fee_rate_tier: onchainEstimate.fee_rate_tier,
+            is_max_amount: params.isMaxAmount,
           },
         };
       }
