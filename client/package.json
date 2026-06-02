@@ -96,7 +96,7 @@
     "lucide-react-native": "^0.563.0",
     "neverthrow": "^8.2.0",
     "noah-tools": "file:./nitromodules/noah-tools",
-    "react": "19.2.7",
+    "react": "19.2.3",
     "react-native": "0.85.3",
     "react-native-bottom-tabs": "^1.2.0",
     "react-native-confirmation-code-field": "^8.0.1",
