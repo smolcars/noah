@@ -38,6 +38,7 @@ pub struct MailboxWorkerConfig {
     pub max_retry_delay: Duration,
     pub claim_ttl: Duration,
     pub claim_renew_interval: Duration,
+    pub stream_idle_reconnect: Duration,
 }
 
 impl Default for MailboxWorkerConfig {
@@ -50,6 +51,7 @@ impl Default for MailboxWorkerConfig {
             max_retry_delay: Duration::from_secs(300),
             claim_ttl: Duration::from_secs(30),
             claim_renew_interval: Duration::from_secs(5),
+            stream_idle_reconnect: Duration::from_secs(60),
         }
     }
 }
@@ -59,6 +61,7 @@ pub struct MailboxSessionContext {
     pub worker_id: String,
     pub claim_ttl: Duration,
     pub claim_renew_interval: Duration,
+    pub stream_idle_reconnect: Duration,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -229,6 +232,7 @@ where
         worker_id: worker_id.clone(),
         claim_ttl: config.claim_ttl,
         claim_renew_interval: config.claim_renew_interval,
+        stream_idle_reconnect: config.stream_idle_reconnect,
     };
 
     let outcome = match transport
@@ -330,95 +334,135 @@ impl MailboxTransport for Beta8MailboxTransport {
             Err(reason) => return Ok(MailboxSessionOutcome::InvalidAuth { reason }),
         };
 
-        let network = app_state.config.network()?;
-        let mut client: MailboxServiceClient<_> = ServerConnection::builder()
-            .address(&app_state.config.ark_server_url)
-            .network(network)
-            .connect()
-            .await?
-            .mailbox_client;
-
         let mut checkpoint = mailbox.last_checkpoint as u64;
-        let suppress_catchup_notifications =
+        let mut suppress_catchup_notifications =
             should_suppress_catchup_notifications(mailbox.last_checkpoint);
-        let mut claim_renewal = interval_at(
-            Instant::now() + session.claim_renew_interval,
-            session.claim_renew_interval,
-        );
 
         loop {
-            if !renew_mailbox_claim(&app_state, &mailbox, &session).await? {
-                return Ok(MailboxSessionOutcome::Completed);
+            let network = app_state.config.network()?;
+            let mut client: MailboxServiceClient<_> = ServerConnection::builder()
+                .address(&app_state.config.ark_server_url)
+                .network(network)
+                .connect()
+                .await?
+                .mailbox_client;
+
+            let mut catchup_count = 0u64;
+            loop {
+                if !renew_mailbox_claim(&app_state, &mailbox, &session).await? {
+                    return Ok(MailboxSessionOutcome::Completed);
+                }
+
+                let read_response = client
+                    .read_mailbox(MailboxRequest {
+                        unblinded_id: unblinded_id.clone(),
+                        authorization: Some(authorization.clone()),
+                        checkpoint,
+                    })
+                    .await;
+
+                let read_response = match read_response {
+                    Ok(response) => response,
+                    Err(status) => return Ok(map_tonic_status(status)),
+                };
+
+                let messages = read_response.into_inner().messages;
+                if messages.is_empty() {
+                    break;
+                }
+
+                for message in messages {
+                    if !process_mailbox_message(
+                        &app_state,
+                        &mailbox,
+                        &session,
+                        &message,
+                        !suppress_catchup_notifications,
+                    )
+                    .await?
+                    {
+                        return Ok(MailboxSessionOutcome::Completed);
+                    }
+                    checkpoint = message.checkpoint;
+                    catchup_count += 1;
+                }
             }
 
-            let read_response = client
-                .read_mailbox(MailboxRequest {
+            if catchup_count > 0 {
+                tracing::info!(
+                    service = "mailbox_worker",
+                    pubkey = %mailbox.pubkey,
+                    catchup_count,
+                    checkpoint,
+                    notifications_suppressed = suppress_catchup_notifications,
+                    "mailbox catch-up complete"
+                );
+            }
+
+            suppress_catchup_notifications = false;
+
+            let stream_response = client
+                .subscribe_mailbox(MailboxRequest {
                     unblinded_id: unblinded_id.clone(),
                     authorization: Some(authorization.clone()),
                     checkpoint,
                 })
                 .await;
 
-            let read_response = match read_response {
-                Ok(response) => response,
+            let mut stream = match stream_response {
+                Ok(response) => response.into_inner(),
                 Err(status) => return Ok(map_tonic_status(status)),
             };
 
-            let messages = read_response.into_inner().messages;
-            if messages.is_empty() {
-                break;
-            }
-
-            for message in messages {
-                if !process_mailbox_message(
-                    &app_state,
-                    &mailbox,
-                    &session,
-                    &message,
-                    !suppress_catchup_notifications,
-                )
-                .await?
-                {
-                    return Ok(MailboxSessionOutcome::Completed);
-                }
-                checkpoint = message.checkpoint;
-            }
-        }
-
-        let stream_response = client
-            .subscribe_mailbox(MailboxRequest {
-                unblinded_id,
-                authorization: Some(authorization),
+            tracing::info!(
+                service = "mailbox_worker",
+                pubkey = %mailbox.pubkey,
                 checkpoint,
-            })
-            .await;
+                idle_reconnect_secs = session.stream_idle_reconnect.as_secs(),
+                "mailbox subscription started"
+            );
 
-        let mut stream = match stream_response {
-            Ok(response) => response.into_inner(),
-            Err(status) => return Ok(map_tonic_status(status)),
-        };
+            let mut claim_renewal = interval_at(
+                Instant::now() + session.claim_renew_interval,
+                session.claim_renew_interval,
+            );
+            let idle_reconnect = sleep(session.stream_idle_reconnect);
+            tokio::pin!(idle_reconnect);
 
-        loop {
-            tokio::select! {
-                _ = claim_renewal.tick() => {
-                    if !renew_mailbox_claim(&app_state, &mailbox, &session).await? {
-                        return Ok(MailboxSessionOutcome::Completed);
+            loop {
+                tokio::select! {
+                    _ = claim_renewal.tick() => {
+                        if !renew_mailbox_claim(&app_state, &mailbox, &session).await? {
+                            return Ok(MailboxSessionOutcome::Completed);
+                        }
                     }
-                }
-                next = stream.next() => {
-                    let Some(next) = next else {
-                        return Ok(MailboxSessionOutcome::Retryable {
-                            reason: "mailbox stream ended".to_string(),
-                        });
-                    };
+                    _ = &mut idle_reconnect => {
+                        tracing::debug!(
+                            service = "mailbox_worker",
+                            pubkey = %mailbox.pubkey,
+                            checkpoint,
+                            idle_reconnect_secs = session.stream_idle_reconnect.as_secs(),
+                            "mailbox stream idle; reconnecting and checking catch-up"
+                        );
+                        break;
+                    }
+                    next = stream.next() => {
+                        let Some(next) = next else {
+                            return Ok(MailboxSessionOutcome::Retryable {
+                                reason: "mailbox stream ended".to_string(),
+                            });
+                        };
 
-                    let message = match next {
-                        Ok(message) => message,
-                        Err(status) => return Ok(map_tonic_status(status)),
-                    };
+                        let message = match next {
+                            Ok(message) => message,
+                            Err(status) => return Ok(map_tonic_status(status)),
+                        };
 
-                    if !process_mailbox_message(&app_state, &mailbox, &session, &message, true).await? {
-                        return Ok(MailboxSessionOutcome::Completed);
+                        if !process_mailbox_message(&app_state, &mailbox, &session, &message, true).await? {
+                            return Ok(MailboxSessionOutcome::Completed);
+                        }
+                        checkpoint = message.checkpoint;
+                        idle_reconnect.as_mut().reset(Instant::now() + session.stream_idle_reconnect);
                     }
                 }
             }
