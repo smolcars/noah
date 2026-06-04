@@ -2360,6 +2360,28 @@ PODS:
     - React-perflogger (= 0.85.3)
     - React-utils (= 0.85.3)
     - ReactNativeDependencies
+  - ReactNativeBottomSheet (0.14.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - ReactNativeDependencies (0.85.3)
   - RNCClipboard (1.16.3):
     - hermes-engine
@@ -2869,6 +2891,7 @@ DEPENDENCIES:
   - ReactAppDependencyProvider (from `build/generated/ios/ReactAppDependencyProvider`)
   - ReactCodegen (from `build/generated/ios/ReactCodegen`)
   - ReactCommon/turbomodule/core (from `../../node_modules/react-native/ReactCommon`)
+  - "ReactNativeBottomSheet (from `../../node_modules/@swmansion/react-native-bottom-sheet`)"
   - ReactNativeDependencies (from `../../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
   - "RNCClipboard (from `../../node_modules/@react-native-clipboard/clipboard`)"
   - RNFSTurbo (from `../../node_modules/react-native-fs-turbo`)
@@ -3121,6 +3144,8 @@ EXTERNAL SOURCES:
     :path: build/generated/ios/ReactCodegen
   ReactCommon:
     :path: "../../node_modules/react-native/ReactCommon"
+  ReactNativeBottomSheet:
+    :path: "../../node_modules/@swmansion/react-native-bottom-sheet"
   ReactNativeDependencies:
     :podspec: "../../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
   RNCClipboard:
@@ -3264,6 +3289,7 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: a54c0c9b976766e1b6d5e2bb4d1ad0d15913e9e1
   ReactCodegen: 7862b98c16d5497b7c56c4821a64446a9dacddf2
   ReactCommon: 3ec2a55999d296af90c24beb66c8a77dc660d3ef
+  ReactNativeBottomSheet: ad86e071a3993700fec5d394314cdaf5445f00c9
   ReactNativeDependencies: 3adcce65198f83890ec4b900248ab39f2f803027
   RNCClipboard: c1cdf3cdd72df606520114f42e61c6898a488dd8
   RNFSTurbo: d00626ccbeb66c229d14fa1ba33adc3d2f12caab

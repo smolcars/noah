@@ -23,9 +23,7 @@ import BoardArkScreen from "~/screens/BoardArkScreen";
 import MnemonicScreen from "~/screens/MnemonicScreen";
 import LogScreen from "~/screens/LogScreen";
 import TransactionsScreen from "~/screens/TransactionsScreen";
-import TransactionDetailScreen from "~/screens/TransactionDetailScreen";
 import BoardingTransactionsScreen from "~/screens/BoardingTransactionsScreen";
-import BoardingTransactionDetailScreen from "~/screens/BoardingTransactionDetailScreen";
 import LightningAddressScreen from "~/screens/LightningAddressScreen";
 import EmailVerificationScreen from "~/screens/EmailVerificationScreen";
 import { BackupSettingsScreen } from "~/screens/BackupSettingsScreen";
@@ -44,8 +42,6 @@ import { COLORS } from "~/lib/styleConstants";
 import { useThemeColors } from "~/hooks/useTheme";
 import { PortalHost } from "@rn-primitives/portal";
 import AppServices from "~/AppServices";
-import { Transaction } from "~/types/transaction";
-import type { BoardingTransaction } from "~/types/boardingTransaction";
 import { getMnemonic } from "~/lib/crypto";
 import { walletDataExists, clearStaleKeychain } from "~/lib/walletApi";
 import VTXOsScreen, { type VTXOWithStatus } from "~/screens/VTXOsScreen";
@@ -105,14 +101,12 @@ export type HomeStackParamList = {
   Settings: NavigatorScreenParams<SettingsStackParamList> | undefined;
   Send: { destination: string };
   BoardingTransactions: undefined;
-  BoardingTransactionDetail: { transaction: BoardingTransaction };
   ReceiveSuccess: { amountSat: number };
   EmailVerification: { fromSettings?: boolean } | undefined;
 };
 
 export type TransactionsStackParamList = {
   TransactionsList: undefined;
-  TransactionDetail: { transaction: Transaction };
 };
 
 const Tab = createNativeBottomTabNavigator<TabParamList>();
@@ -206,11 +200,6 @@ const HomeStackScreen = () => (
       options={{ headerShown: false, animation: "default" }}
     />
     <HomeStack.Screen
-      name="BoardingTransactionDetail"
-      component={BoardingTransactionDetailScreen}
-      options={{ headerShown: false, animation: "default" }}
-    />
-    <HomeStack.Screen
       name="ReceiveSuccess"
       component={ReceiveSuccessScreen}
       options={{ headerShown: false, animation: "default" }}
@@ -228,11 +217,6 @@ const TransactionsStackScreen = () => (
     <TransactionsStack.Screen
       name="TransactionsList"
       component={TransactionsScreen}
-      options={{ headerShown: false, animation: "default" }}
-    />
-    <TransactionsStack.Screen
-      name="TransactionDetail"
-      component={TransactionDetailScreen}
       options={{ headerShown: false, animation: "default" }}
     />
   </TransactionsStack.Navigator>

@@ -19,6 +19,8 @@ import logger from "~/lib/log";
 import { formatBip177 } from "~/lib/utils";
 import { useTransactions } from "~/hooks/useTransactions";
 import { HistoryRefreshButton } from "~/components/HistoryRefreshButton";
+import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
+import { TransactionDetailContent } from "~/screens/TransactionDetailScreen";
 
 const log = logger("TransactionsScreen");
 
@@ -28,6 +30,8 @@ const TransactionsScreen = () => {
   const iconColor = useIconColor();
   const { data: transactions = [], isLoading, isError, isRefetching, refetch } = useTransactions();
   const [filter, setFilter] = useState<PaymentTypes | "all" | "Lightning">("all");
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isTransactionSheetOpen, setIsTransactionSheetOpen] = useState(false);
 
   const filteredTransactions =
     filter === "all"
@@ -52,6 +56,11 @@ const TransactionsScreen = () => {
     }
 
     parentNavigation?.navigate("Home");
+  };
+
+  const openTransaction = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsTransactionSheetOpen(true);
   };
 
   const exportToCSV = async () => {
@@ -199,11 +208,7 @@ const TransactionsScreen = () => {
               renderItem={({ item }: { item: Transaction }) => {
                 return (
                   <View style={{ marginBottom: 8 }}>
-                    <Pressable
-                      onPress={() =>
-                        navigation.navigate("TransactionDetail", { transaction: item })
-                      }
-                    >
+                    <Pressable onPress={() => openTransaction(item)}>
                       <View className="flex-row items-center p-4 bg-card rounded-lg">
                         <View className="mr-4">
                           <Icon
@@ -246,6 +251,19 @@ const TransactionsScreen = () => {
             />
           )}
         </View>
+        {selectedTransaction ? (
+          <AppBottomSheet
+            isOpen={isTransactionSheetOpen}
+            onClose={() => setIsTransactionSheetOpen(false)}
+            onDismiss={() => setSelectedTransaction(null)}
+          >
+            <TransactionDetailContent
+              transaction={selectedTransaction}
+              onClose={() => setIsTransactionSheetOpen(false)}
+              closeIconName="close-outline"
+            />
+          </AppBottomSheet>
+        ) : null}
       </NoahSafeAreaView>
     </GestureHandlerRootView>
   );

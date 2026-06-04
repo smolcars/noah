@@ -39,6 +39,8 @@ import { calculateBalances } from "~/lib/balanceUtils";
 import { onchainSync, sync } from "~/lib/walletApi";
 import { useTransactions } from "~/hooks/useTransactions";
 import { Transaction } from "~/types/transaction";
+import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
+import { TransactionDetailContent } from "~/screens/TransactionDetailScreen";
 
 const getTransactionIcon = (type: Transaction["type"]) => {
   switch (type) {
@@ -78,6 +80,8 @@ const HomeScreen = () => {
   const { data: btcToUsdRate, isLoading: isRateLoading } = useBtcToUsdRate();
   const [isOpen, setIsOpen] = useState(false);
   const [fact, setFact] = useState("");
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isTransactionSheetOpen, setIsTransactionSheetOpen] = useState(false);
   const bottomTabBarHeight = useBottomTabBarHeight();
   const { isUpdateRequired, minimumVersion, currentVersion } = useAppVersionCheck();
   const { isEmailVerified, isEmailPromptDismissed, setEmailPromptDismissed } = useServerStore();
@@ -113,10 +117,8 @@ const HomeScreen = () => {
   };
 
   const openTransaction = (transaction: Transaction) => {
-    parentNavigation?.navigate("History", {
-      screen: "TransactionDetail",
-      params: { transaction },
-    });
+    setSelectedTransaction(transaction);
+    setIsTransactionSheetOpen(true);
   };
 
   const isLoading = isBalanceLoading || isSyncPending || isRateLoading;
@@ -426,6 +428,19 @@ const HomeScreen = () => {
           <Text className="text-center text-xs text-muted-foreground">{fact}</Text>
         </View>
       </ScrollView>
+      {selectedTransaction ? (
+        <AppBottomSheet
+          isOpen={isTransactionSheetOpen}
+          onClose={() => setIsTransactionSheetOpen(false)}
+          onDismiss={() => setSelectedTransaction(null)}
+        >
+          <TransactionDetailContent
+            transaction={selectedTransaction}
+            onClose={() => setIsTransactionSheetOpen(false)}
+            closeIconName="close-outline"
+          />
+        </AppBottomSheet>
+      ) : null}
     </NoahSafeAreaView>
   );
 };

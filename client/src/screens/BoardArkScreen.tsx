@@ -395,18 +395,21 @@ const BoardArkScreen = () => {
     isPending: isBoarding,
     data: boardResult,
     error: boardError,
+    reset: resetBoardArk,
   } = useBoardArk();
   const {
     mutate: boardAllArk,
     isPending: isBoardingAll,
     data: boardAllResult,
     error: boardAllError,
+    reset: resetBoardAllArk,
   } = useBoardAllAmountArk();
   const {
     mutate: offboardAll,
     isPending: isOffboarding,
     data: offboardResult,
     error: offboardError,
+    reset: resetOffboardAll,
   } = useOffboardAllArk();
 
   const [flow, setFlow] = useState<Flow>("onboard");
@@ -574,6 +577,22 @@ const BoardArkScreen = () => {
     offboardAll(address);
   };
 
+  const handleClearForm = () => {
+    Keyboard.dismiss();
+
+    if (flow === "onboard") {
+      setAmount("");
+      setIsMaxAmount(false);
+      setParsedData(null);
+      resetBoardArk();
+      resetBoardAllArk();
+      return;
+    }
+
+    setAddress("");
+    resetOffboardAll();
+  };
+
   const handleBoard = () => {
     if (isBoardEstimatePending) {
       showAlert({
@@ -642,6 +661,14 @@ const BoardArkScreen = () => {
     (boardError instanceof Error ? boardError.message : String(boardError ?? "")) ||
     (boardAllError instanceof Error ? boardAllError.message : String(boardAllError ?? "")) ||
     (offboardError instanceof Error ? offboardError.message : String(offboardError ?? ""));
+  const isActionLoading = isBoarding || isBoardingAll || isOffboarding;
+  const hasClearableInput = flow === "onboard" ? amount.length > 0 : address.length > 0;
+  const isPrimaryActionDisabled =
+    isActionLoading ||
+    isBoardEstimatePending ||
+    isBoardEstimateBlocked ||
+    (flow === "onboard" && (!amount || onchainBalance === 0)) ||
+    (flow === "offboard" && (offchainBalance === 0 || !address));
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
@@ -759,6 +786,7 @@ const BoardArkScreen = () => {
                       grossLabel="Total offboarded"
                       compact
                       feeValueClassName="text-red-500"
+                      rowOrder={["gross", "fee", "net"]}
                       unavailableText="Fee estimate unavailable. The final fee will be calculated when you offboard."
                     />
                   ) : null}
@@ -767,22 +795,24 @@ const BoardArkScreen = () => {
             )}
 
             {/* Action Button */}
-            <NoahButton
-              onPress={handlePress}
-              isLoading={isBoarding || isBoardingAll || isOffboarding}
-              disabled={
-                isBoarding ||
-                isBoardingAll ||
-                isOffboarding ||
-                isBoardEstimatePending ||
-                isBoardEstimateBlocked ||
-                (flow === "onboard" && (!amount || onchainBalance === 0)) ||
-                (flow === "offboard" && (offchainBalance === 0 || !address))
-              }
-              className={flow === "offboard" ? "mt-5" : "mt-8"}
-            >
-              {flow === "onboard" ? "Board Ark" : "Offboard Ark"}
-            </NoahButton>
+            <View className={`flex-row items-center gap-3 ${flow === "offboard" ? "mt-5" : "mt-8"}`}>
+              <Button
+                onPress={handleClearForm}
+                variant="outline"
+                disabled={isActionLoading || !hasClearableInput}
+                className="flex-1 rounded-2xl py-3"
+              >
+                <Text className="font-semibold">Cancel</Text>
+              </Button>
+              <NoahButton
+                onPress={handlePress}
+                isLoading={isActionLoading}
+                disabled={isPrimaryActionDisabled}
+                className="flex-1 rounded-2xl py-3"
+              >
+                {flow === "onboard" ? "Board Ark" : "Offboard Ark"}
+              </NoahButton>
+            </View>
 
             {/* Boarding Transaction Result */}
             {parsedData && flow === "onboard" && (

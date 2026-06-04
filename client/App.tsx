@@ -8,6 +8,7 @@ import AppNavigation from "~/Navigators";
 import * as Sentry from "@sentry/react-native";
 import { View } from "react-native";
 import { Uniwind } from "uniwind";
+import { BottomSheetProvider } from "@swmansion/react-native-bottom-sheet";
 
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { queryClient } from "~/queryClient";
@@ -41,7 +42,9 @@ const AppContent = () => {
         <SafeAreaProvider>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <AlertProvider>
-              <AppNavigation />
+              <BottomSheetProvider>
+                <AppNavigation />
+              </BottomSheetProvider>
             </AlertProvider>
           </GestureHandlerRootView>
         </SafeAreaProvider>

@@ -20,6 +20,8 @@ import { formatMovementStatusLabel } from "~/types/movement";
 import { formatBip177 } from "~/lib/utils";
 import logger from "~/lib/log";
 import { HistoryRefreshButton } from "~/components/HistoryRefreshButton";
+import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
+import { BoardingTransactionDetailContent } from "~/screens/BoardingTransactionDetailScreen";
 
 const log = logger("BoardingTransactionsScreen");
 
@@ -46,6 +48,8 @@ const BoardingTransactionsScreen = () => {
     refetch,
   } = useBoardingTransactions();
   const [filter, setFilter] = useState<BoardingTransactionFilter>("all");
+  const [selectedTransaction, setSelectedTransaction] = useState<BoardingTransaction | null>(null);
+  const [isTransactionSheetOpen, setIsTransactionSheetOpen] = useState(false);
 
   const exportToCSV = async () => {
     const csvHeader = "Movement ID,Date,Type,Status,Amount (sats),Transaction ID,Destination\n";
@@ -107,6 +111,11 @@ const BoardingTransactionsScreen = () => {
 
   const handleRefresh = async () => {
     await refetch();
+  };
+
+  const openTransaction = (transaction: BoardingTransaction) => {
+    setSelectedTransaction(transaction);
+    setIsTransactionSheetOpen(true);
   };
 
   const getIconForType = (type: BoardingTransaction["type"]) => {
@@ -203,11 +212,7 @@ const BoardingTransactionsScreen = () => {
 
                 return (
                   <View style={{ marginBottom: 8 }}>
-                    <Pressable
-                      onPress={() =>
-                        navigation.navigate("BoardingTransactionDetail", { transaction: item })
-                      }
-                    >
+                    <Pressable onPress={() => openTransaction(item)}>
                       <View className="flex-row items-center p-4 bg-card rounded-lg">
                         <View className="mr-4">
                           <Icon
@@ -248,6 +253,19 @@ const BoardingTransactionsScreen = () => {
             />
           )}
         </View>
+        {selectedTransaction ? (
+          <AppBottomSheet
+            isOpen={isTransactionSheetOpen}
+            onClose={() => setIsTransactionSheetOpen(false)}
+            onDismiss={() => setSelectedTransaction(null)}
+          >
+            <BoardingTransactionDetailContent
+              transaction={selectedTransaction}
+              onClose={() => setIsTransactionSheetOpen(false)}
+              closeIconName="close-outline"
+            />
+          </AppBottomSheet>
+        ) : null}
       </NoahSafeAreaView>
     </GestureHandlerRootView>
   );

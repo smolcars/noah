@@ -21,7 +21,7 @@ import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { Button } from "~/components/ui/button";
 import { NoahButton } from "~/components/ui/NoahButton";
 import { Text } from "~/components/ui/text";
-import { BottomSheet } from "~/components/ui/BottomSheet";
+import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { SendConfirmation } from "~/components/SendConfirmation";
 import { CurrencyToggle } from "~/components/CurrencyToggle";
 import { COLORS } from "~/lib/styleConstants";
@@ -356,7 +356,7 @@ const SendScreen = () => {
         </View>
       </TouchableWithoutFeedback>
 
-      <BottomSheet isOpen={showConfirmation} onClose={handleCancelConfirmation}>
+      <AppBottomSheet isOpen={showConfirmation} onClose={handleCancelConfirmation}>
         <SendConfirmation
           destination={destination}
           amount={amountSat}
@@ -382,9 +382,9 @@ const SendScreen = () => {
           feeEstimateNote={feeEstimateNote}
           feeEstimateWarning={feeEstimateWarning}
         />
-      </BottomSheet>
+      </AppBottomSheet>
 
-      <BottomSheet isOpen={showSuccess} onClose={handleCloseSuccess}>
+      <AppBottomSheet isOpen={showSuccess} onClose={handleCloseSuccess}>
         {parsedResult && (
           <SendSuccessBottomSheet
             parsedResult={parsedResult}
@@ -392,7 +392,7 @@ const SendScreen = () => {
             btcPrice={btcPrice}
           />
         )}
-      </BottomSheet>
+      </AppBottomSheet>
     </NoahSafeAreaView>
   );
 };

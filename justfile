@@ -10,6 +10,11 @@ default:
 check:
     bun run check
 
+# Format client TypeScript and server Rust code
+fmt:
+    bun client format
+    cargo fmt --all
+
 # Install dependencies
 install:
     bun install

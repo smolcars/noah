@@ -1,8 +1,11 @@
+import { Fragment } from "react";
 import type { BarkFeeEstimate } from "~/lib/paymentsApi";
 import { Text } from "~/components/ui/text";
 import { formatBip177 } from "~/lib/utils";
 import { COLORS } from "~/lib/styleConstants";
 import { FeeEstimateBox, FeeEstimateRow, FeeEstimateSeparator } from "~/components/FeeEstimateBox";
+
+type FeeEstimateRowKey = "net" | "fee" | "gross";
 
 type FeeEstimateSummaryProps = {
   estimate?: BarkFeeEstimate;
@@ -16,6 +19,7 @@ type FeeEstimateSummaryProps = {
   unavailableText?: string;
   note?: string | null;
   feeValueClassName?: string;
+  rowOrder?: FeeEstimateRowKey[];
 };
 
 export const FeeEstimateSummary = ({
@@ -30,6 +34,7 @@ export const FeeEstimateSummary = ({
   unavailableText = "Fee estimate unavailable. The final fee will be calculated when you send.",
   note = null,
   feeValueClassName,
+  rowOrder = ["net", "fee", "gross"],
 }: FeeEstimateSummaryProps) => {
   if (!estimate && !isLoading && !error) {
     return null;
@@ -39,24 +44,38 @@ export const FeeEstimateSummary = ({
     <FeeEstimateBox title={title} isLoading={isLoading} compact={compact}>
       {estimate ? (
         <>
-          <FeeEstimateRow
-            label={netLabel}
-            value={formatBip177(estimate.net_amount_sat)}
-            compact={compact}
-          />
-          <FeeEstimateSeparator />
-          <FeeEstimateRow
-            label={feeLabel}
-            value={formatBip177(estimate.fee_sat)}
-            compact={compact}
-            valueClassName={feeValueClassName}
-          />
-          <FeeEstimateSeparator />
-          <FeeEstimateRow
-            label={grossLabel}
-            value={formatBip177(estimate.gross_amount_sat)}
-            compact={compact}
-          />
+          {rowOrder.map((rowKey, index) => {
+            const row =
+              rowKey === "net"
+                ? {
+                    label: netLabel,
+                    value: formatBip177(estimate.net_amount_sat),
+                    valueClassName: undefined,
+                  }
+                : rowKey === "fee"
+                  ? {
+                      label: feeLabel,
+                      value: formatBip177(estimate.fee_sat),
+                      valueClassName: feeValueClassName,
+                    }
+                  : {
+                      label: grossLabel,
+                      value: formatBip177(estimate.gross_amount_sat),
+                      valueClassName: undefined,
+                    };
+
+            return (
+              <Fragment key={rowKey}>
+                <FeeEstimateRow
+                  label={row.label}
+                  value={row.value}
+                  compact={compact}
+                  valueClassName={row.valueClassName}
+                />
+                {index < rowOrder.length - 1 ? <FeeEstimateSeparator /> : null}
+              </Fragment>
+            );
+          })}
           {estimate.vtxos_spent.length > 0 ? (
             <Text className="mt-2 text-xs text-muted-foreground">
               Spending {estimate.vtxos_spent.length} VTXO
