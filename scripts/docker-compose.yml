@@ -73,7 +73,7 @@ services:
         condition: service_healthy
 
   captaind:
-    image: niteshbalusu/captaind:nightly-2026-05-28
+    image: niteshbalusu/captaind:nightly-2026-06-04
     volumes:
       - captaind:/data/captaind
       - ./captaind.toml:/data/captaind/captaind.toml
@@ -92,7 +92,7 @@ services:
         condition: service_healthy
 
   bark:
-    image: niteshbalusu/bark:nightly-2026-05-28
+    image: niteshbalusu/bark:nightly-2026-06-04
     volumes:
       - bark:/root
     depends_on:
