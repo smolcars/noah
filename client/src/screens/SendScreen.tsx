@@ -356,7 +356,7 @@ const SendScreen = () => {
         </View>
       </TouchableWithoutFeedback>
 
-      <AppBottomSheet isOpen={showConfirmation} onClose={handleCancelConfirmation}>
+      <AppBottomSheet isOpen={showConfirmation} onClose={handleCancelConfirmation} scrollable>
         <SendConfirmation
           destination={destination}
           amount={amountSat}
@@ -384,7 +384,7 @@ const SendScreen = () => {
         />
       </AppBottomSheet>
 
-      <AppBottomSheet isOpen={showSuccess} onClose={handleCloseSuccess}>
+      <AppBottomSheet isOpen={showSuccess} onClose={handleCloseSuccess} scrollable>
         {parsedResult && (
           <SendSuccessBottomSheet
             parsedResult={parsedResult}

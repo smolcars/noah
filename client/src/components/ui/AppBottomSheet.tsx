@@ -1,5 +1,5 @@
 import type React from "react";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ModalBottomSheet,
@@ -13,6 +13,7 @@ type AppBottomSheetProps = {
   children: React.ReactNode;
   detents?: Detent[];
   scrimColor?: string;
+  scrollable?: boolean;
 };
 
 export const AppBottomSheet = ({
@@ -22,6 +23,7 @@ export const AppBottomSheet = ({
   children,
   detents,
   scrimColor = "rgba(0, 0, 0, 0.55)",
+  scrollable = false,
 }: AppBottomSheetProps) => {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -52,9 +54,25 @@ export const AppBottomSheet = ({
         />
       }
     >
-      <View className="px-4 pt-3" style={shouldConstrainContentHeight ? { height: sheetHeight } : undefined}>
+      <View
+        className="px-4 pt-3"
+        style={shouldConstrainContentHeight ? { height: sheetHeight } : undefined}
+      >
         <View className="mb-3 h-1 w-12 self-center rounded-full bg-muted-foreground/30" />
-        {children}
+        {scrollable ? (
+          <ScrollView
+            bounces={false}
+            className="flex-1"
+            contentContainerStyle={{
+              paddingBottom: Math.max(insets.bottom, 12) + 20,
+            }}
+            showsVerticalScrollIndicator={false}
+          >
+            {children}
+          </ScrollView>
+        ) : (
+          children
+        )}
       </View>
     </ModalBottomSheet>
   );
