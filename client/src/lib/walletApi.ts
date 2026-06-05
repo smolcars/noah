@@ -22,7 +22,6 @@ import {
   vtxos as vtxosNitro,
   getExpiringVtxos as getExpiringVtxosNitro,
   type BarkArkInfo,
-  type BarkCreateOpts,
   type OnchainBalanceResult,
   type OffchainBalanceResult,
   KeyPairResult,
@@ -39,19 +38,15 @@ import {
 } from "../constants";
 import {
   deriveStoreNextKeypair,
-  getArkServerAccessToken,
   peakKeyPair,
   getMnemonic,
-  resetArkServerAccessToken,
   resetServerAuthToken,
-  setArkServerAccessToken,
   setMnemonic,
 } from "./crypto";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import logger from "~/lib/log";
-import { storeNativeMnemonic, storeNativeServerAccessToken } from "noah-tools";
+import { storeNativeMnemonic } from "noah-tools";
 import { useWalletStore } from "~/store/walletStore";
-import { APP_VARIANT } from "~/config";
 
 const log = logger("walletApi");
 
@@ -61,111 +56,7 @@ export interface MailboxAuthorizationResult {
   encoded: string;
 }
 
-type WalletCreationOptions = Omit<BarkCreateOpts, "mnemonic">;
-
-export interface WalletServerAccessTokenOptions {
-  serverAccessToken?: string | null;
-}
-
-export const isArkServerAccessTokenEnabled = APP_VARIANT === "mainnet";
-
-const normalizeServerAccessToken = (token: string | null | undefined): string | null => {
-  const trimmed = token?.trim();
-  return trimmed ? trimmed : null;
-};
-
-const syncNativeServerAccessToken = async (token: string | null): Promise<void> => {
-  if (!shouldUseUnifiedPush()) {
-    return;
-  }
-
-  const nativeResult = await ResultAsync.fromPromise(
-    storeNativeServerAccessToken(token ?? ""),
-    (e) => e as Error,
-  );
-  if (nativeResult.isErr()) {
-    log.w("Failed to store Ark server access token natively for push service", [
-      nativeResult.error,
-    ]);
-  }
-};
-
-export const saveArkServerAccessToken = async (token: string): Promise<Result<void, Error>> => {
-  if (!isArkServerAccessTokenEnabled) {
-    return ok(undefined);
-  }
-
-  const normalized = normalizeServerAccessToken(token);
-  const storeResult = normalized
-    ? await setArkServerAccessToken(normalized)
-    : await resetArkServerAccessToken();
-  if (storeResult.isErr()) {
-    return err(storeResult.error);
-  }
-
-  await syncNativeServerAccessToken(normalized);
-  return ok(undefined);
-};
-
-export const clearArkServerAccessToken = async (): Promise<Result<void, Error>> => {
-  const resetResult = await resetArkServerAccessToken();
-  if (resetResult.isErr()) {
-    return err(resetResult.error);
-  }
-
-  await syncNativeServerAccessToken(null);
-  return ok(undefined);
-};
-
-const getWalletCreationOptions = async (
-  options?: WalletServerAccessTokenOptions,
-): Promise<Result<WalletCreationOptions, Error>> => {
-  if (!isArkServerAccessTokenEnabled) {
-    return ok(ACTIVE_WALLET_CONFIG);
-  }
-
-  const token =
-    options && "serverAccessToken" in options
-      ? normalizeServerAccessToken(options.serverAccessToken)
-      : null;
-  const tokenResult =
-    options && "serverAccessToken" in options ? ok(token) : await getArkServerAccessToken();
-
-  if (tokenResult.isErr()) {
-    return err(tokenResult.error);
-  }
-
-  const normalizedToken = normalizeServerAccessToken(tokenResult.value);
-  if (!normalizedToken) {
-    return ok(ACTIVE_WALLET_CONFIG);
-  }
-
-  const activeConfig = ACTIVE_WALLET_CONFIG.config;
-  if (!activeConfig) {
-    return ok(ACTIVE_WALLET_CONFIG);
-  }
-
-  return ok({
-    ...ACTIVE_WALLET_CONFIG,
-    config: {
-      ...activeConfig,
-      server_access_token: normalizedToken,
-    },
-  });
-};
-
-const createWalletFromMnemonic = async (
-  mnemonic: string,
-  options?: WalletServerAccessTokenOptions,
-): Promise<Result<void, Error>> => {
-  if (isArkServerAccessTokenEnabled && options && "serverAccessToken" in options) {
-    const saveResult = await saveArkServerAccessToken(options.serverAccessToken ?? "");
-    if (saveResult.isErr()) {
-      log.error("Failed to save ARK server access token", [saveResult.error]);
-      return err(saveResult.error);
-    }
-  }
-
+const createWalletFromMnemonic = async (mnemonic: string): Promise<Result<void, Error>> => {
   const isLoadedResult = await ResultAsync.fromPromise(isWalletLoadedNitro(), (e) => e as Error);
   if (isLoadedResult.isErr()) {
     log.error("Failed to check if wallet is loaded", [isLoadedResult.error]);
@@ -180,14 +71,8 @@ const createWalletFromMnemonic = async (
     }
   }
 
-  const configResult = await getWalletCreationOptions(options);
-  if (configResult.isErr()) {
-    log.error("Failed to get wallet creation options", [configResult.error]);
-    return err(configResult.error);
-  }
-
   const createResult = await ResultAsync.fromPromise(
-    createWalletNitro(ARK_DATA_PATH, { ...configResult.value, mnemonic }),
+    createWalletNitro(ARK_DATA_PATH, { ...ACTIVE_WALLET_CONFIG, mnemonic }),
     (e) => e as Error,
   );
 
@@ -213,7 +98,7 @@ const createWalletFromMnemonic = async (
     }
   }
 
-  const loadResult = await loadWallet(mnemonic, options);
+  const loadResult = await loadWallet(mnemonic);
   if (loadResult.isErr()) {
     log.error("Failed to load wallet", [loadResult.error]);
     return err(loadResult.error);
@@ -234,29 +119,16 @@ const createWalletFromMnemonic = async (
   return ok(undefined);
 };
 
-export const createWallet = async (
-  options?: WalletServerAccessTokenOptions,
-): Promise<Result<void, Error>> => {
+export const createWallet = async (): Promise<Result<void, Error>> => {
   const mnemonicResult = await ResultAsync.fromPromise(createMnemonic(), (e) => e as Error);
   if (mnemonicResult.isErr()) {
     log.error("Failed to create mnemonic", [mnemonicResult.error]);
     return err(mnemonicResult.error);
   }
-  return createWalletFromMnemonic(mnemonicResult.value, options);
+  return createWalletFromMnemonic(mnemonicResult.value);
 };
 
-export const restoreWallet = async (
-  mnemonic: string,
-  options?: WalletServerAccessTokenOptions,
-): Promise<Result<boolean, Error>> => {
-  if (isArkServerAccessTokenEnabled && options && "serverAccessToken" in options) {
-    const saveResult = await saveArkServerAccessToken(options.serverAccessToken ?? "");
-    if (saveResult.isErr()) {
-      log.error("Failed to save ARK server access token", [saveResult.error]);
-      return err(saveResult.error);
-    }
-  }
-
+export const restoreWallet = async (mnemonic: string): Promise<Result<boolean, Error>> => {
   const setResult = await ResultAsync.fromPromise(setMnemonic(mnemonic), (e) => e as Error);
   if (setResult.isErr()) {
     log.error("Failed to set mnemonic", [setResult.error]);
@@ -272,22 +144,14 @@ export const restoreWallet = async (
       log.w("Failed to store mnemonic natively for push service", [storeNativeResult.error]);
     }
   }
-  return loadWallet(mnemonic, options);
+  return loadWallet(mnemonic);
 };
 
-const loadWallet = async (
-  mnemonic: string,
-  options?: WalletServerAccessTokenOptions,
-): Promise<Result<boolean, Error>> => {
-  const configResult = await getWalletCreationOptions(options);
-  if (configResult.isErr()) {
-    return err(configResult.error);
-  }
-
+const loadWallet = async (mnemonic: string): Promise<Result<boolean, Error>> => {
   const loadResult = await ResultAsync.fromPromise(
     loadWalletNitro(ARK_DATA_PATH, {
       mnemonic,
-      ...configResult.value,
+      ...ACTIVE_WALLET_CONFIG,
     }),
     (e) => e as Error,
   );
@@ -521,12 +385,6 @@ export const clearStaleKeychain = async (): Promise<Result<void, Error>> => {
   if (tokenResetResult.isErr()) {
     log.w("Failed to clear server auth token", [tokenResetResult.error]);
     return err(tokenResetResult.error);
-  }
-
-  const arkTokenResetResult = await clearArkServerAccessToken();
-  if (arkTokenResetResult.isErr()) {
-    log.w("Failed to clear Ark server access token", [arkTokenResetResult.error]);
-    return err(arkTokenResetResult.error);
   }
 
   log.i("Cleared stale keychain mnemonic after reinstall detection");

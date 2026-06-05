@@ -28,7 +28,6 @@ import LightningAddressScreen from "~/screens/LightningAddressScreen";
 import EmailVerificationScreen from "~/screens/EmailVerificationScreen";
 import { BackupSettingsScreen } from "~/screens/BackupSettingsScreen";
 import RestoreWalletScreen from "~/screens/RestoreWalletScreen";
-import ArkServerAccessTokenScreen from "~/screens/ArkServerAccessTokenScreen";
 import ArkInfoScreen from "~/screens/ArkInfoScreen";
 import NoahStoryScreen from "~/screens/NoahStoryScreen";
 import DebugScreen from "~/screens/DebugScreen";
@@ -86,7 +85,6 @@ export type SettingsStackParamList = {
 export type OnboardingStackParamList = {
   Onboarding: undefined;
   Configuration: undefined;
-  ArkServerAccessToken: { mode: "create" } | { mode: "restore"; mnemonic: string };
   Mnemonic: { fromOnboarding: boolean };
   RestoreWallet: undefined;
   EmailVerification: { fromSettings?: boolean } | undefined;
@@ -242,11 +240,6 @@ const OnboardingStackScreen = () => (
     <OnboardingStack.Screen
       name="RestoreWallet"
       component={RestoreWalletScreen}
-      options={{ animation: "default" }}
-    />
-    <OnboardingStack.Screen
-      name="ArkServerAccessToken"
-      component={ArkServerAccessTokenScreen}
       options={{ animation: "default" }}
     />
     <OnboardingStack.Screen

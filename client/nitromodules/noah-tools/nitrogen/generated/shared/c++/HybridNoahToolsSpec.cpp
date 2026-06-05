@@ -36,7 +36,6 @@ namespace margelo::nitro::noahtools {
       prototype.registerHybridMethod("getUnifiedPushDistributors", &HybridNoahToolsSpec::getUnifiedPushDistributors);
       prototype.registerHybridMethod("setUnifiedPushDistributor", &HybridNoahToolsSpec::setUnifiedPushDistributor);
       prototype.registerHybridMethod("storeNativeMnemonic", &HybridNoahToolsSpec::storeNativeMnemonic);
-      prototype.registerHybridMethod("storeNativeServerAccessToken", &HybridNoahToolsSpec::storeNativeServerAccessToken);
     });
   }
 

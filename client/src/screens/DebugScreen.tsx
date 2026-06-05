@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState } from "react";
 import { View, ScrollView, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,11 +16,6 @@ import {
   maintenanceRefresh,
   maintenanceDelegated,
   maintenanceWithOnchainDelegated,
-  clearArkServerAccessToken,
-  closeWalletIfLoaded,
-  isArkServerAccessTokenEnabled,
-  loadWalletIfNeeded,
-  saveArkServerAccessToken,
 } from "~/lib/walletApi";
 import { offboardAllArk } from "~/lib/paymentsApi";
 import { registerForPushNotificationsAsync } from "~/lib/pushNotifications";
@@ -36,7 +31,6 @@ import {
   SelectValue,
   type Option,
 } from "~/components/ui/select";
-import { getArkServerAccessToken } from "~/lib/crypto";
 
 const log = logger("DebugScreen");
 
@@ -115,30 +109,9 @@ const DebugScreen = () => {
     message: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
-  const [arkServerAccessToken, setArkServerAccessTokenInput] = useState("");
-  const [hasArkServerAccessToken, setHasArkServerAccessToken] = useState(false);
-  const [isSavingArkServerAccessToken, setIsSavingArkServerAccessToken] = useState(false);
 
   const selectedAction = selectedOption?.value as DebugAction | undefined;
   const selectedActionConfig = DEBUG_ACTIONS.find((a) => a.id === selectedAction);
-
-  const refreshArkServerAccessTokenStatus = useCallback(async () => {
-    if (!isArkServerAccessTokenEnabled) {
-      return;
-    }
-
-    const result = await getArkServerAccessToken();
-    if (result.isErr()) {
-      log.w("Failed to read Ark server access token status", [result.error]);
-      return;
-    }
-
-    setHasArkServerAccessToken(Boolean(result.value));
-  }, []);
-
-  useEffect(() => {
-    refreshArkServerAccessTokenStatus();
-  }, [refreshArkServerAccessTokenStatus]);
 
   type ActionResult = { success: true; message: string } | { success: false; error: string };
 
@@ -287,78 +260,6 @@ const DebugScreen = () => {
     }
   };
 
-  const reloadWalletWithCurrentConfig = async (): Promise<ActionResult> => {
-    const closeResult = await closeWalletIfLoaded();
-    if (closeResult.isErr()) {
-      return { success: false, error: closeResult.error.message };
-    }
-    if (!closeResult.value) {
-      return { success: false, error: "Failed to close wallet before reload" };
-    }
-
-    const loadResult = await loadWalletIfNeeded();
-    if (loadResult.isErr()) {
-      return { success: false, error: loadResult.error.message };
-    }
-
-    return { success: true, message: "Wallet reloaded with current Ark server access token" };
-  };
-
-  const handleSaveArkServerAccessToken = async () => {
-    setIsSavingArkServerAccessToken(true);
-    const normalizedToken = arkServerAccessToken.trim();
-    const saveResult = normalizedToken
-      ? await saveArkServerAccessToken(normalizedToken)
-      : await clearArkServerAccessToken();
-    if (saveResult.isErr()) {
-      setIsSavingArkServerAccessToken(false);
-      showAlert({ title: "Save Failed", description: saveResult.error.message });
-      return;
-    }
-
-    const reloadResult = await reloadWalletWithCurrentConfig();
-    await refreshArkServerAccessTokenStatus();
-    setArkServerAccessTokenInput("");
-    setIsSavingArkServerAccessToken(false);
-
-    if (!reloadResult.success) {
-      showAlert({ title: "Reload Failed", description: reloadResult.error });
-      return;
-    }
-
-    showAlert({
-      title: normalizedToken ? "Token Saved" : "Token Cleared",
-      description: normalizedToken
-        ? "The wallet is using the updated Ark server access token."
-        : "The wallet is using the default Ark server config.",
-    });
-  };
-
-  const handleClearArkServerAccessToken = async () => {
-    setIsSavingArkServerAccessToken(true);
-    const clearResult = await clearArkServerAccessToken();
-    if (clearResult.isErr()) {
-      setIsSavingArkServerAccessToken(false);
-      showAlert({ title: "Clear Failed", description: clearResult.error.message });
-      return;
-    }
-
-    const reloadResult = await reloadWalletWithCurrentConfig();
-    await refreshArkServerAccessTokenStatus();
-    setArkServerAccessTokenInput("");
-    setIsSavingArkServerAccessToken(false);
-
-    if (!reloadResult.success) {
-      showAlert({ title: "Reload Failed", description: reloadResult.error });
-      return;
-    }
-
-    showAlert({
-      title: "Token Cleared",
-      description: "The wallet is using the default Ark server config.",
-    });
-  };
-
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
       <View className="flex-row items-center px-4 pb-4">
@@ -369,43 +270,6 @@ const DebugScreen = () => {
       </View>
 
       <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
-        {isArkServerAccessTokenEnabled && (
-          <View className="mb-8 mt-6 rounded-lg border border-input p-4">
-            <Label className="mb-2 text-xl text-foreground">Ark Server Access Token</Label>
-            <Text className="mb-4 text-sm text-muted-foreground">
-              Status: {hasArkServerAccessToken ? "Token saved" : "No token saved"}
-            </Text>
-            <Input
-              value={arkServerAccessToken}
-              onChangeText={setArkServerAccessTokenInput}
-              placeholder="Enter Ark server access token"
-              className="mb-4 h-12"
-              autoCapitalize="none"
-              autoCorrect={false}
-              secureTextEntry
-              editable={!isSavingArkServerAccessToken}
-            />
-            <View className="flex-row">
-              <NoahButton
-                onPress={handleSaveArkServerAccessToken}
-                disabled={isSavingArkServerAccessToken}
-                isLoading={isSavingArkServerAccessToken}
-                className="flex-1"
-              >
-                Save Token
-              </NoahButton>
-              <View className="w-3" />
-              <NoahButton
-                onPress={handleClearArkServerAccessToken}
-                disabled={isSavingArkServerAccessToken || !hasArkServerAccessToken}
-                className="flex-1"
-              >
-                Clear
-              </NoahButton>
-            </View>
-          </View>
-        )}
-
         <View className="mb-6 mt-6">
           <Label className="text-foreground text-2xl mb-2">Select Action</Label>
 

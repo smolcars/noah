@@ -15,7 +15,6 @@ import {
   closeWalletIfLoaded,
   sync,
   getArkInfo,
-  type WalletServerAccessTokenOptions,
 } from "../lib/walletApi";
 import { getAutoBoardThreshold } from "~/lib/autoBoarding";
 import { restoreWallet as restoreWalletAction } from "../lib/backupService";
@@ -32,8 +31,8 @@ export function useCreateWallet() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async (options?: WalletServerAccessTokenOptions) => {
-      const result = await createWalletAction(options);
+    mutationFn: async () => {
+      const result = await createWalletAction();
       if (result.isErr()) {
         throw result.error;
       }
@@ -267,11 +266,8 @@ export function useRestoreWallet() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async ({
-      mnemonic,
-      serverAccessToken,
-    }: { mnemonic: string } & WalletServerAccessTokenOptions) => {
-      const result = await restoreWalletAction(mnemonic, { serverAccessToken });
+    mutationFn: async ({ mnemonic }: { mnemonic: string }) => {
+      const result = await restoreWalletAction(mnemonic);
       if (result.isErr()) {
         throw result.error;
       }
