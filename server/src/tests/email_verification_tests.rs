@@ -112,7 +112,7 @@ async fn test_send_verification_email_already_verified() {
                 )
                 .body(Body::from(
                     serde_json::to_vec(&json!({
-                        "email": "another@example.com"
+                        "email": "verified@example.com"
                     }))
                     .unwrap(),
                 ))
@@ -128,6 +128,76 @@ async fn test_send_verification_email_already_verified() {
 
     assert!(res.success);
     assert_eq!(res.message, Some("Email already verified".to_string()));
+    assert_eq!(res.email, Some("verified@example.com".to_string()));
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_send_verification_email_verified_user_can_request_new_email() {
+    let (app, app_state, _guard) = setup_test_app().await;
+
+    let user = TestUser::new();
+
+    sqlx::query(
+        "INSERT INTO users (pubkey, lightning_address, email, is_email_verified) VALUES ($1, $2, $3, $4)",
+    )
+    .bind(user.pubkey().to_string())
+    .bind("test@localhost")
+    .bind("old@example.com")
+    .bind(true)
+    .execute(&app_state.db_pool)
+    .await
+    .unwrap();
+
+    let access_token = user.access_token(&app_state);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/email/send_verification")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "email": "new@example.com"
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let res: EmailVerificationResponse = serde_json::from_slice(&body).unwrap();
+
+    assert!(res.success);
+    assert_eq!(res.message, Some("Verification code sent".to_string()));
+    assert_eq!(res.email, None);
+
+    let user_record = sqlx::query_as::<_, (Option<String>, bool)>(
+        "SELECT email, is_email_verified FROM users WHERE pubkey = $1",
+    )
+    .bind(user.pubkey().to_string())
+    .fetch_one(&app_state.db_pool)
+    .await
+    .unwrap();
+
+    assert_eq!(user_record.0, Some("old@example.com".to_string()));
+    assert!(user_record.1);
+
+    let pending_email = app_state
+        .email_verification_store
+        .get_email(&user.pubkey().to_string())
+        .await
+        .unwrap();
+    assert_eq!(pending_email, Some("new@example.com".to_string()));
 }
 
 #[tracing_test::traced_test]
@@ -320,7 +390,7 @@ async fn test_verify_email_no_pending_verification() {
 
 #[tracing_test::traced_test]
 #[tokio::test]
-async fn test_verify_email_already_verified() {
+async fn test_verify_email_verified_user_without_pending_code_fails() {
     let (app, app_state, _guard) = setup_test_app().await;
 
     let user = TestUser::new();
@@ -360,13 +430,146 @@ async fn test_verify_email_already_verified() {
         .await
         .unwrap();
 
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let user_record = sqlx::query_as::<_, (Option<String>, bool)>(
+        "SELECT email, is_email_verified FROM users WHERE pubkey = $1",
+    )
+    .bind(user.pubkey().to_string())
+    .fetch_one(&app_state.db_pool)
+    .await
+    .unwrap();
+
+    assert_eq!(user_record.0, Some("verified@example.com".to_string()));
+    assert!(user_record.1);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_verify_email_verified_user_can_update_email() {
+    let (app, app_state, _guard) = setup_test_app().await;
+
+    let user = TestUser::new();
+
+    sqlx::query(
+        "INSERT INTO users (pubkey, lightning_address, email, is_email_verified) VALUES ($1, $2, $3, $4)",
+    )
+    .bind(user.pubkey().to_string())
+    .bind("test@localhost")
+    .bind("old@example.com")
+    .bind(true)
+    .execute(&app_state.db_pool)
+    .await
+    .unwrap();
+
+    let access_token = user.access_token(&app_state);
+    let code = "123456";
+    app_state
+        .email_verification_store
+        .store(&user.pubkey().to_string(), "new@example.com", code)
+        .await
+        .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/email/verify")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "code": code
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
     assert_eq!(response.status(), StatusCode::OK);
 
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let res: EmailVerificationResponse = serde_json::from_slice(&body).unwrap();
 
     assert!(res.success);
-    assert_eq!(res.message, Some("Email already verified".to_string()));
+    assert_eq!(res.message, Some("Email verified successfully".to_string()));
+    assert_eq!(res.email, Some("new@example.com".to_string()));
+
+    let user_record = sqlx::query_as::<_, (Option<String>, bool)>(
+        "SELECT email, is_email_verified FROM users WHERE pubkey = $1",
+    )
+    .bind(user.pubkey().to_string())
+    .fetch_one(&app_state.db_pool)
+    .await
+    .unwrap();
+
+    assert_eq!(user_record.0, Some("new@example.com".to_string()));
+    assert!(user_record.1);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_verify_email_verified_user_invalid_code_keeps_old_email() {
+    let (app, app_state, _guard) = setup_test_app().await;
+
+    let user = TestUser::new();
+
+    sqlx::query(
+        "INSERT INTO users (pubkey, lightning_address, email, is_email_verified) VALUES ($1, $2, $3, $4)",
+    )
+    .bind(user.pubkey().to_string())
+    .bind("test@localhost")
+    .bind("old@example.com")
+    .bind(true)
+    .execute(&app_state.db_pool)
+    .await
+    .unwrap();
+
+    let access_token = user.access_token(&app_state);
+    app_state
+        .email_verification_store
+        .store(&user.pubkey().to_string(), "new@example.com", "123456")
+        .await
+        .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/email/verify")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "code": "999999"
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let user_record = sqlx::query_as::<_, (Option<String>, bool)>(
+        "SELECT email, is_email_verified FROM users WHERE pubkey = $1",
+    )
+    .bind(user.pubkey().to_string())
+    .fetch_one(&app_state.db_pool)
+    .await
+    .unwrap();
+
+    assert_eq!(user_record.0, Some("old@example.com".to_string()));
+    assert!(user_record.1);
 }
 
 #[tracing_test::traced_test]

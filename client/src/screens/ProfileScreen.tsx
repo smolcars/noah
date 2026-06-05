@@ -269,20 +269,16 @@ const ProfileScreen = () => {
                   </Text>
                 </View>
               )}
-              {!isEmailVerified ? (
-                <>
-                  <View className="h-px bg-border" />
-                  <Pressable
-                    onPress={() => navigation.navigate("EmailVerification", { fromSettings: true })}
-                    className="flex-row items-center justify-between px-4 py-4"
-                  >
-                    <Text className="text-base font-semibold text-foreground">
-                      Add Emergency Email
-                    </Text>
-                    <Icon name="chevron-forward-outline" size={22} color={iconColor} />
-                  </Pressable>
-                </>
-              ) : null}
+              <View className="h-px bg-border" />
+              <Pressable
+                onPress={() => navigation.navigate("EmailVerification", { fromSettings: true })}
+                className="flex-row items-center justify-between px-4 py-4"
+              >
+                <Text className="text-base font-semibold text-foreground">
+                  {isEmailVerified ? "Change Emergency Email" : "Add Emergency Email"}
+                </Text>
+                <Icon name="chevron-forward-outline" size={22} color={iconColor} />
+              </Pressable>
             </View>
           </View>
 
