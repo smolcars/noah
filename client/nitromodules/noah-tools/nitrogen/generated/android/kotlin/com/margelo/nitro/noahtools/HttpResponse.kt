@@ -39,7 +39,7 @@ data class HttpResponse(
   }
 
   override fun hashCode(): Int {
-    return arrayOf(
+    return arrayOf<Any?>(
       status,
       body,
       headers

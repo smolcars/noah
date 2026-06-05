@@ -11,31 +11,26 @@
 
 #include "noahtoolsOnLoad.hpp"
 
-#include <NitroModules/HybridObjectRegistry.hpp>
-#include <fbjni/fbjni.h>
 #include <jni.h>
+#include <fbjni/fbjni.h>
+#include <NitroModules/HybridObjectRegistry.hpp>
 
 #include "JHybridNoahToolsSpec.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
 
 namespace margelo::nitro::noahtools {
 
-int initialize(JavaVM *vm) {
-  return facebook::jni::initialize(
-      vm, []() { margelo::nitro::noahtools::registerAllNatives(); });
+int initialize(JavaVM* vm) {
+  return facebook::jni::initialize(vm, []() {
+    ::margelo::nitro::noahtools::registerAllNatives();
+  });
 }
 
-struct JHybridNoahToolsSpecImpl
-    : public jni::JavaClass<JHybridNoahToolsSpecImpl,
-                            JHybridNoahToolsSpec::JavaPart> {
-  static constexpr auto kJavaDescriptor =
-      "Lcom/margelo/nitro/noahtools/NoahTools;";
+struct JHybridNoahToolsSpecImpl: public jni::JavaClass<JHybridNoahToolsSpecImpl, JHybridNoahToolsSpec::JavaPart> {
+  static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/noahtools/NoahTools;";
   static std::shared_ptr<JHybridNoahToolsSpec> create() {
-    static const auto constructorFn =
-        javaClassStatic()
-            ->getConstructor<JHybridNoahToolsSpecImpl::javaobject()>();
-    jni::local_ref<JHybridNoahToolsSpec::JavaPart> javaPart =
-        javaClassStatic()->newObject(constructorFn);
+    static const auto constructorFn = javaClassStatic()->getConstructor<JHybridNoahToolsSpecImpl::javaobject()>();
+    jni::local_ref<JHybridNoahToolsSpec::JavaPart> javaPart = javaClassStatic()->newObject(constructorFn);
     return javaPart->getJHybridNoahToolsSpec();
   }
 };
@@ -49,9 +44,11 @@ void registerAllNatives() {
 
   // Register Nitro Hybrid Objects
   HybridObjectRegistry::registerHybridObjectConstructor(
-      "NoahTools", []() -> std::shared_ptr<HybridObject> {
-        return JHybridNoahToolsSpecImpl::create();
-      });
+    "NoahTools",
+    []() -> std::shared_ptr<HybridObject> {
+      return JHybridNoahToolsSpecImpl::create();
+    }
+  );
 }
 
 } // namespace margelo::nitro::noahtools
