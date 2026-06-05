@@ -50,12 +50,6 @@ jobs:
           unzip ios-release.zip
           rm ios-release.zip
 
-      - name: 📦 Install Maestro
-        run: |
-          MAESTRO_VERSION=1.38.1
-          curl -fsSL "https://get.maestro.mobile.dev" | bash
-          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
-
       - name: 🔧 Setup Regtest Environment
         run: cd scripts && docker-compose pull && docker-compose build && ./ark-dev.sh setup-everything
 

@@ -135,6 +135,7 @@
             bundler
             cocoapods
             (darwinDerivations.xcode-wrapper pkgs)
+            maestro
           ];
 
           darwinHook = ''
