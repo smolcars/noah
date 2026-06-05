@@ -101,7 +101,7 @@ export type LightningAddressSuggestionsResponse = {
  */
 suggestions: Array<string>, };
 
-export type LightningClaimRequestNotification = { payment_hash: string | null, amount_sat: number | null, };
+export type LightningClaimRequestNotification = { payment_hash: string, amount_sat: number, };
 
 export type LightningInvoiceRequestNotification = { transaction_id: string, amount: number, };
 

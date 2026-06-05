@@ -35,6 +35,7 @@ interface SendConfirmationProps {
   feeEstimateUnavailableText?: string | null;
   feeEstimateNote?: string | null;
   feeEstimateWarning?: string | null;
+  sendError?: string | null;
 }
 
 const truncateValue = (value: string) => {
@@ -69,6 +70,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
   feeEstimateUnavailableText = null,
   feeEstimateNote = null,
   feeEstimateWarning = null,
+  sendError = null,
 }) => {
   const colors = useThemeColors();
   const isOnchainDestination =
@@ -136,13 +138,19 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
 
   const usdAmount = btcPrice ? satsToUsd(amount, btcPrice) : 0;
   const resolvedDestination = getDestinationDisplay();
+  const title = isLoading ? "Sending payment" : sendError ? "Send failed" : "Confirm send";
+  const description = isLoading
+    ? "Keep Noah open while this completes."
+    : sendError
+      ? "Review the error, then retry or cancel."
+      : "Review the route and fee before sending.";
 
   return (
     <View>
       <View className="items-center">
-        <Text className="text-center text-2xl font-bold text-foreground">Confirm send</Text>
+        <Text className="text-center text-2xl font-bold text-foreground">{title}</Text>
         <Text className="mt-1 max-w-[280px] text-center text-sm text-muted-foreground">
-          Review the route and fee before sending.
+          {description}
         </Text>
       </View>
 
@@ -182,7 +190,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
           <Bip321Picker
             bip321Data={bip321Data}
             selectedPaymentMethod={selectedPaymentMethod}
-            onSelect={onSelectPaymentMethod}
+            onSelect={isLoading ? () => undefined : onSelectPaymentMethod}
             showSectionHeader={false}
             showSelectedDestination={false}
           />
@@ -205,6 +213,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
                       <Pressable
                         key={source}
                         onPress={() => onSelectOnchainSource(source)}
+                        disabled={isLoading}
                         className="flex-1 rounded-2xl border px-3 py-3"
                         style={{
                           borderColor: isSelected
@@ -213,6 +222,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
                           backgroundColor: isSelected
                             ? "rgba(201, 138, 60, 0.14)"
                             : `${colors.card}99`,
+                          opacity: isLoading ? 0.65 : 1,
                         }}
                       >
                         <Text
@@ -278,6 +288,13 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
           <Text className="text-sm leading-5 text-amber-700 dark:text-amber-200">
             {feeEstimateWarning}
           </Text>
+        </View>
+      ) : null}
+
+      {sendError ? (
+        <View className="mt-3 rounded-2xl border border-destructive/35 bg-destructive/10 px-4 py-3">
+          <Text className="text-sm font-semibold text-destructive">Payment did not send</Text>
+          <Text className="mt-1 text-sm leading-5 text-destructive/90">{sendError}</Text>
         </View>
       ) : null}
 

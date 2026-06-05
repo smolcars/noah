@@ -54,16 +54,13 @@ async function ensureDefaultNotificationChannel() {
   });
 }
 
-async function scheduleLightningPaymentNotification(amountSat: number | null): Promise<string> {
+async function scheduleLightningPaymentNotification(amountSat: number): Promise<string> {
   await ensureDefaultNotificationChannel();
 
   return Notifications.scheduleNotificationAsync({
     content: {
       title: "Lightning Payment Received! ⚡",
-      body:
-        amountSat === null
-          ? "You received a Lightning payment."
-          : `You received ${formatBip177(amountSat)}`,
+      body: `You received ${formatBip177(amountSat)}`,
       sound: "default",
       priority: Notifications.AndroidNotificationPriority.MAX,
       data: {

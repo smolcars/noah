@@ -351,8 +351,6 @@ const readLightningPayment = async (
 };
 
 export function useSend(destinationType: DestinationTypes) {
-  const { showAlert } = useAlert();
-
   return useMutation<SendResult, Error, SendVariables>({
     mutationFn: async (variables) => {
       const { destination, amountSat, comment, onchainSource } = variables;
@@ -416,9 +414,6 @@ export function useSend(destinationType: DestinationTypes) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["balance"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-    },
-    onError: (error: Error) => {
-      showAlert({ title: "Send Failed", description: error.message });
     },
   });
 }

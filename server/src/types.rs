@@ -367,9 +367,9 @@ pub struct LightningInvoiceRequestNotification {
 #[derive(Debug, Serialize, Deserialize, TS, Clone)]
 #[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 pub struct LightningClaimRequestNotification {
-    pub payment_hash: Option<String>,
-    #[ts(type = "number | null")]
-    pub amount_sat: Option<u64>,
+    pub payment_hash: String,
+    #[ts(type = "number")]
+    pub amount_sat: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, TS, Clone)]

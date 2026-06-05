@@ -518,7 +518,7 @@ async fn process_mailbox_message(
         Some(Message::IncomingLightningPayment(lightning_payment)) if send_notifications => {
             let payment_hash = hex::encode(&lightning_payment.payment_hash);
             let amount_sat = lightning_payment.amount_msat / 1000;
-            let notification = build_lightning_claim_notification(payment_hash, Some(amount_sat))?;
+            let notification = build_lightning_claim_notification(payment_hash, amount_sat)?;
 
             tracing::info!(
                 service = "mailbox_worker",
@@ -598,11 +598,11 @@ fn should_suppress_catchup_notifications(last_checkpoint: i64) -> bool {
 
 fn build_lightning_claim_notification(
     payment_hash: String,
-    amount_sat: Option<u64>,
+    amount_sat: u64,
 ) -> Result<PushNotificationData, ApiError> {
     let data = serde_json::to_string(&NotificationData::LightningClaimRequest(
         LightningClaimRequestNotification {
-            payment_hash: Some(payment_hash),
+            payment_hash,
             amount_sat,
         },
     ))
@@ -737,9 +737,8 @@ mod tests {
         let payment_hash = "00".repeat(32);
         let amount_sat = 42_000;
 
-        let notification =
-            build_lightning_claim_notification(payment_hash.clone(), Some(amount_sat))
-                .expect("lightning claim notification should build");
+        let notification = build_lightning_claim_notification(payment_hash.clone(), amount_sat)
+            .expect("lightning claim notification should build");
 
         assert_eq!(notification.title, None);
         assert_eq!(notification.body, None);
@@ -751,8 +750,8 @@ mod tests {
         assert!(matches!(
             data,
             NotificationData::LightningClaimRequest(LightningClaimRequestNotification {
-                payment_hash: Some(hash),
-                amount_sat: Some(amount),
+                payment_hash: hash,
+                amount_sat: amount,
             }) if hash == payment_hash && amount == amount_sat
         ));
     }

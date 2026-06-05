@@ -8,7 +8,6 @@ import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
 import { type Transaction, type PaymentTypes } from "../types/transaction";
-import { Label } from "~/components/ui/label";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { TabParamList, TransactionsStackParamList } from "~/Navigators";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -208,38 +207,39 @@ const TransactionsScreen = () => {
               renderItem={({ item }: { item: Transaction }) => {
                 return (
                   <View style={{ marginBottom: 8 }}>
-                    <Pressable onPress={() => openTransaction(item)}>
-                      <View className="flex-row items-center p-4 bg-card rounded-lg">
-                        <View className="mr-4">
-                          <Icon
-                            name={getIconForType(item.type)}
-                            size={24}
-                            color={item.direction === "outgoing" ? "red" : "green"}
-                          />
-                        </View>
-                        <View className="flex-1">
-                          <View className="flex-row justify-between gap-4">
-                            <View className="flex-1">
-                              <Label className="text-foreground text-base">
-                                {item.type === "Bolt11" || item.type === "Lnurl"
-                                  ? "Lightning"
-                                  : item.type}
-                              </Label>
-                            </View>
-                            <View className="items-end">
-                              <Text
-                                className={`text-base font-bold ${
-                                  item.direction === "outgoing" ? "text-red-500" : "text-green-500"
-                                }`}
-                              >
-                                {`${item.direction === "outgoing" ? "-" : "+"}${formatBip177(item.amount)}`}
-                              </Text>
-                            </View>
+                    <Pressable
+                      onPress={() => openTransaction(item)}
+                      className="w-full flex-row items-center rounded-lg bg-card p-4"
+                    >
+                      <View pointerEvents="none" className="mr-4">
+                        <Icon
+                          name={getIconForType(item.type)}
+                          size={24}
+                          color={item.direction === "outgoing" ? "red" : "green"}
+                        />
+                      </View>
+                      <View pointerEvents="none" className="flex-1">
+                        <View className="flex-row justify-between gap-4">
+                          <View className="flex-1">
+                            <Text className="text-foreground text-base font-medium">
+                              {item.type === "Bolt11" || item.type === "Lnurl"
+                                ? "Lightning"
+                                : item.type}
+                            </Text>
                           </View>
-                          <Text className="text-muted-foreground text-sm mt-1">
-                            {item.dateLabel ?? new Date(item.date).toLocaleString()}
-                          </Text>
+                          <View className="items-end">
+                            <Text
+                              className={`text-base font-bold ${
+                                item.direction === "outgoing" ? "text-red-500" : "text-green-500"
+                              }`}
+                            >
+                              {`${item.direction === "outgoing" ? "-" : "+"}${formatBip177(item.amount)}`}
+                            </Text>
+                          </View>
                         </View>
+                        <Text className="text-muted-foreground text-sm mt-1">
+                          {item.dateLabel ?? new Date(item.date).toLocaleString()}
+                        </Text>
                       </View>
                     </Pressable>
                   </View>

@@ -7,7 +7,6 @@ import { Text } from "../components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
-import { Label } from "~/components/ui/label";
 import { useNavigation } from "@react-navigation/native";
 import { HomeStackParamList } from "~/Navigators";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -212,36 +211,37 @@ const BoardingTransactionsScreen = () => {
 
                 return (
                   <View style={{ marginBottom: 8 }}>
-                    <Pressable onPress={() => openTransaction(item)}>
-                      <View className="flex-row items-center p-4 bg-card rounded-lg">
-                        <View className="mr-4">
-                          <Icon
-                            name={getIconForType(item.type)}
-                            size={24}
-                            color={item.type === "onboarding" ? "green" : "orange"}
-                          />
-                        </View>
-                        <View className="flex-1">
-                          <View className="flex-row justify-between items-center">
-                            <Label className="text-foreground text-base">
-                              {formatBoardingType(item.type)}
-                            </Label>
-                            <Text className={`text-sm font-medium ${getStatusColor(item.status)}`}>
-                              {statusLabel}
-                            </Text>
-                          </View>
-                          <Text className="text-foreground text-sm mt-1">
-                            {formatBip177(item.amountSat)}
+                    <Pressable
+                      onPress={() => openTransaction(item)}
+                      className="w-full flex-row items-center rounded-lg bg-card p-4"
+                    >
+                      <View pointerEvents="none" className="mr-4">
+                        <Icon
+                          name={getIconForType(item.type)}
+                          size={24}
+                          color={item.type === "onboarding" ? "green" : "orange"}
+                        />
+                      </View>
+                      <View pointerEvents="none" className="flex-1">
+                        <View className="flex-row justify-between items-center">
+                          <Text className="text-foreground text-base font-medium">
+                            {formatBoardingType(item.type)}
                           </Text>
-                          <Text className="text-muted-foreground text-sm mt-1">
-                            {new Date(item.date).toLocaleString()}
+                          <Text className={`text-sm font-medium ${getStatusColor(item.status)}`}>
+                            {statusLabel}
                           </Text>
-                          {item.txid && (
-                            <Text className="text-muted-foreground text-xs mt-1" numberOfLines={1}>
-                              TXID: {item.txid}
-                            </Text>
-                          )}
                         </View>
+                        <Text className="text-foreground text-sm mt-1">
+                          {formatBip177(item.amountSat)}
+                        </Text>
+                        <Text className="text-muted-foreground text-sm mt-1">
+                          {new Date(item.date).toLocaleString()}
+                        </Text>
+                        {item.txid && (
+                          <Text className="text-muted-foreground text-xs mt-1" numberOfLines={1}>
+                            TXID: {item.txid}
+                          </Text>
+                        )}
                       </View>
                     </Pressable>
                   </View>

@@ -4,6 +4,7 @@ import {
   Pressable,
   TouchableWithoutFeedback,
   Keyboard,
+  InteractionManager,
   TextInput,
   ScrollView,
 } from "react-native";
@@ -192,8 +193,13 @@ const ReceiveScreen = () => {
   const lightningSubscriptionRef = useRef<BarkNotificationSubscription | null>(null);
   const arkSubscriptionRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lightningSubscriptionRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingReceiveGenerationTaskRef = useRef<ReturnType<
+    typeof InteractionManager.runAfterInteractions
+  > | null>(null);
+  const receiveGenerationRequestIdRef = useRef(0);
   const isCompletingReceiveRef = useRef(false);
   const amountInputRef = useRef<TextInput>(null);
+  const [isSchedulingGeneration, setIsSchedulingGeneration] = useState(false);
   const [arkSubscriptionRetryTick, setArkSubscriptionRetryTick] = useState(0);
   const [lightningSubscriptionRetryTick, setLightningSubscriptionRetryTick] = useState(0);
 
@@ -206,7 +212,8 @@ const ReceiveScreen = () => {
   const { mutateAsync: generateLightningInvoice, isPending: isGeneratingLightning } =
     useGenerateLightningInvoice();
 
-  const isLoading = isGeneratingVtxo || isGeneratingOnchain || isGeneratingLightning;
+  const isLoading =
+    isSchedulingGeneration || isGeneratingVtxo || isGeneratingOnchain || isGeneratingLightning;
   const generatedAmountSat = generatedRequest?.amountSat ?? null;
   const arkAddress = generatedRequest?.arkAddress;
   const generatedOnchainAddress = generatedRequest?.onchainAddress;
@@ -290,6 +297,13 @@ const ReceiveScreen = () => {
     lightningSubscriptionRetryTimeoutRef.current = null;
   }, []);
 
+  const cancelPendingReceiveGeneration = useCallback(() => {
+    receiveGenerationRequestIdRef.current += 1;
+    pendingReceiveGenerationTaskRef.current?.cancel();
+    pendingReceiveGenerationTaskRef.current = null;
+    setIsSchedulingGeneration(false);
+  }, []);
+
   const scheduleArkSubscriptionRetry = useCallback((sessionId: number) => {
     if (arkSubscriptionRetryTimeoutRef.current) {
       return;
@@ -335,6 +349,7 @@ const ReceiveScreen = () => {
   const cancelReceiveSession = useCallback(
     ({ resetAmount }: { resetAmount: boolean }) => {
       receiveSessionIdRef.current += 1;
+      cancelPendingReceiveGeneration();
       activeReceiveSessionRef.current = null;
       isCompletingReceiveRef.current = false;
       clearArkSubscriptionRetry();
@@ -347,6 +362,7 @@ const ReceiveScreen = () => {
       clearArkSubscriptionRetry,
       clearGeneratedReceiveData,
       clearLightningSubscriptionRetry,
+      cancelPendingReceiveGeneration,
       releaseArkSubscription,
       releaseLightningSubscription,
     ],
@@ -514,9 +530,7 @@ const ReceiveScreen = () => {
     }, [cancelReceiveSession]),
   );
 
-  const handleGenerate = () => {
-    Keyboard.dismiss();
-
+  const generateReceiveRequest = useCallback(() => {
     if (hasEnteredAmount && amountSat < minAmount) {
       showAlert({
         title: "Invalid Amount",
@@ -588,6 +602,33 @@ const ReceiveScreen = () => {
         });
       },
     );
+  }, [
+    amountSat,
+    cancelReceiveSession,
+    generateLightningInvoice,
+    generateOffchainAddress,
+    generateOnchainAddress,
+    hasEnteredAmount,
+    showAlert,
+  ]);
+
+  const handleGenerate = () => {
+    Keyboard.dismiss();
+    cancelPendingReceiveGeneration();
+
+    const requestId = receiveGenerationRequestIdRef.current + 1;
+    receiveGenerationRequestIdRef.current = requestId;
+    setIsSchedulingGeneration(true);
+
+    pendingReceiveGenerationTaskRef.current = InteractionManager.runAfterInteractions(() => {
+      if (receiveGenerationRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      pendingReceiveGenerationTaskRef.current = null;
+      setIsSchedulingGeneration(false);
+      generateReceiveRequest();
+    });
   };
 
   const handleClear = () => {
@@ -623,6 +664,7 @@ const ReceiveScreen = () => {
         <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 32 }}
         >
           <View className="px-5 pb-8">

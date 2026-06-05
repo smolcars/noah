@@ -405,6 +405,7 @@ export const useSendScreen = () => {
 
     if (displayResult) {
       if (displayResult.success) {
+        setShowConfirmation(false);
         setShowSuccess(true);
       }
       setParsedResult(displayResult);
@@ -449,6 +450,10 @@ export const useSendScreen = () => {
 
   const handleConfirmSend = () => {
     setIsDestinationFocused(false);
+    reset();
+    setParsedResult(null);
+    setShowSuccess(false);
+
     if (destinationType === "bip321" && bip321Data) {
       let destinationToSend = null;
       let newDestinationType: DestinationTypes = "onchain";
@@ -516,11 +521,14 @@ export const useSendScreen = () => {
         btcPrice,
       });
     }
-
-    setShowConfirmation(false);
   };
 
   const handleCancelConfirmation = () => {
+    if (isSending) {
+      return;
+    }
+
+    reset();
     setShowConfirmation(false);
   };
 
@@ -541,6 +549,7 @@ export const useSendScreen = () => {
   };
 
   const handleClear = () => {
+    reset();
     setDestination("");
     setComment("");
     setAmount("");
@@ -586,6 +595,7 @@ export const useSendScreen = () => {
     isSending,
     error,
     errorMessage,
+    confirmationError: showConfirmation && error ? errorMessage : null,
     showCamera,
     setShowCamera,
     handleScanPress,
