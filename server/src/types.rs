@@ -98,6 +98,8 @@ pub struct RegisterResponse {
     pub lightning_address: Option<String>,
     /// The user's optional display name.
     pub display_name: Option<String>,
+    /// The user's optional emergency email address.
+    pub email: Option<String>,
     /// Whether the user's email is verified.
     pub is_email_verified: bool,
     /// The user's current operational lifecycle status.
@@ -197,6 +199,8 @@ pub struct UserInfoResponse {
     pub lightning_address: String,
     /// The user's optional display name.
     pub display_name: Option<String>,
+    /// The user's optional emergency email address.
+    pub email: Option<String>,
     /// The user's current operational lifecycle status.
     pub user_status: UserStatus,
 }
@@ -555,4 +559,5 @@ pub struct VerifyEmailPayload {
 pub struct EmailVerificationResponse {
     pub success: bool,
     pub message: Option<String>,
+    pub email: Option<String>,
 }

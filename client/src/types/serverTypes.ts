@@ -73,7 +73,7 @@ export type DownloadUrlResponse = { download_url: string, backup_size: number, }
 /**
  * Represents the response for email verification requests.
  */
-export type EmailVerificationResponse = { success: boolean, message: string | null, };
+export type EmailVerificationResponse = { success: boolean, message: string | null, email: string | null, };
 
 export type GetDownloadUrlPayload = { backup_version: number | null, };
 
@@ -160,6 +160,10 @@ lightning_address: string | null,
  */
 display_name: string | null, 
 /**
+ * The user's optional emergency email address.
+ */
+email: string | null,
+/**
  * Whether the user's email is verified.
  */
 is_email_verified: boolean, 
@@ -224,6 +228,10 @@ lightning_address: string,
  * The user's optional display name.
  */
 display_name: string | null, 
+/**
+ * The user's optional emergency email address.
+ */
+email: string | null,
 /**
  * The user's current operational lifecycle status.
  */

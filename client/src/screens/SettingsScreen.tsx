@@ -34,7 +34,6 @@ import { AUTO_BOARD_ONCHAIN_BUFFER_AMOUNT, formatAutoBoardThreshold } from "~/li
 type Setting = {
   id:
     | "profile"
-    | "emergencyEmail"
     | "showMnemonic"
     | "showLogs"
     | "resetRegistration"
@@ -68,7 +67,6 @@ const SettingsScreen = () => {
   const suspendWalletMutation = useSuspendWallet();
   const [versionTapCount, setVersionTapCount] = useState(0);
   const {
-    isEmailVerified,
     isMailboxAuthorizationEnabled,
     setMailboxAuthorizationExpiry,
     setMailboxAuthorizationEnabled,
@@ -176,8 +174,6 @@ const SettingsScreen = () => {
 
     if (item.id === "profile") {
       navigation.navigate("Profile");
-    } else if (item.id === "emergencyEmail") {
-      navigation.navigate("EmailVerification", { fromSettings: true });
     } else if (item.id === "showMnemonic") {
       navigation.navigate("Mnemonic", { fromOnboarding: false });
     } else if (item.id === "showLogs") {
@@ -210,16 +206,8 @@ const SettingsScreen = () => {
     profileData.push({
       id: "profile",
       title: "Profile",
-      description: "Manage your Lightning address, name, and public key.",
+      description: "Manage your name, Lightning address, emergency email, and public key.",
       isPressable: true,
-    });
-    profileData.push({
-      id: "emergencyEmail",
-      title: "Emergency Email",
-      description: isEmailVerified
-        ? "Email alerts are enabled for urgent wallet communication."
-        : "Optional alerts for urgent wallet communication.",
-      isPressable: !isEmailVerified,
     });
 
     infoData.push({

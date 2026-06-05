@@ -51,7 +51,7 @@ const EmailVerificationScreen = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
 
-  const { isRegisteredWithServer, setEmailVerified } = useServerStore();
+  const { isRegisteredWithServer, setEmailAddress, setEmailVerified } = useServerStore();
   const registerMutation = useServerRegistrationMutation();
 
   useEffect(() => {
@@ -104,6 +104,7 @@ const EmailVerificationScreen = () => {
     if (result.isOk()) {
       if (result.value.message === "Email already verified") {
         log.i("Email is already verified on server, syncing local state");
+        setEmailAddress(result.value.email);
         setEmailVerified(true);
         if (fromSettings) {
           showAlert({
@@ -146,6 +147,7 @@ const EmailVerificationScreen = () => {
 
     if (result.isOk() && result.value.success) {
       log.i("Email verified successfully");
+      setEmailAddress(result.value.email ?? email.trim());
       setEmailVerified(true);
 
       if (fromSettings) {

@@ -408,6 +408,7 @@ pub async fn register(
             reason: Some("User already registered".to_string()),
             lightning_address: user.lightning_address,
             display_name: user.display_name,
+            email: user.email,
             is_email_verified: user.is_email_verified,
             user_status: user.status,
         }));
@@ -468,6 +469,7 @@ pub async fn register(
         reason: None,
         lightning_address: Some(ln_address),
         display_name: None,
+        email: None,
         is_email_verified: false,
         user_status: UserStatus::Active,
     }))
@@ -529,6 +531,7 @@ pub async fn send_verification_email(
         return Ok(Json(EmailVerificationResponse {
             success: true,
             message: Some("Email already verified".to_string()),
+            email: user.email,
         }));
     }
 
@@ -561,6 +564,7 @@ pub async fn send_verification_email(
     Ok(Json(EmailVerificationResponse {
         success: true,
         message: Some("Verification code sent".to_string()),
+        email: None,
     }))
 }
 
@@ -585,6 +589,7 @@ pub async fn verify_email(
         return Ok(Json(EmailVerificationResponse {
             success: true,
             message: Some("Email already verified".to_string()),
+            email: user.email,
         }));
     }
 
@@ -622,6 +627,7 @@ pub async fn verify_email(
             Ok(Json(EmailVerificationResponse {
                 success: true,
                 message: Some("Email verified successfully".to_string()),
+                email: Some(verified_email),
             }))
         }
         None => {

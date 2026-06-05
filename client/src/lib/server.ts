@@ -18,12 +18,13 @@ const log = logger("server");
 export const MAILBOX_AUTH_TTL_SECS = 89 * 24 * 60 * 60;
 
 const applyServerRegistrationResult = (response: RegisterResponse) => {
-  const { setRegisteredWithServer, setEmailVerified } = useServerStore.getState();
+  const { setRegisteredWithServer, setEmailAddress, setEmailVerified } = useServerStore.getState();
   const { setDisplayName } = useProfileStore.getState();
-  const { lightning_address, display_name, is_email_verified } = response;
+  const { lightning_address, display_name, email, is_email_verified } = response;
 
   setRegisteredWithServer(true, lightning_address, true);
   setDisplayName(display_name ?? "");
+  setEmailAddress(email);
   setEmailVerified(is_email_verified);
 };
 

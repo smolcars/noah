@@ -8,7 +8,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Text } from "~/components/ui/text";
 import type { SettingsStackParamList } from "~/Navigators";
-import { updateProfile } from "~/lib/api";
+import { getUserInfo, updateProfile } from "~/lib/api";
 import { copyToClipboard } from "~/lib/clipboardUtils";
 import { COLORS } from "~/lib/styleConstants";
 import { useIconColor, useThemeColors } from "~/hooks/useTheme";
@@ -66,7 +66,11 @@ const ProfileScreen = () => {
   const navigation = useNavigation<ProfileNavigationProp>();
   const iconColor = useIconColor();
   const colors = useThemeColors();
+  const emailAddress = useServerStore((state) => state.emailAddress);
+  const isEmailVerified = useServerStore((state) => state.isEmailVerified);
+  const isRegisteredWithServer = useServerStore((state) => state.isRegisteredWithServer);
   const lightningAddress = useServerStore((state) => state.lightningAddress);
+  const setEmailAddress = useServerStore((state) => state.setEmailAddress);
   const displayName = useProfileStore((state) => state.displayName);
   const setDisplayName = useProfileStore((state) => state.setDisplayName);
   const { data: derivedKeyPair } = useDeriveKeyPairFromMnemonic();
@@ -78,6 +82,34 @@ const ProfileScreen = () => {
   useEffect(() => {
     setDraftDisplayName(displayName);
   }, [displayName]);
+
+  useEffect(() => {
+    if (!isRegisteredWithServer || !isEmailVerified || emailAddress) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const refreshEmail = async () => {
+      const result = await getUserInfo();
+      if (cancelled) {
+        return;
+      }
+
+      if (result.isErr()) {
+        log.w("Failed to refresh emergency email from server", [result.error]);
+        return;
+      }
+
+      setEmailAddress(result.value.email);
+    };
+
+    refreshEmail();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [emailAddress, isEmailVerified, isRegisteredWithServer, setEmailAddress]);
 
   const normalizedDisplayName = draftDisplayName.trim();
 
@@ -209,6 +241,48 @@ const ProfileScreen = () => {
                 </Text>
                 <Icon name="chevron-forward-outline" size={22} color={iconColor} />
               </Pressable>
+            </View>
+          </View>
+
+          <View className="mt-8">
+            <Text className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
+              Emergency Email
+            </Text>
+            <View
+              className="mt-3 overflow-hidden rounded-[18px] border"
+              style={{
+                borderColor: `${colors.mutedForeground}24`,
+                backgroundColor: `${colors.card}CC`,
+              }}
+            >
+              {isEmailVerified && emailAddress ? (
+                <CopyRow label="Address" value={emailAddress} />
+              ) : (
+                <View className="px-4 py-4">
+                  <Text className="text-base font-semibold text-foreground">
+                    {isEmailVerified ? "Email alerts enabled" : "No emergency email set"}
+                  </Text>
+                  <Text className="mt-1 text-sm text-muted-foreground">
+                    {isEmailVerified
+                      ? "Your address will appear after the next server sync."
+                      : "Optional alerts for urgent wallet communication."}
+                  </Text>
+                </View>
+              )}
+              {!isEmailVerified ? (
+                <>
+                  <View className="h-px bg-border" />
+                  <Pressable
+                    onPress={() => navigation.navigate("EmailVerification", { fromSettings: true })}
+                    className="flex-row items-center justify-between px-4 py-4"
+                  >
+                    <Text className="text-base font-semibold text-foreground">
+                      Add Emergency Email
+                    </Text>
+                    <Icon name="chevron-forward-outline" size={22} color={iconColor} />
+                  </Pressable>
+                </>
+              ) : null}
             </View>
           </View>
 

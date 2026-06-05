@@ -301,6 +301,7 @@ pub async fn get_user_info(
     Ok(Json(UserInfoResponse {
         lightning_address,
         display_name: user.display_name,
+        email: user.email,
         user_status: user.status,
     }))
 }

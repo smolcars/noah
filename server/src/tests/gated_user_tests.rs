@@ -34,6 +34,16 @@ async fn test_get_user_info() {
     .unwrap();
     tx.commit().await.unwrap();
 
+    let user_repo = UserRepository::new(&app_state.db_pool);
+    user_repo
+        .update_email(&user.pubkey().to_string(), "safety@example.com")
+        .await
+        .unwrap();
+    user_repo
+        .set_email_verified(&user.pubkey().to_string())
+        .await
+        .unwrap();
+
     let response = app
         .clone()
         .oneshot(
@@ -58,6 +68,7 @@ async fn test_get_user_info() {
 
     assert_eq!(res.lightning_address, "existing@localhost");
     assert_eq!(res.display_name, None);
+    assert_eq!(res.email, Some("safety@example.com".to_string()));
     assert_eq!(res.user_status, UserStatus::Active);
 }
 

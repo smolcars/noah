@@ -41,6 +41,7 @@ interface ServerState {
   isRegisteredWithServer: boolean;
   lightningAddress: string | null;
   isBackupEnabled: boolean;
+  emailAddress: string | null;
   isEmailVerified: boolean;
   isEmailPromptDismissed: boolean;
   mailboxAuthorizationExpiry: number | null;
@@ -52,6 +53,7 @@ interface ServerState {
   ) => void;
   setLightningAddress: (lightningAddress: string) => void;
   setBackupEnabled: (enabled: boolean) => void;
+  setEmailAddress: (emailAddress: string | null) => void;
   setEmailVerified: (verified: boolean) => void;
   setEmailPromptDismissed: (dismissed: boolean) => void;
   setMailboxAuthorizationExpiry: (expiry: number | null) => void;
@@ -65,6 +67,7 @@ export const useServerStore = create<ServerState>()(
       isRegisteredWithServer: false,
       lightningAddress: null,
       isBackupEnabled: false,
+      emailAddress: null,
       isEmailVerified: false,
       isEmailPromptDismissed: false,
       mailboxAuthorizationExpiry: null,
@@ -73,6 +76,7 @@ export const useServerStore = create<ServerState>()(
         set({ isRegisteredWithServer: isRegistered, lightningAddress, isBackupEnabled }),
       setLightningAddress: (lightningAddress) => set({ lightningAddress }),
       setBackupEnabled: (enabled) => set({ isBackupEnabled: enabled }),
+      setEmailAddress: (emailAddress) => set({ emailAddress }),
       setEmailVerified: (verified) => set({ isEmailVerified: verified }),
       setEmailPromptDismissed: (dismissed) => set({ isEmailPromptDismissed: dismissed }),
       setMailboxAuthorizationExpiry: (mailboxAuthorizationExpiry) =>
@@ -84,6 +88,7 @@ export const useServerStore = create<ServerState>()(
           isRegisteredWithServer: false,
           lightningAddress: null,
           isBackupEnabled: false,
+          emailAddress: null,
           isEmailVerified: false,
           isEmailPromptDismissed: false,
           mailboxAuthorizationExpiry: null,
