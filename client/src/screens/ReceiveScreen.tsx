@@ -25,7 +25,6 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { TabParamList } from "~/Navigators";
 import Icon from "@react-native-vector-icons/ionicons";
-import Animated, { FadeInDown, FadeInUp, ZoomIn } from "react-native-reanimated";
 import { useIconColor, useThemeColors } from "../hooks/useTheme";
 import { satsToBtc, formatNumber, formatBip177 } from "~/lib/utils";
 import { useReceiveScreen } from "../hooks/useReceiveScreen";
@@ -675,16 +674,16 @@ const ReceiveScreen = () => {
               <Text className="text-2xl font-bold text-foreground">Receive</Text>
             </View>
 
-            <Animated.View entering={FadeInUp.duration(520)} className="pt-1">
+            <View className="pt-1">
               <Text className="text-[11px] font-semibold uppercase tracking-[3px] text-muted-foreground">
                 Receive Bitcoin
               </Text>
               <Text className="mt-2 max-w-[320px] text-base leading-6 text-muted-foreground">
                 Generate a payment request with Ark, Lightning, and on-chain rails when available.
               </Text>
-            </Animated.View>
+            </View>
 
-            <Animated.View className="mt-4">
+            <View className="mt-4">
               <View className="flex-row items-start justify-end gap-4">
                 <View className="flex-1">
                   {isGenerated ? (
@@ -762,7 +761,7 @@ const ReceiveScreen = () => {
               </View>
 
               {bip321Uri ? (
-                <Animated.View entering={ZoomIn.duration(420)} className="mt-7 items-center">
+                <View className="mt-7 items-center">
                   <View className="items-center justify-center px-2 py-2">
                     <View className="rounded-[24px] bg-white p-4 shadow-sm shadow-foreground/5">
                       <QRCode value={bip321Uri} size={190} backgroundColor="white" color="black" />
@@ -779,13 +778,12 @@ const ReceiveScreen = () => {
                   <Text className="mt-3 max-w-[270px] text-center text-sm leading-6 text-muted-foreground">
                     This QR includes every receive rail that generated successfully.
                   </Text>
-                </Animated.View>
+                </View>
               ) : null}
-            </Animated.View>
+            </View>
 
             {isGenerated && (
-              <Animated.View
-                entering={FadeInDown.duration(520).delay(80)}
+              <View
                 className="mt-6 overflow-hidden border-t px-1"
                 style={{
                   borderColor: `${colors.mutedForeground}22`,
@@ -837,10 +835,10 @@ const ReceiveScreen = () => {
                     isCopied={isCopied("onchain")}
                   />
                 )}
-              </Animated.View>
+              </View>
             )}
 
-            <Animated.View className="mt-5 flex-row items-center gap-3">
+            <View className="mt-5 flex-row items-center gap-3">
               <Button
                 onPress={handleClear}
                 disabled={isClearDisabled}
@@ -857,7 +855,7 @@ const ReceiveScreen = () => {
               >
                 {isGenerated ? "New request" : "Generate request"}
               </NoahButton>
-            </Animated.View>
+            </View>
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
