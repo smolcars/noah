@@ -527,7 +527,13 @@ pub async fn send_verification_email(
         .await?
         .ok_or_else(|| ApiError::UserNotFound)?;
 
-    if user.is_email_verified {
+    let requested_email = payload.email.trim();
+    if user.is_email_verified
+        && user
+            .email
+            .as_deref()
+            .is_some_and(|email| email.eq_ignore_ascii_case(requested_email))
+    {
         return Ok(Json(EmailVerificationResponse {
             success: true,
             message: Some("Email already verified".to_string()),
@@ -539,7 +545,7 @@ pub async fn send_verification_email(
 
     state
         .email_verification_store
-        .store(&auth_payload.key, &payload.email, &code)
+        .store(&auth_payload.key, requested_email, &code)
         .await
         .map_err(|e| {
             tracing::error!("Failed to store verification code: {}", e);
@@ -548,7 +554,7 @@ pub async fn send_verification_email(
 
     state
         .email_client
-        .send_verification_email(&payload.email, &code)
+        .send_verification_email(requested_email, &code)
         .await
         .map_err(|e| {
             tracing::error!("Failed to send verification email: {}", e);
@@ -557,7 +563,7 @@ pub async fn send_verification_email(
 
     tracing::info!(
         "Verification email sent to {} for user {}",
-        payload.email,
+        requested_email,
         auth_payload.key
     );
 
@@ -577,21 +583,10 @@ pub async fn verify_email(
 ) -> anyhow::Result<Json<EmailVerificationResponse>, ApiError> {
     let user_repo = UserRepository::new(&state.db_pool);
 
-    let user = user_repo
+    user_repo
         .find_by_pubkey(&auth_payload.key)
         .await?
         .ok_or_else(|| ApiError::UserNotFound)?;
-
-    if user.is_email_verified {
-        if let Some(Extension(event)) = &event {
-            event.add_context("verification_result", "already_verified");
-        }
-        return Ok(Json(EmailVerificationResponse {
-            success: true,
-            message: Some("Email already verified".to_string()),
-            email: user.email,
-        }));
-    }
 
     let email = state
         .email_verification_store

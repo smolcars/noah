@@ -51,8 +51,15 @@ const EmailVerificationScreen = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
 
-  const { isRegisteredWithServer, setEmailAddress, setEmailVerified } = useServerStore();
+  const {
+    emailAddress: currentEmailAddress,
+    isEmailVerified,
+    isRegisteredWithServer,
+    setEmailAddress,
+    setEmailVerified,
+  } = useServerStore();
   const registerMutation = useServerRegistrationMutation();
+  const isChangingEmail = Boolean(fromSettings && isEmailVerified);
 
   useEffect(() => {
     if (fromSettings || isRegisteredWithServer) {
@@ -88,7 +95,8 @@ const EmailVerificationScreen = () => {
   };
 
   const handleSendCode = async () => {
-    if (!isValidEmail(email)) {
+    const trimmedEmail = email.trim();
+    if (!isValidEmail(trimmedEmail)) {
       showAlert({
         title: "Invalid Email",
         description: "Please enter a valid email address.",
@@ -98,18 +106,19 @@ const EmailVerificationScreen = () => {
 
     Keyboard.dismiss();
     setIsSendingCode(true);
+    setEmail(trimmedEmail);
 
-    const result = await sendVerificationEmail({ email });
+    const result = await sendVerificationEmail({ email: trimmedEmail });
 
     if (result.isOk()) {
       if (result.value.message === "Email already verified") {
         log.i("Email is already verified on server, syncing local state");
-        setEmailAddress(result.value.email);
+        setEmailAddress(result.value.email ?? trimmedEmail);
         setEmailVerified(true);
         if (fromSettings) {
           showAlert({
             title: "Already Verified",
-            description: "Your email is already verified.",
+            description: "This email is already verified.",
           });
           navigation.goBack();
         } else {
@@ -152,8 +161,10 @@ const EmailVerificationScreen = () => {
 
       if (fromSettings) {
         showAlert({
-          title: "Email Verified",
-          description: "Your email has been verified successfully.",
+          title: isChangingEmail ? "Email Updated" : "Email Verified",
+          description: isChangingEmail
+            ? "Your emergency email has been updated."
+            : "Your email has been verified successfully.",
         });
         navigation.goBack();
       } else {
@@ -197,14 +208,19 @@ const EmailVerificationScreen = () => {
           <Pressable onPress={() => navigation.goBack()} className="mr-4">
             <Icon name="arrow-back-outline" size={24} color={iconColor} />
           </Pressable>
-          <Text className="text-2xl font-bold text-foreground">Emergency Email</Text>
+          <Text className="text-2xl font-bold text-foreground">
+            {isChangingEmail ? "Change Emergency Email" : "Emergency Email"}
+          </Text>
         </View>
 
         {!codeSent ? (
           <>
             <Text className="text-muted-foreground mb-6">
-              Email is optional. Noah uses it only for urgent wallet safety messages, such as when
-              your VTXOs are close to expiring and you need to come online to refresh them.
+              {isChangingEmail
+                ? `Your current email${
+                    currentEmailAddress ? `, ${currentEmailAddress},` : ""
+                  } will stay active until the new email is verified.`
+                : "Email is optional. Noah uses it only for urgent wallet safety messages, such as when your VTXOs are close to expiring and you need to come online to refresh them."}
             </Text>
 
             <View className="bg-card rounded-2xl border border-border p-5 space-y-5">
@@ -216,7 +232,7 @@ const EmailVerificationScreen = () => {
                   value={email}
                   onChangeText={setEmail}
                   className="h-16 rounded-2xl border border-border bg-background/90 px-4 text-lg leading-6 text-foreground"
-                  placeholder="your@email.com"
+                  placeholder={isChangingEmail ? "new@email.com" : "your@email.com"}
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardType="email-address"
@@ -231,7 +247,7 @@ const EmailVerificationScreen = () => {
               isLoading={isSendingCode}
               disabled={!email || isSendingCode}
             >
-              Send Verification Code
+              {isChangingEmail ? "Send Code to New Email" : "Send Verification Code"}
             </NoahButton>
             {!fromSettings && (
               <Pressable onPress={handleSkip} className="mt-5 items-center">
@@ -242,7 +258,9 @@ const EmailVerificationScreen = () => {
         ) : (
           <>
             <Text className="text-muted-foreground mb-2">
-              We sent a 6-digit verification code to:
+              {isChangingEmail
+                ? "We sent a 6-digit verification code to your new email:"
+                : "We sent a 6-digit verification code to:"}
             </Text>
             <Text className="text-foreground font-semibold mb-6">{email}</Text>
 
@@ -284,7 +302,7 @@ const EmailVerificationScreen = () => {
               isLoading={isVerifying}
               disabled={code.length !== CELL_COUNT || isVerifying}
             >
-              Verify Email
+              {isChangingEmail ? "Update Email" : "Verify Email"}
             </NoahButton>
 
             <View className="mt-6 items-center">
