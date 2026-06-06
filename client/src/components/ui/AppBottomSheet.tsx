@@ -28,7 +28,7 @@ export const AppBottomSheet = ({
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const sheetHeight = Math.max(windowHeight - Math.max(insets.top, 16) - 12, 320);
-  const resolvedDetents = detents ?? [0, sheetHeight];
+  const resolvedDetents: Detent[] = detents ?? [0, "content"];
   const openIndex = resolvedDetents.length - 1;
   const shouldConstrainContentHeight = detents === undefined;
 
