@@ -414,14 +414,14 @@ class NoahPushService : PushService() {
         val configConstructor = try {
             configClass.getConstructor(
                 String::class.java,
+                Integer.TYPE,
+                java.lang.Long.TYPE,
                 String::class.java,
                 String::class.java,
                 String::class.java,
                 String::class.java,
                 String::class.java,
                 String::class.java,
-                Integer::class.javaObjectType,
-                java.lang.Long::class.java,
                 Integer::class.javaObjectType,
                 Integer::class.javaObjectType,
                 Integer::class.javaObjectType
@@ -486,15 +486,15 @@ class NoahPushService : PushService() {
 
         return try {
             configConstructor.newInstance(
-                variantJson.optNullableString("ark"),
+                variantJson.requireString("ark"),
+                variantJson.requireInt("vtxoRefreshExpiryThreshold"),
+                variantJson.requireLong("fallbackFeeRate"),
                 null,
                 variantJson.optNullableString("esplora"),
                 variantJson.optNullableString("bitcoind"),
                 variantJson.optNullableString("bitcoindCookie"),
                 variantJson.optNullableString("bitcoindUser"),
                 variantJson.optNullableString("bitcoindPass"),
-                variantJson.optNullableInt("vtxoRefreshExpiryThreshold"),
-                variantJson.optNullableLong("fallbackFeeRate"),
                 variantJson.optNullableInt("htlcRecvClaimDelta"),
                 variantJson.optNullableInt("vtxoExitMargin"),
                 variantJson.optNullableInt("roundTxRequiredConfirmations")
@@ -530,13 +530,22 @@ class NoahPushService : PushService() {
         return optString(key).takeIf { it.isNotEmpty() }
     }
 
+    private fun JSONObject.requireString(key: String): String =
+        requireNotNull(optNullableString(key)) { "Missing required config value '$key'." }
+
     private fun JSONObject.optNullableInt(key: String): Int? {
         if (!has(key) || isNull(key)) return null
         return optInt(key)
     }
 
+    private fun JSONObject.requireInt(key: String): Int =
+        requireNotNull(optNullableInt(key)) { "Missing required config value '$key'." }
+
     private fun JSONObject.optNullableLong(key: String): Long? {
         if (!has(key) || isNull(key)) return null
         return optLong(key)
     }
+
+    private fun JSONObject.requireLong(key: String): Long =
+        requireNotNull(optNullableLong(key)) { "Missing required config value '$key'." }
 }
