@@ -8,9 +8,26 @@ env:
     substituters = https://cache.nixos.org/
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_call:
+    inputs:
+      git_ref:
+        description: "Git ref to build"
+        required: false
+        default: ""
+        type: string
+    outputs:
+      apk_filename:
+        description: "The filename of the APK"
+        value: ${{ jobs.android-mainnet-build.outputs.apk_filename }}
+      apk_artifact_name:
+        description: "The artifact name for the APK"
+        value: ${{ jobs.android-mainnet-build.outputs.apk_artifact_name }}
+      aab_filename:
+        description: "The filename of the AAB"
+        value: ${{ jobs.android-mainnet-build.outputs.aab_filename }}
+      aab_artifact_name:
+        description: "The artifact name for the AAB"
+        value: ${{ jobs.android-mainnet-build.outputs.aab_artifact_name }}
   workflow_dispatch:
     inputs:
       git_ref:
@@ -23,6 +40,11 @@ jobs:
   android-mainnet-build:
     name: Build Android Mainnet Artifacts
     runs-on: self-hosted
+    outputs:
+      apk_filename: ${{ steps.rename_outputs.outputs.apk_filename }}
+      apk_artifact_name: ${{ steps.rename_outputs.outputs.apk_filename }}
+      aab_filename: ${{ steps.rename_outputs.outputs.aab_filename }}
+      aab_artifact_name: ${{ steps.rename_outputs.outputs.aab_filename }}
     steps:
       - name: 🔒 Validate trusted git ref
         id: validate_ref
@@ -31,10 +53,12 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            git_ref="${{ github.ref }}"
-          else
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             git_ref="${{ inputs.git_ref }}"
+          elif [[ -n "${{ inputs.git_ref }}" ]]; then
+            git_ref="${{ inputs.git_ref }}"
+          else
+            git_ref="${{ github.ref }}"
           fi
           repo_url="${{ github.server_url }}/${{ github.repository }}.git"
           auth_repo_url="${repo_url/https:\/\//https:\/\/x-access-token:${GITHUB_TOKEN}@}"
