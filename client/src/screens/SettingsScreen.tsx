@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, View, Switch, Image } from "react-native";
+import { Linking, Pressable, ScrollView, View, Switch, Image } from "react-native";
 import Constants from "expo-constants";
 import { useWalletStore } from "../store/walletStore";
 import { useBiometrics } from "../hooks/useBiometrics";
@@ -126,6 +126,10 @@ const SettingsScreen = () => {
         setVersionTapCount(0);
       }, 2000);
     }
+  };
+
+  const handleSupportPress = () => {
+    Linking.openURL("https://t.me/blixtwallet/605026");
   };
 
   const handleBiometricsToggle = async (value: boolean) => {
@@ -564,6 +568,11 @@ const SettingsScreen = () => {
                 versionTapCount < 5 &&
                 ` (${5 - versionTapCount} taps to unlock debug)`}
               {isDebugModeEnabled && " 🔧"}
+            </Text>
+          </Pressable>
+          <Pressable onPress={handleSupportPress} className="mb-1">
+            <Text className="text-muted-foreground text-sm text-center">
+              For support, reach us on Telegram
             </Text>
           </Pressable>
           <Text className="text-muted-foreground text-sm">Made with ❤️ from Noah team</Text>

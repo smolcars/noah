@@ -8,6 +8,8 @@ appId: com.noahwallet.regtest
     clearState: true
 
 - tapOn: "Create Wallet"
+- assertVisible: "Noah is in beta"
+- tapOn: "I accept"
 - assertVisible: "Your Recovery Phrase"
 - tapOn: "I Have Saved It, Continue"
 
