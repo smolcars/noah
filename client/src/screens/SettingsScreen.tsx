@@ -572,7 +572,10 @@ const SettingsScreen = () => {
           </Pressable>
           <Pressable onPress={handleSupportPress} className="mb-1">
             <Text className="text-muted-foreground text-sm text-center">
-              For support, reach us on Telegram
+              For support, reach us on{" "}
+              <Text className="text-sm font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
+                Telegram
+              </Text>
             </Text>
           </Pressable>
           <Text className="text-muted-foreground text-sm">Made with ❤️ from Noah team</Text>
