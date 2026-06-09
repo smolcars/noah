@@ -47,7 +47,7 @@ const LNURLP_MIN_SENDABLE: u64 = 100000;
 const LNURLP_MAX_SENDABLE: u64 = 100000000;
 const COMMENT_ALLOWED_SIZE: u16 = 280;
 const POLL_INTERVAL: Duration = Duration::from_millis(500);
-const TIMEOUT: Duration = Duration::from_secs(30);
+const TIMEOUT: Duration = Duration::from_secs(45);
 /// Generates and returns a new `k1` value for an LNURL-auth flow.
 ///
 /// The `k1` value is a random 32-byte hex-encoded string that is stored in Redis with
@@ -307,7 +307,7 @@ pub async fn lnurlp_request(
         }
     });
 
-    tracing::debug!("Polling for invoice with a 30s timeout...");
+    tracing::debug!("Polling for invoice with a 45s timeout...");
 
     let start = std::time::Instant::now();
 
@@ -328,7 +328,7 @@ pub async fn lnurlp_request(
             Ok(None) => {
                 if start.elapsed() >= TIMEOUT {
                     tracing::error!(
-                        "Invoice request timed out after 30s for transaction_id: {}",
+                        "Invoice request timed out after 45s for transaction_id: {}",
                         transaction_id
                     );
                     return Err(ApiError::ServerErr("Request timed out".to_string()));
