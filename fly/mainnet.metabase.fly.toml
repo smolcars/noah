@@ -1,0 +1,42 @@
+# Fly app configuration for Noah mainnet Metabase.
+#
+# Metabase stores its own users, dashboards, and settings in a separate app
+# database. The Noah mainnet database should be added inside the Metabase UI
+# with a read-only reporting role.
+
+app = "noah-mainnet-metabase"
+primary_region = "iad"
+
+[build]
+  image = "metabase/metabase:latest"
+
+[deploy]
+  strategy = "rolling"
+  wait_timeout = "30m"
+
+[env]
+  MB_DB_TYPE = "postgres"
+  MB_JETTY_HOST = "0.0.0.0"
+  MB_JETTY_PORT = "3000"
+  MB_LOAD_SAMPLE_CONTENT = "false"
+  MB_SITE_URL = "https://noah-mainnet-metabase.fly.dev"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "1m"
+    interval = "30s"
+    method = "GET"
+    timeout = "10s"
+    path = "/api/health"
+
+[[vm]]
+  memory = "4gb"
+  cpu_kind = "shared"
+  cpus = 2

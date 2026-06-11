@@ -5,6 +5,10 @@
 There is intentionally no `fly/mainnet.postgres.toml`.
 Fly Managed Postgres is not deployed as a second app config like the legacy Signet Postgres machine. It is created and attached separately.
 
+Metabase for mainnet is configured separately in `fly/mainnet.metabase.fly.toml`.
+See `fly/mainnet-metabase-setup.md` for the Metabase app database and read-only
+reporting role setup.
+
 ## One-time setup
 
 Create the mainnet app:
