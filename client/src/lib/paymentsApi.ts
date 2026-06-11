@@ -6,6 +6,7 @@ import {
   subscribeArkoorAddressMovements as subscribeArkoorAddressMovementsNitro,
   subscribeLightningPaymentMovements as subscribeLightningPaymentMovementsNitro,
   sendArkoorPayment as sendArkoorPaymentNitro,
+  validateArkoorAddress as validateArkoorAddressNitro,
   payLightningAddress as payLightningAddressNitro,
   payLightningOffer as payLightningOfferNitro,
   checkLightningPayment as checkLightningPaymentNitro,
@@ -155,10 +156,22 @@ export const offboardAllArk = async (address: string): Promise<Result<string, Er
   });
 };
 
+const validateArkoorPaymentAddress = async (destination: string): Promise<Result<void, Error>> => {
+  return ResultAsync.fromPromise(validateArkoorAddressNitro(destination), (error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    return new Error(`Invalid Ark address: ${message}`);
+  });
+};
+
 export const sendArkoorPayment = async (
   destination: string,
   amountSat: number,
 ): Promise<Result<ArkoorPaymentResult, Error>> => {
+  const validationResult = await validateArkoorPaymentAddress(destination);
+  if (validationResult.isErr()) {
+    return err(validationResult.error);
+  }
+
   return ResultAsync.fromPromise(sendArkoorPaymentNitro(destination, amountSat), (error) => {
     const e = new Error(
       `Failed to send arkoor payment: ${error instanceof Error ? error.message : String(error)}`,
