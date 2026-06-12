@@ -10,6 +10,7 @@ import { usePendingRounds } from "~/hooks/useWallet";
 import { COLORS } from "~/lib/styleConstants";
 import { getMempoolTxUrl } from "~/constants";
 import { truncateMiddle } from "~/lib/exitTimeline";
+import { copyToClipboard } from "~/lib/clipboardUtils";
 
 const PENDING_ROUNDS_REFETCH_MS = 30_000;
 
@@ -22,37 +23,73 @@ const formatRoundStatus = (status: PendingRoundStatus["status"]) =>
 const RoundDetailRow = ({
   label,
   value,
+  copyable = false,
   explorerUrl,
 }: {
   label: string;
   value: string;
+  copyable?: boolean;
   explorerUrl?: string | null;
-}) => (
-  <View className="flex-row items-center justify-between border-b border-border/10 py-3 last:border-b-0">
-    <Text className="mr-3 text-sm text-muted-foreground">{label}</Text>
-    {explorerUrl ? (
-      <Pressable
-        onPress={() => Linking.openURL(explorerUrl)}
-        className="min-w-0 flex-1 flex-row items-center justify-end gap-x-2"
-        accessibilityRole="button"
-        accessibilityLabel={`Open ${label} in browser`}
-      >
-        <Text className="min-w-0 text-right text-sm text-foreground" numberOfLines={1}>
-          {truncateMiddle(value, 10, 10)}
+}) => {
+  const [copied, setCopied] = useState(false);
+  const canUseActions = copyable || Boolean(explorerUrl);
+
+  const handleCopy = async () => {
+    await copyToClipboard(value, {
+      onCopy: () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1000);
+      },
+    });
+  };
+
+  return (
+    <View className="flex-row items-center justify-between border-b border-border/10 py-3 last:border-b-0">
+      <Text className="mr-3 text-sm text-muted-foreground">{label}</Text>
+      {canUseActions ? (
+        <View className="min-w-0 flex-1 flex-row items-center justify-end gap-x-3">
+          <Text className="min-w-0 flex-1 text-right text-sm text-foreground" numberOfLines={1}>
+            {truncateMiddle(value, 10, 10)}
+          </Text>
+          {copyable ? (
+            <Pressable
+              onPress={handleCopy}
+              hitSlop={10}
+              className="h-8 w-8 items-center justify-center rounded-full bg-background"
+              accessibilityRole="button"
+              accessibilityLabel={`Copy ${label}`}
+            >
+              <Icon
+                name={copied ? "checkmark-circle-outline" : "copy-outline"}
+                size={17}
+                color={copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE}
+              />
+            </Pressable>
+          ) : null}
+          {explorerUrl ? (
+            <Pressable
+              onPress={() => Linking.openURL(explorerUrl)}
+              hitSlop={10}
+              className="h-8 w-8 items-center justify-center rounded-full bg-background"
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${label} in browser`}
+            >
+              <Icon name="open-outline" size={17} color={COLORS.BITCOIN_ORANGE} />
+            </Pressable>
+          ) : null}
+        </View>
+      ) : (
+        <Text
+          className="min-w-0 flex-1 text-right text-sm text-foreground"
+          numberOfLines={2}
+          ellipsizeMode="middle"
+        >
+          {value}
         </Text>
-        <Icon name="open-outline" size={17} color={COLORS.BITCOIN_ORANGE} />
-      </Pressable>
-    ) : (
-      <Text
-        className="min-w-0 flex-1 text-right text-sm text-foreground"
-        numberOfLines={2}
-        ellipsizeMode="middle"
-      >
-        {value}
-      </Text>
-    )}
-  </View>
-);
+      )}
+    </View>
+  );
+};
 
 const PendingRoundDetail = ({ round }: { round: PendingRoundStatus }) => {
   const fundingTxUrl = round.funding_txid ? getMempoolTxUrl(round.funding_txid) : null;
@@ -66,7 +103,12 @@ const PendingRoundDetail = ({ round }: { round: PendingRoundStatus }) => {
       <RoundDetailRow label="Final" value={round.is_final ? "Yes" : "No"} />
       <RoundDetailRow label="Successful" value={round.is_success ? "Yes" : "No"} />
       {round.funding_txid ? (
-        <RoundDetailRow label="Funding tx" value={round.funding_txid} explorerUrl={fundingTxUrl} />
+        <RoundDetailRow
+          label="Funding tx"
+          value={round.funding_txid}
+          copyable
+          explorerUrl={fundingTxUrl}
+        />
       ) : null}
       {round.unsigned_funding_txids.map((txid, index) => (
         <RoundDetailRow
@@ -112,6 +154,8 @@ export const PendingRoundStatusBanner = () => {
         icon={<Clock3 size={16} color="#60a5fa" />}
         tone="info"
         onPress={() => setIsSheetOpen(true)}
+        actionLabel="View"
+        onActionPress={() => setIsSheetOpen(true)}
       />
       <AppBottomSheet
         isOpen={isSheetOpen}
