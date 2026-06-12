@@ -398,12 +398,12 @@ impl<'a> MailboxAuthorizationRepository<'a> {
         auth_version: i64,
         worker_id: &str,
         now: DateTime<Utc>,
+        renew_after: DateTime<Utc>,
         lease_expires_at: DateTime<Utc>,
     ) -> Result<bool> {
-        let result = sqlx::query(
-            "UPDATE mailbox_authorizations
-             SET lease_expires_at = $5,
-                 updated_at = now()
+        let should_renew = sqlx::query_scalar::<_, bool>(
+            "SELECT lease_expires_at IS NULL OR lease_expires_at <= $5
+             FROM mailbox_authorizations
              WHERE pubkey = $1
                AND auth_version = $2
                AND lease_owner = $3
@@ -417,6 +417,36 @@ impl<'a> MailboxAuthorizationRepository<'a> {
         .bind(auth_version)
         .bind(worker_id)
         .bind(now.timestamp())
+        .bind(renew_after)
+        .fetch_optional(self.pool)
+        .await?;
+
+        if should_renew != Some(true) {
+            return Ok(should_renew.is_some());
+        }
+
+        let result = sqlx::query(
+            "UPDATE mailbox_authorizations
+             SET lease_expires_at = $6,
+                 updated_at = now()
+             WHERE pubkey = $1
+               AND auth_version = $2
+               AND lease_owner = $3
+               AND enabled = TRUE
+               AND status = 'active'
+               AND authorization_hex IS NOT NULL
+               AND authorization_expires_at IS NOT NULL
+               AND authorization_expires_at > $4
+               AND (
+                 lease_expires_at IS NULL
+                 OR lease_expires_at <= $5
+               )",
+        )
+        .bind(pubkey)
+        .bind(auth_version)
+        .bind(worker_id)
+        .bind(now.timestamp())
+        .bind(renew_after)
         .bind(lease_expires_at)
         .execute(self.pool)
         .await?;

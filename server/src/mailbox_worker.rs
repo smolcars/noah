@@ -229,14 +229,14 @@ where
 
             tokio::select! {
                 result = join_set.join_next(), if !join_set.is_empty() => {
-                    if let Some(result) = result {
-                        if let Err(error) = Self::handle_session_result(result, &mut active_pubkeys).await {
-                            tracing::error!(
-                                service = "mailbox_worker",
-                                error = %error,
-                                "mailbox session join failed"
-                            );
-                        }
+                    if let Some(result) = result
+                        && let Err(error) = Self::handle_session_result(result, &mut active_pubkeys).await
+                    {
+                        tracing::error!(
+                            service = "mailbox_worker",
+                            error = %error,
+                            "mailbox session join failed"
+                        );
                     }
                 }
                 _ = sleep(self.config.scan_interval) => {}
@@ -779,6 +779,8 @@ async fn renew_mailbox_claim(
     session: &MailboxSessionContext,
 ) -> Result<bool> {
     let now = Utc::now();
+    let renew_window = chrono::TimeDelta::from_std(session.claim_ttl / 2)?;
+    let renew_after = now + renew_window;
     let lease_expires_at = now + chrono::TimeDelta::from_std(session.claim_ttl)?;
     let repo = MailboxAuthorizationRepository::new(&app_state.db_pool);
     repo.renew_claim(
@@ -786,6 +788,7 @@ async fn renew_mailbox_claim(
         mailbox.auth_version,
         &session.worker_id,
         now,
+        renew_after,
         lease_expires_at,
     )
     .await

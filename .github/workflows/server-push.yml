@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - runner: ubuntu-latest
+          - runner: blacksmith-4vcpu-ubuntu-2404
             platform: linux/amd64
             arch: amd64
           - runner: blacksmith-4vcpu-ubuntu-2404-arm
