@@ -64,9 +64,7 @@ export const SendSuccessBottomSheet: React.FC<SendSuccessBottomSheetProps> = ({
   btcPrice,
   fiatCurrency,
 }) => {
-  const fiatAmount = btcPrice
-    ? satsToFiat(parsedResult.amount_sat, btcPrice, fiatCurrency)
-    : null;
+  const fiatAmount = btcPrice ? satsToFiat(parsedResult.amount_sat, btcPrice, fiatCurrency) : null;
   const colors = useThemeColors();
 
   return (

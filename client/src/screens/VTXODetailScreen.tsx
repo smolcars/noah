@@ -12,12 +12,16 @@ import type { BarkVtxo } from "react-native-nitro-ark";
 import { useGetBlockHeight } from "~/hooks/useMarketData";
 import { formatBip177 } from "~/lib/utils";
 import { getMempoolTxUrl } from "~/constants";
-import { NoahButton } from "~/components/ui/NoahButton";
 import type { SettingsStackParamList } from "~/Navigators";
+import { useGetExpiringVtxos, useGetVtxos, useRefreshExpiringVtxos } from "~/hooks/useWallet";
+import { StatusBannerStrip } from "~/components/StatusBannerStrip";
 
 type VTXOWithStatus = BarkVtxo & {
   isExpiring: boolean;
+  isExpired: boolean;
 };
+
+const EXPIRED_COLOR = "#ef4444";
 
 const VTXODetailRow = ({
   label,
@@ -93,27 +97,54 @@ const VTXODetailScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const iconColor = useIconColor();
   const { data: blockHeight } = useGetBlockHeight();
-  const { vtxo } = route.params as { vtxo: VTXOWithStatus };
+  const { vtxo: routeVtxo } = route.params as { vtxo: VTXOWithStatus };
+  const { data: allVtxos = [] } = useGetVtxos();
+  const { data: expiringVtxos } = useGetExpiringVtxos();
+  const refreshExpiringVtxos = useRefreshExpiringVtxos();
+  const latestVtxo = allVtxos.find((item) => item.point === routeVtxo.point);
+  const currentVtxo = latestVtxo ?? routeVtxo;
+  const isLatestExpiring = expiringVtxos?.some((item) => item.point === currentVtxo.point);
+  const vtxo: VTXOWithStatus = {
+    ...currentVtxo,
+    isExpiring: isLatestExpiring ?? routeVtxo.isExpiring,
+    isExpired: routeVtxo.isExpired ?? false,
+  };
   const anchorExplorerUrl = getMempoolTxUrl(vtxo.anchor_point);
+  const isExpired =
+    vtxo.state !== "Locked" &&
+    (blockHeight !== undefined ? vtxo.expiry_height <= blockHeight : vtxo.isExpired);
+  const canRefresh = vtxo.state !== "Locked" && (vtxo.isExpiring || isExpired);
+  const statusLabel =
+    vtxo.state === "Locked"
+      ? "Locked"
+      : isExpired
+        ? "Expired"
+        : vtxo.isExpiring
+          ? "Expiring"
+          : "Active";
 
   const getStatusColor = (vtxo: VTXOWithStatus) => {
     if (vtxo.state === "Locked") return "text-gray-500";
+    if (isExpired) return "text-red-500";
     return vtxo.isExpiring ? "text-orange-500" : "text-green-500";
   };
 
   const getStatusIcon = (vtxo: VTXOWithStatus) => {
     if (vtxo.state === "Locked") return "lock-closed-outline";
+    if (isExpired) return "alert-circle-outline";
     return vtxo.isExpiring ? "warning-outline" : "checkmark-circle-outline";
   };
 
   const getVtxoIcon = (vtxo: VTXOWithStatus) => {
     if (vtxo.state === "Locked") return "lock-closed-outline";
+    if (isExpired) return "alert-circle-outline";
     return vtxo.isExpiring ? "warning-outline" : "cube-outline";
   };
 
   const getVtxoColor = (vtxo: VTXOWithStatus) => {
     if (vtxo.state === "Locked") return "#6b7280";
-    return vtxo.isExpiring ? "#f97316" : "#22c55e";
+    if (isExpired) return EXPIRED_COLOR;
+    return vtxo.isExpiring ? COLORS.BITCOIN_ORANGE : "#22c55e";
   };
 
   return (
@@ -131,6 +162,27 @@ const VTXODetailScreen = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 50 }}
         >
+          {canRefresh ? (
+            <StatusBannerStrip
+              className="mb-4"
+              title={isExpired ? "VTXO expired" : "VTXO expiring soon"}
+              message="Refresh this VTXO to keep it available."
+              icon={
+                <Icon
+                  name={isExpired ? "alert-circle-outline" : "warning-outline"}
+                  size={16}
+                  color={isExpired ? EXPIRED_COLOR : COLORS.BITCOIN_ORANGE}
+                />
+              }
+              tone={isExpired ? "failed" : "info"}
+              actionLabel="Refresh"
+              actionBusyLabel="Refreshing"
+              actionTextStyle={{ color: COLORS.BITCOIN_ORANGE }}
+              isActionLoading={refreshExpiringVtxos.isPending}
+              onActionPress={() => refreshExpiringVtxos.mutate()}
+            />
+          ) : null}
+
           <View className="items-center my-8">
             <View className="mb-4">
               <Icon name={getVtxoIcon(vtxo)} size={64} color={getVtxoColor(vtxo)} />
@@ -141,7 +193,7 @@ const VTXODetailScreen = () => {
             <View className="flex-row items-center">
               <Icon name={getStatusIcon(vtxo)} size={20} color={getVtxoColor(vtxo)} />
               <Text className={`text-xl font-medium ml-2 ${getStatusColor(vtxo)}`}>
-                {vtxo.state === "Locked" ? "Locked" : vtxo.isExpiring ? "Expiring" : "Active"}
+                {statusLabel}
               </Text>
             </View>
           </View>
@@ -149,10 +201,7 @@ const VTXODetailScreen = () => {
           <View className="bg-card p-4 rounded-lg mb-4">
             <VTXODetailRow label="Amount" value={formatBip177(vtxo.amount)} />
             <VTXODetailRow label="State" value={vtxo.state} />
-            <VTXODetailRow
-              label="Status"
-              value={vtxo.state === "Locked" ? "Locked" : vtxo.isExpiring ? "Expiring" : "Active"}
-            />
+            <VTXODetailRow label="Status" value={statusLabel} />
             <VTXODetailRow
               label="Current Block Height"
               value={blockHeight ? blockHeight.toLocaleString() : "Loading..."}
@@ -181,21 +230,6 @@ const VTXODetailScreen = () => {
               explorerUrl={anchorExplorerUrl}
             />
             <VTXODetailRow label="Server Public Key" value={vtxo.server_pubkey} copyable />
-          </View>
-
-          <View className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
-            <Text className="text-base font-semibold text-amber-700 dark:text-amber-300">
-              Emergency exit
-            </Text>
-            <Text className="mt-1 text-sm leading-5 text-amber-700/90 dark:text-amber-200/90">
-              Use only if the Ark server is unavailable and normal offboarding cannot be used.
-            </Text>
-            <NoahButton
-              className="mt-4"
-              onPress={() => navigation.navigate("UnilateralExit", { vtxoIds: [vtxo.point] })}
-            >
-              Exit This VTXO
-            </NoahButton>
           </View>
         </ScrollView>
       </View>

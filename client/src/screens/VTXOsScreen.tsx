@@ -1,4 +1,4 @@
-import { View, Pressable } from "react-native";
+import { View, Pressable, ScrollView } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useState } from "react";
 import { FlashList } from "@shopify/flash-list";
@@ -13,18 +13,28 @@ import type { SettingsStackParamList } from "~/Navigators";
 import { useGetVtxos, useGetExpiringVtxos } from "~/hooks/useWallet";
 import { BarkVtxo } from "react-native-nitro-ark";
 import { formatBip177 } from "~/lib/utils";
+import { useGetBlockHeight } from "~/hooks/useMarketData";
+
+const EXPIRED_COLOR = "#ef4444";
+const EXPIRING_COLOR = "#f97316";
 
 export type VTXOWithStatus = BarkVtxo & {
   isExpiring: boolean;
+  isExpired: boolean;
 };
+
+type VtxoFilter = "all" | "active" | "expiring" | "expired" | "locked";
+
+const filters: VtxoFilter[] = ["all", "active", "expiring", "expired", "locked"];
 
 const VTXOsScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const iconColor = useIconColor();
-  const [filter, setFilter] = useState<"all" | "active" | "expiring" | "locked">("all");
+  const [filter, setFilter] = useState<VtxoFilter>("all");
 
   const { data: allVtxos = [], isLoading: isLoadingAll } = useGetVtxos();
   const { data: expiringVtxos = [], isLoading: isLoadingExpiring } = useGetExpiringVtxos();
+  const { data: blockHeight, isLoading: isLoadingBlockHeight } = useGetBlockHeight();
 
   // Combine and deduplicate VTXOs by point, marking expiring ones
   const expiringPoints = new Set(expiringVtxos.map((vtxo) => vtxo.point));
@@ -32,18 +42,29 @@ const VTXOsScreen = () => {
   const vtxosWithStatus: VTXOWithStatus[] = allVtxos.map((vtxo) => ({
     ...vtxo,
     isExpiring: expiringPoints.has(vtxo.point),
+    isExpired:
+      vtxo.state !== "Locked" && blockHeight !== undefined && vtxo.expiry_height <= blockHeight,
   }));
 
-  const isLoading = isLoadingAll || isLoadingExpiring;
+  const activeVtxos = vtxosWithStatus.filter(
+    (vtxo) => !vtxo.isExpiring && !vtxo.isExpired && vtxo.state === "Spendable",
+  );
+  const expiringOnlyVtxos = vtxosWithStatus.filter((vtxo) => vtxo.isExpiring && !vtxo.isExpired);
+  const expiredVtxos = vtxosWithStatus.filter((vtxo) => vtxo.isExpired);
+  const lockedVtxos = vtxosWithStatus.filter((vtxo) => vtxo.state === "Locked");
+
+  const isLoading = isLoadingAll || isLoadingExpiring || isLoadingBlockHeight;
 
   const filteredVtxos = (() => {
     switch (filter) {
       case "active":
-        return vtxosWithStatus.filter((vtxo) => !vtxo.isExpiring && vtxo.state === "Spendable");
+        return activeVtxos;
       case "expiring":
-        return vtxosWithStatus.filter((vtxo) => vtxo.isExpiring);
+        return expiringOnlyVtxos;
+      case "expired":
+        return expiredVtxos;
       case "locked":
-        return vtxosWithStatus.filter((vtxo) => vtxo.state === "Locked");
+        return lockedVtxos;
       default:
         return vtxosWithStatus;
     }
@@ -51,14 +72,46 @@ const VTXOsScreen = () => {
 
   const getVtxoIcon = (vtxo: VTXOWithStatus) => {
     if (vtxo.state === "Locked") return "lock-closed-outline";
+    if (vtxo.isExpired) return "alert-circle-outline";
     if (vtxo.isExpiring) return "warning-outline";
     return "cube-outline";
   };
 
   const getVtxoColor = (vtxo: VTXOWithStatus) => {
     if (vtxo.state === "Locked") return "#6b7280"; // Gray for locked
-    if (vtxo.isExpiring) return "#f97316"; // Orange for expiring
+    if (vtxo.isExpired) return EXPIRED_COLOR; // Red for expired
+    if (vtxo.isExpiring) return EXPIRING_COLOR; // Orange for expiring
     return "#22c55e"; // Green for active
+  };
+
+  const getFilterLabel = (vtxoFilter: VtxoFilter) => {
+    switch (vtxoFilter) {
+      case "all":
+        return "All";
+      case "active":
+        return "Active";
+      case "expiring":
+        return "Expiring";
+      case "expired":
+        return "Expired";
+      case "locked":
+        return "Locked";
+    }
+  };
+
+  const getFilterCount = (vtxoFilter: VtxoFilter) => {
+    switch (vtxoFilter) {
+      case "active":
+        return activeVtxos.length;
+      case "expiring":
+        return expiringOnlyVtxos.length;
+      case "expired":
+        return expiredVtxos.length;
+      case "locked":
+        return lockedVtxos.length;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -80,33 +133,32 @@ const VTXOsScreen = () => {
             </View>
           </View>
 
-          <View className="flex-row justify-around mb-4">
-            {(["all", "active", "expiring", "locked"] as const).map((f) => (
-              <Pressable
-                key={f}
-                onPress={() => setFilter(f)}
-                className={`px-3 py-1 rounded-full ${filter === f ? "bg-primary" : "bg-card"}`}
-              >
-                <Text
-                  className={`text-sm ${
-                    filter === f ? "text-primary-foreground" : "text-foreground"
+          <View className="mb-4 h-8">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flexGrow: 0 }}
+              contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+            >
+              {filters.map((f) => (
+                <Pressable
+                  key={f}
+                  onPress={() => setFilter(f)}
+                  className={`h-8 items-center justify-center rounded-full px-3 ${
+                    filter === f ? "bg-primary" : "bg-card"
                   }`}
                 >
-                  {f === "all"
-                    ? "All"
-                    : f === "active"
-                      ? "Active"
-                      : f === "expiring"
-                        ? "Expiring"
-                        : "Locked"}
-                  {f === "active" &&
-                    ` (${vtxosWithStatus.filter((v) => !v.isExpiring && v.state === "Spendable").length})`}
-                  {f === "expiring" && ` (${expiringVtxos.length})`}
-                  {f === "locked" &&
-                    ` (${vtxosWithStatus.filter((v) => v.state === "Locked").length})`}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    className={`text-sm ${
+                      filter === f ? "text-primary-foreground" : "text-foreground"
+                    }`}
+                  >
+                    {getFilterLabel(f)}
+                    {getFilterCount(f) !== null ? ` (${getFilterCount(f)})` : ""}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
 
           {isLoading ? (
@@ -123,7 +175,9 @@ const VTXOsScreen = () => {
                     ? "No active VTXOs found"
                     : filter === "expiring"
                       ? "No expiring VTXOs found"
-                      : "No locked VTXOs found"}
+                      : filter === "expired"
+                        ? "No expired VTXOs found"
+                        : "No locked VTXOs found"}
               </Text>
               <Text className="text-muted-foreground text-sm mt-2 text-center">
                 You have no VTXOs.

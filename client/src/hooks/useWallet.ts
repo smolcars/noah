@@ -10,6 +10,7 @@ import {
   loadWalletIfNeeded as loadWalletAction,
   sync as syncAction,
   onchainSync as onchainSyncAction,
+  maintenanceWithOnchainDelegated,
   getVtxos,
   getExpiringVtxos,
   closeWalletIfLoaded,
@@ -181,6 +182,35 @@ export function useGetExpiringVtxos() {
       return result.value;
     },
     retry: false,
+  });
+}
+
+export function useRefreshExpiringVtxos() {
+  const { showAlert } = useAlert();
+
+  return useMutation({
+    mutationFn: async () => {
+      const result = await maintenanceWithOnchainDelegated();
+      if (result.isErr()) {
+        throw result.error;
+      }
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["vtxos"] }),
+        queryClient.invalidateQueries({ queryKey: ["expiring-vtxos"] }),
+        queryClient.invalidateQueries({ queryKey: ["balance"] }),
+        queryClient.invalidateQueries({ queryKey: ["pending-rounds"] }),
+      ]);
+      showAlert({
+        title: "Refresh scheduled",
+        description: "A delegated refresh has been scheduled for eligible VTXOs.",
+      });
+    },
+    onError: (error: Error) => {
+      log.e("Failed to refresh expiring VTXOs", [error]);
+      showAlert({ title: "Failed to refresh VTXO", description: error.message });
+    },
   });
 }
 

@@ -1,5 +1,5 @@
 import type React from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, View, type TextStyle } from "react-native";
 import { Text } from "~/components/ui/text";
 
 export type StatusBannerTone = "info" | "success" | "failed";
@@ -11,6 +11,7 @@ type StatusBannerStripProps = {
   tone: StatusBannerTone;
   actionLabel?: string | null;
   actionBusyLabel?: string;
+  actionTextStyle?: TextStyle;
   isActionLoading?: boolean;
   onPress?: () => void;
   onActionPress?: () => void;
@@ -24,6 +25,7 @@ export const StatusBannerStrip = ({
   tone,
   actionLabel,
   actionBusyLabel = "Working",
+  actionTextStyle,
   isActionLoading = false,
   onPress,
   onActionPress,
@@ -65,7 +67,7 @@ export const StatusBannerStrip = ({
           accessibilityLabel={actionLabel}
           className="ml-3 h-8 items-center justify-center rounded-full border border-border/70 bg-background/60 px-3 active:opacity-80 disabled:opacity-50"
         >
-          <Text className={`text-xs font-semibold ${actionTextClassName}`}>
+          <Text className={`text-xs font-semibold ${actionTextClassName}`} style={actionTextStyle}>
             {isActionLoading ? actionBusyLabel : actionLabel}
           </Text>
         </Pressable>
