@@ -19,8 +19,10 @@ import { UpdateWarningBanner } from "~/components/UpdateWarningBanner";
 import { EmailVerificationBanner } from "~/components/EmailVerificationBanner";
 import { BackupStatusBanner } from "~/components/BackupStatusBanner";
 import { AutoBoardingStatusBanner } from "~/components/AutoBoardingStatusBanner";
+import { PendingRoundStatusBanner } from "~/components/PendingRoundStatusBanner";
 import { useBackgroundJobCoordination } from "~/hooks/useBackgroundJobCoordination";
 import { useServerStore } from "~/store/serverStore";
+import { queryClient } from "~/queryClient";
 
 import Animated, {
   FadeInDown,
@@ -113,6 +115,7 @@ const HomeScreen = () => {
 
     await sync();
     await onchainSync();
+    await queryClient.invalidateQueries({ queryKey: ["pending-rounds"] });
     await refetch();
     await updateWidget();
     getRandomFact();
@@ -249,6 +252,7 @@ const HomeScreen = () => {
           />
         )}
         <BackupStatusBanner />
+        <PendingRoundStatusBanner />
         <AutoBoardingStatusBanner />
         {isBackgroundJobRunning && (
           <View className="px-4 py-2 bg-blue-500/20 border-b border-blue-500/40">

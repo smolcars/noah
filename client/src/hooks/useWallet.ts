@@ -15,6 +15,7 @@ import {
   closeWalletIfLoaded,
   sync,
   getArkInfo,
+  syncPendingRounds,
 } from "../lib/walletApi";
 import { getAutoBoardThreshold } from "~/lib/autoBoarding";
 import { restoreWallet as restoreWalletAction } from "../lib/backupService";
@@ -133,6 +134,24 @@ export function useArkInfo(enabled = true) {
       return result.value;
     },
     enabled,
+    retry: false,
+  });
+}
+
+export function usePendingRounds(refetchIntervalMs: number | false = false) {
+  const { isInitialized, isWalletSuspended, isBackgroundJobRunning } = useWalletStore();
+
+  return useQuery({
+    queryKey: ["pending-rounds"],
+    queryFn: async () => {
+      const result = await syncPendingRounds();
+      if (result.isErr()) {
+        throw result.error;
+      }
+      return result.value;
+    },
+    enabled: isInitialized && !isWalletSuspended && !isBackgroundJobRunning,
+    refetchInterval: refetchIntervalMs,
     retry: false,
   });
 }

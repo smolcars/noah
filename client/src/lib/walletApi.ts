@@ -17,6 +17,7 @@ import {
   maintenanceWithOnchainDelegated as maintenanceWithOnchainDelegatedNitro,
   refreshServer as refreshServerNitro,
   getArkInfo as getArkInfoNitro,
+  syncPendingRounds as syncPendingRoundsNitro,
   signMesssageWithMnemonic as signMessageWithMnemonicNitro,
   deriveKeypairFromMnemonic as deriveKeypairFromMnemonicNitro,
   vtxos as vtxosNitro,
@@ -24,6 +25,7 @@ import {
   type BarkArkInfo,
   type OnchainBalanceResult,
   type OffchainBalanceResult,
+  type PendingRoundStatus,
   KeyPairResult,
 } from "react-native-nitro-ark";
 import * as Keychain from "react-native-keychain";
@@ -224,6 +226,10 @@ export const fetchOffchainBalance = async (): Promise<Result<OffchainBalanceResu
 
 export const sync = async (): Promise<Result<void, Error>> => {
   return ResultAsync.fromPromise(syncNitro(), (e) => e as Error);
+};
+
+export const syncPendingRounds = async (): Promise<Result<PendingRoundStatus[], Error>> => {
+  return ResultAsync.fromPromise(syncPendingRoundsNitro(), (e) => e as Error);
 };
 
 export const signMesssageWithMnemonic = async (
