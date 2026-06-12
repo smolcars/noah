@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Linking, Pressable, View } from "react-native";
 import { Clock3 } from "lucide-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
@@ -128,7 +128,7 @@ export const PendingRoundStatusBanner = () => {
   const [shouldPoll, setShouldPoll] = useState(false);
   const { data: rounds = [] } = usePendingRounds(shouldPoll ? PENDING_ROUNDS_REFETCH_MS : false);
 
-  const activeRounds = useMemo(() => rounds.filter(isRoundActive), [rounds]);
+  const activeRounds = rounds.filter(isRoundActive);
 
   useEffect(() => {
     setShouldPoll(activeRounds.length > 0);
