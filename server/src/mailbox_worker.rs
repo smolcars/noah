@@ -1,6 +1,12 @@
 #![allow(dead_code)]
 
-use std::{cmp, collections::HashSet, sync::Arc, time::Duration};
+use std::{
+    cmp,
+    collections::{HashSet, hash_map::DefaultHasher},
+    hash::{Hash, Hasher},
+    sync::Arc,
+    time::Duration,
+};
 
 use anyhow::Result;
 use ark::{ProtocolEncoding, Vtxo, vtxo::Full, vtxo::policy::VtxoPolicyKind};
@@ -49,8 +55,8 @@ impl Default for MailboxWorkerConfig {
             batch_size: 100,
             base_retry_delay: Duration::from_secs(5),
             max_retry_delay: Duration::from_secs(300),
-            claim_ttl: Duration::from_secs(30),
-            claim_renew_interval: Duration::from_secs(5),
+            claim_ttl: Duration::from_secs(120),
+            claim_renew_interval: Duration::from_secs(30),
             stream_idle_reconnect: Duration::from_secs(60),
         }
     }
@@ -87,6 +93,22 @@ impl MailboxWorkerConfig {
                 default.stream_idle_reconnect,
             ),
         }
+        .with_safe_claim_renew_interval()
+    }
+
+    fn with_safe_claim_renew_interval(mut self) -> Self {
+        let max_renew_interval_secs = self.claim_ttl.as_secs().saturating_div(2).max(1);
+        if self.claim_renew_interval.as_secs() > max_renew_interval_secs {
+            tracing::warn!(
+                service = "mailbox_worker",
+                configured_claim_renew_interval_secs = self.claim_renew_interval.as_secs(),
+                claim_ttl_secs = self.claim_ttl.as_secs(),
+                adjusted_claim_renew_interval_secs = max_renew_interval_secs,
+                "mailbox claim renew interval exceeds safe threshold; adjusting"
+            );
+            self.claim_renew_interval = Duration::from_secs(max_renew_interval_secs);
+        }
+        self
     }
 
     pub fn log(&self) {
@@ -516,7 +538,11 @@ impl MailboxTransport for Beta8MailboxTransport {
             );
 
             let mut claim_renewal = interval_at(
-                Instant::now() + session.claim_renew_interval,
+                jittered_claim_renewal_start(
+                    &mailbox.pubkey,
+                    session.claim_renew_interval,
+                    session.claim_ttl,
+                ),
                 session.claim_renew_interval,
             );
             let idle_reconnect = sleep(session.stream_idle_reconnect);
@@ -591,6 +617,23 @@ fn map_tonic_status(status: Status) -> MailboxSessionOutcome {
             reason: status.to_string(),
         },
     }
+}
+
+fn jittered_claim_renewal_start(
+    pubkey: &str,
+    claim_renew_interval: Duration,
+    claim_ttl: Duration,
+) -> Instant {
+    let max_jitter_secs = cmp::min(
+        claim_renew_interval.as_secs().max(1),
+        claim_ttl.as_secs().saturating_div(2).max(1),
+    );
+
+    let mut hasher = DefaultHasher::new();
+    pubkey.hash(&mut hasher);
+    let jitter_secs = 1 + (hasher.finish() % max_jitter_secs);
+
+    Instant::now() + Duration::from_secs(jitter_secs)
 }
 
 async fn process_mailbox_message(
@@ -808,6 +851,31 @@ mod tests {
         assert!(should_suppress_catchup_notifications(0));
         assert!(!should_suppress_catchup_notifications(1));
         assert!(!should_suppress_catchup_notifications(42));
+    }
+
+    #[test]
+    fn claim_renew_interval_is_clamped_below_ttl() {
+        let config = MailboxWorkerConfig {
+            claim_ttl: Duration::from_secs(120),
+            claim_renew_interval: Duration::from_secs(90),
+            ..Default::default()
+        }
+        .with_safe_claim_renew_interval();
+
+        assert_eq!(config.claim_renew_interval, Duration::from_secs(60));
+    }
+
+    #[test]
+    fn jittered_claim_renewal_start_stays_within_safe_window() {
+        let now = Instant::now();
+        let start = jittered_claim_renewal_start(
+            "02df013fdcd1d3c311715a68002aa75ffaf65f01ec30f1d0ed9d68518da4c7fa7e",
+            Duration::from_secs(30),
+            Duration::from_secs(120),
+        );
+
+        assert!(start > now);
+        assert!(start <= now + Duration::from_secs(30));
     }
 
     #[test]
