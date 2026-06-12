@@ -65,8 +65,7 @@ const TransactionsScreen = () => {
   };
 
   const exportToCSV = async () => {
-    const csvHeader =
-      `Payment ID,Date,Type,Direction,Amount (₿),BTC Price (${fiatCurrency}),Transaction ID,Destination\n`;
+    const csvHeader = `Payment ID,Date,Type,Direction,Amount (₿),BTC Price (${fiatCurrency}),Transaction ID,Destination\n`;
     const csvRows = filteredTransactions
       .map((transaction) => {
         const date =

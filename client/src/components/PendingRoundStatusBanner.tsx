@@ -96,9 +96,7 @@ const PendingRoundDetail = ({ round }: { round: PendingRoundStatus }) => {
 
   return (
     <View className="mb-4 rounded-lg bg-card p-4">
-      <Text className="mb-3 text-base font-semibold text-foreground">
-        Round #{round.round_id}
-      </Text>
+      <Text className="mb-3 text-base font-semibold text-foreground">Round #{round.round_id}</Text>
       <RoundDetailRow label="Status" value={formatRoundStatus(round.status)} />
       <RoundDetailRow label="Final" value={round.is_final ? "Yes" : "No"} />
       <RoundDetailRow label="Successful" value={round.is_success ? "Yes" : "No"} />
@@ -157,11 +155,7 @@ export const PendingRoundStatusBanner = () => {
         actionLabel="View"
         onActionPress={() => setIsSheetOpen(true)}
       />
-      <AppBottomSheet
-        isOpen={isSheetOpen}
-        onClose={() => setIsSheetOpen(false)}
-        scrollable
-      >
+      <AppBottomSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} scrollable>
         <View className="px-1 pb-2">
           <View className="mb-5 flex-row items-center">
             <Pressable onPress={() => setIsSheetOpen(false)} className="mr-4">

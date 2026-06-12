@@ -24,8 +24,7 @@ export const FIAT_CURRENCY_INFO: Record<FiatCurrencyCode, FiatCurrencyInfo> = {
 export type FiatRates = Partial<Record<FiatCurrencyCode, number>>;
 
 export const isFiatCurrencyCode = (value: unknown): value is FiatCurrencyCode =>
-  typeof value === "string" &&
-  SUPPORTED_FIAT_CURRENCIES.includes(value as FiatCurrencyCode);
+  typeof value === "string" && SUPPORTED_FIAT_CURRENCIES.includes(value as FiatCurrencyCode);
 
 export const getFiatCurrencyInfo = (currency: FiatCurrencyCode): FiatCurrencyInfo =>
   FIAT_CURRENCY_INFO[currency];
@@ -39,10 +38,7 @@ export const fiatToSats = (amount: number, btcPrice: number): number => {
   return Math.round((amount / btcPrice) * 100_000_000);
 };
 
-export const formatFiatAmount = (
-  amount: number | string,
-  currency: FiatCurrencyCode,
-): string => {
+export const formatFiatAmount = (amount: number | string, currency: FiatCurrencyCode): string => {
   const { decimals, symbol } = getFiatCurrencyInfo(currency);
   const numericAmount = typeof amount === "number" ? amount : Number(amount);
   const formattedAmount = Number.isFinite(numericAmount)

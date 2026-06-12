@@ -795,7 +795,9 @@ const BoardArkScreen = () => {
             )}
 
             {/* Action Button */}
-            <View className={`flex-row items-center gap-3 ${flow === "offboard" ? "mt-5" : "mt-8"}`}>
+            <View
+              className={`flex-row items-center gap-3 ${flow === "offboard" ? "mt-5" : "mt-8"}`}
+            >
               <Button
                 onPress={handleClearForm}
                 variant="outline"

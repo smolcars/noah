@@ -205,7 +205,10 @@ export const TransactionDetailContent = ({
             />
           ) : null}
           {transaction.hasOnchainFee && typeof transaction.onchainFeeSat === "number" ? (
-            <TransactionDetailRow label="Onchain Fee" value={formatBip177(transaction.onchainFeeSat)} />
+            <TransactionDetailRow
+              label="Onchain Fee"
+              value={formatBip177(transaction.onchainFeeSat)}
+            />
           ) : null}
           {typeof transaction.confirmationHeight === "number" ? (
             <TransactionDetailRow
@@ -214,7 +217,11 @@ export const TransactionDetailContent = ({
             />
           ) : null}
           {transaction.confirmationHash ? (
-            <TransactionDetailRow label="Block Hash" value={transaction.confirmationHash} copyable />
+            <TransactionDetailRow
+              label="Block Hash"
+              value={transaction.confirmationHash}
+              copyable
+            />
           ) : null}
           {transaction.txHex ? (
             <TransactionDetailRow label="Raw Transaction" value={transaction.txHex} copyable />
@@ -225,7 +232,9 @@ export const TransactionDetailContent = ({
       {hasMovementDetails ? (
         <View className="bg-card p-4 rounded-lg mb-4">
           <Text className="text-lg font-semibold text-foreground mb-3">Ark Movement</Text>
-          {movementKindLabel ? <TransactionDetailRow label="Type" value={movementKindLabel} /> : null}
+          {movementKindLabel ? (
+            <TransactionDetailRow label="Type" value={movementKindLabel} />
+          ) : null}
           {movementStatusLabel ? (
             <TransactionDetailRow label="Status" value={movementStatusLabel} />
           ) : null}
