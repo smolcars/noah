@@ -5,7 +5,9 @@ import { Text } from "./ui/text";
 import { NoahButton } from "./ui/NoahButton";
 import ReceiveAnimation from "./ReceiveAnimation";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
-import { formatNumber, satsToUsd, formatBip177 } from "~/lib/utils";
+import { formatBip177 } from "~/lib/utils";
+import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
+import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
 import * as Haptics from "expo-haptics";
 import { useThemeColors } from "~/hooks/useTheme";
 import { COLORS } from "~/lib/styleConstants";
@@ -14,6 +16,7 @@ import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 type ReceiveSuccessProps = {
   amountSat: number;
   btcPrice?: number;
+  fiatCurrency: FiatCurrencyCode;
   totalWalletBalanceSat?: number;
   handleDone: () => void;
 };
@@ -21,10 +24,11 @@ type ReceiveSuccessProps = {
 export const ReceiveSuccess: React.FC<ReceiveSuccessProps> = ({
   amountSat,
   btcPrice,
+  fiatCurrency,
   totalWalletBalanceSat,
   handleDone,
 }) => {
-  const usdAmount = btcPrice ? satsToUsd(amountSat, btcPrice) : 0;
+  const fiatAmount = btcPrice ? satsToFiat(amountSat, btcPrice, fiatCurrency) : null;
   const colors = useThemeColors();
   const bottomTabBarHeight = useBottomTabBarHeight();
 
@@ -52,7 +56,7 @@ export const ReceiveSuccess: React.FC<ReceiveSuccessProps> = ({
             </Text>
             {btcPrice && (
               <Text className="mt-3 text-base font-medium text-muted-foreground">
-                ≈ ${formatNumber(usdAmount)}
+                ≈ {fiatAmount ? formatFiatAmount(fiatAmount, fiatCurrency) : null}
               </Text>
             )}
             <Text className="mt-6 text-center text-2xl font-bold text-foreground">

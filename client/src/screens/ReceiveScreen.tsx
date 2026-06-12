@@ -26,7 +26,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { TabParamList } from "~/Navigators";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor, useThemeColors } from "../hooks/useTheme";
-import { satsToBtc, formatNumber, formatBip177 } from "~/lib/utils";
+import { satsToBtc, formatBip177 } from "~/lib/utils";
+import { formatFiatAmount, getFiatCurrencyInfo, satsToFiat } from "~/lib/fiatCurrency";
 import { useReceiveScreen } from "../hooks/useReceiveScreen";
 import { COLORS } from "~/lib/styleConstants";
 import { CurrencyToggle } from "~/components/CurrencyToggle";
@@ -182,7 +183,9 @@ const ReceiveScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<TabParamList>>();
   const iconColor = useIconColor();
   const colors = useThemeColors();
-  const { amount, setAmount, currency, toggleCurrency, amountSat, btcPrice } = useReceiveScreen();
+  const { amount, setAmount, currency, toggleCurrency, amountSat, btcPrice, fiatCurrency } =
+    useReceiveScreen();
+  const fiatCurrencyInfo = getFiatCurrencyInfo(fiatCurrency);
   const { copyWithState, isCopied } = useCopyToClipboard();
   const [generatedRequest, setGeneratedRequest] = useState<GeneratedReceiveRequest | null>(null);
   const { showAlert } = useAlert();
@@ -232,7 +235,7 @@ const ReceiveScreen = () => {
   const isAmountLocked = isLoading || isGenerated;
   const hasEnteredAmount = amount.trim().length > 0;
   const isEnteredAmountInvalid = hasEnteredAmount && amountSat < minAmount;
-  const displayAmount = amount === "" ? (currency === "USD" ? "0.00" : "0") : amount;
+  const displayAmount = amount === "" ? (currency === "FIAT" ? "0.00" : "0") : amount;
   const [isAmountFocused, setIsAmountFocused] = useState(false);
 
   const stopSubscription = useCallback(
@@ -701,7 +704,7 @@ const ReceiveScreen = () => {
                     <Pressable onPress={focusAmountInput} disabled={isAmountLocked}>
                       <View className="flex-row items-center justify-center">
                         <Text className="mr-3 text-[46px] font-bold leading-[52px] text-foreground">
-                          {currency === "USD" ? "$" : "₿"}
+                          {currency === "FIAT" ? fiatCurrencyInfo.symbol : "₿"}
                         </Text>
                         <Text className="text-[46px] font-bold leading-[52px] text-foreground">
                           {displayAmount}
@@ -738,10 +741,13 @@ const ReceiveScreen = () => {
 
                 <Text className="mt-3 text-lg font-medium text-muted-foreground">
                   {currency === "SATS"
-                    ? `≈ $${
+                    ? `≈ ${
                         btcPrice && amountSat && !isNaN(amountSat)
-                          ? formatNumber(((amountSat * btcPrice) / 100000000).toFixed(2))
-                          : "0.00"
+                          ? formatFiatAmount(
+                              satsToFiat(amountSat, btcPrice, fiatCurrency),
+                              fiatCurrency,
+                            )
+                          : formatFiatAmount("0.00", fiatCurrency)
                       }`
                     : `≈ ${!isNaN(amountSat) && amount ? formatBip177(amountSat) : formatBip177(0)}`}
                 </Text>

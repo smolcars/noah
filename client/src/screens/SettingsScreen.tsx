@@ -30,10 +30,13 @@ import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { revokeMailboxAuthorization } from "~/lib/api";
 import { AUTO_BOARD_ONCHAIN_BUFFER_AMOUNT, formatAutoBoardThreshold } from "~/lib/autoBoarding";
+import { useProfileStore } from "~/store/profileStore";
+import { getFiatCurrencyInfo } from "~/lib/fiatCurrency";
 
 type Setting = {
   id:
     | "profile"
+    | "currency"
     | "showMnemonic"
     | "showLogs"
     | "resetRegistration"
@@ -72,6 +75,8 @@ const SettingsScreen = () => {
     setMailboxAuthorizationEnabled,
   } = useServerStore();
   const { isAutoBoardingEnabled, setAutoBoardingEnabled } = useTransactionStore();
+  const preferredCurrency = useProfileStore((state) => state.preferredCurrency);
+  const preferredCurrencyInfo = getFiatCurrencyInfo(preferredCurrency);
   const {
     data: autoBoardThreshold,
     isError: isAutoBoardThresholdError,
@@ -178,6 +183,8 @@ const SettingsScreen = () => {
 
     if (item.id === "profile") {
       navigation.navigate("Profile");
+    } else if (item.id === "currency") {
+      navigation.navigate("Currency");
     } else if (item.id === "showMnemonic") {
       navigation.navigate("Mnemonic", { fromOnboarding: false });
     } else if (item.id === "showLogs") {
@@ -211,6 +218,13 @@ const SettingsScreen = () => {
       id: "profile",
       title: "Profile",
       description: "Manage your name, Lightning address, emergency email, and public key.",
+      isPressable: true,
+    });
+    profileData.push({
+      id: "currency",
+      title: "Currency",
+      value: `${preferredCurrencyInfo.code} · ${preferredCurrencyInfo.name}`,
+      description: "Choose the fiat currency used for balances and payment amounts.",
       isPressable: true,
     });
 

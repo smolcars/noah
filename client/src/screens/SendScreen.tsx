@@ -16,7 +16,8 @@ import {
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor, useThemeColors } from "../hooks/useTheme";
 import * as Clipboard from "expo-clipboard";
-import { formatNumber, satsToUsd, formatBip177 } from "~/lib/utils";
+import { formatBip177 } from "~/lib/utils";
+import { formatFiatAmount, getFiatCurrencyInfo, satsToFiat } from "~/lib/fiatCurrency";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { Button } from "~/components/ui/button";
 import { NoahButton } from "~/components/ui/NoahButton";
@@ -60,6 +61,7 @@ const SendScreen = () => {
     handleScanPress,
     codeScanner,
     currency,
+    fiatCurrency,
     toggleCurrency,
     amountSat,
     btcPrice,
@@ -86,7 +88,8 @@ const SendScreen = () => {
     feeEstimateWarning,
     confirmationError,
   } = useSendScreen();
-  const displayAmount = amount === "" ? (currency === "USD" ? "0.00" : "0") : amount;
+  const fiatCurrencyInfo = getFiatCurrencyInfo(fiatCurrency);
+  const displayAmount = amount === "" ? (currency === "FIAT" ? "0.00" : "0") : amount;
 
   const handlePaste = async () => {
     const text = await Clipboard.getStringAsync();
@@ -176,7 +179,7 @@ const SendScreen = () => {
                       <Pressable onPress={focusAmountInput} disabled={!isAmountEditable}>
                         <View className="flex-row items-center justify-center">
                           <Text className="mr-3 text-[46px] font-bold leading-[52px] text-foreground">
-                            {currency === "USD" ? "$" : "₿"}
+                            {currency === "FIAT" ? fiatCurrencyInfo.symbol : "₿"}
                           </Text>
                           <Text
                             className={`text-[46px] font-bold leading-[52px] ${
@@ -217,12 +220,22 @@ const SendScreen = () => {
 
                   <Text className="mt-3 text-lg font-medium text-muted-foreground">
                     {parsedAmount
-                      ? `≈ $${btcPrice ? formatNumber(satsToUsd(parsedAmount, btcPrice)) : "0.00"}`
+                      ? `≈ ${
+                          btcPrice
+                            ? formatFiatAmount(
+                                satsToFiat(parsedAmount, btcPrice, fiatCurrency),
+                                fiatCurrency,
+                              )
+                            : formatFiatAmount("0.00", fiatCurrency)
+                        }`
                       : currency === "SATS"
-                        ? `≈ $${
+                        ? `≈ ${
                             btcPrice && amountSat && !isNaN(amountSat)
-                              ? formatNumber(satsToUsd(amountSat, btcPrice))
-                              : "0.00"
+                              ? formatFiatAmount(
+                                  satsToFiat(amountSat, btcPrice, fiatCurrency),
+                                  fiatCurrency,
+                                )
+                              : formatFiatAmount("0.00", fiatCurrency)
                           }`
                         : `≈ ${!isNaN(amountSat) && amount ? formatBip177(amountSat) : formatBip177(0)}`}
                   </Text>
@@ -364,6 +377,7 @@ const SendScreen = () => {
           destinationType={destinationType}
           comment={comment}
           btcPrice={btcPrice}
+          fiatCurrency={fiatCurrency}
           bip321Data={bip321Data}
           selectedPaymentMethod={selectedPaymentMethod}
           onSelectPaymentMethod={setSelectedPaymentMethod}
@@ -392,6 +406,7 @@ const SendScreen = () => {
             parsedResult={parsedResult}
             handleDone={handleDone}
             btcPrice={btcPrice}
+            fiatCurrency={fiatCurrency}
           />
         )}
       </AppBottomSheet>

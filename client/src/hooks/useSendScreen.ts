@@ -15,10 +15,12 @@ import {
   type PaymentResult,
 } from "../lib/paymentsApi";
 import { useQRCodeScanner } from "~/hooks/useQRCodeScanner";
-import { useBtcToUsdRate } from "./useMarketData";
+import { useBtcToFiatRate } from "./useMarketData";
 import { useBalance } from "./useWallet";
 import { useLightningAddressSuggestions } from "./useLightningAddressSuggestions";
-import { formatBip177, satsToUsd, usdToSats } from "../lib/utils";
+import { formatBip177 } from "../lib/utils";
+import { fiatToSats, satsToFiat } from "~/lib/fiatCurrency";
+import { useProfileStore } from "~/store/profileStore";
 import logger from "~/lib/log";
 
 const log = logger("useSendScreen");
@@ -57,7 +59,8 @@ const isOnchainWalletFeeEstimate = (estimate: unknown): estimate is OnchainWalle
 export const useSendScreen = () => {
   const route = useRoute<SendScreenRouteProp>();
   const { showAlert } = useAlert();
-  const { data: btcPrice } = useBtcToUsdRate();
+  const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
+  const { data: btcPrice } = useBtcToFiatRate();
   const { data: balance } = useBalance();
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
@@ -65,7 +68,7 @@ export const useSendScreen = () => {
   const [comment, setComment] = useState("");
   const [parsedResult, setParsedResult] = useState<DisplayResult | null>(null);
   const [destinationType, setDestinationType] = useState<DestinationTypes | null>(null);
-  const [currency, setCurrency] = useState<"USD" | "SATS">("SATS");
+  const [currency, setCurrency] = useState<"FIAT" | "SATS">("SATS");
   const [parsedAmount, setParsedAmount] = useState<number | null>(null);
   const [bip321Data, setBip321Data] = useState<ParsedBip321 | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
@@ -153,7 +156,7 @@ export const useSendScreen = () => {
       return parseInt(amount, 10) || 0;
     }
     if (btcPrice) {
-      return usdToSats(parseFloat(amount), btcPrice);
+      return fiatToSats(parseFloat(amount), btcPrice);
     }
     return 0;
   }, [amount, currency, btcPrice]);
@@ -322,16 +325,16 @@ export const useSendScreen = () => {
   const toggleCurrency = useCallback(() => {
     if (currency === "SATS") {
       if (btcPrice && amount) {
-        setAmount(satsToUsd(parseInt(amount, 10), btcPrice));
+        setAmount(satsToFiat(parseInt(amount, 10), btcPrice, fiatCurrency));
       }
-      setCurrency("USD");
+      setCurrency("FIAT");
     } else {
       if (btcPrice && amount) {
-        setAmount(usdToSats(parseFloat(amount), btcPrice).toString());
+        setAmount(fiatToSats(parseFloat(amount), btcPrice).toString());
       }
       setCurrency("SATS");
     }
-  }, [currency, btcPrice, amount]);
+  }, [currency, btcPrice, amount, fiatCurrency]);
 
   useEffect(() => {
     if (!result) {
@@ -601,6 +604,7 @@ export const useSendScreen = () => {
     handleScanPress,
     codeScanner,
     currency,
+    fiatCurrency,
     toggleCurrency,
     amountSat,
     btcPrice,
