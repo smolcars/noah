@@ -6,7 +6,7 @@ import { authorizeMailboxForServer, MAILBOX_AUTH_TTL_SECS } from "~/lib/server";
 
 const log = logger("useMailboxAuthorization");
 
-const MAILBOX_AUTH_REFRESH_WINDOW_SECS = 7 * 24 * 60 * 60;
+const MAILBOX_AUTH_REFRESH_WINDOW_SECS = 60 * 24 * 60 * 60;
 
 export const useMailboxAuthorization = (isReady: boolean) => {
   const [refreshTick, setRefreshTick] = useState(0);
