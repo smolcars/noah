@@ -9,8 +9,11 @@ import { type Transaction } from "../types/transaction";
 import { type ComponentProps, useState } from "react";
 import { COLORS } from "~/lib/styleConstants";
 import { formatBip177 } from "~/lib/utils";
+import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
+import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
 import { formatMovementKindLabel, formatMovementStatusLabel } from "~/types/movement";
 import { getMempoolTxUrl } from "~/constants";
+import { useProfileStore } from "~/store/profileStore";
 
 const TransactionDetailRow = ({
   label,
@@ -108,19 +111,25 @@ const MovementDestinationList = ({
 
 export const TransactionDetailContent = ({
   transaction,
+  fiatCurrency,
   onClose,
   closeIconName = "arrow-back-outline",
 }: {
   transaction: Transaction;
+  fiatCurrency: FiatCurrencyCode;
   onClose?: () => void;
   closeIconName?: ComponentProps<typeof Icon>["name"];
 }) => {
   const iconColor = useIconColor();
 
   const fiatAmount = transaction.btcPrice
-    ? (transaction.amount * 0.00000001 * transaction.btcPrice).toFixed(2)
+    ? satsToFiat(transaction.amount, transaction.btcPrice, fiatCurrency)
     : "N/A";
-  const bitcoinPrice = transaction.btcPrice ? transaction.btcPrice.toLocaleString() : "N/A";
+  const bitcoinPrice = transaction.btcPrice
+    ? formatFiatAmount(transaction.btcPrice, fiatCurrency)
+    : "N/A";
+  const formattedFiatAmount =
+    fiatAmount === "N/A" ? fiatAmount : formatFiatAmount(fiatAmount, fiatCurrency);
   const transactionDateLabel = transaction.dateLabel ?? new Date(transaction.date).toLocaleString();
   const movementStatusLabel = formatMovementStatusLabel(transaction.movementStatus);
   const movementKindLabel = formatMovementKindLabel(transaction.movementKind);
@@ -161,14 +170,14 @@ export const TransactionDetailContent = ({
         <Text className="text-4xl font-bold text-foreground">
           {formatBip177(transaction.amount)}
         </Text>
-        <Text className="text-xl text-muted-foreground">${fiatAmount}</Text>
+        <Text className="text-xl text-muted-foreground">{formattedFiatAmount}</Text>
       </View>
 
       <View className="bg-card p-4 rounded-lg mb-4">
-        <TransactionDetailRow label="Bitcoin Price" value={`$${bitcoinPrice}`} />
+        <TransactionDetailRow label={`Bitcoin Price (${fiatCurrency})`} value={bitcoinPrice} />
         <TransactionDetailRow
           label="Amount"
-          value={`${formatBip177(transaction.amount)} ($${fiatAmount})`}
+          value={`${formatBip177(transaction.amount)} (${formattedFiatAmount})`}
         />
       </View>
 
@@ -307,11 +316,13 @@ const TransactionDetailScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { transaction } = route.params as { transaction: Transaction };
+  const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
       <TransactionDetailContent
         transaction={transaction}
+        fiatCurrency={fiatCurrency}
         onClose={() => navigation.goBack()}
       />
     </NoahSafeAreaView>

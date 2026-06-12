@@ -3,7 +3,9 @@ import { Pressable, View } from "react-native";
 import { Text } from "./ui/text";
 import { NoahButton } from "./ui/NoahButton";
 import SuccessAnimation from "./SuccessAnimation";
-import { formatNumber, satsToUsd, formatBip177 } from "~/lib/utils";
+import { formatBip177 } from "~/lib/utils";
+import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
+import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
 import { useCopyToClipboard } from "~/lib/clipboardUtils";
 import { COLORS } from "~/lib/styleConstants";
 import { useThemeColors } from "~/hooks/useTheme";
@@ -21,6 +23,7 @@ type SendSuccessBottomSheetProps = {
   parsedResult: ParsedResult;
   handleDone: () => void;
   btcPrice?: number;
+  fiatCurrency: FiatCurrencyCode;
 };
 
 const truncateValue = (value: string) => {
@@ -59,8 +62,11 @@ export const SendSuccessBottomSheet: React.FC<SendSuccessBottomSheetProps> = ({
   parsedResult,
   handleDone,
   btcPrice,
+  fiatCurrency,
 }) => {
-  const usdAmount = btcPrice ? satsToUsd(parsedResult.amount_sat, btcPrice) : 0;
+  const fiatAmount = btcPrice
+    ? satsToFiat(parsedResult.amount_sat, btcPrice, fiatCurrency)
+    : null;
   const colors = useThemeColors();
 
   return (
@@ -76,7 +82,7 @@ export const SendSuccessBottomSheet: React.FC<SendSuccessBottomSheetProps> = ({
         </Text>
         {btcPrice && (
           <Text className="mt-3 text-lg font-medium text-muted-foreground">
-            ≈ ${formatNumber(usdAmount)}
+            ≈ {fiatAmount ? formatFiatAmount(fiatAmount, fiatCurrency) : null}
           </Text>
         )}
       </View>

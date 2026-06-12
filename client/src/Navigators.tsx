@@ -34,6 +34,7 @@ import NoahStoryScreen from "~/screens/NoahStoryScreen";
 import DebugScreen from "~/screens/DebugScreen";
 import QRHubScreen from "~/screens/QRHubScreen";
 import ProfileScreen from "~/screens/ProfileScreen";
+import CurrencySettingsScreen from "~/screens/CurrencySettingsScreen";
 import WalletLoader from "~/components/WalletLoader";
 import { useWalletStore } from "~/store/walletStore";
 import { useServerStore } from "~/store/serverStore";
@@ -68,6 +69,7 @@ export type TabParamList = {
 export type SettingsStackParamList = {
   SettingsList: undefined;
   Profile: undefined;
+  Currency: undefined;
   Mnemonic: { fromOnboarding: boolean };
   Logs: undefined;
   EmailVerification: { fromSettings?: boolean } | undefined;
@@ -123,6 +125,11 @@ const SettingsStackNav = () => (
       options={{ animation: "default" }}
     />
     <Stack.Screen name="Profile" component={ProfileScreen} options={{ animation: "default" }} />
+    <Stack.Screen
+      name="Currency"
+      component={CurrencySettingsScreen}
+      options={{ animation: "default" }}
+    />
     <Stack.Screen name="Mnemonic" component={MnemonicScreen} options={{ animation: "default" }} />
     <Stack.Screen name="Logs" component={LogScreen} options={{ animation: "default" }} />
     <Stack.Screen

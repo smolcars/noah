@@ -30,10 +30,11 @@ import Animated, {
 } from "react-native-reanimated";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
-import { useBtcToUsdRate } from "~/hooks/useMarketData";
+import { useBtcToFiatRate } from "~/hooks/useMarketData";
 import { useWalletStore } from "~/store/walletStore";
 import { updateWidget, useWidget } from "~/hooks/useWidget";
 import { formatBip177 } from "~/lib/utils";
+import { formatFiatAmount, getFiatCurrencyInfo, satsToFiat } from "~/lib/fiatCurrency";
 import { calculateBalances } from "~/lib/balanceUtils";
 import { onchainSync, sync } from "~/lib/walletApi";
 import { useTransactions } from "~/hooks/useTransactions";
@@ -41,6 +42,7 @@ import { Transaction } from "~/types/transaction";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { TransactionDetailContent } from "~/screens/TransactionDetailScreen";
 import { usePrivacyStore } from "~/store/privacyStore";
+import { useProfileStore } from "~/store/profileStore";
 
 const getTransactionIcon = (type: Transaction["type"]) => {
   switch (type) {
@@ -77,7 +79,9 @@ const HomeScreen = () => {
   const { data: balance, refetch, error, isLoading: isBalanceLoading } = useBalance();
   const { isPending: isSyncPending } = useWalletSync();
   const { mutateAsync: loadWallet } = useLoadWallet();
-  const { data: btcToUsdRate, isLoading: isRateLoading } = useBtcToUsdRate();
+  const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
+  const fiatCurrencyInfo = getFiatCurrencyInfo(fiatCurrency);
+  const { data: btcToFiatRate, isLoading: isRateLoading } = useBtcToFiatRate();
   const [isOpen, setIsOpen] = useState(false);
   const [fact, setFact] = useState("");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -129,7 +133,9 @@ const HomeScreen = () => {
   const onchainBalance = balances?.onchainBalance ?? 0;
   const offchainBalance = balances?.offchainBalance ?? 0;
   const totalPendingBalance = balances?.pendingBalance ?? 0;
-  const totalBalanceInUsd = btcToUsdRate ? (totalBalance / 100_000_000) * btcToUsdRate : 0;
+  const totalBalanceInFiat = btcToFiatRate
+    ? satsToFiat(totalBalance, btcToFiatRate, fiatCurrency)
+    : null;
   const errorMessage = error instanceof Error ? error.message : String(error);
   const maskedBalance = "••••";
   const formatHomeBalance = (amount: number) =>
@@ -271,14 +277,12 @@ const HomeScreen = () => {
               <Collapsible open={isOpen} onOpenChange={setIsOpen} className="items-center pb-10">
                 <View className="items-center">
                   {isHomeBalanceHidden ? (
-                    <Text className="mb-2 text-2xl text-muted-foreground">$ {maskedBalance}</Text>
-                  ) : btcToUsdRate ? (
                     <Text className="mb-2 text-2xl text-muted-foreground">
-                      $
-                      {totalBalanceInUsd.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {fiatCurrencyInfo.symbol} {maskedBalance}
+                    </Text>
+                  ) : totalBalanceInFiat ? (
+                    <Text className="mb-2 text-2xl text-muted-foreground">
+                      {formatFiatAmount(totalBalanceInFiat, fiatCurrency)}
                     </Text>
                   ) : (
                     <View className="h-[32px] mb-2 justify-center">
@@ -473,6 +477,7 @@ const HomeScreen = () => {
         >
           <TransactionDetailContent
             transaction={selectedTransaction}
+            fiatCurrency={fiatCurrency}
             onClose={() => setIsTransactionSheetOpen(false)}
             closeIconName="close-outline"
           />

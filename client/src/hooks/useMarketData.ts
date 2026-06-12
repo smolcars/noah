@@ -12,12 +12,15 @@ const log = logger("useMarketData");
 
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import { APP_VARIANT } from "~/config";
-export const getBtcToUsdRate = (): ResultAsync<number, Error> => {
+import type { FiatCurrencyCode, FiatRates } from "~/lib/fiatCurrency";
+import { useProfileStore } from "~/store/profileStore";
+
+export const getBtcToFiatRate = (currency: FiatCurrencyCode): ResultAsync<number, Error> => {
   return ResultAsync.fromPromise(
-    ky.get(mempoolPriceEndpoint).json<{ USD?: number }>(),
-    (e) => new Error(`Failed to fetch BTC to USD rate: ${e}`),
+    ky.get(mempoolPriceEndpoint).json<FiatRates>(),
+    (e) => new Error(`Failed to fetch BTC to ${currency} rate: ${e}`),
   ).andThen((data) => {
-    const rate = data.USD;
+    const rate = data[currency];
     if (rate) {
       return ok(rate);
     }
@@ -25,11 +28,13 @@ export const getBtcToUsdRate = (): ResultAsync<number, Error> => {
   });
 };
 
-export function useBtcToUsdRate() {
+export function useBtcToFiatRate() {
+  const preferredCurrency = useProfileStore((state) => state.preferredCurrency);
+
   return useQuery({
-    queryKey: ["btcToUsdRate"],
+    queryKey: ["btcToFiatRate", preferredCurrency],
     queryFn: async () => {
-      const result = await getBtcToUsdRate();
+      const result = await getBtcToFiatRate(preferredCurrency);
       if (result.isErr()) {
         throw result.error;
       }
@@ -95,30 +100,34 @@ export function useGetBlockHeight() {
   });
 }
 
-export const getHistoricalBtcToUsdRate = (date: string): ResultAsync<number, Error> => {
+export const getHistoricalBtcToFiatRate = (
+  date: string,
+  currency: FiatCurrencyCode,
+): ResultAsync<number, Error> => {
   const timestamp = Math.floor(new Date(date).getTime() / 1000);
   return ResultAsync.fromPromise(
     ky
       .get(mempoolHistoricalPriceEndpoint, {
         searchParams: {
-          currency: "USD",
+          currency,
           timestamp: timestamp.toString(),
         },
       })
-      .json<{ prices?: { USD?: number }[] }>(),
-    (e) => new Error(`Failed to fetch historical BTC to USD rate: ${e}`),
+      .json<{ prices?: FiatRates[] }>(),
+    (e) => new Error(`Failed to fetch historical BTC to ${currency} rate: ${e}`),
   )
     .andThen((data) => {
       const prices = data.prices;
-      if (prices && prices.length > 0 && prices[0].USD) {
-        return ok(prices[0].USD);
+      const rate = prices?.[0]?.[currency];
+      if (rate) {
+        return ok(rate);
       }
       // If no price is available for that day, fetch the current price as a fallback.
-      return getBtcToUsdRate();
+      return getBtcToFiatRate(currency);
     })
     .orElse((error) => {
-      log.e("Failed to fetch historical BTC to USD rate:", [error]);
+      log.e(`Failed to fetch historical BTC to ${currency} rate:`, [error]);
       // Fallback to current price on error
-      return getBtcToUsdRate();
+      return getBtcToFiatRate(currency);
     });
 };

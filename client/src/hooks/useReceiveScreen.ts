@@ -1,25 +1,28 @@
 import { useState, useMemo } from "react";
-import { useBtcToUsdRate } from "./useMarketData";
+import { useBtcToFiatRate } from "./useMarketData";
+import { fiatToSats, satsToFiat } from "~/lib/fiatCurrency";
+import { useProfileStore } from "~/store/profileStore";
 
 export const useReceiveScreen = () => {
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState<"SATS" | "USD">("SATS");
-  const { data: btcPrice } = useBtcToUsdRate();
+  const [currency, setCurrency] = useState<"SATS" | "FIAT">("SATS");
+  const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
+  const { data: btcPrice } = useBtcToFiatRate();
 
   const toggleCurrency = () => {
     if (currency === "SATS") {
       if (btcPrice && amount) {
         const sats = parseInt(amount, 10);
         if (!isNaN(sats)) {
-          setAmount(((sats * btcPrice) / 100000000).toFixed(2));
+          setAmount(satsToFiat(sats, btcPrice, fiatCurrency));
         }
       }
-      setCurrency("USD");
+      setCurrency("FIAT");
     } else {
       if (btcPrice && amount) {
-        const usd = parseFloat(amount);
-        if (!isNaN(usd)) {
-          setAmount(Math.round((usd / btcPrice) * 100000000).toString());
+        const fiatAmount = parseFloat(amount);
+        if (!isNaN(fiatAmount)) {
+          setAmount(fiatToSats(fiatAmount, btcPrice).toString());
         }
       }
       setCurrency("SATS");
@@ -36,8 +39,8 @@ export const useReceiveScreen = () => {
 
     if (!btcPrice) return 0;
 
-    return Math.round((amountFloat / btcPrice) * 100000000);
-  }, [amount, currency, btcPrice]);
+    return fiatToSats(amountFloat, btcPrice);
+  }, [amount, currency, btcPrice, fiatCurrency]);
 
   return {
     amount,
@@ -46,5 +49,6 @@ export const useReceiveScreen = () => {
     toggleCurrency,
     amountSat,
     btcPrice,
+    fiatCurrency,
   };
 };

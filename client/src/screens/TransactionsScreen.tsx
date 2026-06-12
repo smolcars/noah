@@ -20,6 +20,7 @@ import { useTransactions } from "~/hooks/useTransactions";
 import { HistoryRefreshButton } from "~/components/HistoryRefreshButton";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { TransactionDetailContent } from "~/screens/TransactionDetailScreen";
+import { useProfileStore } from "~/store/profileStore";
 
 const log = logger("TransactionsScreen");
 
@@ -28,6 +29,7 @@ const TransactionsScreen = () => {
   const parentNavigation = navigation.getParent<NavigationProp<TabParamList>>();
   const iconColor = useIconColor();
   const { data: transactions = [], isLoading, isError, isRefetching, refetch } = useTransactions();
+  const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
   const [filter, setFilter] = useState<PaymentTypes | "all" | "Lightning">("all");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isTransactionSheetOpen, setIsTransactionSheetOpen] = useState(false);
@@ -64,7 +66,7 @@ const TransactionsScreen = () => {
 
   const exportToCSV = async () => {
     const csvHeader =
-      "Payment ID,Date,Type,Direction,Amount (₿),BTC Price,Transaction ID,Destination\n";
+      `Payment ID,Date,Type,Direction,Amount (₿),BTC Price (${fiatCurrency}),Transaction ID,Destination\n`;
     const csvRows = filteredTransactions
       .map((transaction) => {
         const date =
@@ -259,6 +261,7 @@ const TransactionsScreen = () => {
           >
             <TransactionDetailContent
               transaction={selectedTransaction}
+              fiatCurrency={fiatCurrency}
               onClose={() => setIsTransactionSheetOpen(false)}
               closeIconName="close-outline"
             />

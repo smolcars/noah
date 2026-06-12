@@ -9,8 +9,10 @@ import type { Transaction, PaymentTypes } from "~/types/transaction";
 import type { BarkMovement, MovementStatus, OnchainTransactionInfo } from "react-native-nitro-ark";
 import type { MovementKind } from "~/types/movement";
 import { INCOMING_MOVEMENT_KINDS } from "~/types/movement";
-import { getHistoricalBtcToUsdRate } from "~/hooks/useMarketData";
+import { getHistoricalBtcToFiatRate } from "~/hooks/useMarketData";
 import logger from "~/lib/log";
+import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
+import { useProfileStore } from "~/store/profileStore";
 import {
   BARK_SUBSYSTEM,
   type BarkSubsystemId,
@@ -199,7 +201,10 @@ const determineTransactionType = (
   return "Onchain";
 };
 
-const transformMovementToTransaction = async (movement: BarkMovement): Promise<Transaction> => {
+const transformMovementToTransaction = async (
+  movement: BarkMovement,
+  currency: FiatCurrencyCode,
+): Promise<Transaction> => {
   const movementKind = determineMovementKind(movement);
   const isOutgoing = isOutgoingMovement(movement);
   const direction = isOutgoing ? "outgoing" : "incoming";
@@ -212,7 +217,7 @@ const transformMovementToTransaction = async (movement: BarkMovement): Promise<T
   const transactionType = determineTransactionType(movement, movementKind, isOutgoing);
 
   let btcPrice: number | undefined;
-  const btcPriceResult = await getHistoricalBtcToUsdRate(dateIso);
+  const btcPriceResult = await getHistoricalBtcToFiatRate(dateIso, currency);
   if (btcPriceResult.isOk()) {
     btcPrice = btcPriceResult.value;
   }
@@ -299,6 +304,7 @@ const getOnchainTransactionBlockTime = async (
 
 const transformOnchainTransaction = async (
   transaction: OnchainTransactionInfo,
+  currency: FiatCurrencyCode,
 ): Promise<Transaction> => {
   const isOutgoing = transaction.balance_change_sat < 0;
   const blockTime = await getOnchainTransactionBlockTime(transaction);
@@ -306,7 +312,7 @@ const transformOnchainTransaction = async (
 
   let btcPrice: number | undefined;
   if (blockTime) {
-    const btcPriceResult = await getHistoricalBtcToUsdRate(date);
+    const btcPriceResult = await getHistoricalBtcToFiatRate(date, currency);
     if (btcPriceResult.isOk()) {
       btcPrice = btcPriceResult.value;
     }
@@ -380,7 +386,9 @@ const shouldIncludeMovement = (movement: BarkMovement): boolean => {
   return hasAmount;
 };
 
-const fetchAndTransformTransactions = async (): Promise<Transaction[]> => {
+const fetchAndTransformTransactions = async (
+  currency: FiatCurrencyCode,
+): Promise<Transaction[]> => {
   const loadWalletResult = await loadWalletIfNeeded();
   if (loadWalletResult.isErr()) {
     throw loadWalletResult.error;
@@ -414,9 +422,11 @@ const fetchAndTransformTransactions = async (): Promise<Transaction[]> => {
     return [];
   }
 
-  const movementTransactions = await Promise.all(movements.map(transformMovementToTransaction));
+  const movementTransactions = await Promise.all(
+    movements.map((movement) => transformMovementToTransaction(movement, currency)),
+  );
   const onchainWalletTransactions = await Promise.all(
-    walletTransactions.map(transformOnchainTransaction),
+    walletTransactions.map((transaction) => transformOnchainTransaction(transaction, currency)),
   );
 
   return [...movementTransactions, ...onchainWalletTransactions].sort(compareTransactions);
@@ -424,12 +434,13 @@ const fetchAndTransformTransactions = async (): Promise<Transaction[]> => {
 
 export const useTransactions = (options?: { enabled?: boolean }) => {
   const { isInitialized, isWalletLoaded, isWalletSuspended } = useWalletStore();
+  const preferredCurrency = useProfileStore((state) => state.preferredCurrency);
   const enabled =
     (options?.enabled ?? true) && isInitialized && isWalletLoaded && !isWalletSuspended;
 
   return useQuery({
-    queryKey: ["transactions"],
-    queryFn: fetchAndTransformTransactions,
+    queryKey: ["transactions", preferredCurrency],
+    queryFn: () => fetchAndTransformTransactions(preferredCurrency),
     enabled,
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,

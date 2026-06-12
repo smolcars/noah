@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 import { mmkv } from "~/lib/mmkv";
 import logger from "~/lib/log";
+import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
+import { isFiatCurrencyCode } from "~/lib/fiatCurrency";
 
 const log = logger("profileStore");
 
@@ -35,18 +37,32 @@ const zustandStorage: StateStorage = {
 
 interface ProfileState {
   displayName: string;
+  preferredCurrency: FiatCurrencyCode;
   setDisplayName: (displayName: string) => void;
+  setPreferredCurrency: (preferredCurrency: FiatCurrencyCode) => void;
 }
 
 export const useProfileStore = create<ProfileState>()(
   persist(
     (set) => ({
       displayName: "",
+      preferredCurrency: "USD",
       setDisplayName: (displayName) => set({ displayName }),
+      setPreferredCurrency: (preferredCurrency) => set({ preferredCurrency }),
     }),
     {
       name: "profile-storage",
       storage: createJSONStorage(() => zustandStorage),
+      merge: (persistedState, currentState) => {
+        const state = persistedState as Partial<ProfileState> | null;
+        return {
+          ...currentState,
+          ...state,
+          preferredCurrency: isFiatCurrencyCode(state?.preferredCurrency)
+            ? state.preferredCurrency
+            : "USD",
+        };
+      },
     },
   ),
 );

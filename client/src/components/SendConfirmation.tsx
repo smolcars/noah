@@ -3,7 +3,9 @@ import { Pressable, View } from "react-native";
 import { Text } from "./ui/text";
 import { NoahButton } from "./ui/NoahButton";
 import { Button } from "./ui/button";
-import { formatNumber, satsToUsd, formatBip177 } from "~/lib/utils";
+import { formatBip177 } from "~/lib/utils";
+import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
+import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
 import { DestinationTypes, ParsedBip321 } from "~/lib/sendUtils";
 import { useThemeColors } from "~/hooks/useTheme";
 import { COLORS } from "~/lib/styleConstants";
@@ -17,6 +19,7 @@ interface SendConfirmationProps {
   destinationType: DestinationTypes;
   comment?: string;
   btcPrice?: number;
+  fiatCurrency: FiatCurrencyCode;
   bip321Data?: ParsedBip321 | null;
   selectedPaymentMethod?: "ark" | "lightning" | "onchain" | "offer";
   onSelectPaymentMethod?: (type: "ark" | "lightning" | "onchain" | "offer") => void;
@@ -52,6 +55,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
   destinationType,
   comment,
   btcPrice,
+  fiatCurrency,
   bip321Data,
   selectedPaymentMethod,
   onSelectPaymentMethod,
@@ -136,7 +140,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
     return destination;
   };
 
-  const usdAmount = btcPrice ? satsToUsd(amount, btcPrice) : 0;
+  const fiatAmount = btcPrice ? satsToFiat(amount, btcPrice, fiatCurrency) : null;
   const resolvedDestination = getDestinationDisplay();
   const title = isLoading ? "Sending payment" : sendError ? "Send failed" : "Confirm send";
   const description = isLoading
@@ -160,7 +164,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
         </Text>
         {btcPrice ? (
           <Text className="mt-1 text-sm font-medium text-muted-foreground">
-            ≈ ${formatNumber(usdAmount)}
+            ≈ {fiatAmount ? formatFiatAmount(fiatAmount, fiatCurrency) : null}
           </Text>
         ) : null}
       </View>
