@@ -435,6 +435,8 @@ impl<'a> MailboxAuthorizationRepository<'a> {
                   AND mailbox.authorization_hex IS NOT NULL
                   AND mailbox.authorization_expires_at IS NOT NULL
                   AND mailbox.authorization_expires_at > $4
+                  AND mailbox.lease_expires_at IS NOT NULL
+                  AND mailbox.lease_expires_at > $7
              ),
              renewed AS (
                 UPDATE mailbox_authorizations AS mailbox
@@ -449,10 +451,9 @@ impl<'a> MailboxAuthorizationRepository<'a> {
                   AND mailbox.authorization_hex IS NOT NULL
                   AND mailbox.authorization_expires_at IS NOT NULL
                   AND mailbox.authorization_expires_at > $4
-                  AND (
-                    mailbox.lease_expires_at IS NULL
-                    OR mailbox.lease_expires_at <= $5
-                  )
+                  AND mailbox.lease_expires_at IS NOT NULL
+                  AND mailbox.lease_expires_at > $7
+                  AND mailbox.lease_expires_at <= $5
                 RETURNING mailbox.pubkey
              )
              SELECT
@@ -467,6 +468,7 @@ impl<'a> MailboxAuthorizationRepository<'a> {
         .bind(now.timestamp())
         .bind(renew_after)
         .bind(lease_expires_at)
+        .bind(now)
         .fetch_all(self.pool)
         .await?;
 
@@ -478,7 +480,7 @@ impl<'a> MailboxAuthorizationRepository<'a> {
         pubkey: &str,
         auth_version: i64,
         worker_id: &str,
-        now: i64,
+        now: DateTime<Utc>,
     ) -> Result<bool> {
         let exists = sqlx::query_scalar::<_, bool>(
             "SELECT EXISTS (
@@ -492,11 +494,14 @@ impl<'a> MailboxAuthorizationRepository<'a> {
                   AND authorization_hex IS NOT NULL
                   AND authorization_expires_at IS NOT NULL
                   AND authorization_expires_at > $4
+                  AND lease_expires_at IS NOT NULL
+                  AND lease_expires_at > $5
             )",
         )
         .bind(pubkey)
         .bind(auth_version)
         .bind(worker_id)
+        .bind(now.timestamp())
         .bind(now)
         .fetch_one(self.pool)
         .await?;

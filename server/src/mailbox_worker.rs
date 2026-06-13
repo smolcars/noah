@@ -715,7 +715,7 @@ async fn process_mailbox_message(
             &mailbox.pubkey,
             mailbox.auth_version,
             &session.worker_id,
-            Utc::now().timestamp(),
+            Utc::now(),
         )
         .await
         .map_err(ApiError::from)?
