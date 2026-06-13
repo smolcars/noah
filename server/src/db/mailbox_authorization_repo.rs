@@ -23,6 +23,12 @@ pub struct MailboxAuthorizationRepository<'a> {
     pool: &'a PgPool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, FromRow)]
+pub struct BulkRenewMailboxClaim {
+    pub pubkey: String,
+    pub renewed: bool,
+}
+
 impl<'a> MailboxAuthorizationRepository<'a> {
     pub fn new(pool: &'a PgPool) -> Self {
         Self { pool }
@@ -392,66 +398,110 @@ impl<'a> MailboxAuthorizationRepository<'a> {
         Ok(())
     }
 
-    pub async fn renew_claim(
+    pub async fn bulk_renew_claims(
         &self,
-        pubkey: &str,
-        auth_version: i64,
+        active_claims: &[(String, i64)],
         worker_id: &str,
         now: DateTime<Utc>,
         renew_after: DateTime<Utc>,
         lease_expires_at: DateTime<Utc>,
-    ) -> Result<bool> {
-        let should_renew = sqlx::query_scalar::<_, bool>(
-            "SELECT lease_expires_at IS NULL OR lease_expires_at <= $5
-             FROM mailbox_authorizations
-             WHERE pubkey = $1
-               AND auth_version = $2
-               AND lease_owner = $3
-               AND enabled = TRUE
-               AND status = 'active'
-               AND authorization_hex IS NOT NULL
-               AND authorization_expires_at IS NOT NULL
-               AND authorization_expires_at > $4",
-        )
-        .bind(pubkey)
-        .bind(auth_version)
-        .bind(worker_id)
-        .bind(now.timestamp())
-        .bind(renew_after)
-        .fetch_optional(self.pool)
-        .await?;
-
-        if should_renew != Some(true) {
-            return Ok(should_renew.is_some());
+    ) -> Result<Vec<BulkRenewMailboxClaim>> {
+        if active_claims.is_empty() {
+            return Ok(vec![]);
         }
 
-        let result = sqlx::query(
-            "UPDATE mailbox_authorizations
-             SET lease_expires_at = $6,
-                 updated_at = now()
-             WHERE pubkey = $1
-               AND auth_version = $2
-               AND lease_owner = $3
-               AND enabled = TRUE
-               AND status = 'active'
-               AND authorization_hex IS NOT NULL
-               AND authorization_expires_at IS NOT NULL
-               AND authorization_expires_at > $4
-               AND (
-                 lease_expires_at IS NULL
-                 OR lease_expires_at <= $5
-               )",
+        let pubkeys = active_claims
+            .iter()
+            .map(|(pubkey, _)| pubkey.clone())
+            .collect::<Vec<_>>();
+        let auth_versions = active_claims
+            .iter()
+            .map(|(_, auth_version)| *auth_version)
+            .collect::<Vec<_>>();
+
+        let rows = sqlx::query_as::<_, BulkRenewMailboxClaim>(
+            "WITH active(pubkey, auth_version) AS (
+                SELECT * FROM UNNEST($1::text[], $2::bigint[])
+             ),
+             valid AS (
+                SELECT mailbox.pubkey, mailbox.auth_version
+                FROM mailbox_authorizations AS mailbox
+                INNER JOIN active
+                  ON mailbox.pubkey = active.pubkey
+                 AND mailbox.auth_version = active.auth_version
+                WHERE mailbox.lease_owner = $3
+                  AND mailbox.enabled = TRUE
+                  AND mailbox.status = 'active'
+                  AND mailbox.authorization_hex IS NOT NULL
+                  AND mailbox.authorization_expires_at IS NOT NULL
+                  AND mailbox.authorization_expires_at > $4
+             ),
+             renewed AS (
+                UPDATE mailbox_authorizations AS mailbox
+                SET lease_expires_at = $6,
+                    updated_at = now()
+                FROM valid
+                WHERE mailbox.pubkey = valid.pubkey
+                  AND mailbox.auth_version = valid.auth_version
+                  AND mailbox.lease_owner = $3
+                  AND mailbox.enabled = TRUE
+                  AND mailbox.status = 'active'
+                  AND mailbox.authorization_hex IS NOT NULL
+                  AND mailbox.authorization_expires_at IS NOT NULL
+                  AND mailbox.authorization_expires_at > $4
+                  AND (
+                    mailbox.lease_expires_at IS NULL
+                    OR mailbox.lease_expires_at <= $5
+                  )
+                RETURNING mailbox.pubkey
+             )
+             SELECT
+                valid.pubkey,
+                renewed.pubkey IS NOT NULL AS renewed
+             FROM valid
+             LEFT JOIN renewed ON renewed.pubkey = valid.pubkey",
         )
-        .bind(pubkey)
-        .bind(auth_version)
+        .bind(pubkeys)
+        .bind(auth_versions)
         .bind(worker_id)
         .bind(now.timestamp())
         .bind(renew_after)
         .bind(lease_expires_at)
-        .execute(self.pool)
+        .fetch_all(self.pool)
         .await?;
 
-        Ok(result.rows_affected() > 0)
+        Ok(rows)
+    }
+
+    pub async fn claim_is_active(
+        &self,
+        pubkey: &str,
+        auth_version: i64,
+        worker_id: &str,
+        now: i64,
+    ) -> Result<bool> {
+        let exists = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS (
+                SELECT 1
+                FROM mailbox_authorizations
+                WHERE pubkey = $1
+                  AND auth_version = $2
+                  AND lease_owner = $3
+                  AND enabled = TRUE
+                  AND status = 'active'
+                  AND authorization_hex IS NOT NULL
+                  AND authorization_expires_at IS NOT NULL
+                  AND authorization_expires_at > $4
+            )",
+        )
+        .bind(pubkey)
+        .bind(auth_version)
+        .bind(worker_id)
+        .bind(now)
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(exists)
     }
 
     pub async fn revoke(&self, pubkey: &str) -> Result<()> {
@@ -476,16 +526,23 @@ impl<'a> MailboxAuthorizationRepository<'a> {
         Ok(())
     }
 
-    pub async fn release_claim(&self, pubkey: &str, worker_id: &str) -> Result<()> {
+    pub async fn release_claim(
+        &self,
+        pubkey: &str,
+        auth_version: i64,
+        worker_id: &str,
+    ) -> Result<()> {
         sqlx::query(
             "UPDATE mailbox_authorizations
              SET lease_owner = NULL,
                  lease_expires_at = NULL,
                  updated_at = now()
              WHERE pubkey = $1
-               AND lease_owner = $2",
+               AND auth_version = $2
+               AND lease_owner = $3",
         )
         .bind(pubkey)
+        .bind(auth_version)
         .bind(worker_id)
         .execute(self.pool)
         .await?;

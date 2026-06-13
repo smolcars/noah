@@ -4836,6 +4836,7 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tokio-cron-scheduler",
+ "tokio-util",
  "tower",
  "tower-http",
  "tower_governor",
