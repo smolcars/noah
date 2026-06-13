@@ -2,8 +2,7 @@
 
 use std::{
     cmp,
-    collections::{HashSet, hash_map::DefaultHasher},
-    hash::{Hash, Hasher},
+    collections::{HashMap, HashSet},
     sync::Arc,
     time::Duration,
 };
@@ -25,6 +24,7 @@ use tokio::{
     task::JoinSet,
     time::{Instant, interval_at, sleep},
 };
+use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::{
@@ -152,9 +152,8 @@ fn env_duration_secs(key: &str, default: Duration) -> Duration {
 #[derive(Debug, Clone)]
 pub struct MailboxSessionContext {
     pub worker_id: String,
-    pub claim_ttl: Duration,
-    pub claim_renew_interval: Duration,
     pub stream_idle_reconnect: Duration,
+    pub cancellation_token: CancellationToken,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -183,6 +182,12 @@ pub struct MailboxWorker<T> {
     worker_id: String,
 }
 
+#[derive(Debug, Clone)]
+struct ActiveMailboxSession {
+    auth_version: i64,
+    cancellation_token: CancellationToken,
+}
+
 impl<T> MailboxWorker<T>
 where
     T: MailboxTransport + 'static,
@@ -200,11 +205,16 @@ where
 
     pub async fn run(&self) -> Result<()> {
         let mut join_set = JoinSet::new();
-        let mut active_pubkeys = HashSet::new();
+        let mut active_sessions = HashMap::new();
+        let mut claim_renewal = interval_at(
+            Instant::now() + self.config.claim_renew_interval,
+            self.config.claim_renew_interval,
+        );
 
         loop {
             while let Some(result) = join_set.try_join_next() {
-                if let Err(error) = Self::handle_session_result(result, &mut active_pubkeys).await {
+                if let Err(error) = Self::handle_session_result(result, &mut active_sessions).await
+                {
                     tracing::error!(
                         service = "mailbox_worker",
                         error = %error,
@@ -214,7 +224,7 @@ where
             }
 
             if let Err(error) = self
-                .schedule_runnable_sessions(&mut join_set, &mut active_pubkeys)
+                .schedule_runnable_sessions(&mut join_set, &mut active_sessions)
                 .await
             {
                 tracing::error!(
@@ -230,12 +240,22 @@ where
             tokio::select! {
                 result = join_set.join_next(), if !join_set.is_empty() => {
                     if let Some(result) = result
-                        && let Err(error) = Self::handle_session_result(result, &mut active_pubkeys).await
+                        && let Err(error) = Self::handle_session_result(result, &mut active_sessions).await
                     {
                         tracing::error!(
                             service = "mailbox_worker",
                             error = %error,
                             "mailbox session join failed"
+                        );
+                    }
+                }
+                _ = claim_renewal.tick(), if !active_sessions.is_empty() => {
+                    if let Err(error) = self.renew_active_sessions(&mut active_sessions).await {
+                        tracing::error!(
+                            service = "mailbox_worker",
+                            error = %error,
+                            active_sessions = active_sessions.len(),
+                            "mailbox bulk lease renewal failed"
                         );
                     }
                 }
@@ -246,13 +266,13 @@ where
 
     pub async fn run_once(&self) -> Result<usize> {
         let mut join_set = JoinSet::new();
-        let mut active_pubkeys = HashSet::new();
+        let mut active_sessions = HashMap::new();
         let scheduled = self
-            .schedule_runnable_sessions(&mut join_set, &mut active_pubkeys)
+            .schedule_runnable_sessions(&mut join_set, &mut active_sessions)
             .await?;
 
         while let Some(result) = join_set.join_next().await {
-            Self::handle_session_result(result, &mut active_pubkeys).await?;
+            Self::handle_session_result(result, &mut active_sessions).await?;
         }
 
         Ok(scheduled)
@@ -261,7 +281,7 @@ where
     async fn schedule_runnable_sessions(
         &self,
         join_set: &mut JoinSet<(String, Result<()>)>,
-        active_pubkeys: &mut HashSet<String>,
+        active_sessions: &mut HashMap<String, ActiveMailboxSession>,
     ) -> Result<usize> {
         let available_slots = self.semaphore.available_permits();
         if available_slots == 0 {
@@ -279,7 +299,7 @@ where
         let mut scheduled = 0usize;
 
         for mailbox in runnable {
-            if active_pubkeys.contains(&mailbox.pubkey) {
+            if active_sessions.contains_key(&mailbox.pubkey) {
                 continue;
             }
 
@@ -292,12 +312,26 @@ where
             let transport = self.transport.clone();
             let config = self.config.clone();
             let worker_id = self.worker_id.clone();
+            let cancellation_token = CancellationToken::new();
 
-            active_pubkeys.insert(pubkey.clone());
+            active_sessions.insert(
+                pubkey.clone(),
+                ActiveMailboxSession {
+                    auth_version: mailbox.auth_version,
+                    cancellation_token: cancellation_token.clone(),
+                },
+            );
             join_set.spawn(async move {
                 let _permit = permit;
-                let result =
-                    process_mailbox_session(app_state, transport, config, worker_id, mailbox).await;
+                let result = process_mailbox_session(
+                    app_state,
+                    transport,
+                    config,
+                    worker_id,
+                    mailbox,
+                    cancellation_token,
+                )
+                .await;
                 (pubkey, result)
             });
             scheduled += 1;
@@ -306,12 +340,66 @@ where
         Ok(scheduled)
     }
 
+    async fn renew_active_sessions(
+        &self,
+        active_sessions: &mut HashMap<String, ActiveMailboxSession>,
+    ) -> Result<()> {
+        let active_claims = active_sessions
+            .iter()
+            .map(|(pubkey, session)| (pubkey.clone(), session.auth_version))
+            .collect::<Vec<_>>();
+
+        let repo = MailboxAuthorizationRepository::new(&self.app_state.db_pool);
+        let now = Utc::now();
+        let renew_window = chrono::TimeDelta::from_std(self.config.claim_ttl / 2)?;
+        let renew_after = now + renew_window;
+        let lease_expires_at = now + chrono::TimeDelta::from_std(self.config.claim_ttl)?;
+        let claims = repo
+            .bulk_renew_claims(
+                &active_claims,
+                &self.worker_id,
+                now,
+                renew_after,
+                lease_expires_at,
+            )
+            .await?;
+
+        let valid_pubkeys = claims
+            .iter()
+            .map(|claim| claim.pubkey.clone())
+            .collect::<HashSet<_>>();
+        let renewed_count = claims.iter().filter(|claim| claim.renewed).count();
+        let lost_pubkeys = active_sessions
+            .keys()
+            .filter(|pubkey| !valid_pubkeys.contains(*pubkey))
+            .cloned()
+            .collect::<Vec<_>>();
+
+        for pubkey in &lost_pubkeys {
+            if let Some(session) = active_sessions.get(pubkey) {
+                session.cancellation_token.cancel();
+            }
+        }
+
+        if renewed_count > 0 || !lost_pubkeys.is_empty() {
+            tracing::debug!(
+                service = "mailbox_worker",
+                active_sessions = active_sessions.len(),
+                renewed_count,
+                lost_ownership_count = lost_pubkeys.len(),
+                "mailbox bulk lease renewal complete"
+            );
+        }
+
+        Ok(())
+    }
+
     async fn handle_session_result(
         result: std::result::Result<(String, Result<()>), tokio::task::JoinError>,
-        active_pubkeys: &mut HashSet<String>,
+        active_sessions: &mut HashMap<String, ActiveMailboxSession>,
     ) -> Result<()> {
         let (pubkey, session_result) = result?;
-        active_pubkeys.remove(&pubkey);
+        active_sessions.remove(&pubkey);
         if let Err(error) = session_result {
             tracing::error!(
                 service = "mailbox_worker",
@@ -331,6 +419,7 @@ async fn process_mailbox_session<T>(
     config: MailboxWorkerConfig,
     worker_id: String,
     mailbox: ActiveMailboxAuthorization,
+    cancellation_token: CancellationToken,
 ) -> Result<()>
 where
     T: MailboxTransport + 'static,
@@ -345,9 +434,8 @@ where
 
     let session = MailboxSessionContext {
         worker_id: worker_id.clone(),
-        claim_ttl: config.claim_ttl,
-        claim_renew_interval: config.claim_renew_interval,
         stream_idle_reconnect: config.stream_idle_reconnect,
+        cancellation_token,
     };
 
     let outcome = match transport
@@ -387,7 +475,8 @@ where
         }
     }
 
-    repo.release_claim(&mailbox.pubkey, &worker_id).await?;
+    repo.release_claim(&mailbox.pubkey, mailbox.auth_version, &worker_id)
+        .await?;
 
     Ok(())
 }
@@ -464,7 +553,7 @@ impl MailboxTransport for Beta8MailboxTransport {
 
             let mut catchup_count = 0u64;
             loop {
-                if !renew_mailbox_claim(&app_state, &mailbox, &session).await? {
+                if session.cancellation_token.is_cancelled() {
                     return Ok(MailboxSessionOutcome::Completed);
                 }
 
@@ -537,24 +626,14 @@ impl MailboxTransport for Beta8MailboxTransport {
                 "mailbox subscription started"
             );
 
-            let mut claim_renewal = interval_at(
-                jittered_claim_renewal_start(
-                    &mailbox.pubkey,
-                    session.claim_renew_interval,
-                    session.claim_ttl,
-                ),
-                session.claim_renew_interval,
-            );
             let idle_reconnect = sleep(session.stream_idle_reconnect);
             tokio::pin!(idle_reconnect);
 
             loop {
                 tokio::select! {
-                    _ = claim_renewal.tick() => {
-                        if !renew_mailbox_claim(&app_state, &mailbox, &session).await? {
-                            return Ok(MailboxSessionOutcome::Completed);
-                        }
-                    }
+                    _ = session.cancellation_token.cancelled() => {
+                        return Ok(MailboxSessionOutcome::Completed);
+                    },
                     _ = &mut idle_reconnect => {
                         tracing::trace!(
                             service = "mailbox_worker",
@@ -619,23 +698,6 @@ fn map_tonic_status(status: Status) -> MailboxSessionOutcome {
     }
 }
 
-fn jittered_claim_renewal_start(
-    pubkey: &str,
-    claim_renew_interval: Duration,
-    claim_ttl: Duration,
-) -> Instant {
-    let max_jitter_secs = cmp::min(
-        claim_renew_interval.as_secs().max(1),
-        claim_ttl.as_secs().saturating_div(2).max(1),
-    );
-
-    let mut hasher = DefaultHasher::new();
-    pubkey.hash(&mut hasher);
-    let jitter_secs = 1 + (hasher.finish() % max_jitter_secs);
-
-    Instant::now() + Duration::from_secs(jitter_secs)
-}
-
 async fn process_mailbox_message(
     app_state: &AppState,
     mailbox: &ActiveMailboxAuthorization,
@@ -643,7 +705,18 @@ async fn process_mailbox_message(
     message: &MailboxMessage,
     send_notifications: bool,
 ) -> Result<bool, ApiError> {
-    if !renew_mailbox_claim(app_state, mailbox, session)
+    if session.cancellation_token.is_cancelled() {
+        return Ok(false);
+    }
+
+    let repo = MailboxAuthorizationRepository::new(&app_state.db_pool);
+    if !repo
+        .claim_is_active(
+            &mailbox.pubkey,
+            mailbox.auth_version,
+            &session.worker_id,
+            Utc::now(),
+        )
         .await
         .map_err(ApiError::from)?
     {
@@ -717,7 +790,6 @@ async fn process_mailbox_message(
         _ => {}
     }
 
-    let repo = MailboxAuthorizationRepository::new(&app_state.db_pool);
     repo.update_checkpoint(
         &mailbox.pubkey,
         message.checkpoint as i64,
@@ -771,27 +843,6 @@ fn build_receive_notification(raw_vtxo: &[u8]) -> Result<Option<PushNotification
         VtxoPolicyKind::ServerHtlcRecv | VtxoPolicyKind::ServerHtlcSend => Ok(None),
         _ => Ok(None),
     }
-}
-
-async fn renew_mailbox_claim(
-    app_state: &AppState,
-    mailbox: &ActiveMailboxAuthorization,
-    session: &MailboxSessionContext,
-) -> Result<bool> {
-    let now = Utc::now();
-    let renew_window = chrono::TimeDelta::from_std(session.claim_ttl / 2)?;
-    let renew_after = now + renew_window;
-    let lease_expires_at = now + chrono::TimeDelta::from_std(session.claim_ttl)?;
-    let repo = MailboxAuthorizationRepository::new(&app_state.db_pool);
-    repo.renew_claim(
-        &mailbox.pubkey,
-        mailbox.auth_version,
-        &session.worker_id,
-        now,
-        renew_after,
-        lease_expires_at,
-    )
-    .await
 }
 
 #[cfg(test)]
@@ -869,19 +920,6 @@ mod tests {
     }
 
     #[test]
-    fn jittered_claim_renewal_start_stays_within_safe_window() {
-        let now = Instant::now();
-        let start = jittered_claim_renewal_start(
-            "02df013fdcd1d3c311715a68002aa75ffaf65f01ec30f1d0ed9d68518da4c7fa7e",
-            Duration::from_secs(30),
-            Duration::from_secs(120),
-        );
-
-        assert!(start > now);
-        assert!(start <= now + Duration::from_secs(30));
-    }
-
-    #[test]
     fn build_receive_notification_for_pubkey_vtxo() {
         let raw = VTXO_VECTORS.arkoor2_vtxo.serialize();
 
@@ -946,18 +984,24 @@ mod tests {
     #[tokio::test]
     async fn handle_session_result_does_not_stop_worker_on_session_error() {
         let pubkey = "test-pubkey".to_string();
-        let mut active_pubkeys = HashSet::from([pubkey.clone()]);
+        let mut active_sessions = HashMap::from([(
+            pubkey.clone(),
+            ActiveMailboxSession {
+                auth_version: 1,
+                cancellation_token: CancellationToken::new(),
+            },
+        )]);
         let result = Ok((pubkey.clone(), Err(anyhow!("session failed"))));
 
         let handled = MailboxWorker::<MailboxTransportUnavailable>::handle_session_result(
             result,
-            &mut active_pubkeys,
+            &mut active_sessions,
         )
         .await;
 
         assert!(handled.is_ok(), "session errors should not stop the worker");
         assert!(
-            !active_pubkeys.contains(&pubkey),
+            !active_sessions.contains_key(&pubkey),
             "failed sessions should still be removed from the active set"
         );
     }
