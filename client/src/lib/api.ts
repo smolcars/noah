@@ -221,10 +221,11 @@ const getAccessToken = async (options?: {
   if (!forceRefresh) {
     const storedTokenResult = await getServerAuthToken();
     if (storedTokenResult.isErr()) {
-      return err(storedTokenResult.error);
-    }
-
-    if (storedTokenResult.value) {
+      log.w("Stored server auth token is unreadable, re-authenticating", [
+        storedTokenResult.error,
+      ]);
+      await clearStoredAccessToken();
+    } else if (storedTokenResult.value) {
       const shouldRefreshResult = shouldRefreshServerAuthToken(
         storedTokenResult.value,
         TOKEN_REFRESH_WINDOW_SECONDS,
