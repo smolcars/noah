@@ -22,6 +22,7 @@ import { getAutoBoardThreshold } from "~/lib/autoBoarding";
 import { restoreWallet as restoreWalletAction } from "../lib/backupService";
 import { deregister } from "../lib/api";
 import { queryClient } from "~/queryClient";
+import { invalidateWalletDerivedQueries } from "~/lib/queryInvalidation";
 import { useTransactionStore } from "../store/transactionStore";
 import { useBackupStore } from "~/store/backupStore";
 import { ResultAsync } from "neverthrow";
@@ -158,6 +159,8 @@ export function usePendingRounds(refetchIntervalMs: number | false = false) {
 }
 
 export function useGetVtxos() {
+  const { isInitialized, isWalletSuspended, isBackgroundJobRunning } = useWalletStore();
+
   return useQuery({
     queryKey: ["vtxos"],
     queryFn: async () => {
@@ -167,11 +170,14 @@ export function useGetVtxos() {
       }
       return result.value;
     },
+    enabled: isInitialized && !isWalletSuspended && !isBackgroundJobRunning,
     retry: false,
   });
 }
 
 export function useGetExpiringVtxos() {
+  const { isInitialized, isWalletSuspended, isBackgroundJobRunning } = useWalletStore();
+
   return useQuery({
     queryKey: ["expiring-vtxos"],
     queryFn: async () => {
@@ -181,6 +187,7 @@ export function useGetExpiringVtxos() {
       }
       return result.value;
     },
+    enabled: isInitialized && !isWalletSuspended && !isBackgroundJobRunning,
     retry: false,
   });
 }
@@ -196,12 +203,10 @@ export function useRefreshExpiringVtxos() {
       }
     },
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["vtxos"] }),
-        queryClient.invalidateQueries({ queryKey: ["expiring-vtxos"] }),
-        queryClient.invalidateQueries({ queryKey: ["balance"] }),
-        queryClient.invalidateQueries({ queryKey: ["pending-rounds"] }),
-      ]);
+      await invalidateWalletDerivedQueries({
+        includePendingRounds: true,
+        includeTransactions: false,
+      });
       showAlert({
         title: "Refresh scheduled",
         description: "A delegated refresh has been scheduled for eligible VTXOs.",

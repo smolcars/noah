@@ -1,8 +1,8 @@
-import { queryClient } from "~/queryClient";
 import { useWalletStore } from "~/store/walletStore";
 import { onchainSync, sync } from "~/lib/walletApi";
 import logger from "~/lib/log";
 import { tryClaimAllLightningReceives } from "./paymentsApi";
+import { invalidateWalletDerivedQueries } from "~/lib/queryInvalidation";
 
 const log = logger("sync");
 
@@ -27,6 +27,5 @@ export const syncWallet = async () => {
     }
   });
 
-  await queryClient.invalidateQueries({ queryKey: ["balance"] });
-  await queryClient.invalidateQueries({ queryKey: ["transactions"] });
+  await invalidateWalletDerivedQueries();
 };

@@ -20,9 +20,9 @@ import { EmailVerificationBanner } from "~/components/EmailVerificationBanner";
 import { BackupStatusBanner } from "~/components/BackupStatusBanner";
 import { AutoBoardingStatusBanner } from "~/components/AutoBoardingStatusBanner";
 import { PendingRoundStatusBanner } from "~/components/PendingRoundStatusBanner";
+import { VtxoRefreshStatusBanner } from "~/components/VtxoRefreshStatusBanner";
 import { useBackgroundJobCoordination } from "~/hooks/useBackgroundJobCoordination";
 import { useServerStore } from "~/store/serverStore";
-import { queryClient } from "~/queryClient";
 
 import Animated, {
   FadeInDown,
@@ -45,6 +45,7 @@ import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { TransactionDetailContent } from "~/screens/TransactionDetailScreen";
 import { usePrivacyStore } from "~/store/privacyStore";
 import { useProfileStore } from "~/store/profileStore";
+import { invalidateWalletDerivedQueries } from "~/lib/queryInvalidation";
 
 const getTransactionIcon = (type: Transaction["type"]) => {
   switch (type) {
@@ -78,7 +79,7 @@ const HomeScreen = () => {
   const parentNavigation = navigation.getParent<NavigationProp<TabParamList>>();
   const { walletError, isWalletSuspended } = useWalletStore();
   const { safelyExecuteWhenReady, isBackgroundJobRunning } = useBackgroundJobCoordination();
-  const { data: balance, refetch, error, isLoading: isBalanceLoading } = useBalance();
+  const { data: balance, error, isLoading: isBalanceLoading } = useBalance();
   const { isPending: isSyncPending } = useWalletSync();
   const { mutateAsync: loadWallet } = useLoadWallet();
   const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
@@ -115,11 +116,10 @@ const HomeScreen = () => {
 
     await sync();
     await onchainSync();
-    await queryClient.invalidateQueries({ queryKey: ["pending-rounds"] });
-    await refetch();
+    await invalidateWalletDerivedQueries({ includePendingRounds: true });
     await updateWidget();
     getRandomFact();
-  }, [refetch, getRandomFact, safelyExecuteWhenReady, loadWallet]);
+  }, [getRandomFact, safelyExecuteWhenReady, loadWallet]);
 
   const openHistory = () => {
     parentNavigation?.navigate("History", { screen: "TransactionsList" });
@@ -252,6 +252,7 @@ const HomeScreen = () => {
           />
         )}
         <BackupStatusBanner />
+        <VtxoRefreshStatusBanner />
         <PendingRoundStatusBanner />
         <AutoBoardingStatusBanner />
         {isBackgroundJobRunning && (
