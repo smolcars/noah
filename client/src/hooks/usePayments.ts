@@ -237,6 +237,8 @@ export type BoardArkFeeEstimate = BarkFeeEstimate & {
   estimated_vbytes: StandardOnchainWalletFeeEstimate["estimated_vbytes"];
   fee_rate_tier: StandardOnchainWalletFeeEstimate["fee_rate_tier"];
   is_max_amount: boolean;
+  is_below_minimum_board_amount: boolean;
+  minimum_board_amount_sat: number;
 };
 
 export type BoardArkFeeEstimateUnavailable = {
@@ -244,6 +246,7 @@ export type BoardArkFeeEstimateUnavailable = {
   minimum_board_amount_sat: number;
   boardable_amount_sat: number;
   estimated_onchain_fee_sat: number;
+  estimated_remaining_onchain_sat: number;
   minimum_required_balance_sat: number;
   estimated_vbytes: number;
   fee_rate_sat_vb: number;
@@ -274,8 +277,14 @@ export function useBoardArkFeeEstimate(params: BoardArkFeeEstimateParams | null)
       const grossBoardAmountSat = params.isMaxAmount
         ? Math.max(params.confirmedOnchainBalanceSat - onchainEstimate.fee_sat, 0)
         : params.amountSat;
+      const isBelowMinimumBoardAmount = grossBoardAmountSat < params.minimumBoardAmountSat;
 
-      if (grossBoardAmountSat < params.minimumBoardAmountSat) {
+      const boardEstimateResult = await estimateBoardOffchainFee(grossBoardAmountSat);
+      if (boardEstimateResult.isErr()) {
+        if (!isBelowMinimumBoardAmount) {
+          throw boardEstimateResult.error;
+        }
+
         return {
           kind: "unavailable",
           unavailable: {
@@ -283,6 +292,8 @@ export function useBoardArkFeeEstimate(params: BoardArkFeeEstimateParams | null)
             minimum_board_amount_sat: params.minimumBoardAmountSat,
             boardable_amount_sat: grossBoardAmountSat,
             estimated_onchain_fee_sat: onchainEstimate.fee_sat,
+            estimated_remaining_onchain_sat:
+              params.confirmedOnchainBalanceSat - grossBoardAmountSat - onchainEstimate.fee_sat,
             minimum_required_balance_sat: params.minimumBoardAmountSat + onchainEstimate.fee_sat,
             estimated_vbytes: onchainEstimate.estimated_vbytes,
             fee_rate_sat_vb: onchainEstimate.fee_rate_sat_vb,
@@ -292,7 +303,7 @@ export function useBoardArkFeeEstimate(params: BoardArkFeeEstimateParams | null)
         };
       }
 
-      const boardEstimate = await readEstimateResult(estimateBoardOffchainFee(grossBoardAmountSat));
+      const boardEstimate = boardEstimateResult.value;
 
       return {
         kind: "estimate",
@@ -307,6 +318,8 @@ export function useBoardArkFeeEstimate(params: BoardArkFeeEstimateParams | null)
           estimated_vbytes: onchainEstimate.estimated_vbytes,
           fee_rate_tier: onchainEstimate.fee_rate_tier,
           is_max_amount: params.isMaxAmount,
+          is_below_minimum_board_amount: isBelowMinimumBoardAmount,
+          minimum_board_amount_sat: params.minimumBoardAmountSat,
         },
       };
     },

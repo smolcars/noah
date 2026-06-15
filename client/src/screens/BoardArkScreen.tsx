@@ -223,7 +223,13 @@ const BoardFeeEstimateSummary = ({
     >
       {estimate ? (
         <>
-          {estimate.is_max_amount ? (
+          {estimate.is_below_minimum_board_amount ? (
+            <Text className="mb-2 text-xs leading-5 text-muted-foreground">
+              This estimate is below Ark's minimum board amount of{" "}
+              {formatBip177(estimate.minimum_board_amount_sat)}. The final amount will be
+              calculated when you board.
+            </Text>
+          ) : estimate.is_max_amount ? (
             <Text className="mb-2 text-xs leading-5 text-muted-foreground">
               Max estimate leaves room for the onchain transaction fee.
             </Text>
@@ -272,14 +278,21 @@ const BoardFeeEstimateSummary = ({
         <>
           <Text className="text-sm leading-5 text-muted-foreground">
             {unavailable.is_max_amount
-              ? `Max leaves ${formatBip177(unavailable.boardable_amount_sat)} after the estimated onchain fee, which is below Ark's minimum board amount.`
-              : `Enter at least ${formatBip177(unavailable.minimum_board_amount_sat)} to meet Ark's minimum board amount.`}
+              ? `This Max estimate is below Ark's minimum board amount of ${formatBip177(unavailable.minimum_board_amount_sat)}. The final amount will be calculated when you board.`
+              : `This estimate is below Ark's minimum board amount of ${formatBip177(unavailable.minimum_board_amount_sat)}. The final amount will be calculated when you board.`}
           </Text>
           <FeeEstimateSeparator className="mt-2" />
           <FeeEstimateRow
-            label="Minimum board amount"
-            value={formatBip177(unavailable.minimum_board_amount_sat)}
+            label="Amount to board"
+            value={formatBip177(unavailable.boardable_amount_sat)}
             compact
+          />
+          <FeeEstimateSeparator />
+          <FeeEstimateRow
+            label="Ark boarding fee"
+            value="Not estimated"
+            compact
+            valueClassName="text-muted-foreground"
           />
           <FeeEstimateSeparator />
           <FeeEstimateRow
@@ -290,8 +303,24 @@ const BoardFeeEstimateSummary = ({
           />
           <FeeEstimateSeparator />
           <FeeEstimateRow
-            label="Minimum balance needed"
-            value={formatBip177(unavailable.minimum_required_balance_sat)}
+            label="Stays in onchain wallet"
+            value={formatBip177(unavailable.estimated_remaining_onchain_sat)}
+            compact
+            valueClassName={
+              unavailable.estimated_remaining_onchain_sat < 0 ? "text-red-500" : undefined
+            }
+          />
+          <FeeEstimateSeparator />
+          <FeeEstimateRow
+            label="Ark amount after fee"
+            value="Not estimated"
+            compact
+            valueClassName="text-muted-foreground"
+          />
+          <FeeEstimateSeparator />
+          <FeeEstimateRow
+            label="Minimum board amount"
+            value={formatBip177(unavailable.minimum_board_amount_sat)}
             compact
           />
           <Text className="mt-2 text-xs leading-5 text-muted-foreground">
@@ -309,6 +338,20 @@ const BoardFeeEstimateSummary = ({
     </FeeEstimateBox>
   );
 };
+
+const MinimumBoardAmountSummary = ({ minimumBoardAmountSat }: { minimumBoardAmountSat: number }) => (
+  <FeeEstimateBox title="Minimum board amount" compact>
+    <Text className="text-sm leading-5 text-muted-foreground">
+      Enter at least {formatBip177(minimumBoardAmountSat)} to board to Ark.
+    </Text>
+    <FeeEstimateSeparator className="mt-2" />
+    <FeeEstimateRow
+      label="Minimum board amount"
+      value={formatBip177(minimumBoardAmountSat)}
+      compact
+    />
+  </FeeEstimateBox>
+);
 
 // Transaction result component
 const TransactionResult = ({
@@ -439,6 +482,11 @@ const BoardArkScreen = () => {
     const parsedAmount = Number(trimmedAmount);
     return Number.isSafeInteger(parsedAmount) && parsedAmount > 0 ? parsedAmount : null;
   }, [amount]);
+  const isBoardAmountBelowMinimum =
+    flow === "onboard" &&
+    boardAmountSat !== null &&
+    !!arkInfo &&
+    boardAmountSat < arkInfo.min_board_amount;
 
   const validOffboardEstimateAddress = useMemo(() => {
     if (flow !== "offboard") {
@@ -470,6 +518,10 @@ const BoardArkScreen = () => {
 
   const boardEstimateParams = useMemo(() => {
     if (flow !== "onboard" || boardAmountSat === null || onchainBalance <= 0 || !arkInfo) {
+      return null;
+    }
+
+    if (boardAmountSat < arkInfo.min_board_amount) {
       return null;
     }
 
@@ -518,14 +570,6 @@ const BoardArkScreen = () => {
   const currentBoardEstimateResult = isCurrentBoardEstimate
     ? boardFeeEstimateQuery.data
     : undefined;
-  const isBoardEstimatePending =
-    flow === "onboard" &&
-    !!boardEstimateParams &&
-    (!isCurrentBoardEstimate || boardFeeEstimateQuery.isFetching);
-  const isBoardEstimateBlocked =
-    currentBoardEstimateResult?.kind === "unavailable" ||
-    (currentBoardEstimateResult?.kind === "estimate" &&
-      currentBoardEstimateResult.estimate.estimated_remaining_onchain_sat < 0);
 
   useEffect(() => {
     if (!boardFeeEstimateQuery.error) {
@@ -594,48 +638,24 @@ const BoardArkScreen = () => {
   };
 
   const handleBoard = () => {
-    if (isBoardEstimatePending) {
-      showAlert({
-        title: "Estimating Fees",
-        description: "Please wait for the boarding fee estimate to finish.",
-      });
-      return;
-    }
-
-    if (currentBoardEstimateResult?.kind === "unavailable") {
-      const { unavailable } = currentBoardEstimateResult;
-      showAlert({
-        title: unavailable.is_max_amount ? "Insufficient Funds" : "Amount Too Low",
-        description: unavailable.is_max_amount
-          ? `Your balance needs to cover ${formatBip177(unavailable.minimum_board_amount_sat)} plus the estimated onchain fee.`
-          : `Enter at least ${formatBip177(unavailable.minimum_board_amount_sat)} to board to Ark.`,
-      });
-      return;
-    }
-
-    if (
-      currentBoardEstimateResult?.kind === "estimate" &&
-      currentBoardEstimateResult.estimate.estimated_remaining_onchain_sat < 0
-    ) {
-      showAlert({
-        title: "Insufficient Funds",
-        description:
-          "The amount plus estimated onchain fee exceeds your confirmed on-chain balance.",
-      });
-      return;
-    }
-
-    if (isMaxAmount) {
-      setParsedData(null);
-      boardAllArk();
-      return;
-    }
     const amountSat = parseInt(amount, 10);
     if (isNaN(amountSat) || amountSat <= 0) {
       showAlert({
         title: "Invalid Amount",
         description: "Please enter a valid amount to board.",
       });
+      return;
+    }
+    if (arkInfo && amountSat < arkInfo.min_board_amount) {
+      showAlert({
+        title: "Amount Too Low",
+        description: `Enter at least ${formatBip177(arkInfo.min_board_amount)} to board to Ark.`,
+      });
+      return;
+    }
+    if (isMaxAmount) {
+      setParsedData(null);
+      boardAllArk();
       return;
     }
     if (amountSat > onchainBalance) {
@@ -665,8 +685,7 @@ const BoardArkScreen = () => {
   const hasClearableInput = flow === "onboard" ? amount.length > 0 : address.length > 0;
   const isPrimaryActionDisabled =
     isActionLoading ||
-    isBoardEstimatePending ||
-    isBoardEstimateBlocked ||
+    isBoardAmountBelowMinimum ||
     (flow === "onboard" && (!amount || onchainBalance === 0)) ||
     (flow === "offboard" && (offchainBalance === 0 || !address));
 
@@ -719,7 +738,9 @@ const BoardArkScreen = () => {
                   onchainBalance={onchainBalance}
                   setIsMaxAmount={setIsMaxAmount}
                 />
-                {boardEstimateParams ? (
+                {isBoardAmountBelowMinimum && arkInfo ? (
+                  <MinimumBoardAmountSummary minimumBoardAmountSat={arkInfo.min_board_amount} />
+                ) : boardEstimateParams ? (
                   <BoardFeeEstimateSummary
                     result={currentBoardEstimateResult}
                     isLoading={boardFeeEstimateQuery.isFetching}
