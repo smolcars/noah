@@ -6,9 +6,13 @@ use serde_json::json;
 use tower::ServiceExt;
 
 use crate::db::{
-    heartbeat_repo::HeartbeatRepository,
+    heartbeat_repo::{
+        HEARTBEAT_DEREGISTRATION_MISS_THRESHOLD, HEARTBEAT_NOTIFICATION_RETENTION_LIMIT,
+        HeartbeatRepository,
+    },
     mailbox_authorization_repo::MailboxAuthorizationRepository,
-    push_token_repo::PushTokenRepository, user_repo::UserRepository,
+    push_token_repo::PushTokenRepository,
+    user_repo::UserRepository,
 };
 use crate::tests::common::{TestUser, create_test_user, setup_test_app};
 use crate::types::{DefaultSuccessPayload, HeartbeatStatus, UserStatus};
@@ -428,8 +432,8 @@ async fn test_heartbeat_repo_get_users_to_deregister() {
 
     let heartbeat_repo = HeartbeatRepository::new(&app_state.db_pool);
 
-    // User1: Create 10 missed notifications (should be deregistered)
-    for _ in 0..10 {
+    // User1: Create enough missed notifications to trigger deregistration.
+    for _ in 0..HEARTBEAT_DEREGISTRATION_MISS_THRESHOLD {
         heartbeat_repo
             .create_notification(&user1.pubkey().to_string())
             .await
@@ -437,8 +441,8 @@ async fn test_heartbeat_repo_get_users_to_deregister() {
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
     }
 
-    // User2: Create 5 missed notifications (should NOT be deregistered)
-    for _ in 0..5 {
+    // User2: Create one fewer than the threshold (should NOT be deregistered).
+    for _ in 0..(HEARTBEAT_DEREGISTRATION_MISS_THRESHOLD - 1) {
         heartbeat_repo
             .create_notification(&user2.pubkey().to_string())
             .await
@@ -463,25 +467,27 @@ async fn test_heartbeat_repo_get_users_to_deregister_includes_timeout() {
     let heartbeat_repo = HeartbeatRepository::new(&app_state.db_pool);
     let pubkey = user.pubkey().to_string();
 
-    for i in 0..5 {
+    let split_threshold = HEARTBEAT_DEREGISTRATION_MISS_THRESHOLD / 2;
+
+    for i in 0..split_threshold {
         HeartbeatRepository::create_with_status_and_sent_at(
             &app_state.db_pool,
             &pubkey,
             &format!("pending-{}", i),
             HeartbeatStatus::Pending,
-            Utc::now() - Duration::minutes((20 - i) as i64),
+            Utc::now() - Duration::minutes(HEARTBEAT_DEREGISTRATION_MISS_THRESHOLD - i),
         )
         .await
         .unwrap();
     }
 
-    for i in 0..5 {
+    for i in 0..split_threshold {
         HeartbeatRepository::create_with_status_and_sent_at(
             &app_state.db_pool,
             &pubkey,
             &format!("timeout-{}", i),
             HeartbeatStatus::Timeout,
-            Utc::now() - Duration::minutes((10 - i) as i64),
+            Utc::now() - Duration::minutes(split_threshold - i),
         )
         .await
         .unwrap();
@@ -558,8 +564,8 @@ async fn test_heartbeat_repo_cleanup_old_notifications() {
 
     let heartbeat_repo = HeartbeatRepository::new(&app_state.db_pool);
 
-    // Create 20 notifications (more than the 15 limit)
-    for _ in 0..20 {
+    // Create more notifications than the retention limit.
+    for _ in 0..(HEARTBEAT_NOTIFICATION_RETENTION_LIMIT + 5) {
         heartbeat_repo
             .create_notification(&user.pubkey().to_string())
             .await
@@ -570,7 +576,7 @@ async fn test_heartbeat_repo_cleanup_old_notifications() {
     // Cleanup old notifications
     heartbeat_repo.cleanup_old_notifications().await.unwrap();
 
-    // Verify only 15 notifications remain
+    // Verify only the retained notification window remains.
     let count: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM heartbeat_notifications WHERE pubkey = $1")
             .bind(user.pubkey().to_string())
@@ -578,7 +584,7 @@ async fn test_heartbeat_repo_cleanup_old_notifications() {
             .await
             .unwrap();
 
-    assert_eq!(count, 15);
+    assert_eq!(count, HEARTBEAT_NOTIFICATION_RETENTION_LIMIT);
 }
 
 #[tracing_test::traced_test]
@@ -738,13 +744,13 @@ async fn test_check_and_deregister_inactive_users_removes_mailbox_authorization(
         .await
         .unwrap();
 
-    for i in 0..10 {
+    for i in 0..HEARTBEAT_DEREGISTRATION_MISS_THRESHOLD {
         HeartbeatRepository::create_with_status_and_sent_at(
             &app_state.db_pool,
             &pubkey,
             &format!("missed-{}", i),
             HeartbeatStatus::Pending,
-            Utc::now() - Duration::minutes((20 - i) as i64),
+            Utc::now() - Duration::minutes(HEARTBEAT_DEREGISTRATION_MISS_THRESHOLD - i),
         )
         .await
         .unwrap();

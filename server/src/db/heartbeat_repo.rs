@@ -6,6 +6,9 @@ use crate::types::HeartbeatStatus;
 #[cfg(test)]
 use std::str::FromStr;
 
+pub(crate) const HEARTBEAT_DEREGISTRATION_MISS_THRESHOLD: i64 = 20;
+pub(crate) const HEARTBEAT_NOTIFICATION_RETENTION_LIMIT: i64 = 30;
+
 pub struct HeartbeatRepository<'a> {
     pool: &'a PgPool,
 }
@@ -100,9 +103,10 @@ impl<'a> HeartbeatRepository<'a> {
              FROM heartbeat_notifications
              WHERE pubkey = $1
              ORDER BY sent_at DESC
-             LIMIT 10",
+             LIMIT $2",
         )
         .bind(pubkey)
+        .bind(HEARTBEAT_DEREGISTRATION_MISS_THRESHOLD)
         .fetch_all(self.pool)
         .await?;
 
@@ -133,7 +137,7 @@ impl<'a> HeartbeatRepository<'a> {
         Ok(pubkeys)
     }
 
-    /// Cleans up old heartbeat notifications (keeps only last 15 per user)
+    /// Cleans up old heartbeat notifications.
     pub async fn cleanup_old_notifications(&self) -> Result<()> {
         sqlx::query(
             "DELETE FROM heartbeat_notifications
@@ -142,16 +146,17 @@ impl<'a> HeartbeatRepository<'a> {
                      SELECT id,
                             ROW_NUMBER() OVER (PARTITION BY pubkey ORDER BY sent_at DESC) as rn
                      FROM heartbeat_notifications
-                 ) ranked WHERE rn <= 15
+                 ) ranked WHERE rn <= $1
              )",
         )
+        .bind(HEARTBEAT_NOTIFICATION_RETENTION_LIMIT)
         .execute(self.pool)
         .await?;
 
         Ok(())
     }
 
-    /// Gets users who have missed 10 or more consecutive heartbeats
+    /// Gets users who have missed enough consecutive heartbeats to be deregistered.
     pub async fn get_users_to_deregister(&self) -> Result<Vec<String>> {
         let pubkeys = sqlx::query_scalar::<_, String>(
             "WITH recent_heartbeats AS (
@@ -165,14 +170,15 @@ impl<'a> HeartbeatRepository<'a> {
                 SELECT pubkey,
                        COUNT(*) as missed_count
                 FROM recent_heartbeats
-                WHERE rn <= 10 AND status IN ($1, $2)
+                WHERE rn <= $3 AND status IN ($1, $2)
                 GROUP BY pubkey
-                HAVING COUNT(*) >= 10
+                HAVING COUNT(*) >= $3
             )
             SELECT pubkey FROM consecutive_missed",
         )
         .bind(HeartbeatStatus::Pending.to_string())
         .bind(HeartbeatStatus::Timeout.to_string())
+        .bind(HEARTBEAT_DEREGISTRATION_MISS_THRESHOLD)
         .fetch_all(self.pool)
         .await?;
 
