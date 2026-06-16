@@ -723,7 +723,7 @@ const BoardArkScreen = () => {
             {flow === "onboard" ? (
               <>
                 <Text className="text-muted-foreground text-center mb-8">
-                  Swap you onchain bitcoin and enter the Ark network for fast, cheap offchain
+                  Swap your onchain bitcoin and enter the Ark network for fast, cheap offchain
                   transactions.
                 </Text>
                 <BalanceDisplay
