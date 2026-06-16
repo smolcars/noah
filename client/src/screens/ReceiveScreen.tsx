@@ -42,7 +42,10 @@ import logger from "~/lib/log";
 import type { Bolt11Invoice } from "react-native-nitro-ark";
 import { queryClient } from "~/queryClient";
 import { BlinkingCaret } from "~/components/BlinkingCaret";
-import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
+import {
+  useBitcoinAmountFormatter,
+  useBitcoinAmountUnit,
+} from "~/hooks/useBitcoinAmountFormatter";
 
 const minAmount = 1;
 const SUBSCRIPTION_RETRY_DELAY_MS = 1000;
@@ -185,6 +188,7 @@ const ReceiveScreen = () => {
   const iconColor = useIconColor();
   const colors = useThemeColors();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
+  const bitcoinAmountUnit = useBitcoinAmountUnit();
   const { amount, setAmount, currency, toggleCurrency, amountSat, btcPrice, fiatCurrency } =
     useReceiveScreen();
   const fiatCurrencyInfo = getFiatCurrencyInfo(fiatCurrency);
@@ -238,6 +242,9 @@ const ReceiveScreen = () => {
   const hasEnteredAmount = amount.trim().length > 0;
   const isEnteredAmountInvalid = hasEnteredAmount && amountSat < minAmount;
   const displayAmount = amount === "" ? (currency === "FIAT" ? "0.00" : "0") : amount;
+  const amountPrefix =
+    currency === "FIAT" ? fiatCurrencyInfo.symbol : bitcoinAmountUnit === "bip177" ? "₿" : null;
+  const amountSuffix = currency === "SATS" && bitcoinAmountUnit === "sats" ? "sats" : null;
   const [isAmountFocused, setIsAmountFocused] = useState(false);
 
   const stopSubscription = useCallback(
@@ -705,9 +712,11 @@ const ReceiveScreen = () => {
                   <View className="self-center">
                     <Pressable onPress={focusAmountInput} disabled={isAmountLocked}>
                       <View className="flex-row items-center justify-center">
-                        <Text className="mr-3 text-[46px] font-bold leading-[52px] text-foreground">
-                          {currency === "FIAT" ? fiatCurrencyInfo.symbol : "₿"}
-                        </Text>
+                        {amountPrefix ? (
+                          <Text className="mr-3 text-[46px] font-bold leading-[52px] text-foreground">
+                            {amountPrefix}
+                          </Text>
+                        ) : null}
                         <Text className="text-[46px] font-bold leading-[52px] text-foreground">
                           {displayAmount}
                         </Text>
@@ -716,6 +725,11 @@ const ReceiveScreen = () => {
                           height={40}
                           visible={isAmountFocused && !isAmountLocked}
                         />
+                        {amountSuffix ? (
+                          <Text className="ml-3 text-2xl font-bold text-muted-foreground">
+                            {amountSuffix}
+                          </Text>
+                        ) : null}
                       </View>
                     </Pressable>
                   </View>

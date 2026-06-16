@@ -27,7 +27,10 @@ import { CurrencyToggle } from "~/components/CurrencyToggle";
 import { COLORS } from "~/lib/styleConstants";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { BlinkingCaret } from "~/components/BlinkingCaret";
-import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
+import {
+  useBitcoinAmountFormatter,
+  useBitcoinAmountUnit,
+} from "~/hooks/useBitcoinAmountFormatter";
 
 const SendScreen = () => {
   const navigation = useNavigation();
@@ -35,6 +38,7 @@ const SendScreen = () => {
   const iconColor = useIconColor();
   const colors = useThemeColors();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
+  const bitcoinAmountUnit = useBitcoinAmountUnit();
   const bottomTabBarHeight = useBottomTabBarHeight();
   const destinationInputRef = React.useRef<TextInput>(null);
   const amountInputRef = React.useRef<TextInput>(null);
@@ -91,6 +95,9 @@ const SendScreen = () => {
   } = useSendScreen();
   const fiatCurrencyInfo = getFiatCurrencyInfo(fiatCurrency);
   const displayAmount = amount === "" ? (currency === "FIAT" ? "0.00" : "0") : amount;
+  const amountPrefix =
+    currency === "FIAT" ? fiatCurrencyInfo.symbol : bitcoinAmountUnit === "bip177" ? "₿" : null;
+  const amountSuffix = currency === "SATS" && bitcoinAmountUnit === "sats" ? "sats" : null;
 
   const handlePaste = async () => {
     const text = await Clipboard.getStringAsync();
@@ -179,9 +186,11 @@ const SendScreen = () => {
                     <View className="self-center">
                       <Pressable onPress={focusAmountInput} disabled={!isAmountEditable}>
                         <View className="flex-row items-center justify-center">
-                          <Text className="mr-3 text-[46px] font-bold leading-[52px] text-foreground">
-                            {currency === "FIAT" ? fiatCurrencyInfo.symbol : "₿"}
-                          </Text>
+                          {amountPrefix ? (
+                            <Text className="mr-3 text-[46px] font-bold leading-[52px] text-foreground">
+                              {amountPrefix}
+                            </Text>
+                          ) : null}
                           <Text
                             className={`text-[46px] font-bold leading-[52px] ${
                               isAmountEditable ? "text-foreground" : "text-foreground/70"
@@ -194,6 +203,11 @@ const SendScreen = () => {
                             height={40}
                             visible={isAmountFocused && isAmountEditable}
                           />
+                          {amountSuffix ? (
+                            <Text className="ml-3 text-2xl font-bold text-muted-foreground">
+                              {amountSuffix}
+                            </Text>
+                          ) : null}
                         </View>
                       </Pressable>
                     </View>
