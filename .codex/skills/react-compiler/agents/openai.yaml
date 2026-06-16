@@ -1,0 +1,4 @@
+interface:
+  display_name: "React Compiler"
+  short_description: "React Compiler coding and audit guidance"
+  default_prompt: "Use $react-compiler to refactor this React component for a React Compiler-enabled codebase."

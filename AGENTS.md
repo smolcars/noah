@@ -53,9 +53,9 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
 - State: Zustand with MMKV persistence.
 - Data fetching: TanStack Query.
 - Styling: Uniwind/Nativewind + `global.css` theme variables.
-- Native wallet + crypto: `react-native-nitro-ark`.
+- Ark APIs: `react-native-nitro-ark`.
 - Custom native bridge: `noah-tools` Nitro module.
-- Push: Expo Notifications + UnifiedPush fallback (non-GMS Android).
+- React compiler
 
 ### Server
 
@@ -99,26 +99,6 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
 - Server checks: `just server-check` and `cargo fmt --check`.
 - Combined: `just check-all`.
 
-## CI reality (must match locally)
-
-- Client PR CI (`.github/workflows/client.yml`):
-  - `bun client lint`
-  - `bun client typecheck`
-  - Android signet build
-- Server PR CI (`.github/workflows/server.yml`):
-  - `cargo fmt --check`
-  - `cargo test` with Postgres + Dragonfly services
-  - `cargo build --release --bin noah-cli`
-- Husky pre-commit runs:
-  - `bun client check`
-  - `cargo fmt --check`
-- After opening a PR, monitor CI status checks:
-  - `gh pr checks --watch`
-  - or `gh pr view --json statusCheckRollup`
-- After PR is merged, sync local `master` before continuing work:
-  - `git checkout master`
-  - `git pull --ff-only origin master`
-
 ## Client architecture details
 
 ### App boot sequence
@@ -130,27 +110,6 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
   - Handles push-permission gate screen.
   - Initializes services via `<AppServices />` after wallet is loaded.
 
-### State model
-
-- `walletStore`:
-  - onboarding/wallet-loaded flags, biometrics/debug toggles.
-  - background job coordination flags (`isBackgroundJobRunning`, stale cleanup logic).
-- `serverStore`:
-  - registration status, lightning address, backup enabled, email verified.
-- `transactionStore`:
-  - auto-boarding preferences.
-- `backupStore`:
-  - backup status and freshness metadata.
-
-### Networking and auth
-
-- Client server API wrappers live in `client/src/lib/api.ts`.
-- Every authenticated request:
-  - fetches/uses `k1` (`GET /v0/getk1`),
-  - derives key + signs k1 via wallet mnemonic,
-  - sends `x-auth-k1`, `x-auth-sig`, `x-auth-key` headers.
-- API layer uses `nativePost/nativeGet` from `noah-tools` instead of raw fetch.
-
 ### Wallet and payments
 
 - Do not call `react-native-nitro-ark` directly from screens/components.
@@ -160,25 +119,6 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
   - `client/src/hooks/useWallet.ts`
   - `client/src/hooks/usePayments.ts`
 - Background sync entrypoint: `client/src/lib/sync.ts`.
-
-### Backup
-
-- Main logic: `client/src/lib/backupService.ts`.
-- Automatic trigger logic: `client/src/lib/backupAuto.ts` and `client/src/hooks/useAutoBackup.ts`.
-- Flow: create encrypted backup natively -> get presigned upload URL -> upload -> finalize metadata.
-
-### Push and background tasks
-
-- `client/src/lib/pushNotifications.ts` defines Expo background task `BACKGROUND-NOTIFICATION-TASK`.
-- Task routes by `notification_type` (`maintenance`, `lightning_invoice_request`, `backup_trigger`, `heartbeat`).
-- Uses `walletStore` coordination flags to prevent foreground/background wallet race conditions.
-- UnifiedPush support via `noah-tools` for Android devices without Google Play Services.
-
-### Local persistence
-
-- MMKV for app state (`client/src/lib/mmkv.ts`).
-- SQLite DB at `ARK_DATA_PATH/noah_wallet.sqlite` with migrations in `client/src/lib/migrations.ts`.
-- Transaction/onboarding/offboarding data utilities in `client/src/lib/transactionsDb.ts`.
 
 ### Build variants
 
@@ -204,84 +144,6 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
   - public (stricter),
   - suggestions-specific,
   - authenticated.
-
-### Auth model
-
-- Header-based LNURL-auth style challenge:
-  - `x-auth-k1`, `x-auth-sig`, `x-auth-key`.
-- `k1` is issued in Redis with timestamp suffix and 10 min TTL.
-- On successful auth:
-  - signature is verified,
-  - k1 is removed (single-use),
-  - user key is attached to request extensions + Sentry scope.
-
-### Public and gated endpoints
-
-Public handlers (`public_api_v0.rs`) include:
-
-- `GET /v0/getk1`
-- `POST /v0/ln_address_suggestions`
-- `POST /v0/app_version`
-- `GET /.well-known/lnurlp/{username}`
-- `POST /v0/register` (auth headers required)
-- `POST /v0/email/send_verification` (auth + user exists)
-- `POST /v0/email/verify` (auth + user exists)
-
-Gated handlers (`gated_api_v0.rs`) include:
-
-- `POST /v0/register_push_token`
-- `POST /v0/lnurlp/submit_invoice`
-- `POST /v0/user_info`
-- `POST /v0/update_ln_address`
-- `POST /v0/deregister`
-- `POST /v0/backup/upload_url`
-- `POST /v0/backup/complete_upload`
-- `POST /v0/backup/list`
-- `POST /v0/backup/download_url`
-- `POST /v0/backup/delete`
-- `POST /v0/backup/settings`
-- `POST /v0/report_job_status`
-- `POST /v0/heartbeat_response`
-- `POST /v0/report_last_login`
-
-### DB layer
-
-- All SQL belongs in repository modules under `server/src/db/`.
-- Key repositories:
-  - `user_repo`
-  - `push_token_repo`
-  - `backup_repo`
-  - `heartbeat_repo`
-  - `job_status_repo`
-  - `notification_tracking_repo`
-  - `device_repo`
-- Migrations in `server/migrations/` are canonical for schema evolution.
-
-### Cache layer
-
-- `k1_store`: login challenge issuance/verification state.
-- `invoice_store`: short-lived invoice handoff during LNURL payment flow.
-- `email_verification_store`: code + email with 10-minute TTL.
-- `maintenance_store`: round timestamp/counter for maintenance scheduling.
-
-### Background jobs and Ark stream
-
-- Cron scheduler (`server/src/cron.rs`) manages:
-  - backup trigger notifications,
-  - heartbeat notifications,
-  - inactive user deregistration,
-  - stale pending job-status timeout sweeps,
-  - Redis keepalive ping.
-- Ark server stream integration (`server/src/ark_client.rs`) detects rounds and triggers maintenance notifications.
-
-### Push notification dispatch
-
-- `server/src/push.rs`:
-  - detects Expo vs UnifiedPush token formats,
-  - sends Expo batches,
-  - sends UnifiedPush HTTP POST payloads,
-  - supports per-device unique k1 generation for job-correlated notifications.
-- `server/src/notification_coordinator.rs` applies spacing and priority rules.
 
 ## Shared types and contract generation
 
@@ -317,41 +179,6 @@ Gated handlers (`gated_api_v0.rs`) include:
 - Validate user-provided lightning addresses through existing validation paths.
 - Keep background job coordination logic intact when touching push/wallet load flows.
 
-## Agent task playbooks
-
-### Adding/changing a server endpoint
-
-1. Add/modify payload types in `server/src/types.rs` if needed.
-2. Implement handler in `server/src/routes/public_api_v0.rs` or `server/src/routes/gated_api_v0.rs`.
-3. Add repository methods in `server/src/db/*` for SQL.
-4. Wire route in `server/src/main.rs`.
-5. Add tests under `server/src/tests/`.
-6. Run `cargo test`.
-7. Verify `client/src/types/serverTypes.ts` changes are intentional.
-
-### Adding/changing a client feature that calls server
-
-1. Add wrapper in `client/src/lib/api.ts` (typed with `serverTypes.ts`).
-2. Add hook in `client/src/hooks/`.
-3. Use hook from screen/component.
-4. Keep query invalidation correct (`queryClient.invalidateQueries`).
-5. Run `bun client check`.
-
-### Touching push/background flows
-
-1. Verify both Expo and UnifiedPush paths.
-2. Preserve `walletStore` background job flag semantics.
-3. Ensure job completion reports still call `/report_job_status` for maintenance/backup.
-4. Validate no duplicate concurrent operations introduced.
-
-## Known gotchas
-
-- No `start.md` existed historically in this repo; bootstrap guidance now lives there.
-- `email_verified_middleware` currently logs warning instead of rejecting unverified users.
-- Some docs in `docs/` may describe older concepts (e.g., offboarding coordination) that no longer fully match current code.
-- Root `README.md` is useful but not fully authoritative for backend internals.
-- `client/nitromodules/noah-tools` contains its own `node_modules`; avoid broad searches there unless needed.
-
 ## High-value files to read first for most tasks
 
 - `client/src/Navigators.tsx`
@@ -365,3 +192,66 @@ Gated handlers (`gated_api_v0.rs`) include:
 - `server/src/routes/app_middleware.rs`
 - `server/src/types.rs`
 - `server/src/tests/common.rs`
+
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+## 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+## 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
