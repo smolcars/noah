@@ -7,7 +7,7 @@
 <p align="center">Noah is a modern, trust-minimized wallet for Ark, a Bitcoin Layer 2 protocol. It is built with React Native and Expo.</p>
 
 <p align="center">
-  ⚠️ <strong>WARNING</strong>: This project is in rapid development phase and is extremely alpha. DO NOT use with real funds.
+  ⚠️ <strong>WARNING</strong>: This project is in beta. Only deposit funds you are ok with losing.
 </p>
 
 ---
