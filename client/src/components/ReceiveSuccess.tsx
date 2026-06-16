@@ -5,13 +5,13 @@ import { Text } from "./ui/text";
 import { NoahButton } from "./ui/NoahButton";
 import ReceiveAnimation from "./ReceiveAnimation";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
-import { formatBip177 } from "~/lib/utils";
 import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
 import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
 import * as Haptics from "expo-haptics";
 import { useThemeColors } from "~/hooks/useTheme";
 import { COLORS } from "~/lib/styleConstants";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 type ReceiveSuccessProps = {
   amountSat: number;
@@ -28,6 +28,7 @@ export const ReceiveSuccess: React.FC<ReceiveSuccessProps> = ({
   totalWalletBalanceSat,
   handleDone,
 }) => {
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const fiatAmount = btcPrice ? satsToFiat(amountSat, btcPrice, fiatCurrency) : null;
   const colors = useThemeColors();
   const bottomTabBarHeight = useBottomTabBarHeight();
@@ -52,7 +53,7 @@ export const ReceiveSuccess: React.FC<ReceiveSuccessProps> = ({
 
           <Animated.View entering={FadeInUp.duration(520).delay(180)} className="mt-6 items-center">
             <Text className="text-center text-4xl font-bold text-foreground">
-              {formatBip177(amountSat)}
+              {formatBitcoinAmount(amountSat)}
             </Text>
             {btcPrice && (
               <Text className="mt-3 text-base font-medium text-muted-foreground">
@@ -83,7 +84,9 @@ export const ReceiveSuccess: React.FC<ReceiveSuccessProps> = ({
             <View className="mt-4 flex-row items-center justify-between">
               <Text className="text-base text-muted-foreground">Wallet balance</Text>
               <Text className="text-base font-semibold text-foreground">
-                {totalWalletBalanceSat !== undefined ? formatBip177(totalWalletBalanceSat) : "…"}
+                {totalWalletBalanceSat !== undefined
+                  ? formatBitcoinAmount(totalWalletBalanceSat)
+                  : "…"}
               </Text>
             </View>
           </Animated.View>

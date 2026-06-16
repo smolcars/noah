@@ -28,7 +28,7 @@ import {
   type BoardArkFeeEstimateResult,
 } from "../hooks/usePayments";
 import { copyToClipboard } from "../lib/clipboardUtils";
-import { cn, formatBip177, isNetworkMatch } from "../lib/utils";
+import { cn, isNetworkMatch } from "../lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { useAlert } from "~/contexts/AlertProvider";
@@ -38,6 +38,7 @@ import { BoardResult } from "react-native-nitro-ark";
 import { useTransactionStore } from "~/store/transactionStore";
 import { FeeEstimateSummary } from "~/components/FeeEstimateSummary";
 import { FeeEstimateBox, FeeEstimateRow, FeeEstimateSeparator } from "~/components/FeeEstimateBox";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 const log = logger("BoardArkScreen");
 
@@ -94,31 +95,37 @@ const BalanceDisplay = ({
   pendingAmount?: number;
   isLoading: boolean;
   compact?: boolean;
-}) => (
-  <View className={compact ? "mb-5" : "mb-8"}>
-    <Text className={compact ? "text-sm text-muted-foreground" : "text-lg text-muted-foreground"}>
-      {title}
-    </Text>
-    {isLoading ? (
-      <NoahActivityIndicator className="mt-2" />
-    ) : (
-      <>
-        <Text className={cn("font-bold text-foreground mt-1", compact ? "text-2xl" : "text-3xl")}>
-          {formatBip177(amount)}
-        </Text>
-        {pendingAmount !== undefined && pendingAmount > 0 && (
-          <Text
-            className={
-              compact ? "text-sm text-muted-foreground mt-1" : "text-xl text-muted-foreground mt-1"
-            }
-          >
-            {formatBip177(pendingAmount)} pending
+}) => {
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
+
+  return (
+    <View className={compact ? "mb-5" : "mb-8"}>
+      <Text className={compact ? "text-sm text-muted-foreground" : "text-lg text-muted-foreground"}>
+        {title}
+      </Text>
+      {isLoading ? (
+        <NoahActivityIndicator className="mt-2" />
+      ) : (
+        <>
+          <Text className={cn("font-bold text-foreground mt-1", compact ? "text-2xl" : "text-3xl")}>
+            {formatBitcoinAmount(amount)}
           </Text>
-        )}
-      </>
-    )}
-  </View>
-);
+          {pendingAmount !== undefined && pendingAmount > 0 && (
+            <Text
+              className={
+                compact
+                  ? "text-sm text-muted-foreground mt-1"
+                  : "text-xl text-muted-foreground mt-1"
+              }
+            >
+              {formatBitcoinAmount(pendingAmount)} pending
+            </Text>
+          )}
+        </>
+      )}
+    </View>
+  );
+};
 
 // Flow toggle component
 const FlowToggle = ({ flow, onFlowChange }: { flow: Flow; onFlowChange: (flow: Flow) => void }) => (
@@ -208,6 +215,8 @@ const BoardFeeEstimateSummary = ({
   error: Error | null;
   isWaitingForDebounce: boolean;
 }) => {
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
+
   if (!result && !isLoading && !error && !isWaitingForDebounce) {
     return null;
   }
@@ -226,7 +235,7 @@ const BoardFeeEstimateSummary = ({
           {estimate.is_below_minimum_board_amount ? (
             <Text className="mb-2 text-xs leading-5 text-muted-foreground">
               This estimate is below Ark's minimum board amount of{" "}
-              {formatBip177(estimate.minimum_board_amount_sat)}. The final amount will be
+              {formatBitcoinAmount(estimate.minimum_board_amount_sat)}. The final amount will be
               calculated when you board.
             </Text>
           ) : estimate.is_max_amount ? (
@@ -236,27 +245,27 @@ const BoardFeeEstimateSummary = ({
           ) : null}
           <FeeEstimateRow
             label="Amount to board"
-            value={formatBip177(estimate.gross_amount_sat)}
+            value={formatBitcoinAmount(estimate.gross_amount_sat)}
             compact
           />
           <FeeEstimateSeparator />
           <FeeEstimateRow
             label="Ark boarding fee"
-            value={formatBip177(estimate.fee_sat)}
+            value={formatBitcoinAmount(estimate.fee_sat)}
             compact
             valueClassName="text-red-500"
           />
           <FeeEstimateSeparator />
           <FeeEstimateRow
             label="Estimated onchain fee"
-            value={formatBip177(estimate.estimated_onchain_fee_sat)}
+            value={formatBitcoinAmount(estimate.estimated_onchain_fee_sat)}
             compact
             valueClassName="text-red-500"
           />
           <FeeEstimateSeparator />
           <FeeEstimateRow
             label="Stays in onchain wallet"
-            value={formatBip177(estimate.estimated_remaining_onchain_sat)}
+            value={formatBitcoinAmount(estimate.estimated_remaining_onchain_sat)}
             compact
             valueClassName={
               estimate.estimated_remaining_onchain_sat < 0 ? "text-red-500" : undefined
@@ -265,7 +274,7 @@ const BoardFeeEstimateSummary = ({
           <FeeEstimateSeparator />
           <FeeEstimateRow
             label="Ark amount after fee"
-            value={formatBip177(estimate.net_amount_sat)}
+            value={formatBitcoinAmount(estimate.net_amount_sat)}
             compact
             valueClassName="text-green-500"
           />
@@ -278,13 +287,13 @@ const BoardFeeEstimateSummary = ({
         <>
           <Text className="text-sm leading-5 text-muted-foreground">
             {unavailable.is_max_amount
-              ? `This Max estimate is below Ark's minimum board amount of ${formatBip177(unavailable.minimum_board_amount_sat)}. The final amount will be calculated when you board.`
-              : `This estimate is below Ark's minimum board amount of ${formatBip177(unavailable.minimum_board_amount_sat)}. The final amount will be calculated when you board.`}
+              ? `This Max estimate is below Ark's minimum board amount of ${formatBitcoinAmount(unavailable.minimum_board_amount_sat)}. The final amount will be calculated when you board.`
+              : `This estimate is below Ark's minimum board amount of ${formatBitcoinAmount(unavailable.minimum_board_amount_sat)}. The final amount will be calculated when you board.`}
           </Text>
           <FeeEstimateSeparator className="mt-2" />
           <FeeEstimateRow
             label="Amount to board"
-            value={formatBip177(unavailable.boardable_amount_sat)}
+            value={formatBitcoinAmount(unavailable.boardable_amount_sat)}
             compact
           />
           <FeeEstimateSeparator />
@@ -297,14 +306,14 @@ const BoardFeeEstimateSummary = ({
           <FeeEstimateSeparator />
           <FeeEstimateRow
             label="Estimated onchain fee"
-            value={formatBip177(unavailable.estimated_onchain_fee_sat)}
+            value={formatBitcoinAmount(unavailable.estimated_onchain_fee_sat)}
             compact
             valueClassName="text-red-500"
           />
           <FeeEstimateSeparator />
           <FeeEstimateRow
             label="Stays in onchain wallet"
-            value={formatBip177(unavailable.estimated_remaining_onchain_sat)}
+            value={formatBitcoinAmount(unavailable.estimated_remaining_onchain_sat)}
             compact
             valueClassName={
               unavailable.estimated_remaining_onchain_sat < 0 ? "text-red-500" : undefined
@@ -320,7 +329,7 @@ const BoardFeeEstimateSummary = ({
           <FeeEstimateSeparator />
           <FeeEstimateRow
             label="Minimum board amount"
-            value={formatBip177(unavailable.minimum_board_amount_sat)}
+            value={formatBitcoinAmount(unavailable.minimum_board_amount_sat)}
             compact
           />
           <Text className="mt-2 text-xs leading-5 text-muted-foreground">
@@ -339,19 +348,27 @@ const BoardFeeEstimateSummary = ({
   );
 };
 
-const MinimumBoardAmountSummary = ({ minimumBoardAmountSat }: { minimumBoardAmountSat: number }) => (
-  <FeeEstimateBox title="Minimum board amount" compact>
-    <Text className="text-sm leading-5 text-muted-foreground">
-      Enter at least {formatBip177(minimumBoardAmountSat)} to board to Ark.
-    </Text>
-    <FeeEstimateSeparator className="mt-2" />
-    <FeeEstimateRow
-      label="Minimum board amount"
-      value={formatBip177(minimumBoardAmountSat)}
-      compact
-    />
-  </FeeEstimateBox>
-);
+const MinimumBoardAmountSummary = ({
+  minimumBoardAmountSat,
+}: {
+  minimumBoardAmountSat: number;
+}) => {
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
+
+  return (
+    <FeeEstimateBox title="Minimum board amount" compact>
+      <Text className="text-sm leading-5 text-muted-foreground">
+        Enter at least {formatBitcoinAmount(minimumBoardAmountSat)} to board to Ark.
+      </Text>
+      <FeeEstimateSeparator className="mt-2" />
+      <FeeEstimateRow
+        label="Minimum board amount"
+        value={formatBitcoinAmount(minimumBoardAmountSat)}
+        compact
+      />
+    </FeeEstimateBox>
+  );
+};
 
 // Transaction result component
 const TransactionResult = ({
@@ -431,6 +448,7 @@ const BoardArkScreen = () => {
   const { showAlert } = useAlert();
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const iconColor = useIconColor();
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const isAutoBoardingEnabled = useTransactionStore((state) => state.isAutoBoardingEnabled);
   const { data: balance, isLoading: isBalanceLoading } = useBalance();
   const {
@@ -649,7 +667,7 @@ const BoardArkScreen = () => {
     if (arkInfo && amountSat < arkInfo.min_board_amount) {
       showAlert({
         title: "Amount Too Low",
-        description: `Enter at least ${formatBip177(arkInfo.min_board_amount)} to board to Ark.`,
+        description: `Enter at least ${formatBitcoinAmount(arkInfo.min_board_amount)} to board to Ark.`,
       });
       return;
     }

@@ -32,11 +32,13 @@ import { revokeMailboxAuthorization } from "~/lib/api";
 import { AUTO_BOARD_ONCHAIN_BUFFER_AMOUNT, formatAutoBoardThreshold } from "~/lib/autoBoarding";
 import { useProfileStore } from "~/store/profileStore";
 import { getFiatCurrencyInfo } from "~/lib/fiatCurrency";
+import { getBitcoinAmountUnitInfo } from "~/lib/bitcoinAmount";
 
 type Setting = {
   id:
     | "profile"
     | "currency"
+    | "bitcoinUnit"
     | "showMnemonic"
     | "showLogs"
     | "resetRegistration"
@@ -77,6 +79,8 @@ const SettingsScreen = () => {
   const { isAutoBoardingEnabled, setAutoBoardingEnabled } = useTransactionStore();
   const preferredCurrency = useProfileStore((state) => state.preferredCurrency);
   const preferredCurrencyInfo = getFiatCurrencyInfo(preferredCurrency);
+  const bitcoinAmountUnit = useProfileStore((state) => state.bitcoinAmountUnit);
+  const bitcoinAmountUnitInfo = getBitcoinAmountUnitInfo(bitcoinAmountUnit);
   const {
     data: autoBoardThreshold,
     isError: isAutoBoardThresholdError,
@@ -185,6 +189,8 @@ const SettingsScreen = () => {
       navigation.navigate("Profile");
     } else if (item.id === "currency") {
       navigation.navigate("Currency");
+    } else if (item.id === "bitcoinUnit") {
+      navigation.navigate("BitcoinUnit");
     } else if (item.id === "showMnemonic") {
       navigation.navigate("Mnemonic", { fromOnboarding: false });
     } else if (item.id === "showLogs") {
@@ -225,6 +231,13 @@ const SettingsScreen = () => {
       title: "Currency",
       value: `${preferredCurrencyInfo.code} · ${preferredCurrencyInfo.name}`,
       description: "Choose the fiat currency used for balances and payment amounts.",
+      isPressable: true,
+    });
+    profileData.push({
+      id: "bitcoinUnit",
+      title: "Bitcoin Unit",
+      value: `${bitcoinAmountUnitInfo.title} · ${bitcoinAmountUnitInfo.value}`,
+      description: "Choose how bitcoin amounts are displayed.",
       isPressable: true,
     });
 

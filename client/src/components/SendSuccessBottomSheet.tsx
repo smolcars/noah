@@ -3,12 +3,12 @@ import { Pressable, View } from "react-native";
 import { Text } from "./ui/text";
 import { NoahButton } from "./ui/NoahButton";
 import SuccessAnimation from "./SuccessAnimation";
-import { formatBip177 } from "~/lib/utils";
 import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
 import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
 import { useCopyToClipboard } from "~/lib/clipboardUtils";
 import { COLORS } from "~/lib/styleConstants";
 import { useThemeColors } from "~/hooks/useTheme";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 type ParsedResult = {
   amount_sat: number;
@@ -64,6 +64,7 @@ export const SendSuccessBottomSheet: React.FC<SendSuccessBottomSheetProps> = ({
   btcPrice,
   fiatCurrency,
 }) => {
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const fiatAmount = btcPrice ? satsToFiat(parsedResult.amount_sat, btcPrice, fiatCurrency) : null;
   const colors = useThemeColors();
 
@@ -76,7 +77,7 @@ export const SendSuccessBottomSheet: React.FC<SendSuccessBottomSheetProps> = ({
 
       <View className="mt-6 items-center">
         <Text className="text-center text-4xl font-bold text-foreground">
-          {formatBip177(parsedResult.amount_sat)}
+          {formatBitcoinAmount(parsedResult.amount_sat)}
         </Text>
         {btcPrice && (
           <Text className="mt-3 text-lg font-medium text-muted-foreground">

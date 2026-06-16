@@ -26,7 +26,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { TabParamList } from "~/Navigators";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor, useThemeColors } from "../hooks/useTheme";
-import { satsToBtc, formatBip177 } from "~/lib/utils";
+import { satsToBtc } from "~/lib/utils";
 import { formatFiatAmount, getFiatCurrencyInfo, satsToFiat } from "~/lib/fiatCurrency";
 import { useReceiveScreen } from "../hooks/useReceiveScreen";
 import { COLORS } from "~/lib/styleConstants";
@@ -42,6 +42,7 @@ import logger from "~/lib/log";
 import type { Bolt11Invoice } from "react-native-nitro-ark";
 import { queryClient } from "~/queryClient";
 import { BlinkingCaret } from "~/components/BlinkingCaret";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 const minAmount = 1;
 const SUBSCRIPTION_RETRY_DELAY_MS = 1000;
@@ -183,6 +184,7 @@ const ReceiveScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<TabParamList>>();
   const iconColor = useIconColor();
   const colors = useThemeColors();
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const { amount, setAmount, currency, toggleCurrency, amountSat, btcPrice, fiatCurrency } =
     useReceiveScreen();
   const fiatCurrencyInfo = getFiatCurrencyInfo(fiatCurrency);
@@ -749,7 +751,7 @@ const ReceiveScreen = () => {
                             )
                           : formatFiatAmount("0.00", fiatCurrency)
                       }`
-                    : `≈ ${!isNaN(amountSat) && amount ? formatBip177(amountSat) : formatBip177(0)}`}
+                    : `≈ ${!isNaN(amountSat) && amount ? formatBitcoinAmount(amountSat) : formatBitcoinAmount(0)}`}
                 </Text>
 
                 <View

@@ -12,8 +12,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { SettingsStackParamList } from "~/Navigators";
 import { useGetVtxos, useGetExpiringVtxos } from "~/hooks/useWallet";
 import { BarkVtxo } from "react-native-nitro-ark";
-import { formatBip177 } from "~/lib/utils";
 import { useGetBlockHeight } from "~/hooks/useMarketData";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 const EXPIRED_COLOR = "#ef4444";
 const EXPIRING_COLOR = "#f97316";
@@ -30,6 +30,7 @@ const filters: VtxoFilter[] = ["all", "active", "expiring", "expired", "locked"]
 const VTXOsScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const iconColor = useIconColor();
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const [filter, setFilter] = useState<VtxoFilter>("all");
 
   const { data: allVtxos = [], isLoading: isLoadingAll } = useGetVtxos();
@@ -196,7 +197,7 @@ const VTXOsScreen = () => {
                       <View className="flex-1">
                         <View className="flex-row justify-between items-center">
                           <Label className="text-foreground text-base">
-                            {formatBip177(item.amount)}
+                            {formatBitcoinAmount(item.amount)}
                           </Label>
                         </View>
                         <Text className="text-muted-foreground text-sm mt-1" numberOfLines={1}>

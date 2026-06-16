@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { APP_VARIANT } from "../config";
+export { formatBip177 } from "~/lib/bitcoinAmount";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -26,10 +27,6 @@ export const formatNumber = (num: number | string) => {
 
 export const satsToBtc = (sats: number) => {
   return (sats / 100_000_000).toFixed(8);
-};
-
-export const formatBip177 = (sats: number): string => {
-  return `₿\u00A0${sats.toLocaleString()}`;
 };
 
 export const isNetworkMatch = (

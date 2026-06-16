@@ -15,12 +15,12 @@ import { Result, ResultAsync } from "neverthrow";
 import { CACHES_DIRECTORY_PATH } from "~/constants";
 import RNFSTurbo from "react-native-fs-turbo";
 import logger from "~/lib/log";
-import { formatBip177 } from "~/lib/utils";
 import { useTransactions } from "~/hooks/useTransactions";
 import { HistoryRefreshButton } from "~/components/HistoryRefreshButton";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { TransactionDetailContent } from "~/screens/TransactionDetailScreen";
 import { useProfileStore } from "~/store/profileStore";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 const log = logger("TransactionsScreen");
 
@@ -28,6 +28,7 @@ const TransactionsScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<TransactionsStackParamList>>();
   const parentNavigation = navigation.getParent<NavigationProp<TabParamList>>();
   const iconColor = useIconColor();
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const { data: transactions = [], isLoading, isError, isRefetching, refetch } = useTransactions();
   const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
   const [filter, setFilter] = useState<PaymentTypes | "all" | "Lightning">("all");
@@ -234,7 +235,7 @@ const TransactionsScreen = () => {
                                 item.direction === "outgoing" ? "text-red-500" : "text-green-500"
                               }`}
                             >
-                              {`${item.direction === "outgoing" ? "-" : "+"}${formatBip177(item.amount)}`}
+                              {`${item.direction === "outgoing" ? "-" : "+"}${formatBitcoinAmount(item.amount)}`}
                             </Text>
                           </View>
                         </View>

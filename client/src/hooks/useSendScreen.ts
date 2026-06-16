@@ -18,7 +18,7 @@ import { useQRCodeScanner } from "~/hooks/useQRCodeScanner";
 import { useBtcToFiatRate } from "./useMarketData";
 import { useBalance } from "./useWallet";
 import { useLightningAddressSuggestions } from "./useLightningAddressSuggestions";
-import { formatBip177 } from "../lib/utils";
+import { formatBitcoinAmount } from "~/lib/bitcoinAmount";
 import { fiatToSats, satsToFiat } from "~/lib/fiatCurrency";
 import { useProfileStore } from "~/store/profileStore";
 import logger from "~/lib/log";
@@ -60,6 +60,7 @@ export const useSendScreen = () => {
   const route = useRoute<SendScreenRouteProp>();
   const { showAlert } = useAlert();
   const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
+  const bitcoinAmountUnit = useProfileStore((state) => state.bitcoinAmountUnit);
   const { data: btcPrice } = useBtcToFiatRate();
   const { data: balance } = useBalance();
   const [destination, setDestination] = useState("");
@@ -305,8 +306,9 @@ export const useSendScreen = () => {
     }
 
     const sourceLabel = resolvedOnchainSource === "offchain" ? "Ark" : "onchain";
-    return `Estimated total is ${formatBip177(estimatedTotal)}, but your ${sourceLabel} balance is ${formatBip177(sourceBalance)}. The send may fail if the final fee is not lower.`;
+    return `Estimated total is ${formatBitcoinAmount(estimatedTotal, bitcoinAmountUnit)}, but your ${sourceLabel} balance is ${formatBitcoinAmount(sourceBalance, bitcoinAmountUnit)}. The send may fail if the final fee is not lower.`;
   }, [
+    bitcoinAmountUnit,
     feeEstimateQuery.data,
     isOnchainSend,
     offchainWalletBalance,

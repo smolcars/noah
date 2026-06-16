@@ -20,9 +20,10 @@ import {
   type ExitTimelineItem,
 } from "~/lib/exitTimeline";
 import { COLORS } from "~/lib/styleConstants";
-import { cn, formatBip177 } from "~/lib/utils";
+import { cn } from "~/lib/utils";
 import type { SettingsStackParamList } from "~/Navigators";
 import type { ExitProgressState } from "react-native-nitro-ark";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 type ExitVtxoDetailRouteProp = RouteProp<SettingsStackParamList, "ExitVtxoDetail">;
 type IconName = React.ComponentProps<typeof Icon>["name"];
@@ -146,6 +147,7 @@ const ExitVtxoDetailScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const route = useRoute<ExitVtxoDetailRouteProp>();
   const iconColor = useIconColor();
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const overviewQuery = useExitOverview();
   const syncExits = useSyncExits();
   const overview = overviewQuery.data;
@@ -225,7 +227,7 @@ const ExitVtxoDetailScreen = () => {
               <View className="flex-row items-start justify-between">
                 <View className="flex-1">
                   <Text className="text-3xl font-bold text-foreground">
-                    {formatBip177(exit.amount_sat)}
+                    {formatBitcoinAmount(exit.amount_sat)}
                   </Text>
                   <Text className="mt-2 text-base font-medium text-foreground">
                     {getExitStatusText({

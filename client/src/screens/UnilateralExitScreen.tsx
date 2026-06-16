@@ -43,7 +43,7 @@ import {
   truncateMiddle,
 } from "~/lib/exitTimeline";
 import { COLORS } from "~/lib/styleConstants";
-import { cn, formatBip177, isNetworkMatch } from "~/lib/utils";
+import { cn, isNetworkMatch } from "~/lib/utils";
 import type { SettingsStackParamList } from "~/Navigators";
 import type {
   ExitProgressState,
@@ -51,6 +51,7 @@ import type {
   ExitStatusResult,
   ExitVtxoResult,
 } from "react-native-nitro-ark";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 type UnilateralExitRouteProp = RouteProp<SettingsStackParamList, "UnilateralExit">;
 type IconName = React.ComponentProps<typeof Icon>["name"];
@@ -263,6 +264,7 @@ const ExitVtxoRow = ({
   currentBlockHeight?: number;
   onPress: () => void;
 }) => {
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const state = status?.state ?? exit.state;
   const details = status?.state_details ?? exit.state_details;
   const historyDetails =
@@ -280,7 +282,7 @@ const ExitVtxoRow = ({
       <View>
         <View className="flex-row items-center justify-between">
           <Text className="text-xl font-semibold text-foreground">
-            {formatBip177(exit.amount_sat)}
+            {formatBitcoinAmount(exit.amount_sat)}
           </Text>
           <View className={cn("rounded-full border px-3 py-1.5", tone.bgClassName)}>
             <Text className={cn("text-sm font-semibold", tone.className)}>
@@ -352,6 +354,7 @@ const UnilateralExitScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const route = useRoute<UnilateralExitRouteProp>();
   const iconColor = useIconColor();
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const selectedVtxoIds = route.params?.vtxoIds;
 
   const [destinationAddress, setDestinationAddress] = useState("");
@@ -519,11 +522,14 @@ const UnilateralExitScreen = () => {
                     <ExitSummaryItem label="Tracked" value={`${exits.length}`} />
                     <ExitSummaryItem
                       label="Pending"
-                      value={formatBip177(overview?.pendingTotal ?? 0)}
+                      value={formatBitcoinAmount(overview?.pendingTotal ?? 0)}
                     />
                   </View>
                   <View className="mt-4 flex-row gap-x-4">
-                    <ExitSummaryItem label="Claimable" value={formatBip177(claimableTotal)} />
+                    <ExitSummaryItem
+                      label="Claimable"
+                      value={formatBitcoinAmount(claimableTotal)}
+                    />
                     <ExitSummaryItem label="All Claimable" value={claimableBlockLabel} />
                   </View>
                   <View className="mt-4 flex-row gap-x-4">
@@ -539,7 +545,7 @@ const UnilateralExitScreen = () => {
                     />
                     <ExitSummaryItem
                       label="Available Value"
-                      value={formatBip177(overview?.spendableVtxoTotal ?? 0)}
+                      value={formatBitcoinAmount(overview?.spendableVtxoTotal ?? 0)}
                     />
                   </View>
                 </View>

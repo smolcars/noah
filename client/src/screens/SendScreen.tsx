@@ -16,7 +16,6 @@ import {
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor, useThemeColors } from "../hooks/useTheme";
 import * as Clipboard from "expo-clipboard";
-import { formatBip177 } from "~/lib/utils";
 import { formatFiatAmount, getFiatCurrencyInfo, satsToFiat } from "~/lib/fiatCurrency";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { Button } from "~/components/ui/button";
@@ -28,12 +27,14 @@ import { CurrencyToggle } from "~/components/CurrencyToggle";
 import { COLORS } from "~/lib/styleConstants";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { BlinkingCaret } from "~/components/BlinkingCaret";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 const SendScreen = () => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const iconColor = useIconColor();
   const colors = useThemeColors();
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const bottomTabBarHeight = useBottomTabBarHeight();
   const destinationInputRef = React.useRef<TextInput>(null);
   const amountInputRef = React.useRef<TextInput>(null);
@@ -237,7 +238,7 @@ const SendScreen = () => {
                                 )
                               : formatFiatAmount("0.00", fiatCurrency)
                           }`
-                        : `≈ ${!isNaN(amountSat) && amount ? formatBip177(amountSat) : formatBip177(0)}`}
+                        : `≈ ${!isNaN(amountSat) && amount ? formatBitcoinAmount(amountSat) : formatBitcoinAmount(0)}`}
                   </Text>
                 </View>
               </View>

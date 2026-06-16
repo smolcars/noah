@@ -11,7 +11,8 @@ import {
   buildAutoBoardPlan,
 } from "~/lib/autoBoarding";
 import logger from "~/lib/log";
-import { cn, formatBip177 } from "~/lib/utils";
+import { cn } from "~/lib/utils";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { useTransactionStore } from "~/store/transactionStore";
 
 const log = logger("AutoBoardingService");
@@ -40,6 +41,7 @@ const AutoBoardPlanRow = ({
 );
 
 export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) => {
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const [hasReportedAutoBoardPlanError, setHasReportedAutoBoardPlanError] = useState(false);
   const [autoBoardPlan, setAutoBoardPlan] = useState<AutoBoardPlan | null>(null);
   const [isAutoBoardDialogOpen, setIsAutoBoardDialogOpen] = useState(false);
@@ -278,40 +280,40 @@ export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) 
           <View className="rounded-xl border border-border/70 bg-card/80 p-4">
             <Text className="text-sm font-medium text-muted-foreground">Amount to board</Text>
             <Text className="mt-1 text-3xl font-bold text-foreground">
-              {formatBip177(autoBoardPlan.grossBoardAmountSat)}
+              {formatBitcoinAmount(autoBoardPlan.grossBoardAmountSat)}
             </Text>
             <Text className="mt-1 text-xs leading-5 text-muted-foreground">
-              {formatBip177(autoBoardPlan.netBoardAmountSat)} becomes available in Ark after the
-              boarding fee.
+              {formatBitcoinAmount(autoBoardPlan.netBoardAmountSat)} becomes available in Ark after
+              the boarding fee.
             </Text>
           </View>
 
           <View className="rounded-xl border border-border/70 bg-card/60 px-3 py-1">
             <AutoBoardPlanRow
               label="Onchain balance"
-              value={formatBip177(autoBoardPlan.confirmedOnchainBalanceSat)}
+              value={formatBitcoinAmount(autoBoardPlan.confirmedOnchainBalanceSat)}
             />
             <View className="h-px bg-border/70" />
             <AutoBoardPlanRow
               label="Ark boarding fee"
-              value={formatBip177(autoBoardPlan.arkFeeSat)}
+              value={formatBitcoinAmount(autoBoardPlan.arkFeeSat)}
               valueClassName="text-red-500"
             />
             <View className="h-px bg-border/70" />
             <AutoBoardPlanRow
               label="Estimated onchain fee"
-              value={formatBip177(autoBoardPlan.estimatedOnchainFeeSat)}
+              value={formatBitcoinAmount(autoBoardPlan.estimatedOnchainFeeSat)}
               valueClassName="text-red-500"
             />
             <View className="h-px bg-border/70" />
             <AutoBoardPlanRow
               label="Stays in onchain wallet"
-              value={formatBip177(autoBoardPlan.estimatedRemainingOnchainSat)}
+              value={formatBitcoinAmount(autoBoardPlan.estimatedRemainingOnchainSat)}
             />
             <View className="h-px bg-border/70" />
             <AutoBoardPlanRow
               label="Ark amount after fee"
-              value={formatBip177(autoBoardPlan.netBoardAmountSat)}
+              value={formatBitcoinAmount(autoBoardPlan.netBoardAmountSat)}
               valueClassName="text-green-500"
             />
           </View>

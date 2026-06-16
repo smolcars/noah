@@ -15,9 +15,10 @@ import { registerPushToken, reportJobStatus, heartbeatResponse } from "~/lib/api
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import { NotificationData, ReportType } from "~/types/serverTypes";
 import { useWalletStore } from "~/store/walletStore";
-import { formatBip177 } from "./utils";
+import { formatBitcoinAmount } from "~/lib/bitcoinAmount";
 import { updateWidget } from "~/hooks/useWidget";
 import { shouldUseUnifiedPush } from "~/constants";
+import { useProfileStore } from "~/store/profileStore";
 
 const log = logger("pushNotifications");
 
@@ -56,11 +57,12 @@ async function ensureDefaultNotificationChannel() {
 
 async function scheduleLightningPaymentNotification(amountSat: number): Promise<string> {
   await ensureDefaultNotificationChannel();
+  const { bitcoinAmountUnit } = useProfileStore.getState();
 
   return Notifications.scheduleNotificationAsync({
     content: {
       title: "Lightning Payment Received! ⚡",
-      body: `You received ${formatBip177(amountSat)}`,
+      body: `You received ${formatBitcoinAmount(amountSat, bitcoinAmountUnit)}`,
       sound: "default",
       priority: Notifications.AndroidNotificationPriority.MAX,
       data: {

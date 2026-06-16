@@ -35,7 +35,6 @@ import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { useBtcToFiatRate } from "~/hooks/useMarketData";
 import { useWalletStore } from "~/store/walletStore";
 import { updateWidget, useWidget } from "~/hooks/useWidget";
-import { formatBip177 } from "~/lib/utils";
 import { formatFiatAmount, getFiatCurrencyInfo, satsToFiat } from "~/lib/fiatCurrency";
 import { calculateBalances } from "~/lib/balanceUtils";
 import { onchainSync, sync } from "~/lib/walletApi";
@@ -45,6 +44,7 @@ import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { TransactionDetailContent } from "~/screens/TransactionDetailScreen";
 import { usePrivacyStore } from "~/store/privacyStore";
 import { useProfileStore } from "~/store/profileStore";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 const getTransactionIcon = (type: Transaction["type"]) => {
   switch (type) {
@@ -75,6 +75,7 @@ const getTransactionLabel = (transaction: Transaction) => {
 const HomeScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const iconColor = useIconColor();
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const parentNavigation = navigation.getParent<NavigationProp<TabParamList>>();
   const { walletError, isWalletSuspended } = useWalletStore();
   const { safelyExecuteWhenReady, isBackgroundJobRunning } = useBackgroundJobCoordination();
@@ -142,7 +143,7 @@ const HomeScreen = () => {
   const errorMessage = error instanceof Error ? error.message : String(error);
   const maskedBalance = "••••";
   const formatHomeBalance = (amount: number) =>
-    isHomeBalanceHidden ? maskedBalance : formatBip177(amount);
+    isHomeBalanceHidden ? maskedBalance : formatBitcoinAmount(amount);
 
   useWidget(balances);
 
@@ -459,7 +460,7 @@ const HomeScreen = () => {
                             transaction.direction === "outgoing" ? "text-red-500" : "text-green-500"
                           }`}
                         >
-                          {`${transaction.direction === "outgoing" ? "-" : "+"}${formatBip177(transaction.amount)}`}
+                          {`${transaction.direction === "outgoing" ? "-" : "+"}${formatBitcoinAmount(transaction.amount)}`}
                         </Text>
                       </Pressable>
                     ))

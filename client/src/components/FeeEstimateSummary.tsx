@@ -1,9 +1,9 @@
 import { Fragment } from "react";
 import type { BarkFeeEstimate } from "~/lib/paymentsApi";
 import { Text } from "~/components/ui/text";
-import { formatBip177 } from "~/lib/utils";
 import { COLORS } from "~/lib/styleConstants";
 import { FeeEstimateBox, FeeEstimateRow, FeeEstimateSeparator } from "~/components/FeeEstimateBox";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 type FeeEstimateRowKey = "net" | "fee" | "gross";
 
@@ -36,6 +36,8 @@ export const FeeEstimateSummary = ({
   feeValueClassName,
   rowOrder = ["net", "fee", "gross"],
 }: FeeEstimateSummaryProps) => {
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
+
   if (!estimate && !isLoading && !error) {
     return null;
   }
@@ -49,18 +51,18 @@ export const FeeEstimateSummary = ({
               rowKey === "net"
                 ? {
                     label: netLabel,
-                    value: formatBip177(estimate.net_amount_sat),
+                    value: formatBitcoinAmount(estimate.net_amount_sat),
                     valueClassName: undefined,
                   }
                 : rowKey === "fee"
                   ? {
                       label: feeLabel,
-                      value: formatBip177(estimate.fee_sat),
+                      value: formatBitcoinAmount(estimate.fee_sat),
                       valueClassName: feeValueClassName,
                     }
                   : {
                       label: grossLabel,
-                      value: formatBip177(estimate.gross_amount_sat),
+                      value: formatBitcoinAmount(estimate.gross_amount_sat),
                       valueClassName: undefined,
                     };
 

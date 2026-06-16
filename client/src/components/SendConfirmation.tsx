@@ -3,7 +3,6 @@ import { Pressable, View } from "react-native";
 import { Text } from "./ui/text";
 import { NoahButton } from "./ui/NoahButton";
 import { Button } from "./ui/button";
-import { formatBip177 } from "~/lib/utils";
 import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
 import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
 import { DestinationTypes, ParsedBip321 } from "~/lib/sendUtils";
@@ -12,6 +11,7 @@ import { COLORS } from "~/lib/styleConstants";
 import { Bip321Picker } from "./Bip321Picker";
 import { FeeEstimateSummary } from "./FeeEstimateSummary";
 import type { BarkFeeEstimate, OnchainSendSource } from "~/lib/paymentsApi";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 interface SendConfirmationProps {
   destination: string;
@@ -76,6 +76,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
   feeEstimateWarning = null,
   sendError = null,
 }) => {
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const colors = useThemeColors();
   const isOnchainDestination =
     destinationType === "onchain" ||
@@ -160,7 +161,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
 
       <View className="mt-4 items-center">
         <Text className="text-center text-3xl font-bold text-foreground">
-          {formatBip177(amount)}
+          {formatBitcoinAmount(amount)}
         </Text>
         {btcPrice ? (
           <Text className="mt-1 text-sm font-medium text-muted-foreground">
@@ -237,7 +238,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
                           {getOnchainSourceLabel(source)}
                         </Text>
                         <Text className="mt-1 text-xs text-muted-foreground">
-                          {formatBip177(getOnchainSourceBalance(source))}
+                          {formatBitcoinAmount(getOnchainSourceBalance(source))}
                         </Text>
                       </Pressable>
                     );

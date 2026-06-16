@@ -16,11 +16,11 @@ import RNFSTurbo from "react-native-fs-turbo";
 import { useBoardingTransactions } from "~/hooks/useBoardingTransactions";
 import type { BoardingTransaction } from "~/types/boardingTransaction";
 import { formatMovementStatusLabel } from "~/types/movement";
-import { formatBip177 } from "~/lib/utils";
 import logger from "~/lib/log";
 import { HistoryRefreshButton } from "~/components/HistoryRefreshButton";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { BoardingTransactionDetailContent } from "~/screens/BoardingTransactionDetailScreen";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 const log = logger("BoardingTransactionsScreen");
 
@@ -39,6 +39,7 @@ const formatBoardingStatus = (status: BoardingTransaction["status"]) => {
 const BoardingTransactionsScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const iconColor = useIconColor();
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const {
     data: transactions = [],
     isLoading,
@@ -232,7 +233,7 @@ const BoardingTransactionsScreen = () => {
                           </Text>
                         </View>
                         <Text className="text-foreground text-sm mt-1">
-                          {formatBip177(item.amountSat)}
+                          {formatBitcoinAmount(item.amountSat)}
                         </Text>
                         <Text className="text-muted-foreground text-sm mt-1">
                           {new Date(item.date).toLocaleString()}

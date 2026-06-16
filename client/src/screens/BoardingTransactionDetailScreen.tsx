@@ -9,8 +9,8 @@ import { type ComponentProps, useState } from "react";
 import { COLORS } from "~/lib/styleConstants";
 import type { BoardingTransaction } from "~/types/boardingTransaction";
 import { formatMovementStatusLabel } from "~/types/movement";
-import { formatBip177 } from "~/lib/utils";
 import { getMempoolTxUrl } from "~/constants";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 const BoardingTransactionDetailRow = ({
   label,
@@ -134,6 +134,7 @@ export const BoardingTransactionDetailContent = ({
   closeIconName?: ComponentProps<typeof Icon>["name"];
 }) => {
   const iconColor = useIconColor();
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const explorerUrl = transaction.txid ? getMempoolTxUrl(transaction.txid) : null;
   const statusLabel = formatBoardingStatus(transaction);
 
@@ -199,7 +200,10 @@ export const BoardingTransactionDetailContent = ({
         />
         <BoardingTransactionDetailRow label="Type" value={formatBoardingType(transaction.type)} />
         <BoardingTransactionDetailRow label="Status" value={statusLabel} />
-        <BoardingTransactionDetailRow label="Amount" value={formatBip177(transaction.amountSat)} />
+        <BoardingTransactionDetailRow
+          label="Amount"
+          value={formatBitcoinAmount(transaction.amountSat)}
+        />
       </View>
 
       {(transaction.txid || transaction.destination) && (
@@ -228,25 +232,25 @@ export const BoardingTransactionDetailContent = ({
         {typeof transaction.intendedBalanceSat === "number" ? (
           <BoardingTransactionDetailRow
             label="Intended Delta"
-            value={formatBip177(transaction.intendedBalanceSat)}
+            value={formatBitcoinAmount(transaction.intendedBalanceSat)}
           />
         ) : null}
         {typeof transaction.effectiveBalanceSat === "number" ? (
           <BoardingTransactionDetailRow
             label="Effective Delta"
-            value={formatBip177(transaction.effectiveBalanceSat)}
+            value={formatBitcoinAmount(transaction.effectiveBalanceSat)}
           />
         ) : null}
         {typeof transaction.offchainFeeSat === "number" ? (
           <BoardingTransactionDetailRow
             label="Offchain Fee"
-            value={formatBip177(transaction.offchainFeeSat)}
+            value={formatBitcoinAmount(transaction.offchainFeeSat)}
           />
         ) : null}
         {typeof transaction.onchainFeeSat === "number" ? (
           <BoardingTransactionDetailRow
             label="Onchain Fee"
-            value={formatBip177(transaction.onchainFeeSat)}
+            value={formatBitcoinAmount(transaction.onchainFeeSat)}
           />
         ) : null}
       </View>

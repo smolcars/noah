@@ -8,12 +8,12 @@ import { copyToClipboard } from "../lib/clipboardUtils";
 import { type Transaction } from "../types/transaction";
 import { type ComponentProps, useState } from "react";
 import { COLORS } from "~/lib/styleConstants";
-import { formatBip177 } from "~/lib/utils";
 import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
 import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
 import { formatMovementKindLabel, formatMovementStatusLabel } from "~/types/movement";
 import { getMempoolTxUrl } from "~/constants";
 import { useProfileStore } from "~/store/profileStore";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 const TransactionDetailRow = ({
   label,
@@ -91,6 +91,8 @@ const MovementDestinationList = ({
   title: string;
   destinations: NonNullable<Transaction["sentTo"]>;
 }) => {
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
+
   return (
     <View className="bg-card p-4 rounded-lg mb-4">
       <Text className="text-sm font-semibold text-foreground mb-3">{title}</Text>
@@ -102,7 +104,9 @@ const MovementDestinationList = ({
           <Text className="text-foreground text-sm mb-1" numberOfLines={2}>
             {dest.destination}
           </Text>
-          <Text className="text-muted-foreground text-xs">{formatBip177(dest.amount_sat)}</Text>
+          <Text className="text-muted-foreground text-xs">
+            {formatBitcoinAmount(dest.amount_sat)}
+          </Text>
         </View>
       ))}
     </View>
@@ -121,6 +125,7 @@ export const TransactionDetailContent = ({
   closeIconName?: ComponentProps<typeof Icon>["name"];
 }) => {
   const iconColor = useIconColor();
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
 
   const fiatAmount = transaction.btcPrice
     ? satsToFiat(transaction.amount, transaction.btcPrice, fiatCurrency)
@@ -168,7 +173,7 @@ export const TransactionDetailContent = ({
 
       <View className="items-center my-8">
         <Text className="text-4xl font-bold text-foreground">
-          {formatBip177(transaction.amount)}
+          {formatBitcoinAmount(transaction.amount)}
         </Text>
         <Text className="text-xl text-muted-foreground">{formattedFiatAmount}</Text>
       </View>
@@ -177,7 +182,7 @@ export const TransactionDetailContent = ({
         <TransactionDetailRow label={`Bitcoin Price (${fiatCurrency})`} value={bitcoinPrice} />
         <TransactionDetailRow
           label="Amount"
-          value={`${formatBip177(transaction.amount)} (${formattedFiatAmount})`}
+          value={`${formatBitcoinAmount(transaction.amount)} (${formattedFiatAmount})`}
         />
       </View>
 
@@ -201,13 +206,13 @@ export const TransactionDetailContent = ({
           {typeof transaction.balanceChangeSat === "number" ? (
             <TransactionDetailRow
               label="Balance Δ"
-              value={formatBip177(transaction.balanceChangeSat)}
+              value={formatBitcoinAmount(transaction.balanceChangeSat)}
             />
           ) : null}
           {transaction.hasOnchainFee && typeof transaction.onchainFeeSat === "number" ? (
             <TransactionDetailRow
               label="Onchain Fee"
-              value={formatBip177(transaction.onchainFeeSat)}
+              value={formatBitcoinAmount(transaction.onchainFeeSat)}
             />
           ) : null}
           {typeof transaction.confirmationHeight === "number" ? (
@@ -258,19 +263,19 @@ export const TransactionDetailContent = ({
           {typeof transaction.intendedBalanceSat === "number" ? (
             <TransactionDetailRow
               label="Intended Δ"
-              value={formatBip177(transaction.intendedBalanceSat)}
+              value={formatBitcoinAmount(transaction.intendedBalanceSat)}
             />
           ) : null}
           {typeof transaction.effectiveBalanceSat === "number" ? (
             <TransactionDetailRow
               label="Effective Δ"
-              value={formatBip177(transaction.effectiveBalanceSat)}
+              value={formatBitcoinAmount(transaction.effectiveBalanceSat)}
             />
           ) : null}
           {typeof transaction.offchainFeeSat === "number" ? (
             <TransactionDetailRow
               label="Offchain Fee"
-              value={formatBip177(transaction.offchainFeeSat)}
+              value={formatBitcoinAmount(transaction.offchainFeeSat)}
             />
           ) : null}
         </View>

@@ -10,11 +10,11 @@ import { useState } from "react";
 import { COLORS } from "~/lib/styleConstants";
 import type { BarkVtxo } from "react-native-nitro-ark";
 import { useGetBlockHeight } from "~/hooks/useMarketData";
-import { formatBip177 } from "~/lib/utils";
 import { getMempoolTxUrl } from "~/constants";
 import type { SettingsStackParamList } from "~/Navigators";
 import { useGetExpiringVtxos, useGetVtxos, useRefreshExpiringVtxos } from "~/hooks/useWallet";
 import { StatusBannerStrip } from "~/components/StatusBannerStrip";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 
 type VTXOWithStatus = BarkVtxo & {
   isExpiring: boolean;
@@ -96,6 +96,7 @@ const VTXODetailScreen = () => {
   const route = useRoute();
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const iconColor = useIconColor();
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
   const { data: blockHeight } = useGetBlockHeight();
   const { vtxo: routeVtxo } = route.params as { vtxo: VTXOWithStatus };
   const { data: allVtxos = [] } = useGetVtxos();
@@ -188,7 +189,7 @@ const VTXODetailScreen = () => {
               <Icon name={getVtxoIcon(vtxo)} size={64} color={getVtxoColor(vtxo)} />
             </View>
             <Text className="text-3xl font-bold text-foreground mb-2">
-              {formatBip177(vtxo.amount)}
+              {formatBitcoinAmount(vtxo.amount)}
             </Text>
             <View className="flex-row items-center">
               <Icon name={getStatusIcon(vtxo)} size={20} color={getVtxoColor(vtxo)} />
@@ -199,7 +200,7 @@ const VTXODetailScreen = () => {
           </View>
 
           <View className="bg-card p-4 rounded-lg mb-4">
-            <VTXODetailRow label="Amount" value={formatBip177(vtxo.amount)} />
+            <VTXODetailRow label="Amount" value={formatBitcoinAmount(vtxo.amount)} />
             <VTXODetailRow label="State" value={vtxo.state} />
             <VTXODetailRow label="Status" value={statusLabel} />
             <VTXODetailRow
