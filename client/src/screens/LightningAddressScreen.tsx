@@ -32,6 +32,7 @@ const LightningAddressScreen = () => {
   const domain = getLnurlDomain();
   const currentUsername = lightningAddress ? lightningAddress.split("@")[0] : "";
   const [username, setUsername] = useState(currentUsername);
+  const normalizedUsername = username.trim().toLowerCase();
   const [showUpdateSuccess, setShowUpdateSuccess] = useState(false);
 
   const updateLightningAddressMutation = useUpdateLightningAddress({
@@ -49,8 +50,8 @@ const LightningAddressScreen = () => {
   });
 
   const handleSave = async () => {
-    if (username) {
-      const newAddress = `${username.toLowerCase()}@${domain}`;
+    if (normalizedUsername) {
+      const newAddress = `${normalizedUsername}@${domain}`;
       if (newAddress !== lightningAddress) {
         updateLightningAddressMutation.mutate(newAddress);
       } else if (fromOnboarding) {
@@ -96,9 +97,10 @@ const LightningAddressScreen = () => {
               </Text>
               <Input
                 value={username}
-                onChangeText={setUsername}
+                onChangeText={(value) => setUsername(value.trim().toLowerCase())}
                 className="h-16 rounded-2xl border border-border bg-background/90 px-4 text-lg leading-6 text-foreground"
                 placeholder="fiatjaf"
+                keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
               />
@@ -106,7 +108,7 @@ const LightningAddressScreen = () => {
             <View className="bg-background/70 rounded-xl p-3 border border-border/60">
               <Text className="text-xs text-muted-foreground">Your lightning address will be</Text>
               <Text className="text-md font-semibold text-foreground mt-1">
-                {username}@{domain}
+                {normalizedUsername}@{domain}
               </Text>
             </View>
           </View>
@@ -126,9 +128,9 @@ const LightningAddressScreen = () => {
               <NoahButton
                 onPress={handleSave}
                 isLoading={updateLightningAddressMutation.isPending}
-                disabled={!username}
+                disabled={!normalizedUsername}
               >
-                {`${username}@${domain}` === lightningAddress ? "Continue" : "Save"}
+                {`${normalizedUsername}@${domain}` === lightningAddress ? "Continue" : "Save"}
               </NoahButton>
             </View>
           </View>
@@ -137,7 +139,7 @@ const LightningAddressScreen = () => {
             onPress={handleSave}
             className="mt-8"
             isLoading={updateLightningAddressMutation.isPending}
-            disabled={!username}
+            disabled={!normalizedUsername}
           >
             Save
           </NoahButton>

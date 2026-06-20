@@ -36,6 +36,24 @@ export type ParsedDestination = {
   bip321?: ParsedBip321;
 };
 
+const LIGHTNING_PREFIX_REGEX = /^lightning:/i;
+
+export const normalizeLightningAddress = (address: string): string => address.trim().toLowerCase();
+
+export const normalizeLightningAddressDestination = (destination: string): string => {
+  const trimmedDestination = destination.trim();
+  const cleanedDestination = trimmedDestination.replace(LIGHTNING_PREFIX_REGEX, "");
+  const normalizedAddress = normalizeLightningAddress(cleanedDestination);
+
+  if (!isValidLightningAddress(normalizedAddress)) {
+    return destination;
+  }
+
+  return trimmedDestination.toLowerCase().startsWith("lightning:")
+    ? `lightning:${normalizedAddress}`
+    : normalizedAddress;
+};
+
 export const isValidDestination = (dest: string): boolean => {
   if (dest.toLowerCase().startsWith("bitcoin:")) {
     const expectedNetwork = APP_VARIANT;
@@ -43,7 +61,7 @@ export const isValidDestination = (dest: string): boolean => {
     return result.valid && result.paymentMethods.length > 0;
   }
 
-  const cleanedDest = dest.replace(/^(lightning:)/i, "");
+  const cleanedDest = dest.trim().replace(LIGHTNING_PREFIX_REGEX, "");
 
   // Check Bitcoin address
   const btcResult = validateBitcoinAddress(cleanedDest);
@@ -64,7 +82,7 @@ export const isValidDestination = (dest: string): boolean => {
   }
 
   // Check Lightning Address (LNURL LUD-16)
-  if (isValidLightningAddress(cleanedDest)) {
+  if (isValidLightningAddress(normalizeLightningAddress(cleanedDest))) {
     return true;
   }
 
@@ -148,9 +166,9 @@ export const parseDestination = (destination: string): ParsedDestination => {
     return parseBip321Uri(destination);
   }
 
-  const cleanedDestination = destination.replace(/^(lightning:)/i, "");
+  const cleanedDestination = destination.trim().replace(LIGHTNING_PREFIX_REGEX, "");
 
-  if (isValidLightningAddress(cleanedDestination)) {
+  if (isValidLightningAddress(normalizeLightningAddress(cleanedDestination))) {
     return {
       destinationType: "lnurl",
       isAmountEditable: true,

@@ -365,8 +365,10 @@ export const payLightningAddress = async (
   amountSat: number,
   comment: string,
 ): Promise<Result<LightningPayment, Error>> => {
+  const normalizedAddress = addr.trim().toLowerCase();
+
   return ResultAsync.fromPromise(
-    payLightningAddressNitro(addr, amountSat, comment, true),
+    payLightningAddressNitro(normalizedAddress, amountSat, comment, true),
     (error) => {
       const e = new Error(
         `Failed to send to lightning address: ${
