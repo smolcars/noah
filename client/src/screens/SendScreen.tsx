@@ -288,6 +288,7 @@ const SendScreen = () => {
                         className="min-h-9 flex-1 text-base text-foreground"
                         placeholder="Address, invoice, or lightning address"
                         placeholderTextColor={colors.mutedForeground}
+                        keyboardType="email-address"
                         autoCorrect={false}
                         autoCapitalize="none"
                         value={destination}

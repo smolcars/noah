@@ -5,6 +5,8 @@ import { useAlert } from "~/contexts/AlertProvider";
 import {
   parseDestination,
   isValidDestination,
+  normalizeLightningAddress,
+  normalizeLightningAddressDestination,
   type DestinationTypes,
   ParsedBip321,
 } from "../lib/sendUtils";
@@ -84,7 +86,7 @@ export const useSendScreen = () => {
 
   useEffect(() => {
     if (route.params?.destination) {
-      setDestination(route.params.destination);
+      setDestination(normalizeLightningAddressDestination(route.params.destination));
     }
   }, [route.params]);
 
@@ -96,7 +98,7 @@ export const useSendScreen = () => {
         isAmountEditable: newIsAmountEditable,
         error: parseError,
         bip321,
-      } = parseDestination(destination.toLowerCase());
+      } = parseDestination(destination);
 
       if (parseError) {
         showAlert({ title: "Invalid Destination", description: parseError });
@@ -227,7 +229,7 @@ export const useSendScreen = () => {
       }
     }
 
-    const cleanedDestination = destination.replace(/^(bitcoin:|lightning:)/i, "");
+    const cleanedDestination = destination.trim().replace(/^(bitcoin:|lightning:)/i, "");
 
     switch (finalDestinationType) {
       case "ark":
@@ -506,7 +508,11 @@ export const useSendScreen = () => {
         btcPrice,
       });
     } else {
-      const cleanedDestination = destination.replace(/^(bitcoin:|lightning:)/i, "");
+      const cleanedDestination = destination.trim().replace(/^(bitcoin:|lightning:)/i, "");
+      const destinationToSend =
+        finalDestinationType === "lnurl"
+          ? normalizeLightningAddress(cleanedDestination)
+          : cleanedDestination;
       if (finalDestinationType === "onchain" && resolvedOnchainSource === null) {
         showAlert({
           title: "Choose Send Source",
@@ -516,7 +522,7 @@ export const useSendScreen = () => {
       }
 
       send({
-        destination: cleanedDestination,
+        destination: destinationToSend,
         amountSat:
           finalDestinationType === "lightning" && !isAmountEditable ? undefined : amountSat,
         resolvedAmountSat: amountSat,
@@ -570,7 +576,7 @@ export const useSendScreen = () => {
 
   const { showCamera, setShowCamera, handleScanPress, codeScanner } = useQRCodeScanner({
     onScan: (value) => {
-      setDestination(value);
+      setDestination(normalizeLightningAddressDestination(value));
     },
   });
 

@@ -202,11 +202,13 @@ export const getMempoolTxUrl = (anchorPoint: string): string | null => {
 };
 
 export const isValidLightningAddress = (url: string): boolean => {
-  if (!isEmail(url)) {
+  const normalizedUrl = url.toLowerCase();
+
+  if (!isEmail(normalizedUrl)) {
     return false;
   }
 
-  const [username, domain] = parseEmail(url);
+  const [username, domain] = parseEmail(normalizedUrl);
 
   if (!isUsername(username)) {
     return false;

@@ -8,17 +8,19 @@ import { useAlert } from "~/contexts/AlertProvider";
 const log = logger("useUpdateLightningAddress");
 
 const updateLightningAddressWrapper = async (newAddress: string) => {
-  if (!isValidEmail(newAddress)) {
+  const normalizedAddress = newAddress.trim().toLowerCase();
+
+  if (!isValidEmail(normalizedAddress)) {
     throw new Error("Invalid lightning address format");
   }
 
-  const result = await updateLightningAddress({ ln_address: newAddress });
+  const result = await updateLightningAddress({ ln_address: normalizedAddress });
 
   if (result.isErr()) {
     throw result.error;
   }
 
-  return newAddress;
+  return normalizedAddress;
 };
 
 export const useUpdateLightningAddress = (callbacks?: {
