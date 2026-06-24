@@ -425,6 +425,18 @@ where
     T: MailboxTransport + 'static,
 {
     let repo = MailboxAuthorizationRepository::new(&app_state.db_pool);
+    if !repo
+        .claim_is_active(
+            &mailbox.pubkey,
+            mailbox.auth_version,
+            &worker_id,
+            Utc::now(),
+        )
+        .await?
+    {
+        return Ok(());
+    }
+
     let session = MailboxSessionContext {
         worker_id: worker_id.clone(),
         stream_idle_reconnect: config.stream_idle_reconnect,
