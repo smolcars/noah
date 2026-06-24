@@ -177,6 +177,7 @@ impl<'a> MailboxAuthorizationRepository<'a> {
              UPDATE mailbox_authorizations AS mailbox
              SET lease_owner = $3,
                  lease_expires_at = $5,
+                 last_connected_at = now(),
                  updated_at = now()
              FROM candidates
              WHERE mailbox.pubkey = candidates.pubkey
@@ -235,30 +236,6 @@ impl<'a> MailboxAuthorizationRepository<'a> {
         )
         .bind(pubkey)
         .bind(checkpoint)
-        .bind(auth_version)
-        .bind(worker_id)
-        .execute(self.pool)
-        .await?;
-
-        Ok(result.rows_affected() > 0)
-    }
-
-    pub async fn mark_connected(
-        &self,
-        pubkey: &str,
-        auth_version: i64,
-        worker_id: &str,
-    ) -> Result<bool> {
-        let result = sqlx::query(
-            "UPDATE mailbox_authorizations
-             SET last_connected_at = now(),
-                 status = 'active',
-                 updated_at = now()
-             WHERE pubkey = $1
-               AND auth_version = $2
-               AND lease_owner = $3",
-        )
-        .bind(pubkey)
         .bind(auth_version)
         .bind(worker_id)
         .execute(self.pool)

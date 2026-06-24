@@ -602,6 +602,17 @@ async fn test_claim_runnable_mailboxes_is_exclusive_per_worker() {
     assert_eq!(first_claim.len(), 1);
     assert_eq!(first_claim[0].pubkey, user.pubkey().to_string());
     assert_eq!(second_claim.len(), 0);
+
+    let last_connected_at = sqlx::query_scalar::<_, Option<chrono::DateTime<Utc>>>(
+        "SELECT last_connected_at
+         FROM mailbox_authorizations
+         WHERE pubkey = $1",
+    )
+    .bind(user.pubkey().to_string())
+    .fetch_one(&app_state.db_pool)
+    .await
+    .unwrap();
+    assert!(last_connected_at.is_some());
 }
 
 #[tracing_test::traced_test]
