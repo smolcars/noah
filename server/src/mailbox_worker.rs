@@ -57,7 +57,7 @@ impl Default for MailboxWorkerConfig {
             max_retry_delay: Duration::from_secs(300),
             claim_ttl: Duration::from_secs(120),
             claim_renew_interval: Duration::from_secs(30),
-            stream_idle_reconnect: Duration::from_secs(60),
+            stream_idle_reconnect: Duration::from_secs(600),
         }
     }
 }
