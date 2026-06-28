@@ -13,6 +13,7 @@ export const EXIT_STATE_ORDER: ExitProgressState[] = [
   "Claimable",
   "ClaimInProgress",
   "Claimed",
+  "VtxoAlreadySpent",
 ];
 
 export const EXIT_STATE_LABELS: Record<ExitProgressState, string> = {
@@ -22,6 +23,7 @@ export const EXIT_STATE_LABELS: Record<ExitProgressState, string> = {
   Claimable: "Claimable",
   ClaimInProgress: "Claiming",
   Claimed: "Claimed",
+  VtxoAlreadySpent: "Already spent",
 };
 
 export type ExitDetailRow = {
@@ -152,6 +154,10 @@ export const getExitBlockRows = ({
         details?.txid,
       );
       break;
+    case "VtxoAlreadySpent":
+      addRow("Last scanned", formatBlockRef(details?.last_scanned_block));
+      addRow("State detail", formatKind(details?.kind));
+      break;
     default:
       addRow("State detail", formatKind(details?.kind));
       break;
@@ -189,6 +195,8 @@ export const getExitStatusText = ({
       return details?.block
         ? `Claimed in block ${details.block.height}`
         : "Claim transaction confirmed";
+    case "VtxoAlreadySpent":
+      return "Exit VTXO was already spent";
     case "Processing": {
       const txSummary = getProcessingTransactionSummary(details);
       return txSummary
@@ -235,6 +243,8 @@ const getTimelineDescription = ({
       return details?.block
         ? `Funds were recovered on-chain in block ${details.block.height}.`
         : "Funds were recovered on-chain.";
+    case "VtxoAlreadySpent":
+      return "Exit tracking found that this VTXO was already spent.";
   }
 };
 

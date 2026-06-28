@@ -38,6 +38,13 @@ const stateTone = (state: ExitProgressState) => {
         className: "text-green-500",
         bgClassName: "bg-green-500/10 border-green-500/30",
       };
+    case "VtxoAlreadySpent":
+      return {
+        icon: "alert-circle-outline" as IconName,
+        color: "#8e8e93",
+        className: "text-muted-foreground",
+        bgClassName: "bg-muted border-border",
+      };
     case "ClaimInProgress":
     case "AwaitingDelta":
       return {
