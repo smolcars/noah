@@ -253,7 +253,7 @@ PODS:
     - hermes-engine/Pre-built (= 250829098.0.10)
   - hermes-engine/Pre-built (250829098.0.10)
   - MMKVCore (2.4.0)
-  - NitroArk (0.0.125):
+  - NitroArk (0.0.126):
     - hermes-engine
     - NitroModules
     - RCTRequired
@@ -3208,7 +3208,7 @@ SPEC CHECKSUMS:
   FBLazyVector: 24e62c765683b8d89006a88a2c8f5cf019f0074d
   hermes-engine: a4b58d93049110cff97dba74394902b3c6cdd233
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
-  NitroArk: ee0eb706fecbf5105317d84621b4de24d355242e
+  NitroArk: 88ce9b8b890a290d90a382df15a251ff4afdf658
   NitroMmkv: 4b4f95387a15161b346a6a93b9c7072c179e0e88
   NitroModules: c41b7b778d6557f1e517a80ec681a670321fa001
   NoahTools: 690d5d90593c5634d2a9ab514a6c243d8212ef20

@@ -66,6 +66,13 @@ const stateTone = (state: ExitProgressState) => {
         className: "text-green-500",
         bgClassName: "bg-green-500/10 border-green-500/30",
       };
+    case "VtxoAlreadySpent":
+      return {
+        icon: "alert-circle-outline" as IconName,
+        color: "#8e8e93",
+        className: "text-muted-foreground",
+        bgClassName: "bg-muted border-border",
+      };
     case "ClaimInProgress":
     case "AwaitingDelta":
       return {
@@ -160,6 +167,7 @@ const PHASE_LABELS: Record<ExitProgressState, string> = {
   Claimable: "Ready",
   ClaimInProgress: "Claim",
   Claimed: "Done",
+  VtxoAlreadySpent: "Spent",
 };
 
 const ExitPhaseRail = ({
@@ -397,6 +405,7 @@ const UnilateralExitScreen = () => {
       Claimable: 0,
       ClaimInProgress: 0,
       Claimed: 0,
+      VtxoAlreadySpent: 0,
     },
   );
   const claimInProgressCount = stateCounts.ClaimInProgress;
