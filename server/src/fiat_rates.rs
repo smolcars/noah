@@ -12,6 +12,7 @@ pub const SUPPORTED_FIAT_CURRENCIES: &[&str] = &[
 
 const COINGECKO_BASE_URL: &str = "https://api.coingecko.com/api/v3";
 const COINGECKO_REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+const COINGECKO_USER_AGENT: &str = "NoahWallet/0.1 server fiat-rate cache (https://noahwallet.io)";
 const SOURCE_COINGECKO: &str = "coingecko";
 
 #[derive(Debug, Clone)]
@@ -57,6 +58,7 @@ impl CoinGeckoFiatRateProvider {
         Self {
             client: reqwest::Client::builder()
                 .timeout(COINGECKO_REQUEST_TIMEOUT)
+                .user_agent(COINGECKO_USER_AGENT)
                 .build()
                 .expect("valid CoinGecko HTTP client"),
             api_key: config.coingecko_demo_api_key.clone(),
