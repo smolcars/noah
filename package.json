@@ -16,8 +16,5 @@
     "postinstall": "bun scripts/download_ark_binaries.js",
     "prepare": "husky",
     "check": "bun client check"
-  },
-  "patchedDependencies": {
-    "expo-modules-jsi@56.0.7": "patches/expo-modules-jsi@56.0.7.patch"
   }
 }
