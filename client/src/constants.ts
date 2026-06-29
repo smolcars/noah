@@ -158,6 +158,9 @@ export const msatToSatoshi = (msat: number) => msat / 1000;
 export const mempoolPriceEndpoint = "https://mempool.noderunner.wtf/api/v1/prices";
 export const mempoolHistoricalPriceEndpoint =
   "https://mempool.noderunner.wtf/api/v1/historical-price";
+export const upbitTickerEndpoint = "https://api.upbit.com/v1/ticker";
+export const upbitDailyCandlesEndpoint = "https://api.upbit.com/v1/candles/days";
+export const upbitBtcKrwMarket = "KRW-BTC";
 
 export const getBlockheightEndpoint = () => {
   switch (APP_VARIANT) {

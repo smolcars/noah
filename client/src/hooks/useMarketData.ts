@@ -2,6 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   mempoolPriceEndpoint,
   mempoolHistoricalPriceEndpoint,
+  upbitTickerEndpoint,
+  upbitDailyCandlesEndpoint,
+  upbitBtcKrwMarket,
   getBlockheightEndpoint,
   REGTEST_CONFIG,
 } from "~/constants";
@@ -15,13 +18,43 @@ import { APP_VARIANT } from "~/config";
 import type { FiatCurrencyCode, FiatRates } from "~/lib/fiatCurrency";
 import { useProfileStore } from "~/store/profileStore";
 
+type UpbitPriceResponse = Array<{
+  trade_price?: number;
+}>;
+
+const isValidRate = (rate: unknown): rate is number =>
+  typeof rate === "number" && Number.isFinite(rate) && rate > 0;
+
+const getUpbitBtcToKrwRate = (): ResultAsync<number, Error> => {
+  return ResultAsync.fromPromise(
+    ky
+      .get(upbitTickerEndpoint, {
+        searchParams: {
+          markets: upbitBtcKrwMarket,
+        },
+      })
+      .json<UpbitPriceResponse>(),
+    (e) => new Error(`Failed to fetch BTC to KRW rate from Upbit: ${e}`),
+  ).andThen((data) => {
+    const rate = data[0]?.trade_price;
+    if (isValidRate(rate)) {
+      return ok(rate);
+    }
+    return err(new Error("Invalid response from Upbit ticker API"));
+  });
+};
+
 export const getBtcToFiatRate = (currency: FiatCurrencyCode): ResultAsync<number, Error> => {
+  if (currency === "KRW") {
+    return getUpbitBtcToKrwRate();
+  }
+
   return ResultAsync.fromPromise(
     ky.get(mempoolPriceEndpoint).json<FiatRates>(),
     (e) => new Error(`Failed to fetch BTC to ${currency} rate: ${e}`),
   ).andThen((data) => {
     const rate = data[currency];
-    if (rate) {
+    if (isValidRate(rate)) {
       return ok(rate);
     }
     return err(new Error("Invalid response from exchange rate API"));
@@ -100,10 +133,51 @@ export function useGetBlockHeight() {
   });
 }
 
+const getNextUtcDayStartIso = (date: string): string => {
+  const parsedDate = new Date(date);
+  const nextUtcDayStart = new Date(
+    Date.UTC(
+      parsedDate.getUTCFullYear(),
+      parsedDate.getUTCMonth(),
+      parsedDate.getUTCDate() + 1,
+    ),
+  );
+
+  return nextUtcDayStart.toISOString().replace(".000Z", "Z");
+};
+
+const getHistoricalUpbitBtcToKrwRate = (date: string): ResultAsync<number, Error> => {
+  return ResultAsync.fromPromise(
+    ky
+      .get(upbitDailyCandlesEndpoint, {
+        searchParams: {
+          market: upbitBtcKrwMarket,
+          to: getNextUtcDayStartIso(date),
+          count: "1",
+        },
+      })
+      .json<UpbitPriceResponse>(),
+    (e) => new Error(`Failed to fetch historical BTC to KRW rate from Upbit: ${e}`),
+  ).andThen((data) => {
+    const rate = data[0]?.trade_price;
+    if (isValidRate(rate)) {
+      return ok(rate);
+    }
+    return err(new Error("Invalid response from Upbit daily candles API"));
+  });
+};
+
 export const getHistoricalBtcToFiatRate = (
   date: string,
   currency: FiatCurrencyCode,
 ): ResultAsync<number, Error> => {
+  if (currency === "KRW") {
+    return getHistoricalUpbitBtcToKrwRate(date).orElse((error) => {
+      log.e(`Failed to fetch historical BTC to ${currency} rate:`, [error]);
+      return getBtcToFiatRate(currency);
+    });
+  }
+
   const timestamp = Math.floor(new Date(date).getTime() / 1000);
   return ResultAsync.fromPromise(
     ky
