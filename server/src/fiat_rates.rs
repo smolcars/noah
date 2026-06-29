@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, time::Duration};
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Datelike, Days, NaiveDate, TimeZone, Utc};
@@ -11,6 +11,7 @@ pub const SUPPORTED_FIAT_CURRENCIES: &[&str] = &[
 ];
 
 const COINGECKO_BASE_URL: &str = "https://api.coingecko.com/api/v3";
+const COINGECKO_REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 const SOURCE_COINGECKO: &str = "coingecko";
 
 #[derive(Debug, Clone)]
@@ -54,7 +55,10 @@ pub struct CoinGeckoFiatRateProvider {
 impl CoinGeckoFiatRateProvider {
     pub fn new(config: &Config) -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .timeout(COINGECKO_REQUEST_TIMEOUT)
+                .build()
+                .expect("valid CoinGecko HTTP client"),
             api_key: config.coingecko_demo_api_key.clone(),
         }
     }
