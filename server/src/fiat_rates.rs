@@ -104,15 +104,19 @@ impl CoinGeckoFiatRateProvider {
         let mut rates = Vec::new();
         for currency in SUPPORTED_FIAT_CURRENCIES {
             let key = currency.to_ascii_lowercase();
-            if let Some(price) = data.bitcoin.get(&key).and_then(serde_json::Value::as_f64) {
-                rates.push(FetchedFiatRate {
-                    currency: (*currency).to_string(),
-                    rate_date,
-                    btc_price: price,
-                    observed_at,
-                    source: SOURCE_COINGECKO.to_string(),
-                });
-            }
+            let price = data
+                .bitcoin
+                .get(&key)
+                .and_then(serde_json::Value::as_f64)
+                .with_context(|| format!("CoinGecko latest response did not contain {currency}"))?;
+
+            rates.push(FetchedFiatRate {
+                currency: (*currency).to_string(),
+                rate_date,
+                btc_price: price,
+                observed_at,
+                source: SOURCE_COINGECKO.to_string(),
+            });
         }
 
         tracing::debug!(

@@ -308,7 +308,7 @@ async fn test_fiat_prices_requires_authentication() {
     let response = app
         .oneshot(
             Request::builder()
-                .method(http::Method::GET)
+                .method(http::Method::POST)
                 .uri("/prices")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(
