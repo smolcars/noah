@@ -70,6 +70,12 @@ impl CoinGeckoFiatRateProvider {
             .collect::<Vec<_>>()
             .join(",");
 
+        tracing::debug!(
+            source = SOURCE_COINGECKO,
+            currencies = %currencies,
+            "fetching latest fiat rates"
+        );
+
         let request = self
             .client
             .get(format!("{COINGECKO_BASE_URL}/simple/price"))
@@ -107,6 +113,13 @@ impl CoinGeckoFiatRateProvider {
             }
         }
 
+        tracing::debug!(
+            source = SOURCE_COINGECKO,
+            rate_count = rates.len(),
+            observed_at = %observed_at,
+            "fetched latest fiat rates"
+        );
+
         Ok(rates)
     }
 
@@ -116,6 +129,13 @@ impl CoinGeckoFiatRateProvider {
         rate_date: NaiveDate,
     ) -> Result<FetchedFiatRate> {
         let date = rate_date.format("%d-%m-%Y").to_string();
+        tracing::debug!(
+            source = SOURCE_COINGECKO,
+            currency = %currency,
+            rate_date = %rate_date,
+            "fetching historical fiat rate"
+        );
+
         let request = self
             .client
             .get(format!("{COINGECKO_BASE_URL}/coins/bitcoin/history"))
@@ -143,6 +163,13 @@ impl CoinGeckoFiatRateProvider {
             )
             .single()
             .unwrap_or_else(Utc::now);
+
+        tracing::debug!(
+            source = SOURCE_COINGECKO,
+            currency = %currency,
+            rate_date = %rate_date,
+            "fetched historical fiat rate"
+        );
 
         Ok(FetchedFiatRate {
             currency: currency.to_string(),
@@ -182,6 +209,14 @@ impl CoinGeckoFiatRateProvider {
             .single()
             .context("invalid end date")?;
 
+        tracing::debug!(
+            source = SOURCE_COINGECKO,
+            currency = %currency,
+            start_date = %start_date,
+            end_date = %end_date,
+            "fetching historical fiat rate range"
+        );
+
         let request = self
             .client
             .get(format!(
@@ -216,7 +251,17 @@ impl CoinGeckoFiatRateProvider {
             );
         }
 
-        Ok(daily_rates.into_values().collect())
+        let rates = daily_rates.into_values().collect::<Vec<_>>();
+        tracing::debug!(
+            source = SOURCE_COINGECKO,
+            currency = %currency,
+            start_date = %start_date,
+            end_date = %end_date,
+            rate_count = rates.len(),
+            "fetched historical fiat rate range"
+        );
+
+        Ok(rates)
     }
 
     fn apply_api_key(&self, request: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
@@ -230,6 +275,7 @@ impl CoinGeckoFiatRateProvider {
 pub async fn refresh_latest_rates(config: &Config, repo: &FiatRateRepository<'_>) -> Result<()> {
     let provider = CoinGeckoFiatRateProvider::new(config);
     let rates = provider.fetch_latest_rates().await?;
+    let rate_count = rates.len();
 
     for rate in rates {
         repo.upsert_rate(
@@ -241,6 +287,12 @@ pub async fn refresh_latest_rates(config: &Config, repo: &FiatRateRepository<'_>
         )
         .await?;
     }
+
+    tracing::info!(
+        job = "fiat_rates",
+        rate_count,
+        "refreshed latest fiat rates"
+    );
 
     Ok(())
 }
@@ -255,6 +307,13 @@ pub async fn backfill_recent_rates(config: &Config, repo: &FiatRateRepository<'_
 
     for currency in SUPPORTED_FIAT_CURRENCIES {
         if repo.count_rates_since(currency, start).await? >= days as i64 {
+            tracing::debug!(
+                job = "fiat_rates",
+                currency = %currency,
+                start_date = %start,
+                end_date = %today,
+                "skipping fiat rate backfill; cached range is complete"
+            );
             continue;
         }
 
@@ -263,6 +322,7 @@ pub async fn backfill_recent_rates(config: &Config, repo: &FiatRateRepository<'_
             .await
             .with_context(|| format!("failed to fetch historical range for {currency}"))?;
 
+        let mut inserted_count = 0;
         for rate in rates {
             if repo
                 .get_rate(&rate.currency, rate.rate_date)
@@ -280,7 +340,17 @@ pub async fn backfill_recent_rates(config: &Config, repo: &FiatRateRepository<'_
                 &rate.source,
             )
             .await?;
+            inserted_count += 1;
         }
+
+        tracing::info!(
+            job = "fiat_rates",
+            currency = %currency,
+            start_date = %start,
+            end_date = %today,
+            inserted_count,
+            "backfilled fiat rates"
+        );
     }
 
     Ok(())

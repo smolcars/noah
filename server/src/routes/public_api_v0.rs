@@ -133,6 +133,11 @@ pub async fn historical_fiat_price(
     let rate = match repo.get_rate(&currency, rate_date).await? {
         Some(rate) => rate,
         None => {
+            tracing::debug!(
+                currency = %currency,
+                rate_date = %rate_date,
+                "historical fiat rate cache miss"
+            );
             let provider = CoinGeckoFiatRateProvider::new(&state.config);
             let fetched = provider
                 .fetch_historical_rate(&currency, rate_date)
