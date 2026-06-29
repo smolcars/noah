@@ -1,5 +1,6 @@
 pub mod backup_repo;
 pub mod device_repo;
+pub mod fiat_rate_repo;
 pub mod heartbeat_repo;
 pub mod job_status_repo;
 pub mod mailbox_authorization_repo;

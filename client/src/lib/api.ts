@@ -40,6 +40,10 @@ import {
   SendEmailVerificationPayload,
   VerifyEmailPayload,
   EmailVerificationResponse,
+  FiatPricesPayload,
+  FiatPricesResponse,
+  HistoricalFiatPricePayload,
+  HistoricalFiatPriceResponse,
 } from "~/types/serverTypes";
 import logger from "~/lib/log";
 import { nativeGet, nativePost } from "noah-tools";
@@ -316,6 +320,12 @@ async function post<T, U>(
 
   return responseResult;
 }
+
+export const getFiatPrices = () =>
+  post<FiatPricesPayload, FiatPricesResponse>("/prices", {});
+
+export const getHistoricalFiatPrice = (payload: HistoricalFiatPricePayload) =>
+  post<HistoricalFiatPricePayload, HistoricalFiatPriceResponse>("/historical-price", payload);
 
 export const getUploadUrl = (payload: GetUploadUrlPayload) =>
   post<GetUploadUrlPayload, UploadUrlResponse>("/backup/upload_url", payload);

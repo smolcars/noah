@@ -1,6 +1,19 @@
 import { formatNumber } from "~/lib/utils";
 
-export const SUPPORTED_FIAT_CURRENCIES = ["USD", "EUR", "GBP", "CAD", "CHF", "AUD", "JPY"] as const;
+export const SUPPORTED_FIAT_CURRENCIES = [
+  "USD",
+  "EUR",
+  "GBP",
+  "CAD",
+  "CHF",
+  "AUD",
+  "JPY",
+  "BRL",
+  "KRW",
+  "INR",
+  "MXN",
+  "SGD",
+] as const;
 
 export type FiatCurrencyCode = (typeof SUPPORTED_FIAT_CURRENCIES)[number];
 
@@ -19,6 +32,11 @@ export const FIAT_CURRENCY_INFO: Record<FiatCurrencyCode, FiatCurrencyInfo> = {
   CHF: { code: "CHF", name: "Swiss Franc", symbol: "CHF", decimals: 2 },
   AUD: { code: "AUD", name: "Australian Dollar", symbol: "A$", decimals: 2 },
   JPY: { code: "JPY", name: "Japanese Yen", symbol: "¥", decimals: 0 },
+  BRL: { code: "BRL", name: "Brazilian Real", symbol: "R$", decimals: 2 },
+  KRW: { code: "KRW", name: "South Korean Won", symbol: "₩", decimals: 0 },
+  INR: { code: "INR", name: "Indian Rupee", symbol: "₹", decimals: 2 },
+  MXN: { code: "MXN", name: "Mexican Peso", symbol: "MX$", decimals: 2 },
+  SGD: { code: "SGD", name: "Singapore Dollar", symbol: "S$", decimals: 2 },
 };
 
 export type FiatRates = Partial<Record<FiatCurrencyCode, number>>;

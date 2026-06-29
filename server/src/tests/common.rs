@@ -22,8 +22,8 @@ use crate::routes::gated_api_v0::{
     submit_invoice, update_backup_settings, update_ln_address, update_profile,
 };
 use crate::routes::public_api_v0::{
-    auth_login, check_app_version, get_k1, lnurlp_request, register, send_verification_email,
-    verify_email,
+    auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price, lnurlp_request,
+    register, send_verification_email, verify_email,
 };
 use crate::types::AuthLoginPayload;
 use crate::{AppState, AppStruct};
@@ -87,6 +87,9 @@ impl TestUser {
             maintenance_notification_advance_secs: 30,
             heartbeat_cron: "0 0 * * *".to_string(),
             deregister_cron: "0 0 * * *".to_string(),
+            fiat_rate_refresh_cron: "0 0 * * *".to_string(),
+            fiat_rate_backfill_days: 60,
+            coingecko_demo_api_key: None,
             notification_spacing_minutes: 45,
             minimum_app_version: "0.0.1".to_string(),
             redis_url: std::env::var("TEST_REDIS_URL")
@@ -165,6 +168,8 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
 
     // Gated routes that need auth AND user to exist in database
     let gated_router = Router::new()
+        .route("/prices", post(fiat_prices))
+        .route("/historical-price", post(historical_fiat_price))
         .route("/register_push_token", post(register_push_token))
         .route("/mailbox/authorize", post(authorize_mailbox))
         .route("/mailbox/revoke", post(revoke_mailbox_authorization))
@@ -307,6 +312,7 @@ async fn reset_database(pool: &PgPool) -> sqlx::Result<()> {
     sqlx::query(
         r#"
         TRUNCATE TABLE
+            fiat_rates,
             heartbeat_notifications,
             job_status_reports,
             devices,

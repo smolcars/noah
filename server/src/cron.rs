@@ -1,11 +1,12 @@
 use crate::{
     AppState,
     db::{
-        backup_repo::BackupRepository, heartbeat_repo::HeartbeatRepository,
-        job_status_repo::JobStatusRepository,
+        backup_repo::BackupRepository, fiat_rate_repo::FiatRateRepository,
+        heartbeat_repo::HeartbeatRepository, job_status_repo::JobStatusRepository,
         mailbox_authorization_repo::MailboxAuthorizationRepository,
         push_token_repo::PushTokenRepository, user_repo::UserRepository,
     },
+    fiat_rates,
     notification_coordinator::{NotificationCoordinator, NotificationRequest},
     types::{HeartbeatNotification, NotificationRequestData, UserStatus},
 };
@@ -17,6 +18,7 @@ const STALE_PENDING_JOB_SWEEP_SCHEDULE: &str = "every 10 minutes";
 const STALE_PENDING_JOB_ERROR_MESSAGE: &str = "Timed out after 1 hour waiting for client response";
 const STALE_PENDING_HEARTBEAT_TIMEOUT_MINUTES: i64 = 60;
 const STALE_PENDING_HEARTBEAT_SWEEP_SCHEDULE: &str = "every 10 minutes";
+const FIAT_RATE_REFRESH_LOCK_ID: i64 = 2025110501;
 
 pub async fn send_backup_notifications(app_state: AppState) -> anyhow::Result<()> {
     let backup_repo = BackupRepository::new(&app_state.db_pool);
@@ -182,11 +184,48 @@ pub async fn timeout_stale_pending_heartbeats(app_state: AppState) -> anyhow::Re
     Ok(())
 }
 
+pub async fn refresh_fiat_rates(app_state: AppState) -> anyhow::Result<()> {
+    let mut conn = app_state.db_pool.acquire().await?;
+    let lock_acquired: bool = sqlx::query_scalar("SELECT pg_try_advisory_lock($1)")
+        .bind(FIAT_RATE_REFRESH_LOCK_ID)
+        .fetch_one(&mut *conn)
+        .await?;
+
+    if !lock_acquired {
+        tracing::debug!(
+            job = "fiat_rates",
+            "refresh skipped because another worker holds lock"
+        );
+        return Ok(());
+    }
+
+    let result = async {
+        let repo = FiatRateRepository::new(&app_state.db_pool);
+        fiat_rates::refresh_latest_rates(&app_state.config, &repo).await?;
+        fiat_rates::backfill_recent_rates(&app_state.config, &repo).await?;
+        anyhow::Ok(())
+    }
+    .await;
+
+    let unlock_result: Result<bool, sqlx::Error> =
+        sqlx::query_scalar("SELECT pg_advisory_unlock($1)")
+            .bind(FIAT_RATE_REFRESH_LOCK_ID)
+            .fetch_one(&mut *conn)
+            .await;
+
+    if let Err(e) = unlock_result {
+        tracing::error!(job = "fiat_rates", error = %e, "failed to release advisory lock");
+    }
+
+    result
+}
+
 pub async fn cron_scheduler(
     app_state: AppState,
     backup_cron: String,
     heartbeat_cron: String,
     deregister_cron: String,
+    fiat_rate_refresh_cron: String,
 ) -> anyhow::Result<JobScheduler> {
     let sched = JobScheduler::new().await?;
 
@@ -195,6 +234,7 @@ pub async fn cron_scheduler(
         backup_schedule = %backup_cron,
         heartbeat_schedule = %heartbeat_cron,
         deregister_schedule = %deregister_cron,
+        fiat_rate_refresh_schedule = %fiat_rate_refresh_cron,
         stale_pending_job_cleanup_schedule = %STALE_PENDING_JOB_SWEEP_SCHEDULE,
         stale_pending_job_timeout_minutes = STALE_PENDING_JOB_TIMEOUT_MINUTES,
         stale_pending_heartbeat_cleanup_schedule = %STALE_PENDING_HEARTBEAT_SWEEP_SCHEDULE,
@@ -236,6 +276,17 @@ pub async fn cron_scheduler(
         })
     })?;
     sched.add(inactive_check_job).await?;
+
+    let fiat_rate_refresh_state = app_state.clone();
+    let fiat_rate_refresh_job = Job::new_async(&fiat_rate_refresh_cron, move |_, _| {
+        let app_state = fiat_rate_refresh_state.clone();
+        Box::pin(async move {
+            if let Err(e) = refresh_fiat_rates(app_state).await {
+                tracing::error!(job = "fiat_rates", error = %e, "job failed");
+            }
+        })
+    })?;
+    sched.add(fiat_rate_refresh_job).await?;
 
     // Mark stale pending job reports as timeout
     let stale_pending_job_cleanup_state = app_state.clone();

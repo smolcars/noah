@@ -6,6 +6,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
 };
+use chrono::{TimeZone, Utc};
 use expo_push_notification_client::Priority;
 use rand::Rng;
 use uuid::Uuid;
@@ -19,16 +20,18 @@ use crate::{
     auth::mint_access_token,
     cache::email_verification_store::EmailVerificationStore,
     db::{
-        device_repo::DeviceRepository, mailbox_authorization_repo::MailboxAuthorizationRepository,
-        user_repo::UserRepository,
+        device_repo::DeviceRepository, fiat_rate_repo::FiatRateRepository,
+        mailbox_authorization_repo::MailboxAuthorizationRepository, user_repo::UserRepository,
     },
     errors::ApiError,
+    fiat_rates::{CoinGeckoFiatRateProvider, is_supported_currency},
     push::{PushNotificationData, has_expo_push_token, send_expo_push_notification},
     types::{
         AppVersionCheckPayload, AppVersionInfo, AuthEvent, AuthLoginPayload, AuthLoginResponse,
-        AuthenticatedUser, EmailVerificationResponse, LightningInvoiceRequestNotification,
-        NotificationData, RegisterPayload, RegisterResponse, SendEmailVerificationPayload,
-        UserStatus, VerifyEmailPayload,
+        AuthenticatedUser, EmailVerificationResponse, FiatPricesPayload, FiatPricesResponse,
+        HistoricalFiatPricePayload, HistoricalFiatPriceResponse,
+        LightningInvoiceRequestNotification, NotificationData, RegisterPayload, RegisterResponse,
+        SendEmailVerificationPayload, UserStatus, VerifyEmailPayload,
     },
     utils::{make_k1, verify_auth},
     wide_event::WideEventHandle,
@@ -61,6 +64,113 @@ pub async fn get_k1(State(state): State<AppState>) -> anyhow::Result<Json<GetK1>
     Ok(Json(GetK1 {
         k1,
         tag: "login".to_string(),
+    }))
+}
+
+pub async fn fiat_prices(
+    State(state): State<AppState>,
+    Json(_payload): Json<FiatPricesPayload>,
+) -> anyhow::Result<Json<FiatPricesResponse>, ApiError> {
+    let repo = FiatRateRepository::new(&state.db_pool);
+    let mut rates = repo.get_latest_rates().await?;
+
+    if rates.is_empty() {
+        tracing::warn!("No cached fiat rates found, fetching latest rates from provider");
+        let provider = CoinGeckoFiatRateProvider::new(&state.config);
+        let fetched = provider.fetch_latest_rates().await.map_err(|e| {
+            tracing::error!(error = %e, "Failed to fetch latest fiat rates");
+            ApiError::ServerErr("Failed to fetch fiat rates".to_string())
+        })?;
+
+        for rate in fetched {
+            repo.upsert_rate(
+                &rate.currency,
+                rate.rate_date,
+                rate.btc_price,
+                rate.observed_at,
+                &rate.source,
+            )
+            .await?;
+        }
+
+        rates = repo.get_latest_rates().await?;
+    }
+
+    let time = rates
+        .iter()
+        .map(|rate| rate.observed_at.timestamp())
+        .max()
+        .unwrap_or_else(|| Utc::now().timestamp());
+
+    Ok(Json(FiatPricesResponse {
+        time,
+        rates: rates
+            .into_iter()
+            .map(|rate| (rate.currency, rate.btc_price))
+            .collect(),
+    }))
+}
+
+pub async fn historical_fiat_price(
+    State(state): State<AppState>,
+    Json(payload): Json<HistoricalFiatPricePayload>,
+) -> anyhow::Result<Json<HistoricalFiatPriceResponse>, ApiError> {
+    let currency = payload.currency.to_ascii_uppercase();
+    if !is_supported_currency(&currency) {
+        return Err(ApiError::InvalidArgument(format!(
+            "Unsupported fiat currency: {}",
+            payload.currency
+        )));
+    }
+
+    let rate_date = Utc
+        .timestamp_opt(payload.timestamp, 0)
+        .single()
+        .ok_or_else(|| ApiError::InvalidArgument("Invalid timestamp".to_string()))?
+        .date_naive();
+
+    let repo = FiatRateRepository::new(&state.db_pool);
+    let rate = match repo.get_rate(&currency, rate_date).await? {
+        Some(rate) => rate,
+        None => {
+            tracing::debug!(
+                currency = %currency,
+                rate_date = %rate_date,
+                "historical fiat rate cache miss"
+            );
+            let provider = CoinGeckoFiatRateProvider::new(&state.config);
+            let fetched = provider
+                .fetch_historical_rate(&currency, rate_date)
+                .await
+                .map_err(|e| {
+                    tracing::error!(
+                        currency = %currency,
+                        rate_date = %rate_date,
+                        error = %e,
+                        "Failed to fetch historical fiat rate"
+                    );
+                    ApiError::ServerErr("Failed to fetch historical fiat rate".to_string())
+                })?;
+
+            repo.upsert_rate(
+                &fetched.currency,
+                fetched.rate_date,
+                fetched.btc_price,
+                fetched.observed_at,
+                &fetched.source,
+            )
+            .await?;
+
+            repo.get_rate(&currency, rate_date)
+                .await?
+                .ok_or_else(|| ApiError::ServerErr("Failed to store fiat rate".to_string()))?
+        }
+    };
+
+    Ok(Json(HistoricalFiatPriceResponse {
+        currency,
+        time: payload.timestamp,
+        rate: rate.btc_price,
     }))
 }
 
