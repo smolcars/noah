@@ -9,7 +9,6 @@ import {
   ScrollView,
 } from "react-native";
 import { Text } from "../components/ui/text";
-import { useAlert } from "~/contexts/AlertProvider";
 import { NoahButton } from "../components/ui/NoahButton";
 import { Button } from "~/components/ui/button";
 
@@ -147,16 +146,24 @@ const PaymentRail = ({
   value,
   onCopy,
   isCopied,
+  actionLabel,
 }: {
   icon: React.ComponentProps<typeof Icon>["name"];
   label: string;
   value: string;
-  onCopy: () => void;
+  onCopy?: () => void;
   isCopied: boolean;
+  actionLabel?: string;
 }) => {
   const iconColor = useIconColor();
+  const isCopyable = Boolean(onCopy);
+
   return (
-    <Pressable onPress={onCopy} className="flex-row items-center gap-4 py-4">
+    <Pressable
+      onPress={onCopy}
+      disabled={!isCopyable}
+      className="flex-row items-center gap-4 py-4"
+    >
       <View
         className="h-11 w-11 items-center justify-center rounded-full border border-border"
         style={{ backgroundColor: "rgba(201, 138, 60, 0.10)" }}
@@ -167,17 +174,23 @@ const PaymentRail = ({
         <Text className="text-sm font-semibold text-foreground">{label}</Text>
         <Text
           className="mt-1 text-sm text-muted-foreground"
-          ellipsizeMode="middle"
-          numberOfLines={1}
+          ellipsizeMode={isCopyable ? "middle" : "tail"}
+          numberOfLines={isCopyable ? 1 : 2}
         >
           {truncateAddress(value)}
         </Text>
       </View>
       <Text
         className="text-xs font-semibold uppercase tracking-[2px]"
-        style={{ color: isCopied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE }}
+        style={{
+          color: isCopied
+            ? COLORS.SUCCESS
+            : isCopyable
+              ? COLORS.BITCOIN_ORANGE
+              : COLORS.TAB_BAR_INACTIVE,
+        }}
       >
-        {isCopied ? "Copied" : "Copy"}
+        {isCopied ? "Copied" : actionLabel ?? (isCopyable ? "Copy" : "")}
       </Text>
     </Pressable>
   );
@@ -194,7 +207,6 @@ const ReceiveScreen = () => {
   const fiatCurrencyInfo = getFiatCurrencyInfo(fiatCurrency);
   const { copyWithState, isCopied } = useCopyToClipboard();
   const [generatedRequest, setGeneratedRequest] = useState<GeneratedReceiveRequest | null>(null);
-  const { showAlert } = useAlert();
   const receiveSessionIdRef = useRef(0);
   const activeReceiveSessionRef = useRef<ActiveReceiveSession | null>(null);
   const arkSubscriptionRef = useRef<BarkNotificationSubscription | null>(null);
@@ -240,7 +252,8 @@ const ReceiveScreen = () => {
   const isClearDisabled = isLoading || (!isGenerated && amount === "");
   const isAmountLocked = isLoading || isGenerated;
   const hasEnteredAmount = amount.trim().length > 0;
-  const isEnteredAmountInvalid = hasEnteredAmount && amountSat < minAmount;
+  const canGenerateLightningInvoice = hasEnteredAmount && amountSat >= minAmount;
+  const isAmountlessLightningRequest = isGenerated && generatedAmountSat === null;
   const displayAmount = amount === "" ? (currency === "FIAT" ? "0.00" : "0") : amount;
   const amountPrefix =
     currency === "FIAT" ? fiatCurrencyInfo.symbol : bitcoinAmountUnit === "bip177" ? "₿" : null;
@@ -542,15 +555,7 @@ const ReceiveScreen = () => {
   );
 
   const generateReceiveRequest = useCallback(() => {
-    if (hasEnteredAmount && amountSat < minAmount) {
-      showAlert({
-        title: "Invalid Amount",
-        description: `The minimum amount is ${minAmount} sats.`,
-      });
-      return;
-    }
-
-    const requestAmountSat = hasEnteredAmount ? amountSat : null;
+    const requestAmountSat = canGenerateLightningInvoice ? amountSat : null;
 
     cancelReceiveSession({ resetAmount: false });
     setGeneratedRequest({ amountSat: requestAmountSat });
@@ -616,11 +621,10 @@ const ReceiveScreen = () => {
   }, [
     amountSat,
     cancelReceiveSession,
+    canGenerateLightningInvoice,
     generateLightningInvoice,
     generateOffchainAddress,
     generateOnchainAddress,
-    hasEnteredAmount,
-    showAlert,
   ]);
 
   const handleGenerate = () => {
@@ -768,18 +772,16 @@ const ReceiveScreen = () => {
                     : `≈ ${!isNaN(amountSat) && amount ? formatBitcoinAmount(amountSat) : formatBitcoinAmount(0)}`}
                 </Text>
 
-                <View
-                  className="mt-4 rounded-full border px-4 py-2"
-                  style={{
-                    borderColor: `${colors.mutedForeground}1F`,
-                  }}
-                >
-                  <Text className="text-sm text-muted-foreground">
-                    {isGenerated
-                      ? "Payment request is live"
-                      : "Amount optional for Ark and on-chain"}
-                  </Text>
-                </View>
+                {isGenerated ? (
+                  <View
+                    className="mt-4 rounded-full border px-4 py-2"
+                    style={{
+                      borderColor: `${colors.mutedForeground}1F`,
+                    }}
+                  >
+                    <Text className="text-sm text-muted-foreground">Payment request is live</Text>
+                  </View>
+                ) : null}
               </View>
 
               {bip321Uri ? (
@@ -800,6 +802,11 @@ const ReceiveScreen = () => {
                   <Text className="mt-3 max-w-[270px] text-center text-sm leading-6 text-muted-foreground">
                     This QR includes every receive rail that generated successfully.
                   </Text>
+                  {isAmountlessLightningRequest ? (
+                    <Text className="mt-2 max-w-[290px] text-center text-sm leading-6 text-muted-foreground">
+                      Amount required for Lightning.
+                    </Text>
+                  ) : null}
                 </View>
               ) : null}
             </View>
@@ -816,7 +823,7 @@ const ReceiveScreen = () => {
                     Available via
                   </Text>
                   <Text className="text-xs font-medium uppercase tracking-[2px] text-muted-foreground">
-                    Tap any rail
+                    Tap to copy
                   </Text>
                 </View>
 
@@ -833,7 +840,7 @@ const ReceiveScreen = () => {
                   </>
                 )}
 
-                {lightningInvoice && (
+                {lightningInvoice ? (
                   <>
                     <PaymentRail
                       icon="flash-outline"
@@ -846,7 +853,18 @@ const ReceiveScreen = () => {
                     />
                     <View className="h-px bg-border" />
                   </>
-                )}
+                ) : isAmountlessLightningRequest ? (
+                  <>
+                    <PaymentRail
+                      icon="flash-outline"
+                      label="Lightning"
+                      value="Amount required for Lightning"
+                      isCopied={false}
+                      actionLabel="Required"
+                    />
+                    <View className="h-px bg-border" />
+                  </>
+                ) : null}
 
                 {generatedOnchainAddress && (
                   <PaymentRail
@@ -860,23 +878,33 @@ const ReceiveScreen = () => {
               </View>
             )}
 
-            <View className="mt-5 flex-row items-center gap-3">
-              <Button
-                onPress={handleClear}
-                disabled={isClearDisabled}
-                variant="outline"
-                className="h-14 w-[120px] rounded-2xl"
-              >
-                <Text className="font-semibold">Clear</Text>
-              </Button>
-              <NoahButton
-                onPress={handleGenerate}
-                isLoading={isLoading}
-                disabled={isLoading || isEnteredAmountInvalid}
-                className="h-14 flex-1 rounded-2xl"
-              >
-                {isGenerated ? "New request" : "Generate request"}
-              </NoahButton>
+            <View className="mt-5">
+              {!isGenerated && !canGenerateLightningInvoice ? (
+                <Text
+                  className="mb-3 text-center text-sm font-semibold leading-5"
+                  style={{ color: COLORS.BITCOIN_ORANGE }}
+                >
+                  Enter an amount for Lightning
+                </Text>
+              ) : null}
+              <View className="flex-row items-center gap-3">
+                <Button
+                  onPress={handleClear}
+                  disabled={isClearDisabled}
+                  variant="outline"
+                  className="h-14 w-[120px] rounded-2xl"
+                >
+                  <Text className="font-semibold">Clear</Text>
+                </Button>
+                <NoahButton
+                  onPress={handleGenerate}
+                  isLoading={isLoading}
+                  disabled={isLoading}
+                  className="h-14 flex-1 rounded-2xl"
+                >
+                  {isGenerated ? "New request" : "Generate request"}
+                </NoahButton>
+              </View>
             </View>
           </View>
         </ScrollView>
