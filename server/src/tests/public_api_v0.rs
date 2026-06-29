@@ -1,10 +1,13 @@
 use crate::db::{
-    mailbox_authorization_repo::MailboxAuthorizationRepository,
+    fiat_rate_repo::FiatRateRepository, mailbox_authorization_repo::MailboxAuthorizationRepository,
     push_token_repo::PushTokenRepository, user_repo::UserRepository,
 };
 use crate::routes::public_api_v0::{GetK1, LnurlpDefaultResponse};
-use crate::tests::common::{TestUser, create_test_user, setup_public_test_app};
-use crate::types::{ApiErrorResponse, AppVersionCheckPayload, AppVersionInfo, UserStatus};
+use crate::tests::common::{TestUser, create_test_user, setup_public_test_app, setup_test_app};
+use crate::types::{
+    ApiErrorResponse, AppVersionCheckPayload, AppVersionInfo, FiatPricesPayload,
+    FiatPricesResponse, HistoricalFiatPricePayload, HistoricalFiatPriceResponse, UserStatus,
+};
 use axum::body::Body;
 use axum::http::{self, Request, StatusCode};
 use chrono::Utc;
@@ -26,7 +29,7 @@ async fn test_lnurlp_request_default() {
     let response = app
         .oneshot(
             Request::builder()
-                .method(http::Method::GET)
+                .method(http::Method::POST)
                 .uri("/.well-known/lnurlp/test")
                 .body(Body::empty())
                 .unwrap(),
@@ -59,7 +62,7 @@ async fn test_lnurlp_request_rejects_deregistered_user() {
     let response = app
         .oneshot(
             Request::builder()
-                .method(http::Method::GET)
+                .method(http::Method::POST)
                 .uri("/.well-known/lnurlp/test")
                 .body(Body::empty())
                 .unwrap(),
@@ -289,6 +292,171 @@ async fn test_app_version_check_invalid_version() {
                 .uri("/app_version")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(serde_json::to_string(&payload).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_fiat_prices_requires_authentication() {
+    let (app, _app_state, _guard) = setup_test_app().await;
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::GET)
+                .uri("/prices")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .body(Body::from(
+                    serde_json::to_vec(&FiatPricesPayload {}).unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_fiat_prices_returns_cached_typed_response() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    let access_token = user.access_token(&app_state);
+    create_test_user(&app_state, &user, None).await;
+
+    let observed_at = Utc::now();
+    let repo = FiatRateRepository::new(&app_state.db_pool);
+    repo.upsert_rate(
+        "USD",
+        observed_at.date_naive(),
+        12345.67,
+        observed_at,
+        "test",
+    )
+    .await
+    .unwrap();
+    repo.upsert_rate(
+        "BRL",
+        observed_at.date_naive(),
+        67890.12,
+        observed_at,
+        "test",
+    )
+    .await
+    .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/prices")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&FiatPricesPayload {}).unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let res: FiatPricesResponse = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(res.rates["USD"], 12345.67);
+    assert_eq!(res.rates["BRL"], 67890.12);
+    assert!(res.time > 0);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_historical_fiat_price_returns_cached_typed_response() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    let access_token = user.access_token(&app_state);
+    create_test_user(&app_state, &user, None).await;
+
+    let observed_at = Utc::now();
+    let timestamp = observed_at.timestamp();
+    let repo = FiatRateRepository::new(&app_state.db_pool);
+    repo.upsert_rate(
+        "KRW",
+        observed_at.date_naive(),
+        98765432.1,
+        observed_at,
+        "test",
+    )
+    .await
+    .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/historical-price")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&HistoricalFiatPricePayload {
+                        currency: "KRW".to_string(),
+                        timestamp,
+                    })
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let res: HistoricalFiatPriceResponse = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(res.currency, "KRW");
+    assert_eq!(res.rate, 98765432.1);
+    assert_eq!(res.time, timestamp);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_historical_fiat_price_rejects_unsupported_currency() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    let access_token = user.access_token(&app_state);
+    create_test_user(&app_state, &user, None).await;
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/historical-price")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&HistoricalFiatPricePayload {
+                        currency: "XYZ".to_string(),
+                        timestamp: 1767139200,
+                    })
+                    .unwrap(),
+                ))
                 .unwrap(),
         )
         .await

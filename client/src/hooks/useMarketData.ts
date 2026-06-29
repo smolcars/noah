@@ -1,10 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  mempoolPriceEndpoint,
-  mempoolHistoricalPriceEndpoint,
-  getBlockheightEndpoint,
-  REGTEST_CONFIG,
-} from "~/constants";
+import { getBlockheightEndpoint, REGTEST_CONFIG } from "~/constants";
 import ky from "ky";
 import logger from "~/lib/log";
 
@@ -12,15 +7,18 @@ const log = logger("useMarketData");
 
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import { APP_VARIANT } from "~/config";
-import type { FiatCurrencyCode, FiatRates } from "~/lib/fiatCurrency";
+import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
+import { getFiatPrices, getHistoricalFiatPrice } from "~/lib/api";
 import { useProfileStore } from "~/store/profileStore";
 
 export const getBtcToFiatRate = (currency: FiatCurrencyCode): ResultAsync<number, Error> => {
-  return ResultAsync.fromPromise(
-    ky.get(mempoolPriceEndpoint).json<FiatRates>(),
-    (e) => new Error(`Failed to fetch BTC to ${currency} rate: ${e}`),
-  ).andThen((data) => {
-    const rate = data[currency];
+  return ResultAsync.fromSafePromise(getFiatPrices()).andThen((result) => {
+    if (result.isErr()) {
+      return err(new Error(`Failed to fetch BTC to ${currency} rate: ${result.error.message}`));
+    }
+
+    const data = result.value;
+    const rate = data.rates[currency];
     if (rate) {
       return ok(rate);
     }
@@ -105,20 +103,16 @@ export const getHistoricalBtcToFiatRate = (
   currency: FiatCurrencyCode,
 ): ResultAsync<number, Error> => {
   const timestamp = Math.floor(new Date(date).getTime() / 1000);
-  return ResultAsync.fromPromise(
-    ky
-      .get(mempoolHistoricalPriceEndpoint, {
-        searchParams: {
-          currency,
-          timestamp: timestamp.toString(),
-        },
-      })
-      .json<{ prices?: FiatRates[] }>(),
-    (e) => new Error(`Failed to fetch historical BTC to ${currency} rate: ${e}`),
-  )
-    .andThen((data) => {
-      const prices = data.prices;
-      const rate = prices?.[0]?.[currency];
+  return ResultAsync.fromSafePromise(getHistoricalFiatPrice({ currency, timestamp }))
+    .andThen((result) => {
+      if (result.isErr()) {
+        return err(
+          new Error(`Failed to fetch historical BTC to ${currency} rate: ${result.error.message}`),
+        );
+      }
+
+      const data = result.value;
+      const rate = data.rate;
       if (rate) {
         return ok(rate);
       }

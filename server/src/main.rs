@@ -37,8 +37,8 @@ use crate::{
             update_ln_address, update_profile,
         },
         public_api_v0::{
-            auth_login, check_app_version, get_k1, lnurlp_request, register,
-            send_verification_email, verify_email,
+            auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price,
+            lnurlp_request, register, send_verification_email, verify_email,
         },
     },
 };
@@ -48,6 +48,7 @@ mod cron;
 pub mod db;
 mod email_client;
 mod errors;
+mod fiat_rates;
 mod mailbox_worker;
 mod notification_coordinator;
 mod push;
@@ -183,15 +184,24 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
     let backup_cron = config.backup_cron.clone();
     let heartbeat_cron = config.heartbeat_cron.clone();
     let deregister_cron = config.deregister_cron.clone();
+    let fiat_rate_refresh_cron = config.fiat_rate_refresh_cron.clone();
     let cron_handle = cron_scheduler(
         app_state.clone(),
         backup_cron,
         heartbeat_cron,
         deregister_cron,
+        fiat_rate_refresh_cron,
     )
     .await?;
 
     cron_handle.start().await?;
+
+    let fiat_rate_startup_state = app_state.clone();
+    tokio::spawn(async move {
+        if let Err(e) = cron::refresh_fiat_rates(fiat_rate_startup_state).await {
+            tracing::error!(job = "fiat_rates", error = %e, "startup refresh failed");
+        }
+    });
 
     let ark_client_app_state = app_state.clone();
     let ark_server_url = config.ark_server_url.clone();
@@ -249,6 +259,8 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
 
     // Gated routes need auth and a registered user. Email is optional.
     let gated_router = Router::new()
+        .route("/prices", post(fiat_prices))
+        .route("/historical-price", post(historical_fiat_price))
         .route("/register_push_token", post(register_push_token))
         .route("/mailbox/authorize", post(authorize_mailbox))
         .route("/mailbox/revoke", post(revoke_mailbox_authorization))

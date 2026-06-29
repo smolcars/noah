@@ -1,5 +1,6 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::sync::OnceLock;
 use ts_rs::TS;
 use validator::{Validate, ValidationError};
@@ -247,6 +248,35 @@ pub struct LightningAddressSuggestionsPayload {
 pub struct LightningAddressSuggestionsResponse {
     /// Ordered suggestion list.
     pub suggestions: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct FiatPricesPayload {}
+
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct FiatPricesResponse {
+    #[ts(type = "number")]
+    pub time: i64,
+    pub rates: BTreeMap<String, f64>,
+}
+
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct HistoricalFiatPricePayload {
+    pub currency: String,
+    #[ts(type = "number")]
+    pub timestamp: i64,
+}
+
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct HistoricalFiatPriceResponse {
+    pub currency: String,
+    #[ts(type = "number")]
+    pub time: i64,
+    pub rate: f64,
 }
 
 #[derive(Serialize, Deserialize, TS)]

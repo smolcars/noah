@@ -75,6 +75,10 @@ export type DownloadUrlResponse = { download_url: string, backup_size: number, }
  */
 export type EmailVerificationResponse = { success: boolean, message: string | null, email: string | null, };
 
+export type FiatPricesPayload = Record<string, never>;
+
+export type FiatPricesResponse = { time: number, rates: { [key in string]?: number }, };
+
 export type GetDownloadUrlPayload = { backup_version: number | null, };
 
 export type GetUploadUrlPayload = { backup_version: number, };
@@ -82,6 +86,10 @@ export type GetUploadUrlPayload = { backup_version: number, };
 export type HeartbeatNotification = { notification_id: string, };
 
 export type HeartbeatResponsePayload = { notification_id: string, };
+
+export type HistoricalFiatPricePayload = { currency: string, timestamp: number, };
+
+export type HistoricalFiatPriceResponse = { currency: string, time: number, rate: number, };
 
 /**
  * Defines the payload for querying lightning address suggestions.
@@ -162,7 +170,7 @@ display_name: string | null,
 /**
  * The user's optional emergency email address.
  */
-email: string | null,
+email: string | null, 
 /**
  * Whether the user's email is verified.
  */
@@ -231,7 +239,7 @@ display_name: string | null,
 /**
  * The user's optional emergency email address.
  */
-email: string | null,
+email: string | null, 
 /**
  * The user's current operational lifecycle status.
  */
