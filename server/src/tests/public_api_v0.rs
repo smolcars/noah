@@ -29,7 +29,7 @@ async fn test_lnurlp_request_default() {
     let response = app
         .oneshot(
             Request::builder()
-                .method(http::Method::POST)
+                .method(http::Method::GET)
                 .uri("/.well-known/lnurlp/test")
                 .body(Body::empty())
                 .unwrap(),
@@ -62,7 +62,7 @@ async fn test_lnurlp_request_rejects_deregistered_user() {
     let response = app
         .oneshot(
             Request::builder()
-                .method(http::Method::POST)
+                .method(http::Method::GET)
                 .uri("/.well-known/lnurlp/test")
                 .body(Body::empty())
                 .unwrap(),
