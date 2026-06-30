@@ -35,3 +35,17 @@ pub fn create_auth_rate_limiter() -> RateLimiter {
 
     GovernorLayer::new(config)
 }
+
+/// Creates a rate limiting layer for authenticated fiat price endpoints.
+/// These endpoints read cached server-side data, so allow a larger burst than the
+/// general authenticated API without loosening unrelated protected routes.
+pub fn create_fiat_rate_limiter() -> RateLimiter {
+    let config = GovernorConfigBuilder::default()
+        .per_second(20)
+        .burst_size(300)
+        .key_extractor(SmartIpKeyExtractor)
+        .finish()
+        .expect("Failed to create rate limiter config");
+
+    GovernorLayer::new(config)
+}

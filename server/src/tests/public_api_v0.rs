@@ -324,6 +324,39 @@ async fn test_fiat_prices_requires_authentication() {
 
 #[tracing_test::traced_test]
 #[tokio::test]
+async fn test_fiat_prices_requires_registered_user() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    let access_token = user.access_token(&app_state);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/prices")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&FiatPricesPayload {}).unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let res: ApiErrorResponse = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(res.code, "USER_NOT_FOUND");
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
 async fn test_fiat_prices_returns_cached_typed_response() {
     let (app, app_state, _guard) = setup_test_app().await;
     let user = TestUser::new();
