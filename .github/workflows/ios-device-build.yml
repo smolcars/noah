@@ -9,6 +9,12 @@ env:
 
 on:
   workflow_call:
+    inputs:
+      variant:
+        description: "The iOS app variant to build"
+        required: false
+        default: "signet"
+        type: string
     outputs:
       artifact_name:
         description: "The name of the uploaded artifact"
@@ -31,28 +37,55 @@ jobs:
       - name: 📦 Install dependencies
         run: nix develop .# --command bash -c "bun install --frozen-lockfile"
 
+      - name: 🧭 Resolve build variant
+        id: variant
+        shell: bash
+        env:
+          BUILD_VARIANT: ${{ inputs.variant }}
+        run: |
+          set -euo pipefail
+
+          case "$BUILD_VARIANT" in
+            mainnet)
+              echo "app_name=Noah.app" >> "$GITHUB_OUTPUT"
+              echo "artifact_name=noah-ios-mainnet" >> "$GITHUB_OUTPUT"
+              echo "build_script=build:ios:mainnet:device" >> "$GITHUB_OUTPUT"
+              echo "ipa_filename=noah-mainnet.ipa" >> "$GITHUB_OUTPUT"
+              ;;
+            signet)
+              echo "app_name=Noah-Signet.app" >> "$GITHUB_OUTPUT"
+              echo "artifact_name=noah-ios-signet" >> "$GITHUB_OUTPUT"
+              echo "build_script=build:ios:signet:device" >> "$GITHUB_OUTPUT"
+              echo "ipa_filename=noah-signet.ipa" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Unsupported iOS variant '$BUILD_VARIANT'. Use 'mainnet' or 'signet'."
+              exit 1
+              ;;
+          esac
+
       - name: 🛠️ Build for device
-        run: nix develop .# --command bash -c "bun client ios:prebuild && bun client build:ios:signet:device"
+        run: nix develop .# --command bash -c "bun client ios:prebuild && bun client ${{ steps.variant.outputs.build_script }}"
 
       - name: 📦 Create IPA
         run: |
           mkdir -p client/ios/build/ipa
           mkdir -p Payload
-          cp -R client/ios/build/Build/Products/Release-iphoneos/Noah-Signet.app Payload/
-          zip -r client/ios/build/ipa/noah-signet.ipa Payload
+          cp -R "client/ios/build/Build/Products/Release-iphoneos/${{ steps.variant.outputs.app_name }}" Payload/
+          zip -r "client/ios/build/ipa/${{ steps.variant.outputs.ipa_filename }}" Payload
           rm -rf Payload
 
       - name: 📁 Set outputs
         id: set_outputs
         run: |
-          echo "artifact_name=ios-signet-ipa" >> $GITHUB_OUTPUT
-          echo "ipa_filename=noah-signet.ipa" >> $GITHUB_OUTPUT
+          echo "artifact_name=${{ steps.variant.outputs.artifact_name }}" >> $GITHUB_OUTPUT
+          echo "ipa_filename=${{ steps.variant.outputs.ipa_filename }}" >> $GITHUB_OUTPUT
 
       - name: 📤 Upload IPA artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.set_outputs.outputs.artifact_name }}
-          path: client/ios/build/ipa/noah-signet.ipa
+          path: client/ios/build/ipa/${{ steps.set_outputs.outputs.ipa_filename }}
           if-no-files-found: error
           overwrite: true
 

@@ -16,6 +16,8 @@ jobs:
   build:
     name: Build iOS Device App
     uses: ./.github/workflows/ios-device-build.yml
+    with:
+      variant: signet
     secrets: inherit
 
   upload_and_notify:
