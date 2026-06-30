@@ -64,6 +64,12 @@ jobs:
               ;;
           esac
 
+      - name: 🔧 Create sentry.properties
+        if: ${{ inputs.variant == 'mainnet' }}
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: ./scripts/create_sentry_properties.sh
+
       - name: 🛠️ Build for device
         run: nix develop .# --command bash -c "bun client ios:prebuild && bun client ${{ steps.variant.outputs.build_script }}"
 
@@ -94,3 +100,5 @@ jobs:
         run: |
           rm -rf client/ios/build
           rm -rf Payload
+          rm -f client/android/sentry.properties
+          rm -f client/ios/sentry.properties
