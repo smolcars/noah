@@ -6,5 +6,6 @@
   "apple.privacyManifestAggregationEnabled": "true",
   "ios.forceStaticLinking": "[]",
   "expo.inlineModules.watchedDirectories": "[]",
-  "EXPO_USE_PRECOMPILED_MODULES": "true"
+  "EXPO_USE_PRECOMPILED_MODULES": "true",
+  "expo.inlineModules.xcodeProjectTargets": "{\"mainTarget\":\"Noah\",\"targets\":[]}"
 }
