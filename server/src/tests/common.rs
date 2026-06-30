@@ -168,8 +168,6 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
 
     // Gated routes that need auth AND user to exist in database
     let gated_router = Router::new()
-        .route("/prices", post(fiat_prices))
-        .route("/historical-price", post(historical_fiat_price))
         .route("/register_push_token", post(register_push_token))
         .route("/mailbox/authorize", post(authorize_mailbox))
         .route("/mailbox/revoke", post(revoke_mailbox_authorization))
@@ -188,7 +186,13 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
         .route("/report_job_status", post(report_job_status))
         .route("/heartbeat_response", post(heartbeat_response))
         .route("/report_last_login", post(report_last_login))
-        .layer(user_exists_layer);
+        .layer(user_exists_layer.clone());
+
+    let fiat_router = Router::new()
+        .route("/prices", post(fiat_prices))
+        .route("/historical-price", post(historical_fiat_price))
+        .layer(user_exists_layer)
+        .layer(auth_layer.clone());
 
     // Routes that need auth but user may not exist (like registration)
     let auth_router = Router::new()
@@ -200,6 +204,7 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
     let app = Router::new()
         .route("/getk1", axum::routing::get(get_k1))
         .route("/auth/login", post(auth_login))
+        .merge(fiat_router)
         .merge(auth_router)
         .with_state(app_state.clone());
 

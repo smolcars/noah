@@ -250,6 +250,7 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
     let public_rate_limiter = rate_limit::create_public_rate_limiter();
     let auth_login_rate_limiter = rate_limit::create_public_rate_limiter();
     let auth_rate_limiter = rate_limit::create_auth_rate_limiter();
+    let fiat_rate_limiter = rate_limit::create_fiat_rate_limiter();
 
     // Optional email setup routes need auth and a registered user.
     let email_verification_router = Router::new()
@@ -259,8 +260,6 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
 
     // Gated routes need auth and a registered user. Email is optional.
     let gated_router = Router::new()
-        .route("/prices", post(fiat_prices))
-        .route("/historical-price", post(historical_fiat_price))
         .route("/register_push_token", post(register_push_token))
         .route("/mailbox/authorize", post(authorize_mailbox))
         .route("/mailbox/revoke", post(revoke_mailbox_authorization))
@@ -279,7 +278,16 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         .route("/report_job_status", post(report_job_status))
         .route("/heartbeat_response", post(heartbeat_response))
         .route("/report_last_login", post(report_last_login))
-        .layer(user_exists_layer);
+        .layer(user_exists_layer.clone());
+
+    // Fiat routes need auth and a registered user, but use their own limiter so
+    // wallet history price lookups do not consume the general authenticated API bucket.
+    let fiat_router = Router::new()
+        .route("/prices", post(fiat_prices))
+        .route("/historical-price", post(historical_fiat_price))
+        .layer(user_exists_layer)
+        .layer(fiat_rate_limiter)
+        .layer(auth_layer.clone());
 
     // Routes that need auth but user may not exist (like registration)
     // Apply auth rate limiter to these routes
@@ -298,6 +306,7 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
             post(auth_login).layer(auth_login_rate_limiter),
         )
         .route("/app_version", post(check_app_version))
+        .merge(fiat_router)
         .merge(bearer_router);
 
     // Public route
