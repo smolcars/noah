@@ -12,7 +12,11 @@ import { getFiatPrices, getHistoricalFiatPrice } from "~/lib/api";
 import { useProfileStore } from "~/store/profileStore";
 
 const HISTORICAL_RATE_CACHE_MAX_SIZE = 200;
-const historicalBtcToFiatRateCache = new Map<string, Promise<Result<number, Error>>>();
+type HistoricalRateLookup = {
+  rate: number;
+  cacheable: boolean;
+};
+const historicalBtcToFiatRateCache = new Map<string, Promise<Result<HistoricalRateLookup, Error>>>();
 
 export const getBtcToFiatRate = (currency: FiatCurrencyCode): ResultAsync<number, Error> => {
   return ResultAsync.fromSafePromise(getFiatPrices()).andThen((result) => {
@@ -123,7 +127,7 @@ const trimHistoricalRateCache = () => {
 const fetchHistoricalBtcToFiatRate = async (
   date: string,
   currency: FiatCurrencyCode,
-): Promise<Result<number, Error>> => {
+): Promise<Result<HistoricalRateLookup, Error>> => {
   const timestamp = Math.floor(new Date(date).getTime() / 1000);
   return ResultAsync.fromPromise(
     getHistoricalFiatPrice({ currency, timestamp }),
@@ -139,15 +143,21 @@ const fetchHistoricalBtcToFiatRate = async (
       const data = result.value;
       const rate = data.rate;
       if (rate) {
-        return ok(rate);
+        return ok({ rate, cacheable: true });
       }
       // If no price is available for that day, fetch the current price as a fallback.
-      return getBtcToFiatRate(currency);
+      return getBtcToFiatRate(currency).map((fallbackRate) => ({
+        rate: fallbackRate,
+        cacheable: false,
+      }));
     })
     .orElse((error) => {
       log.e(`Failed to fetch historical BTC to ${currency} rate:`, [error]);
       // Fallback to current price on error
-      return getBtcToFiatRate(currency);
+      return getBtcToFiatRate(currency).map((fallbackRate) => ({
+        rate: fallbackRate,
+        cacheable: false,
+      }));
     });
 };
 
@@ -158,7 +168,9 @@ export const getHistoricalBtcToFiatRate = (
   const cacheKey = getHistoricalRateCacheKey(date, currency);
   const cachedRate = historicalBtcToFiatRateCache.get(cacheKey);
   if (cachedRate) {
-    return ResultAsync.fromSafePromise(cachedRate).andThen((result) => result);
+    return ResultAsync.fromSafePromise(cachedRate).andThen((result) =>
+      result.map(({ rate }) => rate),
+    );
   }
 
   const ratePromise = fetchHistoricalBtcToFiatRate(date, currency);
@@ -167,7 +179,7 @@ export const getHistoricalBtcToFiatRate = (
 
   ratePromise
     .then((result) => {
-      if (result.isErr()) {
+      if (result.isErr() || !result.value.cacheable) {
         historicalBtcToFiatRateCache.delete(cacheKey);
       }
     })
@@ -175,5 +187,7 @@ export const getHistoricalBtcToFiatRate = (
       historicalBtcToFiatRateCache.delete(cacheKey);
     });
 
-  return ResultAsync.fromSafePromise(ratePromise).andThen((result) => result);
+  return ResultAsync.fromSafePromise(ratePromise).andThen((result) =>
+    result.map(({ rate }) => rate),
+  );
 };
