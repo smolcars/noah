@@ -3,7 +3,7 @@ data_dir = "/data/captaind"
 network = "regtest"
 
 # The lifetime of VTXOs in blocks
-vtxo_lifetime = 480
+vtxo_lifetime = 600
 
 # Maximum value of VTXOs
 #max_vtxo_amount = "1000000 sat"
