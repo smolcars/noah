@@ -146,9 +146,6 @@ fund_aspd() {
     fi
 
     send_to_address "$aspd_address" "$amount"
-
-    echo "Waiting for ASPD to sync to chain..."
-    sleep 5
 }
 
 # Sets up Lightning Network channels between LND and CLN
@@ -262,14 +259,6 @@ setup_everything() {
     echo ""
     echo "💸 Sending 0.1 BTC to bark wallet..."
     send_to_address "$bark_address" "0.1"
-
-    echo ""
-    echo "⛏️  Generating 6 blocks..."
-    generate_blocks 6
-
-    echo ""
-    echo "⏳ Waiting 5 seconds before boarding onto Ark..."
-    sleep 5
 
     echo ""
     echo "🚢 Boarding onto Ark with 1000000 sats..."
