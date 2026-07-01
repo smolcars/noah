@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { View } from "react-native";
 import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
 import { Text } from "./ui/text";
-import { NoahButton } from "./ui/NoahButton";
+import { NativeNoahButton } from "./ui/NativeNoahButton";
 import ReceiveAnimation from "./ReceiveAnimation";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
@@ -93,9 +93,7 @@ export const ReceiveSuccess: React.FC<ReceiveSuccessProps> = ({
         </View>
 
         <Animated.View entering={FadeInUp.duration(520).delay(320)} className="mt-6">
-          <NoahButton onPress={handleDone} className="rounded-2xl py-4">
-            Done
-          </NoahButton>
+          <NativeNoahButton label="Done" onPress={handleDone} fullWidth />
         </Animated.View>
       </View>
     </NoahSafeAreaView>

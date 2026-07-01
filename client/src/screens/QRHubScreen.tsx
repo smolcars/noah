@@ -8,7 +8,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { QRCodeScanner } from "~/components/QRCodeScanner";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
-import { Button } from "~/components/ui/button";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { Text } from "~/components/ui/text";
 import type { HomeStackParamList } from "~/Navigators";
 import { useQRCodeScanner } from "~/hooks/useQRCodeScanner";
@@ -149,12 +149,12 @@ const QRHubScreen = () => {
                   <Text className="mt-2 text-sm leading-6 text-muted-foreground">
                     Finish setting up your Lightning address before sharing your QR.
                   </Text>
-                  <Button
+                  <NativeNoahButton
+                    label="Open Profile"
                     onPress={() => navigation.navigate("Settings", { screen: "Profile" })}
                     className="mt-5 h-12 rounded-2xl"
-                  >
-                    <Text>Open Profile</Text>
-                  </Button>
+                    fullWidth
+                  />
                 </View>
               )}
             </Animated.View>
@@ -168,9 +168,13 @@ const QRHubScreen = () => {
                 <Text className="mt-2 max-w-[280px] text-center text-sm leading-6 text-muted-foreground">
                   Scan a Bitcoin, Lightning, or Ark QR code and send from Noah.
                 </Text>
-                <Button onPress={handleScanPress} className="mt-6 h-14 w-full rounded-2xl">
-                  <Text>Open Scanner</Text>
-                </Button>
+                <NativeNoahButton
+                  label="Open Scanner"
+                  onPress={handleScanPress}
+                  className="mt-6"
+                  size="lg"
+                  fullWidth
+                />
               </View>
             </Animated.View>
           )}

@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, View } from "react-native";
 import { Text } from "./ui/text";
-import { NoahButton } from "./ui/NoahButton";
+import { NativeNoahButton } from "./ui/NativeNoahButton";
 import SuccessAnimation from "./SuccessAnimation";
 import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
 import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
@@ -122,9 +122,7 @@ export const SendSuccessBottomSheet: React.FC<SendSuccessBottomSheetProps> = ({
       </View>
 
       <View className="mt-8">
-        <NoahButton onPress={handleDone} className="w-full rounded-2xl py-4">
-          Done
-        </NoahButton>
+        <NativeNoahButton label="Done" onPress={handleDone} fullWidth />
       </View>
     </View>
   );

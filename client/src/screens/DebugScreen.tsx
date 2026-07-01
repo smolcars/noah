@@ -24,7 +24,7 @@ import { offboardAllArk } from "~/lib/paymentsApi";
 import { registerForPushNotificationsAsync } from "~/lib/pushNotifications";
 import { useAlert } from "~/contexts/AlertProvider";
 import logger from "~/lib/log";
-import { NoahButton } from "~/components/ui/NoahButton";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { copyToClipboard } from "~/lib/clipboardUtils";
 import { ConfirmationDialog } from "~/components/ConfirmationDialog";
 
@@ -460,13 +460,15 @@ const DebugScreen = () => {
           </Pressable>
         )}
 
-        <NoahButton
+        <NativeNoahButton
+          label="Execute Action"
           onPress={handleExecute}
           disabled={!selectedAction || isLoading}
+          isLoading={isLoading}
+          loadingLabel="Executing..."
           className="mb-6"
-        >
-          {isLoading ? "Executing..." : "Execute Action"}
-        </NoahButton>
+          fullWidth
+        />
 
         <ConfirmationDialog
           open={isDropDialogOpen}

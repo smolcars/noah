@@ -80,8 +80,8 @@ Second approach:
 - Use SwiftUI `Button` on iOS and Jetpack Compose `Button` variants on Android inside Expo UI
   `Host`.
 - Migrated primary actions on onboarding, push-permission, beta warning, restore wallet, mnemonic,
-  emergency email, Lightning address, UnifiedPush, Backup settings, Ark info retry, and biometric
-  gate screens/components.
+  emergency email, Lightning address, UnifiedPush, Backup settings, Ark info retry, biometric gate,
+  QR utility, debug action, and send/receive success screens/components.
 - Manual QA rejected the first native outline/ghost variants. Added a separate
   `NativeNoahSecondaryButton` for secondary actions.
 - Migrated secondary actions on beta warning, mnemonic copy, push-permission retry, UnifiedPush
