@@ -16,6 +16,8 @@ import {
   maintenanceRefresh,
   maintenanceDelegated,
   maintenanceWithOnchainDelegated,
+  decodeVtxoHex,
+  importVtxo,
   dropVtxo,
 } from "~/lib/walletApi";
 import { offboardAllArk } from "~/lib/paymentsApi";
@@ -36,6 +38,8 @@ type DebugAction =
   | "maintenanceRefresh"
   | "maintenanceDelegated"
   | "maintenanceWithOnchainDelegated"
+  | "decodeVtxoHex"
+  | "importVtxo"
   | "dropVtxo"
   | "offboardAll";
 
@@ -89,6 +93,20 @@ const DEBUG_ACTIONS: ActionOption[] = [
     description: "Offboard all funds to an on-chain address",
     requiresInput: true,
     inputPlaceholder: "Enter Bitcoin address",
+  },
+  {
+    id: "decodeVtxoHex",
+    title: "Decode VTXO Hex",
+    description: "Decode a serialized VTXO hex string without importing it",
+    requiresInput: true,
+    inputPlaceholder: "Enter VTXO hex",
+  },
+  {
+    id: "importVtxo",
+    title: "Import VTXO",
+    description: "Import a serialized VTXO hex string into the local wallet",
+    requiresInput: true,
+    inputPlaceholder: "Enter VTXO hex",
   },
   {
     id: "dropVtxo",
@@ -212,6 +230,24 @@ const DebugScreen = () => {
             ? JSON.stringify(result.value, null, 2)
             : String(result.value);
         return { success: true, message: `Offboard completed.\n\nRound status:\n${statusStr}` };
+      }
+      case "decodeVtxoHex": {
+        const vtxoHex = input.trim();
+        log.d("Decoding VTXO hex", [{ length: vtxoHex.length }]);
+        const result = await decodeVtxoHex(vtxoHex);
+        if (result.isErr()) {
+          return { success: false, error: result.error.message };
+        }
+        return { success: true, message: JSON.stringify(result.value, null, 2) };
+      }
+      case "importVtxo": {
+        const vtxoHex = input.trim();
+        log.d("Importing VTXO hex", [{ length: vtxoHex.length }]);
+        const result = await importVtxo(vtxoHex);
+        if (result.isErr()) {
+          return { success: false, error: result.error.message };
+        }
+        return { success: true, message: JSON.stringify(result.value, null, 2) };
       }
       case "dropVtxo": {
         const vtxoId = input.trim();

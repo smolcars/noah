@@ -21,9 +21,12 @@ import {
   signMesssageWithMnemonic as signMessageWithMnemonicNitro,
   deriveKeypairFromMnemonic as deriveKeypairFromMnemonicNitro,
   vtxos as vtxosNitro,
+  decodeVtxoHex as decodeVtxoHexNitro,
+  importVtxo as importVtxoNitro,
   dangerousDropVtxo as dangerousDropVtxoNitro,
   getExpiringVtxos as getExpiringVtxosNitro,
   type BarkArkInfo,
+  type BarkVtxo,
   type OnchainBalanceResult,
   type OffchainBalanceResult,
   type PendingRoundStatus,
@@ -342,6 +345,14 @@ export const deleteWallet = async (): Promise<Result<void, Error>> => {
 
 export const getVtxos = async () => {
   return ResultAsync.fromPromise(vtxosNitro(), (e) => e as Error);
+};
+
+export const decodeVtxoHex = async (vtxoHex: string): Promise<Result<BarkVtxo, Error>> => {
+  return ResultAsync.fromPromise(decodeVtxoHexNitro(vtxoHex), (e) => e as Error);
+};
+
+export const importVtxo = async (vtxoHex: string): Promise<Result<BarkVtxo, Error>> => {
+  return ResultAsync.fromPromise(importVtxoNitro(vtxoHex), (e) => e as Error);
 };
 
 export const dropVtxo = async (vtxoId: string): Promise<Result<void, Error>> => {
