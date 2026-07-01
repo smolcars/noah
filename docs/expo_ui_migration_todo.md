@@ -103,11 +103,20 @@ Second approach:
 
 ### 4. Slider
 
-- [ ] Replace `@react-native-community/slider` in `client/src/screens/NoahStoryScreen.tsx` with `@expo/ui/community/slider`.
-- [ ] Adjust behavior because Expo's drop-in slider does not currently support `onSlidingComplete`.
-- [ ] Verify seeking behavior, disabled state, and track styling on both platforms through CI/manual review.
-- [ ] Remove `@react-native-community/slider` after verification if unused.
+- [x] Replace `@react-native-community/slider` in `client/src/screens/NoahStoryScreen.tsx` with Expo UI native sliders.
+- [x] Adjust behavior because Expo's drop-in slider does not currently support `onSlidingComplete`.
+- [x] Verify seeking behavior, disabled state, and track styling on both platforms through CI/manual review.
+- [x] Remove `@react-native-community/slider` after verification if unused.
 - [ ] Commit after user verification.
+
+Finding:
+
+- Added `NativeNoahSlider` because `@expo/ui/community/slider` is a visual drop-in but does not
+  expose the release/completion callback Noah needs for audio seeking.
+- iOS uses the SwiftUI slider's editing-change callback to commit the seek on release.
+- Android uses the Jetpack Compose slider's value-finished callback to commit the seek on release.
+- `NoahStoryScreen` previews slider position during drag and only calls `seekAudio` when the drag
+  finishes.
 
 ### 5. Collapsible
 
@@ -167,7 +176,7 @@ Finding:
   - `client/src/components/ui/separator.tsx`
   - `client/src/components/ui/collapsible.tsx`
 - [x] Remove unused `@rn-primitives/*` packages only after import checks pass.
-- [ ] Remove `@react-native-community/slider` only after slider migration is verified.
+- [x] Remove `@react-native-community/slider` only after slider migration is verified.
 - [ ] Run `bun --cwd client lint`.
 - [ ] Run `bun --cwd client typecheck`.
 - [ ] Commit cleanup after user verification.
@@ -194,7 +203,7 @@ Finding:
 - `Collapsible`: 0 usages.
 - `NoahActivityIndicator`: 20 usages.
 - `React Native Modal`: 2 usages.
-- `@react-native-community/slider`: 1 usage.
+- `@react-native-community/slider`: 0 usages. Dependency removed after manual slider verification.
 
 ## Verification Commands
 

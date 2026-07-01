@@ -1914,51 +1914,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-slider (5.2.0):
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-Core-prebuilt
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - react-native-slider/common (= 5.2.0)
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - Yoga
-  - react-native-slider/common (5.2.0):
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-Core-prebuilt
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - Yoga
   - react-native-vector-icons (12.3.0):
     - hermes-engine
     - RCTRequired
@@ -2920,7 +2875,6 @@ DEPENDENCIES:
   - react-native-bottom-tabs (from `../../node_modules/react-native-bottom-tabs`)
   - react-native-quick-base64 (from `../../node_modules/react-native-quick-base64`)
   - react-native-safe-area-context (from `../../node_modules/react-native-safe-area-context`)
-  - "react-native-slider (from `../../node_modules/@react-native-community/slider`)"
   - "react-native-vector-icons (from `../../node_modules/@react-native-vector-icons/get-image`)"
   - "react-native-vector-icons-ionicons (from `../../node_modules/@react-native-vector-icons/ionicons`)"
   - react-native-worklets-core (from `../../node_modules/react-native-worklets-core`)
@@ -3139,8 +3093,6 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/react-native-quick-base64"
   react-native-safe-area-context:
     :path: "../../node_modules/react-native-safe-area-context"
-  react-native-slider:
-    :path: "../../node_modules/@react-native-community/slider"
   react-native-vector-icons:
     :path: "../../node_modules/@react-native-vector-icons/get-image"
   react-native-vector-icons-ionicons:
@@ -3324,7 +3276,6 @@ SPEC CHECKSUMS:
   react-native-bottom-tabs: be329013de6620585cd5e6ca6ac020223e31be3e
   react-native-quick-base64: f5840b9dd6ea8f5814fee7a11376d709d08cab3a
   react-native-safe-area-context: c1eb308f4b36372a4de4b3bdaa8ed695ec3dd461
-  react-native-slider: 8824cf332b11bf5149f6576c8c8b32b4f93f82ac
   react-native-vector-icons: 96005b208c80c31220245b202468887afab1fddc
   react-native-vector-icons-ionicons: 7e633927db6ab96e0255b5920c053777cacca505
   react-native-worklets-core: ac6ca44cc93388211aa7da8977227f9ef8bb1faf

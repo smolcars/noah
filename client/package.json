@@ -54,7 +54,6 @@
     "@bottom-tabs/react-navigation": "^1.2.0",
     "@expo/ui": "~57.0.2",
     "@react-native-clipboard/clipboard": "^1.16.3",
-    "@react-native-community/slider": "5.2.0",
     "@react-native-vector-icons/get-image": "^12.3.0",
     "@react-native-vector-icons/ionicons": "^12.3.0",
     "@react-navigation/native": "^7.2.5",
