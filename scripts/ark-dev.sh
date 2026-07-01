@@ -146,6 +146,9 @@ fund_aspd() {
     fi
 
     send_to_address "$aspd_address" "$amount"
+
+    echo "Waiting for ASPD to sync to chain..."
+    sleep 5
 }
 
 # Sets up Lightning Network channels between LND and CLN
