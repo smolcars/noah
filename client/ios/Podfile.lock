@@ -246,6 +246,10 @@ PODS:
   - ExpoTaskManager (57.0.1):
     - ExpoModulesCore
     - UMAppLoader
+  - ExpoUI (57.0.2):
+    - ExpoModulesCore
+    - ExpoModulesWorklets
+    - React-RCTFabric
   - EXUpdatesInterface (57.0.0):
     - ExpoModulesCore
   - FBLazyVector (0.86.0)
@@ -2867,6 +2871,7 @@ DEPENDENCIES:
   - ExpoSplashScreen (from `../../node_modules/expo-splash-screen/ios`)
   - ExpoSystemUI (from `../../node_modules/expo-system-ui/ios`)
   - ExpoTaskManager (from `../../node_modules/expo-task-manager/ios`)
+  - "ExpoUI (from `../../node_modules/@expo/ui/ios`)"
   - EXUpdatesInterface (from `../../node_modules/expo-updates-interface/ios`)
   - FBLazyVector (from `../../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
@@ -3037,6 +3042,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/expo-system-ui/ios"
   ExpoTaskManager:
     :path: "../../node_modules/expo-task-manager/ios"
+  ExpoUI:
+    :path: "../../node_modules/@expo/ui/ios"
   EXUpdatesInterface:
     :path: "../../node_modules/expo-updates-interface/ios"
   FBLazyVector:
@@ -3268,6 +3275,7 @@ SPEC CHECKSUMS:
   ExpoSplashScreen: 26cb17a209c240a3825de73622382ba99067546f
   ExpoSystemUI: 2805d71b08bbb83f80e67faa9f2e053309f5135c
   ExpoTaskManager: 5928c4c1ce8b2494651b40d9a872a9563d32aa4c
+  ExpoUI: e13763c512e75f6786211efb23c09717f955899b
   EXUpdatesInterface: fb5f5bd7cc4cc5b598fe12386ad158db9aa8cbbb
   FBLazyVector: b3e7ad108f0d882e30445c5527d774e3fd432f3d
   hermes-engine: 10ad1fccd364c7e3d9c1de19a7edb1bdd632c6b4

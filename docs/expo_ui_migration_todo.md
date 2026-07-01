@@ -1,0 +1,135 @@
+# Expo UI Migration TODO
+
+## Goal
+
+Move Noah's high-value JS-rendered UI controls toward `@expo/ui` native components while keeping each migration small enough to verify manually before committing.
+
+## Working Agreement
+
+- User installs `@expo/ui` before implementation starts.
+- Migrate one UI surface at a time.
+- After each migration, user verifies the app behavior.
+- After verification, commit that migration as its own commit.
+- Do not start Android or iOS apps from the autonomous workflow.
+- Prefer universal `@expo/ui` components first. Use `@expo/ui/swift-ui` or `@expo/ui/jetpack-compose` only when the universal API does not cover the needed behavior.
+- Keep wallet, payment, backup, and auth flows behaviorally unchanged.
+
+## Setup
+
+- [x] User installed dependency:
+
+```sh
+cd client
+npx expo install @expo/ui
+```
+
+- [x] `@expo/ui` is present in `client/package.json` and `bun.lock`.
+- [x] `ExpoUI` is present in `client/ios/Podfile.lock`.
+- [x] Run `bun --cwd client typecheck` after dependency install.
+- [ ] Confirm CI/development builds include the native module.
+
+## Progress So Far
+
+- Dependency setup is complete for `@expo/ui` at `~57.0.2`.
+- Bun dependency metadata has been updated.
+- iOS pod resolution has been updated to include the `ExpoUI` pod.
+- `bun --cwd client typecheck` passes with the dependency installed.
+- No app UI surfaces have been migrated yet.
+
+## Migration Tasks
+
+### 1. Native Switches
+
+- [ ] Add a small local wrapper for `@expo/ui` native switch usage.
+- [ ] Migrate settings switches in `client/src/screens/SettingsScreen.tsx`.
+- [ ] Migrate backup switch in `client/src/screens/BackupSettingsScreen.tsx`.
+- [ ] Verify toggles still update persisted state and disabled/loading states work.
+- [ ] Commit after user verification.
+
+### 2. Native Button Wrapper
+
+- [ ] Prototype adapting `client/src/components/ui/button.tsx` or adding a parallel native button wrapper.
+- [ ] Preserve current `Button` and `NoahButton` call-site behavior where practical.
+- [ ] Start with low-risk screens such as onboarding, push permission, logs, and settings actions.
+- [ ] Keep send/receive payment action buttons for a later pass unless the wrapper is proven stable.
+- [ ] Verify disabled, loading, outline, destructive, and primary styles.
+- [ ] Commit after user verification.
+
+### 3. Simple Text Inputs
+
+- [ ] Migrate `client/src/components/ui/input.tsx` for ordinary form fields.
+- [ ] Verify profile, lightning address, debug input, board amount, and delete confirmation fields.
+- [ ] Do not migrate hidden/ref-heavy amount inputs in send/receive during this pass.
+- [ ] Commit after user verification.
+
+### 4. Slider
+
+- [ ] Replace `@react-native-community/slider` in `client/src/screens/NoahStoryScreen.tsx` with `@expo/ui/community/slider`.
+- [ ] Adjust behavior because Expo's drop-in slider does not currently support `onSlidingComplete`.
+- [ ] Verify seeking behavior, disabled state, and track styling on both platforms through CI/manual review.
+- [ ] Remove `@react-native-community/slider` after verification if unused.
+- [ ] Commit after user verification.
+
+### 5. Collapsible
+
+- [ ] Replace the single `@rn-primitives/collapsible` usage in `client/src/screens/HomeScreen.tsx` with `@expo/ui` `Collapsible`, if the API fits.
+- [ ] Verify the balance/details expansion behavior and animation feel.
+- [ ] Remove local collapsible wrapper if unused.
+- [ ] Commit after user verification.
+
+### 6. Alert And Confirmation Dialogs
+
+- [ ] Evaluate `@expo/ui` native dialog/alert APIs against `client/src/contexts/AlertProvider.tsx`.
+- [ ] Migrate global alert display if the native API supports the existing title/description/action model.
+- [ ] Migrate `client/src/components/ConfirmationDialog.tsx` only after global alert is stable.
+- [ ] Verify destructive confirmations, delete-wallet typed confirmation, and backup/export dialogs.
+- [ ] Remove `@rn-primitives/alert-dialog` only after all references are gone.
+- [ ] Commit after user verification.
+
+### 7. Bottom Sheets
+
+- [ ] Keep `client/src/components/ui/AppBottomSheet.tsx` initially because it already uses native `@swmansion/react-native-bottom-sheet`.
+- [ ] Later evaluate `@expo/ui` BottomSheet for parity with current detents, scrim, close/dismiss callbacks, scroll handling, and safe-area behavior.
+- [ ] Migrate only if parity is clear and send/receive sheets behave identically.
+- [ ] Commit after user verification.
+
+### 8. Feedback Modal
+
+- [ ] Evaluate replacing `React Native` `Modal` in `client/src/components/FeedbackModal.tsx` with a native sheet/dialog.
+- [ ] Verify attachment preview, upload progress, validation errors, and close confirmation.
+- [ ] Commit after user verification.
+
+### 9. Dependency Cleanup
+
+- [ ] Remove unused local UI wrappers after migrations:
+  - `client/src/components/ui/select.tsx`
+  - `client/src/components/ui/dropdown-menu.tsx`
+  - `client/src/components/ui/dialog.tsx`
+  - `client/src/components/ui/popover.tsx`
+  - `client/src/components/ui/accordion.tsx`
+- [ ] Remove unused `@rn-primitives/*` packages only after import checks pass.
+- [ ] Remove `@react-native-community/slider` only after slider migration is verified.
+- [ ] Run `bun --cwd client lint`.
+- [ ] Run `bun --cwd client typecheck`.
+- [ ] Commit cleanup after user verification.
+
+## Current Inventory
+
+- `Button`: 23 usages.
+- `NoahButton`: 33 usages.
+- `Input`: 9 usages.
+- Direct `TextInput`: 14 usages.
+- `Switch`: 5 usages.
+- `AppBottomSheet`: 6 usages.
+- `AlertDialog`: 3 direct JSX usages plus wrapper exports.
+- `Collapsible`: 1 usage.
+- `NoahActivityIndicator`: 20 usages.
+- `React Native Modal`: 2 usages.
+- `@react-native-community/slider`: 1 usage.
+
+## Verification Commands
+
+```sh
+bun --cwd client typecheck
+bun --cwd client lint
+```
