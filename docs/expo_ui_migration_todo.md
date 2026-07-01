@@ -81,13 +81,15 @@ Second approach:
   `Host`.
 - Migrated primary actions on onboarding, push-permission, beta warning, restore wallet, mnemonic,
   emergency email, Lightning address, UnifiedPush, Backup settings, Ark info retry, biometric gate,
-  QR utility, debug action, and send/receive success screens/components.
+  QR utility, debug action, destructive/admin, board/exit, and send/receive success
+  screens/components.
+- Added a small native icon button wrapper for utility refresh/share controls.
 - Manual QA rejected the first native outline/ghost variants. Added a separate
   `NativeNoahSecondaryButton` for secondary actions.
 - Migrated secondary actions on beta warning, mnemonic copy, push-permission retry, UnifiedPush
   distributor selection/skip, Lightning address skip, and backup listing.
-- Keep payment flows, destructive dialog actions, and icon-only buttons on the existing wrappers
-  until this set is manually verified.
+- Keep send/receive payment entry and confirmation flows on the existing wrappers until this set is
+  manually verified.
 - The settings `Export Database` secondary button was moved into a dedicated screen because the iOS
   SwiftUI secondary button layout was unstable in the lower Settings scroll area.
 

@@ -21,10 +21,11 @@ import {
 } from "@expo/ui/swift-ui/modifiers";
 import { Platform, View, type StyleProp, type ViewStyle } from "react-native";
 
+import { useTheme } from "~/hooks/useTheme";
 import { COLORS } from "~/lib/styleConstants";
 
 type NativeNoahButtonVariant = "primary" | "destructive";
-type NativeNoahButtonSize = "default" | "lg";
+type NativeNoahButtonSize = "sm" | "default" | "lg";
 
 type NativeNoahButtonProps = {
   label: string;
@@ -46,16 +47,20 @@ const BUTTON_COLORS = {
   destructive: "#dc2626",
   primaryText: "#1a1a1a",
   destructiveText: "#ffffff",
-  disabledContainer: "#d1d5db",
-  disabledText: "#64748b",
+  disabledContainerDark: "#272a30",
+  disabledContainerLight: "#d8dee8",
+  disabledTextDark: "#87909c",
+  disabledTextLight: "#64748b",
 } as const;
 
 const BUTTON_HEIGHT = {
+  sm: 40,
   default: 48,
   lg: 56,
 } as const;
 
 const BUTTON_MIN_WIDTH = {
+  sm: 88,
   default: 132,
   lg: 156,
 } as const;
@@ -85,6 +90,7 @@ export function NativeNoahButton({
   testID,
 }: NativeNoahButtonProps) {
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
+  const { isDark } = useTheme();
   const isDisabled = disabled || isLoading;
   const displayedLabel = isLoading ? (loadingLabel ?? "Loading...") : label;
   const height = BUTTON_HEIGHT[size];
@@ -92,6 +98,12 @@ export function NativeNoahButton({
     variant === "destructive" ? BUTTON_COLORS.destructive : BUTTON_COLORS.primary;
   const contentColor =
     variant === "destructive" ? BUTTON_COLORS.destructiveText : BUTTON_COLORS.primaryText;
+  const disabledContainerColor = isDark
+    ? BUTTON_COLORS.disabledContainerDark
+    : BUTTON_COLORS.disabledContainerLight;
+  const disabledTextColor = isDark
+    ? BUTTON_COLORS.disabledTextDark
+    : BUTTON_COLORS.disabledTextLight;
   const buttonWidth = width ?? measuredWidth ?? BUTTON_MIN_WIDTH[size];
   const hostStyle = {
     width: "100%",
@@ -110,7 +122,6 @@ export function NativeNoahButton({
         {
           width: fullWidth ? "100%" : buttonWidth,
           height,
-          opacity: isDisabled ? 0.65 : 1,
           overflow: "hidden",
         },
         style,
@@ -125,6 +136,8 @@ export function NativeNoahButton({
             variant={variant}
             activeColor={activeColor}
             contentColor={contentColor}
+            disabledContainerColor={disabledContainerColor}
+            disabledTextColor={disabledTextColor}
             height={height}
             testID={testID}
           />
@@ -149,14 +162,14 @@ export function NativeNoahButton({
                 frame({ width: buttonWidth, height, alignment: "center" }),
                 background(
                   isDisabled
-                    ? BUTTON_COLORS.disabledContainer
+                    ? disabledContainerColor
                     : variant === "primary" || variant === "destructive"
                       ? activeColor
                       : "#00000000",
                 ),
                 cornerRadius(height / 2),
-                foregroundStyle(isDisabled ? BUTTON_COLORS.disabledText : contentColor),
-                font({ size: 15, weight: "bold", design: "default" }),
+                foregroundStyle(isDisabled ? disabledTextColor : contentColor),
+                font({ size: size === "sm" ? 14 : 15, weight: "bold", design: "default" }),
                 lineLimit(1),
               ]}
             >
@@ -176,6 +189,9 @@ function AndroidButton({
   variant,
   activeColor,
   contentColor,
+  disabledContainerColor,
+  disabledTextColor,
+  height,
 }: {
   label: string;
   onPress?: () => void;
@@ -183,6 +199,8 @@ function AndroidButton({
   variant: NativeNoahButtonVariant;
   activeColor: string;
   contentColor: string;
+  disabledContainerColor: string;
+  disabledTextColor: string;
   height: number;
   testID?: string;
 }) {
@@ -198,15 +216,15 @@ function AndroidButton({
       colors={{
         containerColor: activeColor,
         contentColor,
-        disabledContainerColor: BUTTON_COLORS.disabledContainer,
-        disabledContentColor: BUTTON_COLORS.disabledText,
+        disabledContainerColor,
+        disabledContentColor: disabledTextColor,
       }}
     >
       <ComposeText
-        color={disabled ? BUTTON_COLORS.disabledText : contentColor}
+        color={disabled ? disabledTextColor : contentColor}
         maxLines={1}
         style={{
-          fontSize: 16,
+          fontSize: height <= BUTTON_HEIGHT.sm ? 14 : 16,
           fontWeight: "700",
           textAlign: "center",
           typography: "labelLarge",

@@ -5,7 +5,6 @@ import { useBiometrics } from "../hooks/useBiometrics";
 import { PLATFORM, shouldUseUnifiedPush } from "../constants";
 import { useServerStore } from "../store/serverStore";
 import { useTransactionStore } from "../store/transactionStore";
-import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Text } from "../components/ui/text";
@@ -33,6 +32,7 @@ import { useProfileStore } from "~/store/profileStore";
 import { getFiatCurrencyInfo } from "~/lib/fiatCurrency";
 import { getBitcoinAmountUnitInfo } from "~/lib/bitcoinAmount";
 import { NativeSwitch } from "~/components/ui/native-switch";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 
 type Setting = {
   id:
@@ -62,6 +62,7 @@ const SettingsScreen = () => {
   const logoImage = isDark ? logoImageDark : logoImageLight;
   const [confirmText, setConfirmText] = useState("");
   const [showFeedback, setShowFeedback] = useState(false);
+  const [isDeleteWalletDialogOpen, setIsDeleteWalletDialogOpen] = useState(false);
   const {
     isInitialized,
     setBiometricsEnabled,
@@ -530,17 +531,27 @@ const SettingsScreen = () => {
               onPress={() => navigation.navigate("ExportDatabase")}
             />
 
+            <NativeNoahButton
+              label="Delete Wallet"
+              variant="destructive"
+              onPress={() => setIsDeleteWalletDialogOpen(true)}
+              fullWidth
+            />
             <ConfirmationDialog
-              trigger={
-                <Button variant="destructive">
-                  <Text>Delete Wallet</Text>
-                </Button>
-              }
+              open={isDeleteWalletDialogOpen}
+              onOpenChange={(open) => {
+                setIsDeleteWalletDialogOpen(open);
+                if (!open) {
+                  setConfirmText("");
+                }
+              }}
               title="Delete Wallet"
               description={`This action is irreversible. To confirm, please type "delete" in the box below.`}
               onConfirm={() => {
                 if (confirmText.toLowerCase() === "delete") {
                   deleteWalletMutation.mutate();
+                  setIsDeleteWalletDialogOpen(false);
+                  setConfirmText("");
                 }
               }}
               isConfirmDisabled={confirmText.toLowerCase() !== "delete"}

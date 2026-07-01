@@ -13,10 +13,10 @@ import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
 import { Text } from "../components/ui/text";
 import { Input } from "../components/ui/input";
-import { Button } from "../components/ui/button";
 import { validateBitcoinAddress } from "bip-321";
 import { APP_VARIANT } from "../config";
-import { NoahButton } from "../components/ui/NoahButton";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
 import { useArkInfo, useBalance } from "../hooks/useWallet";
 import {
@@ -190,16 +190,15 @@ const OnboardForm = ({
         keyboardType="numeric"
         className="flex-1 border-border bg-card p-4 rounded-lg text-foreground"
       />
-      <Button
-        variant="outline"
+      <NativeNoahSecondaryButton
+        label="Max"
         onPress={() => {
           setAmount(String(onchainBalance));
           setIsMaxAmount(true);
         }}
         className="ml-2"
-      >
-        <Text>Max</Text>
-      </Button>
+        width={88}
+      />
     </View>
   </View>
 );
@@ -837,22 +836,22 @@ const BoardArkScreen = () => {
             <View
               className={`flex-row items-center gap-3 ${flow === "offboard" ? "mt-5" : "mt-8"}`}
             >
-              <Button
+              <NativeNoahSecondaryButton
+                label="Cancel"
                 onPress={handleClearForm}
-                variant="outline"
                 disabled={isActionLoading || !hasClearableInput}
-                className="flex-1 rounded-2xl py-3"
-              >
-                <Text className="font-semibold">Cancel</Text>
-              </Button>
-              <NoahButton
+                className="flex-1"
+                fullWidth
+              />
+              <NativeNoahButton
+                label={flow === "onboard" ? "Board Ark" : "Offboard Ark"}
                 onPress={handlePress}
                 isLoading={isActionLoading}
+                loadingLabel={flow === "onboard" ? "Boarding..." : "Offboarding..."}
                 disabled={isPrimaryActionDisabled}
-                className="flex-1 rounded-2xl py-3"
-              >
-                {flow === "onboard" ? "Board Ark" : "Offboard Ark"}
-              </NoahButton>
+                className="flex-1"
+                fullWidth
+              />
             </View>
 
             {/* Boarding Transaction Result */}
