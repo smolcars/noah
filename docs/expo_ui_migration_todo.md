@@ -111,10 +111,19 @@ Second approach:
 
 ### 5. Collapsible
 
-- [ ] Replace the single `@rn-primitives/collapsible` usage in `client/src/screens/HomeScreen.tsx` with `@expo/ui` `Collapsible`, if the API fits.
+- [x] Evaluate the single `@rn-primitives/collapsible` usage in `client/src/screens/HomeScreen.tsx` against `@expo/ui` `Collapsible`.
+- [x] Replace the primitive usage with local controlled state because `@expo/ui` `Collapsible` only supports a text-label trigger and does not fit the custom balance/header/privacy-toggle UI.
 - [ ] Verify the balance/details expansion behavior and animation feel.
-- [ ] Remove local collapsible wrapper if unused.
+- [x] Remove local collapsible wrapper after it became unused.
 - [ ] Commit after user verification.
+
+Finding:
+
+- Expo UI's universal `Collapsible` is not a trigger/content primitive. It owns the tappable
+  header through a string `label`, so using it on Home would either add an extra native disclosure
+  row or force a redesign of the balance header.
+- Home now keeps the existing visible balance header and toggles the details panel directly with
+  React Native state and the existing Reanimated enter/exit animation.
 
 ### 6. Alert And Confirmation Dialogs
 
@@ -140,17 +149,29 @@ Second approach:
 
 ### 9. Dependency Cleanup
 
-- [ ] Remove unused local UI wrappers after migrations:
+- [x] Remove unused local UI wrappers after migrations:
   - `client/src/components/ui/select.tsx`
   - `client/src/components/ui/dropdown-menu.tsx`
   - `client/src/components/ui/dialog.tsx`
   - `client/src/components/ui/popover.tsx`
   - `client/src/components/ui/accordion.tsx`
-- [ ] Remove unused `@rn-primitives/*` packages only after import checks pass.
+  - `client/src/components/ui/separator.tsx`
+  - `client/src/components/ui/collapsible.tsx`
+- [x] Remove unused `@rn-primitives/*` packages only after import checks pass.
 - [ ] Remove `@react-native-community/slider` only after slider migration is verified.
 - [ ] Run `bun --cwd client lint`.
 - [ ] Run `bun --cwd client typecheck`.
 - [ ] Commit cleanup after user verification.
+
+Finding:
+
+- Removed unused wrappers for select, dropdown menu, dialog, popover, accordion, separator, and
+  collapsible.
+- Removed direct dependencies on `@rn-primitives/accordion`, `@rn-primitives/collapsible`,
+  `@rn-primitives/dialog`, `@rn-primitives/dropdown-menu`, `@rn-primitives/popover`,
+  `@rn-primitives/select`, and `@rn-primitives/separator`.
+- Kept `@rn-primitives/alert-dialog`, `@rn-primitives/label`, `@rn-primitives/portal`, and
+  `@rn-primitives/slot` because they still have active imports.
 
 ## Current Inventory
 
@@ -161,7 +182,7 @@ Second approach:
 - `Switch`: 5 usages.
 - `AppBottomSheet`: 6 usages.
 - `AlertDialog`: 3 direct JSX usages plus wrapper exports.
-- `Collapsible`: 1 usage.
+- `Collapsible`: 0 usages.
 - `NoahActivityIndicator`: 20 usages.
 - `React Native Modal`: 2 usages.
 - `@react-native-community/slider`: 1 usage.

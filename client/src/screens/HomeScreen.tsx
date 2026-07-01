@@ -3,7 +3,6 @@ import { NavigationProp, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList, TabParamList } from "../Navigators";
 import { Text } from "../components/ui/text";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../components/ui/collapsible";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { AlertCircle, ChevronDown, Eye, EyeOff, PauseCircle } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
@@ -279,7 +278,7 @@ const HomeScreen = () => {
             </Alert>
           ) : (
             <>
-              <Collapsible open={isOpen} onOpenChange={setIsOpen} className="items-center pb-10">
+              <View className="items-center pb-10">
                 <View className="items-center">
                   {isHomeBalanceHidden ? (
                     <Text className="mb-2 text-2xl text-muted-foreground">
@@ -295,21 +294,21 @@ const HomeScreen = () => {
                     </View>
                   )}
                   <View className="relative flex-row items-center justify-center">
-                    <CollapsibleTrigger asChild>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Toggle balance details"
-                      >
-                        <View className="flex-row items-center space-x-2">
-                          <Text className="text-4xl font-bold">
-                            {formatHomeBalance(totalBalance)}
-                          </Text>
-                          <Animated.View style={animatedRotation}>
-                            <ChevronDown color={iconColor} size={28} />
-                          </Animated.View>
-                        </View>
-                      </Pressable>
-                    </CollapsibleTrigger>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Toggle balance details"
+                      accessibilityState={{ expanded: isOpen }}
+                      onPress={() => setIsOpen((current) => !current)}
+                    >
+                      <View className="flex-row items-center space-x-2">
+                        <Text className="text-4xl font-bold">
+                          {formatHomeBalance(totalBalance)}
+                        </Text>
+                        <Animated.View style={animatedRotation}>
+                          <ChevronDown color={iconColor} size={28} />
+                        </Animated.View>
+                      </View>
+                    </Pressable>
                     <Pressable
                       onPress={toggleHomeBalanceHidden}
                       accessibilityRole="button"
@@ -334,7 +333,7 @@ const HomeScreen = () => {
                     </View>
                   )}
                 </View>
-                <CollapsibleContent>
+                {isOpen && (
                   <Animated.View entering={FadeInDown} exiting={FadeOutDown}>
                     <View className="p-4 rounded-lg bg-card mt-4 min-w-[300px]">
                       <Text className="text-lg font-bold mb-4 text-center">Balance Details</Text>
@@ -404,8 +403,8 @@ const HomeScreen = () => {
                       </View>
                     </View>
                   </Animated.View>
-                </CollapsibleContent>
-              </Collapsible>
+                )}
+              </View>
 
               <View className="gap-4">
                 <View className="rounded-[18px] border border-border/60 bg-card/70 px-4 py-4">
