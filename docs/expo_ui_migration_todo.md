@@ -58,12 +58,38 @@ Plan:
 
 ### 2. Native Button Wrapper
 
-- [ ] Prototype adapting `client/src/components/ui/button.tsx` or adding a parallel native button wrapper.
+- [x] Prototype adapting `client/src/components/ui/button.tsx` or adding a parallel native button wrapper.
 - [ ] Preserve current `Button` and `NoahButton` call-site behavior where practical.
-- [ ] Start with low-risk screens such as onboarding, push permission, logs, and settings actions.
+- [x] Start with low-risk screens such as onboarding, push permission, settings actions, and
+  recovery-phrase actions.
 - [ ] Keep send/receive payment action buttons for a later pass unless the wrapper is proven stable.
 - [ ] Verify disabled, loading, outline, destructive, and primary styles.
 - [ ] Commit after user verification.
+
+Finding:
+
+- A simple parallel wrapper around Expo UI's universal `Button` was rejected in manual visual QA.
+  It did not preserve Noah's current sizing, typography, or color treatment on onboarding.
+- Keep the existing React Native `Button` and `NoahButton` wrappers until a native-button approach
+  can match the app's current visual contract.
+
+Second approach:
+
+- Build `NativeNoahButton` as a branded wrapper with explicit Noah dimensions, colors, shape, and
+  text treatment.
+- Use SwiftUI `Button` on iOS and Jetpack Compose `Button` variants on Android inside Expo UI
+  `Host`.
+- Migrated primary actions on onboarding, push-permission, beta warning, restore wallet, mnemonic,
+  emergency email, Lightning address, UnifiedPush, Backup settings, Ark info retry, and biometric
+  gate screens/components.
+- Manual QA rejected the first native outline/ghost variants. Added a separate
+  `NativeNoahSecondaryButton` for secondary actions.
+- Migrated secondary actions on beta warning, mnemonic copy, push-permission retry, UnifiedPush
+  distributor selection/skip, Lightning address skip, and backup listing.
+- Keep payment flows, destructive dialog actions, and icon-only buttons on the existing wrappers
+  until this set is manually verified.
+- The settings `Export Database` secondary button was moved into a dedicated screen because the iOS
+  SwiftUI secondary button layout was unstable in the lower Settings scroll area.
 
 ### 3. Simple Text Inputs
 

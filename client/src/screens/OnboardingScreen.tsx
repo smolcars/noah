@@ -3,8 +3,8 @@ import { View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { OnboardingStackParamList } from "../Navigators";
-import { NoahButton } from "../components/ui/NoahButton";
 import { Text } from "../components/ui/text";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 
 const OnboardingScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<OnboardingStackParamList>>();
@@ -21,13 +21,19 @@ const OnboardingScreen = () => {
       </Text>
       <View>
         <View className="flex-row justify-center">
-          <NoahButton onPress={handleCreateWallet} size="lg">
-            Create Wallet
-          </NoahButton>
+          <NativeNoahButton
+            label="Create Wallet"
+            onPress={handleCreateWallet}
+            size="lg"
+            width={172}
+          />
           <View style={{ width: 20 }} />
-          <NoahButton onPress={() => navigation.navigate("RestoreWallet")} size="lg">
-            Restore Wallet
-          </NoahButton>
+          <NativeNoahButton
+            label="Restore Wallet"
+            onPress={() => navigation.navigate("RestoreWallet")}
+            size="lg"
+            width={172}
+          />
         </View>
       </View>
     </View>

@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
 import type { BarkArkInfo } from "react-native-nitro-ark";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
-import { NoahButton } from "~/components/ui/NoahButton";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { Text } from "~/components/ui/text";
 import { useArkInfo } from "~/hooks/useWallet";
 import { copyToClipboard } from "~/lib/clipboardUtils";
@@ -256,13 +256,14 @@ const ArkInfoScreen = () => {
               <Text className="mt-2 text-sm leading-6 text-muted-foreground">
                 {error instanceof Error ? error.message : "Failed to load Ark server info."}
               </Text>
-              <NoahButton
+              <NativeNoahButton
+                label="Retry"
                 onPress={() => refetch()}
                 isLoading={isFetching}
+                loadingLabel="Retrying..."
                 className="mt-5 rounded-2xl py-4"
-              >
-                Retry
-              </NoahButton>
+                fullWidth
+              />
             </View>
           ) : null}
 

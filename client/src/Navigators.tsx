@@ -30,6 +30,7 @@ import EmailVerificationScreen from "~/screens/EmailVerificationScreen";
 import { BackupSettingsScreen } from "~/screens/BackupSettingsScreen";
 import RestoreWalletScreen from "~/screens/RestoreWalletScreen";
 import ArkInfoScreen from "~/screens/ArkInfoScreen";
+import ExportDatabaseScreen from "~/screens/ExportDatabaseScreen";
 import NoahStoryScreen from "~/screens/NoahStoryScreen";
 import DebugScreen from "~/screens/DebugScreen";
 import QRHubScreen from "~/screens/QRHubScreen";
@@ -78,6 +79,7 @@ export type SettingsStackParamList = {
   LightningAddress: { fromOnboarding?: boolean };
   BackupSettings: undefined;
   ArkInfo: undefined;
+  ExportDatabase: undefined;
   VTXOs: undefined;
   VTXODetail: { vtxo: VTXOWithStatus };
   UnilateralExit: { vtxoIds?: string[] } | undefined;
@@ -155,6 +157,11 @@ const SettingsStackNav = () => (
       options={{ animation: "default" }}
     />
     <Stack.Screen name="ArkInfo" component={ArkInfoScreen} options={{ animation: "default" }} />
+    <Stack.Screen
+      name="ExportDatabase"
+      component={ExportDatabaseScreen}
+      options={{ animation: "default" }}
+    />
     <Stack.Screen name="VTXOs" component={VTXOsScreen} options={{ animation: "default" }} />
     <Stack.Screen
       name="VTXODetail"

@@ -15,7 +15,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { OnboardingStackParamList, SettingsStackParamList } from "../Navigators";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useAutoBoardThreshold, useDeleteWallet, useSuspendWallet } from "../hooks/useWallet";
-import { useExportDatabase } from "../hooks/useExportDatabase";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { ConfirmationDialog, DangerZoneRow } from "../components/ConfirmationDialog";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -49,6 +48,7 @@ type Setting = {
     | "emergencyExit"
     | "feedback"
     | "unifiedPush"
+    | "exportDatabase"
     | "debug";
   title: string;
   value?: string;
@@ -94,8 +94,6 @@ const SettingsScreen = () => {
   const [isMailboxTogglePending, setIsMailboxTogglePending] = useState(false);
   const [isBiometricsAvailable, setIsBiometricsAvailable] = useState(false);
   const deleteWalletMutation = useDeleteWallet();
-  const { isExporting, showExportSuccess, showExportError, exportError, exportDatabase } =
-    useExportDatabase();
   const tabBarHeight = useBottomTabBarHeight();
   const { bottom: safeBottomInset } = useSafeAreaInsets();
 
@@ -210,6 +208,8 @@ const SettingsScreen = () => {
       setShowFeedback(true);
     } else if (item.id === "unifiedPush") {
       navigation.navigate("UnifiedPush", { fromOnboarding: false });
+    } else if (item.id === "exportDatabase") {
+      navigation.navigate("ExportDatabase");
     } else if (item.id === "debug") {
       navigation.navigate("Debug");
     }
@@ -405,18 +405,6 @@ const SettingsScreen = () => {
             <AlertDescription>{mailboxError}</AlertDescription>
           </Alert>
         )}
-        {showExportSuccess && (
-          <Alert icon={CheckCircle} className="mb-4">
-            <AlertTitle>Export Complete!</AlertTitle>
-            <AlertDescription>Database has been exported successfully.</AlertDescription>
-          </Alert>
-        )}
-        {showExportError && (
-          <Alert icon={AlertTriangle} variant="destructive" className="mb-4">
-            <AlertTitle>Export Failed!</AlertTitle>
-            <AlertDescription>{exportError}</AlertDescription>
-          </Alert>
-        )}
       </View>
       <ScrollView
         className="flex-1 px-4"
@@ -473,10 +461,7 @@ const SettingsScreen = () => {
                 <Label className="text-foreground text-lg">Auto-Board to Ark</Label>
                 <Text className="text-base mt-1 text-muted-foreground">{autoBoardDescription}</Text>
               </View>
-              <NativeSwitch
-                value={isAutoBoardingEnabled}
-                onValueChange={setAutoBoardingEnabled}
-              />
+              <NativeSwitch value={isAutoBoardingEnabled} onValueChange={setAutoBoardingEnabled} />
             </View>
             {isBiometricsAvailable && (
               <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
@@ -486,10 +471,7 @@ const SettingsScreen = () => {
                     Require biometric authentication to unlock your wallet
                   </Text>
                 </View>
-                <NativeSwitch
-                  value={isBiometricsEnabled}
-                  onValueChange={handleBiometricsToggle}
-                />
+                <NativeSwitch value={isBiometricsEnabled} onValueChange={handleBiometricsToggle} />
               </View>
             )}
             <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
@@ -541,17 +523,11 @@ const SettingsScreen = () => {
               />
             </View>
 
-            <ConfirmationDialog
-              trigger={
-                <Button variant="outline" disabled={isExporting} className="mb-4">
-                  <Text>{isExporting ? "Exporting..." : "Export Database"}</Text>
-                </Button>
-              }
+            <DangerZoneRow
               title="Export Database"
-              description="This will create an encrypted backup file containing your wallet's databases. Keep this file secure, as it can be used to restore your wallet."
-              onConfirm={exportDatabase}
-              confirmText="Export"
-              confirmVariant="default"
+              description="Create an encrypted backup file containing your wallet database."
+              isPressable
+              onPress={() => navigation.navigate("ExportDatabase")}
             />
 
             <ConfirmationDialog

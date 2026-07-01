@@ -10,7 +10,6 @@ import {
   useClearByFocusCell,
 } from "react-native-confirmation-code-field";
 import { Input } from "../components/ui/input";
-import { NoahButton } from "../components/ui/NoahButton";
 import { Text } from "../components/ui/text";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
@@ -23,6 +22,7 @@ import { useServerStore } from "~/store/serverStore";
 import type { OnboardingStackParamList, SettingsStackParamList } from "../Navigators";
 import { shouldUseUnifiedPush } from "~/constants";
 import logger from "~/lib/log";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 
 type EmailVerificationParams = {
   fromSettings?: boolean;
@@ -241,14 +241,15 @@ const EmailVerificationScreen = () => {
               </View>
             </View>
 
-            <NoahButton
+            <NativeNoahButton
+              label={isChangingEmail ? "Send Code to New Email" : "Send Verification Code"}
               onPress={handleSendCode}
               className="mt-8"
               isLoading={isSendingCode}
+              loadingLabel="Sending..."
               disabled={!email || isSendingCode}
-            >
-              {isChangingEmail ? "Send Code to New Email" : "Send Verification Code"}
-            </NoahButton>
+              fullWidth
+            />
             {!fromSettings && (
               <Pressable onPress={handleSkip} className="mt-5 items-center">
                 <Text className="text-muted-foreground font-semibold">Continue without email</Text>
@@ -296,14 +297,15 @@ const EmailVerificationScreen = () => {
               />
             </View>
 
-            <NoahButton
+            <NativeNoahButton
+              label={isChangingEmail ? "Update Email" : "Verify Email"}
               onPress={handleVerifyCode}
               className="mt-8"
               isLoading={isVerifying}
+              loadingLabel="Verifying..."
               disabled={code.length !== CELL_COUNT || isVerifying}
-            >
-              {isChangingEmail ? "Update Email" : "Verify Email"}
-            </NoahButton>
+              fullWidth
+            />
 
             <View className="mt-6 items-center">
               <Text className="text-muted-foreground mb-2">Didn't receive the code?</Text>

@@ -11,10 +11,11 @@ import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
 import { CheckCircle } from "lucide-react-native";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
-import { NoahButton } from "~/components/ui/NoahButton";
 import * as Haptics from "expo-haptics";
 import { AlertCircle } from "lucide-react-native";
 import { NativeSwitch } from "~/components/ui/native-switch";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 
 export const BackupSettingsScreen = () => {
   const navigation = useNavigation();
@@ -71,7 +72,8 @@ export const BackupSettingsScreen = () => {
           </Alert>
         )}
 
-        <NoahButton
+        <NativeNoahButton
+          label="Backup Now"
           onPress={async () => {
             const result = await triggerBackup();
             if (result.isOk()) {
@@ -87,13 +89,12 @@ export const BackupSettingsScreen = () => {
           }}
           className="mb-4"
           disabled={isLoading}
-        >
-          <Text>Backup Now</Text>
-        </NoahButton>
+          fullWidth
+        />
 
         <View className="mt-8">
-          <Button
-            variant="outline"
+          <NativeNoahSecondaryButton
+            label="List Backups"
             onPress={async () => {
               const result = await listBackups();
               if (result.isOk()) {
@@ -105,11 +106,10 @@ export const BackupSettingsScreen = () => {
                 setTimeout(() => setShowErrorAlert(false), 5000);
               }
             }}
-            className="mb-8 border-border"
+            className="mb-8"
             disabled={isLoading}
-          >
-            <Text className="text-foreground font-bold">List Backups</Text>
-          </Button>
+            fullWidth
+          />
 
           {showBackups && backupsList && (
             <View className="mb-4 p-4 bg-card rounded-lg border border-border">

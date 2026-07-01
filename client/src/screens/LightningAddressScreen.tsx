@@ -3,8 +3,6 @@ import { View, Pressable } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import { Input } from "../components/ui/input";
-import { Button } from "../components/ui/button";
-import { NoahButton } from "../components/ui/NoahButton";
 import { Text } from "../components/ui/text";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
@@ -16,6 +14,8 @@ import { useWalletStore } from "../store/walletStore";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { CheckCircle } from "lucide-react-native";
 import type { OnboardingStackParamList, SettingsStackParamList } from "../Navigators";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 
 type LightningAddressScreenRouteProp = RouteProp<
   OnboardingStackParamList & SettingsStackParamList,
@@ -116,33 +116,34 @@ const LightningAddressScreen = () => {
         {fromOnboarding ? (
           <View className="flex-row items-center mt-8 gap-4">
             <View className="flex-1">
-              <Button
+              <NativeNoahSecondaryButton
+                label="Skip"
                 onPress={handleSkip}
-                variant="outline"
                 disabled={updateLightningAddressMutation.isPending}
-              >
-                <Text>Skip</Text>
-              </Button>
+                fullWidth
+              />
             </View>
             <View className="flex-1">
-              <NoahButton
+              <NativeNoahButton
+                label={`${normalizedUsername}@${domain}` === lightningAddress ? "Continue" : "Save"}
                 onPress={handleSave}
                 isLoading={updateLightningAddressMutation.isPending}
+                loadingLabel="Saving..."
                 disabled={!normalizedUsername}
-              >
-                {`${normalizedUsername}@${domain}` === lightningAddress ? "Continue" : "Save"}
-              </NoahButton>
+                fullWidth
+              />
             </View>
           </View>
         ) : (
-          <NoahButton
+          <NativeNoahButton
+            label="Save"
             onPress={handleSave}
             className="mt-8"
             isLoading={updateLightningAddressMutation.isPending}
+            loadingLabel="Saving..."
             disabled={!normalizedUsername}
-          >
-            Save
-          </NoahButton>
+            fullWidth
+          />
         )}
       </View>
     </NoahSafeAreaView>
