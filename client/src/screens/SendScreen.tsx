@@ -19,7 +19,6 @@ import * as Clipboard from "expo-clipboard";
 import { formatFiatAmount, getFiatCurrencyInfo, satsToFiat } from "~/lib/fiatCurrency";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { Button } from "~/components/ui/button";
-import { NoahButton } from "~/components/ui/NoahButton";
 import { Text } from "~/components/ui/text";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { SendConfirmation } from "~/components/SendConfirmation";
@@ -373,14 +372,16 @@ const SendScreen = () => {
                   <Text className="font-semibold">Clear</Text>
                 </Button>
               ) : null}
-              <NoahButton
+              <Button
                 onPress={handleSend}
                 disabled={!destination || isSending}
-                isLoading={isSending}
                 className="flex-1 rounded-2xl py-4"
+                style={{ backgroundColor: COLORS.BITCOIN_ORANGE }}
               >
-                Send
-              </NoahButton>
+                <Text className="font-bold" style={{ color: "#1a1a1a" }}>
+                  {isSending ? "Sending..." : "Send"}
+                </Text>
+              </Button>
             </View>
           </View>
         </View>

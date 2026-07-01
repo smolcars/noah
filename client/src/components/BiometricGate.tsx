@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { View, AppState, AppStateStatus, StyleSheet } from "react-native";
 import { Text } from "./ui/text";
-import { NoahButton } from "./ui/NoahButton";
+import { NativeNoahButton } from "./ui/NativeNoahButton";
 import { useBiometrics } from "../hooks/useBiometrics";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
@@ -122,9 +122,12 @@ const BiometricGate: React.FC<BiometricGateProps> = ({ children }) => {
       <Text className="text-muted-foreground text-center mb-8">
         Authenticate to access your wallet
       </Text>
-      <NoahButton onPress={performAuth} disabled={isAuthenticating}>
-        {isAuthenticating ? "Authenticating..." : "Unlock"}
-      </NoahButton>
+      <NativeNoahButton
+        label="Unlock"
+        onPress={performAuth}
+        isLoading={isAuthenticating}
+        loadingLabel="Authenticating..."
+      />
     </View>
   );
 

@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
 import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
-import { Button } from "~/components/ui/button";
+import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 import { Text } from "~/components/ui/text";
 import { useIconColor } from "~/hooks/useTheme";
 import { useExitOverview, useSyncExits } from "~/hooks/useUnilateralExit";
@@ -197,18 +197,12 @@ const ExitVtxoDetailScreen = () => {
             </Pressable>
             <Text className="text-2xl font-bold text-foreground">Exit Timeline</Text>
           </View>
-          <Button
-            variant="ghost"
-            size="icon"
+          <NativeNoahIconButton
+            iconName="refresh-outline"
             onPress={() => syncExits.mutate()}
             disabled={syncExits.isPending}
-          >
-            {syncExits.isPending ? (
-              <NoahActivityIndicator />
-            ) : (
-              <Icon name="refresh-outline" size={22} color={iconColor} />
-            )}
-          </Button>
+            isLoading={syncExits.isPending}
+          />
         </View>
 
         {overviewQuery.isLoading ? (

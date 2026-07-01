@@ -9,13 +9,13 @@ import {
 } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { OnboardingStackParamList } from "../Navigators";
-import { NoahButton } from "../components/ui/NoahButton";
 import { useRestoreWallet } from "~/hooks/useWallet";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { Text } from "~/components/ui/text";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
 import { useWalletStore } from "~/store/walletStore";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, "RestoreWallet">;
 
@@ -83,9 +83,14 @@ const RestoreWalletScreen = ({ navigation }: Props) => {
                 </View>
               )}
 
-              <NoahButton onPress={handleRestore} disabled={isPending}>
-                {isPending ? "Restoring..." : "Restore"}
-              </NoahButton>
+              <NativeNoahButton
+                label="Restore"
+                onPress={handleRestore}
+                disabled={isPending}
+                isLoading={isPending}
+                loadingLabel="Restoring..."
+                width={168}
+              />
             </View>
           </View>
         </TouchableWithoutFeedback>

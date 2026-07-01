@@ -4,12 +4,12 @@ import { AlertTriangle } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { OnboardingStackParamList } from "../Navigators";
-import { NoahButton } from "../components/ui/NoahButton";
-import { Button } from "../components/ui/button";
 import { Text } from "../components/ui/text";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { useCreateWallet } from "../hooks/useWallet";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 
 const BetaWarningScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<OnboardingStackParamList>>();
@@ -49,12 +49,20 @@ const BetaWarningScreen = () => {
             </View>
           ) : (
             <View className="space-y-3">
-              <NoahButton onPress={() => createWallet()} size="lg">
-                I accept
-              </NoahButton>
-              <Button onPress={handleDecline} variant="outline" size="lg" className="mt-3">
-                <Text>I decline</Text>
-              </Button>
+              <NativeNoahButton
+                label="I accept"
+                onPress={() => createWallet()}
+                size="lg"
+                fullWidth
+              />
+              <View className="mt-3">
+                <NativeNoahSecondaryButton
+                  label="I decline"
+                  onPress={handleDecline}
+                  size="lg"
+                  fullWidth
+                />
+              </View>
             </View>
           )}
         </View>

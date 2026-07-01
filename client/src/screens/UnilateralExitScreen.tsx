@@ -14,10 +14,11 @@ import Icon from "@react-native-vector-icons/ionicons";
 import { AlertTriangle } from "lucide-react-native";
 import { validateBitcoinAddress } from "bip-321";
 import { Text } from "~/components/ui/text";
-import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { NoahButton } from "~/components/ui/NoahButton";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
+import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { ConfirmationDialog } from "~/components/ConfirmationDialog";
@@ -352,9 +353,7 @@ const EmptyExitState = ({ onStart }: { onStart: () => void }) => (
     <Text className="mt-2 text-center text-sm leading-5 text-muted-foreground">
       Start only if the Ark server is unavailable and normal offboarding cannot be used.
     </Text>
-    <NoahButton onPress={onStart} className="mt-5 w-full">
-      Start Wallet Exit
-    </NoahButton>
+    <NativeNoahButton label="Start Wallet Exit" onPress={onStart} className="mt-5" fullWidth />
   </View>
 );
 
@@ -488,18 +487,12 @@ const UnilateralExitScreen = () => {
                 </Pressable>
                 <Text className="text-2xl font-bold text-foreground">Emergency Exit</Text>
               </View>
-              <Button
-                variant="ghost"
-                size="icon"
+              <NativeNoahIconButton
+                iconName="refresh-outline"
                 onPress={() => syncExits.mutate()}
                 disabled={isBusy}
-              >
-                {syncExits.isPending ? (
-                  <NoahActivityIndicator />
-                ) : (
-                  <Icon name="refresh-outline" size={22} color={iconColor} />
-                )}
-              </Button>
+                isLoading={syncExits.isPending}
+              />
             </View>
 
             <Alert icon={AlertTriangle} className="mb-5 border-amber-500/40 bg-amber-500/10">
@@ -636,36 +629,32 @@ const UnilateralExitScreen = () => {
                 </View>
 
                 <View className="mb-5 flex-row gap-x-3">
-                  <NoahButton
+                  <NativeNoahSecondaryButton
+                    label={syncExits.isPending ? "Syncing..." : "Sync Status"}
                     className="flex-1"
-                    style={{ backgroundColor: "#e5e7eb" }}
-                    textClassName="font-bold text-base"
                     onPress={() => syncExits.mutate()}
                     disabled={isBusy}
-                    isLoading={syncExits.isPending}
-                  >
-                    Sync Status
-                  </NoahButton>
+                    fullWidth
+                  />
                   {canStartNewExit ? (
-                    <NoahButton
+                    <NativeNoahButton
+                      label="Start New Exit"
                       className="flex-1"
-                      textClassName="font-bold text-base"
                       onPress={() => setShowStartConfirm(true)}
                       disabled={isBusy}
-                    >
-                      Start New Exit
-                    </NoahButton>
+                      fullWidth
+                    />
                   ) : null}
                   {overview?.hasPending ? (
-                    <NoahButton
+                    <NativeNoahButton
+                      label="Progress"
                       className="flex-1"
-                      textClassName="font-bold text-base"
                       onPress={() => setShowProgressConfirm(true)}
                       disabled={isBusy}
                       isLoading={progressExits.isPending}
-                    >
-                      Progress
-                    </NoahButton>
+                      loadingLabel="Progressing..."
+                      fullWidth
+                    />
                   ) : null}
                 </View>
 
@@ -690,14 +679,15 @@ const UnilateralExitScreen = () => {
                         Enter a valid {APP_VARIANT} on-chain address.
                       </Text>
                     ) : null}
-                    <NoahButton
+                    <NativeNoahButton
+                      label="Claim Claimable Exits"
                       className="mt-4"
                       disabled={!isValidDestination || isBusy}
                       isLoading={claimExits.isPending}
+                      loadingLabel="Claiming..."
                       onPress={() => setShowClaimConfirm(true)}
-                    >
-                      Claim Claimable Exits
-                    </NoahButton>
+                      fullWidth
+                    />
                   </View>
                 ) : null}
               </>

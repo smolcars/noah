@@ -1,11 +1,10 @@
-import { Linking, Pressable, ScrollView, View, Switch, Image } from "react-native";
+import { Linking, Pressable, ScrollView, View, Image } from "react-native";
 import Constants from "expo-constants";
 import { useWalletStore } from "../store/walletStore";
 import { useBiometrics } from "../hooks/useBiometrics";
 import { PLATFORM, shouldUseUnifiedPush } from "../constants";
 import { useServerStore } from "../store/serverStore";
 import { useTransactionStore } from "../store/transactionStore";
-import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Text } from "../components/ui/text";
@@ -15,7 +14,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { OnboardingStackParamList, SettingsStackParamList } from "../Navigators";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useAutoBoardThreshold, useDeleteWallet, useSuspendWallet } from "../hooks/useWallet";
-import { useExportDatabase } from "../hooks/useExportDatabase";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { ConfirmationDialog, DangerZoneRow } from "../components/ConfirmationDialog";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -33,6 +31,8 @@ import { AUTO_BOARD_ONCHAIN_BUFFER_AMOUNT, formatAutoBoardThreshold } from "~/li
 import { useProfileStore } from "~/store/profileStore";
 import { getFiatCurrencyInfo } from "~/lib/fiatCurrency";
 import { getBitcoinAmountUnitInfo } from "~/lib/bitcoinAmount";
+import { NativeSwitch } from "~/components/ui/native-switch";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 
 type Setting = {
   id:
@@ -48,6 +48,7 @@ type Setting = {
     | "emergencyExit"
     | "feedback"
     | "unifiedPush"
+    | "exportDatabase"
     | "debug";
   title: string;
   value?: string;
@@ -61,6 +62,7 @@ const SettingsScreen = () => {
   const logoImage = isDark ? logoImageDark : logoImageLight;
   const [confirmText, setConfirmText] = useState("");
   const [showFeedback, setShowFeedback] = useState(false);
+  const [isDeleteWalletDialogOpen, setIsDeleteWalletDialogOpen] = useState(false);
   const {
     isInitialized,
     setBiometricsEnabled,
@@ -93,8 +95,6 @@ const SettingsScreen = () => {
   const [isMailboxTogglePending, setIsMailboxTogglePending] = useState(false);
   const [isBiometricsAvailable, setIsBiometricsAvailable] = useState(false);
   const deleteWalletMutation = useDeleteWallet();
-  const { isExporting, showExportSuccess, showExportError, exportError, exportDatabase } =
-    useExportDatabase();
   const tabBarHeight = useBottomTabBarHeight();
   const { bottom: safeBottomInset } = useSafeAreaInsets();
 
@@ -209,6 +209,8 @@ const SettingsScreen = () => {
       setShowFeedback(true);
     } else if (item.id === "unifiedPush") {
       navigation.navigate("UnifiedPush", { fromOnboarding: false });
+    } else if (item.id === "exportDatabase") {
+      navigation.navigate("ExportDatabase");
     } else if (item.id === "debug") {
       navigation.navigate("Debug");
     }
@@ -404,18 +406,6 @@ const SettingsScreen = () => {
             <AlertDescription>{mailboxError}</AlertDescription>
           </Alert>
         )}
-        {showExportSuccess && (
-          <Alert icon={CheckCircle} className="mb-4">
-            <AlertTitle>Export Complete!</AlertTitle>
-            <AlertDescription>Database has been exported successfully.</AlertDescription>
-          </Alert>
-        )}
-        {showExportError && (
-          <Alert icon={AlertTriangle} variant="destructive" className="mb-4">
-            <AlertTitle>Export Failed!</AlertTitle>
-            <AlertDescription>{exportError}</AlertDescription>
-          </Alert>
-        )}
       </View>
       <ScrollView
         className="flex-1 px-4"
@@ -472,12 +462,7 @@ const SettingsScreen = () => {
                 <Label className="text-foreground text-lg">Auto-Board to Ark</Label>
                 <Text className="text-base mt-1 text-muted-foreground">{autoBoardDescription}</Text>
               </View>
-              <Switch
-                value={isAutoBoardingEnabled}
-                onValueChange={setAutoBoardingEnabled}
-                trackColor={{ false: "#767577", true: "#F7931A" }}
-                thumbColor={isAutoBoardingEnabled ? "#ffffff" : "#f4f3f4"}
-              />
+              <NativeSwitch value={isAutoBoardingEnabled} onValueChange={setAutoBoardingEnabled} />
             </View>
             {isBiometricsAvailable && (
               <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
@@ -487,12 +472,7 @@ const SettingsScreen = () => {
                     Require biometric authentication to unlock your wallet
                   </Text>
                 </View>
-                <Switch
-                  value={isBiometricsEnabled}
-                  onValueChange={handleBiometricsToggle}
-                  trackColor={{ false: "#767577", true: "#F7931A" }}
-                  thumbColor={isBiometricsEnabled ? "#ffffff" : "#f4f3f4"}
-                />
+                <NativeSwitch value={isBiometricsEnabled} onValueChange={handleBiometricsToggle} />
               </View>
             )}
             <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
@@ -503,12 +483,10 @@ const SettingsScreen = () => {
                   payments in the background.
                 </Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={isMailboxAuthorizationEnabled}
                 onValueChange={handleMailboxAuthorizationToggle}
                 disabled={isMailboxTogglePending}
-                trackColor={{ false: "#767577", true: "#F7931A" }}
-                thumbColor={isMailboxAuthorizationEnabled ? "#ffffff" : "#f4f3f4"}
               />
             </View>
           </View>
@@ -538,39 +516,42 @@ const SettingsScreen = () => {
                   re-enabled.
                 </Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={isWalletSuspended}
                 onValueChange={(value) => suspendWalletMutation.mutate(value)}
                 disabled={suspendWalletMutation.isPending}
-                trackColor={{ false: "#767577", true: "#dc2626" }}
-                thumbColor={isWalletSuspended ? "#ffffff" : "#f4f3f4"}
+                tone="destructive"
               />
             </View>
 
-            <ConfirmationDialog
-              trigger={
-                <Button variant="outline" disabled={isExporting} className="mb-4">
-                  <Text>{isExporting ? "Exporting..." : "Export Database"}</Text>
-                </Button>
-              }
+            <DangerZoneRow
               title="Export Database"
-              description="This will create an encrypted backup file containing your wallet's databases. Keep this file secure, as it can be used to restore your wallet."
-              onConfirm={exportDatabase}
-              confirmText="Export"
-              confirmVariant="default"
+              description="Create an encrypted backup file containing your wallet database."
+              isPressable
+              onPress={() => navigation.navigate("ExportDatabase")}
             />
 
+            <NativeNoahButton
+              label="Delete Wallet"
+              variant="destructive"
+              onPress={() => setIsDeleteWalletDialogOpen(true)}
+              fullWidth
+            />
             <ConfirmationDialog
-              trigger={
-                <Button variant="destructive">
-                  <Text>Delete Wallet</Text>
-                </Button>
-              }
+              open={isDeleteWalletDialogOpen}
+              onOpenChange={(open) => {
+                setIsDeleteWalletDialogOpen(open);
+                if (!open) {
+                  setConfirmText("");
+                }
+              }}
               title="Delete Wallet"
               description={`This action is irreversible. To confirm, please type "delete" in the box below.`}
               onConfirm={() => {
                 if (confirmText.toLowerCase() === "delete") {
                   deleteWalletMutation.mutate();
+                  setIsDeleteWalletDialogOpen(false);
+                  setConfirmText("");
                 }
               }}
               isConfirmDisabled={confirmText.toLowerCase() !== "delete"}

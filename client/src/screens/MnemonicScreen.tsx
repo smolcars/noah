@@ -7,8 +7,6 @@ import { copyToClipboard } from "../lib/clipboardUtils";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
 import { Text } from "../components/ui/text";
-import { NoahButton } from "../components/ui/NoahButton";
-import { Button } from "../components/ui/button";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
 import { useAlert } from "~/contexts/AlertProvider";
@@ -17,6 +15,8 @@ import { useBiometrics } from "../hooks/useBiometrics";
 import type { OnboardingStackParamList, SettingsStackParamList } from "../Navigators";
 import { Card, CardContent } from "../components/ui/card";
 import { getMnemonic } from "~/lib/crypto";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 
 type MnemonicScreenRouteProp = RouteProp<
   OnboardingStackParamList & SettingsStackParamList,
@@ -126,15 +126,17 @@ const MnemonicScreen = () => {
 
         {mnemonic && (
           <View className="mt-6">
-            <Button onPress={handleCopy} variant="outline">
-              <Text>Copy Seed Phrase</Text>
-            </Button>
+            <NativeNoahSecondaryButton label="Copy Seed Phrase" onPress={handleCopy} fullWidth />
           </View>
         )}
 
-        <NoahButton onPress={handleContinue} disabled={!mnemonic} className="mt-4">
-          {fromOnboarding ? "I Have Saved It, Continue" : "Done"}
-        </NoahButton>
+        <NativeNoahButton
+          label={fromOnboarding ? "I Have Saved It, Continue" : "Done"}
+          onPress={handleContinue}
+          disabled={!mnemonic}
+          className="mt-4"
+          fullWidth
+        />
       </View>
     </NoahSafeAreaView>
   );

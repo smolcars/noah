@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Pressable } from "react-native";
 import { Text } from "~/components/ui/text";
-import { NoahButton } from "~/components/ui/NoahButton";
-import { Button } from "~/components/ui/button";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
@@ -19,6 +17,8 @@ import { registerUnifiedPushTokenWithServer } from "~/lib/pushNotifications";
 import Clipboard from "@react-native-clipboard/clipboard";
 import type { OnboardingStackParamList } from "~/Navigators";
 import logger from "~/lib/log";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 
 const log = logger("UnifiedPushScreen");
 
@@ -142,12 +142,19 @@ const UnifiedPushScreen = () => {
             ) : (
               distributors.map((d) => (
                 <View key={d.id} className="mb-3">
-                  <NoahButton
-                    variant={d.id === selectedDistributor ? "default" : "outline"}
-                    onPress={() => handleSelectDistributor(d.id)}
-                  >
-                    {d.name}
-                  </NoahButton>
+                  {d.id === selectedDistributor ? (
+                    <NativeNoahButton
+                      label={d.name}
+                      onPress={() => handleSelectDistributor(d.id)}
+                      fullWidth
+                    />
+                  ) : (
+                    <NativeNoahSecondaryButton
+                      label={d.name}
+                      onPress={() => handleSelectDistributor(d.id)}
+                      fullWidth
+                    />
+                  )}
                   <Text className="text-xs text-muted-foreground mt-1 ml-1">{d.id}</Text>
                 </View>
               ))
@@ -160,37 +167,42 @@ const UnifiedPushScreen = () => {
               {endpoint || "Not registered"}
             </Text>
             {endpoint ? (
-              <NoahButton onPress={copyToClipboard} className="mt-2">
-                Copy Endpoint
-              </NoahButton>
+              <NativeNoahButton
+                label="Copy Endpoint"
+                onPress={copyToClipboard}
+                className="mt-2"
+                fullWidth
+              />
             ) : null}
           </View>
 
           {fromOnboarding ? (
             <View className="flex-row items-center gap-4">
               <View className="flex-1">
-                <Button onPress={handleSkip} variant="outline">
-                  <Text>Skip</Text>
-                </Button>
+                <NativeNoahSecondaryButton label="Skip" onPress={handleSkip} fullWidth />
               </View>
               <View className="flex-1">
                 {status === "idle" || status === "error" ? (
-                  <NoahButton onPress={handleRegister}>Register</NoahButton>
+                  <NativeNoahButton label="Register" onPress={handleRegister} fullWidth />
                 ) : status === "registering" ? (
-                  <NoahButton disabled>Registering...</NoahButton>
+                  <NativeNoahButton label="Registering..." disabled fullWidth />
                 ) : (
-                  <NoahButton onPress={handleContinue}>Continue</NoahButton>
+                  <NativeNoahButton label="Continue" onPress={handleContinue} fullWidth />
                 )}
               </View>
             </View>
           ) : (
             <>
               {status === "idle" || status === "error" ? (
-                <NoahButton onPress={handleRegister}>Register with UnifiedPush</NoahButton>
+                <NativeNoahButton
+                  label="Register with UnifiedPush"
+                  onPress={handleRegister}
+                  fullWidth
+                />
               ) : status === "registering" ? (
-                <NoahButton disabled>Registering...</NoahButton>
+                <NativeNoahButton label="Registering..." disabled fullWidth />
               ) : (
-                <NoahButton onPress={handleContinue}>Done</NoahButton>
+                <NativeNoahButton label="Done" onPress={handleContinue} fullWidth />
               )}
             </>
           )}

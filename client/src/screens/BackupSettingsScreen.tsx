@@ -1,19 +1,20 @@
 import React, { useState } from "react";
-import { View, Switch, ScrollView, Pressable } from "react-native";
+import { View, ScrollView, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useBackupManager } from "../hooks/useBackupManager";
 import { NoahSafeAreaView } from "../components/NoahSafeAreaView";
 import { Text } from "../components/ui/text";
-import { Button } from "../components/ui/button";
 import { Label } from "../components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "../components/ui/alert";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
 import { CheckCircle } from "lucide-react-native";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
-import { NoahButton } from "~/components/ui/NoahButton";
 import * as Haptics from "expo-haptics";
 import { AlertCircle } from "lucide-react-native";
+import { NativeSwitch } from "~/components/ui/native-switch";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 
 export const BackupSettingsScreen = () => {
   const navigation = useNavigation();
@@ -49,7 +50,11 @@ export const BackupSettingsScreen = () => {
 
         <View className="flex-row justify-between items-center p-4 border-b border-border bg-card rounded-lg mb-4">
           <Label className="text-foreground text-lg">Enable Automatic Backups</Label>
-          <Switch value={isBackupEnabled} onValueChange={setBackupEnabled} disabled={isLoading} />
+          <NativeSwitch
+            value={isBackupEnabled}
+            onValueChange={setBackupEnabled}
+            disabled={isLoading}
+          />
         </View>
 
         {showSuccessAlert && (
@@ -66,7 +71,8 @@ export const BackupSettingsScreen = () => {
           </Alert>
         )}
 
-        <NoahButton
+        <NativeNoahButton
+          label="Backup Now"
           onPress={async () => {
             const result = await triggerBackup();
             if (result.isOk()) {
@@ -82,13 +88,12 @@ export const BackupSettingsScreen = () => {
           }}
           className="mb-4"
           disabled={isLoading}
-        >
-          <Text>Backup Now</Text>
-        </NoahButton>
+          fullWidth
+        />
 
         <View className="mt-8">
-          <Button
-            variant="outline"
+          <NativeNoahSecondaryButton
+            label="List Backups"
             onPress={async () => {
               const result = await listBackups();
               if (result.isOk()) {
@@ -100,11 +105,10 @@ export const BackupSettingsScreen = () => {
                 setTimeout(() => setShowErrorAlert(false), 5000);
               }
             }}
-            className="mb-8 border-border"
+            className="mb-8"
             disabled={isLoading}
-          >
-            <Text className="text-foreground font-bold">List Backups</Text>
-          </Button>
+            fullWidth
+          />
 
           {showBackups && backupsList && (
             <View className="mb-4 p-4 bg-card rounded-lg border border-border">
@@ -125,14 +129,14 @@ export const BackupSettingsScreen = () => {
                       </Text>
                     </View>
                     <View className="flex-row gap-2">
-                      <Button
+                      <NativeNoahButton
+                        label="Delete"
                         variant="destructive"
                         size="sm"
                         onPress={() => deleteBackup(backup.backup_version)}
                         disabled={isLoading}
-                      >
-                        <Text>Delete</Text>
-                      </Button>
+                        width={88}
+                      />
                     </View>
                   </View>
                 ))

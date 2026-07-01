@@ -7,7 +7,7 @@ import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor, useTheme } from "../hooks/useTheme";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { Text } from "~/components/ui/text";
-import Slider from "@react-native-community/slider";
+import { NativeNoahSlider } from "~/components/ui/NativeNoahSlider";
 import { Asset } from "expo-asset";
 import {
   playAudio,
@@ -34,8 +34,10 @@ const NoahStoryScreen = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
+  const [dragPosition, setDragPosition] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isDraggingRef = useRef(false);
 
   const startPositionUpdates = () => {
     if (intervalRef.current) {
@@ -57,7 +59,9 @@ const NoahStoryScreen = () => {
       }
 
       if (!hasError) {
-        setPosition(currentPosition);
+        if (!isDraggingRef.current) {
+          setPosition(currentPosition);
+        }
         setDuration(currentDuration);
         setIsPlaying(playing);
 
@@ -128,15 +132,24 @@ const NoahStoryScreen = () => {
       stopAudio();
       setIsPlaying(false);
       setPosition(0);
+      setDragPosition(null);
+      isDraggingRef.current = false;
       stopPositionUpdates();
     } catch (error) {
       log.e("Error stopping audio:", [error]);
     }
   };
 
+  const handleSliderValueChange = (value: number) => {
+    isDraggingRef.current = true;
+    setDragPosition(value);
+  };
+
   const handleSeek = (value: number) => {
     seekAudio(value);
     setPosition(value);
+    setDragPosition(null);
+    isDraggingRef.current = false;
   };
 
   const formatTime = (seconds: number) => {
@@ -144,6 +157,7 @@ const NoahStoryScreen = () => {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+  const displayPosition = dragPosition ?? position;
 
   useEffect(() => {
     return () => {
@@ -185,11 +199,12 @@ const NoahStoryScreen = () => {
           </View>
 
           <View className="w-full px-4">
-            <Slider
+            <NativeNoahSlider
               style={{ width: "100%", height: 40 }}
               minimumValue={0}
               maximumValue={duration || 1}
-              value={position}
+              value={displayPosition}
+              onValueChange={handleSliderValueChange}
               onSlidingComplete={handleSeek}
               minimumTrackTintColor="#F7931A"
               maximumTrackTintColor="#666666"
@@ -198,7 +213,7 @@ const NoahStoryScreen = () => {
             />
 
             <View className="flex-row justify-between mb-6">
-              <Text className="text-muted-foreground">{formatTime(position)}</Text>
+              <Text className="text-muted-foreground">{formatTime(displayPosition)}</Text>
               <Text className="text-muted-foreground">{formatTime(duration)}</Text>
             </View>
 

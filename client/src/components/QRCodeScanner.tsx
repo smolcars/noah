@@ -4,7 +4,7 @@ import { Camera, CodeScanner, useCameraDevice } from "react-native-vision-camera
 import { useIsFocused } from "@react-navigation/native";
 import { NoahSafeAreaView } from "./NoahSafeAreaView";
 import { Text } from "./ui/text";
-import { Button } from "./ui/button";
+import { NativeNoahButton } from "./ui/NativeNoahButton";
 import Icon from "@react-native-vector-icons/ionicons";
 
 type QRCodeScannerProps = {
@@ -20,9 +20,7 @@ export const QRCodeScanner = ({ codeScanner, onClose }: QRCodeScannerProps) => {
     return (
       <NoahSafeAreaView className="flex-1 bg-background justify-center items-center p-4">
         <Text className="text-lg text-center">No camera device found.</Text>
-        <Button onPress={onClose} className="mt-4">
-          <Text>Back</Text>
-        </Button>
+        <NativeNoahButton label="Back" onPress={onClose} className="mt-4" />
       </NoahSafeAreaView>
     );
   }

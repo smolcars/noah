@@ -7,7 +7,7 @@ import { Text } from "../components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { getAppLogs } from "noah-tools";
 import { COLORS } from "~/lib/styleConstants";
-import { Button } from "~/components/ui/button";
+import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import RNFSTurbo from "react-native-fs-turbo";
@@ -126,12 +126,17 @@ const LogScreen = () => {
             <Text className="text-2xl font-bold text-foreground">App Logs</Text>
           </View>
           <View className="flex-row space-x-2">
-            <Button onPress={fetchLogs} variant="outline" disabled={isLoading}>
-              <Icon name="refresh-outline" size={20} color={iconColor} />
-            </Button>
-            <Button onPress={handleShare} variant="outline" disabled={logs.length === 0}>
-              <Icon name="share-outline" size={20} color={iconColor} />
-            </Button>
+            <NativeNoahIconButton
+              iconName="refresh-outline"
+              onPress={fetchLogs}
+              disabled={isLoading}
+              style={{ marginRight: 12 }}
+            />
+            <NativeNoahIconButton
+              iconName="share-outline"
+              onPress={handleShare}
+              disabled={logs.length === 0}
+            />
           </View>
         </View>
         {isLoading ? (

@@ -2,10 +2,10 @@ import React from "react";
 import { View, Linking } from "react-native";
 import { BellRing, Zap, RefreshCcw } from "lucide-react-native";
 import { Text } from "~/components/ui/text";
-import { NoahButton } from "~/components/ui/NoahButton";
-import { Button } from "~/components/ui/button";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { type PushPermissionStatus } from "~/lib/pushNotifications";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 
 type PermissionStatus = PushPermissionStatus["status"] | "checking";
 
@@ -66,28 +66,28 @@ export const PushNotificationsRequiredScreen = ({
         </View>
 
         <View className="mt-10 space-y-4">
-          <NoahButton onPress={onRequestPermission} isLoading={isRequesting} size="lg">
-            Enable notifications
-          </NoahButton>
+          <NativeNoahButton
+            label="Enable notifications"
+            onPress={onRequestPermission}
+            isLoading={isRequesting}
+            loadingLabel="Requesting..."
+            size="lg"
+            fullWidth
+          />
           <View className="space-y-3 mt-3">
-            <Button
-              variant="outline"
-              className="border-border bg-card"
+            <NativeNoahSecondaryButton
+              label="I turned them on - check again"
               onPress={onRetryStatus}
               disabled={isRequesting}
-            >
-              <Text className="text-foreground">I turned them on — check again</Text>
-            </Button>
-            <Button
-              variant="ghost"
-              className="flex-row items-center justify-center"
+              fullWidth
+            />
+            <NativeNoahSecondaryButton
+              label="Open settings to allow notifications"
+              emphasis="ghost"
               onPress={() => Linking.openSettings()}
               disabled={isRequesting}
-            >
-              <Text className="text-sm text-muted-foreground">
-                Open settings to allow notifications
-              </Text>
-            </Button>
+              fullWidth
+            />
           </View>
         </View>
       </View>

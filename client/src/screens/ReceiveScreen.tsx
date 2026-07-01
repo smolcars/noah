@@ -9,7 +9,6 @@ import {
   ScrollView,
 } from "react-native";
 import { Text } from "../components/ui/text";
-import { NoahButton } from "../components/ui/NoahButton";
 import { Button } from "~/components/ui/button";
 
 import {
@@ -896,14 +895,20 @@ const ReceiveScreen = () => {
                 >
                   <Text className="font-semibold">Clear</Text>
                 </Button>
-                <NoahButton
+                <Button
                   onPress={handleGenerate}
-                  isLoading={isLoading}
                   disabled={isLoading}
                   className="h-14 flex-1 rounded-2xl"
+                  style={{ backgroundColor: COLORS.BITCOIN_ORANGE }}
                 >
-                  {isGenerated ? "New request" : "Generate request"}
-                </NoahButton>
+                  <Text className="font-bold" style={{ color: "#1a1a1a" }}>
+                    {isLoading
+                      ? "Generating..."
+                      : isGenerated
+                        ? "New request"
+                        : "Generate request"}
+                  </Text>
+                </Button>
               </View>
             </View>
           </View>
