@@ -34,17 +34,27 @@ npx expo install @expo/ui
 - Bun dependency metadata has been updated.
 - iOS pod resolution has been updated to include the `ExpoUI` pod.
 - `bun --cwd client typecheck` passes with the dependency installed.
-- No app UI surfaces have been migrated yet.
+- Native switch code migration is implemented for Settings and Backup settings.
 
 ## Migration Tasks
 
 ### 1. Native Switches
 
-- [ ] Add a small local wrapper for `@expo/ui` native switch usage.
-- [ ] Migrate settings switches in `client/src/screens/SettingsScreen.tsx`.
-- [ ] Migrate backup switch in `client/src/screens/BackupSettingsScreen.tsx`.
-- [ ] Verify toggles still update persisted state and disabled/loading states work.
-- [ ] Commit after user verification.
+- [x] Add a small local wrapper for `@expo/ui` native switch usage.
+- [x] Migrate settings switches in `client/src/screens/SettingsScreen.tsx`.
+- [x] Migrate backup switch in `client/src/screens/BackupSettingsScreen.tsx`.
+- [x] Verify toggles still update persisted state and disabled/loading states work.
+- [x] Commit after user verification.
+
+Plan:
+
+- Keep the screen-facing API close to React Native `Switch`: `value`, `onValueChange`, and
+  `disabled`.
+- Wrap switches in the universal `@expo/ui` `Host`, use the universal `Switch` on iOS, and use
+  the Expo UI Jetpack Compose `Switch` on Android so Noah can set explicit active/inactive colors.
+- Keep all wallet, backup, biometric, mailbox, and suspend-wallet callbacks unchanged.
+- Leave manual verification for the user/device because autonomous agents should not start Android
+  or iOS apps locally.
 
 ### 2. Native Button Wrapper
 

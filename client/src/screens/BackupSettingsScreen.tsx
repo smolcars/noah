@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Switch, ScrollView, Pressable } from "react-native";
+import { View, ScrollView, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useBackupManager } from "../hooks/useBackupManager";
 import { NoahSafeAreaView } from "../components/NoahSafeAreaView";
@@ -14,6 +14,7 @@ import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
 import { NoahButton } from "~/components/ui/NoahButton";
 import * as Haptics from "expo-haptics";
 import { AlertCircle } from "lucide-react-native";
+import { NativeSwitch } from "~/components/ui/native-switch";
 
 export const BackupSettingsScreen = () => {
   const navigation = useNavigation();
@@ -49,7 +50,11 @@ export const BackupSettingsScreen = () => {
 
         <View className="flex-row justify-between items-center p-4 border-b border-border bg-card rounded-lg mb-4">
           <Label className="text-foreground text-lg">Enable Automatic Backups</Label>
-          <Switch value={isBackupEnabled} onValueChange={setBackupEnabled} disabled={isLoading} />
+          <NativeSwitch
+            value={isBackupEnabled}
+            onValueChange={setBackupEnabled}
+            disabled={isLoading}
+          />
         </View>
 
         {showSuccessAlert && (

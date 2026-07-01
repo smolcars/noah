@@ -1,4 +1,4 @@
-import { Linking, Pressable, ScrollView, View, Switch, Image } from "react-native";
+import { Linking, Pressable, ScrollView, View, Image } from "react-native";
 import Constants from "expo-constants";
 import { useWalletStore } from "../store/walletStore";
 import { useBiometrics } from "../hooks/useBiometrics";
@@ -33,6 +33,7 @@ import { AUTO_BOARD_ONCHAIN_BUFFER_AMOUNT, formatAutoBoardThreshold } from "~/li
 import { useProfileStore } from "~/store/profileStore";
 import { getFiatCurrencyInfo } from "~/lib/fiatCurrency";
 import { getBitcoinAmountUnitInfo } from "~/lib/bitcoinAmount";
+import { NativeSwitch } from "~/components/ui/native-switch";
 
 type Setting = {
   id:
@@ -472,11 +473,9 @@ const SettingsScreen = () => {
                 <Label className="text-foreground text-lg">Auto-Board to Ark</Label>
                 <Text className="text-base mt-1 text-muted-foreground">{autoBoardDescription}</Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={isAutoBoardingEnabled}
                 onValueChange={setAutoBoardingEnabled}
-                trackColor={{ false: "#767577", true: "#F7931A" }}
-                thumbColor={isAutoBoardingEnabled ? "#ffffff" : "#f4f3f4"}
               />
             </View>
             {isBiometricsAvailable && (
@@ -487,11 +486,9 @@ const SettingsScreen = () => {
                     Require biometric authentication to unlock your wallet
                   </Text>
                 </View>
-                <Switch
+                <NativeSwitch
                   value={isBiometricsEnabled}
                   onValueChange={handleBiometricsToggle}
-                  trackColor={{ false: "#767577", true: "#F7931A" }}
-                  thumbColor={isBiometricsEnabled ? "#ffffff" : "#f4f3f4"}
                 />
               </View>
             )}
@@ -503,12 +500,10 @@ const SettingsScreen = () => {
                   payments in the background.
                 </Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={isMailboxAuthorizationEnabled}
                 onValueChange={handleMailboxAuthorizationToggle}
                 disabled={isMailboxTogglePending}
-                trackColor={{ false: "#767577", true: "#F7931A" }}
-                thumbColor={isMailboxAuthorizationEnabled ? "#ffffff" : "#f4f3f4"}
               />
             </View>
           </View>
@@ -538,12 +533,11 @@ const SettingsScreen = () => {
                   re-enabled.
                 </Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={isWalletSuspended}
                 onValueChange={(value) => suspendWalletMutation.mutate(value)}
                 disabled={suspendWalletMutation.isPending}
-                trackColor={{ false: "#767577", true: "#dc2626" }}
-                thumbColor={isWalletSuspended ? "#ffffff" : "#f4f3f4"}
+                tone="destructive"
               />
             </View>
 
