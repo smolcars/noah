@@ -16,6 +16,7 @@ const config: { expo: ExpoConfig } = {
     },
     plugins: [
       ["expo-asset"],
+      ["expo-status-bar"],
       [
         "expo-splash-screen",
         {
