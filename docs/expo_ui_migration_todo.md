@@ -62,8 +62,8 @@ Plan:
 - [ ] Preserve current `Button` and `NoahButton` call-site behavior where practical.
 - [x] Start with low-risk screens such as onboarding, push permission, settings actions, and
   recovery-phrase actions.
-- [ ] Keep send/receive payment action buttons for a later pass unless the wrapper is proven stable.
-- [ ] Verify disabled, loading, outline, destructive, and primary styles.
+- [x] Keep send/receive payment action buttons for a later pass unless the wrapper is proven stable.
+- [x] Verify disabled, loading, outline, destructive, and primary styles.
 - [ ] Commit after user verification.
 
 Finding:
@@ -88,8 +88,9 @@ Second approach:
   `NativeNoahSecondaryButton` for secondary actions.
 - Migrated secondary actions on beta warning, mnemonic copy, push-permission retry, UnifiedPush
   distributor selection/skip, Lightning address skip, and backup listing.
-- Keep send/receive payment entry and confirmation flows on the existing wrappers until this set is
-  manually verified.
+- Kept payment bottom action rows on the React Native `Button` wrapper because the iOS native
+  wrappers produced unstable label/frame layout there.
+- Removed the now-unused `NoahButton` wrapper after migrating all call sites.
 - The settings `Export Database` secondary button was moved into a dedicated screen because the iOS
   SwiftUI secondary button layout was unstable in the lower Settings scroll area.
 
@@ -153,8 +154,8 @@ Second approach:
 
 ## Current Inventory
 
-- `Button`: 23 usages.
-- `NoahButton`: 33 usages.
+- `Button`: payment bottom action rows plus alert-dialog internals.
+- `NoahButton`: 0 usages. Removed after migration.
 - `Input`: 9 usages.
 - Direct `TextInput`: 14 usages.
 - `Switch`: 5 usages.

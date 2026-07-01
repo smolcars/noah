@@ -1,7 +1,6 @@
 import React from "react";
 import { Pressable, View } from "react-native";
 import { Text } from "./ui/text";
-import { NoahButton } from "./ui/NoahButton";
 import { Button } from "./ui/button";
 import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
 import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
@@ -312,14 +311,16 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
         >
           <Text className="font-semibold">Cancel</Text>
         </Button>
-        <NoahButton
+        <Button
           onPress={onConfirm}
-          isLoading={isLoading}
           disabled={isLoading || isConfirmDisabled}
           className="flex-1 rounded-2xl py-3"
+          style={{ backgroundColor: COLORS.BITCOIN_ORANGE }}
         >
-          Confirm & Send
-        </NoahButton>
+          <Text className="font-bold" style={{ color: "#1a1a1a" }}>
+            {isLoading ? "Sending..." : "Confirm & Send"}
+          </Text>
+        </Button>
       </View>
     </View>
   );

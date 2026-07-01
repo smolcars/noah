@@ -2,7 +2,6 @@ import React from "react";
 import { View, Linking } from "react-native";
 import { BellRing, Zap, RefreshCcw } from "lucide-react-native";
 import { Text } from "~/components/ui/text";
-import { Button } from "~/components/ui/button";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { type PushPermissionStatus } from "~/lib/pushNotifications";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
@@ -82,16 +81,13 @@ export const PushNotificationsRequiredScreen = ({
               disabled={isRequesting}
               fullWidth
             />
-            <Button
-              variant="ghost"
-              className="flex-row items-center justify-center"
+            <NativeNoahSecondaryButton
+              label="Open settings to allow notifications"
+              emphasis="ghost"
               onPress={() => Linking.openSettings()}
               disabled={isRequesting}
-            >
-              <Text className="text-sm text-muted-foreground">
-                Open settings to allow notifications
-              </Text>
-            </Button>
+              fullWidth
+            />
           </View>
         </View>
       </View>
