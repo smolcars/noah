@@ -88,6 +88,7 @@ impl TestUser {
             heartbeat_cron: "0 0 * * *".to_string(),
             deregister_cron: "0 0 * * *".to_string(),
             fiat_rate_refresh_cron: "0 0 * * *".to_string(),
+            mailbox_auth_cleanup_cron: "0 0 * * *".to_string(),
             fiat_rate_backfill_days: 60,
             coingecko_demo_api_key: None,
             notification_spacing_minutes: 45,

@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use expo_push_notification_client::{Expo, ExpoClientOptions, ExpoPushMessage, Sound};
 use server::config::Config;
+use server::mailbox_auth::backfill_mailbox_authorizations;
 use sqlx::postgres::PgPoolOptions;
 
 #[derive(Parser)]
@@ -47,6 +48,13 @@ enum Commands {
         domain: Option<String>,
 
         /// Dry run - print generated users without inserting
+        #[arg(long, default_value_t = false)]
+        dry_run: bool,
+    },
+
+    /// Validate and normalize existing active mailbox authorizations
+    BackfillMailboxAuth {
+        /// Dry run - classify rows without updating the database
         #[arg(long, default_value_t = false)]
         dry_run: bool,
     },
@@ -291,6 +299,28 @@ async fn cmd_seed_users(
     Ok(())
 }
 
+async fn cmd_backfill_mailbox_auth(config: &Config, dry_run: bool) -> Result<()> {
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&config.postgres_url)
+        .await
+        .context("Failed to connect to database")?;
+
+    let report = backfill_mailbox_authorizations(&pool, dry_run)
+        .await
+        .context("Failed to backfill mailbox authorizations")?;
+
+    println!("Mailbox authorization backfill complete");
+    println!("  dry_run: {}", dry_run);
+    println!("  checked: {}", report.checked);
+    println!("  valid: {}", report.valid);
+    println!("  normalized: {}", report.normalized);
+    println!("  expired: {}", report.expired);
+    println!("  invalid: {}", report.invalid);
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -315,6 +345,9 @@ async fn main() -> Result<()> {
             dry_run,
         } => {
             cmd_seed_users(&config, count, start_index, domain, dry_run).await?;
+        }
+        Commands::BackfillMailboxAuth { dry_run } => {
+            cmd_backfill_mailbox_auth(&config, dry_run).await?;
         }
     }
 

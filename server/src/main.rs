@@ -49,6 +49,7 @@ pub mod db;
 mod email_client;
 mod errors;
 mod fiat_rates;
+mod mailbox_auth;
 mod mailbox_worker;
 mod notification_coordinator;
 mod push;
@@ -185,12 +186,14 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
     let heartbeat_cron = config.heartbeat_cron.clone();
     let deregister_cron = config.deregister_cron.clone();
     let fiat_rate_refresh_cron = config.fiat_rate_refresh_cron.clone();
+    let mailbox_auth_cleanup_cron = config.mailbox_auth_cleanup_cron.clone();
     let cron_handle = cron_scheduler(
         app_state.clone(),
         backup_cron,
         heartbeat_cron,
         deregister_cron,
         fiat_rate_refresh_cron,
+        mailbox_auth_cleanup_cron,
     )
     .await?;
 

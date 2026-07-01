@@ -184,6 +184,22 @@ pub async fn timeout_stale_pending_heartbeats(app_state: AppState) -> anyhow::Re
     Ok(())
 }
 
+pub async fn mark_expired_mailbox_authorizations(app_state: AppState) -> anyhow::Result<()> {
+    let affected = MailboxAuthorizationRepository::new(&app_state.db_pool)
+        .mark_expired_authorizations(chrono::Utc::now().timestamp())
+        .await?;
+
+    if affected > 0 {
+        tracing::info!(
+            job = "mailbox_auth_expiry",
+            updated_count = affected,
+            "marked expired mailbox authorizations"
+        );
+    }
+
+    Ok(())
+}
+
 pub async fn refresh_fiat_rates(app_state: AppState) -> anyhow::Result<()> {
     let mut conn = app_state.db_pool.acquire().await?;
     let lock_acquired: bool = sqlx::query_scalar("SELECT pg_try_advisory_lock($1)")
@@ -226,6 +242,7 @@ pub async fn cron_scheduler(
     heartbeat_cron: String,
     deregister_cron: String,
     fiat_rate_refresh_cron: String,
+    mailbox_auth_cleanup_cron: String,
 ) -> anyhow::Result<JobScheduler> {
     let sched = JobScheduler::new().await?;
 
@@ -235,6 +252,7 @@ pub async fn cron_scheduler(
         heartbeat_schedule = %heartbeat_cron,
         deregister_schedule = %deregister_cron,
         fiat_rate_refresh_schedule = %fiat_rate_refresh_cron,
+        mailbox_auth_cleanup_schedule = %mailbox_auth_cleanup_cron,
         stale_pending_job_cleanup_schedule = %STALE_PENDING_JOB_SWEEP_SCHEDULE,
         stale_pending_job_timeout_minutes = STALE_PENDING_JOB_TIMEOUT_MINUTES,
         stale_pending_heartbeat_cleanup_schedule = %STALE_PENDING_HEARTBEAT_SWEEP_SCHEDULE,
@@ -287,6 +305,17 @@ pub async fn cron_scheduler(
         })
     })?;
     sched.add(fiat_rate_refresh_job).await?;
+
+    let mailbox_auth_cleanup_state = app_state.clone();
+    let mailbox_auth_cleanup_job = Job::new_async(&mailbox_auth_cleanup_cron, move |_, _| {
+        let app_state = mailbox_auth_cleanup_state.clone();
+        Box::pin(async move {
+            if let Err(e) = mark_expired_mailbox_authorizations(app_state).await {
+                tracing::error!(job = "mailbox_auth_expiry", error = %e, "job failed");
+            }
+        })
+    })?;
+    sched.add(mailbox_auth_cleanup_job).await?;
 
     // Mark stale pending job reports as timeout
     let stale_pending_job_cleanup_state = app_state.clone();

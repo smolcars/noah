@@ -29,6 +29,7 @@ pub struct Config {
     pub heartbeat_cron: String,
     pub deregister_cron: String,
     pub fiat_rate_refresh_cron: String,
+    pub mailbox_auth_cleanup_cron: String,
     pub fiat_rate_backfill_days: u64,
     pub coingecko_demo_api_key: Option<String>,
     pub notification_spacing_minutes: i64,
@@ -89,6 +90,8 @@ impl Config {
                 .unwrap_or_else(|_| "every 12 hours".to_string()),
             fiat_rate_refresh_cron: std::env::var("FIAT_RATE_REFRESH_CRON")
                 .unwrap_or_else(|_| "every 5 minutes".to_string()),
+            mailbox_auth_cleanup_cron: std::env::var("MAILBOX_AUTH_CLEANUP_CRON")
+                .unwrap_or_else(|_| "every 10 minutes".to_string()),
             fiat_rate_backfill_days: std::env::var("FIAT_RATE_BACKFILL_DAYS")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -183,6 +186,10 @@ impl Config {
         tracing::debug!("Heartbeat Cron: {}", self.heartbeat_cron);
         tracing::debug!("Deregister Cron: {}", self.deregister_cron);
         tracing::debug!("Fiat Rate Refresh Cron: {}", self.fiat_rate_refresh_cron);
+        tracing::debug!(
+            "Mailbox Auth Cleanup Cron: {}",
+            self.mailbox_auth_cleanup_cron
+        );
         tracing::debug!("Fiat Rate Backfill Days: {}", self.fiat_rate_backfill_days);
         tracing::debug!(
             "CoinGecko Demo API Key: {}",

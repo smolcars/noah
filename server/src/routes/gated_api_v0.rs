@@ -17,6 +17,7 @@ use crate::types::{
 use crate::{
     AppState,
     errors::ApiError,
+    mailbox_auth::validate_authorize_mailbox_payload,
     types::{
         AuthenticatedUser, GetUploadUrlPayload, RegisterPushToken, UpdateLnAddressPayload,
         UploadUrlResponse,
@@ -137,43 +138,27 @@ pub async fn authorize_mailbox(
         .validate()
         .map_err(|e| ApiError::InvalidArgument(e.to_string()))?;
 
-    let now = Utc::now().timestamp();
-    if payload.expiry <= now {
-        return Err(ApiError::InvalidArgument(
-            "Mailbox authorization expiry must be a future Unix timestamp".to_string(),
-        ));
-    }
-
-    if payload.expiry > now + MAX_MAILBOX_AUTH_TTL_SECS {
-        return Err(ApiError::InvalidArgument(
-            "Mailbox authorization expiry exceeds maximum allowed TTL".to_string(),
-        ));
-    }
-
-    if hex::decode(&payload.mailbox_id).is_err() {
-        return Err(ApiError::InvalidArgument(
-            "Mailbox ID must be valid hex".to_string(),
-        ));
-    }
-
-    if hex::decode(&payload.encoded).is_err() {
-        return Err(ApiError::InvalidArgument(
-            "Mailbox authorization must be valid hex".to_string(),
-        ));
-    }
+    let validated = validate_authorize_mailbox_payload(
+        &payload,
+        Utc::now().timestamp(),
+        MAX_MAILBOX_AUTH_TTL_SECS,
+    )?;
 
     if let Some(Extension(event)) = event {
         event.add_context("has_mailbox_authorization", true);
-        event.add_context("mailbox_authorization_expiry", payload.expiry);
+        event.add_context(
+            "mailbox_authorization_expiry",
+            validated.authorization_expires_at,
+        );
     }
 
     let mailbox_repo = MailboxAuthorizationRepository::new(&app_state.db_pool);
     mailbox_repo
         .upsert(
             &auth_payload.key,
-            &payload.mailbox_id,
-            &payload.encoded,
-            payload.expiry,
+            &validated.mailbox_id,
+            &validated.authorization_hex,
+            validated.authorization_expires_at,
         )
         .await?;
 

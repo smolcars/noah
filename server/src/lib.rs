@@ -8,6 +8,7 @@ pub mod config;
 pub mod db;
 pub mod email_client;
 pub mod errors;
+pub mod mailbox_auth;
 pub mod mailbox_worker;
 pub mod push;
 pub mod types;

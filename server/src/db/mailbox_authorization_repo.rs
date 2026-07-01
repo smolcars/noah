@@ -29,6 +29,15 @@ pub struct BulkRenewMailboxClaim {
     pub renewed: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, FromRow)]
+pub struct MailboxAuthorizationBackfillCandidate {
+    pub pubkey: String,
+    pub mailbox_id: String,
+    pub authorization_hex: String,
+    pub authorization_expires_at: i64,
+    pub auth_version: i64,
+}
+
 impl<'a> MailboxAuthorizationRepository<'a> {
     pub fn new(pool: &'a PgPool) -> Self {
         Self { pool }
@@ -115,6 +124,7 @@ impl<'a> MailboxAuthorizationRepository<'a> {
                 FROM mailbox_authorizations
                 WHERE pubkey = $1
                   AND enabled = TRUE
+                  AND status = 'active'
                   AND authorization_hex IS NOT NULL
                   AND authorization_expires_at IS NOT NULL
                   AND authorization_expires_at > $2
@@ -369,6 +379,148 @@ impl<'a> MailboxAuthorizationRepository<'a> {
         .bind(last_error)
         .bind(auth_version)
         .bind(worker_id)
+        .execute(self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn mark_expired_authorizations(&self, now: i64) -> Result<u64> {
+        let result = sqlx::query(
+            "UPDATE mailbox_authorizations
+             SET status = 'expired',
+                 last_error = 'mailbox authorization expired',
+                 lease_owner = NULL,
+                 lease_expires_at = NULL,
+                 next_retry_at = NULL,
+                 updated_at = now()
+             WHERE enabled = TRUE
+               AND status = 'active'
+               AND authorization_expires_at IS NOT NULL
+               AND authorization_expires_at <= $1",
+        )
+        .bind(now)
+        .execute(self.pool)
+        .await?;
+
+        Ok(result.rows_affected())
+    }
+
+    pub async fn find_active_authorizations_for_backfill(
+        &self,
+    ) -> Result<Vec<MailboxAuthorizationBackfillCandidate>> {
+        let records = sqlx::query_as::<_, MailboxAuthorizationBackfillCandidate>(
+            "SELECT
+                pubkey,
+                mailbox_id,
+                authorization_hex,
+                authorization_expires_at,
+                auth_version
+             FROM mailbox_authorizations
+             WHERE enabled = TRUE
+               AND status = 'active'
+               AND authorization_hex IS NOT NULL
+               AND authorization_expires_at IS NOT NULL
+             ORDER BY updated_at ASC",
+        )
+        .fetch_all(self.pool)
+        .await?;
+
+        Ok(records)
+    }
+
+    pub async fn normalize_authorization(
+        &self,
+        pubkey: &str,
+        auth_version: i64,
+        mailbox_id: &str,
+        authorization_expires_at: i64,
+        authorization_hex: &str,
+    ) -> Result<()> {
+        sqlx::query(
+            "UPDATE mailbox_authorizations
+             SET mailbox_id = $3,
+                 authorization_expires_at = $4,
+                 authorization_hex = $5,
+                 failure_count = 0,
+                 last_error = NULL,
+                 lease_owner = NULL,
+                 lease_expires_at = NULL,
+                 next_retry_at = NULL,
+                 status = 'active',
+                 updated_at = now()
+             WHERE pubkey = $1
+               AND auth_version = $2
+               AND enabled = TRUE
+               AND status = 'active'",
+        )
+        .bind(pubkey)
+        .bind(auth_version)
+        .bind(mailbox_id)
+        .bind(authorization_expires_at)
+        .bind(authorization_hex)
+        .execute(self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn mark_backfill_expired(
+        &self,
+        pubkey: &str,
+        auth_version: i64,
+        mailbox_id: Option<&str>,
+        authorization_expires_at: Option<i64>,
+        last_error: &str,
+    ) -> Result<()> {
+        sqlx::query(
+            "UPDATE mailbox_authorizations
+             SET mailbox_id = COALESCE($3, mailbox_id),
+                 authorization_expires_at = COALESCE($4, authorization_expires_at),
+                 status = 'expired',
+                 last_error = $5,
+                 lease_owner = NULL,
+                 lease_expires_at = NULL,
+                 next_retry_at = NULL,
+                 updated_at = now()
+             WHERE pubkey = $1
+               AND auth_version = $2
+               AND enabled = TRUE
+               AND status = 'active'",
+        )
+        .bind(pubkey)
+        .bind(auth_version)
+        .bind(mailbox_id)
+        .bind(authorization_expires_at)
+        .bind(last_error)
+        .execute(self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn mark_backfill_invalid(
+        &self,
+        pubkey: &str,
+        auth_version: i64,
+        last_error: &str,
+    ) -> Result<()> {
+        sqlx::query(
+            "UPDATE mailbox_authorizations
+             SET status = 'invalid',
+                 last_error = $3,
+                 lease_owner = NULL,
+                 lease_expires_at = NULL,
+                 next_retry_at = NULL,
+                 updated_at = now()
+             WHERE pubkey = $1
+               AND auth_version = $2
+               AND enabled = TRUE
+               AND status = 'active'",
+        )
+        .bind(pubkey)
+        .bind(auth_version)
+        .bind(last_error)
         .execute(self.pool)
         .await?;
 
