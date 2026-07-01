@@ -1,14 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "../components/ui/alert-dialog";
-import { Text } from "../components/ui/text";
+import { NativeNoahAlertDialog } from "../components/ui/NativeNoahAlertDialog";
 
 type AlertOptions = {
   title: string;
@@ -48,19 +39,17 @@ export const AlertProvider = ({ children }: { children: ReactNode }) => {
     <AlertContext.Provider value={{ showAlert }}>
       {children}
       {alertState && (
-        <AlertDialog open onOpenChange={() => setAlertState(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{alertState.title}</AlertDialogTitle>
-              <AlertDialogDescription>{alertState.description}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogAction onPress={handleClose}>
-                <Text>OK</Text>
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <NativeNoahAlertDialog
+          open
+          title={alertState.title}
+          description={alertState.description}
+          onConfirm={handleClose}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAlertState(null);
+            }
+          }}
+        />
       )}
     </AlertContext.Provider>
   );

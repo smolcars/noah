@@ -127,12 +127,21 @@ Finding:
 
 ### 6. Alert And Confirmation Dialogs
 
-- [ ] Evaluate `@expo/ui` native dialog/alert APIs against `client/src/contexts/AlertProvider.tsx`.
-- [ ] Migrate global alert display if the native API supports the existing title/description/action model.
-- [ ] Migrate `client/src/components/ConfirmationDialog.tsx` only after global alert is stable.
+- [x] Evaluate `@expo/ui` native dialog/alert APIs against `client/src/contexts/AlertProvider.tsx`.
+- [x] Migrate global alert display if the native API supports the existing title/description/action model.
+- [x] Migrate simple `client/src/components/ConfirmationDialog.tsx` confirmations after global alert is stable.
 - [ ] Verify destructive confirmations, delete-wallet typed confirmation, and backup/export dialogs.
 - [ ] Remove `@rn-primitives/alert-dialog` only after all references are gone.
 - [ ] Commit after user verification.
+
+Finding:
+
+- Added a small native alert wrapper for simple title/description/action dialogs.
+- `AlertProvider` now renders simple `showAlert` calls through native SwiftUI/Compose alert APIs
+  without changing the `showAlert` API.
+- `ConfirmationDialog` now sends simple title/description confirmations through the native wrapper.
+- Confirmation dialogs with custom React Native children still use the existing RN Primitives dialog
+  path because typed delete/drop confirmations and the auto-board details dialog need rich content.
 
 ### 7. Bottom Sheets
 
@@ -175,13 +184,13 @@ Finding:
 
 ## Current Inventory
 
-- `Button`: payment bottom action rows plus alert-dialog internals.
+- `Button`: payment bottom action rows plus legacy custom alert-dialog internals.
 - `NoahButton`: 0 usages. Removed after migration.
 - `Input`: 9 usages.
 - Direct `TextInput`: 14 usages.
 - `Switch`: 5 usages.
 - `AppBottomSheet`: 6 usages.
-- `AlertDialog`: 3 direct JSX usages plus wrapper exports.
+- `AlertDialog`: legacy custom confirmation path plus wrapper exports.
 - `Collapsible`: 0 usages.
 - `NoahActivityIndicator`: 20 usages.
 - `React Native Modal`: 2 usages.

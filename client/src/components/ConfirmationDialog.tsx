@@ -17,6 +17,7 @@ import { Label } from "./ui/label";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor } from "../hooks/useTheme";
 import { cn } from "~/lib/utils";
+import { NativeNoahAlertDialog } from "./ui/NativeNoahAlertDialog";
 
 type DangerZoneRowProps = {
   title: string;
@@ -81,6 +82,10 @@ type ConfirmationDialogProps = {
   enableHaptics?: boolean;
 };
 
+type TriggerElementProps = {
+  onPress?: () => void;
+};
+
 export const ConfirmationDialog = ({
   trigger,
   title,
@@ -112,6 +117,15 @@ export const ConfirmationDialog = ({
       : Haptics.NotificationFeedbackType.Success;
 
   const finalConfirmHapticType = confirmHapticType ?? defaultConfirmHapticType;
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const actualOpen = open ?? internalOpen;
+
+  const setDialogOpen = (nextOpen: boolean) => {
+    if (open === undefined) {
+      setInternalOpen(nextOpen);
+    }
+    onOpenChange?.(nextOpen);
+  };
 
   const handleConfirm = async () => {
     if (enableHaptics) {
@@ -126,6 +140,52 @@ export const ConfirmationDialog = ({
     }
     onCancel?.();
   };
+
+  const hasCustomContent = children !== undefined && children !== null;
+
+  if (!hasCustomContent) {
+    const nativeDialog = (
+      <NativeNoahAlertDialog
+        open={actualOpen}
+        title={title}
+        description={description}
+        confirmText={confirmText}
+        cancelText={cancelText}
+        confirmVariant={confirmVariant}
+        isConfirmDisabled={isConfirmDisabled}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+        onOpenChange={setDialogOpen}
+      />
+    );
+
+    if (!trigger) {
+      return nativeDialog;
+    }
+
+    if (React.isValidElement<TriggerElementProps>(trigger)) {
+      const existingOnPress = trigger.props.onPress;
+      return (
+        <>
+          {React.cloneElement(trigger, {
+            onPress: () => {
+              existingOnPress?.();
+              setDialogOpen(true);
+            },
+          })}
+          {nativeDialog}
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Pressable onPress={() => setDialogOpen(true)}>{trigger}</Pressable>
+        {nativeDialog}
+      </>
+    );
+  }
+
   const content = (
     <AlertDialogContent className={contentClassName}>
       <AlertDialogHeader className={headerClassName}>
