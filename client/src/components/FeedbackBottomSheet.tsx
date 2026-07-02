@@ -192,6 +192,7 @@ export const FeedbackBottomSheet = ({ isOpen, onClose }: FeedbackBottomSheetProp
                 onChangeText={setName}
                 placeholder="Your name"
                 placeholderTextColor={colors.mutedForeground}
+                autoCorrect={false}
                 editable={submitState === "idle"}
                 textStyle={{
                   color: colors.foreground,
