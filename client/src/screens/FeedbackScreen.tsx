@@ -2,14 +2,14 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import { TextInput as ExpoTextInput } from "@expo/ui";
+import { TextInput as ExpoTextInput, type TextInputRef } from "@expo/ui";
 import { Host as ComposeHost } from "@expo/ui/jetpack-compose";
 import { Host as SwiftHost } from "@expo/ui/swift-ui";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
 import { AlertCircle, CheckCircle, ImagePlus, X } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Image,
   Keyboard,
@@ -60,6 +60,18 @@ const FeedbackScreen = () => {
   const [screenshot, setScreenshot] = useState<SelectedScreenshot | null>(null);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const nameInputRef = useRef<TextInputRef>(null);
+  const emailInputRef = useRef<TextInputRef>(null);
+  const subjectInputRef = useRef<TextInputRef>(null);
+  const bodyInputRef = useRef<TextInputRef>(null);
+
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+    nameInputRef.current?.blur();
+    emailInputRef.current?.blur();
+    subjectInputRef.current?.blur();
+    bodyInputRef.current?.blur();
+  };
 
   const handleAddScreenshot = async () => {
     setErrorMessage(null);
@@ -151,10 +163,12 @@ const FeedbackScreen = () => {
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background" style={{ paddingBottom: 0 }}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <TouchableWithoutFeedback onPress={dismissKeyboard} accessible={false}>
         <ScrollView
           className="flex-1 px-4"
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          onScrollBeginDrag={dismissKeyboard}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             flexGrow: 1,
@@ -202,6 +216,7 @@ const FeedbackScreen = () => {
               <InputGroup label="Name">
                 <ExpoInputHost height={48}>
                   <ExpoTextInput
+                    ref={nameInputRef}
                     defaultValue={name}
                     onChangeText={setName}
                     placeholder="Your name"
@@ -227,6 +242,7 @@ const FeedbackScreen = () => {
               <InputGroup label="Email (Optional)">
                 <ExpoInputHost height={48}>
                   <ExpoTextInput
+                    ref={emailInputRef}
                     defaultValue={email}
                     onChangeText={setEmail}
                     placeholder="you@example.com"
@@ -254,6 +270,7 @@ const FeedbackScreen = () => {
               <InputGroup label="Subject">
                 <ExpoInputHost height={48}>
                   <ExpoTextInput
+                    ref={subjectInputRef}
                     defaultValue={subject}
                     onChangeText={setSubject}
                     placeholder="Short summary"
@@ -279,6 +296,7 @@ const FeedbackScreen = () => {
               <InputGroup label="Body">
                 <ExpoInputHost height={150}>
                   <ExpoTextInput
+                    ref={bodyInputRef}
                     defaultValue={body}
                     onChangeText={setBody}
                     placeholder="Describe the bug or share your feedback..."
