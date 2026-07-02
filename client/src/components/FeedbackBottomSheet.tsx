@@ -297,12 +297,23 @@ export const FeedbackBottomSheet = ({ isOpen, onClose }: FeedbackBottomSheetProp
           </InputGroup>
 
           {screenshot ? (
-            <View className="gap-2">
-              <Text className="text-xs font-semibold uppercase text-muted-foreground">
-                Screenshot
-              </Text>
+            <View className="gap-1.5">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-xs font-semibold uppercase text-muted-foreground">
+                  Screenshot
+                </Text>
+                {screenshot.size ? (
+                  <Text className="text-xs text-muted-foreground">
+                    {formatBytes(screenshot.size)}
+                  </Text>
+                ) : null}
+              </View>
               <View className="relative overflow-hidden rounded-md border border-border">
-                <Image source={{ uri: screenshot.uri }} className="h-48 w-full" resizeMode="cover" />
+                <Image
+                  source={{ uri: screenshot.uri }}
+                  className="h-28 w-full"
+                  resizeMode="cover"
+                />
                 <Pressable
                   onPress={() => setScreenshot(null)}
                   className="absolute right-2 top-2 h-9 w-9 items-center justify-center rounded-full bg-black/70"
@@ -311,11 +322,6 @@ export const FeedbackBottomSheet = ({ isOpen, onClose }: FeedbackBottomSheetProp
                   <X size={18} color="#ffffff" />
                 </Pressable>
               </View>
-              {screenshot.size ? (
-                <Text className="text-xs text-muted-foreground">
-                  {formatBytes(screenshot.size)}
-                </Text>
-              ) : null}
             </View>
           ) : (
             <Pressable
