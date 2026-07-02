@@ -10,7 +10,15 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
 import { AlertCircle, CheckCircle, ImagePlus, X } from "lucide-react-native";
 import React, { useState } from "react";
-import { Image, Platform, Pressable, ScrollView, View } from "react-native";
+import {
+  Image,
+  Keyboard,
+  Platform,
+  Pressable,
+  ScrollView,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { fromByteArray } from "react-native-quick-base64";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -143,209 +151,214 @@ const FeedbackScreen = () => {
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background" style={{ paddingBottom: 0 }}>
-      <ScrollView
-        className="flex-1 px-4"
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingBottom: safeBottomInset + tabBarHeight + 24,
-        }}
-      >
-        <View className="flex-row items-center py-4">
-          <Pressable
-            onPress={() => navigation.goBack()}
-            className="mr-4 h-10 w-10 items-center justify-center rounded-full bg-muted"
-          >
-            <Icon name="arrow-back-outline" size={22} color={iconColor} />
-          </Pressable>
-          <View className="flex-1">
-            <Text className="text-2xl font-bold text-foreground">Send Feedback</Text>
-            <Text className="mt-1 text-sm text-muted-foreground">
-              Report a bug or share what would make Noah better.
-            </Text>
-          </View>
-        </View>
-
-        {submitState === "success" ? (
-          <View className="flex-1 items-center justify-center px-3 py-10">
-            <CheckCircle size={56} color={COLORS.SUCCESS} />
-            <Text className="mt-5 text-center text-2xl font-bold text-foreground">Thank You</Text>
-            <Text className="mt-2 text-center text-base text-muted-foreground">
-              Your feedback was sent to the Noah team.
-            </Text>
-            <NativeNoahButton
-              label="Done"
-              className="mt-8"
-              fullWidth
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <ScrollView
+          className="flex-1 px-4"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingBottom: safeBottomInset + tabBarHeight + 24,
+          }}
+        >
+          <View className="flex-row items-center py-4">
+            <Pressable
               onPress={() => navigation.goBack()}
-            />
+              className="mr-4 h-10 w-10 items-center justify-center rounded-full bg-muted"
+            >
+              <Icon name="arrow-back-outline" size={22} color={iconColor} />
+            </Pressable>
+            <View className="flex-1">
+              <Text className="text-2xl font-bold text-foreground">Send Feedback</Text>
+              <Text className="mt-1 text-sm text-muted-foreground">
+                Report a bug or share what would make Noah better.
+              </Text>
+            </View>
           </View>
-        ) : (
-          <View className="gap-5 pb-2">
-            {errorMessage ? (
-              <View className="flex-row items-center gap-3 rounded-md border border-red-900 bg-red-950/40 p-3">
-                <AlertCircle size={20} color="#ef4444" />
-                <Text className="flex-1 text-sm text-red-300">{errorMessage}</Text>
-              </View>
-            ) : null}
 
-            <InputGroup label="Name">
-              <ExpoInputHost height={48}>
-                <ExpoTextInput
-                  defaultValue={name}
-                  onChangeText={setName}
-                  placeholder="Your name"
-                  placeholderTextColor={colors.mutedForeground}
-                  autoCorrect={false}
-                  editable={submitState === "idle"}
-                  textStyle={{
-                    color: colors.foreground,
-                    fontSize: 16,
-                  }}
-                  style={{
-                    height: 48,
-                    paddingHorizontal: 14,
-                    borderWidth: 1,
-                    borderRadius: 8,
-                    borderColor: colors.border,
-                    backgroundColor: isDark ? "#18181b" : "#ffffff",
-                  }}
-                />
-              </ExpoInputHost>
-            </InputGroup>
-
-            <InputGroup label="Email (Optional)">
-              <ExpoInputHost height={48}>
-                <ExpoTextInput
-                  defaultValue={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  placeholderTextColor={colors.mutedForeground}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={submitState === "idle"}
-                  textStyle={{
-                    color: colors.foreground,
-                    fontSize: 16,
-                  }}
-                  style={{
-                    height: 48,
-                    paddingHorizontal: 14,
-                    borderWidth: 1,
-                    borderRadius: 8,
-                    borderColor: colors.border,
-                    backgroundColor: isDark ? "#18181b" : "#ffffff",
-                  }}
-                />
-              </ExpoInputHost>
-            </InputGroup>
-
-            <InputGroup label="Subject">
-              <ExpoInputHost height={48}>
-                <ExpoTextInput
-                  defaultValue={subject}
-                  onChangeText={setSubject}
-                  placeholder="Short summary"
-                  placeholderTextColor={colors.mutedForeground}
-                  maxLength={150}
-                  editable={submitState === "idle"}
-                  textStyle={{
-                    color: colors.foreground,
-                    fontSize: 16,
-                  }}
-                  style={{
-                    height: 48,
-                    paddingHorizontal: 14,
-                    borderWidth: 1,
-                    borderRadius: 8,
-                    borderColor: colors.border,
-                    backgroundColor: isDark ? "#18181b" : "#ffffff",
-                  }}
-                />
-              </ExpoInputHost>
-            </InputGroup>
-
-            <InputGroup label="Body">
-              <ExpoInputHost height={150}>
-                <ExpoTextInput
-                  defaultValue={body}
-                  onChangeText={setBody}
-                  placeholder="Describe the bug or share your feedback..."
-                  placeholderTextColor={colors.mutedForeground}
-                  multiline
-                  numberOfLines={6}
-                  maxLength={60000}
-                  editable={submitState === "idle"}
-                  textStyle={{
-                    color: colors.foreground,
-                    fontSize: 16,
-                    lineHeight: 22,
-                  }}
-                  style={{
-                    height: 150,
-                    padding: 14,
-                    borderWidth: 1,
-                    borderRadius: 8,
-                    borderColor: colors.border,
-                    backgroundColor: isDark ? "#18181b" : "#ffffff",
-                  }}
-                />
-              </ExpoInputHost>
-            </InputGroup>
-
-            {screenshot ? (
-              <View className="gap-1.5">
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-xs font-semibold uppercase text-muted-foreground">
-                    Screenshot
-                  </Text>
-                  {screenshot.size ? (
-                    <Text className="text-xs text-muted-foreground">
-                      {formatBytes(screenshot.size)}
-                    </Text>
-                  ) : null}
+          {submitState === "success" ? (
+            <View className="flex-1 items-center justify-center px-3 py-10">
+              <CheckCircle size={56} color={COLORS.SUCCESS} />
+              <Text className="mt-5 text-center text-2xl font-bold text-foreground">Thank You</Text>
+              <Text className="mt-2 text-center text-base text-muted-foreground">
+                Your feedback was sent to the Noah team.
+              </Text>
+              <NativeNoahButton
+                label="Done"
+                className="mt-8"
+                fullWidth
+                onPress={() => navigation.goBack()}
+              />
+            </View>
+          ) : (
+            <View className="gap-5 pb-2">
+              {errorMessage ? (
+                <View className="flex-row items-center gap-3 rounded-md border border-red-900 bg-red-950/40 p-3">
+                  <AlertCircle size={20} color="#ef4444" />
+                  <Text className="flex-1 text-sm text-red-300">{errorMessage}</Text>
                 </View>
-                <View className="relative overflow-hidden rounded-md border border-border">
-                  <Image
-                    source={{ uri: screenshot.uri }}
-                    className="h-28 w-full"
-                    resizeMode="cover"
+              ) : null}
+
+              <InputGroup label="Name">
+                <ExpoInputHost height={48}>
+                  <ExpoTextInput
+                    defaultValue={name}
+                    onChangeText={setName}
+                    placeholder="Your name"
+                    placeholderTextColor={colors.mutedForeground}
+                    autoCorrect={false}
+                    editable={submitState === "idle"}
+                    textStyle={{
+                      color: colors.foreground,
+                      fontSize: 16,
+                    }}
+                    style={{
+                      height: 48,
+                      paddingHorizontal: 14,
+                      borderWidth: 1,
+                      borderRadius: 8,
+                      borderColor: colors.border,
+                      backgroundColor: isDark ? "#18181b" : "#ffffff",
+                    }}
                   />
-                  <Pressable
-                    onPress={() => setScreenshot(null)}
-                    className="absolute right-2 top-2 h-9 w-9 items-center justify-center rounded-full bg-black/70"
-                    disabled={submitState === "submitting"}
-                  >
-                    <X size={18} color="#ffffff" />
-                  </Pressable>
-                </View>
-              </View>
-            ) : (
-              <Pressable
-                onPress={handleAddScreenshot}
-                className="h-12 flex-row items-center justify-center gap-2 rounded-md border border-border bg-card"
-                disabled={submitState !== "idle"}
-              >
-                <ImagePlus size={20} color={COLORS.BITCOIN_ORANGE} />
-                <Text className="text-base font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
-                  Add Screenshot
-                </Text>
-              </Pressable>
-            )}
+                </ExpoInputHost>
+              </InputGroup>
 
-            <NativeNoahButton
-              label="Send Feedback"
-              loadingLabel="Sending..."
-              isLoading={submitState === "submitting"}
-              disabled={isSubmitDisabled}
-              fullWidth
-              onPress={handleSubmit}
-            />
-          </View>
-        )}
-      </ScrollView>
+              <InputGroup label="Email (Optional)">
+                <ExpoInputHost height={48}>
+                  <ExpoTextInput
+                    defaultValue={email}
+                    onChangeText={setEmail}
+                    placeholder="you@example.com"
+                    placeholderTextColor={colors.mutedForeground}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={submitState === "idle"}
+                    textStyle={{
+                      color: colors.foreground,
+                      fontSize: 16,
+                    }}
+                    style={{
+                      height: 48,
+                      paddingHorizontal: 14,
+                      borderWidth: 1,
+                      borderRadius: 8,
+                      borderColor: colors.border,
+                      backgroundColor: isDark ? "#18181b" : "#ffffff",
+                    }}
+                  />
+                </ExpoInputHost>
+              </InputGroup>
+
+              <InputGroup label="Subject">
+                <ExpoInputHost height={48}>
+                  <ExpoTextInput
+                    defaultValue={subject}
+                    onChangeText={setSubject}
+                    placeholder="Short summary"
+                    placeholderTextColor={colors.mutedForeground}
+                    maxLength={150}
+                    editable={submitState === "idle"}
+                    textStyle={{
+                      color: colors.foreground,
+                      fontSize: 16,
+                    }}
+                    style={{
+                      height: 48,
+                      paddingHorizontal: 14,
+                      borderWidth: 1,
+                      borderRadius: 8,
+                      borderColor: colors.border,
+                      backgroundColor: isDark ? "#18181b" : "#ffffff",
+                    }}
+                  />
+                </ExpoInputHost>
+              </InputGroup>
+
+              <InputGroup label="Body">
+                <ExpoInputHost height={150}>
+                  <ExpoTextInput
+                    defaultValue={body}
+                    onChangeText={setBody}
+                    placeholder="Describe the bug or share your feedback..."
+                    placeholderTextColor={colors.mutedForeground}
+                    multiline
+                    numberOfLines={6}
+                    maxLength={60000}
+                    editable={submitState === "idle"}
+                    textStyle={{
+                      color: colors.foreground,
+                      fontSize: 16,
+                      lineHeight: 22,
+                    }}
+                    style={{
+                      height: 150,
+                      padding: 14,
+                      borderWidth: 1,
+                      borderRadius: 8,
+                      borderColor: colors.border,
+                      backgroundColor: isDark ? "#18181b" : "#ffffff",
+                    }}
+                  />
+                </ExpoInputHost>
+              </InputGroup>
+
+              {screenshot ? (
+                <View className="gap-1.5">
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-xs font-semibold uppercase text-muted-foreground">
+                      Screenshot
+                    </Text>
+                    {screenshot.size ? (
+                      <Text className="text-xs text-muted-foreground">
+                        {formatBytes(screenshot.size)}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View className="relative overflow-hidden rounded-md border border-border">
+                    <Image
+                      source={{ uri: screenshot.uri }}
+                      className="h-28 w-full"
+                      resizeMode="cover"
+                    />
+                    <Pressable
+                      onPress={() => setScreenshot(null)}
+                      className="absolute right-2 top-2 h-9 w-9 items-center justify-center rounded-full bg-black/70"
+                      disabled={submitState === "submitting"}
+                    >
+                      <X size={18} color="#ffffff" />
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                <Pressable
+                  onPress={handleAddScreenshot}
+                  className="h-12 flex-row items-center justify-center gap-2 rounded-md border border-border bg-card"
+                  disabled={submitState !== "idle"}
+                >
+                  <ImagePlus size={20} color={COLORS.BITCOIN_ORANGE} />
+                  <Text
+                    className="text-base font-semibold"
+                    style={{ color: COLORS.BITCOIN_ORANGE }}
+                  >
+                    Add Screenshot
+                  </Text>
+                </Pressable>
+              )}
+
+              <NativeNoahButton
+                label="Send Feedback"
+                loadingLabel="Sending..."
+                isLoading={submitState === "submitting"}
+                disabled={isSubmitDisabled}
+                fullWidth
+                onPress={handleSubmit}
+              />
+            </View>
+          )}
+        </ScrollView>
+      </TouchableWithoutFeedback>
     </NoahSafeAreaView>
   );
 };
