@@ -45,7 +45,7 @@ struct CachedZohoAccessToken {
 
 struct ValidatedSupportTicket {
     message: String,
-    name: Option<String>,
+    name: String,
     email: Option<String>,
     attachment: Option<ValidatedAttachment>,
     device_info: Option<DeviceInfo>,
@@ -154,18 +154,11 @@ fn validate_support_ticket_payload(
         return Err(ApiError::InvalidArgument("Message is too long".to_string()));
     }
 
-    let name = payload.name.and_then(|value| {
-        let trimmed = value.trim();
-        if trimmed.is_empty() {
-            None
-        } else {
-            Some(trimmed.to_string())
-        }
-    });
-    if name
-        .as_ref()
-        .is_some_and(|value| value.len() > MAX_NAME_LEN)
-    {
+    let name = payload.name.trim().to_string();
+    if name.is_empty() {
+        return Err(ApiError::InvalidArgument("Name is required".to_string()));
+    }
+    if name.len() > MAX_NAME_LEN {
         return Err(ApiError::InvalidArgument("Name is too long".to_string()));
     }
 
@@ -413,10 +406,7 @@ async fn create_ticket(
 ) -> Result<ZohoCreateTicketResponse, ApiError> {
     let email = payload.email.clone();
     let contact = Some(ZohoTicketContact {
-        last_name: payload
-            .name
-            .clone()
-            .unwrap_or_else(|| "Noah Wallet User".to_string()),
+        last_name: payload.name.clone(),
         email: email.clone(),
     });
 
@@ -471,9 +461,7 @@ fn build_ticket_description(
     append_description_row(&mut description, "Source", "Noah mobile app");
     append_description_row(&mut description, "User key", &auth_user.key);
 
-    if let Some(name) = &payload.name {
-        append_description_row(&mut description, "Name", name);
-    }
+    append_description_row(&mut description, "Name", &payload.name);
     if let Some(email) = &payload.email {
         append_description_row(&mut description, "Email", email);
     }
@@ -540,7 +528,7 @@ mod tests {
     fn payload_with_message(message: &str) -> SubmitSupportTicketPayload {
         SubmitSupportTicketPayload {
             message: message.to_string(),
-            name: None,
+            name: "Nitesh".to_string(),
             email: None,
             attachment: None,
             device_info: None,
@@ -558,6 +546,16 @@ mod tests {
     fn validate_support_ticket_rejects_invalid_email() {
         let mut payload = payload_with_message("help");
         payload.email = Some("not-an-email".to_string());
+
+        let result = validate_support_ticket_payload(payload);
+
+        assert!(matches!(result, Err(ApiError::InvalidArgument(_))));
+    }
+
+    #[test]
+    fn validate_support_ticket_rejects_blank_name() {
+        let mut payload = payload_with_message("help");
+        payload.name = "   ".to_string();
 
         let result = validate_support_ticket_payload(payload);
 
@@ -601,7 +599,7 @@ mod tests {
     fn build_ticket_description_formats_and_escapes_html() {
         let payload = ValidatedSupportTicket {
             message: "line one\n<script>alert(1)</script>".to_string(),
-            name: Some("Alice & Bob".to_string()),
+            name: "Alice & Bob".to_string(),
             email: Some("alice@example.com".to_string()),
             attachment: None,
             device_info: Some(DeviceInfo {

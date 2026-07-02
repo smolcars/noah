@@ -105,8 +105,9 @@ export const FeedbackBottomSheet = ({ isOpen, onClose }: FeedbackBottomSheetProp
   };
 
   const handleSubmit = async () => {
+    const trimmedName = name.trim();
     const trimmedMessage = message.trim();
-    if (!trimmedMessage || submitState !== "idle") {
+    if (!trimmedName || !trimmedMessage || submitState !== "idle") {
       return;
     }
 
@@ -123,7 +124,7 @@ export const FeedbackBottomSheet = ({ isOpen, onClose }: FeedbackBottomSheetProp
 
     const result = await submitSupportTicket({
       message: trimmedMessage,
-      name: name.trim() || null,
+      name: trimmedName,
       email: email.trim() || null,
       attachment,
       device_info: {
@@ -148,7 +149,7 @@ export const FeedbackBottomSheet = ({ isOpen, onClose }: FeedbackBottomSheetProp
     }, 1800);
   };
 
-  const isSubmitDisabled = !message.trim() || submitState !== "idle";
+  const isSubmitDisabled = !name.trim() || !message.trim() || submitState !== "idle";
 
   return (
     <AppBottomSheet isOpen={isOpen} onClose={handleClose} scrollable>
@@ -185,7 +186,7 @@ export const FeedbackBottomSheet = ({ isOpen, onClose }: FeedbackBottomSheetProp
             </View>
           ) : null}
 
-          <InputGroup label="Name (Optional)">
+          <InputGroup label="Name">
             <ExpoInputHost height={48}>
               <ExpoTextInput
                 defaultValue={name}

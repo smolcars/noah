@@ -567,7 +567,7 @@ pub struct SupportTicketAttachment {
 #[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 pub struct SubmitSupportTicketPayload {
     pub message: String,
-    pub name: Option<String>,
+    pub name: String,
     pub email: Option<String>,
     pub attachment: Option<SupportTicketAttachment>,
     pub device_info: Option<DeviceInfo>,

@@ -204,7 +204,7 @@ invoice: string,
  */
 transaction_id: string, };
 
-export type SubmitSupportTicketPayload = { message: string, name: string | null, email: string | null, attachment: SupportTicketAttachment | null, device_info: DeviceInfo | null, };
+export type SubmitSupportTicketPayload = { message: string, name: string, email: string | null, attachment: SupportTicketAttachment | null, device_info: DeviceInfo | null, };
 
 export type SubmitSupportTicketResponse = { ticket_id: string, ticket_number: string | null, };
 
