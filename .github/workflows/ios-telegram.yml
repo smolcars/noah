@@ -87,15 +87,40 @@ jobs:
           echo "⏱️ Timeout waiting for upload to complete after $((max_attempts * 2)) seconds"
           exit 1
 
+      - name: 📝 Prepare Telegram message
+        if: success()
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          DIAWI_LINK: ${{ steps.poll_diawi.outputs.diawi_link }}
+        run: |
+          python3 <<'PY'
+          import os
+          from pathlib import Path
+
+          sha = os.environ["COMMIT_SHA"]
+          commit_message = os.environ.get("COMMIT_MESSAGE", "").strip() or "(no commit message)"
+          diawi_link = os.environ["DIAWI_LINK"]
+
+          message = (
+              "🍎 New Noah iOS build is available!\n\n"
+              f"📥 Download: {diawi_link}\n\n"
+              f"📝 Commit: {sha}\n"
+              f"💬 Message: {commit_message}"
+          )
+
+          # Telegram sendMessage allows 4096 chars. Keep margin for UTF-8 edge cases.
+          max_message_chars = 3900
+          if len(message) > max_message_chars:
+              message = f"{message[: max_message_chars - 1]}…"
+
+          Path("telegram_ios_build_message.txt").write_text(message, encoding="utf-8")
+          PY
+
       - name: 📢 Send to Telegram
         if: success()
         run: |
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
+          curl -fsS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
             -F chat_id="${{ secrets.BLIXT_CHAT_ID }}" \
             -F message_thread_id="${{ secrets.BLIXT_TOPIC_ID }}" \
-            -F text="🍎 New Noah iOS build is available!
-
-          📥 Download: ${{ steps.poll_diawi.outputs.diawi_link }}
-
-          📝 Commit: ${{ github.sha }}
-          💬 Message: ${{ github.event.head_commit.message }}"
+            -F "text=<telegram_ios_build_message.txt"
