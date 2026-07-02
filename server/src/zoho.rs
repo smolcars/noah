@@ -17,10 +17,11 @@ use crate::{
     },
 };
 
-const MAX_MESSAGE_LEN: usize = 60_000;
+const MAX_SUBJECT_LEN: usize = 150;
+const MAX_BODY_LEN: usize = 60_000;
 const MAX_NAME_LEN: usize = 150;
 const MAX_ATTACHMENT_BYTES: usize = 5 * 1024 * 1024;
-const MAX_ATTACHMENT_BASE64_LEN: usize = ((MAX_ATTACHMENT_BYTES + 2) / 3) * 4 + 16;
+const MAX_ATTACHMENT_BASE64_LEN: usize = MAX_ATTACHMENT_BYTES.div_ceil(3) * 4 + 16;
 const ACCESS_TOKEN_EXPIRY_BUFFER: Duration = Duration::from_secs(120);
 
 static TOKEN_CACHE: LazyLock<Mutex<Option<CachedZohoAccessToken>>> =
@@ -44,7 +45,8 @@ struct CachedZohoAccessToken {
 }
 
 struct ValidatedSupportTicket {
-    message: String,
+    subject: String,
+    body: String,
     name: String,
     email: Option<String>,
     attachment: Option<ValidatedAttachment>,
@@ -146,12 +148,20 @@ pub async fn submit_support_ticket(
 fn validate_support_ticket_payload(
     payload: SubmitSupportTicketPayload,
 ) -> Result<ValidatedSupportTicket, ApiError> {
-    let message = payload.message.trim().to_string();
-    if message.is_empty() {
-        return Err(ApiError::InvalidArgument("Message is required".to_string()));
+    let subject = payload.subject.trim().to_string();
+    if subject.is_empty() {
+        return Err(ApiError::InvalidArgument("Subject is required".to_string()));
     }
-    if message.len() > MAX_MESSAGE_LEN {
-        return Err(ApiError::InvalidArgument("Message is too long".to_string()));
+    if subject.len() > MAX_SUBJECT_LEN {
+        return Err(ApiError::InvalidArgument("Subject is too long".to_string()));
+    }
+
+    let body = payload.body.trim().to_string();
+    if body.is_empty() {
+        return Err(ApiError::InvalidArgument("Body is required".to_string()));
+    }
+    if body.len() > MAX_BODY_LEN {
+        return Err(ApiError::InvalidArgument("Body is too long".to_string()));
     }
 
     let name = payload.name.trim().to_string();
@@ -177,7 +187,8 @@ fn validate_support_ticket_payload(
     let attachment = payload.attachment.map(validate_attachment).transpose()?;
 
     Ok(ValidatedSupportTicket {
-        message,
+        subject,
+        body,
         name,
         email,
         attachment,
@@ -411,7 +422,7 @@ async fn create_ticket(
     });
 
     let request = ZohoCreateTicketRequest {
-        subject: "Noah app feedback".to_string(),
+        subject: payload.subject.clone(),
         department_id: config.department_id.clone(),
         description: build_ticket_description(&payload, auth_user),
         channel: "App".to_string(),
@@ -456,7 +467,7 @@ fn build_ticket_description(
     auth_user: &AuthenticatedUser,
 ) -> String {
     let mut description = "<h3>Feedback</h3><p>".to_string();
-    description.push_str(&escape_html(&payload.message).replace('\n', "<br />"));
+    description.push_str(&escape_html(&payload.body).replace('\n', "<br />"));
     description.push_str("</p><hr /><h3>Context</h3><dl>");
     append_description_row(&mut description, "Source", "Noah mobile app");
     append_description_row(&mut description, "User key", &auth_user.key);
@@ -525,9 +536,10 @@ fn escape_html(value: &str) -> String {
 mod tests {
     use super::*;
 
-    fn payload_with_message(message: &str) -> SubmitSupportTicketPayload {
+    fn payload_with_body(body: &str) -> SubmitSupportTicketPayload {
         SubmitSupportTicketPayload {
-            message: message.to_string(),
+            subject: "Problem sending payment".to_string(),
+            body: body.to_string(),
             name: "Nitesh".to_string(),
             email: None,
             attachment: None,
@@ -536,15 +548,35 @@ mod tests {
     }
 
     #[test]
-    fn validate_support_ticket_rejects_blank_message() {
-        let result = validate_support_ticket_payload(payload_with_message("   "));
+    fn validate_support_ticket_rejects_blank_subject() {
+        let mut payload = payload_with_body("help");
+        payload.subject = "   ".to_string();
+
+        let result = validate_support_ticket_payload(payload);
+
+        assert!(matches!(result, Err(ApiError::InvalidArgument(_))));
+    }
+
+    #[test]
+    fn validate_support_ticket_rejects_long_subject() {
+        let mut payload = payload_with_body("help");
+        payload.subject = "a".repeat(MAX_SUBJECT_LEN + 1);
+
+        let result = validate_support_ticket_payload(payload);
+
+        assert!(matches!(result, Err(ApiError::InvalidArgument(_))));
+    }
+
+    #[test]
+    fn validate_support_ticket_rejects_blank_body() {
+        let result = validate_support_ticket_payload(payload_with_body("   "));
 
         assert!(matches!(result, Err(ApiError::InvalidArgument(_))));
     }
 
     #[test]
     fn validate_support_ticket_rejects_invalid_email() {
-        let mut payload = payload_with_message("help");
+        let mut payload = payload_with_body("help");
         payload.email = Some("not-an-email".to_string());
 
         let result = validate_support_ticket_payload(payload);
@@ -554,7 +586,7 @@ mod tests {
 
     #[test]
     fn validate_support_ticket_rejects_blank_name() {
-        let mut payload = payload_with_message("help");
+        let mut payload = payload_with_body("help");
         payload.name = "   ".to_string();
 
         let result = validate_support_ticket_payload(payload);
@@ -598,7 +630,8 @@ mod tests {
     #[test]
     fn build_ticket_description_formats_and_escapes_html() {
         let payload = ValidatedSupportTicket {
-            message: "line one\n<script>alert(1)</script>".to_string(),
+            subject: "Problem <sending> payment".to_string(),
+            body: "line one\n<script>alert(1)</script>".to_string(),
             name: "Alice & Bob".to_string(),
             email: Some("alice@example.com".to_string()),
             attachment: None,

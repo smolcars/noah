@@ -566,7 +566,8 @@ pub struct SupportTicketAttachment {
 #[derive(Serialize, Deserialize, Debug, Clone, TS)]
 #[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 pub struct SubmitSupportTicketPayload {
-    pub message: String,
+    pub subject: String,
+    pub body: String,
     pub name: String,
     pub email: Option<String>,
     pub attachment: Option<SupportTicketAttachment>,

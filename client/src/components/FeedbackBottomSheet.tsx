@@ -42,7 +42,8 @@ export const FeedbackBottomSheet = ({ isOpen, onClose }: FeedbackBottomSheetProp
   const { colors, isDark } = useTheme();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
   const [screenshot, setScreenshot] = useState<SelectedScreenshot | null>(null);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -51,7 +52,8 @@ export const FeedbackBottomSheet = ({ isOpen, onClose }: FeedbackBottomSheetProp
   const resetForm = () => {
     setName("");
     setEmail("");
-    setMessage("");
+    setSubject("");
+    setBody("");
     setScreenshot(null);
     setSubmitState("idle");
     setErrorMessage(null);
@@ -106,8 +108,9 @@ export const FeedbackBottomSheet = ({ isOpen, onClose }: FeedbackBottomSheetProp
 
   const handleSubmit = async () => {
     const trimmedName = name.trim();
-    const trimmedMessage = message.trim();
-    if (!trimmedName || !trimmedMessage || submitState !== "idle") {
+    const trimmedSubject = subject.trim();
+    const trimmedBody = body.trim();
+    if (!trimmedName || !trimmedSubject || !trimmedBody || submitState !== "idle") {
       return;
     }
 
@@ -123,7 +126,8 @@ export const FeedbackBottomSheet = ({ isOpen, onClose }: FeedbackBottomSheetProp
       : null;
 
     const result = await submitSupportTicket({
-      message: trimmedMessage,
+      subject: trimmedSubject,
+      body: trimmedBody,
       name: trimmedName,
       email: email.trim() || null,
       attachment,
@@ -149,7 +153,8 @@ export const FeedbackBottomSheet = ({ isOpen, onClose }: FeedbackBottomSheetProp
     }, 1800);
   };
 
-  const isSubmitDisabled = !name.trim() || !message.trim() || submitState !== "idle";
+  const isSubmitDisabled =
+    !name.trim() || !subject.trim() || !body.trim() || submitState !== "idle";
 
   return (
     <AppBottomSheet isOpen={isOpen} onClose={handleClose} scrollable>
@@ -238,11 +243,36 @@ export const FeedbackBottomSheet = ({ isOpen, onClose }: FeedbackBottomSheetProp
             </ExpoInputHost>
           </InputGroup>
 
-          <InputGroup label="Message">
+          <InputGroup label="Subject">
+            <ExpoInputHost height={48}>
+              <ExpoTextInput
+                defaultValue={subject}
+                onChangeText={setSubject}
+                placeholder="Short summary"
+                placeholderTextColor={colors.mutedForeground}
+                maxLength={150}
+                editable={submitState === "idle"}
+                textStyle={{
+                  color: colors.foreground,
+                  fontSize: 16,
+                }}
+                style={{
+                  height: 48,
+                  paddingHorizontal: 14,
+                  borderWidth: 1,
+                  borderRadius: 8,
+                  borderColor: colors.border,
+                  backgroundColor: isDark ? "#18181b" : "#ffffff",
+                }}
+              />
+            </ExpoInputHost>
+          </InputGroup>
+
+          <InputGroup label="Body">
             <ExpoInputHost height={150}>
               <ExpoTextInput
-                defaultValue={message}
-                onChangeText={setMessage}
+                defaultValue={body}
+                onChangeText={setBody}
                 placeholder="Describe the bug or share your feedback..."
                 placeholderTextColor={colors.mutedForeground}
                 multiline
