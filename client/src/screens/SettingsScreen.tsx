@@ -22,7 +22,7 @@ import logoImageDark from "../../assets/1024_no_background.png";
 import logoImageLight from "../../assets/All_Files/light_dark_tinted/icon_clear_tinted_ios.png";
 import { COLORS } from "~/lib/styleConstants";
 import { useIconColor, useTheme } from "~/hooks/useTheme";
-import { FeedbackModal } from "~/components/FeedbackModal";
+import { FeedbackBottomSheet } from "~/components/FeedbackBottomSheet";
 import { resetAndReRegisterWithServer } from "../lib/server";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -590,7 +590,7 @@ const SettingsScreen = () => {
         </View>
       </ScrollView>
 
-      <FeedbackModal visible={showFeedback} onClose={() => setShowFeedback(false)} />
+      <FeedbackBottomSheet isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
     </NoahSafeAreaView>
   );
 };

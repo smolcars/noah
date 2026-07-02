@@ -19,7 +19,8 @@ use crate::routes::gated_api_v0::{
     authorize_mailbox, complete_upload, delete_backup, deregister, get_download_url,
     get_upload_url, get_user_info, heartbeat_response, list_backups, ln_address_suggestions,
     register_push_token, report_job_status, report_last_login, revoke_mailbox_authorization,
-    submit_invoice, update_backup_settings, update_ln_address, update_profile,
+    submit_invoice, submit_support_ticket, update_backup_settings, update_ln_address,
+    update_profile,
 };
 use crate::routes::public_api_v0::{
     auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price, lnurlp_request,
@@ -100,6 +101,18 @@ impl TestUser {
             email_dev_mode: true,
             auth_jwt_secret: "test-jwt-secret".to_string(),
             auth_jwt_ttl_hours: 24,
+            zoho_client_id: None,
+            zoho_client_secret: None,
+            zoho_refresh_token: None,
+            zoho_org_id: None,
+            zoho_department_id: None,
+            zoho_accounts_url: "https://accounts.zoho.com".to_string(),
+            zoho_api_domain: "https://desk.zoho.com".to_string(),
+            zoho_agent_ticket_base_url:
+                "https://desk.zoho.com/agent/noahsupport/noah/tickets/details".to_string(),
+            telegram_bot_token: None,
+            telegram_support_chat_id: None,
+            telegram_support_message_thread_id: None,
         }
     }
 
@@ -187,6 +200,7 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
         .route("/report_job_status", post(report_job_status))
         .route("/heartbeat_response", post(heartbeat_response))
         .route("/report_last_login", post(report_last_login))
+        .route("/support/ticket", post(submit_support_ticket))
         .layer(user_exists_layer.clone());
 
     let fiat_router = Router::new()

@@ -33,8 +33,8 @@ use crate::{
             authorize_mailbox, complete_upload, delete_backup, deregister, get_download_url,
             get_upload_url, get_user_info, heartbeat_response, list_backups,
             ln_address_suggestions, register_push_token, report_job_status, report_last_login,
-            revoke_mailbox_authorization, submit_invoice, update_backup_settings,
-            update_ln_address, update_profile,
+            revoke_mailbox_authorization, submit_invoice, submit_support_ticket,
+            update_backup_settings, update_ln_address, update_profile,
         },
         public_api_v0::{
             auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price,
@@ -55,11 +55,13 @@ mod notification_coordinator;
 mod push;
 mod rate_limit;
 mod s3_client;
+mod telegram;
 #[cfg(test)]
 mod tests;
 mod trace_layer;
 mod utils;
 mod wide_event;
+mod zoho;
 
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
@@ -281,6 +283,7 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         .route("/report_job_status", post(report_job_status))
         .route("/heartbeat_response", post(heartbeat_response))
         .route("/report_last_login", post(report_last_login))
+        .route("/support/ticket", post(submit_support_ticket))
         .layer(user_exists_layer.clone());
 
     // Fiat routes need auth and a registered user, but use their own limiter so

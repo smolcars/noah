@@ -204,6 +204,12 @@ invoice: string,
  */
 transaction_id: string, };
 
+export type SubmitSupportTicketPayload = { message: string, name: string | null, email: string | null, attachment: SupportTicketAttachment | null, device_info: DeviceInfo | null, };
+
+export type SubmitSupportTicketResponse = { ticket_id: string, ticket_number: string | null, };
+
+export type SupportTicketAttachment = { filename: string, content_type: string, base64_data: string, };
+
 /**
  * Defines the payload for updating a user's lightning address.
  */

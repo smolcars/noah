@@ -42,6 +42,17 @@ pub struct Config {
     pub email_dev_mode: bool,
     pub auth_jwt_secret: String,
     pub auth_jwt_ttl_hours: u64,
+    pub zoho_client_id: Option<String>,
+    pub zoho_client_secret: Option<String>,
+    pub zoho_refresh_token: Option<String>,
+    pub zoho_org_id: Option<String>,
+    pub zoho_department_id: Option<String>,
+    pub zoho_accounts_url: String,
+    pub zoho_api_domain: String,
+    pub zoho_agent_ticket_base_url: String,
+    pub telegram_bot_token: Option<String>,
+    pub telegram_support_chat_id: Option<String>,
+    pub telegram_support_message_thread_id: Option<i64>,
 }
 
 impl Config {
@@ -121,6 +132,23 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(72),
+            zoho_client_id: std::env::var("ZOHO_CLIENT_ID").ok(),
+            zoho_client_secret: std::env::var("ZOHO_CLIENT_SECRET").ok(),
+            zoho_refresh_token: std::env::var("ZOHO_REFRESH_TOKEN").ok(),
+            zoho_org_id: std::env::var("ZOHO_ORG_ID").ok(),
+            zoho_department_id: std::env::var("ZOHO_DEPARTMENT_ID").ok(),
+            zoho_accounts_url: std::env::var("ZOHO_ACCOUNTS_URL")
+                .unwrap_or_else(|_| "https://accounts.zoho.com".to_string()),
+            zoho_api_domain: std::env::var("ZOHO_API_DOMAIN")
+                .unwrap_or_else(|_| "https://desk.zoho.com".to_string()),
+            zoho_agent_ticket_base_url: std::env::var("ZOHO_AGENT_TICKET_BASE_URL").unwrap_or_else(
+                |_| "https://desk.zoho.com/agent/noahsupport/noah/tickets/details".to_string(),
+            ),
+            telegram_bot_token: std::env::var("TELEGRAM_BOT_TOKEN").ok(),
+            telegram_support_chat_id: std::env::var("TELEGRAM_SUPPORT_CHAT_ID").ok(),
+            telegram_support_message_thread_id: std::env::var("TELEGRAM_SUPPORT_MESSAGE_THREAD_ID")
+                .ok()
+                .and_then(|v| v.parse().ok()),
         };
 
         config.validate()?;
@@ -177,6 +205,27 @@ impl Config {
         tracing::debug!(
             "Sentry URL: {}",
             if self.sentry_url.is_some() {
+                "[SET]"
+            } else {
+                "[NOT SET]"
+            }
+        );
+        tracing::debug!(
+            "Zoho Desk support: {}",
+            if self.zoho_client_id.is_some()
+                && self.zoho_client_secret.is_some()
+                && self.zoho_refresh_token.is_some()
+                && self.zoho_org_id.is_some()
+                && self.zoho_department_id.is_some()
+            {
+                "[SET]"
+            } else {
+                "[NOT SET]"
+            }
+        );
+        tracing::debug!(
+            "Telegram support notifications: {}",
+            if self.telegram_bot_token.is_some() && self.telegram_support_chat_id.is_some() {
                 "[SET]"
             } else {
                 "[NOT SET]"

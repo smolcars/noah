@@ -19,14 +19,6 @@ if (!isSentryDisabled) {
   Sentry.init({
     dsn: "https://ac229acf494dda7d1d84eebcc14f7769@o4509731937648640.ingest.us.sentry.io/4509731938435072",
     sendDefaultPii: true,
-    integrations: [
-      Sentry.feedbackIntegration({
-        showName: true,
-        showEmail: true,
-        isNameRequired: false,
-        isEmailRequired: false,
-      }),
-    ],
   });
 }
 

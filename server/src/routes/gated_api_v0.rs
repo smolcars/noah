@@ -12,7 +12,8 @@ use crate::types::{
     DefaultSuccessPayload, DeleteBackupPayload, DownloadUrlResponse, GetDownloadUrlPayload,
     HeartbeatResponsePayload, LightningAddressSuggestionsPayload,
     LightningAddressSuggestionsResponse, ReportJobStatusPayload, ReportStatus,
-    SubmitInvoicePayload, UpdateProfilePayload, UserInfoResponse, UserStatus,
+    SubmitInvoicePayload, SubmitSupportTicketPayload, SubmitSupportTicketResponse,
+    UpdateProfilePayload, UserInfoResponse, UserStatus,
 };
 use crate::{
     AppState,
@@ -125,6 +126,24 @@ pub async fn register_push_token(
     // });
 
     Ok(Json(DefaultSuccessPayload { success: true }))
+}
+
+/// Creates a Zoho Desk support ticket from in-app user feedback.
+pub async fn submit_support_ticket(
+    State(app_state): State<AppState>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
+    event: Option<Extension<WideEventHandle>>,
+    Json(payload): Json<SubmitSupportTicketPayload>,
+) -> anyhow::Result<Json<SubmitSupportTicketResponse>, ApiError> {
+    if let Some(Extension(event)) = event {
+        event.add_context("support_ticket_submission", true);
+        event.add_context("has_attachment", payload.attachment.is_some());
+    }
+
+    let response =
+        crate::zoho::submit_support_ticket(&app_state.config, &auth_payload, payload).await?;
+
+    Ok(Json(response))
 }
 
 /// Stores or refreshes mailbox authorization for a user.

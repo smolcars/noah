@@ -146,7 +146,7 @@ impl std::str::FromStr for UserStatus {
 }
 
 /// Defines device information captured during registration.
-#[derive(Serialize, Deserialize, TS, Debug)]
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
 #[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 pub struct DeviceInfo {
     pub device_manufacturer: Option<String>,
@@ -553,6 +553,31 @@ pub struct ReportJobStatusPayload {
 #[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 pub struct DefaultSuccessPayload {
     pub success: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct SupportTicketAttachment {
+    pub filename: String,
+    pub content_type: String,
+    pub base64_data: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct SubmitSupportTicketPayload {
+    pub message: String,
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub attachment: Option<SupportTicketAttachment>,
+    pub device_info: Option<DeviceInfo>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct SubmitSupportTicketResponse {
+    pub ticket_id: String,
+    pub ticket_number: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, TS)]

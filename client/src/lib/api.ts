@@ -44,6 +44,8 @@ import {
   FiatPricesResponse,
   HistoricalFiatPricePayload,
   HistoricalFiatPriceResponse,
+  SubmitSupportTicketPayload,
+  SubmitSupportTicketResponse,
 } from "~/types/serverTypes";
 import logger from "~/lib/log";
 import { nativeGet, nativePost } from "noah-tools";
@@ -380,6 +382,9 @@ export const reportJobStatus = (payload: ReportJobCompletionPayload) =>
 
 export const submitInvoice = (payload: SubmitInvoicePayload) =>
   post<SubmitInvoicePayload, DefaultSuccessPayload>("/lnurlp/submit_invoice", payload);
+
+export const submitSupportTicket = (payload: SubmitSupportTicketPayload) =>
+  post<SubmitSupportTicketPayload, SubmitSupportTicketResponse>("/support/ticket", payload);
 
 export const heartbeatResponse = (payload: HeartbeatResponsePayload) =>
   post<HeartbeatResponsePayload, DefaultSuccessPayload>("/heartbeat_response", payload);
