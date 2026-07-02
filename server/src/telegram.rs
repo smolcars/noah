@@ -1,6 +1,10 @@
+use std::time::Duration;
+
 use serde::Serialize;
 
 use crate::config::Config;
+
+const TELEGRAM_SEND_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Clone)]
 struct TelegramConfig {
@@ -46,6 +50,7 @@ pub async fn send_support_ticket_notification(
             telegram_config.bot_token
         ))
         .json(&request)
+        .timeout(TELEGRAM_SEND_TIMEOUT)
         .send()
         .await
         .map_err(|_| anyhow::anyhow!("Telegram sendMessage request failed"))?;

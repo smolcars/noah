@@ -1,5 +1,6 @@
 use axum::{
     Router,
+    extract::DefaultBodyLimit,
     http::StatusCode,
     middleware,
     routing::{get, post},
@@ -68,6 +69,7 @@ use sqlx::postgres::PgPoolOptions;
 
 type AppState = Arc<AppStruct>;
 const K1_TTL_SECONDS: usize = 600;
+const SUPPORT_TICKET_BODY_LIMIT_BYTES: usize = 8 * 1024 * 1024;
 
 #[derive(Clone)]
 pub struct AppStruct {
@@ -283,7 +285,11 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         .route("/report_job_status", post(report_job_status))
         .route("/heartbeat_response", post(heartbeat_response))
         .route("/report_last_login", post(report_last_login))
-        .route("/support/ticket", post(submit_support_ticket))
+        .route(
+            "/support/ticket",
+            post(submit_support_ticket)
+                .layer(DefaultBodyLimit::max(SUPPORT_TICKET_BODY_LIMIT_BYTES)),
+        )
         .layer(user_exists_layer.clone());
 
     // Fiat routes need auth and a registered user, but use their own limiter so
