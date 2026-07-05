@@ -23,6 +23,9 @@ import logoImage from "../../assets/All_Files/light_dark_tinted/icon_clear_tinte
 
 type QRMode = "scan" | "my-code";
 
+const addAddressBreakOpportunities = (address: string) =>
+  address.replace("@", "@\u200B").replace(/\./g, ".\u200B");
+
 const QRHubScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const isFocused = useIsFocused();
@@ -32,6 +35,9 @@ const QRHubScreen = () => {
   const displayName = useProfileStore((state) => state.displayName);
   const [mode, setMode] = useState<QRMode>("my-code");
   const [copied, setCopied] = useState(false);
+  const displayLightningAddress = lightningAddress
+    ? addAddressBreakOpportunities(lightningAddress)
+    : "";
 
   const { showCamera, setShowCamera, handleScanPress, codeScanner } = useQRCodeScanner({
     onScan: (value) => {
@@ -97,6 +103,9 @@ const QRHubScreen = () => {
                     "font-bold",
                     mode === item ? "text-foreground" : "text-muted-foreground",
                   )}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  maxFontSizeMultiplier={1.2}
                 >
                   {item === "my-code" ? "My code" : "Scan"}
                 </Text>
@@ -127,12 +136,15 @@ const QRHubScreen = () => {
                     {displayName.trim().length > 0 ? (
                       <Text className="text-xl font-bold text-foreground">{displayName}</Text>
                     ) : null}
-                    <Pressable onPress={copyLightningAddress} className="mt-2">
+                    <Pressable onPress={copyLightningAddress} className="mt-2 w-full px-4">
                       <Text
-                        className="max-w-[300px] text-center text-base font-semibold"
+                        className="text-center text-base font-semibold"
+                        numberOfLines={2}
+                        ellipsizeMode="tail"
+                        maxFontSizeMultiplier={1.2}
                         style={{ color: copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE }}
                       >
-                        {copied ? "Copied" : lightningAddress}
+                        {copied ? "Copied" : displayLightningAddress}
                       </Text>
                     </Pressable>
                   </View>

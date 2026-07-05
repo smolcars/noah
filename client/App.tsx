@@ -1,19 +1,24 @@
 import "./global.css";
 
-import { QueryClientProvider } from "@tanstack/react-query";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import React, { useEffect } from "react";
-import { AlertProvider } from "~/contexts/AlertProvider";
-import AppNavigation from "~/Navigators";
-import * as Sentry from "@sentry/react-native";
-import { View } from "react-native";
-import { Uniwind } from "uniwind";
 import { BottomSheetProvider } from "@swmansion/react-native-bottom-sheet";
-
+import * as Sentry from "@sentry/react-native";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
+import React, { useEffect } from "react";
+import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { queryClient } from "~/queryClient";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Uniwind } from "uniwind";
 import { APP_VARIANT } from "~/config";
+import { AlertProvider } from "~/contexts/AlertProvider";
+import { appFonts } from "~/lib/fonts";
+import AppNavigation from "~/Navigators";
+import { queryClient } from "~/queryClient";
+
 const isSentryDisabled = __DEV__ || APP_VARIANT === "regtest";
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 if (!isSentryDisabled) {
   Sentry.init({
@@ -23,10 +28,22 @@ if (!isSentryDisabled) {
 }
 
 const AppContent = () => {
+  const [fontsLoaded, fontError] = useFonts(appFonts);
+
   useEffect(() => {
     // Let Uniwind manage theme based on system preference
     Uniwind.setTheme("system");
   }, []);
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      void SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <View className="flex-1">
