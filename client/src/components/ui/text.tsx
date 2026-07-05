@@ -5,10 +5,11 @@ import { FONT_FAMILY } from "~/lib/fonts";
 import { cn } from "~/lib/utils";
 
 const TextClassContext = React.createContext<string | undefined>(undefined);
+const TextFontFamilyContext = React.createContext<string | "native" | undefined>(undefined);
 
-function getFontFamily(className: string) {
+function getFontFamily(className: string, inheritedFontFamily?: string | "native") {
   if (className.match(/\bfont-mono\b/)) {
-    return undefined;
+    return "native";
   }
 
   if (className.match(/\bfont-(black|extrabold|bold)\b/)) {
@@ -23,7 +24,7 @@ function getFontFamily(className: string) {
     return FONT_FAMILY.medium;
   }
 
-  return FONT_FAMILY.regular;
+  return inheritedFontFamily ?? FONT_FAMILY.regular;
 }
 
 function Text({
@@ -37,18 +38,22 @@ function Text({
   asChild?: boolean;
 }) {
   const textClass = React.useContext(TextClassContext);
+  const inheritedFontFamily = React.useContext(TextFontFamilyContext);
   const Component = asChild ? Slot.Text : RNText;
   const resolvedClassName = cn("text-base text-foreground web:select-text", textClass, className);
-  const fontFamily = getFontFamily(resolvedClassName);
-  const fontStyle = fontFamily ? { fontFamily, fontWeight: "400" as const } : undefined;
+  const fontFamily = getFontFamily(resolvedClassName, inheritedFontFamily);
+  const fontStyle =
+    fontFamily && fontFamily !== "native" ? { fontFamily, fontWeight: "400" as const } : undefined;
 
   return (
-    <Component
-      className={resolvedClassName}
-      textBreakStrategy={textBreakStrategy ?? (Platform.OS === "android" ? "simple" : undefined)}
-      style={[fontStyle, style]}
-      {...props}
-    />
+    <TextFontFamilyContext.Provider value={fontFamily}>
+      <Component
+        className={resolvedClassName}
+        textBreakStrategy={textBreakStrategy ?? (Platform.OS === "android" ? "simple" : undefined)}
+        style={[fontStyle, style]}
+        {...props}
+      />
+    </TextFontFamilyContext.Provider>
   );
 }
 
