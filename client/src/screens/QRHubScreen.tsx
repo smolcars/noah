@@ -77,6 +77,7 @@ const QRHubScreen = () => {
   useEffect(() => {
     if (!isFocused && showCamera) {
       setShowCamera(false);
+      setMode("my-code");
     }
   }, [isFocused, setShowCamera, showCamera]);
 
