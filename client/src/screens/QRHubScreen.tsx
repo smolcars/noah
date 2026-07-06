@@ -39,11 +39,40 @@ const QRHubScreen = () => {
     ? addAddressBreakOpportunities(lightningAddress)
     : "";
 
+  const handleScannerValue = (value: string) => {
+    setMode("my-code");
+    navigation.navigate("Send", { destination: value });
+  };
+
   const { showCamera, setShowCamera, handleScanPress, codeScanner } = useQRCodeScanner({
-    onScan: (value) => {
-      navigation.navigate("Send", { destination: value });
-    },
+    onScan: handleScannerValue,
   });
+
+  const handleModePress = (nextMode: QRMode) => {
+    setMode(nextMode);
+  };
+
+  const handleScannerClose = () => {
+    setShowCamera(false);
+    setMode("my-code");
+  };
+
+  const handlePasteFromScanner = (value: string) => {
+    setShowCamera(false);
+    handleScannerValue(value);
+  };
+
+  useEffect(() => {
+    if (!isFocused || mode !== "scan" || showCamera) {
+      return;
+    }
+
+    void handleScanPress().then((opened) => {
+      if (!opened) {
+        setMode("my-code");
+      }
+    });
+  }, [handleScanPress, isFocused, mode, showCamera]);
 
   useEffect(() => {
     if (!isFocused && showCamera) {
@@ -52,7 +81,13 @@ const QRHubScreen = () => {
   }, [isFocused, setShowCamera, showCamera]);
 
   if (showCamera) {
-    return <QRCodeScanner codeScanner={codeScanner} onClose={() => setShowCamera(false)} />;
+    return (
+      <QRCodeScanner
+        codeScanner={codeScanner}
+        onClose={handleScannerClose}
+        onPaste={handlePasteFromScanner}
+      />
+    );
   }
 
   const copyLightningAddress = async () => {
@@ -92,7 +127,7 @@ const QRHubScreen = () => {
             {(["my-code", "scan"] as const).map((item) => (
               <Pressable
                 key={item}
-                onPress={() => setMode(item)}
+                onPress={() => handleModePress(item)}
                 className={cn(
                   "flex-1 items-center justify-center rounded-md p-2",
                   mode === item && "bg-background",
@@ -180,13 +215,6 @@ const QRHubScreen = () => {
                 <Text className="mt-2 max-w-[280px] text-center text-sm leading-6 text-muted-foreground">
                   Scan a Bitcoin, Lightning, or Ark QR code and send from Noah.
                 </Text>
-                <NativeNoahButton
-                  label="Open Scanner"
-                  onPress={handleScanPress}
-                  className="mt-6"
-                  size="lg"
-                  fullWidth
-                />
               </View>
             </Animated.View>
           )}

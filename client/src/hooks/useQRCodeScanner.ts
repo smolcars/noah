@@ -27,7 +27,7 @@ export const useQRCodeScanner = ({ onScan }: QRCodeScannerOptions) => {
     onCodeScanned: handleCodeScanned,
   });
 
-  const handleScanPress = async () => {
+  const handleScanPress = useCallback(async () => {
     if (!hasPermission) {
       const permissionGranted = await requestPermission();
       if (!permissionGranted) {
@@ -35,11 +35,12 @@ export const useQRCodeScanner = ({ onScan }: QRCodeScannerOptions) => {
           title: "Permission required",
           description: "Camera permission is required to scan QR codes.",
         });
-        return;
+        return false;
       }
     }
     setShowCamera(true);
-  };
+    return true;
+  }, [hasPermission, requestPermission, showAlert]);
 
   return {
     showCamera,
