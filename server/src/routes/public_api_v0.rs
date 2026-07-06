@@ -46,7 +46,7 @@ pub struct GetK1 {
     pub tag: String,
 }
 
-const LNURLP_MIN_SENDABLE: u64 = 10000;
+const LNURLP_MIN_SENDABLE: u64 = 1000;
 const LNURLP_MAX_SENDABLE: u64 = 100000000;
 const COMMENT_ALLOWED_SIZE: u16 = 280;
 const POLL_INTERVAL: Duration = Duration::from_millis(500);
