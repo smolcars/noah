@@ -47,15 +47,18 @@ import { COLORS } from "~/lib/styleConstants";
 import { cn, isNetworkMatch } from "~/lib/utils";
 import type { SettingsStackParamList } from "~/Navigators";
 import type {
+  BarkVtxo,
   ExitProgressState,
   ExitStateDetails,
   ExitStatusResult,
   ExitVtxoResult,
 } from "react-native-nitro-ark";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
+import { Host, Picker } from "@expo/ui";
 
 type UnilateralExitRouteProp = RouteProp<SettingsStackParamList, "UnilateralExit">;
 type IconName = React.ComponentProps<typeof Icon>["name"];
+type ExitStartMode = "wallet" | "selected";
 
 const stateTone = (state: ExitProgressState) => {
   switch (state) {
@@ -344,16 +347,247 @@ const ExitVtxoRow = ({
   );
 };
 
-const EmptyExitState = ({ onStart }: { onStart: () => void }) => (
-  <View className="items-center rounded-lg border border-border bg-card px-4 py-8">
-    <Icon name="shield-outline" size={40} color="#8e8e93" />
-    <Text className="mt-4 text-center text-lg font-semibold text-foreground">
-      No emergency exits
-    </Text>
-    <Text className="mt-2 text-center text-sm leading-5 text-muted-foreground">
-      Start only if the Ark server is unavailable and normal offboarding cannot be used.
-    </Text>
-    <NativeNoahButton label="Start Wallet Exit" onPress={onStart} className="mt-5" fullWidth />
+const ExitCandidateVtxoRow = ({
+  vtxo,
+  isSelected,
+  onPress,
+}: {
+  vtxo: BarkVtxo;
+  isSelected: boolean;
+  onPress: () => void;
+}) => {
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      className={cn(
+        "mb-2 flex-row items-center rounded-lg border p-4",
+        isSelected ? "border-primary bg-primary/10" : "border-border bg-background",
+      )}
+    >
+      <View className="mr-4">
+        <Icon name="cube-outline" size={22} color={isSelected ? COLORS.BITCOIN_ORANGE : "#22c55e"} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-base font-semibold text-foreground">
+          {formatBitcoinAmount(vtxo.amount)}
+        </Text>
+        <Text className="mt-1 text-sm text-muted-foreground" numberOfLines={1}>
+          Expires at block {vtxo.expiry_height}
+        </Text>
+        <Text className="mt-1 text-xs text-muted-foreground" numberOfLines={1}>
+          {truncateMiddle(vtxo.id, 12, 10)}
+        </Text>
+      </View>
+      <Icon
+        name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+        size={26}
+        color={isSelected ? "#22c55e" : "#8e8e93"}
+      />
+    </Pressable>
+  );
+};
+
+const ExitModePicker = ({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: ExitStartMode;
+  onChange: (value: ExitStartMode) => void;
+  disabled: boolean;
+}) => (
+  <View className="rounded-lg border border-border bg-background px-3 py-2">
+    <Host style={{ height: 44, width: "100%" }}>
+      <Picker selectedValue={value} onValueChange={onChange} appearance="menu" enabled={!disabled}>
+        <Picker.Item label="Entire wallet" value="wallet" />
+        <Picker.Item label="Selected VTXOs" value="selected" />
+      </Picker>
+    </Host>
+  </View>
+);
+
+const StartExitPanel = ({
+  title = "Start Emergency Exit",
+  description = "Choose whether to exit all available VTXOs or only specific ones.",
+  mode,
+  onModeChange,
+  spendableVtxos,
+  selectedVtxoIds,
+  selectedCount,
+  selectedAmount,
+  isBusy,
+  onToggleVtxo,
+  onSelectAll,
+  onClear,
+  onStart,
+  onCollapse,
+}: {
+  title?: string;
+  description?: string;
+  mode: ExitStartMode;
+  onModeChange: (mode: ExitStartMode) => void;
+  spendableVtxos: BarkVtxo[];
+  selectedVtxoIds: Set<string>;
+  selectedCount: number;
+  selectedAmount: number;
+  isBusy: boolean;
+  onToggleVtxo: (vtxoId: string) => void;
+  onSelectAll: () => void;
+  onClear: () => void;
+  onStart: () => void;
+  onCollapse?: () => void;
+}) => {
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
+  const hasSelection = selectedCount > 0;
+  const startDisabled =
+    isBusy || spendableVtxos.length === 0 || (mode === "selected" && !hasSelection);
+
+  return (
+    <View className="rounded-lg border border-border bg-card p-4">
+      <View className="mb-4 flex-row items-start justify-between gap-3">
+        <View className="flex-1">
+          <Text className="text-lg font-semibold text-foreground">{title}</Text>
+          <Text className="mt-1 text-sm leading-5 text-muted-foreground">{description}</Text>
+        </View>
+        {onCollapse ? (
+          <Pressable onPress={onCollapse} hitSlop={10} disabled={isBusy}>
+            <Text className="text-sm font-semibold text-primary">Hide</Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      <ExitModePicker value={mode} onChange={onModeChange} disabled={isBusy} />
+
+      {mode === "wallet" ? (
+        <View className="mt-4 rounded-lg border border-border bg-background px-3 py-2">
+          <View className="flex-row items-center justify-between py-2">
+            <Text className="text-sm text-muted-foreground">Available VTXOs</Text>
+            <Text className="text-sm font-semibold text-foreground">
+              {spendableVtxos.length.toLocaleString()}
+            </Text>
+          </View>
+          <View className="h-px bg-border/70" />
+          <View className="flex-row items-center justify-between py-2">
+            <Text className="text-sm text-muted-foreground">Available value</Text>
+            <Text className="text-sm font-semibold text-foreground">
+              {formatBitcoinAmount(spendableVtxos.reduce((total, vtxo) => total + vtxo.amount, 0))}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <View className="mt-4">
+          <View className="mb-3 flex-row items-center justify-between">
+            <View>
+              <Text className="text-sm text-muted-foreground">Selected</Text>
+              <Text className="mt-1 text-base font-semibold text-foreground">
+                {selectedCount} {selectedCount === 1 ? "VTXO" : "VTXOs"}
+              </Text>
+            </View>
+            <Text className="text-base font-semibold text-foreground">
+              {formatBitcoinAmount(selectedAmount)}
+            </Text>
+          </View>
+          <View className="mb-3 flex-row gap-2">
+            <Pressable
+              onPress={onSelectAll}
+              disabled={isBusy || spendableVtxos.length === 0}
+              className="h-9 flex-1 items-center justify-center rounded-full bg-background px-3"
+            >
+              <Text className="text-sm font-medium text-foreground">Select all</Text>
+            </Pressable>
+            <Pressable
+              onPress={onClear}
+              disabled={isBusy || !hasSelection}
+              className="h-9 flex-1 items-center justify-center rounded-full bg-background px-3"
+            >
+              <Text className="text-sm font-medium text-muted-foreground">Clear</Text>
+            </Pressable>
+          </View>
+          {spendableVtxos.map((vtxo) => (
+            <ExitCandidateVtxoRow
+              key={vtxo.id}
+              vtxo={vtxo}
+              isSelected={selectedVtxoIds.has(vtxo.id)}
+              onPress={() => onToggleVtxo(vtxo.id)}
+            />
+          ))}
+        </View>
+      )}
+
+      <NativeNoahButton
+        label={mode === "wallet" ? "Start Wallet Exit" : "Start Selected Exit"}
+        className="mt-4"
+        onPress={onStart}
+        disabled={startDisabled}
+        isLoading={isBusy}
+        loadingLabel="Starting..."
+        fullWidth
+      />
+    </View>
+  );
+};
+
+const StartAnotherExitCard = ({
+  spendableVtxos,
+  isBusy,
+  onPress,
+}: {
+  spendableVtxos: BarkVtxo[];
+  isBusy: boolean;
+  onPress: () => void;
+}) => {
+  const formatBitcoinAmount = useBitcoinAmountFormatter();
+  const spendableTotal = spendableVtxos.reduce((total, vtxo) => total + vtxo.amount, 0);
+
+  return (
+    <View className="rounded-lg border border-border bg-card p-4">
+      <Text className="text-lg font-semibold text-foreground">Start another emergency exit</Text>
+      <Text className="mt-1 text-sm leading-5 text-muted-foreground">
+        Exit remaining available VTXOs only if you need another emergency exit.
+      </Text>
+      <View className="my-4 rounded-lg border border-border bg-background px-3 py-2">
+        <View className="flex-row items-center justify-between py-2">
+          <Text className="text-sm text-muted-foreground">Remaining available</Text>
+          <Text className="text-sm font-semibold text-foreground">
+            {spendableVtxos.length} {spendableVtxos.length === 1 ? "VTXO" : "VTXOs"}
+          </Text>
+        </View>
+        <View className="h-px bg-border/70" />
+        <View className="flex-row items-center justify-between py-2">
+          <Text className="text-sm text-muted-foreground">Value</Text>
+          <Text className="text-sm font-semibold text-foreground">
+            {formatBitcoinAmount(spendableTotal)}
+          </Text>
+        </View>
+      </View>
+      <NativeNoahSecondaryButton
+        label="Choose VTXOs"
+        onPress={onPress}
+        disabled={isBusy}
+        fullWidth
+      />
+    </View>
+  );
+};
+
+const EmptyExitState = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => (
+  <View className="gap-5">
+    <View className="items-center rounded-lg border border-border bg-card px-4 py-8">
+      <Icon name="shield-outline" size={40} color="#8e8e93" />
+      <Text className="mt-4 text-center text-lg font-semibold text-foreground">
+        No emergency exits
+      </Text>
+      <Text className="mt-2 text-center text-sm leading-5 text-muted-foreground">
+        Start only if the Ark server is unavailable and normal offboarding cannot be used.
+      </Text>
+    </View>
+    {children}
   </View>
 );
 
@@ -362,9 +596,16 @@ const UnilateralExitScreen = () => {
   const route = useRoute<UnilateralExitRouteProp>();
   const iconColor = useIconColor();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
-  const selectedVtxoIds = route.params?.vtxoIds;
+  const routeSelectedVtxoIds = route.params?.vtxoIds;
 
   const [destinationAddress, setDestinationAddress] = useState("");
+  const [exitStartMode, setExitStartMode] = useState<ExitStartMode>(
+    routeSelectedVtxoIds?.length ? "selected" : "wallet",
+  );
+  const [selectedExitVtxoIds, setSelectedExitVtxoIds] = useState<Set<string>>(
+    () => new Set(routeSelectedVtxoIds ?? []),
+  );
+  const [isNewExitExpanded, setIsNewExitExpanded] = useState(!!routeSelectedVtxoIds?.length);
   const [showStartConfirm, setShowStartConfirm] = useState(false);
   const [showProgressConfirm, setShowProgressConfirm] = useState(false);
   const [showClaimConfirm, setShowClaimConfirm] = useState(false);
@@ -378,6 +619,10 @@ const UnilateralExitScreen = () => {
 
   const overview = overviewQuery.data;
   const exits = overview?.exits ?? [];
+  const spendableVtxos = overview?.spendableVtxos ?? [];
+  const selectedExitVtxos = spendableVtxos.filter((vtxo) => selectedExitVtxoIds.has(vtxo.id));
+  const selectedExitVtxoIdList = selectedExitVtxos.map((vtxo) => vtxo.id);
+  const selectedExitAmount = selectedExitVtxos.reduce((total, vtxo) => total + vtxo.amount, 0);
   const statuses = overview?.statuses ?? {};
   const claimableById = new Map<string, ExitVtxoResult>();
   for (const exit of overview?.claimable ?? []) {
@@ -435,9 +680,15 @@ const UnilateralExitScreen = () => {
     progressExits.isPending ||
     syncExits.isPending ||
     claimExits.isPending;
-  const canStartNewExit = (overview?.spendableVtxoCount ?? 0) > 0 && !isBusy;
+  const canStartNewExit = spendableVtxos.length > 0;
 
-  const startLabel = selectedVtxoIds?.length ? "Start Selected Exit" : "Start Wallet Exit";
+  const startLabel = exitStartMode === "selected" ? "Start Selected Exit" : "Start Wallet Exit";
+  const startDescription =
+    exitStartMode === "selected"
+      ? `This starts unilateral exit tracking for ${selectedExitVtxoIdList.length} selected ${
+          selectedExitVtxoIdList.length === 1 ? "VTXO" : "VTXOs"
+        }. Use this only if normal offboarding is unavailable.`
+      : "This starts unilateral exit tracking for all available funds. Use this only if normal offboarding is unavailable.";
   const allClaimableHeight = overview?.allClaimableAtHeight;
   const currentBlockHeight = overview?.blockHeight;
   const claimableBlockLabel =
@@ -451,12 +702,43 @@ const UnilateralExitScreen = () => {
   const allClaimableRemainingLabel = formatBlocksRemaining(currentBlockHeight, allClaimableHeight);
 
   const handleStart = () => {
-    if (selectedVtxoIds?.length) {
-      startVtxoExit.mutate(selectedVtxoIds);
+    if (exitStartMode === "selected") {
+      if (selectedExitVtxoIdList.length === 0) {
+        return;
+      }
+      startVtxoExit.mutate(selectedExitVtxoIdList);
     } else {
       startWalletExit.mutate();
     }
     setShowStartConfirm(false);
+  };
+
+  const toggleExitVtxoSelection = (vtxoId: string) => {
+    if (isBusy) {
+      return;
+    }
+
+    setSelectedExitVtxoIds((current) => {
+      const next = new Set(current);
+      if (next.has(vtxoId)) {
+        next.delete(vtxoId);
+      } else {
+        next.add(vtxoId);
+      }
+      return next;
+    });
+  };
+
+  const selectAllExitVtxos = () => {
+    setSelectedExitVtxoIds(new Set(spendableVtxos.map((vtxo) => vtxo.id)));
+  };
+
+  const clearExitVtxoSelection = () => {
+    setSelectedExitVtxoIds(new Set());
+  };
+
+  const handleExitModeChange = (mode: ExitStartMode) => {
+    setExitStartMode(mode);
   };
 
   const handleClaim = () => {
@@ -516,7 +798,23 @@ const UnilateralExitScreen = () => {
                 <Text className="mt-2 text-sm text-destructive">{overviewQuery.error.message}</Text>
               </View>
             ) : exits.length === 0 ? (
-              <EmptyExitState onStart={() => setShowStartConfirm(true)} />
+              <EmptyExitState>
+                {canStartNewExit ? (
+                  <StartExitPanel
+                    mode={exitStartMode}
+                    onModeChange={handleExitModeChange}
+                    spendableVtxos={spendableVtxos}
+                    selectedVtxoIds={selectedExitVtxoIds}
+                    selectedCount={selectedExitVtxoIdList.length}
+                    selectedAmount={selectedExitAmount}
+                    isBusy={isBusy}
+                    onToggleVtxo={toggleExitVtxoSelection}
+                    onSelectAll={selectAllExitVtxos}
+                    onClear={clearExitVtxoSelection}
+                    onStart={() => setShowStartConfirm(true)}
+                  />
+                ) : null}
+              </EmptyExitState>
             ) : (
               <>
                 <View className="mb-5 rounded-lg border border-border bg-card p-4">
@@ -636,15 +934,6 @@ const UnilateralExitScreen = () => {
                     disabled={isBusy}
                     fullWidth
                   />
-                  {canStartNewExit ? (
-                    <NativeNoahButton
-                      label="Start New Exit"
-                      className="flex-1"
-                      onPress={() => setShowStartConfirm(true)}
-                      disabled={isBusy}
-                      fullWidth
-                    />
-                  ) : null}
                   {overview?.hasPending ? (
                     <NativeNoahButton
                       label="Progress"
@@ -659,7 +948,7 @@ const UnilateralExitScreen = () => {
                 </View>
 
                 {claimable.length > 0 ? (
-                  <View className="rounded-lg border border-border bg-card p-4">
+                  <View className="mb-5 rounded-lg border border-border bg-card p-4">
                     <Text className="text-lg font-semibold text-foreground">Claim Exits</Text>
                     <Text className="mt-1 text-sm leading-5 text-muted-foreground">
                       Sweep claimable exit outputs to an on-chain Bitcoin address.
@@ -690,6 +979,35 @@ const UnilateralExitScreen = () => {
                     />
                   </View>
                 ) : null}
+
+                {canStartNewExit ? (
+                  <View>
+                    {isNewExitExpanded ? (
+                      <StartExitPanel
+                        title="New Exit"
+                        description="You already have an exit in progress. Start another one only for remaining VTXOs."
+                        mode={exitStartMode}
+                        onModeChange={handleExitModeChange}
+                        spendableVtxos={spendableVtxos}
+                        selectedVtxoIds={selectedExitVtxoIds}
+                        selectedCount={selectedExitVtxoIdList.length}
+                        selectedAmount={selectedExitAmount}
+                        isBusy={isBusy}
+                        onToggleVtxo={toggleExitVtxoSelection}
+                        onSelectAll={selectAllExitVtxos}
+                        onClear={clearExitVtxoSelection}
+                        onStart={() => setShowStartConfirm(true)}
+                        onCollapse={() => setIsNewExitExpanded(false)}
+                      />
+                    ) : (
+                      <StartAnotherExitCard
+                        spendableVtxos={spendableVtxos}
+                        isBusy={isBusy}
+                        onPress={() => setIsNewExitExpanded(true)}
+                      />
+                    )}
+                  </View>
+                ) : null}
               </>
             )}
 
@@ -697,7 +1015,7 @@ const UnilateralExitScreen = () => {
               open={showStartConfirm}
               onOpenChange={setShowStartConfirm}
               title="Start Emergency Exit"
-              description="This starts unilateral exit tracking for your funds. Use this only if normal offboarding is unavailable."
+              description={startDescription}
               confirmText={startLabel}
               onConfirm={handleStart}
             />

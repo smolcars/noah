@@ -20,6 +20,7 @@ import {
 import { getVtxos } from "~/lib/walletApi";
 import type { Result } from "neverthrow";
 import type {
+  BarkVtxo,
   ExitProgressStatusResult,
   ExitStatusResult,
   ExitVtxoResult,
@@ -32,6 +33,7 @@ export type ExitOverview = {
   exits: ExitVtxoResult[];
   statuses: Record<string, ExitStatusResult | undefined>;
   claimable: ExitVtxoResult[];
+  spendableVtxos: BarkVtxo[];
   spendableVtxoCount: number;
   spendableVtxoTotal: number;
   hasPending: boolean;
@@ -112,6 +114,7 @@ export function useExitOverview() {
         exits,
         statuses,
         claimable: readResult(claimableResult),
+        spendableVtxos,
         spendableVtxoCount: spendableVtxos.length,
         spendableVtxoTotal: spendableVtxos.reduce((total, vtxo) => total + vtxo.amount, 0),
         hasPending: readResult(hasPendingResult),
