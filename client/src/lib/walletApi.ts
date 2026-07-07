@@ -15,6 +15,8 @@ import {
   maintenanceWithOnchain as maintenanceWithOnchainNitro,
   maintenanceDelegated as maintenanceDelegatedNitro,
   maintenanceWithOnchainDelegated as maintenanceWithOnchainDelegatedNitro,
+  refreshVtxosDelegated as refreshVtxosDelegatedNitro,
+  estimateRefreshFee as estimateRefreshFeeNitro,
   refreshServer as refreshServerNitro,
   getArkInfo as getArkInfoNitro,
   syncPendingRounds as syncPendingRoundsNitro,
@@ -26,7 +28,9 @@ import {
   dangerousDropVtxo as dangerousDropVtxoNitro,
   getExpiringVtxos as getExpiringVtxosNitro,
   type BarkArkInfo,
+  type BarkFeeEstimate,
   type BarkVtxo,
+  type DelegatedRoundState,
   type OnchainBalanceResult,
   type OffchainBalanceResult,
   type PendingRoundStatus,
@@ -292,6 +296,18 @@ export const maintenanceDelegated = async (): Promise<Result<void, Error>> => {
 
 export const maintenanceWithOnchainDelegated = async (): Promise<Result<void, Error>> => {
   return ResultAsync.fromPromise(maintenanceWithOnchainDelegatedNitro(), (e) => e as Error);
+};
+
+export const refreshVtxosDelegated = async (
+  vtxoIds: string[],
+): Promise<Result<DelegatedRoundState | undefined, Error>> => {
+  return ResultAsync.fromPromise(refreshVtxosDelegatedNitro(vtxoIds), (e) => e as Error);
+};
+
+export const estimateRefreshFee = async (
+  vtxoIds: string[],
+): Promise<Result<BarkFeeEstimate, Error>> => {
+  return ResultAsync.fromPromise(estimateRefreshFeeNitro(vtxoIds), (e) => e as Error);
 };
 
 export const refreshServer = async (): Promise<Result<void, Error>> => {

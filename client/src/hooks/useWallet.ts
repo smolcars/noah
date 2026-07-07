@@ -17,6 +17,8 @@ import {
   sync,
   getArkInfo,
   syncPendingRounds,
+  refreshVtxosDelegated,
+  estimateRefreshFee,
 } from "../lib/walletApi";
 import { getAutoBoardThreshold } from "~/lib/autoBoarding";
 import { restoreWallet as restoreWalletAction } from "../lib/backupService";
@@ -72,10 +74,16 @@ export function useLoadWallet() {
 export function useWalletSync() {
   return useMutation({
     mutationFn: async () => {
-      const result = await Promise.allSettled([sync(), onchainSyncAction()]);
-      const isRejected = result.some((result) => result.status === "rejected");
-      if (isRejected) {
-        throw result.find((result) => result.status === "rejected")?.reason;
+      const results = await Promise.allSettled([sync(), onchainSyncAction()]);
+
+      for (const result of results) {
+        if (result.status === "rejected") {
+          throw result.reason;
+        }
+
+        if (result.value.isErr()) {
+          throw result.value.error;
+        }
       }
 
       return;
@@ -210,6 +218,70 @@ export function useRefreshExpiringVtxos() {
     onError: (error: Error) => {
       log.e("Failed to refresh expiring VTXOs", [error]);
       showAlert({ title: "Failed to refresh VTXO", description: error.message });
+    },
+  });
+}
+
+export function useEstimateRefreshFee() {
+  const { showAlert } = useAlert();
+
+  return useMutation({
+    mutationFn: async (vtxoIds: string[]) => {
+      if (vtxoIds.length === 0) {
+        throw new Error("Select at least one VTXO.");
+      }
+
+      const result = await estimateRefreshFee(vtxoIds);
+      if (result.isErr()) {
+        throw result.error;
+      }
+      return result.value;
+    },
+    onError: (error: Error) => {
+      log.e("Failed to estimate refresh fee", [error]);
+      showAlert({ title: "Failed to estimate refresh fee", description: error.message });
+    },
+  });
+}
+
+export function useRefreshSelectedVtxos() {
+  const { showAlert } = useAlert();
+
+  return useMutation({
+    mutationFn: async (vtxoIds: string[]) => {
+      if (vtxoIds.length === 0) {
+        throw new Error("Select at least one VTXO.");
+      }
+
+      const result = await refreshVtxosDelegated(vtxoIds);
+      if (result.isErr()) {
+        throw result.error;
+      }
+      return result.value;
+    },
+    onSuccess: async (roundState) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["vtxos"] }),
+        queryClient.invalidateQueries({ queryKey: ["expiring-vtxos"] }),
+        queryClient.invalidateQueries({ queryKey: ["balance"] }),
+        queryClient.invalidateQueries({ queryKey: ["pending-rounds"] }),
+      ]);
+      if (!roundState) {
+        showAlert({
+          title: "No refresh needed",
+          description: "The selected VTXOs do not need to be refreshed yet.",
+        });
+        return;
+      }
+
+      showAlert({
+        title: "Refresh scheduled",
+        description: "The selected VTXOs have been scheduled for refresh.",
+      });
+    },
+    onError: (error: Error) => {
+      log.e("Failed to refresh selected VTXOs", [error]);
+      showAlert({ title: "Failed to refresh VTXOs", description: error.message });
     },
   });
 }
