@@ -32,6 +32,12 @@ import { getFiatCurrencyInfo } from "~/lib/fiatCurrency";
 import { getBitcoinAmountUnitInfo } from "~/lib/bitcoinAmount";
 import { NativeSwitch } from "~/components/ui/native-switch";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import {
+  GitHubBrandIcon,
+  GITHUB_URL,
+  TelegramBrandIcon,
+  TELEGRAM_SUPPORT_URL,
+} from "~/components/BrandIcons";
 
 type Setting = {
   id:
@@ -135,8 +141,12 @@ const SettingsScreen = () => {
     }
   };
 
-  const handleSupportPress = () => {
-    Linking.openURL("https://t.me/blixtwallet/605026");
+  const handleTelegramPress = () => {
+    Linking.openURL(TELEGRAM_SUPPORT_URL);
+  };
+
+  const handleGithubPress = () => {
+    Linking.openURL(GITHUB_URL);
   };
 
   const handleBiometricsToggle = async (value: boolean) => {
@@ -576,15 +586,25 @@ const SettingsScreen = () => {
               {isDebugModeEnabled && " 🔧"}
             </Text>
           </Pressable>
-          <Pressable onPress={handleSupportPress} className="mb-1">
-            <Text className="text-muted-foreground text-sm text-center">
-              For support, reach us on{" "}
-              <Text className="text-sm font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
-                Telegram
-              </Text>
-            </Text>
-          </Pressable>
           <Text className="text-muted-foreground text-sm">Made with ❤️ from Noah team</Text>
+          <View className="mt-3 flex-row items-center justify-center gap-4">
+            <Pressable
+              onPress={handleTelegramPress}
+              className="h-10 w-10 items-center justify-center rounded-full bg-card"
+              accessibilityRole="link"
+              accessibilityLabel="Open Telegram support chat"
+            >
+              <TelegramBrandIcon size={28} />
+            </Pressable>
+            <Pressable
+              onPress={handleGithubPress}
+              className="h-10 w-10 items-center justify-center rounded-full bg-card"
+              accessibilityRole="link"
+              accessibilityLabel="Open Noah GitHub repository"
+            >
+              <GitHubBrandIcon size={28} color={iconColor} />
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </NoahSafeAreaView>

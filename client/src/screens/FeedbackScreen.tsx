@@ -13,6 +13,7 @@ import React, { useRef, useState } from "react";
 import {
   Image,
   Keyboard,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -24,6 +25,7 @@ import { fromByteArray } from "react-native-quick-base64";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { SettingsStackParamList } from "~/Navigators";
+import { TelegramBrandIcon, TELEGRAM_SUPPORT_URL } from "~/components/BrandIcons";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { Text } from "~/components/ui/text";
@@ -158,6 +160,10 @@ const FeedbackScreen = () => {
     setSubmitState("success");
   };
 
+  const handleTelegramPress = () => {
+    Linking.openURL(TELEGRAM_SUPPORT_URL);
+  };
+
   const isSubmitDisabled =
     !name.trim() || !subject.trim() || !body.trim() || submitState !== "idle";
 
@@ -206,6 +212,13 @@ const FeedbackScreen = () => {
             </View>
           ) : (
             <View className="gap-5 pb-2">
+              <Pressable onPress={handleTelegramPress} className="flex-row items-center gap-3">
+                <TelegramBrandIcon size={32} />
+                <Text className="flex-1 text-sm text-muted-foreground">
+                  You can also join our Telegram chat for support and feedback.
+                </Text>
+              </Pressable>
+
               {errorMessage ? (
                 <View className="flex-row items-center gap-3 rounded-md border border-red-900 bg-red-950/40 p-3">
                   <AlertCircle size={20} color="#ef4444" />
