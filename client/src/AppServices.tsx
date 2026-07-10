@@ -3,7 +3,7 @@ import { useSyncManager } from "~/hooks/useSyncManager";
 import { useServerRegistration } from "~/hooks/useServerRegistration";
 import { usePushNotifications } from "~/hooks/usePushNotifications";
 import { useMailboxAuthorization } from "~/hooks/useMailboxAuthorization";
-import { useAutoBackup } from "~/hooks/useAutoBackup";
+import { useBackupCoordinator } from "~/hooks/useBackupCoordinator";
 import { reportLastLogin } from "~/lib/api";
 import logger from "~/lib/log";
 import { AutoBoardingService } from "~/components/AutoBoardingService";
@@ -18,7 +18,7 @@ const AppServices = memo(() => {
   useServerRegistration(isReady);
   useMailboxAuthorization(isReady);
   usePushNotifications(isReady);
-  useAutoBackup(isReady);
+  useBackupCoordinator(isReady);
 
   useEffect(() => {
     setIsReady(true);

@@ -118,14 +118,14 @@ export const BackupSettingsScreen = () => {
               ) : (
                 backupsList.map((backup) => (
                   <View
-                    key={backup.backup_version}
+                    key={backup.backup_id}
                     className="flex-row justify-between items-center py-2 border-b border-border"
                   >
                     <View>
-                      <Text className="font-medium">Version {backup.backup_version}</Text>
+                      <Text className="font-medium">Encrypted wallet snapshot</Text>
                       <Text className="text-sm text-muted-foreground">
                         {new Date(backup.created_at).toLocaleString()} -{" "}
-                        {(backup.backup_size / 1024).toFixed(1)} KB
+                        {(backup.encrypted_size / 1024).toFixed(1)} KB
                       </Text>
                     </View>
                     <View className="flex-row gap-2">
@@ -133,7 +133,7 @@ export const BackupSettingsScreen = () => {
                         label="Delete"
                         variant="destructive"
                         size="sm"
-                        onPress={() => deleteBackup(backup.backup_version)}
+                        onPress={() => deleteBackup(backup.backup_id)}
                         disabled={isLoading}
                         width={88}
                       />

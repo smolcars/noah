@@ -8,13 +8,23 @@ const log = logger("backupStore");
 type BackupStatus = "idle" | "in_progress" | "success" | "failed";
 
 interface BackupState {
+  backupPending: boolean;
   lastBackupAt: number | null;
   lastBackupAttemptAt: number | null;
   lastBackupStatus: BackupStatus;
   lastBackupError: string | null;
+  lastBackupId: string | null;
+  lastUploadedSnapshotSha256: string | null;
+  markBackupPending: () => void;
   setBackupInProgress: () => void;
-  setBackupSuccess: () => void;
+  setBackupSuccess: (
+    snapshotSha256: string,
+    backupId: string | null,
+    uploaded: boolean,
+    backupPending: boolean,
+  ) => void;
   setBackupFailed: (error: string) => void;
+  seedRestoredBackup: (snapshotSha256: string, backupId: string | null) => void;
   reset: () => void;
 }
 
@@ -50,32 +60,55 @@ const zustandStorage: StateStorage = {
 };
 
 const initialState = {
+  backupPending: false,
   lastBackupAt: null,
   lastBackupAttemptAt: null,
   lastBackupStatus: "idle" as BackupStatus,
   lastBackupError: null,
+  lastBackupId: null,
+  lastUploadedSnapshotSha256: null,
 };
 
 export const useBackupStore = create<BackupState>()(
   persist(
     (set) => ({
       ...initialState,
+      markBackupPending: () =>
+        set({
+          backupPending: true,
+          lastBackupStatus: "idle",
+          lastBackupError: null,
+        }),
       setBackupInProgress: () =>
         set({
+          backupPending: true,
           lastBackupStatus: "in_progress",
           lastBackupAttemptAt: Date.now(),
           lastBackupError: null,
         }),
-      setBackupSuccess: () =>
-        set({
+      setBackupSuccess: (snapshotSha256, backupId, uploaded, backupPending) =>
+        set((state) => ({
+          backupPending,
           lastBackupStatus: "success",
-          lastBackupAt: Date.now(),
+          lastBackupAt: uploaded ? Date.now() : state.lastBackupAt,
           lastBackupError: null,
-        }),
+          lastBackupId: backupId ?? state.lastBackupId,
+          lastUploadedSnapshotSha256: snapshotSha256,
+        })),
       setBackupFailed: (error: string) =>
         set({
+          backupPending: true,
           lastBackupStatus: "failed",
           lastBackupError: error,
+        }),
+      seedRestoredBackup: (snapshotSha256, backupId) =>
+        set({
+          backupPending: false,
+          lastBackupAt: Date.now(),
+          lastBackupStatus: "success",
+          lastBackupError: null,
+          lastBackupId: backupId,
+          lastUploadedSnapshotSha256: snapshotSha256,
         }),
       reset: () => set(initialState),
     }),

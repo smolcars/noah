@@ -18,11 +18,16 @@ import {
   AppVersionCheckPayload,
   AppVersionInfo,
   BackupInfo,
+  BackupObjectDownloadResponse,
+  BackupObjectInfo,
   BackupSettingsPayload,
+  CompleteBackupUploadPayload,
   CompleteUploadPayload,
+  DeleteBackupObjectPayload,
   DeleteBackupPayload,
   DownloadUrlResponse,
   GetDownloadUrlPayload,
+  GetBackupObjectDownloadPayload,
   GetUploadUrlPayload,
   HeartbeatResponsePayload,
   RegisterResponse,
@@ -44,6 +49,8 @@ import {
   FiatPricesResponse,
   HistoricalFiatPricePayload,
   HistoricalFiatPriceResponse,
+  InitiateBackupUploadPayload,
+  InitiateBackupUploadResponse,
   SubmitSupportTicketPayload,
   SubmitSupportTicketResponse,
 } from "~/types/serverTypes";
@@ -343,6 +350,23 @@ export const deleteBackup = (payload: DeleteBackupPayload) =>
 export const updateBackupSettings = (payload: BackupSettingsPayload) =>
   post<BackupSettingsPayload, DefaultSuccessPayload>("/backup/settings", payload);
 
+export const initiateBackupUpload = (payload: InitiateBackupUploadPayload) =>
+  post<InitiateBackupUploadPayload, InitiateBackupUploadResponse>("/backup/v2/upload", payload);
+
+export const completeBackupUpload = (payload: CompleteBackupUploadPayload) =>
+  post<CompleteBackupUploadPayload, DefaultSuccessPayload>("/backup/v2/complete", payload);
+
+export const listBackupObjects = () => post<object, BackupObjectInfo[]>("/backup/v2/list", {});
+
+export const getBackupObjectDownload = (payload: GetBackupObjectDownloadPayload) =>
+  post<GetBackupObjectDownloadPayload, BackupObjectDownloadResponse>(
+    "/backup/v2/download",
+    payload,
+  );
+
+export const deleteBackupObject = (payload: DeleteBackupObjectPayload) =>
+  post<DeleteBackupObjectPayload, DefaultSuccessPayload>("/backup/v2/delete", payload);
+
 export const registerWithServer = (payload: RegisterPayload) =>
   post<RegisterPayload, RegisterResponse>("/register", payload);
 
@@ -449,6 +473,29 @@ export const getDownloadUrlForRestore = async (payload: {
     {
       backup_version: payload.backup_version ?? null,
     },
+    {
+      accessToken: authResult.value,
+      retryOnAuthFailure: false,
+    },
+  );
+};
+
+export const getBackupObjectDownloadForRestore = async (payload: {
+  backupId?: string;
+  mnemonic: string;
+}): Promise<Result<BackupObjectDownloadResponse, Error>> => {
+  const authResult = await getAccessToken({
+    mnemonic: payload.mnemonic,
+    persistToken: false,
+  });
+
+  if (authResult.isErr()) {
+    return err(authResult.error);
+  }
+
+  return post<GetBackupObjectDownloadPayload, BackupObjectDownloadResponse>(
+    "/backup/v2/download",
+    { backup_id: payload.backupId ?? null },
     {
       accessToken: authResult.value,
       retryOnAuthFailure: false,

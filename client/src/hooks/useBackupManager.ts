@@ -1,38 +1,28 @@
 import { useState } from "react";
-import { Result, ok, err } from "neverthrow";
-import { BackupService } from "../lib/backupService";
-import {
-  listBackups as listBackupsApi,
-  deleteBackup as deleteBackupApi,
-  updateBackupSettings,
-} from "../lib/api";
+import { Result } from "neverthrow";
+import { listBackupObjects, deleteBackupObject, updateBackupSettings } from "../lib/api";
 
 import { useServerStore } from "../store/serverStore";
 import logger from "~/lib/log";
+import { cancelScheduledBackup, flushBackup, scheduleBackup } from "~/lib/backupCoordinator";
+import type { BackupObjectInfo } from "~/types/serverTypes";
 
 const log = logger("useBackupManager");
-
-interface BackupInfo {
-  backup_version: number;
-  created_at: string;
-  backup_size: number;
-}
 
 interface UseBackupManager {
   isBackupEnabled: boolean;
   setBackupEnabled: (enabled: boolean) => void;
   triggerBackup: () => Promise<Result<void, Error>>;
-  listBackups: () => Promise<Result<BackupInfo[], Error>>;
-  deleteBackup: (version: number) => Promise<Result<void, Error>>;
+  listBackups: () => Promise<Result<BackupObjectInfo[], Error>>;
+  deleteBackup: (backupId: string) => Promise<Result<void, Error>>;
   isLoading: boolean;
-  backupsList: BackupInfo[] | null;
+  backupsList: BackupObjectInfo[] | null;
 }
 
 export const useBackupManager = (): UseBackupManager => {
   const { isBackupEnabled, setBackupEnabled: setBackupEnabledStore } = useServerStore();
   const [isLoading, setIsLoading] = useState(false);
-  const [backupsList, setBackupsList] = useState<BackupInfo[] | null>(null);
-  const backupService = new BackupService();
+  const [backupsList, setBackupsList] = useState<BackupObjectInfo[] | null>(null);
 
   const setBackupEnabled = async (enabled: boolean) => {
     setIsLoading(true);
@@ -42,6 +32,10 @@ export const useBackupManager = (): UseBackupManager => {
       log.e("Failed to update backup settings:", [updateResult.error]);
       // Revert the local state if the API call failed
       setBackupEnabledStore(!enabled);
+    } else if (enabled) {
+      scheduleBackup("startup", { immediate: true });
+    } else {
+      cancelScheduledBackup();
     }
     setIsLoading(false);
   };
@@ -49,26 +43,26 @@ export const useBackupManager = (): UseBackupManager => {
   const triggerBackup = async (): Promise<Result<void, Error>> => {
     setIsLoading(true);
 
-    const backupResult = await backupService.performBackup();
+    const backupResult = await flushBackup("manual", { requireEnabled: false });
 
     if (backupResult.isErr()) {
       setIsLoading(false);
-      return err(backupResult.error);
+      return backupResult;
     }
 
     // Refresh the backups list after successful backup
-    const refreshResult = await listBackupsApi();
+    const refreshResult = await listBackupObjects();
     if (refreshResult.isOk()) {
       setBackupsList(refreshResult.value);
     }
 
     setIsLoading(false);
-    return ok(undefined);
+    return backupResult;
   };
 
-  const listBackups = async (): Promise<Result<BackupInfo[], Error>> => {
+  const listBackups = async (): Promise<Result<BackupObjectInfo[], Error>> => {
     setIsLoading(true);
-    const result = await listBackupsApi();
+    const result = await listBackupObjects();
     if (result.isOk()) {
       setBackupsList(result.value);
     }
@@ -76,14 +70,14 @@ export const useBackupManager = (): UseBackupManager => {
     return result;
   };
 
-  const deleteBackup = async (version: number): Promise<Result<void, Error>> => {
+  const deleteBackup = async (backupId: string): Promise<Result<void, Error>> => {
     setIsLoading(true);
-    const result = await deleteBackupApi({ backup_version: version });
+    const result = await deleteBackupObject({ backup_id: backupId });
 
     if (result.isOk()) {
       // Update the local backups list by removing the deleted backup
       setBackupsList((prev) =>
-        prev ? prev.filter((backup) => backup.backup_version !== version) : null,
+        prev ? prev.filter((backup) => backup.backup_id !== backupId) : null,
       );
     }
 

@@ -2,7 +2,7 @@ import { loadWalletIfNeeded, maintenanceWithOnchainDelegated } from "./walletApi
 import logger from "~/lib/log";
 import { bolt11Invoice, tryClaimAllLightningReceives } from "./paymentsApi";
 import { err, ok, Result } from "neverthrow";
-import { BackupService } from "~/lib/backupService";
+import { flushBackup } from "~/lib/backupCoordinator";
 import { submitInvoice as submitInvoiceApi } from "./api";
 import { Bolt11Invoice } from "react-native-nitro-ark";
 
@@ -87,9 +87,7 @@ export async function triggerBackupTask(): Promise<Result<void, Error>> {
     return err(e);
   }
 
-  const backupService = new BackupService();
-
-  const backupResult = await backupService.performBackup();
+  const backupResult = await flushBackup("push", { requireEnabled: false });
   if (backupResult.isErr()) {
     log.e("Backup job failed", [backupResult.error]);
     return err(backupResult.error);
