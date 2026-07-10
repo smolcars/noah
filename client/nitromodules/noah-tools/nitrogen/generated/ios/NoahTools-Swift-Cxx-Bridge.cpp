@@ -46,10 +46,18 @@ namespace margelo::nitro::noahtools::bridge::swift {
     };
   }
   
-  // pragma MARK: std::function<void(const HttpResponse& /* result */)>
-  Func_void_HttpResponse create_Func_void_HttpResponse(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = NoahTools::Func_void_HttpResponse::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const HttpResponse& result) mutable -> void {
+  // pragma MARK: std::function<void(const BackupFileInfo& /* result */)>
+  Func_void_BackupFileInfo create_Func_void_BackupFileInfo(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NoahTools::Func_void_BackupFileInfo::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const BackupFileInfo& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const DecryptedBackupInfo& /* result */)>
+  Func_void_DecryptedBackupInfo create_Func_void_DecryptedBackupInfo(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NoahTools::Func_void_DecryptedBackupInfo::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const DecryptedBackupInfo& result) mutable -> void {
       swiftClosure.call(result);
     };
   }
@@ -59,6 +67,14 @@ namespace margelo::nitro::noahtools::bridge::swift {
     auto swiftClosure = NoahTools::Func_void::fromUnsafe(swiftClosureWrapper);
     return [swiftClosure = std::move(swiftClosure)]() mutable -> void {
       swiftClosure.call();
+    };
+  }
+  
+  // pragma MARK: std::function<void(const HttpResponse& /* result */)>
+  Func_void_HttpResponse create_Func_void_HttpResponse(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NoahTools::Func_void_HttpResponse::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const HttpResponse& result) mutable -> void {
+      swiftClosure.call(result);
     };
   }
   

@@ -58,8 +58,15 @@ namespace margelo::nitro::noahtools {
     std::shared_ptr<Promise<std::vector<std::string>>> getAppLogs() override;
     std::shared_ptr<Promise<std::string>> createBackup(const std::string& mnemonic) override;
     std::shared_ptr<Promise<bool>> restoreBackup(const std::string& encryptedData, const std::string& mnemonic) override;
+    std::shared_ptr<Promise<BackupFileInfo>> encryptWalletSnapshot(const std::string& snapshotPath, const std::string& manifestJson, const std::string& destinationPath, const std::string& mnemonic) override;
+    std::shared_ptr<Promise<DecryptedBackupInfo>> decryptWalletBackup(const std::string& encryptedPath, const std::string& destinationDirectory, const std::string& mnemonic) override;
+    std::shared_ptr<Promise<std::string>> installWalletSnapshot(const std::string& snapshotPath, const std::string& walletDataPath) override;
+    std::shared_ptr<Promise<void>> finalizeWalletSnapshotInstall(const std::string& rollbackPath) override;
+    std::shared_ptr<Promise<void>> rollbackWalletSnapshotInstall(const std::string& walletDataPath, const std::string& rollbackPath) override;
     std::shared_ptr<Promise<HttpResponse>> nativePost(const std::string& url, const std::string& body, const std::unordered_map<std::string, std::string>& headers, double timeoutSeconds) override;
     std::shared_ptr<Promise<HttpResponse>> nativeGet(const std::string& url, const std::unordered_map<std::string, std::string>& headers, double timeoutSeconds) override;
+    std::shared_ptr<Promise<void>> uploadFile(const std::string& url, const std::string& path, const std::unordered_map<std::string, std::string>& headers, double timeoutSeconds) override;
+    std::shared_ptr<Promise<void>> downloadFile(const std::string& url, const std::string& path, const std::unordered_map<std::string, std::string>& headers, double timeoutSeconds) override;
     void nativeLog(const std::string& level, const std::string& tag, const std::string& message) override;
     std::shared_ptr<Promise<void>> playAudio(const std::string& filePath) override;
     void pauseAudio() override;

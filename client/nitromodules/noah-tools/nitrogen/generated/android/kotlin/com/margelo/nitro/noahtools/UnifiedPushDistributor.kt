@@ -43,7 +43,7 @@ data class UnifiedPushDistributor(
   }
 
   override fun hashCode(): Int {
-    return arrayOf<Any?>(
+    return arrayOf(
       id,
       name,
       isSaved,

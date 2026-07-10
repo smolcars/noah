@@ -8,6 +8,10 @@
 #pragma once
 
 // Forward declarations of C++ defined types
+// Forward declaration of `BackupFileInfo` to properly resolve imports.
+namespace margelo::nitro::noahtools { struct BackupFileInfo; }
+// Forward declaration of `DecryptedBackupInfo` to properly resolve imports.
+namespace margelo::nitro::noahtools { struct DecryptedBackupInfo; }
 // Forward declaration of `HttpResponse` to properly resolve imports.
 namespace margelo::nitro::noahtools { struct HttpResponse; }
 // Forward declaration of `HybridNoahToolsSpec` to properly resolve imports.
@@ -16,6 +20,8 @@ namespace margelo::nitro::noahtools { class HybridNoahToolsSpec; }
 namespace margelo::nitro::noahtools { struct UnifiedPushDistributor; }
 
 // Include C++ defined types
+#include "BackupFileInfo.hpp"
+#include "DecryptedBackupInfo.hpp"
 #include "HttpResponse.hpp"
 #include "HybridNoahToolsSpec.hpp"
 #include "UnifiedPushDistributor.hpp"

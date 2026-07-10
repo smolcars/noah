@@ -17,8 +17,15 @@ public protocol HybridNoahToolsSpec_protocol: HybridObject {
   func getAppLogs() throws -> Promise<[String]>
   func createBackup(mnemonic: String) throws -> Promise<String>
   func restoreBackup(encryptedData: String, mnemonic: String) throws -> Promise<Bool>
+  func encryptWalletSnapshot(snapshotPath: String, manifestJson: String, destinationPath: String, mnemonic: String) throws -> Promise<BackupFileInfo>
+  func decryptWalletBackup(encryptedPath: String, destinationDirectory: String, mnemonic: String) throws -> Promise<DecryptedBackupInfo>
+  func installWalletSnapshot(snapshotPath: String, walletDataPath: String) throws -> Promise<String>
+  func finalizeWalletSnapshotInstall(rollbackPath: String) throws -> Promise<Void>
+  func rollbackWalletSnapshotInstall(walletDataPath: String, rollbackPath: String) throws -> Promise<Void>
   func nativePost(url: String, body: String, headers: Dictionary<String, String>, timeoutSeconds: Double) throws -> Promise<HttpResponse>
   func nativeGet(url: String, headers: Dictionary<String, String>, timeoutSeconds: Double) throws -> Promise<HttpResponse>
+  func uploadFile(url: String, path: String, headers: Dictionary<String, String>, timeoutSeconds: Double) throws -> Promise<Void>
+  func downloadFile(url: String, path: String, headers: Dictionary<String, String>, timeoutSeconds: Double) throws -> Promise<Void>
   func nativeLog(level: String, tag: String, message: String) throws -> Void
   func playAudio(filePath: String) throws -> Promise<Void>
   func pauseAudio() throws -> Void

@@ -7,6 +7,10 @@
 
 #include "JHybridNoahToolsSpec.hpp"
 
+// Forward declaration of `BackupFileInfo` to properly resolve imports.
+namespace margelo::nitro::noahtools { struct BackupFileInfo; }
+// Forward declaration of `DecryptedBackupInfo` to properly resolve imports.
+namespace margelo::nitro::noahtools { struct DecryptedBackupInfo; }
 // Forward declaration of `HttpResponse` to properly resolve imports.
 namespace margelo::nitro::noahtools { struct HttpResponse; }
 // Forward declaration of `UnifiedPushDistributor` to properly resolve imports.
@@ -16,10 +20,14 @@ namespace margelo::nitro::noahtools { struct UnifiedPushDistributor; }
 #include <vector>
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/JPromise.hpp>
+#include "BackupFileInfo.hpp"
+#include "JBackupFileInfo.hpp"
+#include "DecryptedBackupInfo.hpp"
+#include "JDecryptedBackupInfo.hpp"
+#include <NitroModules/JUnit.hpp>
 #include "HttpResponse.hpp"
 #include "JHttpResponse.hpp"
 #include <unordered_map>
-#include <NitroModules/JUnit.hpp>
 #include "UnifiedPushDistributor.hpp"
 #include "JUnifiedPushDistributor.hpp"
 #include <NitroModules/Null.hpp>
@@ -123,6 +131,84 @@ namespace margelo::nitro::noahtools {
       return __promise;
     }();
   }
+  std::shared_ptr<Promise<BackupFileInfo>> JHybridNoahToolsSpec::encryptWalletSnapshot(const std::string& snapshotPath, const std::string& manifestJson, const std::string& destinationPath, const std::string& mnemonic) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* snapshotPath */, jni::alias_ref<jni::JString> /* manifestJson */, jni::alias_ref<jni::JString> /* destinationPath */, jni::alias_ref<jni::JString> /* mnemonic */)>("encryptWalletSnapshot");
+    auto __result = method(_javaPart, jni::make_jstring(snapshotPath), jni::make_jstring(manifestJson), jni::make_jstring(destinationPath), jni::make_jstring(mnemonic));
+    return [&]() {
+      auto __promise = Promise<BackupFileInfo>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
+        auto __result = jni::static_ref_cast<JBackupFileInfo>(__boxedResult);
+        __promise->resolve(__result->toCpp());
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  std::shared_ptr<Promise<DecryptedBackupInfo>> JHybridNoahToolsSpec::decryptWalletBackup(const std::string& encryptedPath, const std::string& destinationDirectory, const std::string& mnemonic) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* encryptedPath */, jni::alias_ref<jni::JString> /* destinationDirectory */, jni::alias_ref<jni::JString> /* mnemonic */)>("decryptWalletBackup");
+    auto __result = method(_javaPart, jni::make_jstring(encryptedPath), jni::make_jstring(destinationDirectory), jni::make_jstring(mnemonic));
+    return [&]() {
+      auto __promise = Promise<DecryptedBackupInfo>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
+        auto __result = jni::static_ref_cast<JDecryptedBackupInfo>(__boxedResult);
+        __promise->resolve(__result->toCpp());
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  std::shared_ptr<Promise<std::string>> JHybridNoahToolsSpec::installWalletSnapshot(const std::string& snapshotPath, const std::string& walletDataPath) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* snapshotPath */, jni::alias_ref<jni::JString> /* walletDataPath */)>("installWalletSnapshot");
+    auto __result = method(_javaPart, jni::make_jstring(snapshotPath), jni::make_jstring(walletDataPath));
+    return [&]() {
+      auto __promise = Promise<std::string>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
+        auto __result = jni::static_ref_cast<jni::JString>(__boxedResult);
+        __promise->resolve(__result->toStdString());
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  std::shared_ptr<Promise<void>> JHybridNoahToolsSpec::finalizeWalletSnapshotInstall(const std::string& rollbackPath) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* rollbackPath */)>("finalizeWalletSnapshotInstall");
+    auto __result = method(_javaPart, jni::make_jstring(rollbackPath));
+    return [&]() {
+      auto __promise = Promise<void>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& /* unit */) {
+        __promise->resolve();
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  std::shared_ptr<Promise<void>> JHybridNoahToolsSpec::rollbackWalletSnapshotInstall(const std::string& walletDataPath, const std::string& rollbackPath) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* walletDataPath */, jni::alias_ref<jni::JString> /* rollbackPath */)>("rollbackWalletSnapshotInstall");
+    auto __result = method(_javaPart, jni::make_jstring(walletDataPath), jni::make_jstring(rollbackPath));
+    return [&]() {
+      auto __promise = Promise<void>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& /* unit */) {
+        __promise->resolve();
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
   std::shared_ptr<Promise<HttpResponse>> JHybridNoahToolsSpec::nativePost(const std::string& url, const std::string& body, const std::unordered_map<std::string, std::string>& headers, double timeoutSeconds) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* url */, jni::alias_ref<jni::JString> /* body */, jni::alias_ref<jni::JMap<jni::JString, jni::JString>> /* headers */, double /* timeoutSeconds */)>("nativePost");
     auto __result = method(_javaPart, jni::make_jstring(url), jni::make_jstring(body), [&]() -> jni::local_ref<jni::JMap<jni::JString, jni::JString>> {
@@ -159,6 +245,48 @@ namespace margelo::nitro::noahtools {
       __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
         auto __result = jni::static_ref_cast<JHttpResponse>(__boxedResult);
         __promise->resolve(__result->toCpp());
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  std::shared_ptr<Promise<void>> JHybridNoahToolsSpec::uploadFile(const std::string& url, const std::string& path, const std::unordered_map<std::string, std::string>& headers, double timeoutSeconds) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* url */, jni::alias_ref<jni::JString> /* path */, jni::alias_ref<jni::JMap<jni::JString, jni::JString>> /* headers */, double /* timeoutSeconds */)>("uploadFile");
+    auto __result = method(_javaPart, jni::make_jstring(url), jni::make_jstring(path), [&]() -> jni::local_ref<jni::JMap<jni::JString, jni::JString>> {
+      auto __map = jni::JHashMap<jni::JString, jni::JString>::create(headers.size());
+      for (const auto& __entry : headers) {
+        __map->put(jni::make_jstring(__entry.first), jni::make_jstring(__entry.second));
+      }
+      return __map;
+    }(), timeoutSeconds);
+    return [&]() {
+      auto __promise = Promise<void>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& /* unit */) {
+        __promise->resolve();
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  std::shared_ptr<Promise<void>> JHybridNoahToolsSpec::downloadFile(const std::string& url, const std::string& path, const std::unordered_map<std::string, std::string>& headers, double timeoutSeconds) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* url */, jni::alias_ref<jni::JString> /* path */, jni::alias_ref<jni::JMap<jni::JString, jni::JString>> /* headers */, double /* timeoutSeconds */)>("downloadFile");
+    auto __result = method(_javaPart, jni::make_jstring(url), jni::make_jstring(path), [&]() -> jni::local_ref<jni::JMap<jni::JString, jni::JString>> {
+      auto __map = jni::JHashMap<jni::JString, jni::JString>::create(headers.size());
+      for (const auto& __entry : headers) {
+        __map->put(jni::make_jstring(__entry.first), jni::make_jstring(__entry.second));
+      }
+      return __map;
+    }(), timeoutSeconds);
+    return [&]() {
+      auto __promise = Promise<void>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& /* unit */) {
+        __promise->resolve();
       });
       __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
         jni::JniException __jniError(__throwable);

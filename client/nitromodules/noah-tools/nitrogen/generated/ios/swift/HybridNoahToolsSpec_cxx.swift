@@ -200,6 +200,101 @@ open class HybridNoahToolsSpec_cxx {
   }
   
   @inline(__always)
+  public final func encryptWalletSnapshot(snapshotPath: std.string, manifestJson: std.string, destinationPath: std.string, mnemonic: std.string) -> bridge.Result_std__shared_ptr_Promise_BackupFileInfo___ {
+    do {
+      let __result = try self.__implementation.encryptWalletSnapshot(snapshotPath: String(snapshotPath), manifestJson: String(manifestJson), destinationPath: String(destinationPath), mnemonic: String(mnemonic))
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_BackupFileInfo__ in
+        let __promise = bridge.create_std__shared_ptr_Promise_BackupFileInfo__()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_BackupFileInfo__(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve(__result) })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_BackupFileInfo___(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_BackupFileInfo___(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func decryptWalletBackup(encryptedPath: std.string, destinationDirectory: std.string, mnemonic: std.string) -> bridge.Result_std__shared_ptr_Promise_DecryptedBackupInfo___ {
+    do {
+      let __result = try self.__implementation.decryptWalletBackup(encryptedPath: String(encryptedPath), destinationDirectory: String(destinationDirectory), mnemonic: String(mnemonic))
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_DecryptedBackupInfo__ in
+        let __promise = bridge.create_std__shared_ptr_Promise_DecryptedBackupInfo__()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_DecryptedBackupInfo__(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve(__result) })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_DecryptedBackupInfo___(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_DecryptedBackupInfo___(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func installWalletSnapshot(snapshotPath: std.string, walletDataPath: std.string) -> bridge.Result_std__shared_ptr_Promise_std__string___ {
+    do {
+      let __result = try self.__implementation.installWalletSnapshot(snapshotPath: String(snapshotPath), walletDataPath: String(walletDataPath))
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_std__string__ in
+        let __promise = bridge.create_std__shared_ptr_Promise_std__string__()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__string__(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve(std.string(__result)) })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_std__string___(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_std__string___(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func finalizeWalletSnapshotInstall(rollbackPath: std.string) -> bridge.Result_std__shared_ptr_Promise_void___ {
+    do {
+      let __result = try self.__implementation.finalizeWalletSnapshotInstall(rollbackPath: String(rollbackPath))
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_void__ in
+        let __promise = bridge.create_std__shared_ptr_Promise_void__()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_void__(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve() })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func rollbackWalletSnapshotInstall(walletDataPath: std.string, rollbackPath: std.string) -> bridge.Result_std__shared_ptr_Promise_void___ {
+    do {
+      let __result = try self.__implementation.rollbackWalletSnapshotInstall(walletDataPath: String(walletDataPath), rollbackPath: String(rollbackPath))
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_void__ in
+        let __promise = bridge.create_std__shared_ptr_Promise_void__()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_void__(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve() })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
   public final func nativePost(url: std.string, body: std.string, headers: bridge.std__unordered_map_std__string__std__string_, timeoutSeconds: Double) -> bridge.Result_std__shared_ptr_Promise_HttpResponse___ {
     do {
       let __result = try self.__implementation.nativePost(url: String(url), body: String(body), headers: { () -> Dictionary<String, String> in
@@ -250,6 +345,60 @@ open class HybridNoahToolsSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_std__shared_ptr_Promise_HttpResponse___(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func uploadFile(url: std.string, path: std.string, headers: bridge.std__unordered_map_std__string__std__string_, timeoutSeconds: Double) -> bridge.Result_std__shared_ptr_Promise_void___ {
+    do {
+      let __result = try self.__implementation.uploadFile(url: String(url), path: String(path), headers: { () -> Dictionary<String, String> in
+        var __dictionary = Dictionary<String, String>(minimumCapacity: headers.size())
+        let __keys = bridge.get_std__unordered_map_std__string__std__string__keys(headers)
+        for __key in __keys {
+          let __value = bridge.get_std__unordered_map_std__string__std__string__value(headers, __key)
+          __dictionary[String(__key)] = String(__value)
+        }
+        return __dictionary
+      }(), timeoutSeconds: timeoutSeconds)
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_void__ in
+        let __promise = bridge.create_std__shared_ptr_Promise_void__()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_void__(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve() })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func downloadFile(url: std.string, path: std.string, headers: bridge.std__unordered_map_std__string__std__string_, timeoutSeconds: Double) -> bridge.Result_std__shared_ptr_Promise_void___ {
+    do {
+      let __result = try self.__implementation.downloadFile(url: String(url), path: String(path), headers: { () -> Dictionary<String, String> in
+        var __dictionary = Dictionary<String, String>(minimumCapacity: headers.size())
+        let __keys = bridge.get_std__unordered_map_std__string__std__string__keys(headers)
+        for __key in __keys {
+          let __value = bridge.get_std__unordered_map_std__string__std__string__value(headers, __key)
+          __dictionary[String(__key)] = String(__value)
+        }
+        return __dictionary
+      }(), timeoutSeconds: timeoutSeconds)
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_void__ in
+        let __promise = bridge.create_std__shared_ptr_Promise_void__()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_void__(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve() })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
     }
   }
   

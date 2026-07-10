@@ -18,8 +18,15 @@ namespace margelo::nitro::noahtools {
       prototype.registerHybridMethod("getAppLogs", &HybridNoahToolsSpec::getAppLogs);
       prototype.registerHybridMethod("createBackup", &HybridNoahToolsSpec::createBackup);
       prototype.registerHybridMethod("restoreBackup", &HybridNoahToolsSpec::restoreBackup);
+      prototype.registerHybridMethod("encryptWalletSnapshot", &HybridNoahToolsSpec::encryptWalletSnapshot);
+      prototype.registerHybridMethod("decryptWalletBackup", &HybridNoahToolsSpec::decryptWalletBackup);
+      prototype.registerHybridMethod("installWalletSnapshot", &HybridNoahToolsSpec::installWalletSnapshot);
+      prototype.registerHybridMethod("finalizeWalletSnapshotInstall", &HybridNoahToolsSpec::finalizeWalletSnapshotInstall);
+      prototype.registerHybridMethod("rollbackWalletSnapshotInstall", &HybridNoahToolsSpec::rollbackWalletSnapshotInstall);
       prototype.registerHybridMethod("nativePost", &HybridNoahToolsSpec::nativePost);
       prototype.registerHybridMethod("nativeGet", &HybridNoahToolsSpec::nativeGet);
+      prototype.registerHybridMethod("uploadFile", &HybridNoahToolsSpec::uploadFile);
+      prototype.registerHybridMethod("downloadFile", &HybridNoahToolsSpec::downloadFile);
       prototype.registerHybridMethod("nativeLog", &HybridNoahToolsSpec::nativeLog);
       prototype.registerHybridMethod("playAudio", &HybridNoahToolsSpec::playAudio);
       prototype.registerHybridMethod("pauseAudio", &HybridNoahToolsSpec::pauseAudio);

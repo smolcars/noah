@@ -8,6 +8,10 @@
 #pragma once
 
 // Forward declarations of C++ defined types
+// Forward declaration of `BackupFileInfo` to properly resolve imports.
+namespace margelo::nitro::noahtools { struct BackupFileInfo; }
+// Forward declaration of `DecryptedBackupInfo` to properly resolve imports.
+namespace margelo::nitro::noahtools { struct DecryptedBackupInfo; }
 // Forward declaration of `HttpResponse` to properly resolve imports.
 namespace margelo::nitro::noahtools { struct HttpResponse; }
 // Forward declaration of `HybridNoahToolsSpec` to properly resolve imports.
@@ -20,6 +24,8 @@ namespace margelo::nitro::noahtools { struct UnifiedPushDistributor; }
 namespace NoahTools { class HybridNoahToolsSpec_cxx; }
 
 // Include C++ defined types
+#include "BackupFileInfo.hpp"
+#include "DecryptedBackupInfo.hpp"
 #include "HttpResponse.hpp"
 #include "HybridNoahToolsSpec.hpp"
 #include "UnifiedPushDistributor.hpp"
@@ -177,6 +183,108 @@ namespace margelo::nitro::noahtools::bridge::swift {
     return Func_void_bool_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::shared_ptr<Promise<BackupFileInfo>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<BackupFileInfo>>`.
+   */
+  using std__shared_ptr_Promise_BackupFileInfo__ = std::shared_ptr<Promise<BackupFileInfo>>;
+  inline std::shared_ptr<Promise<BackupFileInfo>> create_std__shared_ptr_Promise_BackupFileInfo__() noexcept {
+    return Promise<BackupFileInfo>::create();
+  }
+  inline PromiseHolder<BackupFileInfo> wrap_std__shared_ptr_Promise_BackupFileInfo__(std::shared_ptr<Promise<BackupFileInfo>> promise) noexcept {
+    return PromiseHolder<BackupFileInfo>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const BackupFileInfo& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const BackupFileInfo&)>`.
+   */
+  using Func_void_BackupFileInfo = std::function<void(const BackupFileInfo& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const BackupFileInfo& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_BackupFileInfo_Wrapper final {
+  public:
+    explicit Func_void_BackupFileInfo_Wrapper(std::function<void(const BackupFileInfo& /* result */)>&& func): _function(std::make_unique<std::function<void(const BackupFileInfo& /* result */)>>(std::move(func))) {}
+    inline void call(BackupFileInfo result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const BackupFileInfo& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_BackupFileInfo create_Func_void_BackupFileInfo(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_BackupFileInfo_Wrapper wrap_Func_void_BackupFileInfo(Func_void_BackupFileInfo value) noexcept {
+    return Func_void_BackupFileInfo_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<DecryptedBackupInfo>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<DecryptedBackupInfo>>`.
+   */
+  using std__shared_ptr_Promise_DecryptedBackupInfo__ = std::shared_ptr<Promise<DecryptedBackupInfo>>;
+  inline std::shared_ptr<Promise<DecryptedBackupInfo>> create_std__shared_ptr_Promise_DecryptedBackupInfo__() noexcept {
+    return Promise<DecryptedBackupInfo>::create();
+  }
+  inline PromiseHolder<DecryptedBackupInfo> wrap_std__shared_ptr_Promise_DecryptedBackupInfo__(std::shared_ptr<Promise<DecryptedBackupInfo>> promise) noexcept {
+    return PromiseHolder<DecryptedBackupInfo>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const DecryptedBackupInfo& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const DecryptedBackupInfo&)>`.
+   */
+  using Func_void_DecryptedBackupInfo = std::function<void(const DecryptedBackupInfo& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const DecryptedBackupInfo& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_DecryptedBackupInfo_Wrapper final {
+  public:
+    explicit Func_void_DecryptedBackupInfo_Wrapper(std::function<void(const DecryptedBackupInfo& /* result */)>&& func): _function(std::make_unique<std::function<void(const DecryptedBackupInfo& /* result */)>>(std::move(func))) {}
+    inline void call(DecryptedBackupInfo result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const DecryptedBackupInfo& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_DecryptedBackupInfo create_Func_void_DecryptedBackupInfo(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_DecryptedBackupInfo_Wrapper wrap_Func_void_DecryptedBackupInfo(Func_void_DecryptedBackupInfo value) noexcept {
+    return Func_void_DecryptedBackupInfo_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<void>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<void>>`.
+   */
+  using std__shared_ptr_Promise_void__ = std::shared_ptr<Promise<void>>;
+  inline std::shared_ptr<Promise<void>> create_std__shared_ptr_Promise_void__() noexcept {
+    return Promise<void>::create();
+  }
+  inline PromiseHolder<void> wrap_std__shared_ptr_Promise_void__(std::shared_ptr<Promise<void>> promise) noexcept {
+    return PromiseHolder<void>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void()>
+  /**
+   * Specialized version of `std::function<void()>`.
+   */
+  using Func_void = std::function<void()>;
+  /**
+   * Wrapper class for a `std::function<void()>`, this can be used from Swift.
+   */
+  class Func_void_Wrapper final {
+  public:
+    explicit Func_void_Wrapper(std::function<void()>&& func): _function(std::make_unique<std::function<void()>>(std::move(func))) {}
+    inline void call() const noexcept {
+      _function->operator()();
+    }
+  private:
+    std::unique_ptr<std::function<void()>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void create_Func_void(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_Wrapper wrap_Func_void(Func_void value) noexcept {
+    return Func_void_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::unordered_map<std::string, std::string>
   /**
    * Specialized version of `std::unordered_map<std::string, std::string>`.
@@ -234,40 +342,6 @@ namespace margelo::nitro::noahtools::bridge::swift {
   Func_void_HttpResponse create_Func_void_HttpResponse(void* NON_NULL swiftClosureWrapper) noexcept;
   inline Func_void_HttpResponse_Wrapper wrap_Func_void_HttpResponse(Func_void_HttpResponse value) noexcept {
     return Func_void_HttpResponse_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::shared_ptr<Promise<void>>
-  /**
-   * Specialized version of `std::shared_ptr<Promise<void>>`.
-   */
-  using std__shared_ptr_Promise_void__ = std::shared_ptr<Promise<void>>;
-  inline std::shared_ptr<Promise<void>> create_std__shared_ptr_Promise_void__() noexcept {
-    return Promise<void>::create();
-  }
-  inline PromiseHolder<void> wrap_std__shared_ptr_Promise_void__(std::shared_ptr<Promise<void>> promise) noexcept {
-    return PromiseHolder<void>(std::move(promise));
-  }
-  
-  // pragma MARK: std::function<void()>
-  /**
-   * Specialized version of `std::function<void()>`.
-   */
-  using Func_void = std::function<void()>;
-  /**
-   * Wrapper class for a `std::function<void()>`, this can be used from Swift.
-   */
-  class Func_void_Wrapper final {
-  public:
-    explicit Func_void_Wrapper(std::function<void()>&& func): _function(std::make_unique<std::function<void()>>(std::move(func))) {}
-    inline void call() const noexcept {
-      _function->operator()();
-    }
-  private:
-    std::unique_ptr<std::function<void()>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void create_Func_void(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_Wrapper wrap_Func_void(Func_void value) noexcept {
-    return Func_void_Wrapper(std::move(value));
   }
   
   // pragma MARK: std::vector<UnifiedPushDistributor>
@@ -373,6 +447,33 @@ namespace margelo::nitro::noahtools::bridge::swift {
     return Result<std::shared_ptr<Promise<bool>>>::withError(error);
   }
   
+  // pragma MARK: Result<std::shared_ptr<Promise<BackupFileInfo>>>
+  using Result_std__shared_ptr_Promise_BackupFileInfo___ = Result<std::shared_ptr<Promise<BackupFileInfo>>>;
+  inline Result_std__shared_ptr_Promise_BackupFileInfo___ create_Result_std__shared_ptr_Promise_BackupFileInfo___(const std::shared_ptr<Promise<BackupFileInfo>>& value) noexcept {
+    return Result<std::shared_ptr<Promise<BackupFileInfo>>>::withValue(value);
+  }
+  inline Result_std__shared_ptr_Promise_BackupFileInfo___ create_Result_std__shared_ptr_Promise_BackupFileInfo___(const std::exception_ptr& error) noexcept {
+    return Result<std::shared_ptr<Promise<BackupFileInfo>>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::shared_ptr<Promise<DecryptedBackupInfo>>>
+  using Result_std__shared_ptr_Promise_DecryptedBackupInfo___ = Result<std::shared_ptr<Promise<DecryptedBackupInfo>>>;
+  inline Result_std__shared_ptr_Promise_DecryptedBackupInfo___ create_Result_std__shared_ptr_Promise_DecryptedBackupInfo___(const std::shared_ptr<Promise<DecryptedBackupInfo>>& value) noexcept {
+    return Result<std::shared_ptr<Promise<DecryptedBackupInfo>>>::withValue(value);
+  }
+  inline Result_std__shared_ptr_Promise_DecryptedBackupInfo___ create_Result_std__shared_ptr_Promise_DecryptedBackupInfo___(const std::exception_ptr& error) noexcept {
+    return Result<std::shared_ptr<Promise<DecryptedBackupInfo>>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::shared_ptr<Promise<void>>>
+  using Result_std__shared_ptr_Promise_void___ = Result<std::shared_ptr<Promise<void>>>;
+  inline Result_std__shared_ptr_Promise_void___ create_Result_std__shared_ptr_Promise_void___(const std::shared_ptr<Promise<void>>& value) noexcept {
+    return Result<std::shared_ptr<Promise<void>>>::withValue(value);
+  }
+  inline Result_std__shared_ptr_Promise_void___ create_Result_std__shared_ptr_Promise_void___(const std::exception_ptr& error) noexcept {
+    return Result<std::shared_ptr<Promise<void>>>::withError(error);
+  }
+  
   // pragma MARK: Result<std::shared_ptr<Promise<HttpResponse>>>
   using Result_std__shared_ptr_Promise_HttpResponse___ = Result<std::shared_ptr<Promise<HttpResponse>>>;
   inline Result_std__shared_ptr_Promise_HttpResponse___ create_Result_std__shared_ptr_Promise_HttpResponse___(const std::shared_ptr<Promise<HttpResponse>>& value) noexcept {
@@ -389,15 +490,6 @@ namespace margelo::nitro::noahtools::bridge::swift {
   }
   inline Result_void_ create_Result_void_(const std::exception_ptr& error) noexcept {
     return Result<void>::withError(error);
-  }
-  
-  // pragma MARK: Result<std::shared_ptr<Promise<void>>>
-  using Result_std__shared_ptr_Promise_void___ = Result<std::shared_ptr<Promise<void>>>;
-  inline Result_std__shared_ptr_Promise_void___ create_Result_std__shared_ptr_Promise_void___(const std::shared_ptr<Promise<void>>& value) noexcept {
-    return Result<std::shared_ptr<Promise<void>>>::withValue(value);
-  }
-  inline Result_std__shared_ptr_Promise_void___ create_Result_std__shared_ptr_Promise_void___(const std::exception_ptr& error) noexcept {
-    return Result<std::shared_ptr<Promise<void>>>::withError(error);
   }
   
   // pragma MARK: Result<double>

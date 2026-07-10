@@ -1,5 +1,10 @@
 import { NitroModules } from "react-native-nitro-modules";
-import type { NoahTools, HttpResponse } from "./NoahTools.nitro";
+import type {
+  BackupFileInfo,
+  DecryptedBackupInfo,
+  NoahTools,
+  HttpResponse,
+} from "./NoahTools.nitro";
 
 const NoahToolsHybridObject = NitroModules.createHybridObject<NoahTools>("NoahTools");
 export type LogLevel = "verbose" | "debug" | "info" | "warn" | "error";
@@ -20,6 +25,46 @@ export function restoreBackup(encryptedData: string, mnemonic: string): Promise<
   return NoahToolsHybridObject.restoreBackup(encryptedData, mnemonic);
 }
 
+export function encryptWalletSnapshot(
+  snapshotPath: string,
+  manifestJson: string,
+  destinationPath: string,
+  mnemonic: string,
+): Promise<BackupFileInfo> {
+  return NoahToolsHybridObject.encryptWalletSnapshot(
+    snapshotPath,
+    manifestJson,
+    destinationPath,
+    mnemonic,
+  );
+}
+
+export function decryptWalletBackup(
+  encryptedPath: string,
+  destinationDirectory: string,
+  mnemonic: string,
+): Promise<DecryptedBackupInfo> {
+  return NoahToolsHybridObject.decryptWalletBackup(encryptedPath, destinationDirectory, mnemonic);
+}
+
+export function installWalletSnapshot(
+  snapshotPath: string,
+  walletDataPath: string,
+): Promise<string> {
+  return NoahToolsHybridObject.installWalletSnapshot(snapshotPath, walletDataPath);
+}
+
+export function finalizeWalletSnapshotInstall(rollbackPath: string): Promise<void> {
+  return NoahToolsHybridObject.finalizeWalletSnapshotInstall(rollbackPath);
+}
+
+export function rollbackWalletSnapshotInstall(
+  walletDataPath: string,
+  rollbackPath: string,
+): Promise<void> {
+  return NoahToolsHybridObject.rollbackWalletSnapshotInstall(walletDataPath, rollbackPath);
+}
+
 export function nativePost(
   url: string,
   body: string,
@@ -35,6 +80,24 @@ export function nativeGet(
   timeoutSeconds: number = 30,
 ): Promise<HttpResponse> {
   return NoahToolsHybridObject.nativeGet(url, headers, timeoutSeconds);
+}
+
+export function uploadFile(
+  url: string,
+  path: string,
+  headers: Record<string, string>,
+  timeoutSeconds: number = 60,
+): Promise<void> {
+  return NoahToolsHybridObject.uploadFile(url, path, headers, timeoutSeconds);
+}
+
+export function downloadFile(
+  url: string,
+  path: string,
+  headers: Record<string, string> = {},
+  timeoutSeconds: number = 60,
+): Promise<void> {
+  return NoahToolsHybridObject.downloadFile(url, path, headers, timeoutSeconds);
 }
 
 export function nativeLog(level: LogLevel, tag: string, message: string): void {

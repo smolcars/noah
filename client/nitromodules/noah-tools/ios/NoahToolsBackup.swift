@@ -5,6 +5,172 @@ import NitroModules
 import ZIPFoundation
 
 extension NoahTools {
+    internal func performEncryptWalletSnapshot(
+        snapshotPath: String,
+        manifestJson: String,
+        destinationPath: String,
+        mnemonic: String
+    ) throws -> Promise<BackupFileInfo> {
+        return Promise.async {
+            let fileManager = FileManager.default
+            let snapshotURL = URL(fileURLWithPath: snapshotPath)
+            let destinationURL = URL(fileURLWithPath: destinationPath)
+            let parentURL = destinationURL.deletingLastPathComponent()
+            let workURL = parentURL.appendingPathComponent(".noah-backup-\(UUID().uuidString)")
+            let zipURL = parentURL.appendingPathComponent(".noah-backup-\(UUID().uuidString).zip")
+
+            guard fileManager.fileExists(atPath: snapshotURL.path) else {
+                throw NSError(
+                    domain: "NoahTools", code: 20,
+                    userInfo: [NSLocalizedDescriptionKey: "Wallet snapshot does not exist"])
+            }
+            guard !fileManager.fileExists(atPath: destinationURL.path) else {
+                throw NSError(
+                    domain: "NoahTools", code: 21,
+                    userInfo: [NSLocalizedDescriptionKey: "Encrypted backup destination already exists"])
+            }
+
+            defer {
+                try? fileManager.removeItem(at: workURL)
+                try? fileManager.removeItem(at: zipURL)
+            }
+            do {
+                try fileManager.createDirectory(
+                    at: workURL, withIntermediateDirectories: false, attributes: nil)
+                try manifestJson.write(
+                    to: workURL.appendingPathComponent("manifest.json"),
+                    atomically: true,
+                    encoding: .utf8
+                )
+                try fileManager.copyItem(
+                    at: snapshotURL, to: workURL.appendingPathComponent("db.sqlite"))
+                try fileManager.zipItem(
+                    at: workURL, to: zipURL, shouldKeepParent: false,
+                    compressionMethod: .deflate)
+
+                let encrypted = try self.encryptV2(
+                    data: Data(contentsOf: zipURL), mnemonic: mnemonic)
+                try encrypted.write(to: destinationURL, options: [.atomic])
+                let attributes = try fileManager.attributesOfItem(atPath: destinationURL.path)
+                let size = (attributes[.size] as? NSNumber)?.doubleValue ?? 0
+                return BackupFileInfo(
+                    path: destinationURL.path,
+                    sizeBytes: size,
+                    sha256: self.sha256File(url: destinationURL)
+                )
+            } catch {
+                try? fileManager.removeItem(at: destinationURL)
+                throw error
+            }
+        }
+    }
+
+    internal func performDecryptWalletBackup(
+        encryptedPath: String,
+        destinationDirectory: String,
+        mnemonic: String
+    ) throws -> Promise<DecryptedBackupInfo> {
+        return Promise.async {
+            let fileManager = FileManager.default
+            let encryptedURL = URL(fileURLWithPath: encryptedPath)
+            let destinationURL = URL(fileURLWithPath: destinationDirectory)
+            let zipURL = destinationURL.deletingLastPathComponent()
+                .appendingPathComponent(".noah-restore-\(UUID().uuidString).zip")
+
+            guard !fileManager.fileExists(atPath: destinationURL.path) else {
+                throw NSError(
+                    domain: "NoahTools", code: 22,
+                    userInfo: [NSLocalizedDescriptionKey: "Restore destination already exists"])
+            }
+
+            defer {
+                try? fileManager.removeItem(at: zipURL)
+            }
+            do {
+                let decrypted = try self.decryptV2(
+                    data: Data(contentsOf: encryptedURL), mnemonic: mnemonic)
+                try decrypted.write(to: zipURL, options: [.atomic])
+                try fileManager.createDirectory(
+                    at: destinationURL, withIntermediateDirectories: false, attributes: nil)
+                try fileManager.unzipItem(at: zipURL, to: destinationURL)
+
+                let manifestURL = destinationURL.appendingPathComponent("manifest.json")
+                let snapshotURL = destinationURL.appendingPathComponent("db.sqlite")
+                guard fileManager.fileExists(atPath: snapshotURL.path) else {
+                    throw NSError(
+                        domain: "NoahTools", code: 23,
+                        userInfo: [NSLocalizedDescriptionKey: "Backup does not contain db.sqlite"])
+                }
+                let manifestJson = try String(contentsOf: manifestURL, encoding: .utf8)
+                return DecryptedBackupInfo(
+                    manifestJson: manifestJson,
+                    snapshotPath: snapshotURL.path
+                )
+            } catch {
+                try? fileManager.removeItem(at: destinationURL)
+                throw error
+            }
+        }
+    }
+
+    internal func performInstallWalletSnapshot(snapshotPath: String, walletDataPath: String) throws
+        -> Promise<String>
+    {
+        return Promise.async {
+            let fileManager = FileManager.default
+            let snapshotURL = URL(fileURLWithPath: snapshotPath)
+            let walletURL = URL(fileURLWithPath: walletDataPath)
+            let parentURL = walletURL.deletingLastPathComponent()
+            let installURL = parentURL.appendingPathComponent(".wallet-install-\(UUID().uuidString)")
+            let rollbackURL = parentURL.appendingPathComponent(".wallet-rollback-\(UUID().uuidString)")
+
+            try fileManager.createDirectory(
+                at: installURL, withIntermediateDirectories: false, attributes: nil)
+            do {
+                try fileManager.copyItem(at: snapshotURL, to: installURL.appendingPathComponent("db.sqlite"))
+                var rollbackPath = ""
+                if fileManager.fileExists(atPath: walletURL.path) {
+                    try fileManager.moveItem(at: walletURL, to: rollbackURL)
+                    rollbackPath = rollbackURL.path
+                }
+                do {
+                    try fileManager.moveItem(at: installURL, to: walletURL)
+                } catch {
+                    if !rollbackPath.isEmpty {
+                        try? fileManager.moveItem(at: rollbackURL, to: walletURL)
+                    }
+                    throw error
+                }
+                return rollbackPath
+            } catch {
+                try? fileManager.removeItem(at: installURL)
+                throw error
+            }
+        }
+    }
+
+    internal func performFinalizeWalletSnapshotInstall(rollbackPath: String) throws -> Promise<Void> {
+        return Promise.async {
+            if !rollbackPath.isEmpty {
+                try? FileManager.default.removeItem(atPath: rollbackPath)
+            }
+        }
+    }
+
+    internal func performRollbackWalletSnapshotInstall(walletDataPath: String, rollbackPath: String)
+        throws -> Promise<Void>
+    {
+        return Promise.async {
+            let fileManager = FileManager.default
+            if fileManager.fileExists(atPath: walletDataPath) {
+                try fileManager.removeItem(atPath: walletDataPath)
+            }
+            if !rollbackPath.isEmpty && fileManager.fileExists(atPath: rollbackPath) {
+                try fileManager.moveItem(atPath: rollbackPath, toPath: walletDataPath)
+            }
+        }
+    }
+
     internal func performCreateBackup(mnemonic: String) throws -> Promise<String> {
         return Promise.async {
             let fileManager = FileManager.default
@@ -158,6 +324,28 @@ extension NoahTools {
         encryptedData.append(sealedBox.tag)
 
         return encryptedData
+    }
+
+    internal func encryptV2(data: Data, mnemonic: String) throws -> Data {
+        var encrypted = try encrypt(data: data, mnemonic: mnemonic)
+        encrypted[encrypted.startIndex] = 2
+        return encrypted
+    }
+
+    internal func decryptV2(data: Data, mnemonic: String) throws -> Data {
+        guard data.first == 2 else {
+            throw NSError(
+                domain: "DecryptionError", code: 3,
+                userInfo: [NSLocalizedDescriptionKey: "Unsupported backup version"])
+        }
+        var legacyLayout = data
+        legacyLayout[legacyLayout.startIndex] = 1
+        return try decrypt(data: legacyLayout, mnemonic: mnemonic)
+    }
+
+    internal func sha256File(url: URL) throws -> String {
+        let digest = SHA256.hash(data: try Data(contentsOf: url))
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 
     internal func decrypt(data: Data, mnemonic: String) throws -> Data {

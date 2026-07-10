@@ -7,6 +7,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
+import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
@@ -27,6 +28,148 @@ object NoahToolsBackup {
     private const val PBKDF2_ITERATIONS = 600_000
     private const val GCM_TAG_LENGTH = 128
     private const val BUFFER_SIZE = 8192
+
+    fun performEncryptWalletSnapshot(
+        snapshotPath: String,
+        manifestJson: String,
+        destinationPath: String,
+        mnemonic: String
+    ): Promise<BackupFileInfo> {
+        return Promise.async {
+            val snapshot = File(snapshotPath)
+            val destination = File(destinationPath)
+            val parent = destination.parentFile
+                ?: throw IllegalArgumentException("Encrypted backup destination has no parent")
+            if (!snapshot.isFile) {
+                throw IllegalArgumentException("Wallet snapshot does not exist")
+            }
+            if (destination.exists()) {
+                throw IllegalArgumentException("Encrypted backup destination already exists")
+            }
+
+            val workDirectory = File(parent, ".noah-backup-${java.util.UUID.randomUUID()}")
+            val zipFile = File(parent, ".noah-backup-${java.util.UUID.randomUUID()}.zip")
+            try {
+                if (!workDirectory.mkdir()) {
+                    throw IllegalStateException("Failed to create backup staging directory")
+                }
+                File(workDirectory, "manifest.json").writeText(manifestJson)
+                snapshot.copyTo(File(workDirectory, "db.sqlite"), overwrite = false)
+                ZipOutputStream(FileOutputStream(zipFile)).use { zipOut ->
+                    zipDirectory(workDirectory, "", zipOut)
+                }
+                destination.writeBytes(encryptV2(zipFile.readBytes(), mnemonic))
+                BackupFileInfo(
+                    path = destination.absolutePath,
+                    sizeBytes = destination.length().toDouble(),
+                    sha256 = sha256File(destination)
+                )
+            } catch (error: Exception) {
+                destination.delete()
+                throw error
+            } finally {
+                workDirectory.deleteRecursively()
+                zipFile.delete()
+            }
+        }
+    }
+
+    fun performDecryptWalletBackup(
+        encryptedPath: String,
+        destinationDirectory: String,
+        mnemonic: String
+    ): Promise<DecryptedBackupInfo> {
+        return Promise.async {
+            val encrypted = File(encryptedPath)
+            val destination = File(destinationDirectory)
+            val zipFile = File(
+                destination.parentFile,
+                ".noah-restore-${java.util.UUID.randomUUID()}.zip"
+            )
+            if (destination.exists()) {
+                throw IllegalArgumentException("Restore destination already exists")
+            }
+            try {
+                zipFile.writeBytes(decryptV2(encrypted.readBytes(), mnemonic))
+                unzipFile(zipFile.absolutePath, destination.absolutePath)
+                val manifest = File(destination, "manifest.json")
+                val snapshot = File(destination, "db.sqlite")
+                if (!manifest.isFile || !snapshot.isFile) {
+                    throw IllegalArgumentException("Backup payload is incomplete")
+                }
+                DecryptedBackupInfo(
+                    manifestJson = manifest.readText(),
+                    snapshotPath = snapshot.absolutePath
+                )
+            } catch (error: Exception) {
+                destination.deleteRecursively()
+                throw error
+            } finally {
+                zipFile.delete()
+            }
+        }
+    }
+
+    fun performInstallWalletSnapshot(
+        snapshotPath: String,
+        walletDataPath: String
+    ): Promise<String> {
+        return Promise.async {
+            val snapshot = File(snapshotPath)
+            val walletDirectory = File(walletDataPath)
+            val parent = walletDirectory.parentFile
+                ?: throw IllegalArgumentException("Wallet data path has no parent")
+            val installDirectory = File(parent, ".wallet-install-${java.util.UUID.randomUUID()}")
+            val rollbackDirectory = File(parent, ".wallet-rollback-${java.util.UUID.randomUUID()}")
+            if (!installDirectory.mkdir()) {
+                throw IllegalStateException("Failed to create wallet install directory")
+            }
+            try {
+                snapshot.copyTo(File(installDirectory, "db.sqlite"), overwrite = false)
+                var rollbackPath = ""
+                if (walletDirectory.exists()) {
+                    if (!walletDirectory.renameTo(rollbackDirectory)) {
+                        throw IllegalStateException("Failed to stage current wallet for rollback")
+                    }
+                    rollbackPath = rollbackDirectory.absolutePath
+                }
+                if (!installDirectory.renameTo(walletDirectory)) {
+                    if (rollbackPath.isNotEmpty()) {
+                        rollbackDirectory.renameTo(walletDirectory)
+                    }
+                    throw IllegalStateException("Failed to install wallet snapshot")
+                }
+                rollbackPath
+            } catch (error: Exception) {
+                installDirectory.deleteRecursively()
+                throw error
+            }
+        }
+    }
+
+    fun performFinalizeWalletSnapshotInstall(rollbackPath: String): Promise<Unit> {
+        return Promise.async {
+            if (rollbackPath.isNotEmpty()) {
+                File(rollbackPath).deleteRecursively()
+            }
+        }
+    }
+
+    fun performRollbackWalletSnapshotInstall(
+        walletDataPath: String,
+        rollbackPath: String
+    ): Promise<Unit> {
+        return Promise.async {
+            val walletDirectory = File(walletDataPath)
+            walletDirectory.deleteRecursively()
+            if (rollbackPath.isNotEmpty()) {
+                val rollbackDirectory = File(rollbackPath)
+                if (rollbackDirectory.exists() && !rollbackDirectory.renameTo(walletDirectory)) {
+                    throw IllegalStateException("Failed to roll back wallet snapshot installation")
+                }
+            }
+        }
+    }
 
     fun performCreateBackup(mnemonic: String): Promise<String> {
         return Promise.async {
@@ -196,6 +339,32 @@ object NoahToolsBackup {
         }.array()
     }
 
+    private fun encryptV2(data: ByteArray, mnemonic: String): ByteArray {
+        return encrypt(data, mnemonic).also { it[0] = 2 }
+    }
+
+    private fun decryptV2(data: ByteArray, mnemonic: String): ByteArray {
+        if (data.isEmpty() || data[0].toInt() != 2) {
+            throw Exception("Unsupported backup version")
+        }
+        val legacyLayout = data.copyOf()
+        legacyLayout[0] = FORMAT_VERSION
+        return decrypt(legacyLayout, mnemonic)
+    }
+
+    private fun sha256File(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        FileInputStream(file).use { input ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
+    }
+
     private fun decrypt(data: ByteArray, mnemonic: String): ByteArray {
         if (mnemonic.isBlank()) {
             throw IllegalArgumentException("Mnemonic cannot be empty")
@@ -257,9 +426,10 @@ object NoahToolsBackup {
 
         for (file in files) {
             if (file.isDirectory) {
-                zipDirectory(file, "$baseName/${file.name}", zipOut)
+                val childBase = if (baseName.isEmpty()) file.name else "$baseName/${file.name}"
+                zipDirectory(file, childBase, zipOut)
             } else {
-                val entryName = "$baseName/${file.name}"
+                val entryName = if (baseName.isEmpty()) file.name else "$baseName/${file.name}"
                 val zipEntry = ZipEntry(entryName)
                 zipOut.putNextEntry(zipEntry)
 

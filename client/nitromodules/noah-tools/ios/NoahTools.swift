@@ -21,6 +21,20 @@ class NoahTools: HybridNoahToolsSpec {
         return try performNativeGet(url: url, headers: headers, timeoutSeconds: timeoutSeconds)
     }
 
+    func uploadFile(
+        url: String, path: String, headers: [String: String], timeoutSeconds: Double
+    ) throws -> Promise<Void> {
+        return try performUploadFile(
+            url: url, path: path, headers: headers, timeoutSeconds: timeoutSeconds)
+    }
+
+    func downloadFile(
+        url: String, path: String, headers: [String: String], timeoutSeconds: Double
+    ) throws -> Promise<Void> {
+        return try performDownloadFile(
+            url: url, path: path, headers: headers, timeoutSeconds: timeoutSeconds)
+    }
+
     func getAppVariant() throws -> String {
         return try performGetAppVariant()
     }
@@ -35,6 +49,50 @@ class NoahTools: HybridNoahToolsSpec {
 
     func restoreBackup(encryptedData: String, mnemonic: String) throws -> Promise<Bool> {
         return try performRestoreBackup(encryptedData: encryptedData, mnemonic: mnemonic)
+    }
+
+    func encryptWalletSnapshot(
+        snapshotPath: String,
+        manifestJson: String,
+        destinationPath: String,
+        mnemonic: String
+    ) throws -> Promise<BackupFileInfo> {
+        return try performEncryptWalletSnapshot(
+            snapshotPath: snapshotPath,
+            manifestJson: manifestJson,
+            destinationPath: destinationPath,
+            mnemonic: mnemonic
+        )
+    }
+
+    func decryptWalletBackup(
+        encryptedPath: String,
+        destinationDirectory: String,
+        mnemonic: String
+    ) throws -> Promise<DecryptedBackupInfo> {
+        return try performDecryptWalletBackup(
+            encryptedPath: encryptedPath,
+            destinationDirectory: destinationDirectory,
+            mnemonic: mnemonic
+        )
+    }
+
+    func installWalletSnapshot(snapshotPath: String, walletDataPath: String) throws
+        -> Promise<String>
+    {
+        return try performInstallWalletSnapshot(
+            snapshotPath: snapshotPath, walletDataPath: walletDataPath)
+    }
+
+    func finalizeWalletSnapshotInstall(rollbackPath: String) throws -> Promise<Void> {
+        return try performFinalizeWalletSnapshotInstall(rollbackPath: rollbackPath)
+    }
+
+    func rollbackWalletSnapshotInstall(walletDataPath: String, rollbackPath: String) throws
+        -> Promise<Void>
+    {
+        return try performRollbackWalletSnapshotInstall(
+            walletDataPath: walletDataPath, rollbackPath: rollbackPath)
     }
 
     func nativeLog(level: String, tag: String, message: String) throws {

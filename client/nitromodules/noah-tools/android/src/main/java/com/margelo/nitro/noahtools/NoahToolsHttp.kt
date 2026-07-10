@@ -5,7 +5,10 @@ import com.margelo.nitro.core.Promise
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.MediaType.Companion.toMediaType
+import java.io.File
+import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
 
 object NoahToolsHttp {
@@ -126,6 +129,70 @@ object NoahToolsHttp {
             } catch (e: Exception) {
                 Log.e(TAG, "Background request failed", e)
                 throw Exception("Background request failed: ${e.message}", e)
+            }
+        }
+    }
+
+    fun performUploadFile(
+        url: String,
+        path: String,
+        headers: Map<String, String>,
+        timeoutSeconds: Double
+    ): Promise<Unit> {
+        return Promise.async {
+            val file = File(path)
+            if (!file.isFile) {
+                throw IllegalArgumentException("Upload file does not exist")
+            }
+            val requestBuilder = Request.Builder()
+                .url(url)
+                .put(file.asRequestBody("application/octet-stream".toMediaType()))
+            headers.forEach { (key, value) -> requestBuilder.addHeader(key, value) }
+            val client = backgroundHttpClient.newBuilder()
+                .connectTimeout(timeoutSeconds.toLong(), TimeUnit.SECONDS)
+                .readTimeout(timeoutSeconds.toLong(), TimeUnit.SECONDS)
+                .writeTimeout(timeoutSeconds.toLong(), TimeUnit.SECONDS)
+                .build()
+            client.newCall(requestBuilder.build()).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw Exception("Backup upload failed with status ${response.code}")
+                }
+            }
+        }
+    }
+
+    fun performDownloadFile(
+        url: String,
+        path: String,
+        headers: Map<String, String>,
+        timeoutSeconds: Double
+    ): Promise<Unit> {
+        return Promise.async {
+            val destination = File(path)
+            if (destination.exists()) {
+                throw IllegalArgumentException("Download destination already exists")
+            }
+            val requestBuilder = Request.Builder().url(url).get()
+            headers.forEach { (key, value) -> requestBuilder.addHeader(key, value) }
+            val client = backgroundHttpClient.newBuilder()
+                .connectTimeout(timeoutSeconds.toLong(), TimeUnit.SECONDS)
+                .readTimeout(timeoutSeconds.toLong(), TimeUnit.SECONDS)
+                .writeTimeout(timeoutSeconds.toLong(), TimeUnit.SECONDS)
+                .build()
+            try {
+                client.newCall(requestBuilder.build()).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        throw Exception("Backup download failed with status ${response.code}")
+                    }
+                    val body = response.body
+                        ?: throw Exception("Backup download returned an empty response")
+                    FileOutputStream(destination).use { output ->
+                        body.byteStream().use { input -> input.copyTo(output) }
+                    }
+                }
+            } catch (error: Exception) {
+                destination.delete()
+                throw error
             }
         }
     }

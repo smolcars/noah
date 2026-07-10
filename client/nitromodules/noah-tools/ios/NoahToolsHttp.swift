@@ -152,4 +152,73 @@ extension NoahTools {
             }
         }
     }
+
+    internal func performUploadFile(
+        url: String, path: String, headers: [String: String], timeoutSeconds: Double
+    ) throws -> Promise<Void> {
+        return Promise.async {
+            guard let requestURL = URL(string: url) else {
+                throw NSError(
+                    domain: "NoahTools", code: 100,
+                    userInfo: [NSLocalizedDescriptionKey: "Invalid upload URL"])
+            }
+            let fileURL = URL(fileURLWithPath: path)
+            guard FileManager.default.fileExists(atPath: fileURL.path) else {
+                throw NSError(
+                    domain: "NoahTools", code: 103,
+                    userInfo: [NSLocalizedDescriptionKey: "Upload file does not exist"])
+            }
+
+            var request = URLRequest(url: requestURL)
+            request.httpMethod = "PUT"
+            request.timeoutInterval = timeoutSeconds
+            for (key, value) in headers {
+                request.setValue(value, forHTTPHeaderField: key)
+            }
+            let (_, response) = try await NoahTools.session.upload(for: request, fromFile: fileURL)
+            guard let httpResponse = response as? HTTPURLResponse,
+                (200..<300).contains(httpResponse.statusCode)
+            else {
+                let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                throw NSError(
+                    domain: "NoahTools", code: 104,
+                    userInfo: [NSLocalizedDescriptionKey: "Backup upload failed with status \(status)"])
+            }
+        }
+    }
+
+    internal func performDownloadFile(
+        url: String, path: String, headers: [String: String], timeoutSeconds: Double
+    ) throws -> Promise<Void> {
+        return Promise.async {
+            guard let requestURL = URL(string: url) else {
+                throw NSError(
+                    domain: "NoahTools", code: 100,
+                    userInfo: [NSLocalizedDescriptionKey: "Invalid download URL"])
+            }
+            let destinationURL = URL(fileURLWithPath: path)
+            guard !FileManager.default.fileExists(atPath: destinationURL.path) else {
+                throw NSError(
+                    domain: "NoahTools", code: 105,
+                    userInfo: [NSLocalizedDescriptionKey: "Download destination already exists"])
+            }
+
+            var request = URLRequest(url: requestURL)
+            request.httpMethod = "GET"
+            request.timeoutInterval = timeoutSeconds
+            for (key, value) in headers {
+                request.setValue(value, forHTTPHeaderField: key)
+            }
+            let (temporaryURL, response) = try await NoahTools.session.download(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                (200..<300).contains(httpResponse.statusCode)
+            else {
+                let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                throw NSError(
+                    domain: "NoahTools", code: 106,
+                    userInfo: [NSLocalizedDescriptionKey: "Backup download failed with status \(status)"])
+            }
+            try FileManager.default.moveItem(at: temporaryURL, to: destinationURL)
+        }
+    }
 }

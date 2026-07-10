@@ -48,11 +48,39 @@ abstract class HybridNoahToolsSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun encryptWalletSnapshot(snapshotPath: String, manifestJson: String, destinationPath: String, mnemonic: String): Promise<BackupFileInfo>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun decryptWalletBackup(encryptedPath: String, destinationDirectory: String, mnemonic: String): Promise<DecryptedBackupInfo>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun installWalletSnapshot(snapshotPath: String, walletDataPath: String): Promise<String>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun finalizeWalletSnapshotInstall(rollbackPath: String): Promise<Unit>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun rollbackWalletSnapshotInstall(walletDataPath: String, rollbackPath: String): Promise<Unit>
+  
+  @DoNotStrip
+  @Keep
   abstract fun nativePost(url: String, body: String, headers: Map<String, String>, timeoutSeconds: Double): Promise<HttpResponse>
   
   @DoNotStrip
   @Keep
   abstract fun nativeGet(url: String, headers: Map<String, String>, timeoutSeconds: Double): Promise<HttpResponse>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun uploadFile(url: String, path: String, headers: Map<String, String>, timeoutSeconds: Double): Promise<Unit>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun downloadFile(url: String, path: String, headers: Map<String, String>, timeoutSeconds: Double): Promise<Unit>
   
   @DoNotStrip
   @Keep

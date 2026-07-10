@@ -13,11 +13,36 @@ export interface UnifiedPushDistributor {
   isConnected: boolean;
 }
 
+export interface BackupFileInfo {
+  path: string;
+  sizeBytes: number;
+  sha256: string;
+}
+
+export interface DecryptedBackupInfo {
+  manifestJson: string;
+  snapshotPath: string;
+}
+
 export interface NoahTools extends HybridObject<{ ios: "swift"; android: "kotlin" }> {
   getAppVariant(): string;
   getAppLogs(): Promise<string[]>;
   createBackup(mnemonic: string): Promise<string>;
   restoreBackup(encryptedData: string, mnemonic: string): Promise<boolean>;
+  encryptWalletSnapshot(
+    snapshotPath: string,
+    manifestJson: string,
+    destinationPath: string,
+    mnemonic: string,
+  ): Promise<BackupFileInfo>;
+  decryptWalletBackup(
+    encryptedPath: string,
+    destinationDirectory: string,
+    mnemonic: string,
+  ): Promise<DecryptedBackupInfo>;
+  installWalletSnapshot(snapshotPath: string, walletDataPath: string): Promise<string>;
+  finalizeWalletSnapshotInstall(rollbackPath: string): Promise<void>;
+  rollbackWalletSnapshotInstall(walletDataPath: string, rollbackPath: string): Promise<void>;
 
   // Native HTTP client for POST requests
   nativePost(
@@ -33,6 +58,18 @@ export interface NoahTools extends HybridObject<{ ios: "swift"; android: "kotlin
     headers: Record<string, string>,
     timeoutSeconds: number,
   ): Promise<HttpResponse>;
+  uploadFile(
+    url: string,
+    path: string,
+    headers: Record<string, string>,
+    timeoutSeconds: number,
+  ): Promise<void>;
+  downloadFile(
+    url: string,
+    path: string,
+    headers: Record<string, string>,
+    timeoutSeconds: number,
+  ): Promise<void>;
 
   // Native logging
   nativeLog(level: string, tag: string, message: string): void;

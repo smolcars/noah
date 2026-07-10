@@ -62,6 +62,24 @@ class NoahTools : HybridNoahToolsSpec() {
         return NoahToolsHttp.performNativeGet(url, headers, timeoutSeconds)
     }
 
+    override fun uploadFile(
+        url: String,
+        path: String,
+        headers: Map<String, String>,
+        timeoutSeconds: Double
+    ): Promise<Unit> {
+        return NoahToolsHttp.performUploadFile(url, path, headers, timeoutSeconds)
+    }
+
+    override fun downloadFile(
+        url: String,
+        path: String,
+        headers: Map<String, String>,
+        timeoutSeconds: Double
+    ): Promise<Unit> {
+        return NoahToolsHttp.performDownloadFile(url, path, headers, timeoutSeconds)
+    }
+
     override fun getAppVariant(): String {
         return NoahToolsLogging.performGetAppVariant()
     }
@@ -76,6 +94,50 @@ class NoahTools : HybridNoahToolsSpec() {
 
     override fun restoreBackup(encryptedData: String, mnemonic: String): Promise<Boolean> {
         return NoahToolsBackup.performRestoreBackup(encryptedData, mnemonic)
+    }
+
+    override fun encryptWalletSnapshot(
+        snapshotPath: String,
+        manifestJson: String,
+        destinationPath: String,
+        mnemonic: String
+    ): Promise<BackupFileInfo> {
+        return NoahToolsBackup.performEncryptWalletSnapshot(
+            snapshotPath,
+            manifestJson,
+            destinationPath,
+            mnemonic
+        )
+    }
+
+    override fun decryptWalletBackup(
+        encryptedPath: String,
+        destinationDirectory: String,
+        mnemonic: String
+    ): Promise<DecryptedBackupInfo> {
+        return NoahToolsBackup.performDecryptWalletBackup(
+            encryptedPath,
+            destinationDirectory,
+            mnemonic
+        )
+    }
+
+    override fun installWalletSnapshot(
+        snapshotPath: String,
+        walletDataPath: String
+    ): Promise<String> {
+        return NoahToolsBackup.performInstallWalletSnapshot(snapshotPath, walletDataPath)
+    }
+
+    override fun finalizeWalletSnapshotInstall(rollbackPath: String): Promise<Unit> {
+        return NoahToolsBackup.performFinalizeWalletSnapshotInstall(rollbackPath)
+    }
+
+    override fun rollbackWalletSnapshotInstall(
+        walletDataPath: String,
+        rollbackPath: String
+    ): Promise<Unit> {
+        return NoahToolsBackup.performRollbackWalletSnapshotInstall(walletDataPath, rollbackPath)
     }
 
     override fun nativeLog(level: String, tag: String, message: String) {
