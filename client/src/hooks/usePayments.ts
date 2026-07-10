@@ -123,14 +123,8 @@ export const resolveLightningAddressPaymentRoute = async (
   const arkLnurlEndpoint = new URL(lnurlEndpoint);
   arkLnurlEndpoint.searchParams.set("ark", arkInfoResult.value.server_pubkey);
 
-  try {
-    const response = await fetchLnurlpResponse(arkLnurlEndpoint);
-    return paymentRouteFromLnurlpResponse(response, true);
-  } catch (error) {
-    log.w("Ark route discovery failed, retrying with standard LNURL", [error]);
-    const response = await fetchLnurlpResponse(lnurlEndpoint);
-    return paymentRouteFromLnurlpResponse(response, false);
-  }
+  const response = await fetchLnurlpResponse(arkLnurlEndpoint);
+  return paymentRouteFromLnurlpResponse(response, true);
 };
 
 export function useLightningAddressPaymentRoute(destination: string | null) {
