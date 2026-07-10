@@ -26,6 +26,7 @@ import {
   estimateOffboardAllFee,
   estimateBoardOffchainFee,
   estimateStandardOnchainTxFee,
+  validateArkoorPaymentAddress,
   type StandardOnchainWalletFeeEstimate,
 } from "../lib/paymentsApi";
 import { queryClient } from "~/queryClient";
@@ -34,7 +35,6 @@ import { getArkInfo } from "~/lib/walletApi";
 import logger from "~/lib/log";
 import ky from "ky";
 import { Result } from "neverthrow";
-import { getLnurlDomain } from "~/constants";
 
 const log = logger("usePayments");
 
@@ -48,7 +48,7 @@ interface LnurlpDefaultResponse {
   ark?: string;
 }
 
-export type NoahPaymentRoute =
+export type LightningAddressPaymentRoute =
   | {
       method: "ark";
       destination: string;
@@ -74,48 +74,74 @@ const parseLightningAddress = (destination: string) => {
   return { username: parts[0], domain: parts[1] };
 };
 
-export const isNoahLightningAddress = (destination: string): boolean => {
-  const parsed = parseLightningAddress(destination);
-  return parsed?.domain === getLnurlDomain().toLowerCase();
+const fetchLnurlpResponse = async (url: URL): Promise<LnurlpDefaultResponse> => {
+  const response = await ky.get(url.toString()).json<LnurlpDefaultResponse>();
+  if (response.tag !== "payRequest" || !response.callback) {
+    throw new Error("Invalid LNURL response for lightning address payment");
+  }
+
+  return response;
 };
 
-export const resolveNoahPaymentRoute = async (destination: string): Promise<NoahPaymentRoute> => {
+const paymentRouteFromLnurlpResponse = async (
+  response: LnurlpDefaultResponse,
+  acceptArkAddress: boolean,
+): Promise<LightningAddressPaymentRoute> => {
+  const limits = {
+    minSendableMsat: response.minSendable,
+    maxSendableMsat: response.maxSendable,
+  };
+
+  if (acceptArkAddress && response.ark) {
+    const validationResult = await validateArkoorPaymentAddress(response.ark);
+    if (validationResult.isOk()) {
+      return { method: "ark", destination: response.ark, ...limits };
+    }
+
+    log.w("Ignoring incompatible Ark address returned by LNURL provider", [validationResult.error]);
+  }
+
+  return { method: "lightning", ...limits };
+};
+
+export const resolveLightningAddressPaymentRoute = async (
+  destination: string,
+): Promise<LightningAddressPaymentRoute> => {
   const parsed = parseLightningAddress(destination);
-  if (!parsed || parsed.domain !== getLnurlDomain().toLowerCase()) {
-    throw new Error("Destination is not a Noah lightning address");
+  if (!parsed) {
+    throw new Error("Destination is not a lightning address");
   }
 
   const lnurlEndpoint = new URL(`https://${parsed.domain}/.well-known/lnurlp/${parsed.username}`);
   const arkInfoResult = await getArkInfo();
   if (arkInfoResult.isErr()) {
-    throw arkInfoResult.error;
-  }
-  lnurlEndpoint.searchParams.set("ark", arkInfoResult.value.server_pubkey);
-  const lnurlJson = await ky.get(lnurlEndpoint.toString()).json<LnurlpDefaultResponse>();
-
-  if (lnurlJson.tag !== "payRequest" || !lnurlJson.callback) {
-    throw new Error("Invalid LNURL response for Noah payment");
+    log.w("Unable to load Ark server info, using standard LNURL discovery", [arkInfoResult.error]);
+    const response = await fetchLnurlpResponse(lnurlEndpoint);
+    return paymentRouteFromLnurlpResponse(response, false);
   }
 
-  const limits = {
-    minSendableMsat: lnurlJson.minSendable,
-    maxSendableMsat: lnurlJson.maxSendable,
-  };
+  const arkLnurlEndpoint = new URL(lnurlEndpoint);
+  arkLnurlEndpoint.searchParams.set("ark", arkInfoResult.value.server_pubkey);
 
-  return lnurlJson.ark
-    ? { method: "ark", destination: lnurlJson.ark, ...limits }
-    : { method: "lightning", ...limits };
+  try {
+    const response = await fetchLnurlpResponse(arkLnurlEndpoint);
+    return paymentRouteFromLnurlpResponse(response, true);
+  } catch (error) {
+    log.w("Ark route discovery failed, retrying with standard LNURL", [error]);
+    const response = await fetchLnurlpResponse(lnurlEndpoint);
+    return paymentRouteFromLnurlpResponse(response, false);
+  }
 };
 
-export function useNoahPaymentRoute(destination: string | null) {
+export function useLightningAddressPaymentRoute(destination: string | null) {
   return useQuery({
-    queryKey: ["payment-route", "noah", destination],
+    queryKey: ["payment-route", "lightning-address", destination],
     queryFn: () => {
       if (!destination) {
-        throw new Error("Noah payment destination is required");
+        throw new Error("Lightning address payment destination is required");
       }
 
-      return resolveNoahPaymentRoute(destination);
+      return resolveLightningAddressPaymentRoute(destination);
     },
     enabled: destination !== null,
     staleTime: 0,
@@ -243,7 +269,7 @@ type SendVariables = {
   resolvedAmountSat: number;
   comment: string | null;
   onchainSource?: OnchainSendSource;
-  noahPaymentRoute?: NoahPaymentRoute;
+  lightningAddressPaymentRoute?: LightningAddressPaymentRoute;
   btcPrice?: number;
 };
 
@@ -435,8 +461,8 @@ const readLightningPayment = async (
   return result.value;
 };
 
-const sendNoahPayment = async (
-  route: NoahPaymentRoute,
+const sendLightningAddressPayment = async (
+  route: LightningAddressPaymentRoute,
   destination: string,
   amountSat: number,
   comment: string | null,
@@ -447,7 +473,7 @@ const sendNoahPayment = async (
   }
 
   if (route.method === "ark") {
-    log.d("Paying Noah user via Ark direct payment");
+    log.d("Paying lightning address via Ark direct payment");
     const result = await sendArkoorPayment(route.destination, amountSat);
     if (result.isErr()) {
       throw result.error;
@@ -455,14 +481,15 @@ const sendNoahPayment = async (
     return result.value;
   }
 
-  log.d("Paying Noah user via Lightning Address");
+  log.d("Paying via standard Lightning Address flow");
   return readLightningPayment(payLightningAddress(destination, amountSat, comment || ""));
 };
 
 export function useSend(destinationType: DestinationTypes) {
   return useMutation<SendResult, Error, SendVariables>({
     mutationFn: async (variables) => {
-      const { destination, amountSat, comment, onchainSource, noahPaymentRoute } = variables;
+      const { destination, amountSat, comment, onchainSource, lightningAddressPaymentRoute } =
+        variables;
       if (amountSat === undefined && destinationType !== "lightning") {
         throw new Error("Amount is required");
       }
@@ -491,27 +518,24 @@ export function useSend(destinationType: DestinationTypes) {
             throw new Error("Amount is required for LNURL payments");
           }
 
-          if (isNoahLightningAddress(destination)) {
-            if (noahPaymentRoute) {
-              return sendNoahPayment(noahPaymentRoute, destination, amountSat, comment);
-            }
-
-            let route: NoahPaymentRoute;
-            try {
-              route = await resolveNoahPaymentRoute(destination);
-            } catch (routeError) {
-              log.w("Failed to resolve Noah payment route, falling back to standard LNURL", [
-                routeError,
-              ]);
-              return readLightningPayment(
-                payLightningAddress(destination, amountSat, comment || ""),
-              );
-            }
-
-            return sendNoahPayment(route, destination, amountSat, comment);
+          if (lightningAddressPaymentRoute) {
+            return sendLightningAddressPayment(
+              lightningAddressPaymentRoute,
+              destination,
+              amountSat,
+              comment,
+            );
           }
 
-          return readLightningPayment(payLightningAddress(destination, amountSat, comment || ""));
+          try {
+            const route = await resolveLightningAddressPaymentRoute(destination);
+            return sendLightningAddressPayment(route, destination, amountSat, comment);
+          } catch (routeError) {
+            log.w("Failed to resolve lightning address payment route, using standard LNURL", [
+              routeError,
+            ]);
+            return readLightningPayment(payLightningAddress(destination, amountSat, comment || ""));
+          }
         }
         case "offer":
           return readLightningPayment(payLightningOffer(destination, amountSat));

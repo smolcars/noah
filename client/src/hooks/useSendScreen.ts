@@ -11,8 +11,7 @@ import {
   ParsedBip321,
 } from "../lib/sendUtils";
 import {
-  isNoahLightningAddress,
-  useNoahPaymentRoute,
+  useLightningAddressPaymentRoute,
   useSend,
   useSendFeeEstimate,
   type SendFeeEstimateParams,
@@ -148,13 +147,11 @@ export const useSendScreen = () => {
     destinationType === "bip321" ? selectedPaymentMethod : destinationType;
   const cleanedDestination = destination.trim().replace(/^(bitcoin:|lightning:)/i, "");
   const normalizedLnurlDestination = normalizeLightningAddress(cleanedDestination);
-  const noahPaymentRouteDestination =
-    showConfirmation &&
-    finalDestinationType === "lnurl" &&
-    isNoahLightningAddress(normalizedLnurlDestination)
-      ? normalizedLnurlDestination
-      : null;
-  const noahPaymentRouteQuery = useNoahPaymentRoute(noahPaymentRouteDestination);
+  const lightningAddressPaymentRouteDestination =
+    showConfirmation && finalDestinationType === "lnurl" ? normalizedLnurlDestination : null;
+  const lightningAddressPaymentRouteQuery = useLightningAddressPaymentRoute(
+    lightningAddressPaymentRouteDestination,
+  );
 
   const {
     mutate: send,
@@ -251,11 +248,8 @@ export const useSendScreen = () => {
       case "offer":
         return { method: "lightning", amountSat };
       case "lnurl":
-        if (!noahPaymentRouteDestination) {
-          return { method: "lightning", amountSat };
-        }
-        return noahPaymentRouteQuery.data
-          ? { method: noahPaymentRouteQuery.data.method, amountSat }
+        return lightningAddressPaymentRouteQuery.data
+          ? { method: lightningAddressPaymentRouteQuery.data.method, amountSat }
           : null;
       case "onchain":
         return cleanedDestination && resolvedOnchainSource !== null
@@ -275,8 +269,7 @@ export const useSendScreen = () => {
     cleanedDestination,
     destinationType,
     finalDestinationType,
-    noahPaymentRouteDestination,
-    noahPaymentRouteQuery.data,
+    lightningAddressPaymentRouteQuery.data,
     resolvedOnchainSource,
     selectedPaymentMethod,
     showConfirmation,
@@ -330,12 +323,14 @@ export const useSendScreen = () => {
   }, [feeEstimateQuery.error]);
 
   useEffect(() => {
-    if (!noahPaymentRouteQuery.error) {
+    if (!lightningAddressPaymentRouteQuery.error) {
       return;
     }
 
-    log.w("Failed to resolve Noah payment route", [noahPaymentRouteQuery.error]);
-  }, [noahPaymentRouteQuery.error]);
+    log.w("Failed to resolve lightning address payment route", [
+      lightningAddressPaymentRouteQuery.error,
+    ]);
+  }, [lightningAddressPaymentRouteQuery.error]);
 
   const toggleCurrency = useCallback(() => {
     if (currency === "SATS") {
@@ -539,9 +534,9 @@ export const useSendScreen = () => {
         comment: comment || null,
         onchainSource:
           finalDestinationType === "onchain" ? (resolvedOnchainSource ?? undefined) : undefined,
-        noahPaymentRoute:
-          finalDestinationType === "lnurl" && noahPaymentRouteDestination
-            ? noahPaymentRouteQuery.data
+        lightningAddressPaymentRoute:
+          finalDestinationType === "lnurl" && lightningAddressPaymentRouteDestination
+            ? lightningAddressPaymentRouteQuery.data
             : undefined,
         btcPrice,
       });
@@ -639,10 +634,10 @@ export const useSendScreen = () => {
     setSelectedOnchainSource,
     resolvedOnchainSource,
     isOnchainSourceSelectionRequired,
-    isNoahPaymentRouteResolutionRequired:
-      noahPaymentRouteDestination !== null &&
-      !noahPaymentRouteQuery.data &&
-      !noahPaymentRouteQuery.error,
+    isLightningAddressPaymentRouteResolutionRequired:
+      lightningAddressPaymentRouteDestination !== null &&
+      !lightningAddressPaymentRouteQuery.data &&
+      !lightningAddressPaymentRouteQuery.error,
     onchainWalletBalance,
     offchainWalletBalance,
     showConfirmation,
@@ -650,10 +645,10 @@ export const useSendScreen = () => {
     showSuccess,
     handleCloseSuccess,
     feeEstimate: feeEstimateQuery.data,
-    isEstimatingFee: noahPaymentRouteQuery.isFetching || feeEstimateQuery.isFetching,
-    feeEstimateError: noahPaymentRouteQuery.error ?? feeEstimateQuery.error,
-    feeEstimateUnavailableText: noahPaymentRouteQuery.error
-      ? "Unable to determine whether this Noah payment will use Ark or Lightning."
+    isEstimatingFee: lightningAddressPaymentRouteQuery.isFetching || feeEstimateQuery.isFetching,
+    feeEstimateError: lightningAddressPaymentRouteQuery.error ?? feeEstimateQuery.error,
+    feeEstimateUnavailableText: lightningAddressPaymentRouteQuery.error
+      ? "Unable to determine whether this payment will use Ark or Lightning."
       : null,
     feeEstimateNote,
     feeEstimateWarning,

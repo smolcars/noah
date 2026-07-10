@@ -156,7 +156,9 @@ export const offboardAllArk = async (address: string): Promise<Result<string, Er
   });
 };
 
-const validateArkoorPaymentAddress = async (destination: string): Promise<Result<void, Error>> => {
+export const validateArkoorPaymentAddress = async (
+  destination: string,
+): Promise<Result<void, Error>> => {
   return ResultAsync.fromPromise(validateArkoorAddressNitro(destination), (error) => {
     const message = error instanceof Error ? error.message : String(error);
     return new Error(`Invalid Ark address: ${message}`);
