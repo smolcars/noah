@@ -22,6 +22,7 @@ import {
   getBackupObjectDownloadForRestore,
   getDownloadUrlForRestore,
   initiateBackupUpload,
+  listBackupObjectsForRestore,
   updateBackupSettings,
 } from "./api";
 import { getMnemonic, setMnemonic } from "./crypto";
@@ -51,6 +52,12 @@ export type BackupOutcome = {
   backupId: string | null;
   snapshotSha256: string;
   uploaded: boolean;
+};
+
+export type EncryptedBackupFile = {
+  path: string;
+  sizeBytes: number;
+  sha256: string;
 };
 
 type RestoreOutcome = {
@@ -216,8 +223,48 @@ export class BackupService {
     }
   }
 
-  private async restoreV2Backup(mnemonic: string): Promise<Result<RestoreOutcome, Error>> {
-    const downloadUrlResult = await getBackupObjectDownloadForRestore({ mnemonic });
+  async createEncryptedBackupFile(
+    destinationPath: string,
+  ): Promise<Result<EncryptedBackupFile, Error>> {
+    const operationId = uuid.v4().toString();
+    const snapshotPath = `${CACHES_DIRECTORY_PATH}/wallet-export-${operationId}.sqlite`;
+
+    try {
+      const snapshotResult = await ResultAsync.fromPromise(
+        createWalletSnapshot(snapshotPath),
+        asError,
+      );
+      if (snapshotResult.isErr()) {
+        return err(snapshotResult.error);
+      }
+      const mnemonicResult = await getMnemonic();
+      if (mnemonicResult.isErr()) {
+        return err(mnemonicResult.error);
+      }
+
+      return await ResultAsync.fromPromise(
+        encryptWalletSnapshot(
+          snapshotResult.value.path,
+          JSON.stringify(snapshotManifest(snapshotResult.value)),
+          destinationPath,
+          mnemonicResult.value,
+        ),
+        asError,
+      );
+    } finally {
+      await removePathIfPresent(snapshotPath);
+    }
+  }
+
+  private async restoreV2BackupObject(
+    mnemonic: string,
+    backupId: string,
+    accessToken: string,
+  ): Promise<Result<RestoreOutcome, Error>> {
+    const downloadUrlResult = await getBackupObjectDownloadForRestore({
+      accessToken,
+      backupId,
+    });
     if (downloadUrlResult.isErr()) {
       return err(downloadUrlResult.error);
     }
@@ -321,11 +368,39 @@ export class BackupService {
   }
 
   async restoreBackup(mnemonic: string): Promise<Result<RestoreOutcome, Error>> {
-    const v2Result = await this.restoreV2Backup(mnemonic);
-    if (v2Result.isOk() || !isNotFoundError(v2Result.error)) {
-      return v2Result;
+    const backupsResult = await listBackupObjectsForRestore({ mnemonic });
+    if (backupsResult.isErr()) {
+      if (isNotFoundError(backupsResult.error)) {
+        return this.restoreLegacyBackup(mnemonic);
+      }
+      return err(backupsResult.error);
     }
-    return this.restoreLegacyBackup(mnemonic);
+    if (backupsResult.value.backups.length === 0) {
+      return this.restoreLegacyBackup(mnemonic);
+    }
+
+    let latestError: Error | null = null;
+    for (const backup of backupsResult.value.backups) {
+      if (backup.format_version !== BACKUP_FORMAT_VERSION) {
+        latestError ??= new Error(`Unsupported backup format version ${backup.format_version}`);
+        continue;
+      }
+
+      const restoreResult = await this.restoreV2BackupObject(
+        mnemonic,
+        backup.backup_id,
+        backupsResult.value.accessToken,
+      );
+      if (restoreResult.isOk()) {
+        return restoreResult;
+      }
+      latestError ??= restoreResult.error;
+      log.w("Retained wallet backup failed validation, trying an older backup", [
+        redactSensitiveErrorMessage(restoreResult.error),
+      ]);
+    }
+
+    return err(latestError ?? new Error("No supported wallet backup was found"));
   }
 }
 

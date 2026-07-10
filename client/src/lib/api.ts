@@ -482,8 +482,21 @@ export const getDownloadUrlForRestore = async (payload: {
 
 export const getBackupObjectDownloadForRestore = async (payload: {
   backupId?: string;
-  mnemonic: string;
+  accessToken: string;
 }): Promise<Result<BackupObjectDownloadResponse, Error>> => {
+  return post<GetBackupObjectDownloadPayload, BackupObjectDownloadResponse>(
+    "/backup/v2/download",
+    { backup_id: payload.backupId ?? null },
+    {
+      accessToken: payload.accessToken,
+      retryOnAuthFailure: false,
+    },
+  );
+};
+
+export const listBackupObjectsForRestore = async (payload: {
+  mnemonic: string;
+}): Promise<Result<{ accessToken: string; backups: BackupObjectInfo[] }, Error>> => {
   const authResult = await getAccessToken({
     mnemonic: payload.mnemonic,
     persistToken: false,
@@ -493,14 +506,15 @@ export const getBackupObjectDownloadForRestore = async (payload: {
     return err(authResult.error);
   }
 
-  return post<GetBackupObjectDownloadPayload, BackupObjectDownloadResponse>(
-    "/backup/v2/download",
-    { backup_id: payload.backupId ?? null },
+  const listResult = await post<object, BackupObjectInfo[]>(
+    "/backup/v2/list",
+    {},
     {
       accessToken: authResult.value,
       retryOnAuthFailure: false,
     },
   );
+  return listResult.map((backups) => ({ accessToken: authResult.value, backups }));
 };
 
 export const deregister = () => post<object, DefaultSuccessPayload>("/deregister", {});

@@ -49,7 +49,7 @@ const ExportDatabaseScreen = () => {
             Export encrypted backup
           </Text>
           <Text className="mt-3 text-center text-base leading-6 text-muted-foreground">
-            This creates an encrypted backup file containing your wallet databases. Keep this file
+            This creates an encrypted backup file containing a safe wallet snapshot. Keep this file
             secure, as it can be used to restore your wallet.
           </Text>
         </View>
