@@ -8,9 +8,11 @@ use crate::wide_event::WideEventHandle;
 // use crate::push::{PushNotificationData, send_push_notification};
 use crate::s3_client::S3BackupClient;
 use crate::types::{
-    AuthorizeMailboxPayload, BackupInfo, BackupSettingsPayload, CompleteUploadPayload,
-    DefaultSuccessPayload, DeleteBackupPayload, DownloadUrlResponse, GetDownloadUrlPayload,
-    HeartbeatResponsePayload, LightningAddressSuggestionsPayload,
+    AuthorizeMailboxPayload, BackupInfo, BackupObjectDownloadResponse, BackupObjectInfo,
+    BackupSettingsPayload, CompleteBackupUploadPayload, CompleteUploadPayload,
+    DefaultSuccessPayload, DeleteBackupObjectPayload, DeleteBackupPayload, DownloadUrlResponse,
+    GetBackupObjectDownloadPayload, GetDownloadUrlPayload, HeartbeatResponsePayload,
+    InitiateBackupUploadPayload, InitiateBackupUploadResponse, LightningAddressSuggestionsPayload,
     LightningAddressSuggestionsResponse, ReportJobStatusPayload, ReportStatus,
     SubmitInvoicePayload, SubmitSupportTicketPayload, SubmitSupportTicketResponse,
     UpdateProfilePayload, UserInfoResponse, UserStatus,
@@ -25,13 +27,16 @@ use crate::{
     },
 };
 use axum::{Extension, Json, extract::State};
+use base64::Engine;
 use chrono::Utc;
+use uuid::Uuid;
 use validator::Validate;
 
 const MAX_MAILBOX_AUTH_TTL_SECS: i64 = 90 * 24 * 60 * 60;
 const LN_SUGGESTIONS_MIN_USERNAME_LEN: usize = 2;
 const LN_SUGGESTIONS_MAX_QUERY_LEN: usize = 64;
 const LN_SUGGESTIONS_LIMIT: i64 = 8;
+const BACKUP_OBJECT_FORMAT_VERSION: i32 = 2;
 const NON_LN_SUGGESTION_PREFIXES: [&str; 9] = [
     "bc1", "tb1", "bcrt1", "lnbc", "lntb", "lnbcrt", "ark", "tark", "lno",
 ];
@@ -377,6 +382,184 @@ pub async fn get_upload_url(
     let upload_url = s3_client.generate_upload_url(&s3_key).await?;
 
     Ok(Json(UploadUrlResponse { upload_url, s3_key }))
+}
+
+pub async fn initiate_backup_object_upload(
+    State(state): State<AppState>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
+    Json(payload): Json<InitiateBackupUploadPayload>,
+) -> Result<Json<InitiateBackupUploadResponse>, ApiError> {
+    if payload.format_version != BACKUP_OBJECT_FORMAT_VERSION {
+        return Err(ApiError::InvalidArgument(format!(
+            "Unsupported backup format version: {}",
+            payload.format_version
+        )));
+    }
+    if payload.encrypted_size == 0 {
+        return Err(ApiError::InvalidArgument(
+            "Backup size must be greater than zero".to_string(),
+        ));
+    }
+
+    let encrypted_sha256 = payload.encrypted_sha256.to_ascii_lowercase();
+    let checksum_bytes = hex::decode(&encrypted_sha256).map_err(|_| {
+        ApiError::InvalidArgument("Backup SHA-256 must be 64 hexadecimal characters".to_string())
+    })?;
+    if checksum_bytes.len() != 32 || encrypted_sha256.len() != 64 {
+        return Err(ApiError::InvalidArgument(
+            "Backup SHA-256 must be 64 hexadecimal characters".to_string(),
+        ));
+    }
+    let checksum_sha256 = base64::engine::general_purpose::STANDARD.encode(checksum_bytes);
+
+    let backup_id = Uuid::new_v4();
+    let object_key = format!("{}/backups/{}.noahbackup", auth_payload.key, backup_id);
+    let s3_client = S3BackupClient::new(state.config.s3_bucket_name.clone()).await?;
+    let upload_url = s3_client
+        .generate_checksummed_upload_url(&object_key, &checksum_sha256)
+        .await?;
+
+    BackupRepository::new(&state.db_pool)
+        .create_pending_object(
+            backup_id,
+            &auth_payload.key,
+            &object_key,
+            payload.format_version,
+            payload.encrypted_size,
+            &encrypted_sha256,
+        )
+        .await?;
+
+    Ok(Json(InitiateBackupUploadResponse {
+        backup_id: backup_id.to_string(),
+        upload_url,
+        checksum_sha256,
+    }))
+}
+
+pub async fn complete_backup_object_upload(
+    State(state): State<AppState>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
+    Json(payload): Json<CompleteBackupUploadPayload>,
+) -> Result<Json<DefaultSuccessPayload>, ApiError> {
+    let backup_id = parse_backup_id(&payload.backup_id)?;
+    let repo = BackupRepository::new(&state.db_pool);
+    let object = repo
+        .find_object(&auth_payload.key, backup_id)
+        .await?
+        .ok_or_else(|| ApiError::NotFound("Backup upload not found".to_string()))?;
+
+    if object.completed_at.is_some() {
+        return Ok(Json(DefaultSuccessPayload { success: true }));
+    }
+
+    let expected_checksum = base64::engine::general_purpose::STANDARD
+        .encode(hex::decode(&object.encrypted_sha256).map_err(anyhow::Error::from)?);
+    let s3_client = S3BackupClient::new(state.config.s3_bucket_name.clone()).await?;
+    let uploaded = s3_client.head_object(&object.object_key).await?;
+    if uploaded.size != object.encrypted_size {
+        return Err(ApiError::InvalidArgument(
+            "Uploaded backup size does not match the initiated upload".to_string(),
+        ));
+    }
+    if uploaded.checksum_sha256.as_deref() != Some(expected_checksum.as_str()) {
+        return Err(ApiError::InvalidArgument(
+            "Uploaded backup checksum does not match the initiated upload".to_string(),
+        ));
+    }
+
+    if !repo.complete_object(&auth_payload.key, backup_id).await? {
+        return Err(ApiError::NotFound("Backup upload not found".to_string()));
+    }
+
+    for expired in repo
+        .completed_objects_beyond_retention(&auth_payload.key)
+        .await?
+    {
+        match s3_client.delete_object(&expired.object_key).await {
+            Ok(()) => {
+                repo.delete_object(&auth_payload.key, expired.backup_id)
+                    .await?;
+            }
+            Err(error) => {
+                tracing::warn!(
+                    backup_id = %expired.backup_id,
+                    error = %error,
+                    "failed to prune retained backup object"
+                );
+            }
+        }
+    }
+
+    Ok(Json(DefaultSuccessPayload { success: true }))
+}
+
+pub async fn list_backup_objects(
+    State(state): State<AppState>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
+) -> Result<Json<Vec<BackupObjectInfo>>, ApiError> {
+    Ok(Json(
+        BackupRepository::new(&state.db_pool)
+            .list_completed_objects(&auth_payload.key)
+            .await?,
+    ))
+}
+
+pub async fn get_backup_object_download_url(
+    State(state): State<AppState>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
+    Json(payload): Json<GetBackupObjectDownloadPayload>,
+) -> Result<Json<BackupObjectDownloadResponse>, ApiError> {
+    let backup_id = payload
+        .backup_id
+        .as_deref()
+        .map(parse_backup_id)
+        .transpose()?;
+    let object = BackupRepository::new(&state.db_pool)
+        .find_completed_object(&auth_payload.key, backup_id)
+        .await?
+        .ok_or_else(|| ApiError::NotFound("Backup not found".to_string()))?;
+    let completed_at = object
+        .completed_at
+        .ok_or_else(|| ApiError::NotFound("Backup not found".to_string()))?;
+    let download_url = S3BackupClient::new(state.config.s3_bucket_name.clone())
+        .await?
+        .generate_download_url(&object.object_key)
+        .await?;
+
+    Ok(Json(BackupObjectDownloadResponse {
+        backup: BackupObjectInfo {
+            backup_id: object.backup_id.to_string(),
+            format_version: object.format_version,
+            created_at: completed_at.to_rfc3339(),
+            encrypted_size: object.encrypted_size,
+            encrypted_sha256: object.encrypted_sha256,
+        },
+        download_url,
+    }))
+}
+
+pub async fn delete_backup_object(
+    State(state): State<AppState>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
+    Json(payload): Json<DeleteBackupObjectPayload>,
+) -> Result<Json<DefaultSuccessPayload>, ApiError> {
+    let backup_id = parse_backup_id(&payload.backup_id)?;
+    let repo = BackupRepository::new(&state.db_pool);
+    let object = repo
+        .find_completed_object(&auth_payload.key, Some(backup_id))
+        .await?
+        .ok_or_else(|| ApiError::NotFound("Backup not found".to_string()))?;
+    S3BackupClient::new(state.config.s3_bucket_name.clone())
+        .await?
+        .delete_object(&object.object_key)
+        .await?;
+    repo.delete_object(&auth_payload.key, backup_id).await?;
+    Ok(Json(DefaultSuccessPayload { success: true }))
+}
+
+fn parse_backup_id(value: &str) -> Result<Uuid, ApiError> {
+    Uuid::parse_str(value).map_err(|_| ApiError::InvalidArgument("Invalid backup ID".to_string()))
 }
 
 pub async fn complete_upload(

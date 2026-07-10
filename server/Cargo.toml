@@ -39,7 +39,7 @@ aws-sdk-sesv2 = "1.71.0"
 ts-rs = "11.1.0"
 sentry = { version = "0.46.0", features = ["tracing", "logs", "tower-axum-matched-path"] }
 tower = "0.5.2"
-uuid = "1.18.1"
+uuid = { version = "1.18.1", features = ["v4"] }
 semver = "1.0.27"
 sqlx = { version = "0.8.2", default-features = false, features = [
   "runtime-tokio",

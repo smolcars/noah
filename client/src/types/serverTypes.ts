@@ -53,13 +53,21 @@ encoded: string, };
 
 export type BackupInfo = { backup_version: number, created_at: string, backup_size: number, };
 
+export type BackupObjectDownloadResponse = { backup: BackupObjectInfo, download_url: string, };
+
+export type BackupObjectInfo = { backup_id: string, format_version: number, created_at: string, encrypted_size: number, encrypted_sha256: string, };
+
 export type BackupSettingsPayload = { backup_enabled: boolean, };
 
 export type BackupTriggerNotification = { notification_k1: string, };
 
+export type CompleteBackupUploadPayload = { backup_id: string, };
+
 export type CompleteUploadPayload = { s3_key: string, backup_version: number, backup_size: number, };
 
 export type DefaultSuccessPayload = { success: boolean, };
+
+export type DeleteBackupObjectPayload = { backup_id: string, };
 
 export type DeleteBackupPayload = { backup_version: number, };
 
@@ -79,6 +87,8 @@ export type FiatPricesPayload = Record<string, never>;
 
 export type FiatPricesResponse = { time: number, rates: { [key in string]?: number }, };
 
+export type GetBackupObjectDownloadPayload = { backup_id: string | null, };
+
 export type GetDownloadUrlPayload = { backup_version: number | null, };
 
 export type GetUploadUrlPayload = { backup_version: number, };
@@ -90,6 +100,10 @@ export type HeartbeatResponsePayload = { notification_id: string, };
 export type HistoricalFiatPricePayload = { currency: string, timestamp: number, };
 
 export type HistoricalFiatPriceResponse = { currency: string, time: number, rate: number, };
+
+export type InitiateBackupUploadPayload = { format_version: number, encrypted_size: number, encrypted_sha256: string, };
+
+export type InitiateBackupUploadResponse = { backup_id: string, upload_url: string, checksum_sha256: string, };
 
 /**
  * Defines the payload for querying lightning address suggestions.

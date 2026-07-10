@@ -3,6 +3,7 @@ use axum::http::{self, Request, StatusCode};
 use http_body_util::BodyExt;
 use serde_json::json;
 use tower::ServiceExt;
+use uuid::Uuid;
 
 use crate::db::backup_repo::BackupRepository;
 use crate::tests::common::{TestUser, create_test_user, setup_test_app};
@@ -50,6 +51,89 @@ async fn test_get_upload_url() {
         // If S3 is not available, we expect an internal server error
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_v2_upload_rejects_unsupported_format_before_s3() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    create_test_user(&app_state, &user, None).await;
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/backup/v2/upload")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", user.access_token(&app_state)),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "format_version": 1,
+                        "encrypted_size": 1024,
+                        "encrypted_sha256": "ab".repeat(32)
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_v2_repository_only_lists_completed_objects_for_owner() {
+    let (_app, app_state, _guard) = setup_test_app().await;
+    let owner = TestUser::new();
+    let other = TestUser::new_with_key(&[0xce; 32]);
+    create_test_user(&app_state, &owner, None).await;
+    create_test_user(&app_state, &other, None).await;
+
+    let repo = BackupRepository::new(&app_state.db_pool);
+    let backup_id = Uuid::new_v4();
+    let owner_pubkey = owner.pubkey().to_string();
+    repo.create_pending_object(
+        backup_id,
+        &owner_pubkey,
+        &format!("{owner_pubkey}/backups/{backup_id}.noahbackup"),
+        2,
+        1024,
+        &"ab".repeat(32),
+    )
+    .await
+    .unwrap();
+
+    assert!(
+        repo.list_completed_objects(&owner_pubkey)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        repo.complete_object(&owner_pubkey, backup_id)
+            .await
+            .unwrap()
+    );
+
+    let completed = repo.list_completed_objects(&owner_pubkey).await.unwrap();
+    assert_eq!(completed.len(), 1);
+    assert_eq!(completed[0].backup_id, backup_id.to_string());
+    assert_eq!(completed[0].format_version, 2);
+    assert_eq!(completed[0].encrypted_size, 1024);
+    assert_eq!(completed[0].encrypted_sha256, "ab".repeat(32));
+
+    assert!(
+        repo.find_completed_object(&other.pubkey().to_string(), Some(backup_id))
+            .await
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[tracing_test::traced_test]

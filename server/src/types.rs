@@ -336,6 +336,59 @@ pub struct BackupSettingsPayload {
     pub backup_enabled: bool,
 }
 
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct InitiateBackupUploadPayload {
+    pub format_version: i32,
+    #[ts(type = "number")]
+    pub encrypted_size: u64,
+    pub encrypted_sha256: String,
+}
+
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct InitiateBackupUploadResponse {
+    pub backup_id: String,
+    pub upload_url: String,
+    pub checksum_sha256: String,
+}
+
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct CompleteBackupUploadPayload {
+    pub backup_id: String,
+}
+
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct BackupObjectInfo {
+    pub backup_id: String,
+    pub format_version: i32,
+    pub created_at: String,
+    #[ts(type = "number")]
+    pub encrypted_size: u64,
+    pub encrypted_sha256: String,
+}
+
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct GetBackupObjectDownloadPayload {
+    pub backup_id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct BackupObjectDownloadResponse {
+    pub backup: BackupObjectInfo,
+    pub download_url: String,
+}
+
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct DeleteBackupObjectPayload {
+    pub backup_id: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 #[serde(rename_all = "camelCase")]

@@ -16,11 +16,12 @@ use crate::cache::{
 use crate::config::Config;
 use crate::email_client::EmailClient;
 use crate::routes::gated_api_v0::{
-    authorize_mailbox, complete_upload, delete_backup, deregister, get_download_url,
-    get_upload_url, get_user_info, heartbeat_response, list_backups, ln_address_suggestions,
-    register_push_token, report_job_status, report_last_login, revoke_mailbox_authorization,
-    submit_invoice, submit_support_ticket, update_backup_settings, update_ln_address,
-    update_profile,
+    authorize_mailbox, complete_backup_object_upload, complete_upload, delete_backup,
+    delete_backup_object, deregister, get_backup_object_download_url, get_download_url,
+    get_upload_url, get_user_info, heartbeat_response, initiate_backup_object_upload,
+    list_backup_objects, list_backups, ln_address_suggestions, register_push_token,
+    report_job_status, report_last_login, revoke_mailbox_authorization, submit_invoice,
+    submit_support_ticket, update_backup_settings, update_ln_address, update_profile,
 };
 use crate::routes::public_api_v0::{
     auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price, lnurlp_request,
@@ -197,6 +198,11 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
         .route("/backup/list", post(list_backups))
         .route("/backup/download_url", post(get_download_url))
         .route("/backup/delete", post(delete_backup))
+        .route("/backup/v2/upload", post(initiate_backup_object_upload))
+        .route("/backup/v2/complete", post(complete_backup_object_upload))
+        .route("/backup/v2/list", post(list_backup_objects))
+        .route("/backup/v2/download", post(get_backup_object_download_url))
+        .route("/backup/v2/delete", post(delete_backup_object))
         .route("/backup/settings", post(update_backup_settings))
         .route("/report_job_status", post(report_job_status))
         .route("/heartbeat_response", post(heartbeat_response))
