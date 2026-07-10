@@ -30,6 +30,7 @@ import {
 } from "../lib/paymentsApi";
 import { queryClient } from "~/queryClient";
 import { DestinationTypes } from "~/lib/sendUtils";
+import { getArkInfo } from "~/lib/walletApi";
 import logger from "~/lib/log";
 import ky from "ky";
 import { Result } from "neverthrow";
@@ -44,12 +45,82 @@ interface LnurlpDefaultResponse {
   metadata: string;
   tag: "payRequest";
   commentAllowed: number;
+  ark?: string;
 }
 
-interface LnurlpInvoiceResponse {
-  pr: string;
-  routes: string[];
-  ark?: string;
+export type NoahPaymentRoute =
+  | {
+      method: "ark";
+      destination: string;
+      minSendableMsat: number;
+      maxSendableMsat: number;
+    }
+  | {
+      method: "lightning";
+      minSendableMsat: number;
+      maxSendableMsat: number;
+    };
+
+const parseLightningAddress = (destination: string) => {
+  const normalized = destination
+    .trim()
+    .toLowerCase()
+    .replace(/^lightning:/, "");
+  const parts = normalized.split("@");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return null;
+  }
+
+  return { username: parts[0], domain: parts[1] };
+};
+
+export const isNoahLightningAddress = (destination: string): boolean => {
+  const parsed = parseLightningAddress(destination);
+  return parsed?.domain === getLnurlDomain().toLowerCase();
+};
+
+export const resolveNoahPaymentRoute = async (destination: string): Promise<NoahPaymentRoute> => {
+  const parsed = parseLightningAddress(destination);
+  if (!parsed || parsed.domain !== getLnurlDomain().toLowerCase()) {
+    throw new Error("Destination is not a Noah lightning address");
+  }
+
+  const lnurlEndpoint = new URL(`https://${parsed.domain}/.well-known/lnurlp/${parsed.username}`);
+  const arkInfoResult = await getArkInfo();
+  if (arkInfoResult.isErr()) {
+    throw arkInfoResult.error;
+  }
+  lnurlEndpoint.searchParams.set("ark", arkInfoResult.value.server_pubkey);
+  const lnurlJson = await ky.get(lnurlEndpoint.toString()).json<LnurlpDefaultResponse>();
+
+  if (lnurlJson.tag !== "payRequest" || !lnurlJson.callback) {
+    throw new Error("Invalid LNURL response for Noah payment");
+  }
+
+  const limits = {
+    minSendableMsat: lnurlJson.minSendable,
+    maxSendableMsat: lnurlJson.maxSendable,
+  };
+
+  return lnurlJson.ark
+    ? { method: "ark", destination: lnurlJson.ark, ...limits }
+    : { method: "lightning", ...limits };
+};
+
+export function useNoahPaymentRoute(destination: string | null) {
+  return useQuery({
+    queryKey: ["payment-route", "noah", destination],
+    queryFn: () => {
+      if (!destination) {
+        throw new Error("Noah payment destination is required");
+      }
+
+      return resolveNoahPaymentRoute(destination);
+    },
+    enabled: destination !== null,
+    staleTime: 0,
+    retry: false,
+  });
 }
 
 export function useGenerateOffchainAddress() {
@@ -172,6 +243,7 @@ type SendVariables = {
   resolvedAmountSat: number;
   comment: string | null;
   onchainSource?: OnchainSendSource;
+  noahPaymentRoute?: NoahPaymentRoute;
   btcPrice?: number;
 };
 
@@ -363,10 +435,34 @@ const readLightningPayment = async (
   return result.value;
 };
 
+const sendNoahPayment = async (
+  route: NoahPaymentRoute,
+  destination: string,
+  amountSat: number,
+  comment: string | null,
+): Promise<ArkoorPaymentResult | LightningPayment> => {
+  const amountMsat = amountSat * 1000;
+  if (amountMsat < route.minSendableMsat || amountMsat > route.maxSendableMsat) {
+    throw new Error("Payment amount is outside the supported range for this lightning address");
+  }
+
+  if (route.method === "ark") {
+    log.d("Paying Noah user via Ark direct payment");
+    const result = await sendArkoorPayment(route.destination, amountSat);
+    if (result.isErr()) {
+      throw result.error;
+    }
+    return result.value;
+  }
+
+  log.d("Paying Noah user via Lightning Address");
+  return readLightningPayment(payLightningAddress(destination, amountSat, comment || ""));
+};
+
 export function useSend(destinationType: DestinationTypes) {
   return useMutation<SendResult, Error, SendVariables>({
     mutationFn: async (variables) => {
-      const { destination, amountSat, comment, onchainSource } = variables;
+      const { destination, amountSat, comment, onchainSource, noahPaymentRoute } = variables;
       if (amountSat === undefined && destinationType !== "lightning") {
         throw new Error("Amount is required");
       }
@@ -395,20 +491,24 @@ export function useSend(destinationType: DestinationTypes) {
             throw new Error("Amount is required for LNURL payments");
           }
 
-          if (destination.toLowerCase().endsWith(getLnurlDomain())) {
-            const noahResult = await handleNoahWalletPayment(destination, amountSat, comment);
-            if (noahResult) {
-              if (noahResult.isErr()) {
-                throw noahResult.error;
-              }
-              const data = noahResult.value;
-              if ("payment_hash" in data) {
-                return readLightningPayment(
-                  Promise.resolve(noahResult as Result<LightningPayment, Error>),
-                );
-              }
-              return data;
+          if (isNoahLightningAddress(destination)) {
+            if (noahPaymentRoute) {
+              return sendNoahPayment(noahPaymentRoute, destination, amountSat, comment);
             }
+
+            let route: NoahPaymentRoute;
+            try {
+              route = await resolveNoahPaymentRoute(destination);
+            } catch (routeError) {
+              log.w("Failed to resolve Noah payment route, falling back to standard LNURL", [
+                routeError,
+              ]);
+              return readLightningPayment(
+                payLightningAddress(destination, amountSat, comment || ""),
+              );
+            }
+
+            return sendNoahPayment(route, destination, amountSat, comment);
           }
 
           return readLightningPayment(payLightningAddress(destination, amountSat, comment || ""));
@@ -429,46 +529,4 @@ export function useSend(destinationType: DestinationTypes) {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
   });
-}
-
-async function handleNoahWalletPayment(
-  destination: string,
-  amountSat: number,
-  comment: string | null,
-): Promise<Result<
-  ArkoorPaymentResult | LightningPayment | NoahOnchainPaymentResult,
-  Error
-> | null> {
-  try {
-    const [user, domain] = destination.split("@");
-    const lnurlEndpoint = `https://${domain}/.well-known/lnurlp/${user}`;
-    const lnurlJson = await ky.get(lnurlEndpoint).json<LnurlpDefaultResponse>();
-
-    if (lnurlJson.tag === "payRequest" && lnurlJson.callback) {
-      const callbackUrl = new URL(lnurlJson.callback);
-      callbackUrl.searchParams.append("amount", (amountSat * 1000).toString());
-      callbackUrl.searchParams.append("wallet", "noahwallet");
-      if (comment) {
-        callbackUrl.searchParams.append("comment", comment);
-      }
-
-      const callbackJson = await ky.get(callbackUrl.toString()).json<LnurlpInvoiceResponse>();
-
-      if (callbackJson.ark) {
-        log.d("Paying via Ark direct payment");
-        return await sendArkoorPayment(callbackJson.ark, amountSat);
-      } else if (callbackJson.pr) {
-        log.d("Paying via Lightning Invoice from LNURL");
-        const lnResult = await payLightningInvoice(callbackJson.pr, amountSat);
-        return lnResult;
-      } else {
-        log.w(
-          "Invalid LNURL callback response for optimized Noah payment, falling back to standard LNURL.",
-        );
-      }
-    }
-  } catch (e) {
-    log.w("Failed optimized Noah payment, falling back to standard LNURL", [e]);
-  }
-  return null;
 }

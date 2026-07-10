@@ -32,6 +32,7 @@ pub const K1_TTL_SECONDS: usize = 600;
 pub struct AppStruct {
     pub config: Arc<Config>,
     pub lnurl_domain: String,
+    pub ark_server_pubkey: Arc<tokio::sync::RwLock<Option<String>>>,
     pub db_pool: PgPool,
     pub k1_cache: K1Store,
     pub invoice_store: InvoiceStore,
@@ -63,6 +64,7 @@ pub async fn build_app_state(config: Config) -> anyhow::Result<AppState> {
     Ok(Arc::new(AppStruct {
         config: Arc::new(config.clone()),
         lnurl_domain: config.lnurl_domain.clone(),
+        ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),
         db_pool,
         k1_cache,
         invoice_store,

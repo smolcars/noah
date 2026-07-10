@@ -75,6 +75,7 @@ const SUPPORT_TICKET_BODY_LIMIT_BYTES: usize = 8 * 1024 * 1024;
 pub struct AppStruct {
     pub config: Arc<Config>,
     pub lnurl_domain: String,
+    pub ark_server_pubkey: Arc<tokio::sync::RwLock<Option<String>>>,
     pub db_pool: PgPool,
     pub k1_cache: K1Store,
     pub invoice_store: InvoiceStore,
@@ -176,6 +177,7 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
     let app_state = Arc::new(AppStruct {
         config: Arc::new(config.clone()),
         lnurl_domain: config.lnurl_domain.clone(),
+        ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),
         db_pool: db_pool.clone(),
         k1_cache: k1_cache.clone(),
         invoice_store,

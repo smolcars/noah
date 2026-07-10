@@ -160,6 +160,7 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
 
     let app_state = Arc::new(AppStruct {
         lnurl_domain: "localhost".to_string(),
+        ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),
         db_pool: db_pool.clone(),
         k1_cache: k1_cache.clone(),
         invoice_store,
@@ -242,6 +243,7 @@ pub async fn setup_public_test_app() -> (Router, AppState, TestDbGuard) {
 
     let app_state = Arc::new(AppStruct {
         lnurl_domain: "localhost".to_string(),
+        ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),
         db_pool: db_pool.clone(),
         k1_cache: k1_cache.clone(),
         invoice_store,

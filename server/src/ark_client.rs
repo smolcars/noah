@@ -73,11 +73,14 @@ async fn establish_connection_and_process(
     );
 
     let info = client.get_ark_info(Empty {}).await?.into_inner();
+    let server_pubkey = info.server_pubkey.to_lower_hex_string();
+
+    *app_state.ark_server_pubkey.write().await = Some(server_pubkey.clone());
 
     tracing::info!(
         service = "ark_client",
         event = "ark_info",
-        server_pubkey = %info.server_pubkey.to_lower_hex_string(),
+        server_pubkey = %server_pubkey,
         "received ark server info"
     );
 

@@ -74,6 +74,7 @@ const SendScreen = () => {
     selectedOnchainSource,
     setSelectedOnchainSource,
     isOnchainSourceSelectionRequired,
+    isNoahPaymentRouteResolutionRequired,
     onchainWalletBalance,
     offchainWalletBalance,
     handleClear,
@@ -402,7 +403,9 @@ const SendScreen = () => {
           offchainWalletBalance={offchainWalletBalance}
           onConfirm={handleConfirmSend}
           onCancel={handleCancelConfirmation}
-          isConfirmDisabled={isOnchainSourceSelectionRequired}
+          isConfirmDisabled={
+            isOnchainSourceSelectionRequired || isNoahPaymentRouteResolutionRequired
+          }
           isLoading={isSending}
           feeEstimate={feeEstimate}
           isEstimatingFee={isEstimatingFee}

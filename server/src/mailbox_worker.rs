@@ -534,7 +534,7 @@ impl MailboxTransport for Beta8MailboxTransport {
             });
         }
 
-        let unblinded_id = match decode_hex_bytes("mailbox_id", &mailbox.mailbox_id) {
+        let mailbox_id = match decode_hex_bytes("mailbox_id", &mailbox.mailbox_id) {
             Ok(value) => value,
             Err(reason) => return Ok(MailboxSessionOutcome::InvalidAuth { reason }),
         };
@@ -564,7 +564,7 @@ impl MailboxTransport for Beta8MailboxTransport {
 
                 let read_response = client
                     .read_mailbox(MailboxRequest {
-                        unblinded_id: unblinded_id.clone(),
+                        mailbox_id: mailbox_id.clone(),
                         authorization: Some(authorization.clone()),
                         checkpoint,
                     })
@@ -612,7 +612,7 @@ impl MailboxTransport for Beta8MailboxTransport {
 
             let stream_response = client
                 .subscribe_mailbox(MailboxRequest {
-                    unblinded_id: unblinded_id.clone(),
+                    mailbox_id: mailbox_id.clone(),
                     authorization: Some(authorization.clone()),
                     checkpoint,
                 })

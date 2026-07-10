@@ -249,6 +249,9 @@ pub struct LnurlpDefaultResponse {
     pub tag: String,
     /// The maximum length of a comment that can be included with the payment.
     pub comment_allowed: u16,
+    /// The user's Ark address when requested for a compatible Ark server.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ark: Option<String>,
 }
 
 /// Represents the second response in the LNURL-pay protocol.
@@ -269,7 +272,32 @@ pub struct LnurlpInvoiceResponse {
 pub struct LnurlpRequestQuery {
     /// The amount of the payment in millisatoshis.
     amount: Option<u64>,
+    /// The payer's Ark server pubkey, used to negotiate a compatible Ark address.
+    ark: Option<String>,
+    /// Deprecated Noah-specific Ark capability signal.
     wallet: Option<String>,
+}
+
+async fn negotiated_ark_address(
+    state: &AppState,
+    query: &LnurlpRequestQuery,
+    ark_address: Option<&String>,
+) -> Option<String> {
+    let Some(ark_address) = ark_address else {
+        return None;
+    };
+
+    if let Some(requested_server_pubkey) = query.ark.as_deref() {
+        let configured_server_pubkey = state.ark_server_pubkey.read().await;
+        let matches_configured_server = configured_server_pubkey
+            .as_deref()
+            .is_some_and(|pubkey| pubkey.eq_ignore_ascii_case(requested_server_pubkey));
+
+        return matches_configured_server.then(|| ark_address.clone());
+    }
+
+    // Deprecated compatibility path. Remove after Noah clients have migrated to `ark`.
+    (query.wallet.as_deref() == Some("noahwallet")).then(|| ark_address.clone())
 }
 
 /// Handles LNURL-pay requests.
@@ -328,6 +356,7 @@ pub async fn lnurlp_request(
             metadata,
             tag: "payRequest".to_string(),
             comment_allowed: COMMENT_ALLOWED_SIZE,
+            ark: negotiated_ark_address(&state, &query, user.ark_address.as_ref()).await,
         };
         return Ok(Json(
             serde_json::to_value(response).map_err(|e| ApiError::SerializeErr(e.to_string()))?,
@@ -350,14 +379,13 @@ pub async fn lnurlp_request(
         )));
     }
 
-    if let Some(wallet) = &query.wallet
-        && wallet == "noahwallet"
-        && let Some(ark_address) = &user.ark_address
+    if let Some(ark_address) =
+        negotiated_ark_address(&state, &query, user.ark_address.as_ref()).await
     {
         let response = LnurlpInvoiceResponse {
             pr: "".to_string(),
             routes: vec![],
-            ark: Some(ark_address.clone()),
+            ark: Some(ark_address),
         };
         return Ok(Json(
             serde_json::to_value(response).map_err(|e| ApiError::SerializeErr(e.to_string()))?,
