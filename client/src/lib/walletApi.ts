@@ -202,10 +202,15 @@ export const loadWalletIfNeeded = async (): Promise<Result<boolean, Error>> => {
   }
 
   if (isLoadedResult.value) {
+    useWalletStore.getState().setWalletLoaded();
     return ok(true);
   }
 
-  return loadWalletFromStorage();
+  const loadResult = await loadWalletFromStorage();
+  if (loadResult.isOk() && loadResult.value) {
+    useWalletStore.getState().setWalletLoaded();
+  }
+  return loadResult;
 };
 
 export const closeWalletIfLoaded = async (): Promise<Result<boolean, Error>> => {
