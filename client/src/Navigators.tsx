@@ -348,7 +348,7 @@ const AppTabs = ({ preloadedIcons }: { preloadedIcons: PreloadedIcons }) => {
       }}
       tabBarInactiveTintColor={themedColors.tabBarInactive}
       hapticFeedbackEnabled
-      disablePageAnimations={false}
+      disablePageAnimations={true}
     >
       <Tab.Screen
         name="Home"
