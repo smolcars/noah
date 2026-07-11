@@ -126,7 +126,6 @@ async fn test_v2_repository_only_lists_completed_objects_for_owner() {
     let owner = TestUser::new();
     let other = TestUser::new_with_key(&[0xce; 32]);
     create_test_user(&app_state, &owner, None).await;
-    create_test_user(&app_state, &other, None).await;
 
     let repo = BackupRepository::new(&app_state.db_pool);
     let backup_id = Uuid::new_v4();
