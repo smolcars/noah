@@ -71,12 +71,16 @@ impl<'a> BackupRepository<'a> {
         format_version: i32,
         encrypted_size: u64,
         encrypted_sha256: &str,
-    ) -> Result<()> {
+    ) -> Result<BackupObject> {
         let size = i64::try_from(encrypted_size)?;
-        sqlx::query(
+        Ok(sqlx::query_as::<_, BackupObject>(
             "INSERT INTO backup_objects
                 (backup_id, pubkey, object_key, format_version, encrypted_size, encrypted_sha256)
-             VALUES ($1, $2, $3, $4, $5, $6)",
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (pubkey) WHERE status = 'pending'
+             DO UPDATE SET pubkey = backup_objects.pubkey
+             RETURNING backup_id, pubkey, object_key, format_version, encrypted_size,
+                       encrypted_sha256, completed_at",
         )
         .bind(backup_id)
         .bind(pubkey)
@@ -84,9 +88,8 @@ impl<'a> BackupRepository<'a> {
         .bind(format_version)
         .bind(size)
         .bind(encrypted_sha256)
-        .execute(self.pool)
-        .await?;
-        Ok(())
+        .fetch_one(self.pool)
+        .await?)
     }
 
     pub async fn find_object(

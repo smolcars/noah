@@ -32,6 +32,8 @@ pub enum ApiError {
     TokenExpired,
     #[error("Not found: {0}")]
     NotFound(String),
+    #[error("Conflict: {0}")]
+    Conflict(String),
     #[error("K1 expired")]
     K1Expired,
     #[error("User not found")]
@@ -55,6 +57,7 @@ impl ApiError {
             ApiError::InvalidToken => StatusCode::UNAUTHORIZED,
             ApiError::TokenExpired => StatusCode::UNAUTHORIZED,
             ApiError::NotFound(_) => StatusCode::NOT_FOUND,
+            ApiError::Conflict(_) => StatusCode::CONFLICT,
             ApiError::K1Expired => StatusCode::UNAUTHORIZED,
             ApiError::UserNotFound => StatusCode::UNAUTHORIZED,
         }
@@ -74,6 +77,7 @@ impl ApiError {
             ApiError::InvalidToken => "INVALID_TOKEN",
             ApiError::TokenExpired => "TOKEN_EXPIRED",
             ApiError::NotFound(_) => "NOT_FOUND",
+            ApiError::Conflict(_) => "CONFLICT",
             ApiError::K1Expired => "K1_EXPIRED",
             ApiError::UserNotFound => "USER_NOT_FOUND",
         }
@@ -83,6 +87,7 @@ impl ApiError {
         match self {
             ApiError::InvalidArgument(e) => e.to_string(),
             ApiError::NotFound(e) => e.to_string(),
+            ApiError::Conflict(e) => e.to_string(),
             ApiError::ServerErr(e) => e.to_string(),
             ApiError::InvalidSignature => "Invalid signature".to_string(),
             ApiError::AuthRequired => "Authentication required".to_string(),
@@ -107,7 +112,10 @@ impl IntoResponse for ApiError {
 
         // Log the error with appropriate level based on status code
         match status {
-            StatusCode::BAD_REQUEST | StatusCode::UNAUTHORIZED | StatusCode::NOT_FOUND => {
+            StatusCode::BAD_REQUEST
+            | StatusCode::UNAUTHORIZED
+            | StatusCode::NOT_FOUND
+            | StatusCode::CONFLICT => {
                 tracing::warn!(
                     error_type = ?self,
                     status = %status.as_u16(),

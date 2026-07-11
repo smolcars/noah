@@ -19,7 +19,7 @@ const STALE_PENDING_JOB_SWEEP_SCHEDULE: &str = "every 10 minutes";
 const STALE_PENDING_JOB_ERROR_MESSAGE: &str = "Timed out after 1 hour waiting for client response";
 const STALE_PENDING_HEARTBEAT_TIMEOUT_MINUTES: i64 = 60;
 const STALE_PENDING_HEARTBEAT_SWEEP_SCHEDULE: &str = "every 10 minutes";
-const STALE_BACKUP_UPLOAD_TIMEOUT_HOURS: i64 = 24;
+const STALE_BACKUP_UPLOAD_TIMEOUT_MINUTES: i64 = 30;
 const STALE_BACKUP_UPLOAD_SWEEP_SCHEDULE: &str = "every 1 hour";
 const FIAT_RATE_REFRESH_LOCK_ID: i64 = 2025110501;
 
@@ -189,7 +189,8 @@ pub async fn timeout_stale_pending_heartbeats(app_state: AppState) -> anyhow::Re
 
 pub async fn cleanup_stale_backup_uploads(app_state: AppState) -> anyhow::Result<()> {
     let repo = BackupRepository::new(&app_state.db_pool);
-    let cutoff = chrono::Utc::now() - chrono::Duration::hours(STALE_BACKUP_UPLOAD_TIMEOUT_HOURS);
+    let cutoff =
+        chrono::Utc::now() - chrono::Duration::minutes(STALE_BACKUP_UPLOAD_TIMEOUT_MINUTES);
     let stale_uploads = repo.stale_pending_objects(cutoff).await?;
     if stale_uploads.is_empty() {
         return Ok(());
@@ -294,7 +295,7 @@ pub async fn cron_scheduler(
         stale_pending_heartbeat_cleanup_schedule = %STALE_PENDING_HEARTBEAT_SWEEP_SCHEDULE,
         stale_pending_heartbeat_timeout_minutes = STALE_PENDING_HEARTBEAT_TIMEOUT_MINUTES,
         stale_backup_upload_cleanup_schedule = %STALE_BACKUP_UPLOAD_SWEEP_SCHEDULE,
-        stale_backup_upload_timeout_hours = STALE_BACKUP_UPLOAD_TIMEOUT_HOURS,
+        stale_backup_upload_timeout_minutes = STALE_BACKUP_UPLOAD_TIMEOUT_MINUTES,
         "scheduler initialized"
     );
 

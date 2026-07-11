@@ -419,26 +419,43 @@ pub async fn initiate_backup_object_upload(
     }
     let checksum_sha256 = base64::engine::general_purpose::STANDARD.encode(checksum_bytes);
 
-    let backup_id = Uuid::new_v4();
-    let object_key = format!("{}/backups/{}.noahbackup", auth_payload.key, backup_id);
-    let s3_client = S3BackupClient::new(state.config.s3_bucket_name.clone()).await?;
-    let upload_url = s3_client
-        .generate_checksummed_upload_url(&object_key, &checksum_sha256, payload.encrypted_size)
-        .await?;
-
-    BackupRepository::new(&state.db_pool)
+    let requested_backup_id = Uuid::new_v4();
+    let requested_object_key = format!(
+        "{}/backups/{}.noahbackup",
+        auth_payload.key, requested_backup_id
+    );
+    let pending_object = BackupRepository::new(&state.db_pool)
         .create_pending_object(
-            backup_id,
+            requested_backup_id,
             &auth_payload.key,
-            &object_key,
+            &requested_object_key,
             payload.format_version,
             payload.encrypted_size,
             &encrypted_sha256,
         )
         .await?;
 
+    if pending_object.format_version != payload.format_version
+        || pending_object.encrypted_size != payload.encrypted_size
+        || pending_object.encrypted_sha256 != encrypted_sha256
+    {
+        return Err(ApiError::Conflict(
+            "A different backup upload is already pending. Please retry after it expires."
+                .to_string(),
+        ));
+    }
+
+    let s3_client = S3BackupClient::new(state.config.s3_bucket_name.clone()).await?;
+    let upload_url = s3_client
+        .generate_checksummed_upload_url(
+            &pending_object.object_key,
+            &checksum_sha256,
+            payload.encrypted_size,
+        )
+        .await?;
+
     Ok(Json(InitiateBackupUploadResponse {
-        backup_id: backup_id.to_string(),
+        backup_id: pending_object.backup_id.to_string(),
         upload_url,
         checksum_sha256,
     }))
