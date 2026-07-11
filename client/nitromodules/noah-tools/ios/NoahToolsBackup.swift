@@ -56,7 +56,7 @@ extension NoahTools {
                 return BackupFileInfo(
                     path: destinationURL.path,
                     sizeBytes: size,
-                    sha256: self.sha256File(url: destinationURL)
+                    sha256: try self.sha256File(url: destinationURL)
                 )
             } catch {
                 try? fileManager.removeItem(at: destinationURL)
