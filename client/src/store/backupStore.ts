@@ -25,6 +25,7 @@ interface BackupState {
   ) => void;
   setBackupFailed: (error: string) => void;
   seedRestoredBackup: (snapshotSha256: string, backupId: string | null) => void;
+  forgetUploadedBackup: (backupId: string) => boolean;
   reset: () => void;
 }
 
@@ -110,6 +111,23 @@ export const useBackupStore = create<BackupState>()(
           lastBackupId: backupId,
           lastUploadedSnapshotSha256: snapshotSha256,
         }),
+      forgetUploadedBackup: (backupId) => {
+        let didForget = false;
+        set((state) => {
+          if (state.lastBackupId !== backupId) {
+            return state;
+          }
+          didForget = true;
+          return {
+            backupPending: true,
+            lastBackupId: null,
+            lastUploadedSnapshotSha256: null,
+            lastBackupStatus: "idle",
+            lastBackupError: null,
+          };
+        });
+        return didForget;
+      },
       reset: () => set(initialState),
     }),
     {

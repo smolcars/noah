@@ -3,6 +3,7 @@ import { Result } from "neverthrow";
 import { listBackupObjects, deleteBackupObject, updateBackupSettings } from "../lib/api";
 
 import { useServerStore } from "../store/serverStore";
+import { useBackupStore } from "~/store/backupStore";
 import logger from "~/lib/log";
 import { cancelScheduledBackup, flushBackup, scheduleBackup } from "~/lib/backupCoordinator";
 import type { BackupObjectInfo } from "~/types/serverTypes";
@@ -79,6 +80,10 @@ export const useBackupManager = (): UseBackupManager => {
       setBackupsList((prev) =>
         prev ? prev.filter((backup) => backup.backup_id !== backupId) : null,
       );
+      const deletedCurrentBackup = useBackupStore.getState().forgetUploadedBackup(backupId);
+      if (deletedCurrentBackup && isBackupEnabled) {
+        scheduleBackup("manual");
+      }
     }
 
     setIsLoading(false);
