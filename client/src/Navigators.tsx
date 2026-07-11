@@ -9,6 +9,7 @@ import { createNativeBottomTabNavigator } from "@bottom-tabs/react-navigation";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
 import { Platform, View, Text, AppState, ImageSourcePropType } from "react-native";
+import * as Device from "expo-device";
 import { StatusBar } from "expo-status-bar";
 import { useUniwind } from "uniwind";
 import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
@@ -337,6 +338,13 @@ const preloadAndroidIcons = async (): Promise<PreloadedIcons> => {
 const AppTabs = ({ preloadedIcons }: { preloadedIcons: PreloadedIcons }) => {
   const isIos = Platform.OS === "ios";
   const themedColors = useThemeColors();
+  // Disable page animations on Android unconditionally, and on iOS < 26 only.
+  // iOS 26 has a react-native-bottom-tabs regression (issue #531) where
+  // disablePageAnimations causes a visible tab-switching glitch. Remove this
+  // version gate once the upstream fix (PR #523) is released.
+  const shouldDisablePageAnimations =
+    Platform.OS === "android" ||
+    (Platform.OS === "ios" && parseInt(Device.osVersion ?? "0", 10) < 26);
 
   return (
     <Tab.Navigator
@@ -348,7 +356,7 @@ const AppTabs = ({ preloadedIcons }: { preloadedIcons: PreloadedIcons }) => {
       }}
       tabBarInactiveTintColor={themedColors.tabBarInactive}
       hapticFeedbackEnabled
-      disablePageAnimations={true}
+      disablePageAnimations={shouldDisablePageAnimations}
     >
       <Tab.Screen
         name="Home"
