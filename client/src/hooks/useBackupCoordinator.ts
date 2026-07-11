@@ -1,12 +1,26 @@
 import { useEffect, useState } from "react";
 import { AppState } from "react-native";
 import { subscribeWalletStateChanges, type WalletStateChangeEvent } from "react-native-nitro-ark";
-import { cancelScheduledBackup, scheduleBackup } from "~/lib/backupCoordinator";
+import {
+  cancelScheduledBackup,
+  scheduleBackup,
+  type BackupReason,
+} from "~/lib/backupCoordinator";
 import logger from "~/lib/log";
 import { useServerStore } from "~/store/serverStore";
 import { useWalletStore } from "~/store/walletStore";
 
 const log = logger("useBackupCoordinator");
+
+const scheduleBackupWhenIdle = (reason: BackupReason, immediate = false): boolean => {
+  if (useWalletStore.getState().isBackgroundJobRunning) {
+    log.d("Deferring automatic backup while a background job is running", [reason]);
+    return false;
+  }
+
+  scheduleBackup(reason, { immediate });
+  return true;
+};
 
 export const useBackupCoordinator = (isReady: boolean) => {
   const [subscriptionGeneration, setSubscriptionGeneration] = useState(0);
@@ -14,8 +28,14 @@ export const useBackupCoordinator = (isReady: boolean) => {
   const isInitialized = useWalletStore((state) => state.isInitialized);
   const isWalletLoaded = useWalletStore((state) => state.isWalletLoaded);
   const isWalletSuspended = useWalletStore((state) => state.isWalletSuspended);
+  const isBackgroundJobRunning = useWalletStore((state) => state.isBackgroundJobRunning);
   const canCoordinateBackups =
-    isReady && isBackupEnabled && isInitialized && isWalletLoaded && !isWalletSuspended;
+    isReady &&
+    isBackupEnabled &&
+    isInitialized &&
+    isWalletLoaded &&
+    !isWalletSuspended &&
+    !isBackgroundJobRunning;
 
   useEffect(() => {
     if (!canCoordinateBackups) {
@@ -31,17 +51,18 @@ export const useBackupCoordinator = (isReady: boolean) => {
     try {
       const subscription = subscribeWalletStateChanges((event: WalletStateChangeEvent) => {
         if (event.reason === "databaseChanged") {
-          scheduleBackup("database_changed");
+          scheduleBackupWhenIdle("database_changed");
           return;
         }
 
         if (event.reason === "resyncRequired") {
-          scheduleBackup("resync_required", { immediate: true });
-          setSubscriptionGeneration((generation) => generation + 1);
+          if (scheduleBackupWhenIdle("resync_required", true)) {
+            setSubscriptionGeneration((generation) => generation + 1);
+          }
           return;
         }
 
-        scheduleBackup("startup", { immediate: true });
+        scheduleBackupWhenIdle("startup", true);
       });
 
       return () => {
@@ -51,7 +72,7 @@ export const useBackupCoordinator = (isReady: boolean) => {
       };
     } catch (error) {
       log.w("Failed to watch wallet state changes", [error]);
-      scheduleBackup("startup", { immediate: true });
+      scheduleBackupWhenIdle("startup", true);
     }
   }, [
     canCoordinateBackups,
@@ -65,7 +86,7 @@ export const useBackupCoordinator = (isReady: boolean) => {
 
     const appStateSubscription = AppState.addEventListener("change", (nextState) => {
       if (nextState === "active") {
-        scheduleBackup("app_foreground", { immediate: true });
+        scheduleBackupWhenIdle("app_foreground", true);
       }
     });
 
