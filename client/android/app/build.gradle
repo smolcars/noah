@@ -27,11 +27,14 @@ def hasReleaseSigningConfig = missingReleaseSigningKeys.isEmpty() &&
     releaseSigningStoreFile.exists()
 
 gradle.taskGraph.whenReady { taskGraph ->
-    def mainnetReleaseRequested = taskGraph.allTasks.any {
-        it.name.toLowerCase().contains('mainnetrelease')
+    def mainnetReleaseBuildRequested = taskGraph.allTasks.any { task ->
+        def name = task.name.toLowerCase()
+        return name.contains('mainnetrelease') && (
+            name.contains('assemble') || name.contains('bundle') || name.contains('install')
+        )
     }
 
-    if (mainnetReleaseRequested && !hasReleaseSigningConfig) {
+    if (mainnetReleaseBuildRequested && !hasReleaseSigningConfig) {
         def missingKeysMessage = missingReleaseSigningKeys.isEmpty()
             ? ''
             : " Missing properties: ${missingReleaseSigningKeys.join(', ')}."
