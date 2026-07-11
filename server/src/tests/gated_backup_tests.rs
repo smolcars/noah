@@ -88,6 +88,39 @@ async fn test_v2_upload_rejects_unsupported_format_before_s3() {
 
 #[tracing_test::traced_test]
 #[tokio::test]
+async fn test_v2_upload_rejects_oversized_object_before_s3() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    create_test_user(&app_state, &user, None).await;
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/backup/v2/upload")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", user.access_token(&app_state)),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "format_version": 2,
+                        "encrypted_size": 256_u64 * 1024 * 1024 + 1,
+                        "encrypted_sha256": "ab".repeat(32)
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
 async fn test_v2_repository_only_lists_completed_objects_for_owner() {
     let (_app, app_state, _guard) = setup_test_app().await;
     let owner = TestUser::new();

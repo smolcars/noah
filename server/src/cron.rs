@@ -8,6 +8,7 @@ use crate::{
     },
     fiat_rates,
     notification_coordinator::{NotificationCoordinator, NotificationRequest},
+    s3_client::S3BackupClient,
     types::{HeartbeatNotification, NotificationRequestData, UserStatus},
 };
 use expo_push_notification_client::Priority;
@@ -18,6 +19,8 @@ const STALE_PENDING_JOB_SWEEP_SCHEDULE: &str = "every 10 minutes";
 const STALE_PENDING_JOB_ERROR_MESSAGE: &str = "Timed out after 1 hour waiting for client response";
 const STALE_PENDING_HEARTBEAT_TIMEOUT_MINUTES: i64 = 60;
 const STALE_PENDING_HEARTBEAT_SWEEP_SCHEDULE: &str = "every 10 minutes";
+const STALE_BACKUP_UPLOAD_TIMEOUT_HOURS: i64 = 24;
+const STALE_BACKUP_UPLOAD_SWEEP_SCHEDULE: &str = "every 1 hour";
 const FIAT_RATE_REFRESH_LOCK_ID: i64 = 2025110501;
 
 pub async fn send_backup_notifications(app_state: AppState) -> anyhow::Result<()> {
@@ -184,6 +187,39 @@ pub async fn timeout_stale_pending_heartbeats(app_state: AppState) -> anyhow::Re
     Ok(())
 }
 
+pub async fn cleanup_stale_backup_uploads(app_state: AppState) -> anyhow::Result<()> {
+    let repo = BackupRepository::new(&app_state.db_pool);
+    let cutoff = chrono::Utc::now() - chrono::Duration::hours(STALE_BACKUP_UPLOAD_TIMEOUT_HOURS);
+    let stale_uploads = repo.stale_pending_objects(cutoff).await?;
+    if stale_uploads.is_empty() {
+        return Ok(());
+    }
+
+    let s3_client = S3BackupClient::new(app_state.config.s3_bucket_name.clone()).await?;
+    let mut deleted_count = 0;
+    for upload in stale_uploads {
+        if let Err(error) = s3_client.delete_object(&upload.object_key).await {
+            tracing::warn!(
+                job = "stale_backup_upload_cleanup",
+                backup_id = %upload.backup_id,
+                error = %error,
+                "failed to delete stale backup object"
+            );
+            continue;
+        }
+        if repo.delete_object(&upload.pubkey, upload.backup_id).await? {
+            deleted_count += 1;
+        }
+    }
+
+    tracing::info!(
+        job = "stale_backup_upload_cleanup",
+        deleted_count,
+        "removed stale pending backup uploads"
+    );
+    Ok(())
+}
+
 pub async fn mark_expired_mailbox_authorizations(app_state: AppState) -> anyhow::Result<()> {
     let affected = MailboxAuthorizationRepository::new(&app_state.db_pool)
         .mark_expired_authorizations(chrono::Utc::now().timestamp())
@@ -257,6 +293,8 @@ pub async fn cron_scheduler(
         stale_pending_job_timeout_minutes = STALE_PENDING_JOB_TIMEOUT_MINUTES,
         stale_pending_heartbeat_cleanup_schedule = %STALE_PENDING_HEARTBEAT_SWEEP_SCHEDULE,
         stale_pending_heartbeat_timeout_minutes = STALE_PENDING_HEARTBEAT_TIMEOUT_MINUTES,
+        stale_backup_upload_cleanup_schedule = %STALE_BACKUP_UPLOAD_SWEEP_SCHEDULE,
+        stale_backup_upload_timeout_hours = STALE_BACKUP_UPLOAD_TIMEOUT_HOURS,
         "scheduler initialized"
     );
 
@@ -342,6 +380,22 @@ pub async fn cron_scheduler(
             })
         })?;
     sched.add(stale_pending_heartbeat_cleanup).await?;
+
+    let stale_backup_upload_cleanup_state = app_state.clone();
+    let stale_backup_upload_cleanup =
+        Job::new_async(STALE_BACKUP_UPLOAD_SWEEP_SCHEDULE, move |_, _| {
+            let app_state = stale_backup_upload_cleanup_state.clone();
+            Box::pin(async move {
+                if let Err(e) = cleanup_stale_backup_uploads(app_state).await {
+                    tracing::error!(
+                        job = "stale_backup_upload_cleanup",
+                        error = %e,
+                        "job failed"
+                    );
+                }
+            })
+        })?;
+    sched.add(stale_backup_upload_cleanup).await?;
 
     // Redis keepalive to prevent Upstash idle connection timeout
     let keepalive_app_state = app_state.clone();

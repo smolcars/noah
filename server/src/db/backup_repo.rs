@@ -196,6 +196,22 @@ impl<'a> BackupRepository<'a> {
         .await?)
     }
 
+    pub async fn stale_pending_objects(
+        &self,
+        created_before: DateTime<Utc>,
+    ) -> Result<Vec<BackupObject>> {
+        Ok(sqlx::query_as::<_, BackupObject>(
+            "SELECT backup_id, pubkey, object_key, format_version, encrypted_size,
+                    encrypted_sha256, completed_at
+             FROM backup_objects
+             WHERE status = 'pending' AND created_at < $1
+             ORDER BY created_at ASC",
+        )
+        .bind(created_before)
+        .fetch_all(self.pool)
+        .await?)
+    }
+
     pub async fn delete_object(&self, pubkey: &str, backup_id: uuid::Uuid) -> Result<bool> {
         let result = sqlx::query("DELETE FROM backup_objects WHERE pubkey = $1 AND backup_id = $2")
             .bind(pubkey)

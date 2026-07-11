@@ -44,13 +44,16 @@ impl S3BackupClient {
         &self,
         key: &str,
         checksum_sha256: &str,
+        content_length: u64,
     ) -> Result<String, anyhow::Error> {
         let presigning_config = PresigningConfig::expires_in(Duration::from_secs(900))?;
+        let content_length = i64::try_from(content_length)?;
         let presigned_request = self
             .client
             .put_object()
             .bucket(&self.bucket)
             .key(key)
+            .content_length(content_length)
             .checksum_sha256(checksum_sha256)
             .presigned(presigning_config)
             .await?;

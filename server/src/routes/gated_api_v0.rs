@@ -37,6 +37,7 @@ const LN_SUGGESTIONS_MIN_USERNAME_LEN: usize = 2;
 const LN_SUGGESTIONS_MAX_QUERY_LEN: usize = 64;
 const LN_SUGGESTIONS_LIMIT: i64 = 8;
 const BACKUP_OBJECT_FORMAT_VERSION: i32 = 2;
+const MAX_BACKUP_OBJECT_SIZE_BYTES: u64 = 256 * 1024 * 1024;
 const NON_LN_SUGGESTION_PREFIXES: [&str; 9] = [
     "bc1", "tb1", "bcrt1", "lnbc", "lntb", "lnbcrt", "ark", "tark", "lno",
 ];
@@ -400,6 +401,12 @@ pub async fn initiate_backup_object_upload(
             "Backup size must be greater than zero".to_string(),
         ));
     }
+    if payload.encrypted_size > MAX_BACKUP_OBJECT_SIZE_BYTES {
+        return Err(ApiError::InvalidArgument(format!(
+            "Backup size must not exceed {} bytes",
+            MAX_BACKUP_OBJECT_SIZE_BYTES
+        )));
+    }
 
     let encrypted_sha256 = payload.encrypted_sha256.to_ascii_lowercase();
     let checksum_bytes = hex::decode(&encrypted_sha256).map_err(|_| {
@@ -416,7 +423,7 @@ pub async fn initiate_backup_object_upload(
     let object_key = format!("{}/backups/{}.noahbackup", auth_payload.key, backup_id);
     let s3_client = S3BackupClient::new(state.config.s3_bucket_name.clone()).await?;
     let upload_url = s3_client
-        .generate_checksummed_upload_url(&object_key, &checksum_sha256)
+        .generate_checksummed_upload_url(&object_key, &checksum_sha256, payload.encrypted_size)
         .await?;
 
     BackupRepository::new(&state.db_pool)

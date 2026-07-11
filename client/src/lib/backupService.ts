@@ -195,6 +195,7 @@ export class BackupService {
           initiateResult.value.upload_url,
           encrypted.path,
           {
+            "Content-Length": encrypted.sizeBytes.toString(),
             "Content-Type": "application/octet-stream",
             "x-amz-checksum-sha256": initiateResult.value.checksum_sha256,
           },
