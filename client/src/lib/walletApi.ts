@@ -36,17 +36,16 @@ import {
   type PendingRoundStatus,
   KeyPairResult,
 } from "react-native-nitro-ark";
-import * as Keychain from "react-native-keychain";
 import RNFSTurbo from "react-native-fs-turbo";
 import {
   ARK_DATA_PATH,
   CACHES_DIRECTORY_PATH,
   DOCUMENT_DIRECTORY_PATH,
-  MNEMONIC_KEYCHAIN_SERVICE,
   ACTIVE_WALLET_CONFIG,
   shouldUseUnifiedPush,
 } from "../constants";
 import {
+  clearMnemonic,
   deriveStoreNextKeypair,
   peakKeyPair,
   getMnemonic,
@@ -55,7 +54,7 @@ import {
 } from "./crypto";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import logger from "~/lib/log";
-import { storeNativeMnemonic } from "noah-tools";
+import { clearNativeMnemonic, storeNativeMnemonic } from "noah-tools";
 import { useWalletStore } from "~/store/walletStore";
 
 const log = logger("walletApi");
@@ -91,7 +90,7 @@ const createWalletFromMnemonic = async (mnemonic: string): Promise<Result<void, 
     return err(createResult.error);
   }
 
-  const setMnemonicResult = await ResultAsync.fromPromise(setMnemonic(mnemonic), (e) => e as Error);
+  const setMnemonicResult = await setMnemonic(mnemonic);
 
   if (setMnemonicResult.isErr()) {
     log.error("Failed to set mnemonic", [setMnemonicResult.error]);
@@ -108,7 +107,7 @@ const createWalletFromMnemonic = async (mnemonic: string): Promise<Result<void, 
     }
   }
 
-  const loadResult = await loadWallet(mnemonic);
+  const loadResult = await loadWalletWithMnemonic(mnemonic);
   if (loadResult.isErr()) {
     log.error("Failed to load wallet", [loadResult.error]);
     return err(loadResult.error);
@@ -139,7 +138,7 @@ export const createWallet = async (): Promise<Result<void, Error>> => {
 };
 
 export const restoreWallet = async (mnemonic: string): Promise<Result<boolean, Error>> => {
-  const setResult = await ResultAsync.fromPromise(setMnemonic(mnemonic), (e) => e as Error);
+  const setResult = await setMnemonic(mnemonic);
   if (setResult.isErr()) {
     log.error("Failed to set mnemonic", [setResult.error]);
     return err(setResult.error);
@@ -154,10 +153,12 @@ export const restoreWallet = async (mnemonic: string): Promise<Result<boolean, E
       log.w("Failed to store mnemonic natively for push service", [storeNativeResult.error]);
     }
   }
-  return loadWallet(mnemonic);
+  return loadWalletWithMnemonic(mnemonic);
 };
 
-const loadWallet = async (mnemonic: string): Promise<Result<boolean, Error>> => {
+export const loadWalletWithMnemonic = async (
+  mnemonic: string,
+): Promise<Result<boolean, Error>> => {
   const loadResult = await ResultAsync.fromPromise(
     loadWalletNitro(ARK_DATA_PATH, {
       mnemonic,
@@ -185,7 +186,7 @@ const loadWalletFromStorage = async (): Promise<Result<boolean, Error>> => {
     return err(new Error("No wallet found. Please create a wallet first."));
   }
 
-  return loadWallet(mnemonic);
+  return loadWalletWithMnemonic(mnemonic);
 };
 
 export const loadWalletIfNeeded = async (): Promise<Result<boolean, Error>> => {
@@ -410,13 +411,21 @@ export const walletDataExists = (): boolean => {
  * This handles the iOS reinstall case where keychain persists but app data is gone.
  */
 export const clearStaleKeychain = async (): Promise<Result<void, Error>> => {
-  const mnemonicResetResult = await ResultAsync.fromPromise(
-    Keychain.resetGenericPassword({ service: MNEMONIC_KEYCHAIN_SERVICE }),
-    (e) => e as Error,
-  );
+  const mnemonicResetResult = await clearMnemonic();
   if (mnemonicResetResult.isErr()) {
     log.w("Failed to clear stale keychain", [mnemonicResetResult.error]);
     return err(mnemonicResetResult.error);
+  }
+
+  if (shouldUseUnifiedPush()) {
+    const nativeResetResult = await ResultAsync.fromPromise(
+      clearNativeMnemonic(),
+      (e) => e as Error,
+    );
+    if (nativeResetResult.isErr()) {
+      log.w("Failed to clear stale native mnemonic", [nativeResetResult.error]);
+      return err(nativeResetResult.error);
+    }
   }
 
   const tokenResetResult = await resetServerAuthToken();

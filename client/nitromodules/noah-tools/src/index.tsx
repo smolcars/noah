@@ -180,4 +180,8 @@ export function storeNativeMnemonic(mnemonic: string): Promise<void> {
   return NoahToolsHybridObject.storeNativeMnemonic(mnemonic);
 }
 
+export function clearNativeMnemonic(): Promise<void> {
+  return NoahToolsHybridObject.clearNativeMnemonic();
+}
+
 export type { HttpResponse } from "./NoahTools.nitro";

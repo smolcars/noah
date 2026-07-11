@@ -17,7 +17,7 @@ namespace margelo::nitro::noahtools {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "UnifiedPushDistributor" and the the Kotlin data class "UnifiedPushDistributor".
+   * The C++ JNI bridge between the C++ struct "UnifiedPushDistributor" and the Kotlin data class "UnifiedPushDistributor".
    */
   struct JUnifiedPushDistributor final: public jni::JavaClass<JUnifiedPushDistributor> {
   public:

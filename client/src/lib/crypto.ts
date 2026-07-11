@@ -74,17 +74,17 @@ export const verifyMessage = async (
 };
 
 export const setMnemonic = async (mnemonic: string): Promise<Result<void, Error>> => {
-  await ResultAsync.fromPromise(
+  const result = await ResultAsync.fromPromise(
     Keychain.setGenericPassword(KEYCHAIN_USERNAME, mnemonic, {
       service: MNEMONIC_KEYCHAIN_SERVICE,
     }),
     (e) => e as Error,
   );
 
-  return ok(undefined);
+  return result.map(() => undefined);
 };
 
-export const getMnemonic = async (): Promise<Result<string, Error>> => {
+export const getStoredMnemonic = async (): Promise<Result<string | null, Error>> => {
   const credentialsResult = await ResultAsync.fromPromise(
     Keychain.getGenericPassword({ service: MNEMONIC_KEYCHAIN_SERVICE }),
     (e) => e as Error,
@@ -96,10 +96,30 @@ export const getMnemonic = async (): Promise<Result<string, Error>> => {
 
   const credentials = credentialsResult.value;
   if (!credentials || !credentials.password) {
-    return err(new Error("No wallet found. Please create a wallet first."));
+    return ok(null);
   }
 
   return ok(credentials.password);
+};
+
+export const clearMnemonic = async (): Promise<Result<void, Error>> => {
+  const result = await ResultAsync.fromPromise(
+    Keychain.resetGenericPassword({ service: MNEMONIC_KEYCHAIN_SERVICE }),
+    (e) => e as Error,
+  );
+  return result.map(() => undefined);
+};
+
+export const getMnemonic = async (): Promise<Result<string, Error>> => {
+  const mnemonicResult = await getStoredMnemonic();
+  if (mnemonicResult.isErr()) {
+    return err(mnemonicResult.error);
+  }
+  if (!mnemonicResult.value) {
+    return err(new Error("No wallet found. Please create a wallet first."));
+  }
+
+  return ok(mnemonicResult.value);
 };
 
 export const setServerAuthToken = async (token: string): Promise<Result<void, Error>> => {

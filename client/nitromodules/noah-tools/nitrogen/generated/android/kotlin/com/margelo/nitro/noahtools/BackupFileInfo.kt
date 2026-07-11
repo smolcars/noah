@@ -39,7 +39,7 @@ data class BackupFileInfo(
   }
 
   override fun hashCode(): Int {
-    return arrayOf(
+    return arrayOf<Any?>(
       path,
       sizeBytes,
       sha256

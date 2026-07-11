@@ -35,7 +35,7 @@ data class DecryptedBackupInfo(
   }
 
   override fun hashCode(): Int {
-    return arrayOf(
+    return arrayOf<Any?>(
       manifestJson,
       snapshotPath
     ).contentDeepHashCode()

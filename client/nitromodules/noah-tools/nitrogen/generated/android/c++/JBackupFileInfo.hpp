@@ -17,7 +17,7 @@ namespace margelo::nitro::noahtools {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "BackupFileInfo" and the the Kotlin data class "BackupFileInfo".
+   * The C++ JNI bridge between the C++ struct "BackupFileInfo" and the Kotlin data class "BackupFileInfo".
    */
   struct JBackupFileInfo final: public jni::JavaClass<JBackupFileInfo> {
   public:

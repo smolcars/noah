@@ -327,4 +327,29 @@ class NoahTools : HybridNoahToolsSpec() {
         }
     }
 
+    override fun clearNativeMnemonic(): Promise<Unit> {
+        return Promise.async {
+            val context = NitroModules.applicationContext ?: return@async
+            val variant = when (context.packageName) {
+                "com.noahwallet.regtest" -> "regtest"
+                "com.noahwallet.signet" -> "signet"
+                else -> "mainnet"
+            }
+
+            try {
+                val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+                val prefs = EncryptedSharedPreferences.create(
+                    "noah_native_secrets",
+                    masterKeyAlias,
+                    context,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+                prefs.edit().remove("mnemonic_$variant").apply()
+            } catch (e: Exception) {
+                throw Exception("Failed to clear native mnemonic: ${e.message}", e)
+            }
+        }
+    }
+
 }

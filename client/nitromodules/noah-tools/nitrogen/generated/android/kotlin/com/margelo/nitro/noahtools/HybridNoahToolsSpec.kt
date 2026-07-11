@@ -27,7 +27,7 @@ import com.margelo.nitro.core.HybridObject
 )
 abstract class HybridNoahToolsSpec: HybridObject() {
   // Properties
-  
+
 
   // Methods
   @DoNotStrip
@@ -145,6 +145,10 @@ abstract class HybridNoahToolsSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun storeNativeMnemonic(mnemonic: String): Promise<Unit>
+
+  @DoNotStrip
+  @Keep
+  abstract fun clearNativeMnemonic(): Promise<Unit>
 
   // Default implementation of `HybridObject.toString()`
   override fun toString(): String {

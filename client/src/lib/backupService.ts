@@ -6,6 +6,7 @@ import {
   type WalletSnapshotInfo,
 } from "react-native-nitro-ark";
 import {
+  clearNativeMnemonic,
   decryptWalletBackup,
   downloadFile,
   encryptWalletSnapshot,
@@ -25,8 +26,8 @@ import {
   listBackupObjectsForRestore,
   updateBackupSettings,
 } from "./api";
-import { getMnemonic, setMnemonic } from "./crypto";
-import { loadWalletIfNeeded } from "./walletApi";
+import { clearMnemonic, getMnemonic, getStoredMnemonic, setMnemonic } from "./crypto";
+import { closeWalletIfLoaded, loadWalletWithMnemonic } from "./walletApi";
 import { useWalletStore } from "~/store/walletStore";
 import { useBackupStore } from "~/store/backupStore";
 import logger from "~/lib/log";
@@ -407,6 +408,10 @@ export class BackupService {
 
 export const restoreWallet = async (mnemonic: string): Promise<Result<void, Error>> => {
   let restoreOutcome: RestoreOutcome | null = null;
+  let previousMnemonic: string | null = null;
+  let walletOpened = false;
+  let keychainMnemonicMayHaveChanged = false;
+  let nativeMnemonicMayHaveChanged = false;
   const rollbackSnapshotInstall = async () => {
     if (!restoreOutcome?.usesSnapshotInstall) {
       return;
@@ -415,8 +420,77 @@ export const restoreWallet = async (mnemonic: string): Promise<Result<void, Erro
     restoreOutcome = null;
   };
 
+  const rollbackRestore = async () => {
+    let rollbackError: Error | null = null;
+    const rememberRollbackError = (error: Error) => {
+      rollbackError ??= error;
+    };
+
+    if (walletOpened) {
+      const closeResult = await closeWalletIfLoaded();
+      if (closeResult.isErr()) {
+        rememberRollbackError(closeResult.error);
+      } else if (!closeResult.value) {
+        rememberRollbackError(new Error("Failed to close restored wallet before rollback"));
+      }
+      walletOpened = false;
+    }
+
+    if (keychainMnemonicMayHaveChanged) {
+      const restoreMnemonicResult = previousMnemonic
+        ? await setMnemonic(previousMnemonic)
+        : await clearMnemonic();
+      if (restoreMnemonicResult.isErr()) {
+        rememberRollbackError(restoreMnemonicResult.error);
+      }
+      keychainMnemonicMayHaveChanged = false;
+    }
+
+    if (nativeMnemonicMayHaveChanged && shouldUseUnifiedPush()) {
+      const nativeRestoreResult = await ResultAsync.fromPromise(
+        previousMnemonic
+          ? storeNativeMnemonic(previousMnemonic)
+          : clearNativeMnemonic(),
+        asError,
+      );
+      if (nativeRestoreResult.isErr()) {
+        rememberRollbackError(nativeRestoreResult.error);
+      }
+      nativeMnemonicMayHaveChanged = false;
+    }
+
+    const snapshotRollbackResult = await ResultAsync.fromPromise(
+      rollbackSnapshotInstall(),
+      asError,
+    );
+    if (snapshotRollbackResult.isErr()) {
+      rememberRollbackError(snapshotRollbackResult.error);
+    }
+
+    if (rollbackError) {
+      throw rollbackError;
+    }
+  };
+
+  const failRestore = async (error: Error): Promise<Result<void, Error>> => {
+    const rollbackResult = await ResultAsync.fromPromise(rollbackRestore(), asError);
+    if (rollbackResult.isErr()) {
+      log.e("Failed to roll back wallet restore", [
+        redactSensitiveErrorMessage(rollbackResult.error),
+      ]);
+      return err(new Error("Wallet restore failed and could not be rolled back safely"));
+    }
+    return err(error);
+  };
+
   try {
     updateProgress("Starting restore...", 0);
+    const previousMnemonicResult = await getStoredMnemonic();
+    if (previousMnemonicResult.isErr()) {
+      return err(previousMnemonicResult.error);
+    }
+    previousMnemonic = previousMnemonicResult.value;
+
     const backupService = new BackupService();
     updateProgress("Fetching and validating backup...", 55);
     const restoreResult = await backupService.restoreBackup(mnemonic);
@@ -425,30 +499,34 @@ export const restoreWallet = async (mnemonic: string): Promise<Result<void, Erro
     }
     restoreOutcome = restoreResult.value;
 
-    updateProgress("Finalizing...", 90);
-    const setMnemonicResult = await ResultAsync.fromPromise(setMnemonic(mnemonic), asError);
+    updateProgress("Loading wallet...", 90);
+    const loadWalletResult = await loadWalletWithMnemonic(mnemonic);
+    if (loadWalletResult.isErr()) {
+      return failRestore(loadWalletResult.error);
+    }
+    walletOpened = true;
+
+    updateProgress("Finalizing...", 95);
+    keychainMnemonicMayHaveChanged = true;
+    const setMnemonicResult = await setMnemonic(mnemonic);
     if (setMnemonicResult.isErr()) {
-      await rollbackSnapshotInstall();
-      return err(setMnemonicResult.error);
+      return failRestore(setMnemonicResult.error);
     }
 
     if (shouldUseUnifiedPush()) {
+      nativeMnemonicMayHaveChanged = true;
       const storeNativeResult = await ResultAsync.fromPromise(
         storeNativeMnemonic(mnemonic),
         asError,
       );
       if (storeNativeResult.isErr()) {
-        await rollbackSnapshotInstall();
-        return err(storeNativeResult.error);
+        return failRestore(storeNativeResult.error);
       }
     }
 
-    updateProgress("Loading wallet...", 95);
-    const loadWalletResult = await loadWalletIfNeeded();
-    if (loadWalletResult.isErr()) {
-      await rollbackSnapshotInstall();
-      return err(loadWalletResult.error);
-    }
+    keychainMnemonicMayHaveChanged = false;
+    nativeMnemonicMayHaveChanged = false;
+    walletOpened = false;
     if (restoreOutcome.usesSnapshotInstall) {
       const rollbackPath = restoreOutcome.rollbackPath;
       restoreOutcome.usesSnapshotInstall = false;
@@ -472,8 +550,7 @@ export const restoreWallet = async (mnemonic: string): Promise<Result<void, Erro
     useWalletStore.setState({ isInitialized: true, isWalletLoaded: true, restoreProgress: null });
     return ok(undefined);
   } catch (error) {
-    await rollbackSnapshotInstall().catch(() => {});
-    return err(asError(error));
+    return failRestore(asError(error));
   } finally {
     useWalletStore.getState().setRestoreProgress(null);
   }

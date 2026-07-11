@@ -299,6 +299,14 @@ namespace margelo::nitro::noahtools {
       auto __value = std::move(__result.value());
       return __value;
     }
+    inline std::shared_ptr<Promise<void>> clearNativeMnemonic() override {
+      auto __result = _swiftPart.clearNativeMnemonic();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
 
   private:
     NoahTools::HybridNoahToolsSpec_cxx _swiftPart;

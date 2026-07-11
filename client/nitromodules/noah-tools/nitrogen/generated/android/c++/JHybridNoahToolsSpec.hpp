@@ -83,6 +83,7 @@ namespace margelo::nitro::noahtools {
     std::vector<UnifiedPushDistributor> getUnifiedPushDistributors() override;
     void setUnifiedPushDistributor(const std::optional<std::variant<nitro::NullType, std::string>>& distributorId) override;
     std::shared_ptr<Promise<void>> storeNativeMnemonic(const std::string& mnemonic) override;
+    std::shared_ptr<Promise<void>> clearNativeMnemonic() override;
 
   private:
     jni::global_ref<JHybridNoahToolsSpec::JavaPart> _javaPart;
