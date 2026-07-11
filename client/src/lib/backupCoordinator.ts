@@ -7,6 +7,8 @@ import { useServerStore } from "~/store/serverStore";
 import { useWalletStore } from "~/store/walletStore";
 
 const BACKUP_DEBOUNCE_MS = 5_000;
+const BACKUP_RETRY_INITIAL_MS = 15_000;
+const BACKUP_RETRY_MAX_MS = 15 * 60_000;
 
 export type BackupReason =
   | "app_foreground"
@@ -26,12 +28,22 @@ const log = logger("backupCoordinator");
 let requestedGeneration = 0;
 let completedGeneration = 0;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let retryAttempt = 0;
+let pendingRequireEnabled = true;
 let backupInFlight: Promise<Result<void, Error>> | null = null;
 
 const clearDebounceTimer = () => {
   if (debounceTimer) {
     clearTimeout(debounceTimer);
     debounceTimer = null;
+  }
+};
+
+const clearRetryTimer = () => {
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
   }
 };
 
@@ -53,8 +65,31 @@ const scheduleTrailingBackup = () => {
   }, BACKUP_DEBOUNCE_MS);
 };
 
-const performBackupPass = async (): Promise<Result<void, Error>> => {
-  const passGeneration = requestedGeneration;
+const scheduleBackupRetry = () => {
+  if (retryTimer || debounceTimer || !canBackup(pendingRequireEnabled)) {
+    return;
+  }
+
+  const baseDelay = Math.min(
+    BACKUP_RETRY_INITIAL_MS * 2 ** retryAttempt,
+    BACKUP_RETRY_MAX_MS,
+  );
+  const delay = Math.min(
+    Math.round(baseDelay * (0.8 + Math.random() * 0.4)),
+    BACKUP_RETRY_MAX_MS,
+  );
+  retryAttempt = Math.min(retryAttempt + 1, 10);
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    void runBackupPass();
+  }, delay);
+  log.d("Backup retry scheduled", [delay]);
+};
+
+const performBackupPass = async (
+  passGeneration: number,
+  requireEnabled: boolean,
+): Promise<Result<void, Error>> => {
   const backupStore = useBackupStore.getState();
   backupStore.setBackupInProgress();
 
@@ -64,9 +99,13 @@ const performBackupPass = async (): Promise<Result<void, Error>> => {
     const safeMessage = redactSensitiveErrorMessage(result.error);
     useBackupStore.getState().setBackupFailed(safeMessage);
     log.w("Backup failed", [safeMessage]);
+    pendingRequireEnabled = pendingRequireEnabled && requireEnabled;
+    scheduleBackupRetry();
     return err(result.error);
   }
 
+  retryAttempt = 0;
+  clearRetryTimer();
   completedGeneration = Math.max(completedGeneration, passGeneration);
   const hasNewerRequest = requestedGeneration > completedGeneration;
   useBackupStore
@@ -90,7 +129,15 @@ async function runBackupPass(): Promise<Result<void, Error>> {
     return backupInFlight;
   }
 
-  backupInFlight = performBackupPass();
+  const requireEnabled = pendingRequireEnabled;
+  if (!canBackup(requireEnabled)) {
+    log.d("Skipping backup pass because the wallet is not eligible");
+    return err(new Error("Wallet is not ready for backup"));
+  }
+
+  const passGeneration = requestedGeneration;
+  pendingRequireEnabled = true;
+  backupInFlight = performBackupPass(passGeneration, requireEnabled);
   try {
     return await backupInFlight;
   } finally {
@@ -106,19 +153,23 @@ export const scheduleBackup = (reason: BackupReason, options: BackupRequestOptio
   }
 
   requestedGeneration += 1;
+  pendingRequireEnabled = pendingRequireEnabled && requireEnabled;
   useBackupStore.getState().markBackupPending();
   log.d("Backup requested", [reason, requestedGeneration]);
 
   if (options.immediate) {
     clearDebounceTimer();
+    clearRetryTimer();
     void runBackupPass();
     return;
   }
+  clearRetryTimer();
   scheduleTrailingBackup();
 };
 
 export const cancelScheduledBackup = (): void => {
   clearDebounceTimer();
+  clearRetryTimer();
 };
 
 export const flushBackup = async (
@@ -131,9 +182,11 @@ export const flushBackup = async (
   }
 
   requestedGeneration += 1;
+  pendingRequireEnabled = pendingRequireEnabled && requireEnabled;
   const targetGeneration = requestedGeneration;
   useBackupStore.getState().markBackupPending();
   clearDebounceTimer();
+  clearRetryTimer();
   log.d("Immediate backup requested", [reason, targetGeneration]);
 
   let result = await runBackupPass();

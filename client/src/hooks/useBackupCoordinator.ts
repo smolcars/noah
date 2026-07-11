@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppState } from "react-native";
 import { subscribeWalletStateChanges, type WalletStateChangeEvent } from "react-native-nitro-ark";
-import { scheduleBackup } from "~/lib/backupCoordinator";
+import { cancelScheduledBackup, scheduleBackup } from "~/lib/backupCoordinator";
 import logger from "~/lib/log";
 import { useServerStore } from "~/store/serverStore";
 import { useWalletStore } from "~/store/walletStore";
@@ -14,9 +14,17 @@ export const useBackupCoordinator = (isReady: boolean) => {
   const isInitialized = useWalletStore((state) => state.isInitialized);
   const isWalletLoaded = useWalletStore((state) => state.isWalletLoaded);
   const isWalletSuspended = useWalletStore((state) => state.isWalletSuspended);
+  const canCoordinateBackups =
+    isReady && isBackupEnabled && isInitialized && isWalletLoaded && !isWalletSuspended;
 
   useEffect(() => {
-    if (!isReady || !isBackupEnabled || !isInitialized || !isWalletLoaded || isWalletSuspended) {
+    if (!canCoordinateBackups) {
+      cancelScheduledBackup();
+    }
+  }, [canCoordinateBackups]);
+
+  useEffect(() => {
+    if (!canCoordinateBackups) {
       return;
     }
 
@@ -46,16 +54,12 @@ export const useBackupCoordinator = (isReady: boolean) => {
       scheduleBackup("startup", { immediate: true });
     }
   }, [
-    isBackupEnabled,
-    isInitialized,
-    isReady,
-    isWalletLoaded,
-    isWalletSuspended,
+    canCoordinateBackups,
     subscriptionGeneration,
   ]);
 
   useEffect(() => {
-    if (!isReady || !isBackupEnabled || !isInitialized || !isWalletLoaded || isWalletSuspended) {
+    if (!canCoordinateBackups) {
       return;
     }
 
@@ -66,5 +70,5 @@ export const useBackupCoordinator = (isReady: boolean) => {
     });
 
     return () => appStateSubscription.remove();
-  }, [isBackupEnabled, isInitialized, isReady, isWalletLoaded, isWalletSuspended]);
+  }, [canCoordinateBackups]);
 };
