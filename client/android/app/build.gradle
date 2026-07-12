@@ -25,6 +25,7 @@ def releaseSigningStoreFile = releaseSigningStoreFilePath ? file(releaseSigningS
 def hasReleaseSigningConfig = missingReleaseSigningKeys.isEmpty() &&
     releaseSigningStoreFile != null &&
     releaseSigningStoreFile.exists()
+def useCiDebugSigning = System.getenv('CI_DEBUG_SIGNING') == 'true'
 
 gradle.taskGraph.whenReady { taskGraph ->
     def mainnetReleaseRequested = taskGraph.allTasks.any {
@@ -187,6 +188,8 @@ android {
             // see https://reactnative.dev/docs/signed-apk-android.
             if (hasReleaseSigningConfig) {
                 signingConfig signingConfigs.release
+            } else if (useCiDebugSigning) {
+                signingConfig signingConfigs.debug
             }
 
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
