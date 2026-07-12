@@ -1,10 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { View, ScrollView, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { SettingsStackParamList } from "../Navigators";
-import Icon from "@react-native-vector-icons/ionicons";
-import { useIconColor } from "../hooks/useTheme";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { Text } from "~/components/ui/text";
 import { Label } from "~/components/ui/label";
@@ -28,6 +26,10 @@ import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { copyToClipboard } from "~/lib/clipboardUtils";
 import { ConfirmationDialog } from "~/components/ConfirmationDialog";
 import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
+import {
+  NativeNoahPicker,
+  type NativeNoahPickerOption,
+} from "~/components/ui/NativeNoahPicker";
 
 const log = logger("DebugScreen");
 
@@ -118,12 +120,17 @@ const DEBUG_ACTIONS: ActionOption[] = [
   },
 ];
 
+type DebugActionSelection = DebugAction | "none";
+
+const DEBUG_ACTION_OPTIONS: readonly NativeNoahPickerOption<DebugActionSelection>[] = [
+  { value: "none", label: "Choose an action..." },
+  ...DEBUG_ACTIONS.map((action) => ({ value: action.id, label: action.title })),
+];
+
 const DebugScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
-  const iconColor = useIconColor();
   const { showAlert } = useAlert();
   const [selectedAction, setSelectedAction] = useState<DebugAction | null>(null);
-  const [isActionListOpen, setIsActionListOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isDropDialogOpen, setIsDropDialogOpen] = useState(false);
@@ -322,9 +329,8 @@ const DebugScreen = () => {
     }
   };
 
-  const handleSelectAction = (action: DebugAction) => {
+  const handleSelectAction = (action: DebugAction | null) => {
     setSelectedAction(action);
-    setIsActionListOpen(false);
     setResultState(null);
     setInputValue("");
     setCopied(false);
@@ -360,67 +366,23 @@ const DebugScreen = () => {
       >
         <View className="mb-6 mt-6">
           <Label className="text-foreground text-2xl mb-2">Select Action</Label>
-
-          <Pressable
-            onPress={() => setIsActionListOpen((open) => !open)}
-            className="h-12 flex-row items-center justify-between rounded-md border border-input bg-background px-3"
-          >
+          <NativeNoahPicker
+            value={selectedAction ?? "none"}
+            options={DEBUG_ACTION_OPTIONS}
+            onValueChange={(value) => handleSelectAction(value === "none" ? null : value)}
+            testID="debug-action-picker"
+          />
+          {selectedActionConfig ? (
             <Text
-              className={
-                selectedActionConfig ? "text-foreground text-lg" : "text-muted-foreground text-lg"
-              }
-              numberOfLines={1}
+              className={`mt-2 text-sm ${
+                selectedAction === "dropVtxo"
+                  ? "text-red-700 dark:text-red-300"
+                  : "text-muted-foreground"
+              }`}
             >
-              {selectedActionConfig?.title ?? "Choose an action..."}
+              {selectedActionConfig.description}
             </Text>
-            <Icon
-              name={isActionListOpen ? "chevron-up" : "chevron-down"}
-              size={20}
-              color={iconColor}
-            />
-          </Pressable>
-
-          {isActionListOpen && (
-            <View className="mt-2 overflow-hidden rounded-md border border-border bg-popover">
-              {DEBUG_ACTIONS.map((action, index) => {
-                const isSelected = action.id === selectedAction;
-                const isDangerousAction = action.id === "dropVtxo";
-                return (
-                  <Pressable
-                    key={action.id}
-                    onPress={() => handleSelectAction(action.id)}
-                    className={`px-4 py-3 ${
-                      index < DEBUG_ACTIONS.length - 1 ? "border-b border-border/60" : ""
-                    } ${
-                      isDangerousAction
-                        ? "bg-red-50 dark:bg-red-950/30"
-                        : isSelected
-                          ? "bg-accent/40"
-                          : ""
-                    }`}
-                  >
-                    <View className="flex-row items-start gap-3">
-                      <View className="w-5 items-center pt-1">
-                        {isSelected ? <Icon name="checkmark" size={18} color={iconColor} /> : null}
-                      </View>
-                      <View className="min-w-0 flex-1">
-                        <Text
-                          className={`text-lg font-semibold ${
-                            isDangerousAction ? "text-red-700 dark:text-red-300" : "text-foreground"
-                          }`}
-                        >
-                          {action.title}
-                        </Text>
-                        <Text className="text-muted-foreground mt-1 text-sm">
-                          {action.description}
-                        </Text>
-                      </View>
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
+          ) : null}
         </View>
 
         {selectedActionConfig?.requiresInput && (

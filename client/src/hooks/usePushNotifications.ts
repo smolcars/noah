@@ -24,7 +24,7 @@ export const usePushNotifications = (isReady: boolean) => {
         return;
       }
 
-      log.d("Successfully registered for push notifications");
+      log.d("Push notification registration flow completed");
 
       // If backup is enabled, then register with server for backup
       log.d("Is backup enabled?", [isBackupEnabled]);

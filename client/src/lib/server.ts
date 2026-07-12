@@ -73,6 +73,11 @@ export const registerPushNotificationsForServer = async (): Promise<Result<void,
   }
 
   const tokenPayload = tokenResult.value;
+  if (tokenPayload.kind === "device_not_supported") {
+    log.d("Skipping push notification registration on unsupported device");
+    return ok(undefined);
+  }
+
   if (tokenPayload.kind !== "success") {
     const error = new Error(
       `Push notification registration did not complete: ${tokenPayload.kind}`,
