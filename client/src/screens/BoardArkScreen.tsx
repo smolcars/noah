@@ -35,7 +35,6 @@ import { useAlert } from "~/contexts/AlertProvider";
 import logger from "~/lib/log";
 import { HomeStackParamList } from "~/Navigators";
 import { BoardResult } from "react-native-nitro-ark";
-import { useTransactionStore } from "~/store/transactionStore";
 import { FeeEstimateSummary } from "~/components/FeeEstimateSummary";
 import { FeeEstimateBox, FeeEstimateRow, FeeEstimateSeparator } from "~/components/FeeEstimateBox";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
@@ -428,7 +427,6 @@ const BoardArkScreen = () => {
   const { showAlert } = useAlert();
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
-  const isAutoBoardingEnabled = useTransactionStore((state) => state.isAutoBoardingEnabled);
   const { data: balance, isLoading: isBalanceLoading } = useBalance();
   const {
     mutate: boardArk,
