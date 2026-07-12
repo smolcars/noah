@@ -165,7 +165,7 @@
 
         in
         pkgs.mkShellNoCC {
-          buildInputs = if system == "aarch64-darwin" then basePackages ++ darwinPackages else basePackages;
+          buildInputs = if system == "aarch64-darwin" then basePackages ++ darwinPackages else basePackages ++ [ pkgs.maestro ];
 
           shellHook = if system == "aarch64-darwin" then darwinHook else linuxHook;
         };
