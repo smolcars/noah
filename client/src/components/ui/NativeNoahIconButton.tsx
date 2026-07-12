@@ -81,8 +81,9 @@ export function NativeNoahIconButton({
   const { colors } = useTheme();
   const isDisabled = disabled || isLoading;
   const iconNames = ICONS[icon];
+  const supportsLiquidGlass = Platform.OS === "ios" && Number(Platform.Version) >= 26;
 
-  if (Platform.OS === "ios") {
+  if (supportsLiquidGlass) {
     return (
       <View
         className={className}

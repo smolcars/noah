@@ -153,15 +153,17 @@ const BoardingTransactionsScreen = () => {
       <NoahSafeAreaView className="flex-1 bg-background">
         <View className="p-4 flex-1">
           <View className="flex-row items-center justify-between mb-8">
-            <View className="flex-row items-center">
+            <View className="mr-2 min-w-0 flex-1 flex-row items-center">
               <NativeNoahBackButton
                 onPress={() => navigation.goBack()}
                 className="mr-3"
                 testID="boarding-history-back-button"
               />
-              <Text className="text-2xl font-bold text-foreground">Boarding History</Text>
+              <Text className="min-w-0 flex-1 text-2xl font-bold text-foreground" numberOfLines={2}>
+                Boarding History
+              </Text>
             </View>
-            <View className="flex-row items-center gap-4">
+            <View className="shrink-0 flex-row items-center gap-4">
               <NativeNoahIconButton
                 icon="refresh"
                 accessibilityLabel="Refresh boarding history"

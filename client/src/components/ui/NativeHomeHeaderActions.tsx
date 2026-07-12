@@ -33,8 +33,9 @@ export function NativeHomeHeaderActions({
   onOpenSettings,
 }: NativeHomeHeaderActionsProps) {
   const { colors } = useTheme();
+  const supportsLiquidGlass = Platform.OS === "ios" && Number(Platform.Version) >= 26;
 
-  if (Platform.OS === "ios") {
+  if (supportsLiquidGlass) {
     return (
       <SwiftHost seedColor={COLORS.BITCOIN_ORANGE} style={{ flex: 1 }}>
         <SwiftHStack alignment="center">
