@@ -1,24 +1,22 @@
 import { Host } from "@expo/ui";
-import { useState } from "react";
 import {
   OutlinedButton as ComposeOutlinedButton,
   Shape,
   Text as ComposeText,
   TextButton as ComposeTextButton,
 } from "@expo/ui/jetpack-compose";
-import { fillMaxSize } from "@expo/ui/jetpack-compose/modifiers";
-import { Button as SwiftButton, Text as SwiftText } from "@expo/ui/swift-ui";
 import {
-  buttonBorderShape,
-  buttonStyle,
-  controlSize,
-  font,
-  foregroundStyle,
-  frame,
-  lineLimit,
-  tint,
-} from "@expo/ui/swift-ui/modifiers";
-import { Platform, View, type StyleProp, type ViewStyle } from "react-native";
+  fillMaxSize,
+  testID as composeTestID,
+} from "@expo/ui/jetpack-compose/modifiers";
+import {
+  Platform,
+  Pressable,
+  Text as NativeText,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 
 import { useTheme } from "~/hooks/useTheme";
 import { COLORS } from "~/lib/styleConstants";
@@ -73,34 +71,57 @@ export function NativeNoahSecondaryButton({
   style,
   testID,
 }: NativeNoahSecondaryButtonProps) {
-  const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const { isDark } = useTheme();
   const height = BUTTON_HEIGHT[size];
-  const buttonWidth = width ?? measuredWidth ?? BUTTON_MIN_WIDTH[size];
+  const buttonWidth = width ?? BUTTON_MIN_WIDTH[size];
   const accentColor =
     tone === "destructive" ? SECONDARY_COLORS.destructive : SECONDARY_COLORS.accent;
   const textColor = isDark ? SECONDARY_COLORS.darkText : SECONDARY_COLORS.lightText;
-  const iosOutlineStyle =
-    Platform.OS === "ios" && emphasis === "outline"
-      ? {
-          borderWidth: 1,
-          borderColor: disabled ? SECONDARY_COLORS.disabledBorder : `${accentColor}66`,
-          borderRadius: height / 2,
-        }
-      : null;
   const hostStyle = {
     width: "100%",
     height,
   } as const;
 
+  if (Platform.OS === "ios") {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        className={className}
+        disabled={disabled}
+        onPress={onPress}
+        testID={testID}
+        style={({ pressed }) => [
+          {
+            width: fullWidth ? "100%" : buttonWidth,
+            height,
+            alignItems: "center",
+            justifyContent: "center",
+            borderWidth: emphasis === "outline" ? 1 : 0,
+            borderColor: disabled ? SECONDARY_COLORS.disabledBorder : `${accentColor}66`,
+            borderRadius: height / 2,
+            opacity: disabled ? 0.65 : pressed ? 0.7 : 1,
+          },
+          style,
+        ]}
+      >
+        <NativeText
+          numberOfLines={1}
+          style={{
+            color: disabled ? SECONDARY_COLORS.disabledText : textColor,
+            fontSize: 16,
+            fontWeight: "600",
+          }}
+        >
+          {label}
+        </NativeText>
+      </Pressable>
+    );
+  }
+
   return (
     <View
       className={className}
-      onLayout={(event) => {
-        if (width === undefined && fullWidth) {
-          setMeasuredWidth(event.nativeEvent.layout.width);
-        }
-      }}
       style={[
         {
           width: fullWidth ? "100%" : buttonWidth,
@@ -108,44 +129,18 @@ export function NativeNoahSecondaryButton({
           opacity: disabled ? 0.65 : 1,
           overflow: "hidden",
         },
-        iosOutlineStyle,
         style,
       ]}
     >
       <Host seedColor={accentColor} style={hostStyle}>
-        {Platform.OS === "android" ? (
-          <AndroidSecondaryButton
-            label={label}
-            onPress={onPress}
-            disabled={disabled}
-            emphasis={emphasis}
-            textColor={textColor}
-            testID={testID}
-          />
-        ) : (
-          <SwiftButton
-            onPress={disabled ? undefined : onPress}
-            testID={testID}
-            role={tone === "destructive" ? "destructive" : "default"}
-            modifiers={[
-              buttonStyle("plain"),
-              buttonBorderShape("capsule"),
-              controlSize(size === "lg" ? "large" : "regular"),
-              tint(accentColor),
-            ]}
-          >
-            <SwiftText
-              modifiers={[
-                frame({ width: buttonWidth, height, alignment: "center" }),
-                foregroundStyle(disabled ? SECONDARY_COLORS.disabledText : textColor),
-                font({ size: 16, weight: "semibold", design: "default" }),
-                lineLimit(1),
-              ]}
-            >
-              {label}
-            </SwiftText>
-          </SwiftButton>
-        )}
+        <AndroidSecondaryButton
+          label={label}
+          onPress={onPress}
+          disabled={disabled}
+          emphasis={emphasis}
+          textColor={textColor}
+          testID={testID}
+        />
       </Host>
     </View>
   );
@@ -157,6 +152,7 @@ function AndroidSecondaryButton({
   disabled,
   emphasis,
   textColor,
+  testID,
 }: {
   label: string;
   onPress?: () => void;
@@ -171,7 +167,7 @@ function AndroidSecondaryButton({
     <ButtonComponent
       onClick={disabled ? undefined : onPress}
       enabled={!disabled}
-      modifiers={[fillMaxSize()]}
+      modifiers={[fillMaxSize(), ...(testID ? [composeTestID(testID)] : [])]}
       shape={Shape.Pill({})}
       contentPadding={{ start: 18, top: 0, end: 18, bottom: 0 }}
       colors={{

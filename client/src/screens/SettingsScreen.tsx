@@ -1,5 +1,13 @@
-import { Linking, Pressable, ScrollView, View, Image } from "react-native";
+import {
+  Image,
+  Keyboard,
+  Linking,
+  Pressable,
+  ScrollView,
+  View,
+} from "react-native";
 import Constants from "expo-constants";
+import * as Haptics from "expo-haptics";
 import { useWalletStore } from "../store/walletStore";
 import { useBiometrics } from "../hooks/useBiometrics";
 import { PLATFORM, shouldUseUnifiedPush } from "../constants";
@@ -32,6 +40,8 @@ import { getFiatCurrencyInfo } from "~/lib/fiatCurrency";
 import { getBitcoinAmountUnitInfo } from "~/lib/bitcoinAmount";
 import { NativeSwitch } from "~/components/ui/native-switch";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
+import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import {
   GitHubBrandIcon,
   GITHUB_URL,
@@ -147,6 +157,27 @@ const SettingsScreen = () => {
 
   const handleGithubPress = () => {
     Linking.openURL(GITHUB_URL);
+  };
+
+  const closeDeleteWalletSheet = () => {
+    Keyboard.dismiss();
+    setIsDeleteWalletDialogOpen(false);
+    setConfirmText("");
+  };
+
+  const handleCancelDeleteWallet = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    closeDeleteWalletSheet();
+  };
+
+  const handleDeleteWallet = async () => {
+    if (confirmText.trim().toLowerCase() !== "delete" || deleteWalletMutation.isPending) {
+      return;
+    }
+
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    deleteWalletMutation.mutate();
+    closeDeleteWalletSheet();
   };
 
   const handleBiometricsToggle = async (value: boolean) => {
@@ -545,34 +576,6 @@ const SettingsScreen = () => {
               onPress={() => setIsDeleteWalletDialogOpen(true)}
               fullWidth
             />
-            <ConfirmationDialog
-              open={isDeleteWalletDialogOpen}
-              onOpenChange={(open) => {
-                setIsDeleteWalletDialogOpen(open);
-                if (!open) {
-                  setConfirmText("");
-                }
-              }}
-              title="Delete Wallet"
-              description={`This action is irreversible. To confirm, please type "delete" in the box below.`}
-              onConfirm={() => {
-                if (confirmText.toLowerCase() === "delete") {
-                  deleteWalletMutation.mutate();
-                  setIsDeleteWalletDialogOpen(false);
-                  setConfirmText("");
-                }
-              }}
-              isConfirmDisabled={confirmText.toLowerCase() !== "delete"}
-            >
-              <Input
-                value={confirmText}
-                onChangeText={setConfirmText}
-                placeholder='Type "delete" to confirm'
-                className="h-12"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </ConfirmationDialog>
           </View>
         )}
 
@@ -607,6 +610,64 @@ const SettingsScreen = () => {
           </View>
         </View>
       </ScrollView>
+      <AppBottomSheet
+        isOpen={isDeleteWalletDialogOpen}
+        onClose={closeDeleteWalletSheet}
+        detents={[0, "content"]}
+        avoidKeyboard
+      >
+        <View
+          className="gap-4 pt-2"
+          style={{ paddingBottom: Math.max(safeBottomInset, 16) + 12 }}
+        >
+          <View className="gap-2">
+            <Text className="text-xl font-bold text-foreground">Delete Wallet</Text>
+            <Text className="text-base text-muted-foreground">
+              This action is irreversible. To confirm, please type "delete" in the box below.
+            </Text>
+          </View>
+
+          <Input
+            value={confirmText}
+            onChangeText={setConfirmText}
+            placeholder='Type "delete" to confirm'
+            className="h-12"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="done"
+            onSubmitEditing={() => {
+              void handleDeleteWallet();
+            }}
+          />
+
+          <View className="flex-row gap-3">
+            <NativeNoahSecondaryButton
+              label="Cancel"
+              onPress={() => {
+                void handleCancelDeleteWallet();
+              }}
+              disabled={deleteWalletMutation.isPending}
+              className="flex-1"
+              fullWidth
+            />
+            <NativeNoahButton
+              label="Delete Wallet"
+              variant="destructive"
+              testID="confirm-delete-wallet"
+              onPress={() => {
+                void handleDeleteWallet();
+              }}
+              disabled={
+                confirmText.trim().toLowerCase() !== "delete" || deleteWalletMutation.isPending
+              }
+              isLoading={deleteWalletMutation.isPending}
+              loadingLabel="Deleting..."
+              className="flex-1"
+              fullWidth
+            />
+          </View>
+        </View>
+      </AppBottomSheet>
     </NoahSafeAreaView>
   );
 };

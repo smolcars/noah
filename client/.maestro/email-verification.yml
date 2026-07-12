@@ -59,5 +59,6 @@ appId: com.noahwallet.regtest
 - tapOn:
     text: 'Type "delete" to confirm'
 - inputText: "delete"
-- tapOn: "Confirm"
+- tapOn:
+    id: "confirm-delete-wallet"
 - assertVisible: "Welcome to Noah"
