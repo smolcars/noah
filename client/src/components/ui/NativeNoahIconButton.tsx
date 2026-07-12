@@ -17,9 +17,13 @@ import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
 import { useTheme } from "~/hooks/useTheme";
 import { COLORS } from "~/lib/styleConstants";
 
-export type NativeNoahIcon = "history" | "refresh" | "share";
+export type NativeNoahIcon = "back" | "history" | "refresh" | "share";
 
 const ICONS = {
+  back: {
+    ios: "chevron.backward",
+    android: "arrow-back-outline",
+  },
   history: {
     ios: "clock.arrow.circlepath",
     android: "time-outline",
@@ -52,6 +56,15 @@ type NativeNoahIconButtonProps = {
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
+
+type NativeNoahBackButtonProps = Pick<
+  NativeNoahIconButtonProps,
+  "onPress" | "disabled" | "className" | "style" | "testID"
+>;
+
+export function NativeNoahBackButton(props: NativeNoahBackButtonProps) {
+  return <NativeNoahIconButton icon="back" accessibilityLabel="Go back" {...props} />;
+}
 
 export function NativeNoahIconButton({
   icon,

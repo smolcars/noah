@@ -11,8 +11,6 @@ import {
 } from "react-native-confirmation-code-field";
 import { Input } from "../components/ui/input";
 import { Text } from "../components/ui/text";
-import Icon from "@react-native-vector-icons/ionicons";
-import { useIconColor } from "../hooks/useTheme";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
 import { useAlert } from "~/contexts/AlertProvider";
@@ -23,6 +21,7 @@ import type { OnboardingStackParamList, SettingsStackParamList } from "../Naviga
 import { shouldUseUnifiedPush } from "~/constants";
 import logger from "~/lib/log";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 
 type EmailVerificationParams = {
   fromSettings?: boolean;
@@ -41,7 +40,6 @@ const EmailVerificationScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<OnboardingStackParamList & SettingsStackParamList>>();
   const route = useRoute<EmailVerificationScreenRouteProp>();
-  const iconColor = useIconColor();
   const { showAlert } = useAlert();
   const { fromSettings } = route.params || {};
 
@@ -205,9 +203,11 @@ const EmailVerificationScreen = () => {
     <NoahSafeAreaView className="flex-1 bg-background">
       <View className="p-4">
         <View className="flex-row items-center mb-8">
-          <Pressable onPress={() => navigation.goBack()} className="mr-4">
-            <Icon name="arrow-back-outline" size={24} color={iconColor} />
-          </Pressable>
+          <NativeNoahBackButton
+            onPress={() => navigation.goBack()}
+            className="mr-3"
+            testID="email-verification-back-button"
+          />
           <Text className="text-2xl font-bold text-foreground">
             {isChangingEmail ? "Change Emergency Email" : "Emergency Email"}
           </Text>

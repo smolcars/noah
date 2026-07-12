@@ -27,6 +27,7 @@ import logger from "~/lib/log";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { copyToClipboard } from "~/lib/clipboardUtils";
 import { ConfirmationDialog } from "~/components/ConfirmationDialog";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 
 const log = logger("DebugScreen");
 
@@ -344,9 +345,11 @@ const DebugScreen = () => {
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
       <View className="flex-row items-center px-4 pb-4">
-        <Pressable onPress={() => navigation.goBack()} className="mr-4">
-          <Icon name="arrow-back" size={24} color={iconColor} />
-        </Pressable>
+        <NativeNoahBackButton
+          onPress={() => navigation.goBack()}
+          className="mr-3"
+          testID="debug-back-button"
+        />
         <Text className="text-2xl font-bold text-foreground">Debug</Text>
       </View>
 

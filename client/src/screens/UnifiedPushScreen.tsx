@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { View, Pressable } from "react-native";
+import { View } from "react-native";
 import { Text } from "~/components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
-import Icon from "@react-native-vector-icons/ionicons";
-import { useIconColor } from "../hooks/useTheme";
 import {
   registerUnifiedPush,
   getUnifiedPushEndpoint,
@@ -19,11 +17,11 @@ import type { OnboardingStackParamList } from "~/Navigators";
 import logger from "~/lib/log";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 
 const log = logger("UnifiedPushScreen");
 
 const UnifiedPushScreen = () => {
-  const iconColor = useIconColor();
   const [endpoint, setEndpoint] = useState<string>("");
   const [status, setStatus] = useState<"idle" | "registering" | "registered" | "error">("idle");
   const route = useRoute<RouteProp<OnboardingStackParamList, "UnifiedPush">>();
@@ -118,9 +116,11 @@ const UnifiedPushScreen = () => {
       <View className="flex-1">
         <View className="flex-row items-center mb-4 mt-2">
           {!fromOnboarding && (
-            <Pressable onPress={() => navigation.goBack()} className="mr-4">
-              <Icon name="arrow-back-outline" size={24} color={iconColor} />
-            </Pressable>
+            <NativeNoahBackButton
+              onPress={() => navigation.goBack()}
+              className="mr-3"
+              testID="unified-push-back-button"
+            />
           )}
           <Text className="text-2xl font-bold text-foreground">
             {fromOnboarding ? "UnifiedPush Setup" : "UnifiedPush"}

@@ -4,10 +4,11 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { SettingsStackParamList } from "../Navigators";
 import Icon from "@react-native-vector-icons/ionicons";
-import { useIconColor, useTheme } from "../hooks/useTheme";
+import { useTheme } from "../hooks/useTheme";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { Text } from "~/components/ui/text";
 import { NativeNoahSlider } from "~/components/ui/NativeNoahSlider";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import { Asset } from "expo-asset";
 import {
   playAudio,
@@ -28,7 +29,6 @@ const log = logger("NoahStoryScreen");
 
 const NoahStoryScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
-  const iconColor = useIconColor();
   const { isDark } = useTheme();
   const logoImage = isDark ? logoImageDark : logoImageLight;
   const [isPlaying, setIsPlaying] = useState(false);
@@ -174,9 +174,11 @@ const NoahStoryScreen = () => {
     <NoahSafeAreaView className="flex-1 bg-background">
       <View className="p-4 flex-1">
         <View className="flex-row items-center mb-4">
-          <Pressable onPress={() => navigation.goBack()} className="mr-4">
-            <Icon name="arrow-back-outline" size={24} color={iconColor} />
-          </Pressable>
+          <NativeNoahBackButton
+            onPress={() => navigation.goBack()}
+            className="mr-3"
+            testID="noah-story-back-button"
+          />
           <Text className="text-2xl font-bold text-foreground">Noah's Ark Story</Text>
         </View>
 

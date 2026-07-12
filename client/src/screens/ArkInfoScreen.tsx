@@ -2,15 +2,15 @@ import React from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import Icon from "@react-native-vector-icons/ionicons";
 import type { BarkArkInfo } from "react-native-nitro-ark";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import { Text } from "~/components/ui/text";
 import { useArkInfo } from "~/hooks/useWallet";
 import { copyToClipboard } from "~/lib/clipboardUtils";
 import { COLORS } from "~/lib/styleConstants";
-import { useIconColor, useThemeColors } from "~/hooks/useTheme";
+import { useThemeColors } from "~/hooks/useTheme";
 import type { SettingsStackParamList } from "~/Navigators";
 import {
   ACTIVE_WALLET_CONFIG,
@@ -204,7 +204,6 @@ const buildConfigurationSections = () => [
 
 const ArkInfoScreen = () => {
   const navigation = useNavigation<NavigationProp>();
-  const iconColor = useIconColor();
   const colors = useThemeColors();
   const { data: arkInfo, isLoading, isError, error, refetch, isFetching } = useArkInfo();
   const sections = arkInfo
@@ -220,9 +219,11 @@ const ArkInfoScreen = () => {
       >
         <View className="px-5 pb-8 pt-4">
           <View className="flex-row items-center">
-            <Pressable onPress={() => navigation.goBack()} className="mr-4">
-              <Icon name="arrow-back-outline" size={24} color={iconColor} />
-            </Pressable>
+            <NativeNoahBackButton
+              onPress={() => navigation.goBack()}
+              className="mr-3"
+              testID="ark-info-back-button"
+            />
             <Text className="text-2xl font-bold text-foreground">Ark Info</Text>
           </View>
 

@@ -1,13 +1,11 @@
 import React, { useState } from "react";
-import { View, ScrollView, Pressable } from "react-native";
+import { View, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useBackupManager } from "../hooks/useBackupManager";
 import { NoahSafeAreaView } from "../components/NoahSafeAreaView";
 import { Text } from "../components/ui/text";
 import { Label } from "../components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "../components/ui/alert";
-import Icon from "@react-native-vector-icons/ionicons";
-import { useIconColor } from "../hooks/useTheme";
 import { CheckCircle } from "lucide-react-native";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
 import * as Haptics from "expo-haptics";
@@ -15,10 +13,10 @@ import { AlertCircle } from "lucide-react-native";
 import { NativeSwitch } from "~/components/ui/native-switch";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 
 export const BackupSettingsScreen = () => {
   const navigation = useNavigation();
-  const iconColor = useIconColor();
   const {
     isBackupEnabled,
     setBackupEnabled,
@@ -38,9 +36,11 @@ export const BackupSettingsScreen = () => {
     <NoahSafeAreaView className="flex-1 bg-background">
       <ScrollView contentContainerClassName="p-4 flex-1">
         <View className="flex-row items-center mb-8">
-          <Pressable onPress={() => navigation.goBack()} className="mr-4">
-            <Icon name="arrow-back-outline" size={24} color={iconColor} />
-          </Pressable>
+          <NativeNoahBackButton
+            onPress={() => navigation.goBack()}
+            className="mr-3"
+            testID="backup-settings-back-button"
+          />
           <Text className="text-2xl font-bold text-foreground">Backup</Text>
         </View>
         <Text className="text-muted-foreground mb-8">

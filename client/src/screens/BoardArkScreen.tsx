@@ -10,7 +10,6 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
-import { useIconColor } from "../hooks/useTheme";
 import { Text } from "../components/ui/text";
 import { Input } from "../components/ui/input";
 import { validateBitcoinAddress } from "bip-321";
@@ -40,7 +39,7 @@ import { FeeEstimateSummary } from "~/components/FeeEstimateSummary";
 import { FeeEstimateBox, FeeEstimateRow, FeeEstimateSeparator } from "~/components/FeeEstimateBox";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { NativeNoahSegmentedControl } from "~/components/ui/NativeNoahSegmentedControl";
-import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
+import { NativeNoahBackButton, NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 
 const log = logger("BoardArkScreen");
 
@@ -427,7 +426,6 @@ const ErrorDisplay = ({ errorMessage }: { errorMessage: string }) => (
 const BoardArkScreen = () => {
   const { showAlert } = useAlert();
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
-  const iconColor = useIconColor();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const isAutoBoardingEnabled = useTransactionStore((state) => state.isAutoBoardingEnabled);
   const { data: balance, isLoading: isBalanceLoading } = useBalance();
@@ -699,9 +697,11 @@ const BoardArkScreen = () => {
             {/* Header */}
             <View className="flex-row items-center justify-between mb-6">
               <View className="flex-row items-center">
-                <Pressable onPress={() => navigation.goBack()} className="mr-4">
-                  <Icon name="arrow-back-outline" size={24} color={iconColor} />
-                </Pressable>
+                <NativeNoahBackButton
+                  onPress={() => navigation.goBack()}
+                  className="mr-3"
+                  testID="board-ark-back-button"
+                />
                 <Text className="text-2xl font-bold text-foreground">
                   {flow === "onboard" ? "Board Ark" : "Offboard Ark"}
                 </Text>

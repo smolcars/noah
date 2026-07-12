@@ -29,6 +29,7 @@ import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { PLATFORM } from "~/constants";
 import { useAlert } from "~/contexts/AlertProvider";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 
 const EXPIRED_COLOR = "#ef4444";
 const EXPIRING_COLOR = "#f97316";
@@ -285,17 +286,18 @@ const VTXOsScreen = () => {
         <View className="p-4 flex-1">
           <View className="flex-row items-center justify-between mb-8">
             <View className="flex-row items-center">
-              <Pressable
-                onPress={isSelecting ? stopSelecting : () => navigation.goBack()}
-                className="mr-4"
-                disabled={isBusy}
-              >
-                <Icon
-                  name={isSelecting ? "close-outline" : "arrow-back-outline"}
-                  size={24}
-                  color={iconColor}
+              {isSelecting ? (
+                <Pressable onPress={stopSelecting} className="mr-4" disabled={isBusy}>
+                  <Icon name="close-outline" size={24} color={iconColor} />
+                </Pressable>
+              ) : (
+                <NativeNoahBackButton
+                  onPress={() => navigation.goBack()}
+                  className="mr-3"
+                  disabled={isBusy}
+                  testID="vtxos-back-button"
                 />
-              </Pressable>
+              )}
               <Text className="text-2xl font-bold text-foreground">
                 {isSelecting ? "Select VTXOs" : "VTXOs"}
               </Text>

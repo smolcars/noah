@@ -6,7 +6,6 @@ import { FlashList } from "@shopify/flash-list";
 import { Text } from "../components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import Icon from "@react-native-vector-icons/ionicons";
-import { useIconColor } from "../hooks/useTheme";
 import { useNavigation } from "@react-navigation/native";
 import { HomeStackParamList } from "~/Navigators";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -20,7 +19,8 @@ import logger from "~/lib/log";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { BoardingTransactionDetailContent } from "~/screens/BoardingTransactionDetailScreen";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
-import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
+import { NativeNoahBackButton, NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
+import { NativeNoahSegmentedControl } from "~/components/ui/NativeNoahSegmentedControl";
 
 const log = logger("BoardingTransactionsScreen");
 
@@ -32,13 +32,17 @@ const formatBoardingType = (type: BoardingTransaction["type"]) =>
 const formatBoardingFilter = (filter: BoardingTransactionFilter) =>
   filter === "all" ? "All" : formatBoardingType(filter);
 
+const BOARDING_FILTER_OPTIONS = (["all", "onboarding", "offboarding"] as const).map((value) => ({
+  label: formatBoardingFilter(value),
+  value,
+}));
+
 const formatBoardingStatus = (status: BoardingTransaction["status"]) => {
   return formatMovementStatusLabel(status) ?? status;
 };
 
 const BoardingTransactionsScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
-  const iconColor = useIconColor();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const {
     data: transactions = [],
@@ -150,9 +154,11 @@ const BoardingTransactionsScreen = () => {
         <View className="p-4 flex-1">
           <View className="flex-row items-center justify-between mb-8">
             <View className="flex-row items-center">
-              <Pressable onPress={() => navigation.goBack()} className="mr-4">
-                <Icon name="arrow-back-outline" size={24} color={iconColor} />
-              </Pressable>
+              <NativeNoahBackButton
+                onPress={() => navigation.goBack()}
+                className="mr-3"
+                testID="boarding-history-back-button"
+              />
               <Text className="text-2xl font-bold text-foreground">Boarding History</Text>
             </View>
             <View className="flex-row items-center gap-4">
@@ -173,22 +179,13 @@ const BoardingTransactionsScreen = () => {
               />
             </View>
           </View>
-          <View className="flex-row justify-around mb-4">
-            {(["all", "onboarding", "offboarding"] as const).map((f) => (
-              <Pressable
-                key={f}
-                onPress={() => setFilter(f)}
-                className={`px-3 py-1 rounded-full ${filter === f ? "bg-primary" : "bg-card"}`}
-              >
-                <Text
-                  className={`text-sm ${
-                    filter === f ? "text-primary-foreground" : "text-foreground"
-                  }`}
-                >
-                  {formatBoardingFilter(f)}
-                </Text>
-              </Pressable>
-            ))}
+          <View className="mb-4">
+            <NativeNoahSegmentedControl
+              value={filter}
+              options={BOARDING_FILTER_OPTIONS}
+              onValueChange={setFilter}
+              testID="boarding-history-filter"
+            />
           </View>
           {isLoading ? (
             <View className="flex-1 items-center justify-center">

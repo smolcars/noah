@@ -29,6 +29,7 @@ import { AlertTriangle, CheckCircle } from "lucide-react-native";
 import logoImageDark from "../../assets/1024_no_background.png";
 import logoImageLight from "../../assets/All_Files/light_dark_tinted/icon_clear_tinted_ios.png";
 import { COLORS } from "~/lib/styleConstants";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import { useIconColor, useTheme } from "~/hooks/useTheme";
 import { resetAndReRegisterWithServer } from "../lib/server";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
@@ -411,9 +412,11 @@ const SettingsScreen = () => {
     <NoahSafeAreaView className="flex-1 bg-background" style={{ paddingBottom: 0 }}>
       <View className="px-4 pt-4">
         <View className="flex-row items-center mb-4">
-          <Pressable onPress={() => navigation.goBack()} className="mr-4">
-            <Icon name="arrow-back-outline" size={24} color={iconColor} />
-          </Pressable>
+          <NativeNoahBackButton
+            onPress={() => navigation.goBack()}
+            className="mr-3"
+            testID="settings-back-button"
+          />
           <Text className="text-2xl font-bold text-foreground">Settings</Text>
         </View>
 

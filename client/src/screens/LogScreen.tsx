@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { View, Pressable } from "react-native";
+import { View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import Icon from "@react-native-vector-icons/ionicons";
-import { useIconColor } from "../hooks/useTheme";
 import { Text } from "../components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { getAppLogs } from "noah-tools";
 import { COLORS } from "~/lib/styleConstants";
-import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
+import { NativeNoahBackButton, NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 import { NoahActivityIndicator } from "../components/ui/NoahActivityIndicator";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import RNFSTurbo from "react-native-fs-turbo";
@@ -21,7 +19,6 @@ const log = logger("LogScreen");
 
 const LogScreen = () => {
   const navigation = useNavigation();
-  const iconColor = useIconColor();
   const [logs, setLogs] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -120,9 +117,11 @@ const LogScreen = () => {
       <View className="p-4 flex-1">
         <View className="flex-row items-center justify-between mb-4">
           <View className="flex-row items-center">
-            <Pressable onPress={() => navigation.goBack()} className="mr-4">
-              <Icon name="arrow-back-outline" size={24} color={iconColor} />
-            </Pressable>
+            <NativeNoahBackButton
+              onPress={() => navigation.goBack()}
+              className="mr-3"
+              testID="logs-back-button"
+            />
             <Text className="text-2xl font-bold text-foreground">App Logs</Text>
           </View>
           <View className="flex-row space-x-4">

@@ -17,7 +17,7 @@ import Icon from "@react-native-vector-icons/ionicons";
 import { useIconColor, useThemeColors } from "../hooks/useTheme";
 import * as Clipboard from "expo-clipboard";
 import { formatFiatAmount, getFiatCurrencyInfo, satsToFiat } from "~/lib/fiatCurrency";
-import { useNavigation, useIsFocused } from "@react-navigation/native";
+import { useIsFocused } from "@react-navigation/native";
 import { Button } from "~/components/ui/button";
 import { Text } from "~/components/ui/text";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
@@ -29,7 +29,6 @@ import { BlinkingCaret } from "~/components/BlinkingCaret";
 import { useBitcoinAmountFormatter, useBitcoinAmountUnit } from "~/hooks/useBitcoinAmountFormatter";
 
 const SendScreen = () => {
-  const navigation = useNavigation();
   const isFocused = useIsFocused();
   const iconColor = useIconColor();
   const colors = useThemeColors();
@@ -143,9 +142,6 @@ const SendScreen = () => {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <View className="flex-1">
           <View className="flex-row items-center px-5 pt-4 pb-3">
-            <Pressable onPress={() => navigation.goBack()} className="mr-4">
-              <Icon name="arrow-back-outline" size={24} color={iconColor} />
-            </Pressable>
             <Text className="text-2xl font-bold text-foreground">Send</Text>
             <View className="flex-1 items-end">
               <Pressable onPress={handleScanPress}>

@@ -108,7 +108,6 @@ export type HomeStackParamList = {
   BoardArk: undefined;
   QRHub: undefined;
   Settings: NavigatorScreenParams<SettingsStackParamList> | undefined;
-  Send: { destination: string };
   BoardingTransactions: undefined;
   ReceiveSuccess: { amountSat: number };
   EmailVerification: { fromSettings?: boolean } | undefined;
@@ -212,11 +211,6 @@ const HomeStackScreen = () => (
     <HomeStack.Screen
       name="Settings"
       component={SettingsStackNav}
-      options={{ headerShown: false, animation: "default" }}
-    />
-    <HomeStack.Screen
-      name="Send"
-      component={SendScreen}
       options={{ headerShown: false, animation: "default" }}
     />
     <HomeStack.Screen
