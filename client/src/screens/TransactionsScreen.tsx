@@ -16,11 +16,11 @@ import { CACHES_DIRECTORY_PATH } from "~/constants";
 import RNFSTurbo from "react-native-fs-turbo";
 import logger from "~/lib/log";
 import { useTransactions } from "~/hooks/useTransactions";
-import { HistoryRefreshButton } from "~/components/HistoryRefreshButton";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { TransactionDetailContent } from "~/screens/TransactionDetailScreen";
 import { useProfileStore } from "~/store/profileStore";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
+import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 
 const log = logger("TransactionsScreen");
 
@@ -153,16 +153,22 @@ const TransactionsScreen = () => {
               </Pressable>
               <Text className="text-2xl font-bold text-foreground">Transactions</Text>
             </View>
-            <View className="flex-row items-center gap-2">
-              <HistoryRefreshButton isRefreshing={isRefetching} onRefresh={handleRefresh} />
-              <Pressable
-                onPress={exportToCSV}
-                accessibilityRole="button"
+            <View className="flex-row items-center gap-4">
+              <NativeNoahIconButton
+                icon="refresh"
+                accessibilityLabel="Refresh transaction history"
+                onPress={() => {
+                  void handleRefresh();
+                }}
+                isLoading={isRefetching}
+                testID="transactions-refresh-button"
+              />
+              <NativeNoahIconButton
+                icon="share"
                 accessibilityLabel="Export transactions"
-                className="h-10 w-10 items-center justify-center rounded-full"
-              >
-                <Icon name="download-outline" size={24} color={iconColor} />
-              </Pressable>
+                onPress={exportToCSV}
+                testID="transactions-share-button"
+              />
             </View>
           </View>
           <View className="flex-row justify-around mb-4">

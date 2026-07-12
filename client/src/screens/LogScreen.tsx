@@ -125,17 +125,20 @@ const LogScreen = () => {
             </Pressable>
             <Text className="text-2xl font-bold text-foreground">App Logs</Text>
           </View>
-          <View className="flex-row space-x-2">
+          <View className="flex-row space-x-4">
             <NativeNoahIconButton
-              iconName="refresh-outline"
+              icon="refresh"
+              accessibilityLabel="Refresh app logs"
               onPress={fetchLogs}
-              disabled={isLoading}
-              style={{ marginRight: 12 }}
+              isLoading={isLoading}
+              testID="logs-refresh-button"
             />
             <NativeNoahIconButton
-              iconName="share-outline"
+              icon="share"
+              accessibilityLabel="Share app logs"
               onPress={handleShare}
               disabled={logs.length === 0}
+              testID="logs-share-button"
             />
           </View>
         </View>

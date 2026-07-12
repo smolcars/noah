@@ -18,10 +18,15 @@ import { useProfileStore } from "~/store/profileStore";
 import { copyToClipboard } from "~/lib/clipboardUtils";
 import { COLORS } from "~/lib/styleConstants";
 import { PLATFORM } from "~/constants";
-import { cn } from "~/lib/utils";
+import { NativeNoahSegmentedControl } from "~/components/ui/NativeNoahSegmentedControl";
 import logoImage from "../../assets/All_Files/light_dark_tinted/icon_clear_tinted_ios.png";
 
 type QRMode = "scan" | "my-code";
+
+const QR_MODE_OPTIONS = [
+  { label: "My code", value: "my-code" },
+  { label: "Scan", value: "scan" },
+] as const;
 
 const addAddressBreakOpportunities = (address: string) =>
   address.replace("@", "@\u200B").replace(/\./g, ".\u200B");
@@ -124,29 +129,13 @@ const QRHubScreen = () => {
             <Text className="text-2xl font-bold text-foreground">QR Code</Text>
           </View>
 
-          <View className="mt-7 mb-6 flex flex-row justify-around rounded-lg bg-muted p-1">
-            {(["my-code", "scan"] as const).map((item) => (
-              <Pressable
-                key={item}
-                onPress={() => handleModePress(item)}
-                className={cn(
-                  "flex-1 items-center justify-center rounded-md p-2",
-                  mode === item && "bg-background",
-                )}
-              >
-                <Text
-                  className={cn(
-                    "font-bold",
-                    mode === item ? "text-foreground" : "text-muted-foreground",
-                  )}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                  maxFontSizeMultiplier={1.2}
-                >
-                  {item === "my-code" ? "My code" : "Scan"}
-                </Text>
-              </Pressable>
-            ))}
+          <View className="mt-7 mb-6">
+            <NativeNoahSegmentedControl
+              value={mode}
+              options={QR_MODE_OPTIONS}
+              onValueChange={handleModePress}
+              testID="qr-mode"
+            />
           </View>
 
           {mode === "my-code" ? (

@@ -198,10 +198,11 @@ const ExitVtxoDetailScreen = () => {
             <Text className="text-2xl font-bold text-foreground">Exit Timeline</Text>
           </View>
           <NativeNoahIconButton
-            iconName="refresh-outline"
+            icon="refresh"
+            accessibilityLabel="Refresh exit timeline"
             onPress={() => syncExits.mutate()}
-            disabled={syncExits.isPending}
             isLoading={syncExits.isPending}
+            testID="exit-timeline-refresh-button"
           />
         </View>
 

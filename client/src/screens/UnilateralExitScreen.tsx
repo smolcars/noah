@@ -773,10 +773,12 @@ const UnilateralExitScreen = () => {
                 <Text className="text-2xl font-bold text-foreground">Emergency Exit</Text>
               </View>
               <NativeNoahIconButton
-                iconName="refresh-outline"
+                icon="refresh"
+                accessibilityLabel="Refresh emergency exits"
                 onPress={() => syncExits.mutate()}
                 disabled={isBusy}
                 isLoading={syncExits.isPending}
+                testID="emergency-exits-refresh-button"
               />
             </View>
 

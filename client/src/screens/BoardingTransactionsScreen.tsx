@@ -17,10 +17,10 @@ import { useBoardingTransactions } from "~/hooks/useBoardingTransactions";
 import type { BoardingTransaction } from "~/types/boardingTransaction";
 import { formatMovementStatusLabel } from "~/types/movement";
 import logger from "~/lib/log";
-import { HistoryRefreshButton } from "~/components/HistoryRefreshButton";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { BoardingTransactionDetailContent } from "~/screens/BoardingTransactionDetailScreen";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
+import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 
 const log = logger("BoardingTransactionsScreen");
 
@@ -155,16 +155,22 @@ const BoardingTransactionsScreen = () => {
               </Pressable>
               <Text className="text-2xl font-bold text-foreground">Boarding History</Text>
             </View>
-            <View className="flex-row items-center gap-2">
-              <HistoryRefreshButton isRefreshing={isRefetching} onRefresh={handleRefresh} />
-              <Pressable
-                onPress={exportToCSV}
-                accessibilityRole="button"
+            <View className="flex-row items-center gap-4">
+              <NativeNoahIconButton
+                icon="refresh"
+                accessibilityLabel="Refresh boarding history"
+                onPress={() => {
+                  void handleRefresh();
+                }}
+                isLoading={isRefetching}
+                testID="boarding-history-refresh-button"
+              />
+              <NativeNoahIconButton
+                icon="share"
                 accessibilityLabel="Export boarding history"
-                className="h-10 w-10 items-center justify-center rounded-full"
-              >
-                <Icon name="download-outline" size={24} color={iconColor} />
-              </Pressable>
+                onPress={exportToCSV}
+                testID="boarding-history-share-button"
+              />
             </View>
           </View>
           <View className="flex-row justify-around mb-4">
