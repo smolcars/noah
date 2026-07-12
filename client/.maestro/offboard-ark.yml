@@ -9,30 +9,6 @@ appId: com.noahwallet.regtest
 - launchApp:
     clearState: true
 
-# Wait for Expo dev launcher
-- extendedWaitUntil:
-    visible: "Then, select the local server when it appears here."
-    timeout: 15000
-
-# Tap the URL input field and enter Metro server URL
-- tapOn: "http://"
-- inputText: "http://10.0.2.2:8081"
-
-# Tap Connect button
-- tapOn: "Connect"
-
-# Dismiss dev menu onboarding popup (tap upper middle to dismiss)
-- extendedWaitUntil:
-    visible: "Continue"
-    timeout: 10000
-- tapOn:
-    point: "50%,15%"
-
-# Wait for app to load
-- extendedWaitUntil:
-    visible: "Create Wallet"
-    timeout: 15000
-
 # Create wallet
 - tapOn: "Create Wallet"
 - assertVisible: "Noah is in beta"

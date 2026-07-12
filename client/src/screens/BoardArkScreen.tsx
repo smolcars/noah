@@ -503,7 +503,7 @@ const BoardArkScreen = () => {
     return trimmedAddress;
   }, [address, flow]);
 
-  const { data: isOwnOnchainAddress } = useIsOnchainAddressMine(
+  const { data: isOwnOnchainAddress, isPending: isCheckingOwnAddress } = useIsOnchainAddressMine(
     flow === "offboard" ? validOffboardEstimateAddress : null,
   );
 
@@ -619,6 +619,10 @@ const BoardArkScreen = () => {
       return;
     }
 
+    if (isCheckingOwnAddress) {
+      return;
+    }
+
     if (isOwnOnchainAddress) {
       showAlert({
         title: "Cannot Offboard to Own Wallet",
@@ -697,7 +701,7 @@ const BoardArkScreen = () => {
     isActionLoading ||
     isBoardAmountBelowMinimum ||
     (flow === "onboard" && (!amount || onchainBalance === 0)) ||
-    (flow === "offboard" && (offchainBalance === 0 || !address)) ||
+    (flow === "offboard" && (offchainBalance === 0 || !address || isCheckingOwnAddress)) ||
     isOwnOnchainAddress;
 
   return (
