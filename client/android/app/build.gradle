@@ -29,7 +29,8 @@ def useCiDebugSigning = System.getenv('CI_DEBUG_SIGNING') == 'true'
 
 gradle.taskGraph.whenReady { taskGraph ->
     def mainnetReleaseRequested = taskGraph.allTasks.any {
-        it.name.toLowerCase().contains('mainnetrelease')
+        def taskName = it.name.toLowerCase()
+        taskName.contains('mainnetrelease') && taskName != 'premainnetreleasebuild'
     }
 
     if (mainnetReleaseRequested && !hasReleaseSigningConfig) {
