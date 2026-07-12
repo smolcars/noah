@@ -7,6 +7,7 @@ import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Text } from "~/components/ui/text";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import type { SettingsStackParamList } from "~/Navigators";
 import { getUserInfo, updateProfile } from "~/lib/api";
 import { copyToClipboard } from "~/lib/clipboardUtils";
@@ -160,9 +161,11 @@ const ProfileScreen = () => {
       >
         <View className="px-5 pb-8 pt-4">
           <View className="flex-row items-center">
-            <Pressable onPress={() => navigation.goBack()} className="mr-4">
-              <Icon name="arrow-back-outline" size={24} color={iconColor} />
-            </Pressable>
+            <NativeNoahBackButton
+              onPress={() => navigation.goBack()}
+              className="mr-3"
+              testID="profile-back-button"
+            />
             <Text className="text-2xl font-bold text-foreground">Profile</Text>
           </View>
 

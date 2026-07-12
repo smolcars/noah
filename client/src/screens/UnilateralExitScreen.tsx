@@ -17,13 +17,12 @@ import { Text } from "~/components/ui/text";
 import { Input } from "~/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
-import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
+import { NativeNoahBackButton, NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 import { NativeNoahPicker, type NativeNoahPickerOption } from "~/components/ui/NativeNoahPicker";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { ConfirmationDialog } from "~/components/ConfirmationDialog";
-import { useIconColor } from "~/hooks/useTheme";
 import {
   useClaimExits,
   useExitOverview,
@@ -597,7 +596,6 @@ const EmptyExitState = ({
 const UnilateralExitScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const route = useRoute<UnilateralExitRouteProp>();
-  const iconColor = useIconColor();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const routeSelectedVtxoIds = route.params?.vtxoIds;
 
@@ -767,16 +765,20 @@ const UnilateralExitScreen = () => {
           >
             <View className="mb-6 flex-row items-center justify-between">
               <View className="flex-row items-center">
-                <Pressable onPress={() => navigation.goBack()} className="mr-4">
-                  <Icon name="arrow-back-outline" size={24} color={iconColor} />
-                </Pressable>
+                <NativeNoahBackButton
+                  onPress={() => navigation.goBack()}
+                  className="mr-3"
+                  testID="emergency-exit-back-button"
+                />
                 <Text className="text-2xl font-bold text-foreground">Emergency Exit</Text>
               </View>
               <NativeNoahIconButton
-                iconName="refresh-outline"
+                icon="refresh"
+                accessibilityLabel="Refresh emergency exits"
                 onPress={() => syncExits.mutate()}
                 disabled={isBusy}
                 isLoading={syncExits.isPending}
+                testID="emergency-exits-refresh-button"
               />
             </View>
 

@@ -5,9 +5,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
 import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
-import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
+import { NativeNoahBackButton, NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 import { Text } from "~/components/ui/text";
-import { useIconColor } from "~/hooks/useTheme";
 import { useExitOverview, useSyncExits } from "~/hooks/useUnilateralExit";
 import {
   buildExitTimelineItems,
@@ -153,7 +152,6 @@ const TimelineRow = ({ item, isLast }: { item: ExitTimelineItem; isLast: boolean
 const ExitVtxoDetailScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const route = useRoute<ExitVtxoDetailRouteProp>();
-  const iconColor = useIconColor();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const overviewQuery = useExitOverview();
   const syncExits = useSyncExits();
@@ -192,16 +190,19 @@ const ExitVtxoDetailScreen = () => {
       >
         <View className="mb-8 flex-row items-center justify-between">
           <View className="flex-row items-center">
-            <Pressable onPress={() => navigation.goBack()} className="mr-4">
-              <Icon name="arrow-back-outline" size={24} color={iconColor} />
-            </Pressable>
+            <NativeNoahBackButton
+              onPress={() => navigation.goBack()}
+              className="mr-3"
+              testID="exit-timeline-back-button"
+            />
             <Text className="text-2xl font-bold text-foreground">Exit Timeline</Text>
           </View>
           <NativeNoahIconButton
-            iconName="refresh-outline"
+            icon="refresh"
+            accessibilityLabel="Refresh exit timeline"
             onPress={() => syncExits.mutate()}
-            disabled={syncExits.isPending}
             isLoading={syncExits.isPending}
+            testID="exit-timeline-refresh-button"
           />
         </View>
 

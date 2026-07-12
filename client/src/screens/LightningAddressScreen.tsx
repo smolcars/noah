@@ -1,11 +1,9 @@
 import React, { useState } from "react";
-import { View, Pressable } from "react-native";
+import { View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import { Input } from "../components/ui/input";
 import { Text } from "../components/ui/text";
-import Icon from "@react-native-vector-icons/ionicons";
-import { useIconColor } from "../hooks/useTheme";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { useUpdateLightningAddress } from "../hooks/useUpdateLightningAddress";
 import { getLnurlDomain } from "../constants";
@@ -16,6 +14,7 @@ import { CheckCircle } from "lucide-react-native";
 import type { OnboardingStackParamList, SettingsStackParamList } from "../Navigators";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 
 type LightningAddressScreenRouteProp = RouteProp<
   OnboardingStackParamList & SettingsStackParamList,
@@ -24,7 +23,6 @@ type LightningAddressScreenRouteProp = RouteProp<
 
 const LightningAddressScreen = () => {
   const navigation = useNavigation();
-  const iconColor = useIconColor();
   const route = useRoute<LightningAddressScreenRouteProp>();
   const { fromOnboarding } = route.params || {};
   const { finishOnboarding } = useWalletStore();
@@ -72,9 +70,11 @@ const LightningAddressScreen = () => {
       <View className="p-4">
         <View className="flex-row items-center mb-8">
           {!fromOnboarding && (
-            <Pressable onPress={() => navigation.goBack()} className="mr-4">
-              <Icon name="arrow-back-outline" size={24} color={iconColor} />
-            </Pressable>
+            <NativeNoahBackButton
+              onPress={() => navigation.goBack()}
+              className="mr-3"
+              testID="lightning-address-back-button"
+            />
           )}
           <Text className="text-2xl font-bold text-foreground">
             {fromOnboarding ? "Choose your Lightning Address" : "Lightning Address"}

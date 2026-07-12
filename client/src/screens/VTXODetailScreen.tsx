@@ -15,6 +15,7 @@ import type { SettingsStackParamList } from "~/Navigators";
 import { useGetExpiringVtxos, useGetVtxos, useRefreshExpiringVtxos } from "~/hooks/useWallet";
 import { StatusBannerStrip } from "~/components/StatusBannerStrip";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 
 type VTXOWithStatus = BarkVtxo & {
   isExpiring: boolean;
@@ -95,7 +96,6 @@ const VTXODetailRow = ({
 const VTXODetailScreen = () => {
   const route = useRoute();
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
-  const iconColor = useIconColor();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const { data: blockHeight } = useGetBlockHeight();
   const { vtxo: routeVtxo } = route.params as { vtxo: VTXOWithStatus };
@@ -152,9 +152,11 @@ const VTXODetailScreen = () => {
     <NoahSafeAreaView className="flex-1 bg-background">
       <View className="p-4 flex-1">
         <View className="flex-row items-center mb-8">
-          <Pressable onPress={() => navigation.goBack()} className="mr-4">
-            <Icon name="arrow-back-outline" size={24} color={iconColor} />
-          </Pressable>
+          <NativeNoahBackButton
+            onPress={() => navigation.goBack()}
+            className="mr-3"
+            testID="vtxo-detail-back-button"
+          />
           <Text className="text-2xl font-bold text-foreground">VTXO Details</Text>
         </View>
 

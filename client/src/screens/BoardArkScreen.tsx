@@ -10,7 +10,6 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
-import { useIconColor } from "../hooks/useTheme";
 import { Text } from "../components/ui/text";
 import { Input } from "../components/ui/input";
 import { validateBitcoinAddress } from "bip-321";
@@ -39,6 +38,8 @@ import { useTransactionStore } from "~/store/transactionStore";
 import { FeeEstimateSummary } from "~/components/FeeEstimateSummary";
 import { FeeEstimateBox, FeeEstimateRow, FeeEstimateSeparator } from "~/components/FeeEstimateBox";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
+import { NativeNoahSegmentedControl } from "~/components/ui/NativeNoahSegmentedControl";
+import { NativeNoahBackButton, NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 
 const log = logger("BoardArkScreen");
 
@@ -60,6 +61,11 @@ type BoardingResponse = {
 };
 
 type Flow = "onboard" | "offboard";
+
+const FLOW_OPTIONS = [
+  { label: "Board the Ark", value: "onboard" },
+  { label: "Offboard Ark", value: "offboard" },
+] as const;
 
 // Custom hook for parsing boarding results
 const useParsedBoardingResult = (boardResult?: BoardResult, boardAllResult?: BoardResult) => {
@@ -129,39 +135,13 @@ const BalanceDisplay = ({
 
 // Flow toggle component
 const FlowToggle = ({ flow, onFlowChange }: { flow: Flow; onFlowChange: (flow: Flow) => void }) => (
-  <View className="flex flex-row justify-around rounded-lg bg-muted p-1 mb-6">
-    <Pressable
-      onPress={() => onFlowChange("onboard")}
-      className={cn(
-        "flex-1 items-center justify-center rounded-md p-2",
-        flow === "onboard" && "bg-background",
-      )}
-    >
-      <Text
-        className={cn(
-          "font-bold",
-          flow === "onboard" ? "text-foreground" : "text-muted-foreground",
-        )}
-      >
-        Board the Ark
-      </Text>
-    </Pressable>
-    <Pressable
-      onPress={() => onFlowChange("offboard")}
-      className={cn(
-        "flex-1 items-center justify-center rounded-md p-2",
-        flow === "offboard" && "bg-background",
-      )}
-    >
-      <Text
-        className={cn(
-          "font-bold",
-          flow === "offboard" ? "text-foreground" : "text-muted-foreground",
-        )}
-      >
-        Offboard Ark
-      </Text>
-    </Pressable>
+  <View className="mb-6">
+    <NativeNoahSegmentedControl
+      value={flow}
+      options={FLOW_OPTIONS}
+      onValueChange={onFlowChange}
+      testID="board-ark-flow"
+    />
   </View>
 );
 
@@ -446,7 +426,6 @@ const ErrorDisplay = ({ errorMessage }: { errorMessage: string }) => (
 const BoardArkScreen = () => {
   const { showAlert } = useAlert();
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
-  const iconColor = useIconColor();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const isAutoBoardingEnabled = useTransactionStore((state) => state.isAutoBoardingEnabled);
   const { data: balance, isLoading: isBalanceLoading } = useBalance();
@@ -718,19 +697,21 @@ const BoardArkScreen = () => {
             {/* Header */}
             <View className="flex-row items-center justify-between mb-6">
               <View className="flex-row items-center">
-                <Pressable onPress={() => navigation.goBack()} className="mr-4">
-                  <Icon name="arrow-back-outline" size={24} color={iconColor} />
-                </Pressable>
+                <NativeNoahBackButton
+                  onPress={() => navigation.goBack()}
+                  className="mr-3"
+                  testID="board-ark-back-button"
+                />
                 <Text className="text-2xl font-bold text-foreground">
                   {flow === "onboard" ? "Board Ark" : "Offboard Ark"}
                 </Text>
               </View>
-              <Pressable
+              <NativeNoahIconButton
+                icon="history"
+                accessibilityLabel="Open boarding history"
                 onPress={() => navigation.navigate("BoardingTransactions")}
-                className="p-2"
-              >
-                <Icon name="time-outline" size={24} color={iconColor} />
-              </Pressable>
+                testID="board-ark-history-button"
+              />
             </View>
 
             {/* Flow Toggle */}

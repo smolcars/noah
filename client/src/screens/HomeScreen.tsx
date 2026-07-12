@@ -44,6 +44,7 @@ import { TransactionDetailContent } from "~/screens/TransactionDetailScreen";
 import { usePrivacyStore } from "~/store/privacyStore";
 import { useProfileStore } from "~/store/profileStore";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
+import { NativeHomeHeaderActions } from "~/components/ui/NativeHomeHeaderActions";
 
 const getTransactionIcon = (type: Transaction["type"]) => {
   switch (type) {
@@ -195,32 +196,18 @@ const HomeScreen = () => {
         paddingBottom: PLATFORM === "ios" ? bottomTabBarHeight : 0,
       }}
     >
-      <View className="flex-row items-center justify-between p-4">
-        <Pressable onPress={() => navigation.navigate("BoardArk")}>
-          <Icon name="boat" size={28} color={iconColor} />
-        </Pressable>
-        <View className="flex-1 items-center">
+      <View className="relative m-4 h-[52px]">
+        <NativeHomeHeaderActions
+          onBoardArk={() => navigation.navigate("BoardArk")}
+          onOpenQr={() => navigation.navigate("QRHub")}
+          onOpenSettings={() => navigation.navigate("Settings")}
+        />
+        <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
           {APP_VARIANT !== "mainnet" && (
             <View className="rounded-md bg-yellow-400 px-2 py-1">
               <Text className="text-xs font-bold uppercase text-black">{APP_VARIANT}</Text>
             </View>
           )}
-        </View>
-        <View className="flex-row items-center gap-4">
-          <Pressable
-            onPress={() => navigation.navigate("QRHub")}
-            accessibilityRole="button"
-            accessibilityLabel="Open QR code"
-          >
-            <Icon name="qr-code-outline" size={28} color={iconColor} />
-          </Pressable>
-          <Pressable
-            onPress={() => navigation.navigate("Settings")}
-            accessibilityRole="button"
-            accessibilityLabel="Open settings"
-          >
-            <Icon name="settings-outline" size={28} color={iconColor} />
-          </Pressable>
         </View>
       </View>
       <ScrollView

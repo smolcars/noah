@@ -7,7 +7,6 @@ import { Host as ComposeHost } from "@expo/ui/jetpack-compose";
 import { Host as SwiftHost } from "@expo/ui/swift-ui";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import Icon from "@react-native-vector-icons/ionicons";
 import { AlertCircle, CheckCircle, ImagePlus, X } from "lucide-react-native";
 import React, { useRef, useState } from "react";
 import {
@@ -28,8 +27,9 @@ import type { SettingsStackParamList } from "~/Navigators";
 import { TelegramBrandIcon, TELEGRAM_SUPPORT_URL } from "~/components/BrandIcons";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import { Text } from "~/components/ui/text";
-import { useIconColor, useTheme } from "~/hooks/useTheme";
+import { useTheme } from "~/hooks/useTheme";
 import { submitSupportTicket } from "~/lib/api";
 import Logger from "~/lib/log";
 import { COLORS } from "~/lib/styleConstants";
@@ -52,7 +52,6 @@ type SelectedScreenshot = {
 const FeedbackScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList, "Feedback">>();
   const { colors, isDark } = useTheme();
-  const iconColor = useIconColor();
   const tabBarHeight = useBottomTabBarHeight();
   const { bottom: safeBottomInset } = useSafeAreaInsets();
   const [name, setName] = useState("");
@@ -182,12 +181,11 @@ const FeedbackScreen = () => {
           }}
         >
           <View className="flex-row items-center py-4">
-            <Pressable
+            <NativeNoahBackButton
               onPress={() => navigation.goBack()}
-              className="mr-4 h-10 w-10 items-center justify-center rounded-full bg-muted"
-            >
-              <Icon name="arrow-back-outline" size={22} color={iconColor} />
-            </Pressable>
+              className="mr-3"
+              testID="feedback-back-button"
+            />
             <View className="flex-1">
               <Text className="text-2xl font-bold text-foreground">Send Feedback</Text>
               <Text className="mt-1 text-sm text-muted-foreground">

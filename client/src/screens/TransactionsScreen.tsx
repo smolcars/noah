@@ -6,32 +6,35 @@ import { FlashList } from "@shopify/flash-list";
 import { Text } from "../components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import Icon from "@react-native-vector-icons/ionicons";
-import { useIconColor } from "../hooks/useTheme";
 import { type Transaction, type PaymentTypes } from "../types/transaction";
-import { NavigationProp, useNavigation } from "@react-navigation/native";
-import { TabParamList, TransactionsStackParamList } from "~/Navigators";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Result, ResultAsync } from "neverthrow";
 import { CACHES_DIRECTORY_PATH } from "~/constants";
 import RNFSTurbo from "react-native-fs-turbo";
 import logger from "~/lib/log";
 import { useTransactions } from "~/hooks/useTransactions";
-import { HistoryRefreshButton } from "~/components/HistoryRefreshButton";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { TransactionDetailContent } from "~/screens/TransactionDetailScreen";
 import { useProfileStore } from "~/store/profileStore";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
+import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
+import { NativeNoahSegmentedControl } from "~/components/ui/NativeNoahSegmentedControl";
 
 const log = logger("TransactionsScreen");
 
+type TransactionFilter = PaymentTypes | "all" | "Lightning";
+
+const TRANSACTION_FILTER_OPTIONS = [
+  { label: "All", value: "all" },
+  { label: "Lightning", value: "Lightning" },
+  { label: "Ark", value: "Arkoor" },
+  { label: "Onchain", value: "Onchain" },
+] as const;
+
 const TransactionsScreen = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<TransactionsStackParamList>>();
-  const parentNavigation = navigation.getParent<NavigationProp<TabParamList>>();
-  const iconColor = useIconColor();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const { data: transactions = [], isLoading, isError, isRefetching, refetch } = useTransactions();
   const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
-  const [filter, setFilter] = useState<PaymentTypes | "all" | "Lightning">("all");
+  const [filter, setFilter] = useState<TransactionFilter>("all");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isTransactionSheetOpen, setIsTransactionSheetOpen] = useState(false);
 
@@ -44,20 +47,6 @@ const TransactionsScreen = () => {
 
   const handleRefresh = async () => {
     await refetch();
-  };
-
-  const handleBack = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-      return;
-    }
-
-    if (parentNavigation?.canGoBack()) {
-      parentNavigation.goBack();
-      return;
-    }
-
-    parentNavigation?.navigate("Home");
   };
 
   const openTransaction = (transaction: Transaction) => {
@@ -147,46 +136,32 @@ const TransactionsScreen = () => {
       <NoahSafeAreaView className="flex-1 bg-background">
         <View className="p-4 flex-1">
           <View className="flex-row items-center justify-between mb-8">
-            <View className="flex-row items-center">
-              <Pressable onPress={handleBack} className="mr-4">
-                <Icon name="arrow-back-outline" size={24} color={iconColor} />
-              </Pressable>
-              <Text className="text-2xl font-bold text-foreground">Transactions</Text>
-            </View>
-            <View className="flex-row items-center gap-2">
-              <HistoryRefreshButton isRefreshing={isRefetching} onRefresh={handleRefresh} />
-              <Pressable
-                onPress={exportToCSV}
-                accessibilityRole="button"
+            <Text className="text-2xl font-bold text-foreground">Transactions</Text>
+            <View className="flex-row items-center gap-4">
+              <NativeNoahIconButton
+                icon="refresh"
+                accessibilityLabel="Refresh transaction history"
+                onPress={() => {
+                  void handleRefresh();
+                }}
+                isLoading={isRefetching}
+                testID="transactions-refresh-button"
+              />
+              <NativeNoahIconButton
+                icon="share"
                 accessibilityLabel="Export transactions"
-                className="h-10 w-10 items-center justify-center rounded-full"
-              >
-                <Icon name="download-outline" size={24} color={iconColor} />
-              </Pressable>
+                onPress={exportToCSV}
+                testID="transactions-share-button"
+              />
             </View>
           </View>
-          <View className="flex-row justify-around mb-4">
-            {(["all", "Lightning", "Arkoor", "Onchain"] as const).map((f) => (
-              <Pressable
-                key={f}
-                onPress={() => setFilter(f)}
-                className={`px-3 py-1 rounded-full ${filter === f ? "bg-primary" : "bg-card"}`}
-              >
-                <Text
-                  className={`text-sm ${
-                    filter === f ? "text-primary-foreground" : "text-foreground"
-                  }`}
-                >
-                  {f === "Arkoor"
-                    ? "Ark"
-                    : f === "all"
-                      ? "All"
-                      : f === "Lightning"
-                        ? "Lightning"
-                        : f}
-                </Text>
-              </Pressable>
-            ))}
+          <View className="mb-4">
+            <NativeNoahSegmentedControl
+              value={filter}
+              options={TRANSACTION_FILTER_OPTIONS}
+              onValueChange={setFilter}
+              testID="transaction-filter"
+            />
           </View>
           {isLoading ? (
             <View className="flex-1 items-center justify-center">

@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { Text } from "~/components/ui/text";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import type { SettingsStackParamList } from "~/Navigators";
 import {
   getFiatCurrencyInfo,
@@ -38,9 +39,11 @@ const CurrencySettingsScreen = () => {
       >
         <View className="px-5 pb-8 pt-4">
           <View className="flex-row items-center">
-            <Pressable onPress={() => navigation.goBack()} className="mr-4">
-              <Icon name="arrow-back-outline" size={24} color={iconColor} />
-            </Pressable>
+            <NativeNoahBackButton
+              onPress={() => navigation.goBack()}
+              className="mr-3"
+              testID="currency-settings-back-button"
+            />
             <Text className="text-2xl font-bold text-foreground">Currency</Text>
           </View>
 

@@ -1,19 +1,17 @@
-import { Pressable, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import Icon from "@react-native-vector-icons/ionicons";
 import { AlertCircle, CheckCircle, Download } from "lucide-react-native";
 
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import { Text } from "~/components/ui/text";
-import { useIconColor } from "~/hooks/useTheme";
 import { useExportDatabase } from "~/hooks/useExportDatabase";
 import { COLORS } from "~/lib/styleConstants";
 
 const ExportDatabaseScreen = () => {
   const navigation = useNavigation();
-  const iconColor = useIconColor();
   const { isExporting, showExportSuccess, showExportError, exportError, exportDatabase } =
     useExportDatabase();
 
@@ -21,9 +19,11 @@ const ExportDatabaseScreen = () => {
     <NoahSafeAreaView className="flex-1 bg-background">
       <ScrollView contentContainerClassName="p-4 flex-grow">
         <View className="flex-row items-center mb-8">
-          <Pressable onPress={() => navigation.goBack()} className="mr-4">
-            <Icon name="arrow-back-outline" size={24} color={iconColor} />
-          </Pressable>
+          <NativeNoahBackButton
+            onPress={() => navigation.goBack()}
+            className="mr-3"
+            testID="export-database-back-button"
+          />
           <Text className="text-2xl font-bold text-foreground">Export Database</Text>
         </View>
 

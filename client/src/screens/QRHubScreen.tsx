@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { type NavigationProp, useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
 import QRCode from "react-native-qrcode-svg";
@@ -10,26 +10,31 @@ import { QRCodeScanner } from "~/components/QRCodeScanner";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { Text } from "~/components/ui/text";
-import type { HomeStackParamList } from "~/Navigators";
+import type { HomeStackParamList, TabParamList } from "~/Navigators";
 import { useQRCodeScanner } from "~/hooks/useQRCodeScanner";
-import { useIconColor } from "~/hooks/useTheme";
 import { useServerStore } from "~/store/serverStore";
 import { useProfileStore } from "~/store/profileStore";
 import { copyToClipboard } from "~/lib/clipboardUtils";
 import { COLORS } from "~/lib/styleConstants";
 import { PLATFORM } from "~/constants";
-import { cn } from "~/lib/utils";
+import { NativeNoahSegmentedControl } from "~/components/ui/NativeNoahSegmentedControl";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import logoImage from "../../assets/All_Files/light_dark_tinted/icon_clear_tinted_ios.png";
 
 type QRMode = "scan" | "my-code";
+
+const QR_MODE_OPTIONS = [
+  { label: "My code", value: "my-code" },
+  { label: "Scan", value: "scan" },
+] as const;
 
 const addAddressBreakOpportunities = (address: string) =>
   address.replace("@", "@\u200B").replace(/\./g, ".\u200B");
 
 const QRHubScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+  const tabNavigation = navigation.getParent<NavigationProp<TabParamList>>();
   const isFocused = useIsFocused();
-  const iconColor = useIconColor();
   const tabBarHeight = useBottomTabBarHeight();
   const lightningAddress = useServerStore((state) => state.lightningAddress);
   const displayName = useProfileStore((state) => state.displayName);
@@ -41,7 +46,7 @@ const QRHubScreen = () => {
 
   const handleScannerValue = (value: string) => {
     setMode("my-code");
-    navigation.navigate("Send", { destination: value });
+    tabNavigation?.navigate("Send", { destination: value, requestId: Date.now() });
   };
 
   const { showCamera, setShowCamera, handleScanPress, codeScanner } = useQRCodeScanner({
@@ -118,35 +123,21 @@ const QRHubScreen = () => {
       >
         <View className="px-5 pb-8 pt-4">
           <View className="flex-row items-center">
-            <Pressable onPress={() => navigation.goBack()} className="mr-4">
-              <Icon name="arrow-back-outline" size={24} color={iconColor} />
-            </Pressable>
+            <NativeNoahBackButton
+              onPress={() => navigation.goBack()}
+              className="mr-3"
+              testID="qr-hub-back-button"
+            />
             <Text className="text-2xl font-bold text-foreground">QR Code</Text>
           </View>
 
-          <View className="mt-7 mb-6 flex flex-row justify-around rounded-lg bg-muted p-1">
-            {(["my-code", "scan"] as const).map((item) => (
-              <Pressable
-                key={item}
-                onPress={() => handleModePress(item)}
-                className={cn(
-                  "flex-1 items-center justify-center rounded-md p-2",
-                  mode === item && "bg-background",
-                )}
-              >
-                <Text
-                  className={cn(
-                    "font-bold",
-                    mode === item ? "text-foreground" : "text-muted-foreground",
-                  )}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                  maxFontSizeMultiplier={1.2}
-                >
-                  {item === "my-code" ? "My code" : "Scan"}
-                </Text>
-              </Pressable>
-            ))}
+          <View className="mt-7 mb-6">
+            <NativeNoahSegmentedControl
+              value={mode}
+              options={QR_MODE_OPTIONS}
+              onValueChange={handleModePress}
+              testID="qr-mode"
+            />
           </View>
 
           {mode === "my-code" ? (

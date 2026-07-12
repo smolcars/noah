@@ -190,7 +190,6 @@ const PaymentRail = ({
 
 const ReceiveScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<TabParamList>>();
-  const iconColor = useIconColor();
   const colors = useThemeColors();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const bitcoinAmountUnit = useBitcoinAmountUnit();
@@ -676,9 +675,6 @@ const ReceiveScreen = () => {
         >
           <View className="px-5 pb-8">
             <View className="mb-4 flex-row items-center pt-1">
-              <Pressable onPress={() => navigation.goBack()} className="mr-4">
-                <Icon name="arrow-back-outline" size={24} color={iconColor} />
-              </Pressable>
               <Text className="text-2xl font-bold text-foreground">Receive</Text>
             </View>
 
