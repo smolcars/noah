@@ -29,10 +29,10 @@ appId: com.noahwallet.regtest
 # Home screen
 - assertVisible: "History"
 
-# Navigate to Board Ark (tap boat icon in upper left of home screen)
+# Navigate to Board Ark
 - tapOn:
-    point: "8%,8%"
-- assertVisible: "Board Ark"
+    id: "home-board-ark-button"
+- assertVisible: "Amount to Board"
 
 # Switch to Offboard Ark flow
 - tapOn: "Offboard Ark"
@@ -81,8 +81,8 @@ appId: com.noahwallet.regtest
 
 # Navigate back to Board Ark > Offboard Ark
 - tapOn:
-    point: "8%,8%"
-- assertVisible: "Board Ark"
+    id: "home-board-ark-button"
+- assertVisible: "Amount to Board"
 - tapOn: "Offboard Ark"
 - assertVisible: "Offboard Ark"
 
