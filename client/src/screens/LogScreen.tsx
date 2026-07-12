@@ -124,7 +124,7 @@ const LogScreen = () => {
             />
             <Text className="text-2xl font-bold text-foreground">App Logs</Text>
           </View>
-          <View className="flex-row space-x-4">
+          <View className="flex-row gap-4">
             <NativeNoahIconButton
               icon="refresh"
               accessibilityLabel="Refresh app logs"
