@@ -66,7 +66,7 @@ import logger from "~/lib/log";
 export type TabParamList = {
   Home: NavigatorScreenParams<HomeStackParamList> | undefined;
   Receive: undefined;
-  Send: { destination?: string };
+  Send: { destination?: string; requestId?: number };
   History: NavigatorScreenParams<TransactionsStackParamList> | undefined;
 };
 

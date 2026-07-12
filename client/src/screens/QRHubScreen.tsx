@@ -46,7 +46,7 @@ const QRHubScreen = () => {
 
   const handleScannerValue = (value: string) => {
     setMode("my-code");
-    tabNavigation?.navigate("Send", { destination: value });
+    tabNavigation?.navigate("Send", { destination: value, requestId: Date.now() });
   };
 
   const { showCamera, setShowCamera, handleScanPress, codeScanner } = useQRCodeScanner({

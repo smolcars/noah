@@ -41,7 +41,10 @@ type DisplayResult = {
   type: string;
 };
 
-type SendScreenRouteProp = RouteProp<{ params: { destination?: string } }, "params">;
+type SendScreenRouteProp = RouteProp<
+  { params: { destination?: string; requestId?: number } },
+  "params"
+>;
 
 const formatFeeRate = (feeRateSatVb: number) => {
   if (Number.isInteger(feeRateSatVb)) {
@@ -88,12 +91,7 @@ export const useSendScreen = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isDestinationFocused, setIsDestinationFocused] = useState(false);
-
-  useEffect(() => {
-    if (route.params?.destination) {
-      setDestination(normalizeLightningAddressDestination(route.params.destination));
-    }
-  }, [route.params]);
+  const [destinationRequestRevision, setDestinationRequestRevision] = useState(0);
 
   useEffect(() => {
     if (destination) {
@@ -141,7 +139,7 @@ export const useSendScreen = () => {
       setParsedAmount(null);
       setBip321Data(null);
     }
-  }, [destination, showAlert]);
+  }, [destination, destinationRequestRevision, showAlert]);
 
   const finalDestinationType =
     destinationType === "bip321" ? selectedPaymentMethod : destinationType;
@@ -160,6 +158,29 @@ export const useSendScreen = () => {
     error,
     reset,
   } = useSend(finalDestinationType);
+
+  useEffect(() => {
+    if (!route.params?.destination) {
+      return;
+    }
+
+    reset();
+    setAmount("");
+    setIsAmountEditable(true);
+    setComment("");
+    setParsedResult(null);
+    setDestinationType(null);
+    setCurrency("SATS");
+    setParsedAmount(null);
+    setBip321Data(null);
+    setSelectedPaymentMethod("onchain");
+    setSelectedOnchainSource(null);
+    setShowConfirmation(false);
+    setShowSuccess(false);
+    setIsDestinationFocused(false);
+    setDestination(normalizeLightningAddressDestination(route.params.destination));
+    setDestinationRequestRevision((revision) => revision + 1);
+  }, [reset, route.params]);
 
   const { suggestions: lightningAddressSuggestions } = useLightningAddressSuggestions({
     destination,
