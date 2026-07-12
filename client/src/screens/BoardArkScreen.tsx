@@ -24,6 +24,7 @@ import {
   useBoardArkFeeEstimate,
   useOffboardAllArk,
   useOffboardAllFeeEstimate,
+  useIsOnchainAddressMine,
   type BoardArkFeeEstimateResult,
 } from "../hooks/usePayments";
 import { copyToClipboard } from "../lib/clipboardUtils";
@@ -34,7 +35,6 @@ import { useAlert } from "~/contexts/AlertProvider";
 import logger from "~/lib/log";
 import { HomeStackParamList } from "~/Navigators";
 import { BoardResult } from "react-native-nitro-ark";
-import { useTransactionStore } from "~/store/transactionStore";
 import { FeeEstimateSummary } from "~/components/FeeEstimateSummary";
 import { FeeEstimateBox, FeeEstimateRow, FeeEstimateSeparator } from "~/components/FeeEstimateBox";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
@@ -427,7 +427,6 @@ const BoardArkScreen = () => {
   const { showAlert } = useAlert();
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
-  const isAutoBoardingEnabled = useTransactionStore((state) => state.isAutoBoardingEnabled);
   const { data: balance, isLoading: isBalanceLoading } = useBalance();
   const {
     mutate: boardArk,
@@ -501,6 +500,10 @@ const BoardArkScreen = () => {
 
     return trimmedAddress;
   }, [address, flow]);
+
+  const { data: isOwnOnchainAddress, isPending: isCheckingOwnAddress } = useIsOnchainAddressMine(
+    flow === "offboard" ? validOffboardEstimateAddress : null,
+  );
 
   const [debouncedOffboardEstimateAddress, setDebouncedOffboardEstimateAddress] = useState<
     string | null
@@ -614,6 +617,19 @@ const BoardArkScreen = () => {
       return;
     }
 
+    if (isCheckingOwnAddress) {
+      return;
+    }
+
+    if (isOwnOnchainAddress) {
+      showAlert({
+        title: "Cannot Offboard to Own Wallet",
+        description:
+          "Sending to your own Noah wallet address would board the funds back into Ark. Please use an external Bitcoin address.",
+      });
+      return;
+    }
+
     offboardAll(address);
   };
 
@@ -683,7 +699,8 @@ const BoardArkScreen = () => {
     isActionLoading ||
     isBoardAmountBelowMinimum ||
     (flow === "onboard" && (!amount || onchainBalance === 0)) ||
-    (flow === "offboard" && (offchainBalance === 0 || !address));
+    (flow === "offboard" && (offchainBalance === 0 || !address || isCheckingOwnAddress)) ||
+    isOwnOnchainAddress;
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
@@ -774,20 +791,20 @@ const BoardArkScreen = () => {
                     />
                   </View>
 
-                  {isAutoBoardingEnabled ? (
-                    <View className="mt-3 flex-row items-start rounded-2xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                  {isOwnOnchainAddress ? (
+                    <View className="mt-3 flex-row items-start rounded-2xl border border-red-500/30 bg-red-500/10 px-3 py-2">
                       <Icon
                         name="alert-circle-outline"
                         size={17}
-                        color="#d97706"
+                        color="#dc2626"
                         style={{ marginTop: 1, marginRight: 8 }}
                       />
                       <View className="flex-1">
-                        <Text className="text-sm font-semibold text-amber-700 dark:text-amber-300">
-                          Use an external address
+                        <Text className="text-sm font-semibold text-red-700 dark:text-red-300">
+                          Cannot offboard to own wallet
                         </Text>
-                        <Text className="mt-0.5 text-xs leading-4 text-amber-700/90 dark:text-amber-200/90">
-                          Sending to your Noah wallet address can board the funds back into Ark.
+                        <Text className="mt-0.5 text-xs leading-4 text-red-700/90 dark:text-red-200/90">
+                          This address belongs to your Noah wallet. Offboarding to it would board the funds back into Ark. Use an external Bitcoin address.
                         </Text>
                       </View>
                     </View>

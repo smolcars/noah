@@ -1,0 +1,99 @@
+# offboard-ark.yml
+# Tests that the offboard Ark flow works correctly
+# Note: The own-address blocking is tested via the Rust unit test
+# (onchain_is_mine). This test verifies the UI flow works.
+
+appId: com.noahwallet.regtest
+---
+# Launch app fresh
+- launchApp:
+    clearState: true
+
+# Create wallet
+- tapOn: "Create Wallet"
+- assertVisible: "Noah is in beta"
+- tapOn: "I accept"
+- assertVisible: "Your Recovery Phrase"
+- tapOn: "I Have Saved It, Continue"
+
+# Emergency Email screen
+- assertVisible: "Emergency Email"
+- tapOn: "Continue without email"
+
+# Lightning Address screen
+- extendedWaitUntil:
+    visible: "Choose your Lightning Address"
+    timeout: 10000
+- tapOn: "Skip"
+
+# Home screen
+- assertVisible: "History"
+
+# Navigate to Board Ark
+- tapOn:
+    id: "home-board-ark-button"
+- assertVisible: "Amount to Board"
+
+# Switch to Offboard Ark flow
+- tapOn: "Offboard Ark"
+- assertVisible: "Offboard Ark"
+- assertVisible: "Destination"
+
+# Enter an external Bitcoin address
+- tapOn: "Enter Bitcoin address"
+- inputText: "bcrt1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+
+# Verify no error banner appears for external address
+- assertNotVisible: "Cannot offboard to own wallet"
+
+# Go back to home to get the wallet's own onchain address
+- back
+- extendedWaitUntil:
+    visible: "History"
+    timeout: 10000
+
+# Navigate to Receive screen
+- tapOn: "Receive"
+
+# Tap "Generate request" to generate addresses
+- extendedWaitUntil:
+    visible: "Generate request"
+    timeout: 10000
+- tapOn: "Generate request"
+
+# Scroll down to reveal the On-chain rail
+- swipe:
+    direction: UP
+
+# Wait for On-chain rail to appear
+- extendedWaitUntil:
+    visible: "On-chain"
+    timeout: 15000
+
+# Tap the onchain address row to copy the full address
+- tapOn: "On-chain"
+
+# Go back to home
+- back
+- extendedWaitUntil:
+    visible: "History"
+    timeout: 10000
+
+# Navigate back to Board Ark > Offboard Ark
+- tapOn:
+    id: "home-board-ark-button"
+- assertVisible: "Amount to Board"
+- tapOn: "Offboard Ark"
+- assertVisible: "Offboard Ark"
+
+# Clear the input and paste the wallet's own address via long-press
+- tapOn: "Enter Bitcoin address"
+- eraseText: 100
+- longPressOn: "Enter Bitcoin address"
+- tapOn: "Paste"
+
+# Verify the error banner appears for own address
+- extendedWaitUntil:
+    visible: "Cannot offboard to own wallet"
+    timeout: 5000
+- assertVisible: "Cannot offboard to own wallet"

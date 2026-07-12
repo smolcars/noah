@@ -3,6 +3,7 @@ import { useAlert } from "~/contexts/AlertProvider";
 import {
   newAddress,
   onchainAddress,
+  onchainIsMine,
   boardArk,
   bolt11Invoice,
   onchainSend,
@@ -433,6 +434,26 @@ export function useOffboardAllFeeEstimate(destinationAddress: string | null) {
     },
     enabled: !!destinationAddress,
     staleTime: 20 * 1000,
+    retry: false,
+  });
+}
+
+export function useIsOnchainAddressMine(address: string | null) {
+  return useQuery({
+    queryKey: ["is-onchain-address-mine", address],
+    queryFn: async () => {
+      if (!address) {
+        throw new Error("Address is required");
+      }
+
+      const result = await onchainIsMine(address);
+      if (result.isErr()) {
+        throw result.error;
+      }
+      return result.value;
+    },
+    enabled: !!address,
+    staleTime: Infinity,
     retry: false,
   });
 }

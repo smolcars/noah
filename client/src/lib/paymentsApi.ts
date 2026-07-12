@@ -16,6 +16,7 @@ import {
   type LightningPayment,
   newAddress as newAddressNitro,
   onchainAddress as onchainAddressNitro,
+  onchainIsMine as onchainIsMineNitro,
   payLightningInvoice as payLightningInvoiceNitro,
   onchainSend as onchainSendNitro,
   sendOnchain as sendOnchainNitro,
@@ -104,7 +105,21 @@ export const onchainAddress = async (): Promise<Result<string, Error>> => {
     onchainAddressNitro(),
     (error) =>
       new Error(
-        `Failed to generate onchain address: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error.message : "Failed to get onchain address",
+      ),
+  );
+};
+
+export const onchainIsMine = async (
+  address: string,
+): Promise<Result<boolean, Error>> => {
+  return ResultAsync.fromPromise(
+    onchainIsMineNitro(address),
+    (error) =>
+      new Error(
+        error instanceof Error
+          ? error.message
+          : "Failed to check address ownership",
       ),
   );
 };
