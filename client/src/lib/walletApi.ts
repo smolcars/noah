@@ -592,6 +592,7 @@ export const clearStaleKeychain = async (): Promise<Result<void, Error>> => {
     log.w("Failed to clear native Esplora endpoint", [nativeEsploraResetResult.error]);
     return err(nativeEsploraResetResult.error);
   }
+  useEsploraStore.getState().reset();
 
   const tokenResetResult = await resetServerAuthToken();
   if (tokenResetResult.isErr()) {
