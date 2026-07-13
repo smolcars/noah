@@ -79,6 +79,9 @@ jobs:
       - name: ✨ Lint code
         run: nix develop .# --command bash -c "bun client lint"
 
+      - name: 🧪 Run unit tests
+        run: nix develop .# --command bash -c "bun client test:unit"
+
       - name: 🔍 Typecheck code
         run: nix develop .# --command bash -c "bun client typecheck"
 

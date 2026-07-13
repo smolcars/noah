@@ -44,8 +44,9 @@
     "nitrogen": "bun --cwd nitromodules/noah-tools nitrogen",
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "test:unit": "bun test tests/unit",
     "typecheck": "tsc --noEmit",
-    "check": "bun run lint && bun run typecheck",
+    "check": "bun run lint && bun run test:unit && bun run typecheck",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "maestro:test": "maestro test --debug-output maestro-debug-output .maestro"
