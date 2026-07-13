@@ -39,6 +39,7 @@ import QRHubScreen from "~/screens/QRHubScreen";
 import ProfileScreen from "~/screens/ProfileScreen";
 import CurrencySettingsScreen from "~/screens/CurrencySettingsScreen";
 import BitcoinUnitSettingsScreen from "~/screens/BitcoinUnitSettingsScreen";
+import EsploraSettingsScreen from "~/screens/EsploraSettingsScreen";
 import WalletLoader from "~/components/WalletLoader";
 import { useWalletStore } from "~/store/walletStore";
 import { useServerStore } from "~/store/serverStore";
@@ -75,6 +76,7 @@ export type SettingsStackParamList = {
   Profile: undefined;
   Currency: undefined;
   BitcoinUnit: undefined;
+  Esplora: undefined;
   Mnemonic: { fromOnboarding: boolean };
   Logs: undefined;
   EmailVerification: { fromSettings?: boolean } | undefined;
@@ -139,6 +141,11 @@ const SettingsStackNav = () => (
     <Stack.Screen
       name="BitcoinUnit"
       component={BitcoinUnitSettingsScreen}
+      options={{ animation: "default" }}
+    />
+    <Stack.Screen
+      name="Esplora"
+      component={EsploraSettingsScreen}
       options={{ animation: "default" }}
     />
     <Stack.Screen name="Mnemonic" component={MnemonicScreen} options={{ animation: "default" }} />

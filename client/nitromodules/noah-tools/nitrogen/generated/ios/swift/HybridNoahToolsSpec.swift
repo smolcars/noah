@@ -43,6 +43,8 @@ public protocol HybridNoahToolsSpec_protocol: HybridObject {
   func setUnifiedPushDistributor(distributorId: Variant_NullType_String?) throws -> Void
   func storeNativeMnemonic(mnemonic: String) throws -> Promise<Void>
   func clearNativeMnemonic() throws -> Promise<Void>
+  func storeNativeEsploraEndpoint(endpoint: String) throws -> Promise<Void>
+  func clearNativeEsploraEndpoint() throws -> Promise<Void>
 }
 
 public extension HybridNoahToolsSpec_protocol {

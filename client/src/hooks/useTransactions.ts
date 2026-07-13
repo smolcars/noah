@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { validateBitcoinAddress } from "bip-321";
 import ky from "ky";
-import { getEsploraApiBaseUrl } from "~/constants";
+import { getEsploraApiBaseUrl } from "~/lib/esplora";
 import { history, onchainTransactions } from "~/lib/paymentsApi";
 import { loadWalletIfNeeded } from "~/lib/walletApi";
 import { useWalletStore } from "~/store/walletStore";
@@ -13,6 +13,7 @@ import { getHistoricalBtcToFiatRate } from "~/hooks/useMarketData";
 import logger from "~/lib/log";
 import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
 import { useProfileStore } from "~/store/profileStore";
+import { useEsploraStore } from "~/store/esploraStore";
 import {
   BARK_SUBSYSTEM,
   type BarkSubsystemId,
@@ -435,11 +436,12 @@ const fetchAndTransformTransactions = async (
 export const useTransactions = (options?: { enabled?: boolean }) => {
   const { isInitialized, isWalletLoaded, isWalletSuspended } = useWalletStore();
   const preferredCurrency = useProfileStore((state) => state.preferredCurrency);
+  const endpointOverride = useEsploraStore((state) => state.endpointOverride);
   const enabled =
     (options?.enabled ?? true) && isInitialized && isWalletLoaded && !isWalletSuspended;
 
   return useQuery({
-    queryKey: ["transactions", preferredCurrency],
+    queryKey: ["transactions", preferredCurrency, endpointOverride],
     queryFn: () => fetchAndTransformTransactions(preferredCurrency),
     enabled,
     staleTime: 30 * 1000,

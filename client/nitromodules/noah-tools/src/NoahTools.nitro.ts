@@ -103,4 +103,6 @@ export interface NoahTools extends HybridObject<{ ios: "swift"; android: "kotlin
   setUnifiedPushDistributor(distributorId: string | null): void;
   storeNativeMnemonic(mnemonic: string): Promise<void>;
   clearNativeMnemonic(): Promise<void>;
+  storeNativeEsploraEndpoint(endpoint: string): Promise<void>;
+  clearNativeEsploraEndpoint(): Promise<void>;
 }

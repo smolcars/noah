@@ -81,7 +81,7 @@ export const getLnurlDomain = (): string => {
   }
 };
 
-type WalletCreationOptions = Omit<BarkCreateOpts, "mnemonic">;
+export type WalletCreationOptions = Omit<BarkCreateOpts, "mnemonic">;
 
 export const SIGNET_CONFIG: WalletCreationOptions = {
   regtest: false,
@@ -155,7 +155,7 @@ export const msatToSatoshi = (msat: number) => msat / 1000;
 export const mempoolPriceEndpoint = `${getServerEndpoint()}/v0/prices`;
 export const mempoolHistoricalPriceEndpoint = `${getServerEndpoint()}/v0/historical-price`;
 
-export const getBlockheightEndpoint = () => {
+export const getDefaultBlockheightEndpoint = () => {
   switch (APP_VARIANT) {
     case "mainnet":
       return "https://mempool.second.tech/api/blocks/tip/height";
@@ -164,20 +164,6 @@ export const getBlockheightEndpoint = () => {
     case "regtest":
       return `http://${REGTEST_URL}:18443`;
   }
-};
-
-export const getEsploraApiBaseUrl = (): string | null => {
-  if (APP_VARIANT === "regtest") {
-    return null;
-  }
-
-  const esplora = ACTIVE_WALLET_CONFIG.config?.esplora;
-  if (!esplora) {
-    return null;
-  }
-
-  const withProtocol = /^https?:\/\//.test(esplora) ? esplora : `https://${esplora}`;
-  return withProtocol.replace(/\/+$/, "");
 };
 
 export const getMempoolTxUrl = (anchorPoint: string): string | null => {

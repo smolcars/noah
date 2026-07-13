@@ -95,6 +95,8 @@ namespace margelo::nitro::noahtools {
       virtual void setUnifiedPushDistributor(const std::optional<std::variant<nitro::NullType, std::string>>& distributorId) = 0;
       virtual std::shared_ptr<Promise<void>> storeNativeMnemonic(const std::string& mnemonic) = 0;
       virtual std::shared_ptr<Promise<void>> clearNativeMnemonic() = 0;
+      virtual std::shared_ptr<Promise<void>> storeNativeEsploraEndpoint(const std::string& endpoint) = 0;
+      virtual std::shared_ptr<Promise<void>> clearNativeEsploraEndpoint() = 0;
 
     protected:
       // Hybrid Setup

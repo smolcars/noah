@@ -184,4 +184,12 @@ export function clearNativeMnemonic(): Promise<void> {
   return NoahToolsHybridObject.clearNativeMnemonic();
 }
 
+export function storeNativeEsploraEndpoint(endpoint: string): Promise<void> {
+  return NoahToolsHybridObject.storeNativeEsploraEndpoint(endpoint);
+}
+
+export function clearNativeEsploraEndpoint(): Promise<void> {
+  return NoahToolsHybridObject.clearNativeEsploraEndpoint();
+}
+
 export type { HttpResponse } from "./NoahTools.nitro";

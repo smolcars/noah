@@ -49,12 +49,16 @@ import {
   TelegramBrandIcon,
   TELEGRAM_SUPPORT_URL,
 } from "~/components/BrandIcons";
+import { APP_VARIANT } from "~/config";
+import { getDefaultEsploraEndpoint } from "~/lib/esplora";
+import { useEsploraStore } from "~/store/esploraStore";
 
 type Setting = {
   id:
     | "profile"
     | "currency"
     | "bitcoinUnit"
+    | "esplora"
     | "showMnemonic"
     | "showLogs"
     | "resetRegistration"
@@ -98,6 +102,8 @@ const SettingsScreen = () => {
   const preferredCurrencyInfo = getFiatCurrencyInfo(preferredCurrency);
   const bitcoinAmountUnit = useProfileStore((state) => state.bitcoinAmountUnit);
   const bitcoinAmountUnitInfo = getBitcoinAmountUnitInfo(bitcoinAmountUnit);
+  const endpointOverride = useEsploraStore((state) => state.endpointOverride);
+  const effectiveEsploraEndpoint = endpointOverride ?? getDefaultEsploraEndpoint();
   const {
     data: autoBoardThreshold,
     isError: isAutoBoardThresholdError,
@@ -231,6 +237,8 @@ const SettingsScreen = () => {
       navigation.navigate("Currency");
     } else if (item.id === "bitcoinUnit") {
       navigation.navigate("BitcoinUnit");
+    } else if (item.id === "esplora") {
+      navigation.navigate("Esplora");
     } else if (item.id === "showMnemonic") {
       navigation.navigate("Mnemonic", { fromOnboarding: false });
     } else if (item.id === "showLogs") {
@@ -317,6 +325,16 @@ const SettingsScreen = () => {
       description: "Automatically or manually backup your wallet after encrypting it.",
       isPressable: true,
     });
+
+    if (APP_VARIANT !== "regtest") {
+      walletData.push({
+        id: "esplora",
+        title: "Esplora API",
+        value: endpointOverride ? "Custom" : "Noah default",
+        description: effectiveEsploraEndpoint ?? "Not configured",
+        isPressable: true,
+      });
+    }
 
     if (shouldUseUnifiedPush()) {
       walletData.push({

@@ -54,8 +54,21 @@ import {
 } from "./crypto";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import logger from "~/lib/log";
-import { clearNativeMnemonic, storeNativeMnemonic } from "noah-tools";
+import {
+  clearNativeEsploraEndpoint,
+  clearNativeMnemonic,
+  storeNativeEsploraEndpoint,
+  storeNativeMnemonic,
+} from "noah-tools";
 import { useWalletStore } from "~/store/walletStore";
+import { APP_VARIANT } from "~/config";
+import {
+  getActiveWalletConfig,
+  getDefaultEsploraEndpoint,
+  getEffectiveEsploraEndpoint,
+  validateEsploraEndpoint,
+} from "~/lib/esplora";
+import { useEsploraStore } from "~/store/esploraStore";
 
 const log = logger("walletApi");
 
@@ -81,7 +94,7 @@ const createWalletFromMnemonic = async (mnemonic: string): Promise<Result<void, 
   }
 
   const createResult = await ResultAsync.fromPromise(
-    createWalletNitro(ARK_DATA_PATH, { ...ACTIVE_WALLET_CONFIG, mnemonic }),
+    createWalletNitro(ARK_DATA_PATH, { ...getActiveWalletConfig(), mnemonic }),
     (e) => e as Error,
   );
 
@@ -158,11 +171,12 @@ export const restoreWallet = async (mnemonic: string): Promise<Result<boolean, E
 
 export const loadWalletWithMnemonic = async (
   mnemonic: string,
+  esploraEndpoint = getEffectiveEsploraEndpoint(),
 ): Promise<Result<boolean, Error>> => {
   const loadResult = await ResultAsync.fromPromise(
     loadWalletNitro(ARK_DATA_PATH, {
       mnemonic,
-      ...ACTIVE_WALLET_CONFIG,
+      ...getActiveWalletConfig(esploraEndpoint),
     }),
     (e) => e as Error,
   );
@@ -172,6 +186,143 @@ export const loadWalletWithMnemonic = async (
   }
 
   return ok(true);
+};
+
+const persistNativeEsploraOverride = async (
+  endpointOverride: string | null,
+): Promise<Result<void, Error>> => {
+  return ResultAsync.fromPromise(
+    endpointOverride ? storeNativeEsploraEndpoint(endpointOverride) : clearNativeEsploraEndpoint(),
+    (error) => error as Error,
+  );
+};
+
+const reloadWalletWithEsplora = async (
+  mnemonic: string,
+  endpoint: string,
+): Promise<Result<boolean, Error>> => {
+  const closeAttempt = await ResultAsync.fromPromise(closeWalletIfLoaded(), (error) =>
+    error instanceof Error ? error : new Error(String(error)),
+  );
+  if (closeAttempt.isErr()) {
+    return err(closeAttempt.error);
+  }
+
+  const closeResult = closeAttempt.value;
+  if (closeResult.isErr()) {
+    return err(closeResult.error);
+  }
+  if (!closeResult.value) {
+    return err(new Error("Failed to close the wallet while changing the Esplora endpoint."));
+  }
+
+  return loadWalletWithMnemonic(mnemonic, endpoint);
+};
+
+export interface EsploraSwitchResult {
+  endpoint: string;
+  isDefault: boolean;
+}
+
+export const switchEsploraEndpoint = async (
+  requestedOverride: string | null,
+): Promise<Result<EsploraSwitchResult, Error>> => {
+  if (APP_VARIANT === "regtest") {
+    return err(new Error("Regtest wallets use Bitcoin Core instead of Esplora."));
+  }
+
+  const defaultEndpoint = getDefaultEsploraEndpoint();
+  if (!defaultEndpoint) {
+    return err(new Error("No default Esplora endpoint is configured."));
+  }
+
+  const validationResult = await validateEsploraEndpoint(requestedOverride ?? defaultEndpoint);
+  if (validationResult.isErr()) {
+    return err(validationResult.error);
+  }
+
+  const targetEndpoint = validationResult.value;
+  const targetOverride =
+    requestedOverride === null || targetEndpoint === defaultEndpoint ? null : targetEndpoint;
+  const previousOverride = useEsploraStore.getState().endpointOverride;
+  const previousEndpoint = getEffectiveEsploraEndpoint();
+
+  if (!previousEndpoint) {
+    return err(new Error("No current Esplora endpoint is configured."));
+  }
+
+  if (targetEndpoint === previousEndpoint) {
+    const nativeResult = await persistNativeEsploraOverride(targetOverride);
+    if (nativeResult.isErr()) {
+      return err(nativeResult.error);
+    }
+    useEsploraStore.getState().setEndpointOverride(targetOverride);
+    return ok({ endpoint: targetEndpoint, isDefault: targetOverride === null });
+  }
+
+  const isLoadedResult = await ResultAsync.fromPromise(
+    isWalletLoadedNitro(),
+    (error) => error as Error,
+  );
+  if (isLoadedResult.isErr()) {
+    return err(isLoadedResult.error);
+  }
+
+  const wasWalletLoaded = isLoadedResult.value;
+  let mnemonic: string | null = null;
+
+  if (wasWalletLoaded) {
+    const mnemonicResult = await getMnemonic();
+    if (mnemonicResult.isErr()) {
+      return err(mnemonicResult.error);
+    }
+    mnemonic = mnemonicResult.value;
+    if (!mnemonic) {
+      return err(new Error("No wallet mnemonic is available to reload the wallet."));
+    }
+
+    const candidateLoadResult = await reloadWalletWithEsplora(mnemonic, targetEndpoint);
+    if (candidateLoadResult.isErr()) {
+      const rollbackResult = await reloadWalletWithEsplora(mnemonic, previousEndpoint);
+      if (rollbackResult.isErr()) {
+        useWalletStore.getState().setWalletUnloaded();
+        return err(
+          new Error(
+            `Failed to load the wallet with the new Esplora endpoint and failed to restore the previous configuration: ${rollbackResult.error.message}`,
+          ),
+        );
+      }
+      return err(
+        new Error(
+          `Failed to load the wallet with the new Esplora endpoint: ${candidateLoadResult.error.message}`,
+        ),
+      );
+    }
+  }
+
+  const nativeResult = await persistNativeEsploraOverride(targetOverride);
+  if (nativeResult.isErr()) {
+    await persistNativeEsploraOverride(previousOverride);
+    if (wasWalletLoaded && mnemonic) {
+      const rollbackResult = await reloadWalletWithEsplora(mnemonic, previousEndpoint);
+      if (rollbackResult.isErr()) {
+        useWalletStore.getState().setWalletUnloaded();
+        return err(
+          new Error(
+            `Failed to save the Esplora endpoint for background operations and failed to restore the previous wallet configuration: ${rollbackResult.error.message}`,
+          ),
+        );
+      }
+    }
+    return err(
+      new Error(
+        `Failed to save the Esplora endpoint for background operations: ${nativeResult.error.message}`,
+      ),
+    );
+  }
+
+  useEsploraStore.getState().setEndpointOverride(targetOverride);
+  return ok({ endpoint: targetEndpoint, isDefault: targetOverride === null });
 };
 
 const loadWalletFromStorage = async (): Promise<Result<boolean, Error>> => {
@@ -431,6 +582,15 @@ export const clearStaleKeychain = async (): Promise<Result<void, Error>> => {
       log.w("Failed to clear stale native mnemonic", [nativeResetResult.error]);
       return err(nativeResetResult.error);
     }
+  }
+
+  const nativeEsploraResetResult = await ResultAsync.fromPromise(
+    clearNativeEsploraEndpoint(),
+    (e) => e as Error,
+  );
+  if (nativeEsploraResetResult.isErr()) {
+    log.w("Failed to clear native Esplora endpoint", [nativeEsploraResetResult.error]);
+    return err(nativeEsploraResetResult.error);
   }
 
   const tokenResetResult = await resetServerAuthToken();

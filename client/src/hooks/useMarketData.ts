@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { getBlockheightEndpoint, REGTEST_CONFIG } from "~/constants";
+import { REGTEST_CONFIG } from "~/constants";
+import { getBlockheightEndpoint } from "~/lib/esplora";
 import ky from "ky";
 import logger from "~/lib/log";
 
@@ -10,6 +11,7 @@ import { APP_VARIANT } from "~/config";
 import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
 import { getFiatPrices, getHistoricalFiatPrice } from "~/lib/api";
 import { useProfileStore } from "~/store/profileStore";
+import { useEsploraStore } from "~/store/esploraStore";
 
 const HISTORICAL_RATE_CACHE_MAX_SIZE = 200;
 type HistoricalRateLookup = {
@@ -82,7 +84,7 @@ export const getBlockHeight = async (): Promise<Result<number, Error>> => {
 
   const result = await ResultAsync.fromPromise(
     ky.get(url).text(),
-    (e) => new Error(`Failed to fetch blockheight from mempool.space: ${e}`),
+    (e) => new Error(`Failed to fetch blockheight from Esplora: ${e}`),
   ).andThen((data) => {
     const height = parseInt(data, 10);
     if (!isNaN(height)) {
@@ -95,8 +97,10 @@ export const getBlockHeight = async (): Promise<Result<number, Error>> => {
 };
 
 export function useGetBlockHeight() {
+  const endpointOverride = useEsploraStore((state) => state.endpointOverride);
+
   return useQuery({
-    queryKey: ["getBlockHeight"],
+    queryKey: ["getBlockHeight", endpointOverride],
     queryFn: async () => {
       const result = await getBlockHeight();
       if (result.isErr()) {

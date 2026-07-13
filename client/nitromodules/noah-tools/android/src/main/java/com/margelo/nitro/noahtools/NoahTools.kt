@@ -352,4 +352,54 @@ class NoahTools : HybridNoahToolsSpec() {
         }
     }
 
+    override fun storeNativeEsploraEndpoint(endpoint: String): Promise<Unit> {
+        return Promise.async {
+            val context = NitroModules.applicationContext ?: return@async
+            val variant = when (context.packageName) {
+                "com.noahwallet.regtest" -> "regtest"
+                "com.noahwallet.signet" -> "signet"
+                else -> "mainnet"
+            }
+
+            try {
+                val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+                val prefs = EncryptedSharedPreferences.create(
+                    "noah_native_secrets",
+                    masterKeyAlias,
+                    context,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+                prefs.edit().putString("esplora_$variant", endpoint).apply()
+            } catch (e: Exception) {
+                throw Exception("Failed to store native Esplora endpoint: ${e.message}", e)
+            }
+        }
+    }
+
+    override fun clearNativeEsploraEndpoint(): Promise<Unit> {
+        return Promise.async {
+            val context = NitroModules.applicationContext ?: return@async
+            val variant = when (context.packageName) {
+                "com.noahwallet.regtest" -> "regtest"
+                "com.noahwallet.signet" -> "signet"
+                else -> "mainnet"
+            }
+
+            try {
+                val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+                val prefs = EncryptedSharedPreferences.create(
+                    "noah_native_secrets",
+                    masterKeyAlias,
+                    context,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+                prefs.edit().remove("esplora_$variant").apply()
+            } catch (e: Exception) {
+                throw Exception("Failed to clear native Esplora endpoint: ${e.message}", e)
+            }
+        }
+    }
+
 }

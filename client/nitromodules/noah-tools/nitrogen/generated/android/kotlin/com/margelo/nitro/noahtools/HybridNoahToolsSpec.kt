@@ -150,6 +150,14 @@ abstract class HybridNoahToolsSpec: HybridObject() {
   @Keep
   abstract fun clearNativeMnemonic(): Promise<Unit>
 
+  @DoNotStrip
+  @Keep
+  abstract fun storeNativeEsploraEndpoint(endpoint: String): Promise<Unit>
+
+  @DoNotStrip
+  @Keep
+  abstract fun clearNativeEsploraEndpoint(): Promise<Unit>
+
   // Default implementation of `HybridObject.toString()`
   override fun toString(): String {
     return "[HybridObject NoahTools]"

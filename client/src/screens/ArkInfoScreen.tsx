@@ -14,11 +14,12 @@ import { useThemeColors } from "~/hooks/useTheme";
 import type { SettingsStackParamList } from "~/Navigators";
 import {
   ACTIVE_WALLET_CONFIG,
-  getBlockheightEndpoint,
   mempoolHistoricalPriceEndpoint,
   mempoolPriceEndpoint,
 } from "~/constants";
 import { APP_VARIANT } from "~/config";
+import { getBlockheightEndpoint, getDefaultEsploraEndpoint } from "~/lib/esplora";
+import { useEsploraStore } from "~/store/esploraStore";
 
 type NavigationProp = NativeStackNavigationProp<SettingsStackParamList, "ArkInfo">;
 
@@ -182,12 +183,12 @@ const buildSections = (arkInfo: BarkArkInfo) => [
   },
 ];
 
-const buildConfigurationSections = () => [
+const buildConfigurationSections = (esploraEndpoint: string | null) => [
   {
     title: "Wallet endpoints",
     rows: compactRows([
       { label: "Ark server", value: ACTIVE_WALLET_CONFIG.config?.ark, copyable: true },
-      { label: "Esplora API", value: ACTIVE_WALLET_CONFIG.config?.esplora, copyable: true },
+      { label: "Esplora API", value: esploraEndpoint, copyable: true },
       { label: "Bitcoind RPC", value: ACTIVE_WALLET_CONFIG.config?.bitcoind, copyable: true },
     ]),
   },
@@ -205,10 +206,12 @@ const buildConfigurationSections = () => [
 const ArkInfoScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const colors = useThemeColors();
+  const endpointOverride = useEsploraStore((state) => state.endpointOverride);
+  const esploraEndpoint = endpointOverride ?? getDefaultEsploraEndpoint();
   const { data: arkInfo, isLoading, isError, error, refetch, isFetching } = useArkInfo();
   const sections = arkInfo
-    ? [...buildSections(arkInfo), ...buildConfigurationSections()]
-    : buildConfigurationSections();
+    ? [...buildSections(arkInfo), ...buildConfigurationSections(esploraEndpoint)]
+    : buildConfigurationSections(esploraEndpoint);
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">

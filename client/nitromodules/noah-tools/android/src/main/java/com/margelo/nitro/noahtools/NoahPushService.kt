@@ -475,6 +475,29 @@ class NoahPushService : PushService() {
         }
     }
 
+    private fun readEsploraFromStorage(context: Context, appVariant: String): String? {
+        return try {
+            val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+
+            val prefs = EncryptedSharedPreferences.create(
+                "noah_native_secrets",
+                masterKeyAlias,
+                context,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+
+            prefs.getString("esplora_$appVariant", null)
+        } catch (e: Exception) {
+            NoahToolsLogging.performNativeLog(
+                "warn",
+                "NoahPushService",
+                "Unable to read custom Esplora endpoint: ${e.message}"
+            )
+            null
+        }
+    }
+
     private fun loadBarkConfig(context: Context, appVariant: String, configConstructor: Constructor<*>): Any? {
         val configJson = readConfigJson(context) ?: return null
         val variantJson = configJson.optJSONObject(appVariant)
@@ -490,7 +513,8 @@ class NoahPushService : PushService() {
                 variantJson.requireInt("vtxoRefreshExpiryThreshold"),
                 variantJson.requireLong("fallbackFeeRate"),
                 null,
-                variantJson.optNullableString("esplora"),
+                readEsploraFromStorage(context, appVariant)
+                    ?: variantJson.optNullableString("esplora"),
                 variantJson.optNullableString("bitcoind"),
                 variantJson.optNullableString("bitcoindCookie"),
                 variantJson.optNullableString("bitcoindUser"),

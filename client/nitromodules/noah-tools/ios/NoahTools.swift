@@ -189,6 +189,20 @@ class NoahTools: HybridNoahToolsSpec {
         promise.resolve()
         return promise
     }
+
+    func storeNativeEsploraEndpoint(endpoint: String) throws -> Promise<Void> {
+        // This is Android-only, no-op on iOS
+        let promise = Promise<Void>()
+        promise.resolve()
+        return promise
+    }
+
+    func clearNativeEsploraEndpoint() throws -> Promise<Void> {
+        // This is Android-only, no-op on iOS
+        let promise = Promise<Void>()
+        promise.resolve()
+        return promise
+    }
 }
 
 // Include the extensions from other files
