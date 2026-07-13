@@ -8,14 +8,23 @@ import { useIconColor } from "../hooks/useTheme";
 import { copyToClipboard } from "../lib/clipboardUtils";
 import { useState } from "react";
 import { COLORS } from "~/lib/styleConstants";
-import type { BarkVtxo } from "react-native-nitro-ark";
+import type { BarkFeeEstimate, BarkVtxo } from "react-native-nitro-ark";
 import { useGetBlockHeight } from "~/hooks/useMarketData";
 import { getMempoolTxUrl } from "~/constants";
 import type { SettingsStackParamList } from "~/Navigators";
-import { useGetExpiringVtxos, useGetVtxos, useRefreshExpiringVtxos } from "~/hooks/useWallet";
+import {
+  useEstimateRefreshFee,
+  useGetExpiringVtxos,
+  useGetVtxos,
+  useRefreshSelectedVtxos,
+  useWalletSync,
+} from "~/hooks/useWallet";
 import { StatusBannerStrip } from "~/components/StatusBannerStrip";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { VtxoRefreshDialog } from "~/components/VtxoRefreshDialog";
+import { useAlert } from "~/contexts/AlertProvider";
 
 type VTXOWithStatus = BarkVtxo & {
   isExpiring: boolean;
@@ -97,11 +106,16 @@ const VTXODetailScreen = () => {
   const route = useRoute();
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
+  const { showAlert } = useAlert();
+  const [refreshEstimate, setRefreshEstimate] = useState<BarkFeeEstimate | null>(null);
+  const [isRefreshDialogOpen, setIsRefreshDialogOpen] = useState(false);
   const { data: blockHeight } = useGetBlockHeight();
   const { vtxo: routeVtxo } = route.params as { vtxo: VTXOWithStatus };
-  const { data: allVtxos = [] } = useGetVtxos();
+  const { data: allVtxos = [], isSuccess: hasLoadedVtxos } = useGetVtxos();
   const { data: expiringVtxos } = useGetExpiringVtxos();
-  const refreshExpiringVtxos = useRefreshExpiringVtxos();
+  const estimateRefreshFee = useEstimateRefreshFee();
+  const refreshSelectedVtxos = useRefreshSelectedVtxos();
+  const walletSync = useWalletSync();
   const latestVtxo = allVtxos.find((item) => item.point === routeVtxo.point);
   const currentVtxo = latestVtxo ?? routeVtxo;
   const isLatestExpiring = expiringVtxos?.some((item) => item.point === currentVtxo.point);
@@ -114,7 +128,11 @@ const VTXODetailScreen = () => {
   const isExpired =
     vtxo.state !== "Locked" &&
     (blockHeight !== undefined ? vtxo.expiry_height <= blockHeight : vtxo.isExpired);
-  const canRefresh = vtxo.state !== "Locked" && (vtxo.isExpiring || isExpired);
+  const needsRefresh = vtxo.state !== "Locked" && (vtxo.isExpiring || isExpired);
+  const canRefresh =
+    hasLoadedVtxos && latestVtxo !== undefined && latestVtxo.state !== "Locked";
+  const isRefreshBusy =
+    estimateRefreshFee.isPending || refreshSelectedVtxos.isPending || walletSync.isPending;
   const statusLabel =
     vtxo.state === "Locked"
       ? "Locked"
@@ -148,6 +166,35 @@ const VTXODetailScreen = () => {
     return vtxo.isExpiring ? COLORS.BITCOIN_ORANGE : "#22c55e";
   };
 
+  const handleRefreshPress = () => {
+    setRefreshEstimate(null);
+    estimateRefreshFee.mutate([vtxo.id], {
+      onSuccess: (estimate) => {
+        setRefreshEstimate(estimate);
+        setIsRefreshDialogOpen(true);
+      },
+    });
+  };
+
+  const handleConfirmRefresh = () => {
+    walletSync.mutate(undefined, {
+      onSuccess: () => {
+        refreshSelectedVtxos.mutate([vtxo.id], {
+          onSuccess: () => {
+            setIsRefreshDialogOpen(false);
+            setRefreshEstimate(null);
+          },
+        });
+      },
+      onError: (error) => {
+        showAlert({
+          title: "Sync failed",
+          description: error instanceof Error ? error.message : String(error),
+        });
+      },
+    });
+  };
+
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
       <View className="p-4 flex-1">
@@ -165,7 +212,7 @@ const VTXODetailScreen = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 50 }}
         >
-          {canRefresh ? (
+          {needsRefresh ? (
             <StatusBannerStrip
               className="mb-4"
               title={isExpired ? "VTXO expired" : "VTXO expiring soon"}
@@ -178,11 +225,6 @@ const VTXODetailScreen = () => {
                 />
               }
               tone={isExpired ? "failed" : "info"}
-              actionLabel="Refresh"
-              actionBusyLabel="Refreshing"
-              actionTextStyle={{ color: COLORS.BITCOIN_ORANGE }}
-              isActionLoading={refreshExpiringVtxos.isPending}
-              onActionPress={() => refreshExpiringVtxos.mutate()}
             />
           ) : null}
 
@@ -234,8 +276,44 @@ const VTXODetailScreen = () => {
             />
             <VTXODetailRow label="Server Public Key" value={vtxo.server_pubkey} copyable />
           </View>
+
+          {canRefresh ? (
+            <NativeNoahButton
+              label="Refresh VTXO"
+              loadingLabel="Estimating fee..."
+              onPress={handleRefreshPress}
+              disabled={refreshSelectedVtxos.isPending || walletSync.isPending}
+              isLoading={estimateRefreshFee.isPending}
+              fullWidth
+              size="lg"
+              className="mt-2 mb-4"
+              testID="vtxo-detail-refresh-button"
+            />
+          ) : null}
         </ScrollView>
       </View>
+
+      <VtxoRefreshDialog
+        amountSat={vtxo.amount}
+        estimate={refreshEstimate}
+        isBusy={isRefreshBusy}
+        open={isRefreshDialogOpen}
+        onOpenChange={(open) => {
+          if (refreshSelectedVtxos.isPending || walletSync.isPending) {
+            return;
+          }
+          setIsRefreshDialogOpen(open);
+          if (!open) {
+            setRefreshEstimate(null);
+          }
+        }}
+        onConfirm={handleConfirmRefresh}
+        onCancel={() => {
+          setIsRefreshDialogOpen(false);
+          setRefreshEstimate(null);
+        }}
+        vtxoCount={1}
+      />
     </NoahSafeAreaView>
   );
 };

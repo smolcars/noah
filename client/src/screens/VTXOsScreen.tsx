@@ -18,18 +18,16 @@ import {
   useWalletSync,
 } from "~/hooks/useWallet";
 import { type BarkFeeEstimate, type BarkVtxo } from "react-native-nitro-ark";
-import { useBtcToFiatRate, useGetBlockHeight } from "~/hooks/useMarketData";
+import { useGetBlockHeight } from "~/hooks/useMarketData";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
-import { ConfirmationDialog } from "~/components/ConfirmationDialog";
-import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
-import { useProfileStore } from "~/store/profileStore";
 import { cn } from "~/lib/utils";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { PLATFORM } from "~/constants";
 import { useAlert } from "~/contexts/AlertProvider";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
+import { VtxoRefreshDialog } from "~/components/VtxoRefreshDialog";
 
 const EXPIRED_COLOR = "#ef4444";
 const EXPIRING_COLOR = "#f97316";
@@ -43,35 +41,10 @@ type VtxoFilter = "all" | "active" | "expiring" | "expired" | "locked";
 
 const filters: VtxoFilter[] = ["all", "active", "expiring", "expired", "locked"];
 
-const RefreshPlanRow = ({
-  label,
-  value,
-  valueClassName,
-}: {
-  label: string;
-  value: string;
-  valueClassName?: string;
-}) => (
-  <View className="flex-row items-center justify-between py-2.5">
-    <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-      {label}
-    </Text>
-    <Text
-      className={cn("ml-3 flex-shrink text-right text-sm font-semibold text-foreground", valueClassName)}
-      numberOfLines={1}
-      adjustsFontSizeToFit
-      minimumFontScale={0.8}
-    >
-      {value}
-    </Text>
-  </View>
-);
-
 const VTXOsScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const iconColor = useIconColor();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
-  const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
   const bottomTabBarHeight = useBottomTabBarHeight();
   const { bottom: safeBottomInset } = useSafeAreaInsets();
   const { showAlert } = useAlert();
@@ -84,7 +57,6 @@ const VTXOsScreen = () => {
   const { data: allVtxos = [], isLoading: isLoadingAll } = useGetVtxos();
   const { data: expiringVtxos = [], isLoading: isLoadingExpiring } = useGetExpiringVtxos();
   const { data: blockHeight, isLoading: isLoadingBlockHeight } = useGetBlockHeight();
-  const { data: btcToFiatRate } = useBtcToFiatRate();
   const estimateRefreshFee = useEstimateRefreshFee();
   const refreshSelectedVtxos = useRefreshSelectedVtxos();
   const walletSync = useWalletSync();
@@ -126,8 +98,8 @@ const VTXOsScreen = () => {
   const selectedVtxos = vtxosWithStatus.filter((vtxo) => selectedVtxoIds.has(vtxo.id));
   const selectedAmountSat = selectedVtxos.reduce((total, vtxo) => total + vtxo.amount, 0);
   const selectedVtxoIdList = selectedVtxos.map((vtxo) => vtxo.id);
-  const selectedAfterFeeSat = Math.max(selectedAmountSat - (refreshEstimate?.fee_sat ?? 0), 0);
-  const isBusy = estimateRefreshFee.isPending || refreshSelectedVtxos.isPending || walletSync.isPending;
+  const isBusy =
+    estimateRefreshFee.isPending || refreshSelectedVtxos.isPending || walletSync.isPending;
   const hasSelectableVtxos = vtxosWithStatus.some((vtxo) => vtxo.state !== "Locked");
 
   const getVtxoIcon = (vtxo: VTXOWithStatus) => {
@@ -172,23 +144,6 @@ const VTXOsScreen = () => {
       default:
         return null;
     }
-  };
-
-  const formatFiatValue = (amountSat: number) => {
-    if (btcToFiatRate === undefined) {
-      return "Unavailable";
-    }
-
-    return formatFiatAmount(satsToFiat(amountSat, btcToFiatRate, fiatCurrency), fiatCurrency);
-  };
-
-  const formatBitcoinWithFiat = (amountSat: number) => {
-    const fiatValue = formatFiatValue(amountSat);
-    if (fiatValue === "Unavailable") {
-      return formatBitcoinAmount(amountSat);
-    }
-
-    return `${formatBitcoinAmount(amountSat)} (${fiatValue})`;
   };
 
   const clearSelection = () => {
@@ -503,12 +458,10 @@ const VTXOsScreen = () => {
           )}
         </View>
 
-        <ConfirmationDialog
-          title="Refresh VTXOs?"
-          description="This refreshes the selected VTXOs in a delegated Ark round."
-          confirmText="Refresh"
-          cancelText="Cancel"
-          confirmVariant="default"
+        <VtxoRefreshDialog
+          amountSat={selectedAmountSat}
+          estimate={refreshEstimate}
+          isBusy={walletSync.isPending || refreshSelectedVtxos.isPending}
           open={isRefreshDialogOpen}
           onOpenChange={(open) => {
             if (walletSync.isPending || refreshSelectedVtxos.isPending) {
@@ -524,50 +477,8 @@ const VTXOsScreen = () => {
             setIsRefreshDialogOpen(false);
             setRefreshEstimate(null);
           }}
-          isConfirmDisabled={walletSync.isPending || refreshSelectedVtxos.isPending || !refreshEstimate}
-          contentClassName="w-[92%] rounded-2xl border-border bg-background p-5"
-          headerClassName="gap-2"
-          titleClassName="text-2xl font-bold text-foreground"
-          descriptionClassName="text-base leading-6 text-muted-foreground"
-          footerClassName="mt-1 gap-3 space-x-0"
-          cancelClassName="h-12 rounded-xl border-border bg-background"
-          actionClassName="h-12 rounded-xl"
-        >
-          {refreshEstimate ? (
-            <View className="gap-3">
-              <View className="rounded-xl border border-border/70 bg-card/80 p-4">
-                <Text className="text-sm font-medium text-muted-foreground">Amount selected</Text>
-                <Text
-                  className="mt-1 text-3xl font-bold text-foreground"
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.72}
-                >
-                  {formatBitcoinWithFiat(selectedAmountSat)}
-                </Text>
-              </View>
-
-              <View className="rounded-xl border border-border/70 bg-card/60 px-3 py-1">
-                <RefreshPlanRow
-                  label="VTXOs selected"
-                  value={selectedVtxos.length.toLocaleString()}
-                />
-                <View className="h-px bg-border/70" />
-                <RefreshPlanRow
-                  label="Refresh fee"
-                  value={formatBitcoinWithFiat(refreshEstimate.fee_sat)}
-                  valueClassName="text-red-500"
-                />
-                <View className="h-px bg-border/70" />
-                <RefreshPlanRow
-                  label="Amount after fee"
-                  value={formatBitcoinWithFiat(selectedAfterFeeSat)}
-                  valueClassName="text-green-500"
-                />
-              </View>
-            </View>
-          ) : null}
-        </ConfirmationDialog>
+          vtxoCount={selectedVtxos.length}
+        />
       </NoahSafeAreaView>
     </GestureHandlerRootView>
   );
