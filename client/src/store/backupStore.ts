@@ -75,11 +75,12 @@ export const useBackupStore = create<BackupState>()(
     (set) => ({
       ...initialState,
       markBackupPending: () =>
-        set({
+        set((state) => ({
           backupPending: true,
-          lastBackupStatus: "idle",
+          lastBackupStatus:
+            state.lastBackupStatus === "in_progress" ? "in_progress" : "idle",
           lastBackupError: null,
-        }),
+        })),
       setBackupInProgress: () =>
         set({
           backupPending: true,
@@ -90,7 +91,7 @@ export const useBackupStore = create<BackupState>()(
       setBackupSuccess: (snapshotSha256, backupId, uploaded, backupPending) =>
         set((state) => ({
           backupPending,
-          lastBackupStatus: "success",
+          lastBackupStatus: uploaded ? "success" : "idle",
           lastBackupAt: uploaded ? Date.now() : state.lastBackupAt,
           lastBackupError: null,
           lastBackupId: backupId ?? state.lastBackupId,
