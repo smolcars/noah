@@ -91,10 +91,12 @@ const performBackupPass = async (
   requireEnabled: boolean,
 ): Promise<Result<void, Error>> => {
   const backupStore = useBackupStore.getState();
-  backupStore.setBackupInProgress();
 
   const service = new BackupService();
-  const result = await service.performBackup(backupStore.lastUploadedSnapshotSha256);
+  const result = await service.performBackup(
+    backupStore.lastUploadedSnapshotSha256,
+    () => useBackupStore.getState().setBackupInProgress(),
+  );
   if (result.isErr()) {
     const safeMessage = redactSensitiveErrorMessage(result.error);
     useBackupStore.getState().setBackupFailed(safeMessage);

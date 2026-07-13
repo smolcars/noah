@@ -146,6 +146,7 @@ export class BackupService {
 
   async performBackup(
     lastUploadedSnapshotSha256: string | null,
+    onUploadRequired?: () => void,
   ): Promise<Result<BackupOutcome, Error>> {
     const operationId = uuid.v4().toString();
     const snapshotPath = `${CACHES_DIRECTORY_PATH}/wallet-snapshot-${operationId}.sqlite`;
@@ -163,6 +164,7 @@ export class BackupService {
       if (snapshot.sha256 === lastUploadedSnapshotSha256) {
         return ok({ backupId: null, snapshotSha256: snapshot.sha256, uploaded: false });
       }
+      onUploadRequired?.();
 
       const mnemonicResult = await getMnemonic();
       if (mnemonicResult.isErr()) {

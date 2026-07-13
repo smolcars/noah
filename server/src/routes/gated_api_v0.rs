@@ -424,8 +424,16 @@ pub async fn initiate_backup_object_upload(
         "{}/backups/{}.noahbackup",
         auth_payload.key, requested_backup_id
     );
+    let s3_client = S3BackupClient::new(state.config.s3_bucket_name.clone()).await?;
+    let upload_url = s3_client
+        .generate_checksummed_upload_url(
+            &requested_object_key,
+            &checksum_sha256,
+            payload.encrypted_size,
+        )
+        .await?;
     let pending_object = BackupRepository::new(&state.db_pool)
-        .create_pending_object(
+        .reserve_pending_object(
             requested_backup_id,
             &auth_payload.key,
             &requested_object_key,
@@ -433,26 +441,12 @@ pub async fn initiate_backup_object_upload(
             payload.encrypted_size,
             &encrypted_sha256,
         )
-        .await?;
-
-    if pending_object.format_version != payload.format_version
-        || pending_object.encrypted_size != payload.encrypted_size
-        || pending_object.encrypted_sha256 != encrypted_sha256
-    {
-        return Err(ApiError::Conflict(
-            "A different backup upload is already pending. Please retry after it expires."
-                .to_string(),
-        ));
-    }
-
-    let s3_client = S3BackupClient::new(state.config.s3_bucket_name.clone()).await?;
-    let upload_url = s3_client
-        .generate_checksummed_upload_url(
-            &pending_object.object_key,
-            &checksum_sha256,
-            payload.encrypted_size,
-        )
-        .await?;
+        .await?
+        .ok_or_else(|| {
+            ApiError::TooManyRequests(
+                "Too many backup upload attempts. Please retry in a few minutes.".to_string(),
+            )
+        })?;
 
     Ok(Json(InitiateBackupUploadResponse {
         backup_id: pending_object.backup_id.to_string(),
@@ -476,6 +470,11 @@ pub async fn complete_backup_object_upload(
     if object.completed_at.is_some() {
         return Ok(Json(DefaultSuccessPayload { success: true }));
     }
+    if object.status != "pending" {
+        return Err(ApiError::Conflict(
+            "This backup upload was superseded by a newer attempt.".to_string(),
+        ));
+    }
 
     let expected_checksum = base64::engine::general_purpose::STANDARD
         .encode(hex::decode(&object.encrypted_sha256).map_err(anyhow::Error::from)?);
@@ -493,7 +492,9 @@ pub async fn complete_backup_object_upload(
     }
 
     if !repo.complete_object(&auth_payload.key, backup_id).await? {
-        return Err(ApiError::NotFound("Backup upload not found".to_string()));
+        return Err(ApiError::Conflict(
+            "This backup upload was superseded by a newer attempt.".to_string(),
+        ));
     }
 
     for expired in repo

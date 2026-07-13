@@ -6,6 +6,7 @@ use std::convert::TryFrom;
 use crate::types::{BackupInfo, BackupObjectInfo};
 
 const COMPLETED_BACKUP_RETENTION: i64 = 3;
+const MAX_RECENT_BACKUP_RESERVATIONS: i64 = 5;
 
 /// Represents a record from the `backup_metadata` table.
 #[derive(Debug)]
@@ -24,6 +25,7 @@ pub struct BackupObject {
     pub format_version: i32,
     pub encrypted_size: u64,
     pub encrypted_sha256: String,
+    pub status: String,
     pub completed_at: Option<DateTime<Utc>>,
 }
 
@@ -36,6 +38,7 @@ impl<'r> sqlx::FromRow<'r, PgRow> for BackupObject {
             format_version: row.try_get("format_version")?,
             encrypted_size: row.try_get::<i64, _>("encrypted_size")? as u64,
             encrypted_sha256: row.try_get("encrypted_sha256")?,
+            status: row.try_get("status")?,
             completed_at: row.try_get("completed_at")?,
         })
     }
@@ -63,7 +66,7 @@ impl<'a> BackupRepository<'a> {
         Self { pool }
     }
 
-    pub async fn create_pending_object(
+    pub async fn reserve_pending_object(
         &self,
         backup_id: uuid::Uuid,
         pubkey: &str,
@@ -71,16 +74,43 @@ impl<'a> BackupRepository<'a> {
         format_version: i32,
         encrypted_size: u64,
         encrypted_sha256: &str,
-    ) -> Result<BackupObject> {
+    ) -> Result<Option<BackupObject>> {
         let size = i64::try_from(encrypted_size)?;
-        Ok(sqlx::query_as::<_, BackupObject>(
+        let mut transaction = self.pool.begin().await?;
+        sqlx::query("SELECT pubkey FROM users WHERE pubkey = $1 FOR UPDATE")
+            .bind(pubkey)
+            .fetch_one(&mut *transaction)
+            .await?;
+
+        let recent_count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*)
+             FROM backup_objects
+             WHERE pubkey = $1
+               AND status IN ('pending', 'superseded')
+               AND created_at > now() - interval '15 minutes'",
+        )
+        .bind(pubkey)
+        .fetch_one(&mut *transaction)
+        .await?;
+        if recent_count >= MAX_RECENT_BACKUP_RESERVATIONS {
+            return Ok(None);
+        }
+
+        sqlx::query(
+            "UPDATE backup_objects
+             SET status = 'superseded', superseded_at = now()
+             WHERE pubkey = $1 AND status = 'pending'",
+        )
+        .bind(pubkey)
+        .execute(&mut *transaction)
+        .await?;
+
+        let object = sqlx::query_as::<_, BackupObject>(
             "INSERT INTO backup_objects
                 (backup_id, pubkey, object_key, format_version, encrypted_size, encrypted_sha256)
              VALUES ($1, $2, $3, $4, $5, $6)
-             ON CONFLICT (pubkey) WHERE status = 'pending'
-             DO UPDATE SET pubkey = backup_objects.pubkey
              RETURNING backup_id, pubkey, object_key, format_version, encrypted_size,
-                       encrypted_sha256, completed_at",
+                       encrypted_sha256, status, completed_at",
         )
         .bind(backup_id)
         .bind(pubkey)
@@ -88,8 +118,10 @@ impl<'a> BackupRepository<'a> {
         .bind(format_version)
         .bind(size)
         .bind(encrypted_sha256)
-        .fetch_one(self.pool)
-        .await?)
+        .fetch_one(&mut *transaction)
+        .await?;
+        transaction.commit().await?;
+        Ok(Some(object))
     }
 
     pub async fn find_object(
@@ -99,7 +131,7 @@ impl<'a> BackupRepository<'a> {
     ) -> Result<Option<BackupObject>> {
         Ok(sqlx::query_as::<_, BackupObject>(
             "SELECT backup_id, pubkey, object_key, format_version, encrypted_size,
-                    encrypted_sha256, completed_at
+                    encrypted_sha256, status, completed_at
              FROM backup_objects
              WHERE pubkey = $1 AND backup_id = $2",
         )
@@ -157,7 +189,7 @@ impl<'a> BackupRepository<'a> {
         let object = if let Some(backup_id) = backup_id {
             sqlx::query_as::<_, BackupObject>(
                 "SELECT backup_id, pubkey, object_key, format_version, encrypted_size,
-                        encrypted_sha256, completed_at
+                        encrypted_sha256, status, completed_at
                  FROM backup_objects
                  WHERE pubkey = $1 AND backup_id = $2 AND status = 'completed'",
             )
@@ -168,7 +200,7 @@ impl<'a> BackupRepository<'a> {
         } else {
             sqlx::query_as::<_, BackupObject>(
                 "SELECT backup_id, pubkey, object_key, format_version, encrypted_size,
-                        encrypted_sha256, completed_at
+                        encrypted_sha256, status, completed_at
                  FROM backup_objects
                  WHERE pubkey = $1 AND status = 'completed'
                  ORDER BY completed_at DESC
@@ -187,7 +219,7 @@ impl<'a> BackupRepository<'a> {
     ) -> Result<Vec<BackupObject>> {
         Ok(sqlx::query_as::<_, BackupObject>(
             "SELECT backup_id, pubkey, object_key, format_version, encrypted_size,
-                    encrypted_sha256, completed_at
+                    encrypted_sha256, status, completed_at
              FROM backup_objects
              WHERE pubkey = $1 AND status = 'completed'
              ORDER BY completed_at DESC
@@ -199,18 +231,33 @@ impl<'a> BackupRepository<'a> {
         .await?)
     }
 
-    pub async fn stale_pending_objects(
+    pub async fn supersede_stale_pending(
         &self,
-        created_before: DateTime<Utc>,
+        pending_created_before: DateTime<Utc>,
+    ) -> Result<u64> {
+        let result = sqlx::query(
+            "UPDATE backup_objects
+             SET status = 'superseded', superseded_at = now()
+             WHERE status = 'pending' AND created_at < $1",
+        )
+        .bind(pending_created_before)
+        .execute(self.pool)
+        .await?;
+        Ok(result.rows_affected())
+    }
+
+    pub async fn stale_superseded_objects(
+        &self,
+        superseded_before: DateTime<Utc>,
     ) -> Result<Vec<BackupObject>> {
         Ok(sqlx::query_as::<_, BackupObject>(
             "SELECT backup_id, pubkey, object_key, format_version, encrypted_size,
-                    encrypted_sha256, completed_at
+                    encrypted_sha256, status, completed_at
              FROM backup_objects
-             WHERE status = 'pending' AND created_at < $1
+             WHERE status = 'superseded' AND superseded_at < $1
              ORDER BY created_at ASC",
         )
-        .bind(created_before)
+        .bind(superseded_before)
         .fetch_all(self.pool)
         .await?)
     }
@@ -222,6 +269,24 @@ impl<'a> BackupRepository<'a> {
             .execute(self.pool)
             .await?;
         Ok(result.rows_affected() == 1)
+    }
+
+    #[cfg(test)]
+    pub async fn set_object_created_at(
+        &self,
+        pubkey: &str,
+        backup_id: uuid::Uuid,
+        created_at: DateTime<Utc>,
+    ) -> Result<()> {
+        sqlx::query(
+            "UPDATE backup_objects SET created_at = $3 WHERE pubkey = $1 AND backup_id = $2",
+        )
+        .bind(pubkey)
+        .bind(backup_id)
+        .bind(created_at)
+        .execute(self.pool)
+        .await?;
+        Ok(())
     }
 
     /// Inserts or updates backup metadata.

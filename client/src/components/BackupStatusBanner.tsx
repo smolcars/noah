@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle, CloudUpload } from "lucide-react-native";
+import { AlertCircle, CheckCircle } from "lucide-react-native";
 import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
 import { StatusBannerStrip, type StatusBannerTone } from "~/components/StatusBannerStrip";
 import { useBackupStore } from "~/store/backupStore";
-import { useServerStore } from "~/store/serverStore";
 import { AUTO_BACKUP_SUCCESS_BANNER_MS } from "~/constants";
 import { flushBackup } from "~/lib/backupCoordinator";
 import logger from "~/lib/log";
@@ -18,7 +17,6 @@ const formatBackupTime = (timestamp: number) =>
   });
 
 export const BackupStatusBanner: React.FC = () => {
-  const { isBackupEnabled } = useServerStore();
   const { backupPending, lastBackupAt, lastBackupStatus, lastBackupError } = useBackupStore();
   const [isRetrying, setIsRetrying] = useState(false);
   const [tick, setTick] = useState(0);
@@ -50,9 +48,8 @@ export const BackupStatusBanner: React.FC = () => {
     now - lastBackupAt < AUTO_BACKUP_SUCCESS_BANNER_MS;
   const showInProgress = lastBackupStatus === "in_progress";
   const showFailed = lastBackupStatus === "failed";
-  const showPending = backupPending && !showInProgress && !showFailed;
 
-  const { title, message, icon, tone, actionLabel } = (() => {
+  const banner = (() => {
     if (showInProgress) {
       return {
         title: "Backing up wallet",
@@ -83,22 +80,14 @@ export const BackupStatusBanner: React.FC = () => {
       };
     }
 
-    return {
-      title: "Backup pending",
-      message: "Waiting to back up recent wallet changes",
-      icon: <CloudUpload size={16} color="#60a5fa" />,
-      tone: "info" as StatusBannerTone,
-      actionLabel: "Back up",
-    };
+    return null;
   })();
 
-  if (!isBackupEnabled && !backupPending && lastBackupStatus === "idle" && !lastBackupAt) {
+  if (!banner) {
     return null;
   }
 
-  if (!showSuccess && !showInProgress && !showFailed && !showPending) {
-    return null;
-  }
+  const { title, message, icon, tone, actionLabel } = banner;
 
   const handleBackupNow = () => {
     setIsRetrying(true);

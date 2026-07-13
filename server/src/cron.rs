@@ -20,7 +20,8 @@ const STALE_PENDING_JOB_ERROR_MESSAGE: &str = "Timed out after 1 hour waiting fo
 const STALE_PENDING_HEARTBEAT_TIMEOUT_MINUTES: i64 = 60;
 const STALE_PENDING_HEARTBEAT_SWEEP_SCHEDULE: &str = "every 10 minutes";
 const STALE_BACKUP_UPLOAD_TIMEOUT_MINUTES: i64 = 30;
-const STALE_BACKUP_UPLOAD_SWEEP_SCHEDULE: &str = "every 1 hour";
+const SUPERSEDED_BACKUP_UPLOAD_TIMEOUT_MINUTES: i64 = 20;
+const STALE_BACKUP_UPLOAD_SWEEP_SCHEDULE: &str = "every 5 minutes";
 const FIAT_RATE_REFRESH_LOCK_ID: i64 = 2025110501;
 
 pub async fn send_backup_notifications(app_state: AppState) -> anyhow::Result<()> {
@@ -189,10 +190,20 @@ pub async fn timeout_stale_pending_heartbeats(app_state: AppState) -> anyhow::Re
 
 pub async fn cleanup_stale_backup_uploads(app_state: AppState) -> anyhow::Result<()> {
     let repo = BackupRepository::new(&app_state.db_pool);
-    let cutoff =
+    let pending_cutoff =
         chrono::Utc::now() - chrono::Duration::minutes(STALE_BACKUP_UPLOAD_TIMEOUT_MINUTES);
-    let stale_uploads = repo.stale_pending_objects(cutoff).await?;
+    let superseded_cutoff =
+        chrono::Utc::now() - chrono::Duration::minutes(SUPERSEDED_BACKUP_UPLOAD_TIMEOUT_MINUTES);
+    let newly_superseded = repo.supersede_stale_pending(pending_cutoff).await?;
+    let stale_uploads = repo.stale_superseded_objects(superseded_cutoff).await?;
     if stale_uploads.is_empty() {
+        if newly_superseded > 0 {
+            tracing::info!(
+                job = "stale_backup_upload_cleanup",
+                newly_superseded,
+                "superseded stale pending backup uploads"
+            );
+        }
         return Ok(());
     }
 
@@ -204,7 +215,7 @@ pub async fn cleanup_stale_backup_uploads(app_state: AppState) -> anyhow::Result
                 job = "stale_backup_upload_cleanup",
                 backup_id = %upload.backup_id,
                 error = %error,
-                "failed to delete stale backup object"
+                "failed to delete incomplete backup object"
             );
             continue;
         }
@@ -215,8 +226,9 @@ pub async fn cleanup_stale_backup_uploads(app_state: AppState) -> anyhow::Result
 
     tracing::info!(
         job = "stale_backup_upload_cleanup",
+        newly_superseded,
         deleted_count,
-        "removed stale pending backup uploads"
+        "removed stale or superseded backup uploads"
     );
     Ok(())
 }
@@ -296,6 +308,7 @@ pub async fn cron_scheduler(
         stale_pending_heartbeat_timeout_minutes = STALE_PENDING_HEARTBEAT_TIMEOUT_MINUTES,
         stale_backup_upload_cleanup_schedule = %STALE_BACKUP_UPLOAD_SWEEP_SCHEDULE,
         stale_backup_upload_timeout_minutes = STALE_BACKUP_UPLOAD_TIMEOUT_MINUTES,
+        superseded_backup_upload_timeout_minutes = SUPERSEDED_BACKUP_UPLOAD_TIMEOUT_MINUTES,
         "scheduler initialized"
     );
 

@@ -121,53 +121,6 @@ async fn test_v2_upload_rejects_oversized_object_before_s3() {
 
 #[tracing_test::traced_test]
 #[tokio::test]
-async fn test_v2_upload_rejects_a_different_pending_object_before_s3() {
-    let (app, app_state, _guard) = setup_test_app().await;
-    let user = TestUser::new();
-    create_test_user(&app_state, &user, None).await;
-
-    let backup_id = Uuid::new_v4();
-    let pubkey = user.pubkey().to_string();
-    BackupRepository::new(&app_state.db_pool)
-        .create_pending_object(
-            backup_id,
-            &pubkey,
-            &format!("{pubkey}/backups/{backup_id}.noahbackup"),
-            2,
-            1024,
-            &"ab".repeat(32),
-        )
-        .await
-        .unwrap();
-
-    let response = app
-        .oneshot(
-            Request::builder()
-                .method(http::Method::POST)
-                .uri("/backup/v2/upload")
-                .header(http::header::CONTENT_TYPE, "application/json")
-                .header(
-                    http::header::AUTHORIZATION,
-                    format!("Bearer {}", user.access_token(&app_state)),
-                )
-                .body(Body::from(
-                    serde_json::to_vec(&json!({
-                        "format_version": 2,
-                        "encrypted_size": 2048,
-                        "encrypted_sha256": "cd".repeat(32)
-                    }))
-                    .unwrap(),
-                ))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-
-    assert_eq!(response.status(), StatusCode::CONFLICT);
-}
-
-#[tracing_test::traced_test]
-#[tokio::test]
 async fn test_v2_repository_only_lists_completed_objects_for_owner() {
     let (_app, app_state, _guard) = setup_test_app().await;
     let owner = TestUser::new();
@@ -177,7 +130,7 @@ async fn test_v2_repository_only_lists_completed_objects_for_owner() {
     let repo = BackupRepository::new(&app_state.db_pool);
     let backup_id = Uuid::new_v4();
     let owner_pubkey = owner.pubkey().to_string();
-    repo.create_pending_object(
+    repo.reserve_pending_object(
         backup_id,
         &owner_pubkey,
         &format!("{owner_pubkey}/backups/{backup_id}.noahbackup"),
@@ -186,6 +139,7 @@ async fn test_v2_repository_only_lists_completed_objects_for_owner() {
         &"ab".repeat(32),
     )
     .await
+    .unwrap()
     .unwrap();
 
     assert!(
@@ -217,7 +171,7 @@ async fn test_v2_repository_only_lists_completed_objects_for_owner() {
 
 #[tracing_test::traced_test]
 #[tokio::test]
-async fn test_v2_repository_reuses_one_pending_object_per_owner() {
+async fn test_v2_repository_supersedes_pending_object_for_owner() {
     let (_app, app_state, _guard) = setup_test_app().await;
     let owner = TestUser::new();
     create_test_user(&app_state, &owner, None).await;
@@ -226,7 +180,7 @@ async fn test_v2_repository_reuses_one_pending_object_per_owner() {
     let owner_pubkey = owner.pubkey().to_string();
     let first_id = Uuid::new_v4();
     let first = repo
-        .create_pending_object(
+        .reserve_pending_object(
             first_id,
             &owner_pubkey,
             &format!("{owner_pubkey}/backups/{first_id}.noahbackup"),
@@ -235,11 +189,12 @@ async fn test_v2_repository_reuses_one_pending_object_per_owner() {
             &"ab".repeat(32),
         )
         .await
+        .unwrap()
         .unwrap();
 
     let second_id = Uuid::new_v4();
     let second = repo
-        .create_pending_object(
+        .reserve_pending_object(
             second_id,
             &owner_pubkey,
             &format!("{owner_pubkey}/backups/{second_id}.noahbackup"),
@@ -248,12 +203,174 @@ async fn test_v2_repository_reuses_one_pending_object_per_owner() {
             &"cd".repeat(32),
         )
         .await
+        .unwrap()
         .unwrap();
 
     assert_eq!(first.backup_id, first_id);
-    assert_eq!(second.backup_id, first_id);
-    assert_eq!(second.encrypted_size, 1024);
-    assert_eq!(second.encrypted_sha256, "ab".repeat(32));
+    assert_eq!(second.backup_id, second_id);
+    assert_eq!(second.status, "pending");
+    let superseded = repo
+        .find_object(&owner_pubkey, first_id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(superseded.status, "superseded");
+    assert!(!repo.complete_object(&owner_pubkey, first_id).await.unwrap());
+    assert!(
+        repo.complete_object(&owner_pubkey, second_id)
+            .await
+            .unwrap()
+    );
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_v2_complete_rejects_superseded_upload_before_s3() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let owner = TestUser::new();
+    create_test_user(&app_state, &owner, None).await;
+
+    let repo = BackupRepository::new(&app_state.db_pool);
+    let owner_pubkey = owner.pubkey().to_string();
+    let superseded_id = Uuid::new_v4();
+    repo.reserve_pending_object(
+        superseded_id,
+        &owner_pubkey,
+        &format!("{owner_pubkey}/backups/{superseded_id}.noahbackup"),
+        2,
+        1024,
+        &"ab".repeat(32),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+
+    let current_id = Uuid::new_v4();
+    repo.reserve_pending_object(
+        current_id,
+        &owner_pubkey,
+        &format!("{owner_pubkey}/backups/{current_id}.noahbackup"),
+        2,
+        1024,
+        &"cd".repeat(32),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/backup/v2/complete")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", owner.access_token(&app_state)),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "backup_id": superseded_id.to_string()
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_v2_repository_limits_recent_incomplete_reservations() {
+    let (_app, app_state, _guard) = setup_test_app().await;
+    let owner = TestUser::new();
+    create_test_user(&app_state, &owner, None).await;
+
+    let repo = BackupRepository::new(&app_state.db_pool);
+    let owner_pubkey = owner.pubkey().to_string();
+    for attempt in 0..5 {
+        let backup_id = Uuid::new_v4();
+        assert!(
+            repo.reserve_pending_object(
+                backup_id,
+                &owner_pubkey,
+                &format!("{owner_pubkey}/backups/{backup_id}.noahbackup"),
+                2,
+                1024 + attempt,
+                &format!("{:064x}", attempt),
+            )
+            .await
+            .unwrap()
+            .is_some()
+        );
+    }
+
+    let blocked_id = Uuid::new_v4();
+    assert!(
+        repo.reserve_pending_object(
+            blocked_id,
+            &owner_pubkey,
+            &format!("{owner_pubkey}/backups/{blocked_id}.noahbackup"),
+            2,
+            2048,
+            &"ff".repeat(32),
+        )
+        .await
+        .unwrap()
+        .is_none()
+    );
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_v2_repository_supersedes_stale_pending_before_cleanup() {
+    let (_app, app_state, _guard) = setup_test_app().await;
+    let owner = TestUser::new();
+    create_test_user(&app_state, &owner, None).await;
+
+    let repo = BackupRepository::new(&app_state.db_pool);
+    let owner_pubkey = owner.pubkey().to_string();
+    let backup_id = Uuid::new_v4();
+    repo.reserve_pending_object(
+        backup_id,
+        &owner_pubkey,
+        &format!("{owner_pubkey}/backups/{backup_id}.noahbackup"),
+        2,
+        1024,
+        &"ab".repeat(32),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    repo.set_object_created_at(
+        &owner_pubkey,
+        backup_id,
+        chrono::Utc::now() - chrono::Duration::hours(1),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        repo.supersede_stale_pending(chrono::Utc::now() - chrono::Duration::minutes(30))
+            .await
+            .unwrap(),
+        1
+    );
+    assert!(
+        !repo
+            .complete_object(&owner_pubkey, backup_id)
+            .await
+            .unwrap()
+    );
+    let ready_for_cleanup = repo
+        .stale_superseded_objects(chrono::Utc::now() + chrono::Duration::seconds(1))
+        .await
+        .unwrap();
+    assert_eq!(ready_for_cleanup.len(), 1);
+    assert_eq!(ready_for_cleanup[0].backup_id, backup_id);
 }
 
 #[tracing_test::traced_test]
