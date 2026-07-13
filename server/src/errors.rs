@@ -34,6 +34,8 @@ pub enum ApiError {
     NotFound(String),
     #[error("Conflict: {0}")]
     Conflict(String),
+    #[error("Too many requests: {0}")]
+    TooManyRequests(String),
     #[error("K1 expired")]
     K1Expired,
     #[error("User not found")]
@@ -58,6 +60,7 @@ impl ApiError {
             ApiError::TokenExpired => StatusCode::UNAUTHORIZED,
             ApiError::NotFound(_) => StatusCode::NOT_FOUND,
             ApiError::Conflict(_) => StatusCode::CONFLICT,
+            ApiError::TooManyRequests(_) => StatusCode::TOO_MANY_REQUESTS,
             ApiError::K1Expired => StatusCode::UNAUTHORIZED,
             ApiError::UserNotFound => StatusCode::UNAUTHORIZED,
         }
@@ -78,6 +81,7 @@ impl ApiError {
             ApiError::TokenExpired => "TOKEN_EXPIRED",
             ApiError::NotFound(_) => "NOT_FOUND",
             ApiError::Conflict(_) => "CONFLICT",
+            ApiError::TooManyRequests(_) => "TOO_MANY_REQUESTS",
             ApiError::K1Expired => "K1_EXPIRED",
             ApiError::UserNotFound => "USER_NOT_FOUND",
         }
@@ -88,6 +92,7 @@ impl ApiError {
             ApiError::InvalidArgument(e) => e.to_string(),
             ApiError::NotFound(e) => e.to_string(),
             ApiError::Conflict(e) => e.to_string(),
+            ApiError::TooManyRequests(e) => e.to_string(),
             ApiError::ServerErr(e) => e.to_string(),
             ApiError::InvalidSignature => "Invalid signature".to_string(),
             ApiError::AuthRequired => "Authentication required".to_string(),
@@ -115,7 +120,8 @@ impl IntoResponse for ApiError {
             StatusCode::BAD_REQUEST
             | StatusCode::UNAUTHORIZED
             | StatusCode::NOT_FOUND
-            | StatusCode::CONFLICT => {
+            | StatusCode::CONFLICT
+            | StatusCode::TOO_MANY_REQUESTS => {
                 tracing::warn!(
                     error_type = ?self,
                     status = %status.as_u16(),
