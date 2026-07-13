@@ -72,15 +72,20 @@ const EsploraSettingsScreen = () => {
           className="mr-3"
           testID="esplora-settings-back-button"
         />
-        <Text className="text-2xl font-bold text-foreground">Esplora API</Text>
+        <Text className="text-2xl font-bold text-foreground">Edit Esplora API</Text>
       </View>
 
       <ScrollView
         className="flex-1 px-5"
         contentContainerStyle={{ paddingBottom: 32 }}
+        keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
       >
-        <View className="mt-6 rounded-2xl border border-border bg-card p-4">
+        <Text className="mt-5 text-base leading-6 text-muted-foreground">
+          Used for Bitcoin network data throughout the wallet.
+        </Text>
+
+        <View className="mt-5 rounded-2xl border border-border bg-card p-4">
           <Text className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
             Active endpoint
           </Text>
@@ -130,7 +135,7 @@ const EsploraSettingsScreen = () => {
 
         <View className="mt-6 gap-3">
           <NativeNoahButton
-            label="Test & Use Endpoint"
+            label="Test & Save Endpoint"
             loadingLabel="Testing Endpoint..."
             isLoading={switchEndpoint.isPending}
             disabled={!endpointInput.trim()}
@@ -147,7 +152,7 @@ const EsploraSettingsScreen = () => {
           />
         </View>
 
-        <View className="mt-7 rounded-2xl border border-border bg-card p-4">
+        <View className="mt-8 border-t border-border pt-6">
           <Text className="font-semibold text-foreground">Default endpoint</Text>
           <Text className="mt-2 text-sm text-muted-foreground">{defaultEndpoint}</Text>
           <Text className="mt-3 text-sm leading-5 text-muted-foreground">

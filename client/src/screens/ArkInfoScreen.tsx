@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { ChevronRight } from "lucide-react-native";
 import type { BarkArkInfo } from "react-native-nitro-ark";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
@@ -28,7 +29,12 @@ type ArkInfoValue = string | number | boolean;
 type InfoRow = {
   label: string;
   value: ArkInfoValue;
+  accessibilityHint?: string;
+  accessibilityLabel?: string;
+  actionLabel?: string;
   copyable?: boolean;
+  onPress?: () => void;
+  testID?: string;
   unit?: string;
 };
 
@@ -62,7 +68,12 @@ const InfoSection = ({ title, rows }: { title: string; rows: InfoRow[] }) => {
   const colors = useThemeColors();
   const [copiedKey, setCopiedKey] = React.useState<string | null>(null);
 
-  const handleCopy = async (row: InfoRow) => {
+  const handlePress = async (row: InfoRow) => {
+    if (row.onPress) {
+      row.onPress();
+      return;
+    }
+
     if (!row.copyable) {
       return;
     }
@@ -91,12 +102,21 @@ const InfoSection = ({ title, rows }: { title: string; rows: InfoRow[] }) => {
         {rows.map((row, index) => {
           const value = formatValue(row.value, row.unit);
           const copied = copiedKey === row.label;
+          const isPressable = Boolean(row.onPress || row.copyable);
 
           return (
             <Pressable
               key={row.label}
-              onPress={() => handleCopy(row)}
-              disabled={!row.copyable}
+              onPress={() => handlePress(row)}
+              disabled={!isPressable}
+              accessibilityRole={isPressable ? "button" : undefined}
+              accessibilityLabel={
+                row.accessibilityLabel ?? (row.copyable ? `Copy ${row.label}` : undefined)
+              }
+              accessibilityHint={row.accessibilityHint}
+              android_ripple={{ color: `${COLORS.BITCOIN_ORANGE}14` }}
+              style={({ pressed }) => (pressed && isPressable ? { opacity: 0.72 } : undefined)}
+              testID={row.testID}
               className={`flex-row items-center gap-3 px-4 py-4 ${
                 index < rows.length - 1 ? "border-b border-border/60" : ""
               }`}
@@ -105,13 +125,23 @@ const InfoSection = ({ title, rows }: { title: string; rows: InfoRow[] }) => {
                 <Text className="text-sm text-muted-foreground">{row.label}</Text>
                 <Text
                   className="mt-1 text-base font-semibold text-foreground"
-                  numberOfLines={row.copyable ? 1 : 2}
+                  numberOfLines={isPressable ? 1 : 2}
                   ellipsizeMode="middle"
                 >
-                  {row.copyable && typeof row.value === "string" ? truncateValue(value) : value}
+                  {isPressable && typeof row.value === "string" ? truncateValue(value) : value}
                 </Text>
               </View>
-              {row.copyable ? (
+              {row.actionLabel ? (
+                <View className="flex-row items-center gap-1">
+                  <Text
+                    className="text-xs font-semibold uppercase tracking-[2px]"
+                    style={{ color: COLORS.BITCOIN_ORANGE }}
+                  >
+                    {row.actionLabel}
+                  </Text>
+                  <ChevronRight size={16} color={COLORS.BITCOIN_ORANGE} strokeWidth={2.5} />
+                </View>
+              ) : row.copyable ? (
                 <Text
                   className="text-xs font-semibold uppercase tracking-[2px]"
                   style={{ color: copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE }}
@@ -183,12 +213,24 @@ const buildSections = (arkInfo: BarkArkInfo) => [
   },
 ];
 
-const buildConfigurationSections = (esploraEndpoint: string | null) => [
+const buildConfigurationSections = (
+  esploraEndpoint: string | null,
+  hasEsploraOverride: boolean,
+  onEditEsplora: () => void,
+) => [
   {
     title: "Wallet endpoints",
     rows: compactRows([
       { label: "Ark server", value: ACTIVE_WALLET_CONFIG.config?.ark, copyable: true },
-      { label: "Esplora API", value: esploraEndpoint, copyable: true },
+      {
+        label: hasEsploraOverride ? "Esplora API · Custom" : "Esplora API · Noah default",
+        value: esploraEndpoint,
+        actionLabel: "Edit",
+        onPress: onEditEsplora,
+        accessibilityLabel: "Edit Esplora API endpoint",
+        accessibilityHint: "Opens the endpoint editor.",
+        testID: "edit-esplora-endpoint",
+      },
       { label: "Bitcoind RPC", value: ACTIVE_WALLET_CONFIG.config?.bitcoind, copyable: true },
     ]),
   },
@@ -209,9 +251,15 @@ const ArkInfoScreen = () => {
   const endpointOverride = useEsploraStore((state) => state.endpointOverride);
   const esploraEndpoint = endpointOverride ?? getDefaultEsploraEndpoint();
   const { data: arkInfo, isLoading, isError, error, refetch, isFetching } = useArkInfo();
+  const openEsploraEditor = () => navigation.navigate("Esplora");
+  const configurationSections = buildConfigurationSections(
+    esploraEndpoint,
+    endpointOverride !== null,
+    openEsploraEditor,
+  );
   const sections = arkInfo
-    ? [...buildSections(arkInfo), ...buildConfigurationSections(esploraEndpoint)]
-    : buildConfigurationSections(esploraEndpoint);
+    ? [...buildSections(arkInfo), ...configurationSections]
+    : configurationSections;
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
