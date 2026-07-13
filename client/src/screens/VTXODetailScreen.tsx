@@ -111,7 +111,7 @@ const VTXODetailScreen = () => {
   const [isRefreshDialogOpen, setIsRefreshDialogOpen] = useState(false);
   const { data: blockHeight } = useGetBlockHeight();
   const { vtxo: routeVtxo } = route.params as { vtxo: VTXOWithStatus };
-  const { data: allVtxos = [] } = useGetVtxos();
+  const { data: allVtxos = [], isSuccess: hasLoadedVtxos } = useGetVtxos();
   const { data: expiringVtxos } = useGetExpiringVtxos();
   const estimateRefreshFee = useEstimateRefreshFee();
   const refreshSelectedVtxos = useRefreshSelectedVtxos();
@@ -129,7 +129,8 @@ const VTXODetailScreen = () => {
     vtxo.state !== "Locked" &&
     (blockHeight !== undefined ? vtxo.expiry_height <= blockHeight : vtxo.isExpired);
   const needsRefresh = vtxo.state !== "Locked" && (vtxo.isExpiring || isExpired);
-  const canRefresh = vtxo.state !== "Locked";
+  const canRefresh =
+    hasLoadedVtxos && latestVtxo !== undefined && latestVtxo.state !== "Locked";
   const isRefreshBusy =
     estimateRefreshFee.isPending || refreshSelectedVtxos.isPending || walletSync.isPending;
   const statusLabel =
