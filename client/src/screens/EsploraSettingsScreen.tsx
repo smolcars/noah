@@ -109,8 +109,8 @@ const EsploraSettingsScreen = () => {
             testID="esplora-endpoint-input"
           />
           <Text className="text-sm leading-5 text-muted-foreground">
-            Noah will test /blocks/tip/height before changing the wallet configuration. You may also
-            paste the full tip-height or tip-hash URL.
+            Noah will test /block-height/0 and verify the Bitcoin network before changing the wallet
+            configuration. You may also paste the full test or tip URL.
           </Text>
         </View>
 

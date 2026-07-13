@@ -8,12 +8,17 @@ import {
 import { APP_VARIANT } from "~/config";
 import { useEsploraStore } from "~/store/esploraStore";
 import {
+  getEsploraGenesisHashUrl,
   getEsploraTipHeightUrl,
   normalizeEsploraEndpoint,
-  parseEsploraTipHeight,
+  validateEsploraGenesisHash,
 } from "~/lib/esploraUrl";
 
 const ESPLORA_VALIDATION_TIMEOUT_MS = 5000;
+const ESPLORA_GENESIS_HASHES = {
+  mainnet: "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+  signet: "00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6",
+} as const;
 
 export const getDefaultEsploraEndpoint = (): string | null => {
   if (APP_VARIANT === "regtest") {
@@ -65,10 +70,14 @@ export const validateEsploraEndpoint = async (value: string): Promise<Result<str
     return err(normalizedResult.error);
   }
 
+  if (APP_VARIANT === "regtest") {
+    return err(new Error("Regtest wallets use Bitcoin Core instead of Esplora."));
+  }
+
   const endpoint = normalizedResult.value;
   const responseResult = await ResultAsync.fromPromise(
     ky
-      .get(getEsploraTipHeightUrl(endpoint), {
+      .get(getEsploraGenesisHashUrl(endpoint), {
         retry: 0,
         timeout: ESPLORA_VALIDATION_TIMEOUT_MS,
       })
@@ -80,9 +89,12 @@ export const validateEsploraEndpoint = async (value: string): Promise<Result<str
     return err(responseResult.error);
   }
 
-  const heightResult = parseEsploraTipHeight(responseResult.value);
-  if (heightResult.isErr()) {
-    return err(heightResult.error);
+  const genesisHashResult = validateEsploraGenesisHash(
+    responseResult.value,
+    ESPLORA_GENESIS_HASHES[APP_VARIANT],
+  );
+  if (genesisHashResult.isErr()) {
+    return err(genesisHashResult.error);
   }
 
   return ok(endpoint);

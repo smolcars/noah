@@ -1,6 +1,10 @@
 import { err, ok, type Result } from "neverthrow";
 
-const TIP_ENDPOINT_SUFFIXES = ["/blocks/tip/height", "/blocks/tip/hash"] as const;
+const ESPLORA_ENDPOINT_SUFFIXES = [
+  "/blocks/tip/height",
+  "/blocks/tip/hash",
+  "/block-height/0",
+] as const;
 
 export const normalizeEsploraEndpoint = (value: string): Result<string, Error> => {
   const trimmed = value.trim();
@@ -29,7 +33,7 @@ export const normalizeEsploraEndpoint = (value: string): Result<string, Error> =
     return err(new Error("The Esplora endpoint cannot include a query string or fragment."));
   }
 
-  const matchedSuffix = TIP_ENDPOINT_SUFFIXES.find((suffix) =>
+  const matchedSuffix = ESPLORA_ENDPOINT_SUFFIXES.find((suffix) =>
     url.pathname.replace(/\/+$/, "").endsWith(suffix),
   );
   if (matchedSuffix) {
@@ -42,16 +46,30 @@ export const normalizeEsploraEndpoint = (value: string): Result<string, Error> =
 export const getEsploraTipHeightUrl = (endpoint: string): string =>
   `${endpoint.replace(/\/+$/, "")}/blocks/tip/height`;
 
-export const parseEsploraTipHeight = (value: string): Result<number, Error> => {
-  const trimmed = value.trim();
-  if (!/^\d+$/.test(trimmed)) {
-    return err(new Error("The endpoint returned an invalid block height."));
+export const getEsploraGenesisHashUrl = (endpoint: string): string =>
+  `${endpoint.replace(/\/+$/, "")}/block-height/0`;
+
+export const parseEsploraBlockHash = (value: string): Result<string, Error> => {
+  const normalized = value.trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(normalized)) {
+    return err(new Error("The endpoint returned an invalid block hash."));
   }
 
-  const height = Number(trimmed);
-  if (!Number.isSafeInteger(height)) {
-    return err(new Error("The endpoint returned an invalid block height."));
+  return ok(normalized);
+};
+
+export const validateEsploraGenesisHash = (
+  value: string,
+  expectedGenesisHash: string,
+): Result<void, Error> => {
+  const hashResult = parseEsploraBlockHash(value);
+  if (hashResult.isErr()) {
+    return err(hashResult.error);
   }
 
-  return ok(height);
+  if (hashResult.value !== expectedGenesisHash) {
+    return err(new Error("The Esplora endpoint is for a different Bitcoin network."));
+  }
+
+  return ok(undefined);
 };
