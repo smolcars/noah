@@ -15,6 +15,7 @@ import * as Location from "expo-location";
 import { useDeferredValue, useEffect, useRef, useState, type ComponentProps } from "react";
 import {
   Alert,
+  Keyboard,
   Linking,
   Platform,
   Pressable,
@@ -38,7 +39,15 @@ import {
   XBrandIcon,
 } from "~/components/BrandIcons";
 import { useBtcMapPlace, useBtcMapPlaces } from "~/hooks/useBtcMap";
+import { useCitySearch } from "~/hooks/useCitySearch";
 import { useTheme } from "~/hooks/useTheme";
+import {
+  cityDisplayLabel,
+  citySecondaryLabel,
+  normalizeSearchText,
+  searchCities,
+  type CitySearchEntry,
+} from "~/lib/citySearch";
 import logger from "~/lib/log";
 import { mmkv } from "~/lib/mmkv";
 import { type BtcMapPlace, type BtcMapPlaceDetail } from "~/lib/btcMap";
@@ -145,6 +154,23 @@ const getForegroundLocation = async (): Promise<ForegroundLocationResult> => {
   }
 };
 
+const searchPlaces = (places: ReadonlyArray<BtcMapPlace>, query: string, limit: number) =>
+  query.length < 2
+    ? []
+    : places
+        .flatMap((place) => {
+          const name = normalizeSearchText(place.name);
+          const score =
+            name === query ? 0 : name.startsWith(query) ? 1 : name.includes(query) ? 2 : 3;
+          return score === 3 ? [] : [{ place, score }];
+        })
+        .sort(
+          (left, right) =>
+            left.score - right.score || left.place.name.localeCompare(right.place.name),
+        )
+        .slice(0, limit)
+        .map(({ place }) => place);
+
 function DetailAction({
   icon,
   label,
@@ -165,6 +191,42 @@ function DetailAction({
     >
       <Icon name={icon} size={20} color={colors.foreground} />
       <Text className="text-xs font-semibold">{label}</Text>
+    </Pressable>
+  );
+}
+
+function SearchResultRow({
+  icon,
+  label,
+  detail,
+  onPress,
+}: {
+  icon: ComponentProps<typeof Icon>["name"];
+  label: string;
+  detail: string;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${label}, ${detail}`}
+      onPress={onPress}
+      className="flex-row items-center gap-3 px-4 py-3"
+      style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
+    >
+      <View className="h-9 w-9 items-center justify-center rounded-full bg-secondary">
+        <Icon name={icon} size={18} color={colors.foreground} />
+      </View>
+      <View className="flex-1">
+        <Text className="font-semibold" numberOfLines={1}>
+          {label}
+        </Text>
+        <Text className="mt-0.5 text-xs text-muted-foreground" numberOfLines={1}>
+          {detail}
+        </Text>
+      </View>
+      <Icon name="chevron-forward" size={16} color={colors.mutedForeground} />
     </Pressable>
   );
 }
@@ -453,12 +515,17 @@ export default function BtcMapScreen() {
   const cameraRef = useRef<CameraRef>(null);
   const placesSourceRef = useRef<GeoJSONSourceRef>(null);
   const snapshotQuery = useBtcMapPlaces();
+  const cityIndexQuery = useCitySearch();
   const [initialViewport] = useState(loadStoredBtcMapViewport);
+  const [mapViewport, setMapViewport] = useState(initialViewport ?? DEFAULT_VIEWPORT);
   const canPersistViewportRef = useRef(initialViewport !== undefined);
   const initialLocationAttemptRef = useRef(false);
   const [category, setCategory] = useState<PlaceCategory>("all");
   const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search.trim().toLocaleLowerCase());
+  const deferredSearch = useDeferredValue(search);
+  const normalizedSearch = normalizeSearchText(deferredSearch);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<CitySearchEntry>();
   const [selectedPlaceId, setSelectedPlaceId] = useState<number>();
   const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<Coordinates>();
@@ -493,6 +560,7 @@ export default function BtcMapScreen() {
       };
       canPersistViewportRef.current = true;
       saveBtcMapViewport(viewport);
+      setMapViewport(viewport);
       setUserLocation(result.coordinates);
       cameraRef.current?.easeTo({ ...viewport, duration: 700 });
     });
@@ -506,10 +574,24 @@ export default function BtcMapScreen() {
   }, [initialViewport, snapshotQuery.isSuccess]);
 
   const places = snapshotQuery.data?.places ?? EMPTY_PLACES;
+  const matchingCategoryPlaces = places.filter(
+    (place) => category === "all" || getPlaceCategory(place.icon) === category,
+  );
+  const isAutocompleteOpen =
+    isSearchFocused && normalizedSearch.length >= 2 && selectedCity === undefined;
+  const cityResults = searchCities(
+    cityIndexQuery.data?.cities ?? [],
+    normalizedSearch,
+    3,
+    mapViewport.center,
+  );
+  const merchantResults = searchPlaces(matchingCategoryPlaces, normalizedSearch, 3);
   const filteredPlaces = places.filter(
     (place) =>
       (category === "all" || getPlaceCategory(place.icon) === category) &&
-      (deferredSearch.length === 0 || place.name.toLocaleLowerCase().includes(deferredSearch)),
+      (selectedCity !== undefined ||
+        normalizedSearch.length === 0 ||
+        normalizeSearchText(place.name).includes(normalizedSearch)),
   );
   const placesGeoJson: GeoJSON.FeatureCollection<GeoJSON.Point, PlaceFeatureProperties> = {
     type: "FeatureCollection",
@@ -541,6 +623,9 @@ export default function BtcMapScreen() {
     const viewport: BtcMapViewport = { center: [place.lon, place.lat], zoom: 15 };
     canPersistViewportRef.current = true;
     saveBtcMapViewport(viewport);
+    setMapViewport(viewport);
+    setIsSearchFocused(false);
+    Keyboard.dismiss();
     setSelectedPlaceId(place.id);
     setIsDetailSheetOpen(true);
     cameraRef.current?.easeTo({ ...viewport, duration: 650 });
@@ -559,6 +644,7 @@ export default function BtcMapScreen() {
     }
     canPersistViewportRef.current = true;
     saveBtcMapViewport(viewport);
+    setMapViewport(viewport);
   };
 
   const handlePlacePress = async (event: NativeSyntheticEvent<PressEventWithFeatures>) => {
@@ -578,6 +664,7 @@ export default function BtcMapScreen() {
         if (viewport) {
           canPersistViewportRef.current = true;
           saveBtcMapViewport(viewport);
+          setMapViewport(viewport);
           cameraRef.current?.easeTo({ ...viewport, duration: 450 });
         }
       }
@@ -613,7 +700,24 @@ export default function BtcMapScreen() {
     };
     canPersistViewportRef.current = true;
     saveBtcMapViewport(viewport);
+    setMapViewport(viewport);
+    setSearch("");
+    setSelectedCity(undefined);
     setUserLocation(result.coordinates);
+    cameraRef.current?.easeTo({ ...viewport, duration: 700 });
+  };
+
+  const selectCity = (city: CitySearchEntry) => {
+    const viewport: BtcMapViewport = { center: city.center, zoom: 11 };
+    canPersistViewportRef.current = true;
+    saveBtcMapViewport(viewport);
+    setMapViewport(viewport);
+    setSearch(cityDisplayLabel(city));
+    setSelectedCity(city);
+    setSelectedPlaceId(undefined);
+    setUserLocation(undefined);
+    setIsSearchFocused(false);
+    Keyboard.dismiss();
     cameraRef.current?.easeTo({ ...viewport, duration: 700 });
   };
 
@@ -661,6 +765,10 @@ export default function BtcMapScreen() {
         compassPosition={{ top: insets.top + 118, right: 14 }}
         touchPitch={false}
         onRegionDidChange={handleRegionDidChange}
+        onPress={() => {
+          setIsSearchFocused(false);
+          Keyboard.dismiss();
+        }}
       >
         <Camera
           ref={cameraRef}
@@ -737,9 +845,19 @@ export default function BtcMapScreen() {
             <Icon name="search" size={19} color={colors.mutedForeground} />
             <TextInput
               value={search}
-              onChangeText={setSearch}
-              accessibilityLabel="Search BTC Map places"
-              placeholder="Search places"
+              onChangeText={(value) => {
+                setSearch(value);
+                setSelectedCity(undefined);
+              }}
+              onFocus={() => setIsSearchFocused(true)}
+              onSubmitEditing={() => {
+                const city = cityResults[0];
+                if (city) {
+                  selectCity(city);
+                }
+              }}
+              accessibilityLabel="Search places or cities"
+              placeholder="Search places or cities"
               placeholderTextColor={colors.mutedForeground}
               className="ml-2 flex-1 text-base text-foreground"
               returnKeyType="search"
@@ -749,53 +867,112 @@ export default function BtcMapScreen() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Clear search"
-                onPress={() => setSearch("")}
+                onPress={() => {
+                  setSearch("");
+                  setSelectedCity(undefined);
+                }}
               >
                 <Icon name="close-circle" size={20} color={colors.mutedForeground} />
               </Pressable>
             )}
           </View>
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerClassName="mt-2 gap-2 pr-4"
-        >
-          {PLACE_CATEGORIES.map((item) => {
-            const selected = category === item.value;
-            return (
-              <Pressable
-                key={item.value}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                onPress={() => setCategory(item.value)}
-                className={`rounded-full border px-4 py-2 ${
-                  selected ? "border-[#f7931a] bg-[#f7931a]" : "border-border bg-background"
-                }`}
-              >
-                <Text className={`text-sm font-semibold ${selected ? "text-white" : ""}`}>
-                  {item.label}
+        {isAutocompleteOpen ? (
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+            className="mt-2 max-h-80 rounded-3xl border border-border bg-background"
+          >
+            <Text className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Locations
+            </Text>
+            {cityIndexQuery.isLoading && (
+              <View className="flex-row items-center gap-2 px-4 py-3">
+                <NoahActivityIndicator size="small" />
+                <Text className="text-sm text-muted-foreground">Loading city search…</Text>
+              </View>
+            )}
+            {cityResults.map((city) => (
+              <SearchResultRow
+                key={city.id}
+                icon="location-outline"
+                label={city.name}
+                detail={citySecondaryLabel(city)}
+                onPress={() => selectCity(city)}
+              />
+            ))}
+
+            {merchantResults.length > 0 && (
+              <>
+                <View className="mx-4 h-px bg-border" />
+                <Text className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Bitcoin places
                 </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                {merchantResults.map((place) => (
+                  <SearchResultRow
+                    key={place.id}
+                    icon="storefront-outline"
+                    label={place.name}
+                    detail={categoryLabel(place)}
+                    onPress={() => selectPlace(place)}
+                  />
+                ))}
+              </>
+            )}
+
+            {!cityIndexQuery.isLoading &&
+              cityResults.length === 0 &&
+              merchantResults.length === 0 && (
+                <Text className="px-4 pb-5 pt-2 text-sm text-muted-foreground">
+                  No matching cities or Bitcoin places
+                </Text>
+              )}
+          </ScrollView>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerClassName="mt-2 gap-2 pr-4"
+          >
+            {PLACE_CATEGORIES.map((item) => {
+              const selected = category === item.value;
+              return (
+                <Pressable
+                  key={item.value}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  onPress={() => setCategory(item.value)}
+                  className={`rounded-full border px-4 py-2 ${
+                    selected ? "border-[#f7931a] bg-[#f7931a]" : "border-border bg-background"
+                  }`}
+                >
+                  <Text className={`text-sm font-semibold ${selected ? "text-white" : ""}`}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
       </View>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Find places near me"
-        disabled={isLocating}
-        onPress={() => void handleLocate()}
-        className="absolute right-3 h-12 w-12 items-center justify-center rounded-full border border-border bg-background"
-        style={{ top: insets.top + 112, opacity: isLocating ? 0.6 : 1 }}
-      >
-        {isLocating ? (
-          <NoahActivityIndicator size="small" />
-        ) : (
-          <Icon name="locate" size={22} color={COLORS.BITCOIN_ORANGE} />
-        )}
-      </Pressable>
+      {!isAutocompleteOpen && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Find places near me"
+          disabled={isLocating}
+          onPress={() => void handleLocate()}
+          className="absolute right-3 h-12 w-12 items-center justify-center rounded-full border border-border bg-background"
+          style={{ top: insets.top + 112, opacity: isLocating ? 0.6 : 1 }}
+        >
+          {isLocating ? (
+            <NoahActivityIndicator size="small" />
+          ) : (
+            <Icon name="locate" size={22} color={COLORS.BITCOIN_ORANGE} />
+          )}
+        </Pressable>
+      )}
 
       <View
         pointerEvents="box-none"
@@ -822,6 +999,17 @@ export default function BtcMapScreen() {
           }
         >
           <Text className="text-[10px] text-white">BTC Map</Text>
+        </Pressable>
+        <Text className="text-[10px] text-white">·</Text>
+        <Pressable
+          accessibilityRole="link"
+          onPress={() =>
+            void openUrl("https://www.geonames.org").catch((error) =>
+              log.w("Could not open GeoNames attribution", [error]),
+            )
+          }
+        >
+          <Text className="text-[10px] text-white">GeoNames</Text>
         </Pressable>
       </View>
 

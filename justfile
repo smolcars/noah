@@ -31,6 +31,10 @@ bump *args:
 btcmap-snapshot:
     bun run btcmap:snapshot
 
+# Refresh the GeoNames city index bundled with the client
+geonames-snapshot:
+    bun run geonames:snapshot
+
 # Android builds (regtest)
 android:
     bun run android:regtest:debug

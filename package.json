@@ -14,6 +14,7 @@
     "android:clean": "bun client android:clean",
     "ios:clean": "bun client ios:clean",
     "btcmap:snapshot": "bun scripts/update_btcmap_snapshot.ts",
+    "geonames:snapshot": "bun scripts/update_geonames_snapshot.ts",
     "postinstall": "bun scripts/download_ark_binaries.js",
     "prepare": "husky",
     "check": "bun client check"
