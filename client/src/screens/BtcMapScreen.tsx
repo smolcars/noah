@@ -96,12 +96,12 @@ const isCurrentBoost = (place: BtcMapPlace) =>
   place.boosted_until !== undefined && new Date(place.boosted_until).getTime() > Date.now();
 
 const openUrl = async (url: string) => {
-  const supported = await Linking.canOpenURL(url);
-  if (!supported) {
+  try {
+    await Linking.openURL(url);
+  } catch (error) {
     Alert.alert("Cannot open link", "No app is available to open this link.");
-    return;
+    throw error;
   }
-  await Linking.openURL(url);
 };
 
 const loadStoredBtcMapViewport = (): BtcMapViewport | undefined => {
