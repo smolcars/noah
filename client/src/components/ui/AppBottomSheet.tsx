@@ -1,3 +1,5 @@
+import { Host as SwiftHost, Rectangle as SwiftRectangle } from "@expo/ui/swift-ui";
+import { foregroundStyle, glassEffect } from "@expo/ui/swift-ui/modifiers";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Keyboard,
@@ -11,6 +13,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ModalBottomSheet, type Detent } from "@swmansion/react-native-bottom-sheet";
 
+import { useTheme } from "~/hooks/useTheme";
+
 type AppBottomSheetProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -20,7 +24,34 @@ type AppBottomSheetProps = {
   scrimColor?: string;
   scrollable?: boolean;
   avoidKeyboard?: boolean;
+  liquidGlass?: boolean;
 };
+
+function LiquidGlassSheetSurface() {
+  const { isDark } = useTheme();
+
+  return (
+    <SwiftHost
+      colorScheme={isDark ? "dark" : "light"}
+      pointerEvents="none"
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          borderTopLeftRadius: 32,
+          borderTopRightRadius: 32,
+          overflow: "hidden",
+        },
+      ]}
+    >
+      <SwiftRectangle
+        modifiers={[
+          foregroundStyle("clear"),
+          glassEffect({ glass: { variant: "regular" }, shape: "rectangle" }),
+        ]}
+      />
+    </SwiftHost>
+  );
+}
 
 export const AppBottomSheet = ({
   isOpen,
@@ -31,6 +62,7 @@ export const AppBottomSheet = ({
   scrimColor = "rgba(0, 0, 0, 0.55)",
   scrollable = false,
   avoidKeyboard = false,
+  liquidGlass = false,
 }: AppBottomSheetProps) => {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -47,6 +79,7 @@ export const AppBottomSheet = ({
       : typeof openDetentValue === "number" && openDetentValue > 0
         ? openDetentValue
         : undefined;
+  const showsLiquidGlass = liquidGlass && Platform.OS === "ios" && Number(Platform.Version) >= 26;
 
   useEffect(() => {
     if (!avoidKeyboard) {
@@ -89,10 +122,14 @@ export const AppBottomSheet = ({
       scrimColor={scrimColor}
       style={avoidKeyboard && keyboardOffset > 0 ? { bottom: keyboardOffset } : undefined}
       surface={
-        <View
-          className="rounded-t-[32px] border border-border bg-background"
-          style={StyleSheet.absoluteFill}
-        />
+        showsLiquidGlass ? (
+          <LiquidGlassSheetSurface />
+        ) : (
+          <View
+            className="rounded-t-[32px] border border-border bg-background"
+            style={StyleSheet.absoluteFill}
+          />
+        )
       }
     >
       <View

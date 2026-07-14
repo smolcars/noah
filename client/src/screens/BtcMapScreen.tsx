@@ -753,6 +753,7 @@ export default function BtcMapScreen() {
           detents={[0, PLACE_DETAIL_SHEET_HEIGHT]}
           scrimColor="rgba(0, 0, 0, 0.18)"
           scrollable
+          liquidGlass
         >
           <PlaceDetailPanel
             place={selectedPlace}
