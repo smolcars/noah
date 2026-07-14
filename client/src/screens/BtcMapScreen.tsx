@@ -48,6 +48,7 @@ import {
   searchCities,
   type CitySearchEntry,
 } from "~/lib/citySearch";
+import { useCopyToClipboard } from "~/lib/clipboardUtils";
 import logger from "~/lib/log";
 import { mmkv } from "~/lib/mmkv";
 import { type BtcMapPlace, type BtcMapPlaceDetail } from "~/lib/btcMap";
@@ -241,9 +242,13 @@ function PlaceDetailPanel({
   onClose: () => void;
 }) {
   const { colors } = useTheme();
+  const { copyWithState, isCopied } = useCopyToClipboard(1200);
   const detailQuery = useBtcMapPlace(place.id, place.comments);
   const detail: BtcMapPlaceDetail = detailQuery.data?.place ?? place;
   const distance = userLocation ? distanceKm(userLocation, place) : undefined;
+  const address = detail.address;
+  const addressCopyId = `place-address-${place.id}`;
+  const addressCopied = isCopied(addressCopyId);
 
   const openDirections = () => {
     const label = encodeURIComponent(place.name);
@@ -336,11 +341,23 @@ function PlaceDetailPanel({
         </Text>
       )}
 
-      {detail.address && (
-        <View className="mt-4 flex-row gap-3">
+      {address && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={addressCopied ? "Address copied" : `Copy address: ${address}`}
+          accessibilityHint="Copies the merchant address to the clipboard"
+          onPress={() => void copyWithState(address, addressCopyId)}
+          className="-mx-2 mt-2 flex-row items-start gap-3 rounded-xl px-2 py-2"
+          style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
+        >
           <Icon name="location-outline" size={18} color={colors.mutedForeground} />
-          <Text className="flex-1 text-sm leading-5">{detail.address}</Text>
-        </View>
+          <Text className="flex-1 text-sm leading-5">{address}</Text>
+          <Icon
+            name={addressCopied ? "checkmark-circle-outline" : "copy-outline"}
+            size={18}
+            color={addressCopied ? COLORS.SUCCESS : colors.mutedForeground}
+          />
+        </Pressable>
       )}
       {detail.opening_hours && (
         <View className="mt-3 flex-row gap-3">
