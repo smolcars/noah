@@ -41,7 +41,6 @@ import {
   ARK_DATA_PATH,
   CACHES_DIRECTORY_PATH,
   DOCUMENT_DIRECTORY_PATH,
-  ACTIVE_WALLET_CONFIG,
   shouldUseUnifiedPush,
 } from "../constants";
 import {
@@ -62,13 +61,13 @@ import {
 } from "noah-tools";
 import { useWalletStore } from "~/store/walletStore";
 import { APP_VARIANT } from "~/config";
-import {
-  getActiveWalletConfig,
-  getDefaultEsploraEndpoint,
-  getEffectiveEsploraEndpoint,
-  validateEsploraEndpoint,
-} from "~/lib/esplora";
+import { getEffectiveEsploraEndpoint, validateEsploraEndpoint } from "~/lib/esplora";
 import { useEsploraStore } from "~/store/esploraStore";
+import {
+  getDefaultEsploraEndpoint,
+  getEffectiveWalletConfig,
+  getWalletRefreshExpiryThreshold,
+} from "~/lib/walletConfig";
 
 const log = logger("walletApi");
 
@@ -94,7 +93,10 @@ const createWalletFromMnemonic = async (mnemonic: string): Promise<Result<void, 
   }
 
   const createResult = await ResultAsync.fromPromise(
-    createWalletNitro(ARK_DATA_PATH, { ...getActiveWalletConfig(), mnemonic }),
+    createWalletNitro(ARK_DATA_PATH, {
+      ...getEffectiveWalletConfig(getEffectiveEsploraEndpoint()),
+      mnemonic,
+    }),
     (e) => e as Error,
   );
 
@@ -176,7 +178,7 @@ export const loadWalletWithMnemonic = async (
   const loadResult = await ResultAsync.fromPromise(
     loadWalletNitro(ARK_DATA_PATH, {
       mnemonic,
-      ...getActiveWalletConfig(esploraEndpoint),
+      ...getEffectiveWalletConfig(esploraEndpoint),
     }),
     (e) => e as Error,
   );
@@ -534,7 +536,7 @@ export const dropVtxo = async (vtxoId: string): Promise<Result<void, Error>> => 
 
 export const getExpiringVtxos = async () => {
   return ResultAsync.fromPromise(
-    getExpiringVtxosNitro(ACTIVE_WALLET_CONFIG.config?.vtxo_refresh_expiry_threshold || 288),
+    getExpiringVtxosNitro(getWalletRefreshExpiryThreshold()),
     (e) => e as Error,
   );
 };

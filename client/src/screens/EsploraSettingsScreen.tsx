@@ -12,7 +12,7 @@ import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 import { Text } from "~/components/ui/text";
 import { useSwitchEsploraEndpoint } from "~/hooks/useEsplora";
-import { getDefaultEsploraEndpoint } from "~/lib/esplora";
+import { getDefaultEsploraEndpoint } from "~/lib/walletConfig";
 import type { SettingsStackParamList } from "~/Navigators";
 import { useEsploraStore } from "~/store/esploraStore";
 

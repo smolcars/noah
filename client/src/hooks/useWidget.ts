@@ -5,8 +5,8 @@ import { APP_VARIANT } from "~/config";
 import logger from "~/lib/log";
 import { getVtxos, fetchOnchainBalance, fetchOffchainBalance } from "~/lib/walletApi";
 import { getBlockHeight } from "~/hooks/useMarketData";
-import { ACTIVE_WALLET_CONFIG } from "~/constants";
 import { calculateBalances, type BalanceData } from "~/lib/balanceUtils";
+import { getWalletRefreshExpiryThreshold } from "~/lib/walletConfig";
 
 const log = logger("useWidget");
 
@@ -110,7 +110,7 @@ export async function updateWidget(balanceData?: BalanceData): Promise<void> {
       }
     }
 
-    const expiryThreshold = ACTIVE_WALLET_CONFIG.config?.vtxo_refresh_expiry_threshold || 288;
+    const expiryThreshold = getWalletRefreshExpiryThreshold();
 
     updateWidgetData(
       totalBalance,

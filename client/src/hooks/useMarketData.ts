@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { REGTEST_CONFIG } from "~/constants";
 import { getBlockheightEndpoint } from "~/lib/esplora";
 import ky from "ky";
 import logger from "~/lib/log";
@@ -12,6 +11,7 @@ import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
 import { getFiatPrices, getHistoricalFiatPrice } from "~/lib/api";
 import { useProfileStore } from "~/store/profileStore";
 import { useEsploraStore } from "~/store/esploraStore";
+import { getWalletRpcAuth } from "~/lib/walletConfig";
 
 const HISTORICAL_RATE_CACHE_MAX_SIZE = 200;
 type HistoricalRateLookup = {
@@ -58,10 +58,7 @@ export const getBlockHeight = async (): Promise<Result<number, Error>> => {
   const url = getBlockheightEndpoint();
 
   if (APP_VARIANT === "regtest") {
-    const auth = {
-      username: REGTEST_CONFIG.config?.bitcoind_user,
-      password: REGTEST_CONFIG.config?.bitcoind_pass,
-    };
+    const auth = getWalletRpcAuth();
 
     return ResultAsync.fromPromise(
       ky

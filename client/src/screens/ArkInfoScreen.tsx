@@ -13,14 +13,11 @@ import { copyToClipboard } from "~/lib/clipboardUtils";
 import { COLORS } from "~/lib/styleConstants";
 import { useThemeColors } from "~/hooks/useTheme";
 import type { SettingsStackParamList } from "~/Navigators";
-import {
-  ACTIVE_WALLET_CONFIG,
-  mempoolHistoricalPriceEndpoint,
-  mempoolPriceEndpoint,
-} from "~/constants";
+import { mempoolHistoricalPriceEndpoint, mempoolPriceEndpoint } from "~/constants";
 import { APP_VARIANT } from "~/config";
-import { getBlockheightEndpoint, getDefaultEsploraEndpoint } from "~/lib/esplora";
+import { getBlockheightEndpoint } from "~/lib/esplora";
 import { useEsploraStore } from "~/store/esploraStore";
+import { getDefaultEsploraEndpoint, getWalletEndpoints } from "~/lib/walletConfig";
 
 type NavigationProp = NativeStackNavigationProp<SettingsStackParamList, "ArkInfo">;
 
@@ -217,33 +214,37 @@ const buildConfigurationSections = (
   esploraEndpoint: string | null,
   hasEsploraOverride: boolean,
   onEditEsplora: () => void,
-) => [
-  {
-    title: "Wallet endpoints",
-    rows: compactRows([
-      { label: "Ark server", value: ACTIVE_WALLET_CONFIG.config?.ark, copyable: true },
-      {
-        label: hasEsploraOverride ? "Esplora API · Custom" : "Esplora API · Noah default",
-        value: esploraEndpoint,
-        actionLabel: "Edit",
-        onPress: onEditEsplora,
-        accessibilityLabel: "Edit Esplora API endpoint",
-        accessibilityHint: "Opens the endpoint editor.",
-        testID: "edit-esplora-endpoint",
-      },
-      { label: "Bitcoind RPC", value: ACTIVE_WALLET_CONFIG.config?.bitcoind, copyable: true },
-    ]),
-  },
-  {
-    title: "Explorer APIs",
-    rows: compactRows([
-      { label: "Block height API", value: getBlockheightEndpoint(), copyable: true },
-      { label: "Mempool explorer", value: getMempoolExplorerBaseUrl(), copyable: true },
-      { label: "Price API", value: mempoolPriceEndpoint, copyable: true },
-      { label: "Historical price API", value: mempoolHistoricalPriceEndpoint, copyable: true },
-    ]),
-  },
-];
+) => {
+  const walletEndpoints = getWalletEndpoints(esploraEndpoint);
+
+  return [
+    {
+      title: "Wallet endpoints",
+      rows: compactRows([
+        { label: "Ark server", value: walletEndpoints.ark, copyable: true },
+        {
+          label: hasEsploraOverride ? "Esplora API · Custom" : "Esplora API · Noah default",
+          value: walletEndpoints.esplora,
+          actionLabel: "Edit",
+          onPress: onEditEsplora,
+          accessibilityLabel: "Edit Esplora API endpoint",
+          accessibilityHint: "Opens the endpoint editor.",
+          testID: "edit-esplora-endpoint",
+        },
+        { label: "Bitcoind RPC", value: walletEndpoints.bitcoind, copyable: true },
+      ]),
+    },
+    {
+      title: "Explorer APIs",
+      rows: compactRows([
+        { label: "Block height API", value: getBlockheightEndpoint(), copyable: true },
+        { label: "Mempool explorer", value: getMempoolExplorerBaseUrl(), copyable: true },
+        { label: "Price API", value: mempoolPriceEndpoint, copyable: true },
+        { label: "Historical price API", value: mempoolHistoricalPriceEndpoint, copyable: true },
+      ]),
+    },
+  ];
+};
 
 const ArkInfoScreen = () => {
   const navigation = useNavigation<NavigationProp>();

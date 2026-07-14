@@ -1,4 +1,3 @@
-import type { BarkCreateOpts } from "react-native-nitro-ark";
 import RNFSTurbo from "react-native-fs-turbo";
 import { APP_VARIANT } from "./config";
 import { decode } from "light-bolt11-decoder";
@@ -26,12 +25,6 @@ export const CACHES_DIRECTORY_PATH = RNFSTurbo.CachesDirectoryPath;
 // Emulators are excluded in this check and only real devices matter.
 export const shouldUseUnifiedPush = () =>
   PLATFORM === "android" && Device.isDevice && !isGooglePlayServicesAvailable();
-
-const REGTEST_URL = process.env.EXPO_PUBLIC_REGTEST_URL
-  ? process.env.EXPO_PUBLIC_REGTEST_URL
-  : PLATFORM === "android"
-    ? "10.0.2.2"
-    : "localhost";
 
 const REGTEST_SERVER_URL = process.env.EXPO_PUBLIC_REGTEST_SERVER_URL
   ? process.env.EXPO_PUBLIC_REGTEST_SERVER_URL
@@ -81,71 +74,6 @@ export const getLnurlDomain = (): string => {
   }
 };
 
-export type WalletCreationOptions = Omit<BarkCreateOpts, "mnemonic">;
-
-export const SIGNET_CONFIG: WalletCreationOptions = {
-  regtest: false,
-  signet: true,
-  bitcoin: false,
-  config: {
-    esplora: "https://esplora.signet.2nd.dev",
-    ark: "https://ark.signet.2nd.dev",
-    vtxo_refresh_expiry_threshold: 48,
-    fallback_fee_rate: 10000,
-    htlc_recv_claim_delta: 18,
-    vtxo_exit_margin: 12,
-    round_tx_required_confirmations: 1,
-  },
-};
-
-export const REGTEST_CONFIG: WalletCreationOptions = {
-  regtest: true,
-  signet: false,
-  bitcoin: false,
-  config: {
-    bitcoind: `http://${REGTEST_URL}:18443`,
-    ark: `http://${REGTEST_URL}:3535`,
-    bitcoind_user: "second",
-    bitcoind_pass: "ark",
-    vtxo_refresh_expiry_threshold: 24,
-    fallback_fee_rate: 10000,
-    htlc_recv_claim_delta: 18,
-    vtxo_exit_margin: 12,
-    round_tx_required_confirmations: 1,
-  },
-};
-
-export const PRODUCTION_CONFIG: WalletCreationOptions = {
-  regtest: false,
-  signet: false,
-  bitcoin: true,
-  config: {
-    esplora: "https://mempool.second.tech/api",
-    ark: "https://ark.second.tech",
-    vtxo_refresh_expiry_threshold: 288,
-    fallback_fee_rate: 10000,
-    htlc_recv_claim_delta: 18,
-    vtxo_exit_margin: 12,
-    round_tx_required_confirmations: 2,
-  },
-};
-
-const getActiveWalletConfig = (): WalletCreationOptions => {
-  switch (APP_VARIANT) {
-    case "regtest":
-      return REGTEST_CONFIG;
-    case "signet":
-      return SIGNET_CONFIG;
-    case "mainnet":
-      return PRODUCTION_CONFIG;
-    default:
-      // Default to signet for development builds that aren't launched via a profile
-      return SIGNET_CONFIG;
-  }
-};
-
-export const ACTIVE_WALLET_CONFIG = getActiveWalletConfig();
-
 export const decodeBolt11 = (invoice: string) => {
   return Result.fromThrowable(decode)(invoice).unwrapOr(null);
 };
@@ -154,17 +82,6 @@ export const msatToSatoshi = (msat: number) => msat / 1000;
 
 export const mempoolPriceEndpoint = `${getServerEndpoint()}/v0/prices`;
 export const mempoolHistoricalPriceEndpoint = `${getServerEndpoint()}/v0/historical-price`;
-
-export const getDefaultBlockheightEndpoint = () => {
-  switch (APP_VARIANT) {
-    case "mainnet":
-      return "https://mempool.second.tech/api/blocks/tip/height";
-    case "signet":
-      return "https://mempool.space/signet/api/blocks/tip/height";
-    case "regtest":
-      return `http://${REGTEST_URL}:18443`;
-  }
-};
 
 export const getMempoolTxUrl = (anchorPoint: string): string | null => {
   const txid = anchorPoint.split(":")[0];
