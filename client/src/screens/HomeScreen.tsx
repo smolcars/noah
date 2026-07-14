@@ -199,6 +199,7 @@ const HomeScreen = () => {
       <View className="relative m-4 h-[52px]">
         <NativeHomeHeaderActions
           onBoardArk={() => navigation.navigate("BoardArk")}
+          onOpenPlaces={() => navigation.navigate("BtcMap")}
           onOpenQr={() => navigation.navigate("QRHub")}
           onOpenSettings={() => navigation.navigate("Settings")}
         />

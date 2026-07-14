@@ -428,6 +428,7 @@
 				C5FCC581670747C288FF9153 /* [Expo Dev Launcher] Strip Local Network Keys for Release */,
 				A6ED6C1C037766EFC9079E3D /* [CP] Embed Pods Frameworks */,
 				2951B4B9361944A3900A3C98 /* [CP] Copy Pods Resources */,
+				0F60CE3D275E638B76FFF5EB /* [MapLibre React Native] Remove MapLibre.xcframework-ios.signature */,
 			);
 			buildRules = (
 			);
@@ -435,6 +436,9 @@
 				C3C8E72E2EC4DFD300A7BF32 /* PBXTargetDependency */,
 			);
 			name = Noah;
+			packageProductDependencies = (
+				AFDDD8919A3F8760EC6282EF /* MapLibre */,
+			);
 			productName = noah;
 			productReference = 13B07F961A680F5B00A75B9A /* Noah.app */;
 			productType = "com.apple.product-type.application";
@@ -452,6 +456,7 @@
 				C3C8E7142EC4DF3C00A7BF32 /* Embed Foundation Extensions */,
 				8E05494DDA98B659FE796968 /* [CP] Embed Pods Frameworks */,
 				3D92B3E53869B522CD1B9110 /* [CP] Copy Pods Resources */,
+				8E1C981D0987F726F592AFA0 /* [MapLibre React Native] Remove MapLibre.xcframework-ios.signature */,
 			);
 			buildRules = (
 			);
@@ -459,6 +464,9 @@
 				C3C8E7122EC4DF3C00A7BF32 /* PBXTargetDependency */,
 			);
 			name = "Noah-Signet";
+			packageProductDependencies = (
+				968B83678DB207919D578B7A /* MapLibre */,
+			);
 			productName = noah;
 			productReference = C39DD7152E0C95AF000CB6A9 /* Noah-Signet.app */;
 			productType = "com.apple.product-type.application";
@@ -476,6 +484,7 @@
 				C379B5722EC4D046004DFDC1 /* Embed Foundation Extensions */,
 				A5D1985E48CFE32E8B0300E5 /* [CP] Embed Pods Frameworks */,
 				1073B479687179FA02E1EC81 /* [CP] Copy Pods Resources */,
+				30C4F8B5F1A4F5E9A4730C57 /* [MapLibre React Native] Remove MapLibre.xcframework-ios.signature */,
 			);
 			buildRules = (
 			);
@@ -483,6 +492,9 @@
 				C3C8E74A2EC4E26C00A7BF32 /* PBXTargetDependency */,
 			);
 			name = "Noah-Regtest";
+			packageProductDependencies = (
+				2CC0D1998C6E6DB436BE49D7 /* MapLibre */,
+			);
 			productName = noah;
 			productReference = C39DD72A2E0C973E000CB6A9 /* Noah-Regtest.app */;
 			productType = "com.apple.product-type.application";
@@ -578,6 +590,9 @@
 				Base,
 			);
 			mainGroup = 83CBB9F61A601CBA00E9B192;
+			packageReferences = (
+				46D1A33179E0BA75B8C83E16 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 83CBBA001A601CBA00E9B192 /* Products */;
 			projectDirPath = "";
@@ -686,6 +701,25 @@
 			shellPath = /bin/sh;
 			shellScript = "if [[ -f \"$PODS_ROOT/../.xcode.env\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env\"\nfi\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\n# The project root by default is one level up from the ios directory\nexport PROJECT_ROOT=\"$PROJECT_DIR\"/..\n\nif [[ \"$CONFIGURATION\" = *Debug* ]]; then\n  export SKIP_BUNDLING=1\nfi\nif [[ -z \"$ENTRY_FILE\" ]]; then\n  # Set the entry JS file using the bundler's entry resolution.\n  export ENTRY_FILE=\"$(\"$NODE_BINARY\" -e \"require('expo/scripts/resolveAppEntry')\" \"$PROJECT_ROOT\" ios absolute | tail -n 1)\"\nfi\n\nif [[ -z \"$CLI_PATH\" ]]; then\n  # Use Expo CLI\n  export CLI_PATH=\"$(\"$NODE_BINARY\" --print \"require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })\")\"\nfi\nif [[ -z \"$BUNDLE_COMMAND\" ]]; then\n  # Default Expo CLI command for bundling\n  export BUNDLE_COMMAND=\"export:embed\"\nfi\n\n# Source .xcode.env.updates if it exists to allow\n# SKIP_BUNDLING to be unset if needed\nif [[ -f \"$PODS_ROOT/../.xcode.env.updates\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.updates\"\nfi\n# Source local changes to allow overrides\n# if needed\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\n/bin/sh `\"$NODE_BINARY\" --print \"require('path').dirname(require.resolve('@sentry/react-native/package.json')) + '/scripts/sentry-xcode.sh'\"` `\"$NODE_BINARY\" --print \"require('path').dirname(require.resolve('react-native/package.json')) + '/scripts/react-native-xcode.sh'\"`\n\n";
 		};
+		0F60CE3D275E638B76FFF5EB /* [MapLibre React Native] Remove MapLibre.xcframework-ios.signature */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[MapLibre React Native] Remove MapLibre.xcframework-ios.signature";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\"";
+		};
 		1073B479687179FA02E1EC81 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -733,6 +767,25 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-noah-common-Noah/Pods-noah-common-Noah-resources.sh\"\n";
 			showEnvVarsInLog = 0;
+		};
+		30C4F8B5F1A4F5E9A4730C57 /* [MapLibre React Native] Remove MapLibre.xcframework-ios.signature */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[MapLibre React Native] Remove MapLibre.xcframework-ios.signature";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\"";
 		};
 		3D92B3E53869B522CD1B9110 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -811,6 +864,25 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-noah-common-Noah-Signet/Pods-noah-common-Noah-Signet-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
+		};
+		8E1C981D0987F726F592AFA0 /* [MapLibre React Native] Remove MapLibre.xcframework-ios.signature */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[MapLibre React Native] Remove MapLibre.xcframework-ios.signature";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\"";
 		};
 		A5D1985E48CFE32E8B0300E5 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -1773,6 +1845,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		46D1A33179E0BA75B8C83E16 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/maplibre/maplibre-gl-native-distribution";
+			requirement = {
+				kind = exactVersion;
+				version = 6.26.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2CC0D1998C6E6DB436BE49D7 /* MapLibre */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 46D1A33179E0BA75B8C83E16 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */;
+			productName = MapLibre;
+		};
+		968B83678DB207919D578B7A /* MapLibre */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 46D1A33179E0BA75B8C83E16 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */;
+			productName = MapLibre;
+		};
+		AFDDD8919A3F8760EC6282EF /* MapLibre */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 46D1A33179E0BA75B8C83E16 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */;
+			productName = MapLibre;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 83CBB9F71A601CBA00E9B192 /* Project object */;
 }

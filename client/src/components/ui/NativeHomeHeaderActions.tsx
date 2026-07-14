@@ -1,5 +1,6 @@
 import {
   Button as SwiftButton,
+  Divider as SwiftDivider,
   Host as SwiftHost,
   HStack as SwiftHStack,
   Spacer as SwiftSpacer,
@@ -10,6 +11,7 @@ import {
   buttonStyle,
   controlSize,
   frame,
+  glassEffect,
   labelStyle,
 } from "@expo/ui/swift-ui/modifiers";
 import Icon from "@react-native-vector-icons/ionicons";
@@ -23,12 +25,14 @@ const ACTION_GROUP_WIDTH = 112;
 
 type NativeHomeHeaderActionsProps = {
   onBoardArk: () => void;
+  onOpenPlaces: () => void;
   onOpenQr: () => void;
   onOpenSettings: () => void;
 };
 
 export function NativeHomeHeaderActions({
   onBoardArk,
+  onOpenPlaces,
   onOpenQr,
   onOpenSettings,
 }: NativeHomeHeaderActionsProps) {
@@ -39,18 +43,43 @@ export function NativeHomeHeaderActions({
     return (
       <SwiftHost seedColor={COLORS.BITCOIN_ORANGE} style={{ flex: 1 }}>
         <SwiftHStack alignment="center">
-          <SwiftButton
-            label="Board Ark"
-            systemImage="ferry"
-            onPress={onBoardArk}
+          <SwiftHStack
+            alignment="center"
+            spacing={0}
             modifiers={[
-              buttonStyle("glass"),
-              buttonBorderShape("circle"),
-              controlSize("large"),
-              labelStyle("iconOnly"),
-              accessibilityIdentifier("home-board-ark-button"),
+              frame({ width: ACTION_GROUP_WIDTH, height: BUTTON_SIZE }),
+              glassEffect({
+                glass: { variant: "regular", interactive: true },
+                shape: "capsule",
+              }),
             ]}
-          />
+          >
+            <SwiftButton
+              label="Board Ark"
+              systemImage="ferry"
+              onPress={onBoardArk}
+              modifiers={[
+                buttonStyle("borderless"),
+                controlSize("large"),
+                labelStyle("iconOnly"),
+                frame({ width: BUTTON_SIZE, height: BUTTON_SIZE }),
+                accessibilityIdentifier("home-board-ark-button"),
+              ]}
+            />
+            <SwiftDivider modifiers={[frame({ height: 22 })]} />
+            <SwiftButton
+              label="Find places that accept bitcoin"
+              systemImage="map"
+              onPress={onOpenPlaces}
+              modifiers={[
+                buttonStyle("borderless"),
+                controlSize("large"),
+                labelStyle("iconOnly"),
+                frame({ width: BUTTON_SIZE, height: BUTTON_SIZE }),
+                accessibilityIdentifier("home-btc-map-button"),
+              ]}
+            />
+          </SwiftHStack>
           <SwiftSpacer />
           <SwiftHStack
             alignment="center"
@@ -89,27 +118,51 @@ export function NativeHomeHeaderActions({
 
   return (
     <View className="flex-1 flex-row items-center justify-between">
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Board Ark"
-        android_ripple={{ color: `${COLORS.BITCOIN_ORANGE}33`, borderless: true }}
-        onPress={onBoardArk}
-        testID="home-board-ark-button"
-        style={({ pressed }) => ({
-          width: BUTTON_SIZE,
+      <View
+        className="flex-row overflow-hidden"
+        style={{
+          width: ACTION_GROUP_WIDTH,
           height: BUTTON_SIZE,
-          alignItems: "center",
-          justifyContent: "center",
           borderRadius: BUTTON_SIZE / 2,
           borderWidth: 1,
           borderColor: colors.border,
           backgroundColor: `${COLORS.BITCOIN_ORANGE}14`,
-          opacity: pressed ? 0.72 : 1,
-          overflow: "hidden",
-        })}
+        }}
       >
-        <Icon name="boat-outline" size={24} color={colors.foreground} />
-      </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Board Ark"
+          android_ripple={{ color: `${COLORS.BITCOIN_ORANGE}33` }}
+          onPress={onBoardArk}
+          testID="home-board-ark-button"
+          style={({ pressed }) => ({
+            width: ACTION_GROUP_WIDTH / 2,
+            height: BUTTON_SIZE,
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: pressed ? 0.72 : 1,
+          })}
+        >
+          <Icon name="boat-outline" size={23} color={colors.foreground} />
+        </Pressable>
+        <View className="my-3 w-px bg-border" />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Find places that accept bitcoin"
+          android_ripple={{ color: `${COLORS.BITCOIN_ORANGE}33` }}
+          onPress={onOpenPlaces}
+          testID="home-btc-map-button"
+          style={({ pressed }) => ({
+            width: ACTION_GROUP_WIDTH / 2 - 1,
+            height: BUTTON_SIZE,
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: pressed ? 0.72 : 1,
+          })}
+        >
+          <Icon name="map-outline" size={23} color={colors.foreground} />
+        </Pressable>
+      </View>
       <View
         className="flex-row justify-between"
         style={{

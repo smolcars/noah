@@ -200,6 +200,8 @@ PODS:
     - ExpoModulesCore
   - ExpoLocalAuthentication (57.0.0):
     - ExpoModulesCore
+  - ExpoLocation (57.0.2):
+    - ExpoModulesCore
   - ExpoLogBox (57.0.0):
     - React-Core
   - ExpoModulesCore (57.0.3):
@@ -256,6 +258,28 @@ PODS:
   - hermes-engine (250829098.0.14):
     - hermes-engine/Pre-built (= 250829098.0.14)
   - hermes-engine/Pre-built (250829098.0.14)
+  - MapLibreReactNative (11.3.6):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - MMKVCore (2.4.0)
   - NitroArk (0.0.131):
     - hermes-engine
@@ -2817,6 +2841,7 @@ DEPENDENCIES:
   - ExpoImagePicker (from `../../node_modules/expo-image-picker/ios`)
   - ExpoKeepAwake (from `../../node_modules/expo-keep-awake/ios`)
   - ExpoLocalAuthentication (from `../../node_modules/expo-local-authentication/ios`)
+  - ExpoLocation (from `../../node_modules/expo-location/ios`)
   - "ExpoLogBox (from `../../node_modules/@expo/log-box`)"
   - ExpoModulesCore (from `../../node_modules/expo-modules-core`)
   - ExpoModulesJSI (from `../../node_modules/expo-modules-jsi/apple`)
@@ -2830,6 +2855,7 @@ DEPENDENCIES:
   - EXUpdatesInterface (from `../../node_modules/expo-updates-interface/ios`)
   - FBLazyVector (from `../../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
+  - "MapLibreReactNative (from `../../node_modules/@maplibre/maplibre-react-native`)"
   - NitroArk (from `../../node_modules/react-native-nitro-ark`)
   - NitroMmkv (from `../../node_modules/react-native-mmkv`)
   - NitroModules (from `../../node_modules/react-native-nitro-modules`)
@@ -2978,6 +3004,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/expo-keep-awake/ios"
   ExpoLocalAuthentication:
     :path: "../../node_modules/expo-local-authentication/ios"
+  ExpoLocation:
+    :path: "../../node_modules/expo-location/ios"
   ExpoLogBox:
     :path: "../../node_modules/@expo/log-box"
   ExpoModulesCore:
@@ -3005,6 +3033,8 @@ EXTERNAL SOURCES:
   hermes-engine:
     :podspec: "../../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec"
     :tag: hermes-v250829098.0.14
+  MapLibreReactNative:
+    :path: "../../node_modules/@maplibre/maplibre-react-native"
   NitroArk:
     :path: "../../node_modules/react-native-nitro-ark"
   NitroMmkv:
@@ -3218,6 +3248,7 @@ SPEC CHECKSUMS:
   ExpoImagePicker: 028fde7f7f9a6d17db48f85dc15fd7046041ee3d
   ExpoKeepAwake: c5a7e46e8f52c093370ea89457d73c060d0b2a2e
   ExpoLocalAuthentication: 934b3cfab91473c0cf25114a119ac856eac122a5
+  ExpoLocation: a808bb82b56940bfe207730941c5d3518985960e
   ExpoLogBox: 71393ad8a15193044673cee88f6f41cf014bccd7
   ExpoModulesCore: 4a8b5444f63e5f45cc670a84a9dac5ad13f5b062
   ExpoModulesJSI: ca1381e851de6269705442ba66bc54a3320a142b
@@ -3231,6 +3262,7 @@ SPEC CHECKSUMS:
   EXUpdatesInterface: fb5f5bd7cc4cc5b598fe12386ad158db9aa8cbbb
   FBLazyVector: b3e7ad108f0d882e30445c5527d774e3fd432f3d
   hermes-engine: 10ad1fccd364c7e3d9c1de19a7edb1bdd632c6b4
+  MapLibreReactNative: 5df4460492c6c8af365fc6107f48f0e922d915ad
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
   NitroArk: 3fedb9f2fc57b4fee97a708706e6639cb7f77280
   NitroMmkv: 1ff46eceb958298b1d7c013a6314432438b77a62
@@ -3334,6 +3366,6 @@ SPEC CHECKSUMS:
   Yoga: fe50ab299e578f397fef753cf309c6703a4db29b
   ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
 
-PODFILE CHECKSUM: 4f7bfef54d368b084972ea249849c22cbbd71897
+PODFILE CHECKSUM: 90f020762334e63fe6527266173ef03e02a18523
 
 COCOAPODS: 1.16.2

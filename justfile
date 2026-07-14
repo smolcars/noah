@@ -27,6 +27,14 @@ start:
 bump *args:
     bun scripts/bump_client_version.ts {{ args }}
 
+# Refresh the BTC Map snapshot bundled with the client
+btcmap-snapshot:
+    bun run btcmap:snapshot
+
+# Refresh the GeoNames city index bundled with the client
+geonames-snapshot:
+    bun run geonames:snapshot
+
 # Android builds (regtest)
 android:
     bun run android:regtest:debug
