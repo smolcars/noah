@@ -38,7 +38,15 @@ export const AppBottomSheet = ({
   const sheetHeight = Math.max(windowHeight - Math.max(insets.top, 16) - 12, 320);
   const resolvedDetents: Detent[] = detents ?? [0, "content"];
   const openIndex = resolvedDetents.length - 1;
-  const shouldConstrainContentHeight = detents === undefined;
+  const openDetent = resolvedDetents[openIndex];
+  const openDetentValue =
+    typeof openDetent === "object" && openDetent !== null ? openDetent.value : openDetent;
+  const contentHeight =
+    detents === undefined
+      ? sheetHeight
+      : typeof openDetentValue === "number" && openDetentValue > 0
+        ? openDetentValue
+        : undefined;
 
   useEffect(() => {
     if (!avoidKeyboard) {
@@ -89,7 +97,7 @@ export const AppBottomSheet = ({
     >
       <View
         className="px-4 pt-3"
-        style={shouldConstrainContentHeight ? { height: sheetHeight } : undefined}
+        style={contentHeight === undefined ? undefined : { height: contentHeight }}
       >
         <View className="mb-3 h-1 w-12 self-center rounded-full bg-muted-foreground/30" />
         {scrollable ? (

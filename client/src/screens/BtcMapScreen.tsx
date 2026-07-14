@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
+import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { Text } from "~/components/ui/text";
 import {
   FacebookBrandIcon,
@@ -53,6 +54,7 @@ const log = logger("BtcMapScreen");
 const LIGHT_MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 const DARK_MAP_STYLE = "https://tiles.openfreemap.org/styles/dark";
 const EMPTY_PLACES: BtcMapPlace[] = [];
+const PLACE_DETAIL_SHEET_HEIGHT = 390;
 
 type Coordinates = { latitude: number; longitude: number };
 type ForegroundLocationResult =
@@ -138,12 +140,10 @@ function DetailAction({
 function PlaceDetailPanel({
   place,
   userLocation,
-  bottom,
   onClose,
 }: {
   place: BtcMapPlace;
   userLocation: Coordinates | undefined;
-  bottom: number;
   onClose: () => void;
 }) {
   const { colors } = useTheme();
@@ -167,113 +167,108 @@ function PlaceDetailPanel({
   };
 
   return (
-    <View
-      className="absolute left-3 right-3 overflow-hidden rounded-[28px] border border-border bg-background"
-      style={{ bottom, maxHeight: 350 }}
-    >
-      <ScrollView contentContainerClassName="px-5 pb-5 pt-4" bounces={false}>
-        <View className="flex-row items-start justify-between gap-4">
-          <View className="flex-1">
-            <View className="mb-1 flex-row flex-wrap items-center gap-2">
-              <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {categoryLabel(place)}
-              </Text>
-              {isCurrentBoost(place) && (
-                <Text className="text-xs font-bold text-[#f7931a]">Featured</Text>
-              )}
-            </View>
-            <Text className="text-xl font-bold" numberOfLines={2}>
-              {detail.name}
+    <View className="px-1 pb-2">
+      <View className="flex-row items-start justify-between gap-4">
+        <View className="flex-1">
+          <View className="mb-1 flex-row flex-wrap items-center gap-2">
+            <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {categoryLabel(place)}
             </Text>
-            <View className="mt-1 flex-row flex-wrap items-center gap-x-2">
-              {distance !== undefined && (
-                <Text className="text-sm text-muted-foreground">{formatDistance(distance)}</Text>
-              )}
-              {detail.verified_at && (
-                <Text className="text-sm text-muted-foreground">
-                  Verified {dateLabel(detail.verified_at)}
-                </Text>
-              )}
-            </View>
+            {isCurrentBoost(place) && (
+              <Text className="text-xs font-bold text-[#f7931a]">Featured</Text>
+            )}
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close place details"
-            onPress={onClose}
-            className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
-          >
-            <Icon name="close" size={20} color={colors.foreground} />
-          </Pressable>
-        </View>
-
-        <View className="mt-4 flex-row gap-2">
-          <DetailAction icon="navigate-outline" label="Directions" onPress={openDirections} />
-          {detail.website && (
-            <DetailAction
-              icon="globe-outline"
-              label="Website"
-              onPress={() =>
-                void openUrl(detail.website!).catch((error) =>
-                  log.w("Could not open merchant website", [error]),
-                )
-              }
-            />
-          )}
-          {detail.phone && (
-            <DetailAction
-              icon="call-outline"
-              label="Call"
-              onPress={() =>
-                void openUrl(`tel:${detail.phone}`).catch((error) =>
-                  log.w("Could not open phone app", [error]),
-                )
-              }
-            />
-          )}
-          <DetailAction icon="share-outline" label="Share" onPress={sharePlace} />
-        </View>
-
-        {detailQuery.isLoading && (
-          <View className="mt-4 flex-row items-center gap-2">
-            <NoahActivityIndicator size="small" />
-            <Text className="text-sm text-muted-foreground">Loading details…</Text>
-          </View>
-        )}
-
-        {detailQuery.isError && (
-          <Text className="mt-4 text-sm text-muted-foreground">
-            Live details are unavailable. The bundled map still works offline.
+          <Text className="text-xl font-bold" numberOfLines={2}>
+            {detail.name}
           </Text>
-        )}
-
-        {detail.address && (
-          <View className="mt-4 flex-row gap-3">
-            <Icon name="location-outline" size={18} color={colors.mutedForeground} />
-            <Text className="flex-1 text-sm leading-5">{detail.address}</Text>
+          <View className="mt-1 flex-row flex-wrap items-center gap-x-2">
+            {distance !== undefined && (
+              <Text className="text-sm text-muted-foreground">{formatDistance(distance)}</Text>
+            )}
+            {detail.verified_at && (
+              <Text className="text-sm text-muted-foreground">
+                Verified {dateLabel(detail.verified_at)}
+              </Text>
+            )}
           </View>
-        )}
-        {detail.opening_hours && (
-          <View className="mt-3 flex-row gap-3">
-            <Icon name="time-outline" size={18} color={colors.mutedForeground} />
-            <Text className="flex-1 text-sm leading-5">{detail.opening_hours}</Text>
-          </View>
-        )}
-        {detail.description && (
-          <Text className="mt-4 text-sm leading-5 text-muted-foreground">{detail.description}</Text>
-        )}
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close place details"
+          onPress={onClose}
+          className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
+        >
+          <Icon name="close" size={20} color={colors.foreground} />
+        </Pressable>
+      </View>
 
-        {detailQuery.data && <PaymentMethods place={detailQuery.data.place} />}
-        {detailQuery.data && <SocialLinks place={detailQuery.data.place} />}
+      <View className="mt-4 flex-row gap-2">
+        <DetailAction icon="navigate-outline" label="Directions" onPress={openDirections} />
+        {detail.website && (
+          <DetailAction
+            icon="globe-outline"
+            label="Website"
+            onPress={() =>
+              void openUrl(detail.website!).catch((error) =>
+                log.w("Could not open merchant website", [error]),
+              )
+            }
+          />
+        )}
+        {detail.phone && (
+          <DetailAction
+            icon="call-outline"
+            label="Call"
+            onPress={() =>
+              void openUrl(`tel:${detail.phone}`).catch((error) =>
+                log.w("Could not open phone app", [error]),
+              )
+            }
+          />
+        )}
+        <DetailAction icon="share-outline" label="Share" onPress={sharePlace} />
+      </View>
 
-        {detailQuery.data?.comments.map((comment) => (
-          <View key={comment.id} className="mt-4 border-l-2 border-[#f7931a] pl-3">
-            <Text className="text-sm leading-5">{comment.text}</Text>
-            <Text className="mt-1 text-xs text-muted-foreground">
-              {dateLabel(comment.created_at)}
-            </Text>
-          </View>
-        ))}
-      </ScrollView>
+      {detailQuery.isLoading && (
+        <View className="mt-4 flex-row items-center gap-2">
+          <NoahActivityIndicator size="small" />
+          <Text className="text-sm text-muted-foreground">Loading details…</Text>
+        </View>
+      )}
+
+      {detailQuery.isError && (
+        <Text className="mt-4 text-sm text-muted-foreground">
+          Live details are unavailable. The bundled map still works offline.
+        </Text>
+      )}
+
+      {detail.address && (
+        <View className="mt-4 flex-row gap-3">
+          <Icon name="location-outline" size={18} color={colors.mutedForeground} />
+          <Text className="flex-1 text-sm leading-5">{detail.address}</Text>
+        </View>
+      )}
+      {detail.opening_hours && (
+        <View className="mt-3 flex-row gap-3">
+          <Icon name="time-outline" size={18} color={colors.mutedForeground} />
+          <Text className="flex-1 text-sm leading-5">{detail.opening_hours}</Text>
+        </View>
+      )}
+      {detail.description && (
+        <Text className="mt-4 text-sm leading-5 text-muted-foreground">{detail.description}</Text>
+      )}
+
+      {detailQuery.data && <PaymentMethods place={detailQuery.data.place} />}
+      {detailQuery.data && <SocialLinks place={detailQuery.data.place} />}
+
+      {detailQuery.data?.comments.map((comment) => (
+        <View key={comment.id} className="mt-4 border-l-2 border-[#f7931a] pl-3">
+          <Text className="text-sm leading-5">{comment.text}</Text>
+          <Text className="mt-1 text-xs text-muted-foreground">
+            {dateLabel(comment.created_at)}
+          </Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -430,6 +425,7 @@ export default function BtcMapScreen() {
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search.trim().toLocaleLowerCase());
   const [selectedPlaceId, setSelectedPlaceId] = useState<number>();
+  const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<Coordinates>();
   const [isLocating, setIsLocating] = useState(false);
 
@@ -467,6 +463,7 @@ export default function BtcMapScreen() {
 
   const selectPlace = (place: BtcMapPlace) => {
     setSelectedPlaceId(place.id);
+    setIsDetailSheetOpen(true);
     cameraRef.current?.easeTo({ center: [place.lon, place.lat], zoom: 15, duration: 650 });
   };
 
@@ -548,7 +545,9 @@ export default function BtcMapScreen() {
   }
 
   const panelBottom = tabBarHeight + 10;
-  const attributionBottom = panelBottom + (selectedPlace ? 360 : userLocation ? 145 : 8);
+  const attributionBottom = selectedPlace
+    ? PLACE_DETAIL_SHEET_HEIGHT + 10
+    : panelBottom + (userLocation ? 145 : 8);
 
   return (
     <View className="flex-1 bg-background">
@@ -747,12 +746,20 @@ export default function BtcMapScreen() {
       )}
 
       {selectedPlace && (
-        <PlaceDetailPanel
-          place={selectedPlace}
-          userLocation={userLocation}
-          bottom={panelBottom}
-          onClose={() => setSelectedPlaceId(undefined)}
-        />
+        <AppBottomSheet
+          isOpen={isDetailSheetOpen}
+          onClose={() => setIsDetailSheetOpen(false)}
+          onDismiss={() => setSelectedPlaceId(undefined)}
+          detents={[0, PLACE_DETAIL_SHEET_HEIGHT]}
+          scrimColor="rgba(0, 0, 0, 0.18)"
+          scrollable
+        >
+          <PlaceDetailPanel
+            place={selectedPlace}
+            userLocation={userLocation}
+            onClose={() => setIsDetailSheetOpen(false)}
+          />
+        </AppBottomSheet>
       )}
     </View>
   );
