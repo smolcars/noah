@@ -17,6 +17,14 @@ const config: { expo: ExpoConfig } = {
     plugins: [
       ["expo-asset"],
       ["expo-status-bar"],
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-location",
+        {
+          locationWhenInUsePermission:
+            "Allow $(PRODUCT_NAME) to use your location to find nearby places that accept bitcoin.",
+        },
+      ],
       [
         "expo-splash-screen",
         {

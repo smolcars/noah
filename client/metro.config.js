@@ -17,6 +17,8 @@ config.resolver.extraNodeModules = {
   "~": projectRoot,
 };
 
+config.resolver.assetExts = [...config.resolver.assetExts, "btcmap"];
+
 // Prevent duplicate Nitro linkage and keep unit tests out of production bundles
 config.resolver.blockList = [
   /node_modules\/.*\/node_modules\/react-native-nitro-modules\/.*/,

@@ -36,6 +36,7 @@ import FeedbackScreen from "~/screens/FeedbackScreen";
 import NoahStoryScreen from "~/screens/NoahStoryScreen";
 import DebugScreen from "~/screens/DebugScreen";
 import QRHubScreen from "~/screens/QRHubScreen";
+import BtcMapScreen from "~/screens/BtcMapScreen";
 import ProfileScreen from "~/screens/ProfileScreen";
 import CurrencySettingsScreen from "~/screens/CurrencySettingsScreen";
 import BitcoinUnitSettingsScreen from "~/screens/BitcoinUnitSettingsScreen";
@@ -108,6 +109,7 @@ export type OnboardingStackParamList = {
 export type HomeStackParamList = {
   HomeStack: undefined;
   BoardArk: undefined;
+  BtcMap: undefined;
   QRHub: undefined;
   Settings: NavigatorScreenParams<SettingsStackParamList> | undefined;
   BoardingTransactions: undefined;
@@ -208,6 +210,11 @@ const HomeStackScreen = () => (
     <HomeStack.Screen
       name="BoardArk"
       component={BoardArkScreen}
+      options={{ headerShown: false, animation: "default" }}
+    />
+    <HomeStack.Screen
+      name="BtcMap"
+      component={BtcMapScreen}
       options={{ headerShown: false, animation: "default" }}
     />
     <HomeStack.Screen
