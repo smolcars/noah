@@ -993,6 +993,17 @@ export default function BtcMapScreen() {
         <Pressable
           accessibilityRole="link"
           onPress={() =>
+            void openUrl("https://openmaptiles.org").catch((error) =>
+              log.w("Could not open OpenMapTiles attribution", [error]),
+            )
+          }
+        >
+          <Text className="text-[10px] text-white">© OpenMapTiles</Text>
+        </Pressable>
+        <Text className="text-[10px] text-white">·</Text>
+        <Pressable
+          accessibilityRole="link"
+          onPress={() =>
             void openUrl("https://btcmap.org").catch((error) =>
               log.w("Could not open BTC Map attribution", [error]),
             )
