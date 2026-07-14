@@ -4,6 +4,7 @@ import {
   distanceKm,
   formatDistance,
   getPlaceCategory,
+  parseBtcMapViewport,
 } from "../../src/lib/btcMapUtils";
 
 describe("BTC Map categories", () => {
@@ -28,6 +29,22 @@ describe("BTC Map distance", () => {
     expect(distance).toBeLessThan(7);
     expect(formatDistance(distance)).toBe(`${distance.toFixed(1)} km`);
     expect(formatDistance(0.25)).toBe("250 m");
+  });
+});
+
+describe("BTC Map viewport", () => {
+  test("accepts a bounded center and zoom", () => {
+    expect(parseBtcMapViewport({ center: [-73.9857, 40.7484], zoom: 14.5 })).toEqual({
+      center: [-73.9857, 40.7484],
+      zoom: 14.5,
+    });
+  });
+
+  test("rejects malformed or out-of-range viewports", () => {
+    expect(parseBtcMapViewport({ center: [-181, 40], zoom: 12 })).toBeUndefined();
+    expect(parseBtcMapViewport({ center: [-73, 91], zoom: 12 })).toBeUndefined();
+    expect(parseBtcMapViewport({ center: [-73, 40], zoom: 20 })).toBeUndefined();
+    expect(parseBtcMapViewport({ center: [0], zoom: 12 })).toBeUndefined();
   });
 });
 

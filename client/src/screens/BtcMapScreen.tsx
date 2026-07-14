@@ -6,12 +6,13 @@ import {
   type CameraRef,
   type GeoJSONSourceRef,
   type PressEventWithFeatures,
+  type ViewStateChangeEvent,
 } from "@maplibre/maplibre-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import * as Location from "expo-location";
-import { useDeferredValue, useRef, useState, type ComponentProps } from "react";
+import { useDeferredValue, useEffect, useRef, useState, type ComponentProps } from "react";
 import {
   Alert,
   Linking,
@@ -39,11 +40,14 @@ import {
 import { useBtcMapPlace, useBtcMapPlaces } from "~/hooks/useBtcMap";
 import { useTheme } from "~/hooks/useTheme";
 import logger from "~/lib/log";
+import { mmkv } from "~/lib/mmkv";
 import { type BtcMapPlace, type BtcMapPlaceDetail } from "~/lib/btcMap";
 import {
+  type BtcMapViewport,
   distanceKm,
   formatDistance,
   getPlaceCategory,
+  parseBtcMapViewport,
   PLACE_CATEGORIES,
   type PlaceCategory,
 } from "~/lib/btcMapUtils";
@@ -55,6 +59,8 @@ const LIGHT_MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 const DARK_MAP_STYLE = "https://tiles.openfreemap.org/styles/dark";
 const EMPTY_PLACES: BtcMapPlace[] = [];
 const PLACE_DETAIL_SHEET_HEIGHT = 390;
+const DEFAULT_VIEWPORT: BtcMapViewport = { center: [0, 20], zoom: 1.5 };
+const VIEWPORT_STORAGE_KEY = "btc-map-viewport-v1";
 
 type Coordinates = { latitude: number; longitude: number };
 type ForegroundLocationResult =
@@ -87,6 +93,32 @@ const openUrl = async (url: string) => {
     return;
   }
   await Linking.openURL(url);
+};
+
+const loadStoredBtcMapViewport = (): BtcMapViewport | undefined => {
+  try {
+    const serialized = mmkv.getString(VIEWPORT_STORAGE_KEY);
+    if (!serialized) {
+      return undefined;
+    }
+    const viewport = parseBtcMapViewport(JSON.parse(serialized) as unknown);
+    if (!viewport) {
+      mmkv.remove(VIEWPORT_STORAGE_KEY);
+      log.w("Ignored an invalid saved BTC Map viewport");
+    }
+    return viewport;
+  } catch (error) {
+    log.w("Could not load the saved BTC Map viewport", [error]);
+    return undefined;
+  }
+};
+
+const saveBtcMapViewport = (viewport: BtcMapViewport) => {
+  try {
+    mmkv.set(VIEWPORT_STORAGE_KEY, JSON.stringify(viewport));
+  } catch (error) {
+    log.w("Could not save the BTC Map viewport", [error]);
+  }
 };
 
 const getForegroundLocation = async (): Promise<ForegroundLocationResult> => {
@@ -421,6 +453,9 @@ export default function BtcMapScreen() {
   const cameraRef = useRef<CameraRef>(null);
   const placesSourceRef = useRef<GeoJSONSourceRef>(null);
   const snapshotQuery = useBtcMapPlaces();
+  const [initialViewport] = useState(loadStoredBtcMapViewport);
+  const canPersistViewportRef = useRef(initialViewport !== undefined);
+  const initialLocationAttemptRef = useRef(false);
   const [category, setCategory] = useState<PlaceCategory>("all");
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search.trim().toLocaleLowerCase());
@@ -428,6 +463,47 @@ export default function BtcMapScreen() {
   const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<Coordinates>();
   const [isLocating, setIsLocating] = useState(false);
+
+  useEffect(() => {
+    if (initialViewport || !snapshotQuery.isSuccess || initialLocationAttemptRef.current) {
+      return;
+    }
+
+    initialLocationAttemptRef.current = true;
+    let cancelled = false;
+    let finished = false;
+    setIsLocating(true);
+    void getForegroundLocation().then((result) => {
+      if (cancelled) {
+        return;
+      }
+      finished = true;
+      setIsLocating(false);
+      if (result.status === "error") {
+        log.w("Could not get initial foreground location", [result.error]);
+        return;
+      }
+      if (result.status !== "granted" || canPersistViewportRef.current) {
+        return;
+      }
+
+      const viewport: BtcMapViewport = {
+        center: [result.coordinates.longitude, result.coordinates.latitude],
+        zoom: 13,
+      };
+      canPersistViewportRef.current = true;
+      saveBtcMapViewport(viewport);
+      setUserLocation(result.coordinates);
+      cameraRef.current?.easeTo({ ...viewport, duration: 700 });
+    });
+
+    return () => {
+      cancelled = true;
+      if (!finished) {
+        initialLocationAttemptRef.current = false;
+      }
+    };
+  }, [initialViewport, snapshotQuery.isSuccess]);
 
   const places = snapshotQuery.data?.places ?? EMPTY_PLACES;
   const filteredPlaces = places.filter(
@@ -462,9 +538,27 @@ export default function BtcMapScreen() {
   };
 
   const selectPlace = (place: BtcMapPlace) => {
+    const viewport: BtcMapViewport = { center: [place.lon, place.lat], zoom: 15 };
+    canPersistViewportRef.current = true;
+    saveBtcMapViewport(viewport);
     setSelectedPlaceId(place.id);
     setIsDetailSheetOpen(true);
-    cameraRef.current?.easeTo({ center: [place.lon, place.lat], zoom: 15, duration: 650 });
+    cameraRef.current?.easeTo({ ...viewport, duration: 650 });
+  };
+
+  const handleRegionDidChange = (event: NativeSyntheticEvent<ViewStateChangeEvent>) => {
+    if (!canPersistViewportRef.current && !event.nativeEvent.userInteraction) {
+      return;
+    }
+    const viewport = parseBtcMapViewport({
+      center: event.nativeEvent.center,
+      zoom: event.nativeEvent.zoom,
+    });
+    if (!viewport) {
+      return;
+    }
+    canPersistViewportRef.current = true;
+    saveBtcMapViewport(viewport);
   };
 
   const handlePlacePress = async (event: NativeSyntheticEvent<PressEventWithFeatures>) => {
@@ -477,11 +571,15 @@ export default function BtcMapScreen() {
     if (typeof clusterId === "number") {
       const zoom = await placesSourceRef.current?.getClusterExpansionZoom(clusterId);
       if (zoom !== undefined) {
-        cameraRef.current?.easeTo({
-          center: feature.geometry.coordinates as [number, number],
+        const viewport = parseBtcMapViewport({
+          center: feature.geometry.coordinates,
           zoom,
-          duration: 450,
         });
+        if (viewport) {
+          canPersistViewportRef.current = true;
+          saveBtcMapViewport(viewport);
+          cameraRef.current?.easeTo({ ...viewport, duration: 450 });
+        }
       }
       return;
     }
@@ -509,12 +607,14 @@ export default function BtcMapScreen() {
       Alert.alert("Location unavailable", "Noah could not determine your current location.");
       return;
     }
-    setUserLocation(result.coordinates);
-    cameraRef.current?.easeTo({
+    const viewport: BtcMapViewport = {
       center: [result.coordinates.longitude, result.coordinates.latitude],
       zoom: 13,
-      duration: 700,
-    });
+    };
+    canPersistViewportRef.current = true;
+    saveBtcMapViewport(viewport);
+    setUserLocation(result.coordinates);
+    cameraRef.current?.easeTo({ ...viewport, duration: 700 });
   };
 
   if (snapshotQuery.isLoading) {
@@ -560,10 +660,11 @@ export default function BtcMapScreen() {
         compass
         compassPosition={{ top: insets.top + 118, right: 14 }}
         touchPitch={false}
+        onRegionDidChange={handleRegionDidChange}
       >
         <Camera
           ref={cameraRef}
-          initialViewState={{ center: [0, 20], zoom: 1.5 }}
+          initialViewState={initialViewport ?? DEFAULT_VIEWPORT}
           minZoom={1}
           maxZoom={19}
         />

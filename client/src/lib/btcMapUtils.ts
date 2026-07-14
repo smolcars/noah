@@ -1,6 +1,10 @@
 import type { BtcMapPlace } from "~/lib/btcMap";
 
 export type PlaceCategory = "all" | "food" | "shop" | "stay" | "atm" | "services";
+export type BtcMapViewport = {
+  center: [longitude: number, latitude: number];
+  zoom: number;
+};
 
 export const PLACE_CATEGORIES: ReadonlyArray<{ value: PlaceCategory; label: string }> = [
   { value: "all", label: "All" },
@@ -61,3 +65,29 @@ export const formatDistance = (kilometers: number) =>
   kilometers < 1
     ? `${Math.max(1, Math.round(kilometers * 1000))} m`
     : `${kilometers.toFixed(1)} km`;
+
+export const parseBtcMapViewport = (value: unknown): BtcMapViewport | undefined => {
+  if (typeof value !== "object" || value === null || !("center" in value) || !("zoom" in value)) {
+    return undefined;
+  }
+  const { center, zoom } = value;
+  if (
+    !Array.isArray(center) ||
+    center.length !== 2 ||
+    typeof center[0] !== "number" ||
+    !Number.isFinite(center[0]) ||
+    center[0] < -180 ||
+    center[0] > 180 ||
+    typeof center[1] !== "number" ||
+    !Number.isFinite(center[1]) ||
+    center[1] < -90 ||
+    center[1] > 90 ||
+    typeof zoom !== "number" ||
+    !Number.isFinite(zoom) ||
+    zoom < 1 ||
+    zoom > 19
+  ) {
+    return undefined;
+  }
+  return { center: [center[0], center[1]], zoom };
+};
