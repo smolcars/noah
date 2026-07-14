@@ -766,9 +766,6 @@ export default function BtcMapScreen() {
   }
 
   const panelBottom = tabBarHeight + 10;
-  const attributionBottom = selectedPlace
-    ? PLACE_DETAIL_SHEET_HEIGHT + 10
-    : panelBottom + (userLocation ? 145 : 8);
 
   return (
     <View className="flex-1 bg-background">
@@ -855,7 +852,11 @@ export default function BtcMapScreen() {
         </GeoJSONSource>
       </Map>
 
-      <View className="absolute left-3 right-3" style={{ top: insets.top + 8 }}>
+      <View
+        pointerEvents="box-none"
+        className="absolute left-3 right-3"
+        style={{ top: insets.top + 8 }}
+      >
         <View className="flex-row items-center gap-2">
           <NativeNoahBackButton onPress={() => navigation.goBack()} />
           <View className="h-12 flex-1 flex-row items-center rounded-full border border-border bg-background px-4">
@@ -972,73 +973,72 @@ export default function BtcMapScreen() {
             })}
           </ScrollView>
         )}
-      </View>
-
-      {!isAutocompleteOpen && (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Find places near me"
-          disabled={isLocating}
-          onPress={() => void handleLocate()}
-          className="absolute right-3 h-12 w-12 items-center justify-center rounded-full border border-border bg-background"
-          style={{ top: insets.top + 112, opacity: isLocating ? 0.6 : 1 }}
-        >
-          {isLocating ? (
-            <NoahActivityIndicator size="small" />
-          ) : (
-            <Icon name="locate" size={22} color={COLORS.BITCOIN_ORANGE} />
-          )}
-        </Pressable>
-      )}
-
-      <View
-        pointerEvents="box-none"
-        className="absolute right-3 flex-row items-center gap-1 rounded-full bg-black/60 px-2.5 py-1.5"
-        style={{ bottom: attributionBottom }}
-      >
-        <Pressable
-          accessibilityRole="link"
-          onPress={() =>
-            void openUrl("https://www.openstreetmap.org/copyright").catch((error) =>
-              log.w("Could not open map attribution", [error]),
-            )
-          }
-        >
-          <Text className="text-[10px] text-white">© OpenStreetMap</Text>
-        </Pressable>
-        <Text className="text-[10px] text-white">·</Text>
-        <Pressable
-          accessibilityRole="link"
-          onPress={() =>
-            void openUrl("https://openmaptiles.org").catch((error) =>
-              log.w("Could not open OpenMapTiles attribution", [error]),
-            )
-          }
-        >
-          <Text className="text-[10px] text-white">© OpenMapTiles</Text>
-        </Pressable>
-        <Text className="text-[10px] text-white">·</Text>
-        <Pressable
-          accessibilityRole="link"
-          onPress={() =>
-            void openUrl("https://btcmap.org").catch((error) =>
-              log.w("Could not open BTC Map attribution", [error]),
-            )
-          }
-        >
-          <Text className="text-[10px] text-white">BTC Map</Text>
-        </Pressable>
-        <Text className="text-[10px] text-white">·</Text>
-        <Pressable
-          accessibilityRole="link"
-          onPress={() =>
-            void openUrl("https://www.geonames.org").catch((error) =>
-              log.w("Could not open GeoNames attribution", [error]),
-            )
-          }
-        >
-          <Text className="text-[10px] text-white">GeoNames</Text>
-        </Pressable>
+        {!isAutocompleteOpen && (
+          <View pointerEvents="box-none" className="mt-3 flex-row items-center justify-end gap-2">
+            <View
+              pointerEvents="box-none"
+              className="flex-shrink flex-row flex-wrap items-center justify-end gap-x-1 gap-y-0.5 rounded-full bg-black/60 px-2.5 py-1.5"
+            >
+              <Pressable
+                accessibilityRole="link"
+                onPress={() =>
+                  void openUrl("https://www.openstreetmap.org/copyright").catch((error) =>
+                    log.w("Could not open map attribution", [error]),
+                  )
+                }
+              >
+                <Text className="text-[10px] text-white">© OpenStreetMap</Text>
+              </Pressable>
+              <Text className="text-[10px] text-white">·</Text>
+              <Pressable
+                accessibilityRole="link"
+                onPress={() =>
+                  void openUrl("https://openmaptiles.org").catch((error) =>
+                    log.w("Could not open OpenMapTiles attribution", [error]),
+                  )
+                }
+              >
+                <Text className="text-[10px] text-white">© OpenMapTiles</Text>
+              </Pressable>
+              <Text className="text-[10px] text-white">·</Text>
+              <Pressable
+                accessibilityRole="link"
+                onPress={() =>
+                  void openUrl("https://btcmap.org").catch((error) =>
+                    log.w("Could not open BTC Map attribution", [error]),
+                  )
+                }
+              >
+                <Text className="text-[10px] text-white">BTC Map</Text>
+              </Pressable>
+              <Text className="text-[10px] text-white">·</Text>
+              <Pressable
+                accessibilityRole="link"
+                onPress={() =>
+                  void openUrl("https://www.geonames.org").catch((error) =>
+                    log.w("Could not open GeoNames attribution", [error]),
+                  )
+                }
+              >
+                <Text className="text-[10px] text-white">GeoNames</Text>
+              </Pressable>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Find places near me"
+              disabled={isLocating}
+              onPress={() => void handleLocate()}
+              className="h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-border bg-background"
+              style={{ opacity: isLocating ? 0.6 : 1 }}
+            >
+              {isLocating ? (
+                <NoahActivityIndicator size="small" />
+              ) : (
+                <Icon name="locate" size={22} color={COLORS.BITCOIN_ORANGE} />
+              )}
+            </Pressable>
+          </View>
+        )}
       </View>
 
       {!selectedPlace && userLocation && (
