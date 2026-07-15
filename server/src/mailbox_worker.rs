@@ -29,6 +29,7 @@ use uuid::Uuid;
 
 use crate::{
     AppState,
+    config::ARK_USER_AGENT,
     db::mailbox_authorization_repo::{ActiveMailboxAuthorization, MailboxAuthorizationRepository},
     errors::ApiError,
     push::{PushNotificationData, send_expo_push_notification, send_push_notification},
@@ -552,6 +553,7 @@ impl MailboxTransport for Beta8MailboxTransport {
             let mut client: MailboxServiceClient<_> = ServerConnection::builder()
                 .address(&app_state.config.ark_server_url)
                 .network(network)
+                .user_agent(ARK_USER_AGENT)
                 .connect()
                 .await?
                 .mailbox_client;

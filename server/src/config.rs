@@ -3,6 +3,8 @@ use bitcoin::Network;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 
+pub const ARK_USER_AGENT: &str = concat!("noah-server/", env!("CARGO_PKG_VERSION"));
+
 /// Configuration for the Noah server
 ///
 /// All config fields are set via environment variables:

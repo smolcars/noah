@@ -1,5 +1,6 @@
 use crate::{
     AppState,
+    config::ARK_USER_AGENT,
     notification_coordinator::{NotificationCoordinator, NotificationRequest},
     types::NotificationRequestData,
 };
@@ -61,6 +62,7 @@ async fn establish_connection_and_process(
     let connection = ServerConnection::builder()
         .address(ark_server_url)
         .network(network)
+        .user_agent(ARK_USER_AGENT)
         .connect()
         .await
         .map_err(|e| anyhow::anyhow!("Failed to connect: {e:#}"))?;
