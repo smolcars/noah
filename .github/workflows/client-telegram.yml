@@ -42,7 +42,7 @@ jobs:
           echo "Waiting 5 seconds for the local Bot API server to initialize..."
           sleep 5
 
-      - name: 📝 Prepare Telegram messages
+      - name: 📝 Prepare Telegram caption
         env:
           COMMIT_SHA: ${{ github.sha }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
@@ -52,23 +52,22 @@ jobs:
           from pathlib import Path
 
           sha = os.environ["COMMIT_SHA"]
-          short_sha = sha[:7]
           commit_message = os.environ.get("COMMIT_MESSAGE", "").strip() or "(no commit message)"
 
-          caption = f"🤖 New Noah Android build is available!\n\n📝 Commit: {short_sha}"
-          message = (
+          caption_prefix = (
               "🤖 New Noah Android build is available!\n\n"
               f"📝 Commit: {sha}\n"
-              f"💬 Message: {commit_message}"
+              "💬 Message: "
           )
 
-          # Telegram sendMessage allows 4096 chars. Keep margin for UTF-8 edge cases.
-          max_message_chars = 3900
-          if len(message) > max_message_chars:
-              message = f"{message[: max_message_chars - 1]}…"
+          # Telegram document captions allow 1024 chars. Keep margin for UTF-8 edge cases.
+          max_caption_chars = 950
+          max_commit_message_chars = max_caption_chars - len(caption_prefix)
+          if len(commit_message) > max_commit_message_chars:
+              commit_message = f"{commit_message[: max_commit_message_chars - 1]}…"
 
+          caption = f"{caption_prefix}{commit_message}"
           Path("telegram_apk_caption.txt").write_text(caption, encoding="utf-8")
-          Path("telegram_android_build_message.txt").write_text(message, encoding="utf-8")
           PY
 
       - name: 📤 Send APK using local Bot API server
@@ -78,13 +77,6 @@ jobs:
           -F message_thread_id="${{ secrets.BLIXT_TOPIC_ID }}" \
           -F document=@"${{ needs.build.outputs.apk_filename }}" \
           -F "caption=<telegram_apk_caption.txt"
-
-      - name: 📢 Send Android build details
-        run: |
-          curl -fsS -X POST "http://localhost:8081/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
-          -F chat_id="${{ secrets.BLIXT_CHAT_ID }}" \
-          -F message_thread_id="${{ secrets.BLIXT_TOPIC_ID }}" \
-          -F "text=<telegram_android_build_message.txt"
 
       - name: 🛑 Stop and remove local Bot API server
         if: always()
