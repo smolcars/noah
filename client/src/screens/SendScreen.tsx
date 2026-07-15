@@ -47,6 +47,10 @@ const SendScreen = () => {
     handleSelectLightningAddressSuggestion,
     amount,
     setAmount,
+    isMaxSend,
+    canSendMax,
+    handleMaxSend,
+    maxSendAmountSat,
     isAmountEditable,
     comment,
     setComment,
@@ -73,6 +77,9 @@ const SendScreen = () => {
     selectedOnchainSource,
     setSelectedOnchainSource,
     isOnchainSourceSelectionRequired,
+    isConfirmationAmountInvalid,
+    isCheckingOwnOnchainAddress,
+    isOwnOnchainAddress,
     isLightningAddressPaymentRouteResolutionRequired,
     onchainWalletBalance,
     offchainWalletBalance,
@@ -90,7 +97,13 @@ const SendScreen = () => {
     confirmationError,
   } = useSendScreen();
   const fiatCurrencyInfo = getFiatCurrencyInfo(fiatCurrency);
-  const displayAmount = amount === "" ? (currency === "FIAT" ? "0.00" : "0") : amount;
+  const displayAmount = isMaxSend
+    ? "MAX"
+    : amount === ""
+      ? currency === "FIAT"
+        ? "0.00"
+        : "0"
+      : amount;
   const amountPrefix =
     currency === "FIAT" ? fiatCurrencyInfo.symbol : bitcoinAmountUnit === "bip177" ? "₿" : null;
   const amountSuffix = currency === "SATS" && bitcoinAmountUnit === "sats" ? "sats" : null;
@@ -112,10 +125,11 @@ const SendScreen = () => {
       return;
     }
 
+    setAmount(amount);
     requestAnimationFrame(() => {
       amountInputRef.current?.focus();
     });
-  }, [isAmountEditable]);
+  }, [amount, isAmountEditable, setAmount]);
 
   React.useEffect(() => {
     if (isAmountEditable) {
@@ -170,8 +184,34 @@ const SendScreen = () => {
 
               <View className="mt-5">
                 <View className="flex-row items-start justify-end gap-4">
-                  <View className="flex-1" />
-                  <CurrencyToggle onPress={toggleCurrency} disabled={!!parsedAmount} />
+                  <View className="flex-1">
+                    {canSendMax ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Send maximum amount"
+                        onPress={handleMaxSend}
+                        className="self-start rounded-full border border-border px-4 py-2"
+                        style={{
+                          backgroundColor: isMaxSend
+                            ? `${COLORS.BITCOIN_ORANGE}20`
+                            : `${colors.card}CC`,
+                          borderColor: isMaxSend
+                            ? COLORS.BITCOIN_ORANGE
+                            : `${colors.mutedForeground}26`,
+                        }}
+                      >
+                        <Text
+                          className="text-xs font-bold tracking-[2px]"
+                          style={{
+                            color: isMaxSend ? COLORS.BITCOIN_ORANGE : colors.foreground,
+                          }}
+                        >
+                          MAX
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                  <CurrencyToggle onPress={toggleCurrency} disabled={!!parsedAmount || isMaxSend} />
                 </View>
 
                 <View className="mt-3 items-center">
@@ -227,25 +267,29 @@ const SendScreen = () => {
                   </View>
 
                   <Text className="mt-3 text-lg font-medium text-muted-foreground">
-                    {parsedAmount
-                      ? `≈ ${
-                          btcPrice
-                            ? formatFiatAmount(
-                                satsToFiat(parsedAmount, btcPrice, fiatCurrency),
-                                fiatCurrency,
-                              )
-                            : formatFiatAmount("0.00", fiatCurrency)
-                        }`
-                      : currency === "SATS"
+                    {isMaxSend
+                      ? maxSendAmountSat > 0
+                        ? `${formatBitcoinAmount(maxSendAmountSat)} maximum from the selected balance`
+                        : "Choose the balance to sweep on confirmation"
+                      : parsedAmount
                         ? `≈ ${
-                            btcPrice && amountSat && !isNaN(amountSat)
+                            btcPrice
                               ? formatFiatAmount(
-                                  satsToFiat(amountSat, btcPrice, fiatCurrency),
+                                  satsToFiat(parsedAmount, btcPrice, fiatCurrency),
                                   fiatCurrency,
                                 )
                               : formatFiatAmount("0.00", fiatCurrency)
                           }`
-                        : `≈ ${!isNaN(amountSat) && amount ? formatBitcoinAmount(amountSat) : formatBitcoinAmount(0)}`}
+                        : currency === "SATS"
+                          ? `≈ ${
+                              btcPrice && amountSat && !isNaN(amountSat)
+                                ? formatFiatAmount(
+                                    satsToFiat(amountSat, btcPrice, fiatCurrency),
+                                    fiatCurrency,
+                                  )
+                                : formatFiatAmount("0.00", fiatCurrency)
+                            }`
+                          : `≈ ${!isNaN(amountSat) && amount ? formatBitcoinAmount(amountSat) : formatBitcoinAmount(0)}`}
                   </Text>
                 </View>
               </View>
@@ -384,7 +428,17 @@ const SendScreen = () => {
       <AppBottomSheet isOpen={showConfirmation} onClose={handleCancelConfirmation} scrollable>
         <SendConfirmation
           destination={destination}
-          amount={amountSat}
+          amount={isMaxSend ? maxSendAmountSat : amountSat}
+          isMaxAmount={isMaxSend}
+          amountNote={
+            isMaxSend
+              ? selectedOnchainSource === "offchain"
+                ? "Sweeps the full Ark balance after the offboarding fee."
+                : selectedOnchainSource === "onchain"
+                  ? "Sweeps the full onchain balance; the miner fee is deducted when the transaction is built."
+                  : "Choose which balance to sweep."
+              : null
+          }
           destinationType={destinationType}
           comment={comment}
           btcPrice={btcPrice}
@@ -400,7 +454,11 @@ const SendScreen = () => {
           onConfirm={handleConfirmSend}
           onCancel={handleCancelConfirmation}
           isConfirmDisabled={
-            isOnchainSourceSelectionRequired || isLightningAddressPaymentRouteResolutionRequired
+            isOnchainSourceSelectionRequired ||
+            isConfirmationAmountInvalid ||
+            isLightningAddressPaymentRouteResolutionRequired ||
+            isCheckingOwnOnchainAddress ||
+            isOwnOnchainAddress
           }
           isLoading={isSending}
           feeEstimate={feeEstimate}

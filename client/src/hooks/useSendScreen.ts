@@ -12,6 +12,7 @@ import {
 } from "../lib/sendUtils";
 import {
   useLightningAddressPaymentRoute,
+  useIsOnchainAddressMine,
   useSend,
   useSendFeeEstimate,
   type SendFeeEstimateParams,
@@ -92,6 +93,7 @@ export const useSendScreen = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isDestinationFocused, setIsDestinationFocused] = useState(false);
   const [destinationRequestRevision, setDestinationRequestRevision] = useState(0);
+  const [isMaxSend, setIsMaxSend] = useState(false);
 
   useEffect(() => {
     if (destination) {
@@ -109,6 +111,7 @@ export const useSendScreen = () => {
 
       setDestinationType(newDestinationType);
       if (newAmount) {
+        setIsMaxSend(false);
         setCurrency("SATS");
         setAmount(newAmount.toString());
         setParsedAmount(newAmount);
@@ -138,6 +141,7 @@ export const useSendScreen = () => {
       setIsAmountEditable(true);
       setParsedAmount(null);
       setBip321Data(null);
+      setIsMaxSend(false);
     }
   }, [destination, destinationRequestRevision, showAlert]);
 
@@ -175,6 +179,7 @@ export const useSendScreen = () => {
     setBip321Data(null);
     setSelectedPaymentMethod("onchain");
     setSelectedOnchainSource(null);
+    setIsMaxSend(false);
     setShowConfirmation(false);
     setShowSuccess(false);
     setIsDestinationFocused(false);
@@ -202,22 +207,24 @@ export const useSendScreen = () => {
   const offchainWalletBalance = balance?.offchain.spendable ?? 0;
 
   const onchainSourceOptions = useMemo<OnchainSendSource[]>(() => {
-    if (!isOnchainSend || amountSat <= 0 || !balance) {
+    if (!isOnchainSend || !balance) {
       return [];
     }
 
     const options: OnchainSendSource[] = [];
-    if (offchainWalletBalance >= amountSat) {
+    if (
+      isMaxSend ? offchainWalletBalance > 0 : amountSat > 0 && offchainWalletBalance >= amountSat
+    ) {
       options.push("offchain");
     }
-    if (onchainWalletBalance >= amountSat) {
+    if (isMaxSend ? onchainWalletBalance > 0 : amountSat > 0 && onchainWalletBalance >= amountSat) {
       options.push("onchain");
     }
     return options;
-  }, [amountSat, balance, isOnchainSend, offchainWalletBalance, onchainWalletBalance]);
+  }, [amountSat, balance, isMaxSend, isOnchainSend, offchainWalletBalance, onchainWalletBalance]);
 
   useEffect(() => {
-    if (!isOnchainSend || amountSat <= 0) {
+    if (!isOnchainSend || (!isMaxSend && amountSat <= 0)) {
       setSelectedOnchainSource(null);
       return;
     }
@@ -225,7 +232,7 @@ export const useSendScreen = () => {
     if (selectedOnchainSource !== null && !onchainSourceOptions.includes(selectedOnchainSource)) {
       setSelectedOnchainSource(null);
     }
-  }, [amountSat, isOnchainSend, onchainSourceOptions, selectedOnchainSource]);
+  }, [amountSat, isMaxSend, isOnchainSend, onchainSourceOptions, selectedOnchainSource]);
 
   const resolvedOnchainSource =
     selectedOnchainSource ?? (onchainSourceOptions.length === 1 ? onchainSourceOptions[0] : null);
@@ -233,12 +240,29 @@ export const useSendScreen = () => {
   const isOnchainSourceSelectionRequired =
     isOnchainSend && onchainSourceOptions.length > 1 && resolvedOnchainSource === null;
 
+  useEffect(() => {
+    if (!isOnchainSend || !isAmountEditable) {
+      setIsMaxSend(false);
+    }
+  }, [isAmountEditable, isOnchainSend]);
+
+  const resolvedOnchainDestination = !isOnchainSend
+    ? null
+    : destinationType === "bip321"
+      ? (bip321Data?.onchainAddress ?? null)
+      : cleanedDestination || null;
+  const ownOnchainAddressQuery = useIsOnchainAddressMine(
+    showConfirmation && isMaxSend && resolvedOnchainSource === "offchain"
+      ? resolvedOnchainDestination
+      : null,
+  );
+
   const feeEstimateParams = useMemo<SendFeeEstimateParams | null>(() => {
     if (!showConfirmation) {
       return null;
     }
 
-    if (!amountSat || amountSat <= 0) {
+    if (!isMaxSend && (!amountSat || amountSat <= 0)) {
       return null;
     }
 
@@ -251,12 +275,20 @@ export const useSendScreen = () => {
         case "offer":
           return bip321Data.offer ? { method: "lightning", amountSat } : null;
         case "onchain":
+          if (isMaxSend && resolvedOnchainSource === "onchain") {
+            return null;
+          }
+
           return bip321Data.onchainAddress && resolvedOnchainSource !== null
             ? {
                 method: "onchain",
                 source: resolvedOnchainSource,
                 destination: bip321Data.onchainAddress,
-                amountSat,
+                amountSat:
+                  isMaxSend && resolvedOnchainSource === "offchain"
+                    ? offchainWalletBalance
+                    : amountSat,
+                isMaxAmount: isMaxSend,
               }
             : null;
       }
@@ -273,12 +305,20 @@ export const useSendScreen = () => {
           ? { method: lightningAddressPaymentRouteQuery.data.method, amountSat }
           : null;
       case "onchain":
+        if (isMaxSend && resolvedOnchainSource === "onchain") {
+          return null;
+        }
+
         return cleanedDestination && resolvedOnchainSource !== null
           ? {
               method: "onchain",
               source: resolvedOnchainSource,
               destination: cleanedDestination,
-              amountSat,
+              amountSat:
+                isMaxSend && resolvedOnchainSource === "offchain"
+                  ? offchainWalletBalance
+                  : amountSat,
+              isMaxAmount: isMaxSend,
             }
           : null;
       default:
@@ -290,7 +330,9 @@ export const useSendScreen = () => {
     cleanedDestination,
     destinationType,
     finalDestinationType,
+    isMaxSend,
     lightningAddressPaymentRouteQuery.data,
+    offchainWalletBalance,
     resolvedOnchainSource,
     selectedPaymentMethod,
     showConfirmation,
@@ -299,6 +341,10 @@ export const useSendScreen = () => {
   const feeEstimateQuery = useSendFeeEstimate(feeEstimateParams);
 
   const feeEstimateNote = useMemo(() => {
+    if (isMaxSend && resolvedOnchainSource === "onchain") {
+      return "The onchain wallet will send its full confirmed balance. The final miner fee is calculated when the transaction is built.";
+    }
+
     if (!isOnchainSend || resolvedOnchainSource !== "onchain") {
       return null;
     }
@@ -309,9 +355,17 @@ export const useSendScreen = () => {
     }
 
     return `Regular fee rate: ${formatFeeRate(estimate.fee_rate_sat_vb)} sat/vB. Estimated as a ${estimate.estimated_vbytes} vB 2-in/2-out SegWit transaction.`;
-  }, [feeEstimateQuery.data, isOnchainSend, resolvedOnchainSource]);
+  }, [feeEstimateQuery.data, isMaxSend, isOnchainSend, resolvedOnchainSource]);
 
   const feeEstimateWarning = useMemo(() => {
+    if (ownOnchainAddressQuery.data) {
+      return "Your Ark balance cannot be swept to this wallet's own onchain address. Use an external Bitcoin address.";
+    }
+
+    if (isMaxSend) {
+      return null;
+    }
+
     if (!isOnchainSend || resolvedOnchainSource === null || !feeEstimateQuery.data) {
       return null;
     }
@@ -329,11 +383,40 @@ export const useSendScreen = () => {
   }, [
     bitcoinAmountUnit,
     feeEstimateQuery.data,
+    isMaxSend,
     isOnchainSend,
     offchainWalletBalance,
     onchainWalletBalance,
+    ownOnchainAddressQuery.data,
     resolvedOnchainSource,
   ]);
+
+  const confirmationAmountSat = isMaxSend
+    ? resolvedOnchainSource === "offchain"
+      ? (feeEstimateQuery.data?.net_amount_sat ?? offchainWalletBalance)
+      : resolvedOnchainSource === "onchain"
+        ? onchainWalletBalance
+        : 0
+    : amountSat;
+
+  const setEnteredAmount = (nextAmount: string) => {
+    setIsMaxSend(false);
+    setAmount(nextAmount);
+  };
+
+  const handleMaxSend = () => {
+    setAmount("");
+    setCurrency("SATS");
+    setParsedAmount(null);
+    setIsMaxSend(true);
+  };
+
+  const handleSelectPaymentMethod = (method: "ark" | "lightning" | "onchain" | "offer") => {
+    setSelectedPaymentMethod(method);
+    if (method !== "onchain") {
+      setIsMaxSend(false);
+    }
+  };
 
   useEffect(() => {
     if (!feeEstimateQuery.error) {
@@ -456,7 +539,7 @@ export const useSendScreen = () => {
       });
       return;
     }
-    if (isNaN(amountSat) || amountSat <= 0) {
+    if (!isMaxSend && (isNaN(amountSat) || amountSat <= 0)) {
       showAlert({ title: "Invalid Amount", description: "Please enter a valid amount." });
       return;
     }
@@ -471,7 +554,9 @@ export const useSendScreen = () => {
       if (onchainSourceOptions.length === 0) {
         showAlert({
           title: "Insufficient Funds",
-          description: "Neither your Ark balance nor onchain wallet can cover this payment.",
+          description: isMaxSend
+            ? "Neither your Ark balance nor onchain wallet has confirmed funds to send."
+            : "Neither your Ark balance nor onchain wallet can cover this payment.",
         });
         return;
       }
@@ -483,6 +568,26 @@ export const useSendScreen = () => {
   };
 
   const handleConfirmSend = () => {
+    if (!isMaxSend && amountSat <= 0) {
+      showAlert({ title: "Invalid Amount", description: "Please enter a valid amount." });
+      return;
+    }
+
+    if (isMaxSend && resolvedOnchainSource === "offchain") {
+      if (ownOnchainAddressQuery.isFetching) {
+        return;
+      }
+
+      if (ownOnchainAddressQuery.data) {
+        showAlert({
+          title: "Cannot Send to Own Wallet",
+          description:
+            "Your Ark balance cannot be swept to this wallet's own onchain address. Use an external Bitcoin address.",
+        });
+        return;
+      }
+    }
+
     setIsDestinationFocused(false);
     reset();
     setParsedResult(null);
@@ -524,11 +629,14 @@ export const useSendScreen = () => {
       send({
         destination: destinationToSend,
         amountSat:
-          (newDestinationType === "lightning" || newDestinationType === "offer") &&
-          !isAmountEditable
+          isMaxSend && newDestinationType === "onchain"
             ? undefined
-            : amountSat,
-        resolvedAmountSat: amountSat,
+            : (newDestinationType === "lightning" || newDestinationType === "offer") &&
+                !isAmountEditable
+              ? undefined
+              : amountSat,
+        resolvedAmountSat: confirmationAmountSat,
+        isMaxAmount: isMaxSend && newDestinationType === "onchain",
         comment: comment || null,
         onchainSource:
           newDestinationType === "onchain" ? (resolvedOnchainSource ?? undefined) : undefined,
@@ -550,8 +658,13 @@ export const useSendScreen = () => {
       send({
         destination: destinationToSend,
         amountSat:
-          finalDestinationType === "lightning" && !isAmountEditable ? undefined : amountSat,
-        resolvedAmountSat: amountSat,
+          isMaxSend && finalDestinationType === "onchain"
+            ? undefined
+            : finalDestinationType === "lightning" && !isAmountEditable
+              ? undefined
+              : amountSat,
+        resolvedAmountSat: confirmationAmountSat,
+        isMaxAmount: isMaxSend && finalDestinationType === "onchain",
         comment: comment || null,
         onchainSource:
           finalDestinationType === "onchain" ? (resolvedOnchainSource ?? undefined) : undefined,
@@ -582,6 +695,7 @@ export const useSendScreen = () => {
     setParsedResult(null);
     setDestination("");
     setAmount("");
+    setIsMaxSend(false);
     setComment("");
     setShowConfirmation(false);
     setShowSuccess(false);
@@ -594,6 +708,7 @@ export const useSendScreen = () => {
     setDestination("");
     setComment("");
     setAmount("");
+    setIsMaxSend(false);
     setShowConfirmation(false);
     setShowSuccess(false);
     setIsDestinationFocused(false);
@@ -623,7 +738,11 @@ export const useSendScreen = () => {
     lightningAddressSuggestions,
     handleSelectLightningAddressSuggestion,
     amount,
-    setAmount,
+    setAmount: setEnteredAmount,
+    isMaxSend,
+    canSendMax: isOnchainSend && isAmountEditable,
+    handleMaxSend,
+    maxSendAmountSat: confirmationAmountSat,
     isAmountEditable,
     comment,
     setComment,
@@ -649,12 +768,15 @@ export const useSendScreen = () => {
     parsedAmount,
     bip321Data,
     selectedPaymentMethod,
-    setSelectedPaymentMethod,
+    setSelectedPaymentMethod: handleSelectPaymentMethod,
     onchainSourceOptions,
     selectedOnchainSource: resolvedOnchainSource,
     setSelectedOnchainSource,
     resolvedOnchainSource,
     isOnchainSourceSelectionRequired,
+    isConfirmationAmountInvalid: !isMaxSend && amountSat <= 0,
+    isCheckingOwnOnchainAddress: ownOnchainAddressQuery.isFetching,
+    isOwnOnchainAddress: ownOnchainAddressQuery.data ?? false,
     isLightningAddressPaymentRouteResolutionRequired:
       lightningAddressPaymentRouteDestination !== null &&
       !lightningAddressPaymentRouteQuery.data &&

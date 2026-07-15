@@ -788,7 +788,7 @@ const UnilateralExitScreen = () => {
               </AlertTitle>
               <AlertDescription className="text-amber-700/90 dark:text-amber-200/90">
                 Use this only if the Ark server is unresponsive or uncooperative. In normal
-                circumstances, use Offboard Ark.
+                circumstances, send to an onchain address from your Ark balance.
               </AlertDescription>
             </Alert>
 

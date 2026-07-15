@@ -23,6 +23,12 @@ import {
   getMovementSubsystemName,
   isBoardingHistoryMovement,
 } from "~/lib/barkMovement";
+import {
+  getBoardingMovementAmount,
+  getMovementTransactionId,
+  mergeBoardingWithOnchainTransactions,
+  parseMovementMetadata,
+} from "~/lib/transactionHistory";
 
 const log = logger("useTransactions");
 const UNKNOWN_ONCHAIN_DATE_ISO = new Date(0).toISOString();
@@ -128,15 +134,6 @@ const getMovementDateIso = (createdAt: string | undefined): string => {
   return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
 };
 
-const getUniqueMovementId = (movement: BarkMovement, isOutgoing: boolean): string => {
-  const candidateVtxos = isOutgoing
-    ? [...movement.input_vtxos, ...movement.output_vtxos, ...movement.exited_vtxos]
-    : [...movement.output_vtxos, ...movement.input_vtxos, ...movement.exited_vtxos];
-
-  const vtxoId = candidateVtxos.find((id) => typeof id === "string" && id.length > 0);
-  return vtxoId ?? `movement-${movement.id}`;
-};
-
 const hasBitcoinAddressDestination = (movement: BarkMovement, isOutgoing: boolean): boolean => {
   const destinations = isOutgoing ? movement.sent_to : movement.received_on;
 
@@ -211,10 +208,16 @@ const transformMovementToTransaction = async (
   const direction = isOutgoing ? "outgoing" : "incoming";
 
   const createdAt =
-    (movement as { time?: { created_at?: string } }).time?.created_at ?? movement.created_at;
+    (movement as { time?: { created_at?: string } }).time?.created_at ??
+    movement.completed_at ??
+    movement.created_at;
   const dateIso = getMovementDateIso(createdAt);
-  const amount = getMovementAmount(movement, isOutgoing);
-  const txid = getUniqueMovementId(movement, isOutgoing);
+  const isBoardingMovement = isBoardingHistoryMovement(movement);
+  const amount = isBoardingMovement
+    ? getBoardingMovementAmount(movement)
+    : getMovementAmount(movement, isOutgoing);
+  const metadata = parseMovementMetadata(movement.metadata_json);
+  const txid = getMovementTransactionId(movement, metadata, isOutgoing);
   const transactionType = determineTransactionType(movement, movementKind, isOutgoing);
 
   let btcPrice: number | undefined;
@@ -249,6 +252,8 @@ const transformMovementToTransaction = async (
     intendedBalanceSat: movement.intended_balance_sat,
     effectiveBalanceSat: movement.effective_balance_sat,
     offchainFeeSat: movement.offchain_fee_sat,
+    onchainFeeSat: metadata.onchainFeeSat,
+    chainAnchor: metadata.chainAnchor,
     sentTo: movement.sent_to.map((destination) => ({
       destination: getMovementDestinationValue(destination) ?? "",
       amount_sat: destination.amount_sat,
@@ -372,11 +377,11 @@ const compareTransactions = (a: Transaction, b: Transaction): number => {
 };
 
 const shouldIncludeMovement = (movement: BarkMovement): boolean => {
-  if (movement.status === "failed") {
-    return false;
+  if (isBoardingHistoryMovement(movement)) {
+    return true;
   }
 
-  if (isBoardingHistoryMovement(movement)) {
+  if (movement.status === "failed") {
     return false;
   }
 
@@ -430,7 +435,9 @@ const fetchAndTransformTransactions = async (
     walletTransactions.map((transaction) => transformOnchainTransaction(transaction, currency)),
   );
 
-  return [...movementTransactions, ...onchainWalletTransactions].sort(compareTransactions);
+  return mergeBoardingWithOnchainTransactions(movementTransactions, onchainWalletTransactions).sort(
+    compareTransactions,
+  );
 };
 
 export const useTransactions = (options?: { enabled?: boolean }) => {

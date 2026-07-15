@@ -18,6 +18,8 @@ import { useProfileStore } from "~/store/profileStore";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 import { NativeNoahSegmentedControl } from "~/components/ui/NativeNoahSegmentedControl";
+import { getTransactionDisplayLabel, isBoardingTransfer } from "~/lib/transactionHistory";
+import { formatMovementStatusLabel } from "~/types/movement";
 
 const log = logger("TransactionsScreen");
 
@@ -55,24 +57,30 @@ const TransactionsScreen = () => {
   };
 
   const exportToCSV = async () => {
-    const csvHeader = `Payment ID,Date,Type,Direction,Amount (₿),BTC Price (${fiatCurrency}),Transaction ID,Destination\n`;
+    const csvHeader = `Payment ID,Date,Type,Status,Direction,Amount (₿),BTC Price (${fiatCurrency}),Transaction ID,Destination\n`;
     const csvRows = filteredTransactions
       .map((transaction) => {
         const date =
           transaction.dateLabel ?? new Date(transaction.date).toISOString().split("T")[0];
-        const type =
-          transaction.type === "Bolt11" || transaction.type === "Lnurl"
-            ? "Lightning"
-            : transaction.type;
-        const direction = transaction.direction === "outgoing" ? "Outgoing" : "Incoming";
-        const amount =
-          transaction.direction === "outgoing" ? -transaction.amount : transaction.amount;
+        const type = getTransactionDisplayLabel(transaction);
+        const status = formatMovementStatusLabel(transaction.movementStatus) ?? "";
+        const isTransfer = isBoardingTransfer(transaction);
+        const direction = isTransfer
+          ? "Transfer"
+          : transaction.direction === "outgoing"
+            ? "Outgoing"
+            : "Incoming";
+        const amount = isTransfer
+          ? transaction.amount
+          : transaction.direction === "outgoing"
+            ? -transaction.amount
+            : transaction.amount;
         const id = transaction.id;
         const btcPrice = transaction.btcPrice;
         const txid = transaction.txid || "";
         const destination = transaction.destination;
 
-        return `${id},${date},${type},${direction},${amount},${btcPrice},${txid},${destination}`;
+        return `${id},${date},${type},${status},${direction},${amount},${btcPrice},${txid},${destination}`;
       })
       .join("\n");
 
@@ -117,8 +125,16 @@ const TransactionsScreen = () => {
     )();
   };
 
-  const getIconForType = (type: Transaction["type"]) => {
-    switch (type) {
+  const getIconForTransaction = (transaction: Transaction) => {
+    if (transaction.movementKind === "onboard") {
+      return "log-in-outline";
+    }
+
+    if (transaction.movementKind === "offboard") {
+      return "log-out-outline";
+    }
+
+    switch (transaction.type) {
       case "Bolt11":
       case "Lnurl":
         return "flash-outline";
@@ -182,6 +198,9 @@ const TransactionsScreen = () => {
             <FlashList
               data={filteredTransactions}
               renderItem={({ item }: { item: Transaction }) => {
+                const isTransfer = isBoardingTransfer(item);
+                const movementStatus = formatMovementStatusLabel(item.movementStatus);
+
                 return (
                   <View style={{ marginBottom: 8 }}>
                     <Pressable
@@ -190,28 +209,37 @@ const TransactionsScreen = () => {
                     >
                       <View pointerEvents="none" className="mr-4">
                         <Icon
-                          name={getIconForType(item.type)}
+                          name={getIconForTransaction(item)}
                           size={24}
-                          color={item.direction === "outgoing" ? "red" : "green"}
+                          color={
+                            isTransfer ? "#f97316" : item.direction === "outgoing" ? "red" : "green"
+                          }
                         />
                       </View>
                       <View pointerEvents="none" className="flex-1">
                         <View className="flex-row justify-between gap-4">
                           <View className="flex-1">
                             <Text className="text-foreground text-base font-medium">
-                              {item.type === "Bolt11" || item.type === "Lnurl"
-                                ? "Lightning"
-                                : item.type}
+                              {getTransactionDisplayLabel(item)}
                             </Text>
                           </View>
                           <View className="items-end">
                             <Text
                               className={`text-base font-bold ${
-                                item.direction === "outgoing" ? "text-red-500" : "text-green-500"
+                                isTransfer
+                                  ? "text-orange-500"
+                                  : item.direction === "outgoing"
+                                    ? "text-red-500"
+                                    : "text-green-500"
                               }`}
                             >
-                              {`${item.direction === "outgoing" ? "-" : "+"}${formatBitcoinAmount(item.amount)}`}
+                              {`${isTransfer ? "" : item.direction === "outgoing" ? "-" : "+"}${formatBitcoinAmount(item.amount)}`}
                             </Text>
+                            {movementStatus ? (
+                              <Text className="mt-1 text-xs text-muted-foreground">
+                                {movementStatus}
+                              </Text>
+                            ) : null}
                           </View>
                         </View>
                         <Text className="text-muted-foreground text-sm mt-1">

@@ -18,6 +18,7 @@ import {
   onchainAddress as onchainAddressNitro,
   onchainIsMine as onchainIsMineNitro,
   payLightningInvoice as payLightningInvoiceNitro,
+  onchainDrain as onchainDrainNitro,
   onchainSend as onchainSendNitro,
   sendOnchain as sendOnchainNitro,
   onchainFeeRates as onchainFeeRatesNitro,
@@ -238,6 +239,41 @@ export const onchainSend = async ({
 
     return e;
   }).map((result) => ({ ...result, source: "onchain" }));
+};
+
+export const onchainDrain = async ({
+  destination,
+  fallbackAmountSat,
+}: {
+  destination: string;
+  fallbackAmountSat: number;
+}): Promise<Result<NoahOnchainPaymentResult, Error>> => {
+  const drainResult = await ResultAsync.fromPromise(onchainDrainNitro(destination), (error) => {
+    return new Error(
+      `Failed to drain onchain funds: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  });
+
+  if (drainResult.isErr()) {
+    return err(drainResult.error);
+  }
+
+  const txid = drainResult.value;
+  const transactionsResult = await onchainTransactions();
+  const transaction = transactionsResult.isOk()
+    ? transactionsResult.value.find((candidate) => candidate.txid === txid)
+    : undefined;
+  const feeSat = transaction?.has_onchain_fee ? transaction.onchain_fee_sat : 0;
+  const amountSat = transaction
+    ? Math.max(Math.abs(transaction.balance_change_sat) - feeSat, 0)
+    : fallbackAmountSat;
+
+  return ok({
+    txid,
+    amount_sat: amountSat,
+    destination_address: destination,
+    source: "onchain",
+  });
 };
 
 export const sendOnchainFromOffchain = async ({

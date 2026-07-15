@@ -37,6 +37,7 @@ export type Transaction = {
   balanceChangeSat?: number;
   hasOnchainFee?: boolean;
   onchainFeeSat?: number;
+  chainAnchor?: string;
   hasConfirmation?: boolean;
   confirmationHeight?: number;
   confirmationHash?: string;

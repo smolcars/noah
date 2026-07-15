@@ -45,9 +45,19 @@ import { usePrivacyStore } from "~/store/privacyStore";
 import { useProfileStore } from "~/store/profileStore";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { NativeHomeHeaderActions } from "~/components/ui/NativeHomeHeaderActions";
+import { BoardArkBottomSheet } from "~/components/BoardArkBottomSheet";
+import { getTransactionDisplayLabel, isBoardingTransfer } from "~/lib/transactionHistory";
 
-const getTransactionIcon = (type: Transaction["type"]) => {
-  switch (type) {
+const getTransactionIcon = (transaction: Transaction) => {
+  if (transaction.movementKind === "onboard") {
+    return "log-in-outline";
+  }
+
+  if (transaction.movementKind === "offboard") {
+    return "log-out-outline";
+  }
+
+  switch (transaction.type) {
     case "Bolt11":
     case "Lnurl":
       return "flash-outline";
@@ -58,18 +68,6 @@ const getTransactionIcon = (type: Transaction["type"]) => {
     default:
       return "cash-outline";
   }
-};
-
-const getTransactionLabel = (transaction: Transaction) => {
-  if (transaction.type === "Bolt11" || transaction.type === "Lnurl") {
-    return "Lightning";
-  }
-
-  if (transaction.type === "Arkoor") {
-    return "Ark";
-  }
-
-  return transaction.type;
 };
 
 const HomeScreen = () => {
@@ -89,6 +87,7 @@ const HomeScreen = () => {
   const [fact, setFact] = useState("");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isTransactionSheetOpen, setIsTransactionSheetOpen] = useState(false);
+  const [isBoardArkSheetOpen, setIsBoardArkSheetOpen] = useState(false);
   const bottomTabBarHeight = useBottomTabBarHeight();
   const { isUpdateRequired, minimumVersion, currentVersion } = useAppVersionCheck();
   const { isEmailVerified, isEmailPromptDismissed, setEmailPromptDismissed } = useServerStore();
@@ -198,7 +197,7 @@ const HomeScreen = () => {
     >
       <View className="relative m-4 h-[52px]">
         <NativeHomeHeaderActions
-          onBoardArk={() => navigation.navigate("BoardArk")}
+          onBoardArk={() => setIsBoardArkSheetOpen(true)}
           onOpenPlaces={() => navigation.navigate("BtcMap")}
           onOpenQr={() => navigation.navigate("QRHub")}
           onOpenSettings={() => navigation.navigate("Settings")}
@@ -425,14 +424,20 @@ const HomeScreen = () => {
                       >
                         <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-background">
                           <Icon
-                            name={getTransactionIcon(transaction.type)}
+                            name={getTransactionIcon(transaction)}
                             size={20}
-                            color={transaction.direction === "outgoing" ? "#ef4444" : "#22c55e"}
+                            color={
+                              isBoardingTransfer(transaction)
+                                ? "#f97316"
+                                : transaction.direction === "outgoing"
+                                  ? "#ef4444"
+                                  : "#22c55e"
+                            }
                           />
                         </View>
                         <View className="min-w-0 flex-1">
                           <Text className="text-sm font-semibold text-foreground">
-                            {getTransactionLabel(transaction)}
+                            {getTransactionDisplayLabel(transaction)}
                           </Text>
                           <Text className="mt-1 text-xs text-muted-foreground">
                             {transaction.dateLabel ??
@@ -444,10 +449,14 @@ const HomeScreen = () => {
                         </View>
                         <Text
                           className={`text-sm font-bold ${
-                            transaction.direction === "outgoing" ? "text-red-500" : "text-green-500"
+                            isBoardingTransfer(transaction)
+                              ? "text-orange-500"
+                              : transaction.direction === "outgoing"
+                                ? "text-red-500"
+                                : "text-green-500"
                           }`}
                         >
-                          {`${transaction.direction === "outgoing" ? "-" : "+"}${formatBitcoinAmount(transaction.amount)}`}
+                          {`${isBoardingTransfer(transaction) ? "" : transaction.direction === "outgoing" ? "-" : "+"}${formatBitcoinAmount(transaction.amount)}`}
                         </Text>
                       </Pressable>
                     ))
@@ -475,6 +484,10 @@ const HomeScreen = () => {
           />
         </AppBottomSheet>
       ) : null}
+      <BoardArkBottomSheet
+        isOpen={isBoardArkSheetOpen}
+        onClose={() => setIsBoardArkSheetOpen(false)}
+      />
     </NoahSafeAreaView>
   );
 };

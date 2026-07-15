@@ -14,6 +14,7 @@ import { formatMovementKindLabel, formatMovementStatusLabel } from "~/types/move
 import { getMempoolTxUrl } from "~/constants";
 import { useProfileStore } from "~/store/profileStore";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
+import { getTransactionDisplayLabel } from "~/lib/transactionHistory";
 
 const TransactionDetailRow = ({
   label,
@@ -148,11 +149,12 @@ export const TransactionDetailContent = ({
     typeof transaction.offchainFeeSat === "number" ||
     typeof transaction.movementId === "number",
   );
-  const hasOnchainWalletDetails = transaction.source === "onchain-wallet";
+  const hasOnchainWalletDetails =
+    transaction.source === "onchain-wallet" || typeof transaction.balanceChangeSat === "number";
   const onchainExplorerUrl =
     hasOnchainWalletDetails && transaction.txid ? getMempoolTxUrl(transaction.txid) : null;
   const arkSendOnchainExplorerUrl =
-    !hasOnchainWalletDetails && transaction.movementKind === "send-onchain" && transaction.txid
+    !hasOnchainWalletDetails && transaction.type === "Onchain" && transaction.txid
       ? getMempoolTxUrl(transaction.txid)
       : null;
 
@@ -168,7 +170,9 @@ export const TransactionDetailContent = ({
             <Icon name={closeIconName} size={24} color={iconColor} />
           </Pressable>
         ) : null}
-        <Text className="text-2xl font-bold text-foreground">{transaction.type}</Text>
+        <Text className="text-2xl font-bold text-foreground">
+          {getTransactionDisplayLabel(transaction)}
+        </Text>
       </View>
 
       <View className="items-center my-8">
@@ -259,6 +263,9 @@ export const TransactionDetailContent = ({
                   : transaction.subsystemName
               }
             />
+          ) : null}
+          {transaction.chainAnchor && transaction.chainAnchor !== transaction.txid ? (
+            <TransactionDetailRow label="Chain Anchor" value={transaction.chainAnchor} copyable />
           ) : null}
           {typeof transaction.intendedBalanceSat === "number" ? (
             <TransactionDetailRow

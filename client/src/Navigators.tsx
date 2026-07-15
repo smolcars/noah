@@ -21,11 +21,9 @@ import ReceiveScreen from "~/screens/ReceiveScreen";
 import ReceiveSuccessScreen from "~/screens/ReceiveSuccessScreen";
 import SendScreen from "~/screens/SendScreen";
 import SettingsScreen from "~/screens/SettingsScreen";
-import BoardArkScreen from "~/screens/BoardArkScreen";
 import MnemonicScreen from "~/screens/MnemonicScreen";
 import LogScreen from "~/screens/LogScreen";
 import TransactionsScreen from "~/screens/TransactionsScreen";
-import BoardingTransactionsScreen from "~/screens/BoardingTransactionsScreen";
 import LightningAddressScreen from "~/screens/LightningAddressScreen";
 import EmailVerificationScreen from "~/screens/EmailVerificationScreen";
 import { BackupSettingsScreen } from "~/screens/BackupSettingsScreen";
@@ -108,11 +106,9 @@ export type OnboardingStackParamList = {
 
 export type HomeStackParamList = {
   HomeStack: undefined;
-  BoardArk: undefined;
   BtcMap: undefined;
   QRHub: undefined;
   Settings: NavigatorScreenParams<SettingsStackParamList> | undefined;
-  BoardingTransactions: undefined;
   ReceiveSuccess: { amountSat: number };
   EmailVerification: { fromSettings?: boolean } | undefined;
 };
@@ -208,11 +204,6 @@ const HomeStackScreen = () => (
       options={{ headerShown: false, animation: "default" }}
     />
     <HomeStack.Screen
-      name="BoardArk"
-      component={BoardArkScreen}
-      options={{ headerShown: false, animation: "default" }}
-    />
-    <HomeStack.Screen
       name="BtcMap"
       component={BtcMapScreen}
       options={{ headerShown: false, animation: "default" }}
@@ -225,11 +216,6 @@ const HomeStackScreen = () => (
     <HomeStack.Screen
       name="Settings"
       component={SettingsStackNav}
-      options={{ headerShown: false, animation: "default" }}
-    />
-    <HomeStack.Screen
-      name="BoardingTransactions"
-      component={BoardingTransactionsScreen}
       options={{ headerShown: false, animation: "default" }}
     />
     <HomeStack.Screen
