@@ -207,7 +207,10 @@ const TransactionsScreen = () => {
                       onPress={() => openTransaction(item)}
                       className="w-full flex-row items-center rounded-lg bg-card p-4"
                     >
-                      <View pointerEvents="none" className="mr-4">
+                      <View
+                        pointerEvents="none"
+                        className="mr-4 h-8 w-8 shrink-0 items-center justify-center"
+                      >
                         <Icon
                           name={getIconForTransaction(item)}
                           size={24}
@@ -216,7 +219,7 @@ const TransactionsScreen = () => {
                           }
                         />
                       </View>
-                      <View pointerEvents="none" className="flex-1">
+                      <View pointerEvents="none" className="min-w-0 flex-1">
                         <View className="flex-row justify-between gap-4">
                           <View className="flex-1">
                             <Text className="text-foreground text-base font-medium">
