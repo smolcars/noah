@@ -98,7 +98,7 @@ const SendScreen = () => {
   } = useSendScreen();
   const fiatCurrencyInfo = getFiatCurrencyInfo(fiatCurrency);
   const displayAmount = isMaxSend
-    ? "MAX"
+    ? maxSendAmountSat.toLocaleString()
     : amount === ""
       ? currency === "FIAT"
         ? "0.00"
@@ -268,9 +268,11 @@ const SendScreen = () => {
 
                   <Text className="mt-3 text-lg font-medium text-muted-foreground">
                     {isMaxSend
-                      ? maxSendAmountSat > 0
-                        ? `${formatBitcoinAmount(maxSendAmountSat)} maximum from the selected balance`
-                        : "Choose the balance to sweep on confirmation"
+                      ? selectedOnchainSource === "offchain"
+                        ? "Full Ark balance"
+                        : selectedOnchainSource === "onchain"
+                          ? "Full onchain balance"
+                          : "Choose the balance to sweep on confirmation"
                       : parsedAmount
                         ? `≈ ${
                             btcPrice
@@ -429,7 +431,6 @@ const SendScreen = () => {
         <SendConfirmation
           destination={destination}
           amount={isMaxSend ? maxSendAmountSat : amountSat}
-          isMaxAmount={isMaxSend}
           amountNote={
             isMaxSend
               ? selectedOnchainSource === "offchain"

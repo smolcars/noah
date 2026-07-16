@@ -15,7 +15,6 @@ import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 interface SendConfirmationProps {
   destination: string;
   amount: number;
-  isMaxAmount?: boolean;
   amountNote?: string | null;
   destinationType: DestinationTypes;
   comment?: string;
@@ -53,7 +52,6 @@ const truncateValue = (value: string) => {
 export const SendConfirmation: React.FC<SendConfirmationProps> = ({
   destination,
   amount,
-  isMaxAmount = false,
   amountNote = null,
   destinationType,
   comment,
@@ -164,7 +162,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
 
       <View className="mt-4 items-center">
         <Text className="text-center text-3xl font-bold text-foreground">
-          {isMaxAmount ? "MAX" : formatBitcoinAmount(amount)}
+          {formatBitcoinAmount(amount)}
         </Text>
         {amountNote ? (
           <Text className="mt-1 max-w-[300px] text-center text-sm text-muted-foreground">

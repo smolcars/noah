@@ -28,6 +28,7 @@ import { useBalance } from "./useWallet";
 import { useLightningAddressSuggestions } from "./useLightningAddressSuggestions";
 import { formatBitcoinAmount } from "~/lib/bitcoinAmount";
 import { fiatToSats, satsToFiat } from "~/lib/fiatCurrency";
+import { getMaxSendBalanceSat } from "~/lib/onchainSend";
 import { useProfileStore } from "~/store/profileStore";
 import logger from "~/lib/log";
 
@@ -398,6 +399,11 @@ export const useSendScreen = () => {
         ? onchainWalletBalance
         : 0
     : amountSat;
+  const maxSendBalanceSat = getMaxSendBalanceSat(
+    resolvedOnchainSource,
+    onchainWalletBalance,
+    offchainWalletBalance,
+  );
 
   const setEnteredAmount = (nextAmount: string) => {
     setIsMaxSend(false);
@@ -742,7 +748,7 @@ export const useSendScreen = () => {
     isMaxSend,
     canSendMax: isOnchainSend && isAmountEditable,
     handleMaxSend,
-    maxSendAmountSat: confirmationAmountSat,
+    maxSendAmountSat: maxSendBalanceSat,
     isAmountEditable,
     comment,
     setComment,
