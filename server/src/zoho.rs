@@ -502,6 +502,7 @@ fn append_device_info(description: &mut String, device_info: &DeviceInfo) {
         "App version",
         device_info.app_version.as_deref(),
     );
+    append_optional_description_row(description, "App build", device_info.app_build.as_deref());
 }
 
 fn append_optional_description_row(description: &mut String, label: &str, value: Option<&str>) {
@@ -641,6 +642,7 @@ mod tests {
                 os_name: Some("iOS".to_string()),
                 os_version: Some("26.5".to_string()),
                 app_version: Some("0.1.3".to_string()),
+                app_build: Some("26".to_string()),
             }),
         };
         let auth_user = AuthenticatedUser {

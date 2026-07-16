@@ -47,6 +47,7 @@ struct DeviceInfo {
     os_name: Option<String>,
     os_version: Option<String>,
     app_version: Option<String>,
+    app_build: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -144,6 +145,7 @@ async fn register_test_user(
             os_name: Some("Android".to_string()),
             os_version: Some("14".to_string()),
             app_version: Some("1.0.0".to_string()),
+            app_build: Some("1".to_string()),
         }),
     };
 

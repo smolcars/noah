@@ -4,7 +4,7 @@ import { useServerRegistration } from "~/hooks/useServerRegistration";
 import { usePushNotifications } from "~/hooks/usePushNotifications";
 import { useMailboxAuthorization } from "~/hooks/useMailboxAuthorization";
 import { useBackupCoordinator } from "~/hooks/useBackupCoordinator";
-import { reportLastLogin } from "~/lib/api";
+import { reportLastLoginForServer } from "~/lib/server";
 import logger from "~/lib/log";
 import { AutoBoardingService } from "~/components/AutoBoardingService";
 
@@ -26,7 +26,7 @@ const AppServices = memo(() => {
 
   useEffect(() => {
     if (isReady) {
-      reportLastLogin().then((result) => {
+      reportLastLoginForServer().then((result) => {
         if (result.isErr()) {
           log.w("Failed to report last login", [result.error]);
         }

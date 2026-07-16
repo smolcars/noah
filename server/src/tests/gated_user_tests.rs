@@ -6,6 +6,7 @@ use serde_json::json;
 use tower::ServiceExt;
 
 use crate::db::backup_repo::BackupRepository;
+use crate::db::device_repo::DeviceRepository;
 use crate::db::heartbeat_repo::HeartbeatRepository;
 use crate::db::job_status_repo::JobStatusRepository;
 use crate::db::mailbox_authorization_repo::MailboxAuthorizationRepository;
@@ -1220,7 +1221,7 @@ async fn test_report_last_login() {
                     http::header::AUTHORIZATION,
                     format!("Bearer {}", access_token),
                 )
-                .body(Body::empty())
+                .body(Body::from("{}"))
                 .unwrap(),
         )
         .await
@@ -1234,6 +1235,99 @@ async fn test_report_last_login() {
         .await
         .unwrap();
     assert!(updated_last_login.is_some());
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_report_last_login_upserts_device_info() {
+    let (app, app_state, _guard) = setup_test_app().await;
+
+    let user = TestUser::new();
+    let pubkey = user.pubkey().to_string();
+    let access_token = user.access_token(&app_state);
+
+    let mut tx = app_state.db_pool.begin().await.unwrap();
+    UserRepository::create(&mut tx, &pubkey, "deviceuser@localhost", None)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/report_last_login")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "device_info": {
+                            "device_manufacturer": "Apple",
+                            "device_model": "iPhone 12 Pro",
+                            "os_name": "iOS",
+                            "os_version": "26.5",
+                            "app_version": "0.1.3",
+                            "app_build": "26"
+                        }
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let initial_device = DeviceRepository::find_by_pubkey(&app_state.db_pool, &pubkey)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(initial_device.app_version.as_deref(), Some("0.1.3"));
+    assert_eq!(initial_device.app_build.as_deref(), Some("26"));
+    assert_eq!(initial_device.os_version.as_deref(), Some("26.5"));
+
+    let update_response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/report_last_login")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", access_token),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "device_info": {
+                            "device_manufacturer": "Apple",
+                            "device_model": "iPhone 12 Pro",
+                            "os_name": "iOS",
+                            "os_version": "26.6",
+                            "app_version": "0.1.4",
+                            "app_build": "27"
+                        }
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(update_response.status(), StatusCode::OK);
+
+    let updated_device = DeviceRepository::find_by_pubkey(&app_state.db_pool, &pubkey)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(updated_device.app_version.as_deref(), Some("0.1.4"));
+    assert_eq!(updated_device.app_build.as_deref(), Some("27"));
+    assert_eq!(updated_device.os_version.as_deref(), Some("26.6"));
 }
 
 #[tracing_test::traced_test]
@@ -1267,7 +1361,7 @@ async fn test_report_last_login_updates_timestamp() {
                     http::header::AUTHORIZATION,
                     format!("Bearer {}", access_token),
                 )
-                .body(Body::empty())
+                .body(Body::from("{}"))
                 .unwrap(),
         )
         .await
@@ -1296,7 +1390,7 @@ async fn test_report_last_login_updates_timestamp() {
                     http::header::AUTHORIZATION,
                     format!("Bearer {}", access_token),
                 )
-                .body(Body::empty())
+                .body(Body::from("{}"))
                 .unwrap(),
         )
         .await

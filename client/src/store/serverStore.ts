@@ -46,6 +46,8 @@ interface ServerState {
   isEmailPromptDismissed: boolean;
   mailboxAuthorizationExpiry: number | null;
   isMailboxAuthorizationEnabled: boolean;
+  lastReportedDeviceFingerprint: string | null;
+  lastDeviceReportAt: number | null;
   setRegisteredWithServer: (
     isRegistered: boolean,
     lightningAddress: string | null,
@@ -58,6 +60,7 @@ interface ServerState {
   setEmailPromptDismissed: (dismissed: boolean) => void;
   setMailboxAuthorizationExpiry: (expiry: number | null) => void;
   setMailboxAuthorizationEnabled: (enabled: boolean) => void;
+  setDeviceReportState: (fingerprint: string, reportedAt: number) => void;
   resetRegistration: () => void;
 }
 
@@ -72,6 +75,8 @@ export const useServerStore = create<ServerState>()(
       isEmailPromptDismissed: false,
       mailboxAuthorizationExpiry: null,
       isMailboxAuthorizationEnabled: true,
+      lastReportedDeviceFingerprint: null,
+      lastDeviceReportAt: null,
       setRegisteredWithServer: (isRegistered, lightningAddress, isBackupEnabled) =>
         set({ isRegisteredWithServer: isRegistered, lightningAddress, isBackupEnabled }),
       setLightningAddress: (lightningAddress) => set({ lightningAddress }),
@@ -83,6 +88,8 @@ export const useServerStore = create<ServerState>()(
         set({ mailboxAuthorizationExpiry }),
       setMailboxAuthorizationEnabled: (isMailboxAuthorizationEnabled) =>
         set({ isMailboxAuthorizationEnabled }),
+      setDeviceReportState: (lastReportedDeviceFingerprint, lastDeviceReportAt) =>
+        set({ lastReportedDeviceFingerprint, lastDeviceReportAt }),
       resetRegistration: () =>
         set({
           isRegisteredWithServer: false,
@@ -92,6 +99,8 @@ export const useServerStore = create<ServerState>()(
           isEmailVerified: false,
           isEmailPromptDismissed: false,
           mailboxAuthorizationExpiry: null,
+          lastReportedDeviceFingerprint: null,
+          lastDeviceReportAt: null,
         }),
     }),
     {
