@@ -18,7 +18,7 @@ import { useProfileStore } from "~/store/profileStore";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 import { NativeNoahSegmentedControl } from "~/components/ui/NativeNoahSegmentedControl";
-import { getTransactionDisplayLabel, isBoardingTransfer } from "~/lib/transactionHistory";
+import { getTransactionDisplayLabel, isInternalBoardingTransfer } from "~/lib/transactionHistory";
 import { formatMovementStatusLabel } from "~/types/movement";
 
 const log = logger("TransactionsScreen");
@@ -64,7 +64,7 @@ const TransactionsScreen = () => {
           transaction.dateLabel ?? new Date(transaction.date).toISOString().split("T")[0];
         const type = getTransactionDisplayLabel(transaction);
         const status = formatMovementStatusLabel(transaction.movementStatus) ?? "";
-        const isTransfer = isBoardingTransfer(transaction);
+        const isTransfer = isInternalBoardingTransfer(transaction);
         const direction = isTransfer
           ? "Transfer"
           : transaction.direction === "outgoing"
@@ -198,7 +198,7 @@ const TransactionsScreen = () => {
             <FlashList
               data={filteredTransactions}
               renderItem={({ item }: { item: Transaction }) => {
-                const isTransfer = isBoardingTransfer(item);
+                const isTransfer = isInternalBoardingTransfer(item);
                 const movementStatus = formatMovementStatusLabel(item.movementStatus);
 
                 return (

@@ -4,6 +4,7 @@ import {
   getBoardingMovementAmount,
   getMovementTransactionId,
   getTransactionDisplayLabel,
+  isInternalBoardingTransfer,
   mergeBoardingWithOnchainTransactions,
   parseMovementMetadata,
 } from "../../src/lib/transactionHistory";
@@ -110,5 +111,10 @@ describe("unified transaction history", () => {
     expect(getTransactionDisplayLabel({ type: "Onchain", movementKind: "offboard" })).toBe(
       "Offboard",
     );
+  });
+
+  test("treats boards as internal transfers but preserves offboards as outgoing sends", () => {
+    expect(isInternalBoardingTransfer({ type: "Onchain", movementKind: "onboard" })).toBe(true);
+    expect(isInternalBoardingTransfer({ type: "Onchain", movementKind: "offboard" })).toBe(false);
   });
 });

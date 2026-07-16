@@ -133,5 +133,5 @@ export const getTransactionDisplayLabel = (transaction: Transaction): string => 
   return transaction.type;
 };
 
-export const isBoardingTransfer = (transaction: Transaction): boolean =>
-  transaction.movementKind === "onboard" || transaction.movementKind === "offboard";
+export const isInternalBoardingTransfer = (transaction: Transaction): boolean =>
+  transaction.movementKind === "onboard";

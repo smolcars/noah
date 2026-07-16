@@ -45,7 +45,7 @@ import { usePrivacyStore } from "~/store/privacyStore";
 import { useProfileStore } from "~/store/profileStore";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { NativeHomeHeaderActions } from "~/components/ui/NativeHomeHeaderActions";
-import { getTransactionDisplayLabel, isBoardingTransfer } from "~/lib/transactionHistory";
+import { getTransactionDisplayLabel, isInternalBoardingTransfer } from "~/lib/transactionHistory";
 
 const getTransactionIcon = (transaction: Transaction) => {
   if (transaction.movementKind === "onboard") {
@@ -424,7 +424,7 @@ const HomeScreen = () => {
                             name={getTransactionIcon(transaction)}
                             size={20}
                             color={
-                              isBoardingTransfer(transaction)
+                              isInternalBoardingTransfer(transaction)
                                 ? "#f97316"
                                 : transaction.direction === "outgoing"
                                   ? "#ef4444"
@@ -446,14 +446,14 @@ const HomeScreen = () => {
                         </View>
                         <Text
                           className={`text-sm font-bold ${
-                            isBoardingTransfer(transaction)
+                            isInternalBoardingTransfer(transaction)
                               ? "text-orange-500"
                               : transaction.direction === "outgoing"
                                 ? "text-red-500"
                                 : "text-green-500"
                           }`}
                         >
-                          {`${isBoardingTransfer(transaction) ? "" : transaction.direction === "outgoing" ? "-" : "+"}${formatBitcoinAmount(transaction.amount)}`}
+                          {`${isInternalBoardingTransfer(transaction) ? "" : transaction.direction === "outgoing" ? "-" : "+"}${formatBitcoinAmount(transaction.amount)}`}
                         </Text>
                       </Pressable>
                     ))
