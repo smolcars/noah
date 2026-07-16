@@ -24,14 +24,12 @@ const BUTTON_SIZE = 52;
 const ACTION_GROUP_WIDTH = 112;
 
 type NativeHomeHeaderActionsProps = {
-  onBoardArk: () => void;
   onOpenPlaces: () => void;
   onOpenQr: () => void;
   onOpenSettings: () => void;
 };
 
 export function NativeHomeHeaderActions({
-  onBoardArk,
   onOpenPlaces,
   onOpenQr,
   onOpenSettings,
@@ -55,15 +53,15 @@ export function NativeHomeHeaderActions({
             ]}
           >
             <SwiftButton
-              label="Board Ark"
-              systemImage="ferry"
-              onPress={onBoardArk}
+              label="Open settings"
+              systemImage="gearshape"
+              onPress={onOpenSettings}
               modifiers={[
                 buttonStyle("borderless"),
                 controlSize("large"),
                 labelStyle("iconOnly"),
                 frame({ width: BUTTON_SIZE, height: BUTTON_SIZE }),
-                accessibilityIdentifier("home-board-ark-button"),
+                accessibilityIdentifier("home-settings-button"),
               ]}
             />
             <SwiftDivider modifiers={[frame({ height: 22 })]} />
@@ -83,8 +81,7 @@ export function NativeHomeHeaderActions({
           <SwiftSpacer />
           <SwiftHStack
             alignment="center"
-            spacing={8}
-            modifiers={[frame({ width: ACTION_GROUP_WIDTH, height: BUTTON_SIZE })]}
+            modifiers={[frame({ width: BUTTON_SIZE, height: BUTTON_SIZE })]}
           >
             <SwiftButton
               label="Open QR code"
@@ -96,18 +93,6 @@ export function NativeHomeHeaderActions({
                 controlSize("large"),
                 labelStyle("iconOnly"),
                 accessibilityIdentifier("home-qr-button"),
-              ]}
-            />
-            <SwiftButton
-              label="Open settings"
-              systemImage="gearshape"
-              onPress={onOpenSettings}
-              modifiers={[
-                buttonStyle("glass"),
-                buttonBorderShape("circle"),
-                controlSize("large"),
-                labelStyle("iconOnly"),
-                accessibilityIdentifier("home-settings-button"),
               ]}
             />
           </SwiftHStack>
@@ -131,10 +116,10 @@ export function NativeHomeHeaderActions({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Board Ark"
+          accessibilityLabel="Open settings"
           android_ripple={{ color: `${COLORS.BITCOIN_ORANGE}33` }}
-          onPress={onBoardArk}
-          testID="home-board-ark-button"
+          onPress={onOpenSettings}
+          testID="home-settings-button"
           style={({ pressed }) => ({
             width: ACTION_GROUP_WIDTH / 2,
             height: BUTTON_SIZE,
@@ -143,7 +128,7 @@ export function NativeHomeHeaderActions({
             opacity: pressed ? 0.72 : 1,
           })}
         >
-          <Icon name="boat-outline" size={23} color={colors.foreground} />
+          <Icon name="settings-outline" size={24} color={colors.foreground} />
         </Pressable>
         <View className="my-3 w-px bg-border" />
         <Pressable
@@ -164,9 +149,9 @@ export function NativeHomeHeaderActions({
         </Pressable>
       </View>
       <View
-        className="flex-row justify-between"
+        className="flex-row"
         style={{
-          width: ACTION_GROUP_WIDTH,
+          width: BUTTON_SIZE,
           height: BUTTON_SIZE,
         }}
       >
@@ -190,27 +175,6 @@ export function NativeHomeHeaderActions({
           })}
         >
           <Icon name="qr-code-outline" size={24} color={colors.foreground} />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open settings"
-          android_ripple={{ color: `${COLORS.BITCOIN_ORANGE}33`, borderless: true }}
-          onPress={onOpenSettings}
-          testID="home-settings-button"
-          style={({ pressed }) => ({
-            width: BUTTON_SIZE,
-            height: BUTTON_SIZE,
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: BUTTON_SIZE / 2,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: `${COLORS.BITCOIN_ORANGE}14`,
-            opacity: pressed ? 0.72 : 1,
-            overflow: "hidden",
-          })}
-        >
-          <Icon name="settings-outline" size={24} color={colors.foreground} />
         </Pressable>
       </View>
     </View>

@@ -45,7 +45,6 @@ import { usePrivacyStore } from "~/store/privacyStore";
 import { useProfileStore } from "~/store/profileStore";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { NativeHomeHeaderActions } from "~/components/ui/NativeHomeHeaderActions";
-import { BoardArkBottomSheet } from "~/components/BoardArkBottomSheet";
 import { getTransactionDisplayLabel, isBoardingTransfer } from "~/lib/transactionHistory";
 
 const getTransactionIcon = (transaction: Transaction) => {
@@ -87,7 +86,6 @@ const HomeScreen = () => {
   const [fact, setFact] = useState("");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isTransactionSheetOpen, setIsTransactionSheetOpen] = useState(false);
-  const [isBoardArkSheetOpen, setIsBoardArkSheetOpen] = useState(false);
   const bottomTabBarHeight = useBottomTabBarHeight();
   const { isUpdateRequired, minimumVersion, currentVersion } = useAppVersionCheck();
   const { isEmailVerified, isEmailPromptDismissed, setEmailPromptDismissed } = useServerStore();
@@ -197,7 +195,6 @@ const HomeScreen = () => {
     >
       <View className="relative m-4 h-[52px]">
         <NativeHomeHeaderActions
-          onBoardArk={() => setIsBoardArkSheetOpen(true)}
           onOpenPlaces={() => navigation.navigate("BtcMap")}
           onOpenQr={() => navigation.navigate("QRHub")}
           onOpenSettings={() => navigation.navigate("Settings")}
@@ -484,10 +481,6 @@ const HomeScreen = () => {
           />
         </AppBottomSheet>
       ) : null}
-      <BoardArkBottomSheet
-        isOpen={isBoardArkSheetOpen}
-        onClose={() => setIsBoardArkSheetOpen(false)}
-      />
     </NoahSafeAreaView>
   );
 };

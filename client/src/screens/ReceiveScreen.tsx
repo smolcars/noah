@@ -41,6 +41,8 @@ import type { Bolt11Invoice } from "react-native-nitro-ark";
 import { queryClient } from "~/queryClient";
 import { BlinkingCaret } from "~/components/BlinkingCaret";
 import { useBitcoinAmountFormatter, useBitcoinAmountUnit } from "~/hooks/useBitcoinAmountFormatter";
+import { BoardArkBottomSheet } from "~/components/BoardArkBottomSheet";
+import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 
 const minAmount = 1;
 const SUBSCRIPTION_RETRY_DELAY_MS = 1000;
@@ -213,6 +215,7 @@ const ReceiveScreen = () => {
   const [isSchedulingGeneration, setIsSchedulingGeneration] = useState(false);
   const [arkSubscriptionRetryTick, setArkSubscriptionRetryTick] = useState(0);
   const [lightningSubscriptionRetryTick, setLightningSubscriptionRetryTick] = useState(0);
+  const [isBoardArkSheetOpen, setIsBoardArkSheetOpen] = useState(false);
 
   const { mutateAsync: generateOffchainAddress, isPending: isGeneratingVtxo } =
     useGenerateOffchainAddress();
@@ -674,8 +677,19 @@ const ReceiveScreen = () => {
           contentContainerStyle={{ paddingBottom: 32 }}
         >
           <View className="px-5 pb-8">
-            <View className="mb-4 flex-row items-center pt-1">
+            <View className="mb-4 flex-row items-center justify-between pt-1">
               <Text className="text-2xl font-bold text-foreground">Receive</Text>
+              <NativeNoahIconButton
+                icon="board"
+                accessibilityLabel="Board to Ark"
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setIsBoardArkSheetOpen(true);
+                }}
+                size={52}
+                iconSize={23}
+                testID="receive-board-ark-button"
+              />
             </View>
 
             <View className="pt-1">
@@ -899,6 +913,10 @@ const ReceiveScreen = () => {
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
+      <BoardArkBottomSheet
+        isOpen={isBoardArkSheetOpen}
+        onClose={() => setIsBoardArkSheetOpen(false)}
+      />
     </NoahSafeAreaView>
   );
 };

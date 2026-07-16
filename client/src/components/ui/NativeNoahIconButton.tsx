@@ -17,12 +17,16 @@ import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
 import { useTheme } from "~/hooks/useTheme";
 import { COLORS } from "~/lib/styleConstants";
 
-export type NativeNoahIcon = "back" | "history" | "refresh" | "share";
+export type NativeNoahIcon = "back" | "board" | "history" | "refresh" | "share";
 
 const ICONS = {
   back: {
     ios: "chevron.backward",
     android: "arrow-back-outline",
+  },
+  board: {
+    ios: "ferry",
+    android: "boat-outline",
   },
   history: {
     ios: "clock.arrow.circlepath",
