@@ -5,43 +5,43 @@ edition = "2024"
 default-run = "server"
 
 [dependencies]
-axum = { version = "0.8.7", features = ["json"] }
-anyhow = "1.0.100"
-dotenvy = "0.15"
-tokio = { version = "1.48.0", features = ["macros", "rt-multi-thread"] }
-tokio-util = "0.7.16"
-tracing = "0.1.43"
-tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
-tower-http = { version = "0.6.7", features = ["trace"] }
+axum = { version = "0.8.9", features = ["json"] }
+anyhow = "1.0.103"
+dotenvy = "0.15.7"
+tokio = { version = "1.52.4", features = ["macros", "rt-multi-thread"] }
+tokio-util = "0.7.18"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+tower-http = { version = "0.7.0", features = ["trace"] }
 tower_governor = "0.8.0"
-governor = "0.10.2"
-serde = { version = "1.0.225", features = ["derive"] }
-chrono = { version = "0.4.42", features = ["serde"] }
+governor = "0.10.4"
+serde = { version = "1.0.228", features = ["derive"] }
+chrono = { version = "0.4.45", features = ["serde"] }
 hex = "0.4.3"
-rand = "0.9.2"
-bitcoin = "0.32.7"
-thiserror = "2.0.17"
+rand = "0.10.2"
+bitcoin = "0.32.102"
+thiserror = "2.0.18"
 tokio-cron-scheduler = { version = "0.15.1", features = ["english"] }
-serde_json = "1.0.145"
-random_word = { version = "0.5.0", features = ["en"] }
-futures-util = "0.3.30"
+serde_json = "1.0.150"
+random_word = { version = "0.5.2", features = ["en"] }
+futures-util = "0.3.32"
 bark-server-rpc = { git = "https://gitlab.com/ark-bitcoin/bark", tag = "server-0.3.0" }
 ark = { package = "ark-lib", git = "https://gitlab.com/ark-bitcoin/bark", tag = "server-0.3.0" }
-deadpool-redis = { version = "0.22.0", features = ["serde", "rt_tokio_1"] }
-redis = { version = "0.32.7", features = ["aio", "tokio-comp"] }
+deadpool-redis = { version = "0.23.0", features = ["serde", "rt_tokio_1"] }
+redis = { version = "1.4.0", features = ["aio", "tokio-comp"] }
 
-async-trait = "0.1.80"
-http-body-util = "0.1.1"
+async-trait = "0.1.89"
+http-body-util = "0.1.4"
 validator = { version = "0.20.0", features = ["derive"] }
-aws-config = "1.8.11"
-aws-sdk-s3 = "1.115.0"
-aws-sdk-sesv2 = "1.71.0"
-ts-rs = "11.1.0"
-sentry = { version = "0.46.0", features = ["tracing", "logs", "tower-axum-matched-path"] }
-tower = "0.5.2"
-uuid = { version = "1.18.1", features = ["v4"] }
-semver = "1.0.27"
-sqlx = { version = "0.8.2", default-features = false, features = [
+aws-config = "1.9.0"
+aws-sdk-s3 = "1.138.0"
+aws-sdk-sesv2 = "1.124.0"
+ts-rs = "12.0.1"
+sentry = { version = "0.48.5", features = ["tracing", "logs", "tower-axum-matched-path"] }
+tower = "0.5.3"
+uuid = { version = "1.24.0", features = ["v4"] }
+semver = "1.0.28"
+sqlx = { version = "0.9.0", default-features = false, features = [
   "runtime-tokio",
   "postgres",
   "uuid",
@@ -49,18 +49,18 @@ sqlx = { version = "0.8.2", default-features = false, features = [
   "macros",
   "migrate",
 ] }
-reqwest = { version = "0.12.24", features = ["json", "multipart"] }
+reqwest = { version = "0.13.4", features = ["form", "json", "multipart", "query"] }
 base64 = "0.22.1"
 goose = { version = "0.18.1", optional = true }
-clap = { version = "4.5", features = ["derive"] }
-regex = "1.12.2"
-expo_push_notification_client = "2.0.0"
-jsonwebtoken = "9.3.1"
+clap = { version = "4.6.2", features = ["derive"] }
+regex = "1.13.1"
+expo_push_notification_client = "2.0.2"
+jsonwebtoken = { version = "10.4.0", features = ["aws_lc_rs"] }
 
 [dev-dependencies]
-tower = { version = "0.5.2", features = ["full"] }
-tracing-test = "0.2.5"
-once_cell = "1.19.0"
+tower = { version = "0.5.3", features = ["full"] }
+tracing-test = "0.2.6"
+once_cell = "1.21.4"
 ark = { package = "ark-lib", git = "https://gitlab.com/ark-bitcoin/bark", tag = "server-0.3.0", features = [
   "test-util",
 ] }

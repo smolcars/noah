@@ -1,5 +1,5 @@
 use goose::prelude::*;
-use rand::Rng;
+use rand::RngExt;
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};

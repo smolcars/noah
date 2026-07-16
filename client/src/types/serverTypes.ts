@@ -83,9 +83,9 @@ export type DownloadUrlResponse = { download_url: string, backup_size: number, }
  */
 export type EmailVerificationResponse = { success: boolean, message: string | null, email: string | null, };
 
-export type FiatPricesPayload = Record<string, never>;
+export type FiatPricesPayload = Record<symbol, never>;
 
-export type FiatPricesResponse = { time: number, rates: { [key in string]?: number }, };
+export type FiatPricesResponse = { time: number, rates: { [key in string]: number }, };
 
 export type GetBackupObjectDownloadPayload = { backup_id: string | null, };
 

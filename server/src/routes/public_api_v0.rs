@@ -8,7 +8,7 @@ use axum::{
 };
 use chrono::{TimeZone, Utc};
 use expo_push_notification_client::Priority;
-use rand::Rng;
+use rand::RngExt;
 use uuid::Uuid;
 
 use serde::{Deserialize, Serialize};

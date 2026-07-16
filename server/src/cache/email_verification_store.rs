@@ -1,5 +1,5 @@
 use deadpool_redis::redis::AsyncCommands;
-use rand::Rng;
+use rand::RngExt;
 
 use super::redis_client::RedisClient;
 

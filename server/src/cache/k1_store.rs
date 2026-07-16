@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use deadpool_redis::redis::{AsyncCommands, cmd};
-use rand::RngCore;
+use rand::Rng;
 
 use super::redis_client::RedisClient;
 
