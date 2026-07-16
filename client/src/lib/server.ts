@@ -1,11 +1,9 @@
-import { authorizeMailbox, registerWithServer } from "~/lib/api";
-import * as Device from "expo-device";
+import { authorizeMailbox, registerWithServer, reportLastLogin } from "~/lib/api";
 import logger from "~/lib/log";
 import { useServerStore } from "~/store/serverStore";
 import { useProfileStore } from "~/store/profileStore";
 import { type Result, err, ok } from "neverthrow";
 import { RegisterResponse } from "~/types/serverTypes";
-import Constants from "expo-constants";
 import { peakAddress } from "~/lib/paymentsApi";
 import {
   registerForPushNotificationsAsync,
@@ -13,9 +11,18 @@ import {
   registerUnifiedPushTokenWithServer,
 } from "~/lib/pushNotifications";
 import { getMailboxAuthorization, loadWalletIfNeeded } from "~/lib/walletApi";
+import {
+  getCurrentDeviceInfo,
+  getDeviceInfoFingerprint,
+  shouldReportDeviceInfo,
+} from "~/lib/deviceInfo";
 
 const log = logger("server");
 export const MAILBOX_AUTH_TTL_SECS = 89 * 24 * 60 * 60;
+
+const recordDeviceInfoReport = (fingerprint: string) => {
+  useServerStore.getState().setDeviceReportState(fingerprint, Date.now());
+};
 
 const applyServerRegistrationResult = (response: RegisterResponse) => {
   const { setRegisteredWithServer, setEmailAddress, setEmailVerified } = useServerStore.getState();
@@ -38,16 +45,12 @@ export const performServerRegistration = async (
     return err(addressResult.error);
   }
   const ark_address = addressResult.value.address;
+  const deviceInfo = getCurrentDeviceInfo();
+  const deviceInfoFingerprint = getDeviceInfoFingerprint(deviceInfo);
 
   // Register with server and pass user device information.
   const result = await registerWithServer({
-    device_info: {
-      app_version: Constants.expoConfig?.version || null,
-      os_name: Device.osName,
-      os_version: Device.osVersion,
-      device_model: Device.modelName,
-      device_manufacturer: Device.manufacturer,
-    },
+    device_info: deviceInfo,
     ln_address,
     ark_address,
   });
@@ -57,9 +60,31 @@ export const performServerRegistration = async (
     return result;
   }
 
+  recordDeviceInfoReport(deviceInfoFingerprint);
   log.d("Successfully registered with server", [result.value.is_email_verified]);
   if (options?.updateStore ?? true) {
     applyServerRegistrationResult(result.value);
+  }
+
+  return result;
+};
+
+export const reportLastLoginForServer = async () => {
+  const {
+    isRegisteredWithServer,
+    lastReportedDeviceFingerprint,
+    lastDeviceReportAt,
+    setDeviceReportState,
+  } = useServerStore.getState();
+
+  const deviceInfo = getCurrentDeviceInfo();
+  const shouldIncludeDeviceInfo =
+    isRegisteredWithServer &&
+    shouldReportDeviceInfo(deviceInfo, lastReportedDeviceFingerprint, lastDeviceReportAt);
+
+  const result = await reportLastLogin(shouldIncludeDeviceInfo ? { device_info: deviceInfo } : {});
+  if (result.isOk() && shouldIncludeDeviceInfo) {
+    setDeviceReportState(getDeviceInfoFingerprint(deviceInfo), Date.now());
   }
 
   return result;

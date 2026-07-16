@@ -1,5 +1,3 @@
-import Constants from "expo-constants";
-import * as Device from "expo-device";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { TextInput as ExpoTextInput, type TextInputRef } from "@expo/ui";
@@ -31,6 +29,7 @@ import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import { Text } from "~/components/ui/text";
 import { useTheme } from "~/hooks/useTheme";
 import { submitSupportTicket } from "~/lib/api";
+import { getCurrentDeviceInfo } from "~/lib/deviceInfo";
 import Logger from "~/lib/log";
 import { COLORS } from "~/lib/styleConstants";
 import type { SupportTicketAttachment } from "~/types/serverTypes";
@@ -140,13 +139,7 @@ const FeedbackScreen = () => {
       name: trimmedName,
       email: email.trim() || null,
       attachment,
-      device_info: {
-        app_version: Constants.expoConfig?.version || null,
-        os_name: Device.osName,
-        os_version: Device.osVersion,
-        device_model: Device.modelName,
-        device_manufacturer: Device.manufacturer,
-      },
+      device_info: getCurrentDeviceInfo(),
     });
 
     if (result.isErr()) {

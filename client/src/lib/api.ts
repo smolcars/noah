@@ -38,6 +38,7 @@ import {
   UpdateProfilePayload,
   UploadUrlResponse,
   ReportJobStatusPayload,
+  ReportLastLoginPayload,
   DefaultSuccessPayload,
   SubmitInvoicePayload,
   RegisterPayload,
@@ -519,7 +520,8 @@ export const listBackupObjectsForRestore = async (payload: {
 
 export const deregister = () => post<object, DefaultSuccessPayload>("/deregister", {});
 
-export const reportLastLogin = () => post<object, DefaultSuccessPayload>("/report_last_login", {});
+export const reportLastLogin = (payload: ReportLastLoginPayload = {}) =>
+  post<ReportLastLoginPayload, DefaultSuccessPayload>("/report_last_login", payload);
 
 export const checkAppVersion = async (
   clientVersion: string,

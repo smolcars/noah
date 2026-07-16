@@ -145,7 +145,7 @@ impl std::str::FromStr for UserStatus {
     }
 }
 
-/// Defines device information captured during registration.
+/// Defines device information reported by the client.
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
 #[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 pub struct DeviceInfo {
@@ -154,6 +154,7 @@ pub struct DeviceInfo {
     pub os_name: Option<String>,
     pub os_version: Option<String>,
     pub app_version: Option<String>,
+    pub app_build: Option<String>,
 }
 
 /// Defines the payload for a user registration request.
@@ -606,6 +607,14 @@ pub struct ReportJobStatusPayload {
 #[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 pub struct DefaultSuccessPayload {
     pub success: bool,
+}
+
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct ReportLastLoginPayload {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub device_info: Option<DeviceInfo>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, TS)]

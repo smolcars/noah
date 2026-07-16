@@ -72,9 +72,9 @@ export type DeleteBackupObjectPayload = { backup_id: string, };
 export type DeleteBackupPayload = { backup_version: number, };
 
 /**
- * Defines device information captured during registration.
+ * Defines device information reported by the client.
  */
-export type DeviceInfo = { device_manufacturer: string | null, device_model: string | null, os_name: string | null, os_version: string | null, app_version: string | null, };
+export type DeviceInfo = { device_manufacturer: string | null, device_model: string | null, os_name: string | null, os_version: string | null, app_version: string | null, app_build: string | null, };
 
 export type DownloadUrlResponse = { download_url: string, backup_size: number, };
 
@@ -195,6 +195,8 @@ is_email_verified: boolean,
 user_status: UserStatus, };
 
 export type ReportJobStatusPayload = { notification_k1: string, report_type: ReportType, status: ReportStatus, error_message: string | null, };
+
+export type ReportLastLoginPayload = { device_info?: DeviceInfo, };
 
 export type ReportStatus = "pending" | "success" | "failure" | "timeout";
 

@@ -1,4 +1,5 @@
 use crate::db::backup_repo::BackupRepository;
+use crate::db::device_repo::DeviceRepository;
 use crate::db::heartbeat_repo::HeartbeatRepository;
 use crate::db::job_status_repo::JobStatusRepository;
 use crate::db::mailbox_authorization_repo::MailboxAuthorizationRepository;
@@ -13,8 +14,8 @@ use crate::types::{
     DefaultSuccessPayload, DeleteBackupObjectPayload, DeleteBackupPayload, DownloadUrlResponse,
     GetBackupObjectDownloadPayload, GetDownloadUrlPayload, HeartbeatResponsePayload,
     InitiateBackupUploadPayload, InitiateBackupUploadResponse, LightningAddressSuggestionsPayload,
-    LightningAddressSuggestionsResponse, ReportJobStatusPayload, ReportStatus,
-    SubmitInvoicePayload, SubmitSupportTicketPayload, SubmitSupportTicketResponse,
+    LightningAddressSuggestionsResponse, ReportJobStatusPayload, ReportLastLoginPayload,
+    ReportStatus, SubmitInvoicePayload, SubmitSupportTicketPayload, SubmitSupportTicketResponse,
     UpdateProfilePayload, UserInfoResponse, UserStatus,
 };
 use crate::{
@@ -796,9 +797,16 @@ pub async fn heartbeat_response(
 pub async fn report_last_login(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
+    Json(payload): Json<ReportLastLoginPayload>,
 ) -> anyhow::Result<Json<DefaultSuccessPayload>, ApiError> {
     let user_repo = UserRepository::new(&state.db_pool);
     user_repo.update_last_login(&auth_payload.key).await?;
+
+    if let Some(device_info) = payload.device_info {
+        let mut tx = state.db_pool.begin().await?;
+        DeviceRepository::upsert(&mut tx, &auth_payload.key, &device_info).await?;
+        tx.commit().await?;
+    }
 
     Ok(Json(DefaultSuccessPayload { success: true }))
 }

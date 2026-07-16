@@ -17,14 +17,23 @@ impl DeviceRepository {
         device_info: &DeviceInfo,
     ) -> Result<()> {
         sqlx::query(
-            "INSERT INTO devices (pubkey, device_manufacturer, device_model, os_name, os_version, app_version)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            "INSERT INTO devices (
+                 pubkey,
+                 device_manufacturer,
+                 device_model,
+                 os_name,
+                 os_version,
+                 app_version,
+                 app_build
+             )
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
              ON CONFLICT(pubkey) DO UPDATE SET
                  device_manufacturer = excluded.device_manufacturer,
                  device_model = excluded.device_model,
                  os_name = excluded.os_name,
                  os_version = excluded.os_version,
                  app_version = excluded.app_version,
+                 app_build = COALESCE(excluded.app_build, devices.app_build),
                  updated_at = now()",
         )
         .bind(pubkey)
@@ -33,8 +42,50 @@ impl DeviceRepository {
         .bind(device_info.os_name.clone())
         .bind(device_info.os_version.clone())
         .bind(device_info.app_version.clone())
+        .bind(device_info.app_build.clone())
         .execute(&mut **tx)
         .await?;
         Ok(())
+    }
+
+    #[cfg(test)]
+    pub async fn find_by_pubkey(pool: &sqlx::PgPool, pubkey: &str) -> Result<Option<DeviceInfo>> {
+        let row = sqlx::query_as::<
+            _,
+            (
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+            ),
+        >(
+            "SELECT
+                 device_manufacturer,
+                 device_model,
+                 os_name,
+                 os_version,
+                 app_version,
+                 app_build
+             FROM devices
+             WHERE pubkey = $1",
+        )
+        .bind(pubkey)
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(row.map(
+            |(device_manufacturer, device_model, os_name, os_version, app_version, app_build)| {
+                DeviceInfo {
+                    device_manufacturer,
+                    device_model,
+                    os_name,
+                    os_version,
+                    app_version,
+                    app_build,
+                }
+            },
+        ))
     }
 }
