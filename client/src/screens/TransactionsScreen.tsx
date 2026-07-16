@@ -219,35 +219,36 @@ const TransactionsScreen = () => {
                           }
                         />
                       </View>
-                      <View pointerEvents="none" className="min-w-0 flex-1">
-                        <View className="flex-row justify-between gap-4">
-                          <View className="flex-1">
-                            <Text className="text-foreground text-base font-medium">
-                              {getTransactionDisplayLabel(item)}
-                            </Text>
-                          </View>
-                          <View className="items-end">
-                            <Text
-                              className={`text-base font-bold ${
-                                isTransfer
-                                  ? "text-orange-500"
-                                  : item.direction === "outgoing"
-                                    ? "text-red-500"
-                                    : "text-green-500"
-                              }`}
-                            >
-                              {`${isTransfer ? "" : item.direction === "outgoing" ? "-" : "+"}${formatBitcoinAmount(item.amount)}`}
-                            </Text>
-                            {movementStatus ? (
-                              <Text className="mt-1 text-xs text-muted-foreground">
-                                {movementStatus}
-                              </Text>
-                            ) : null}
-                          </View>
+                      <View
+                        pointerEvents="none"
+                        className="min-w-0 flex-1 flex-row justify-between gap-4"
+                      >
+                        <View className="min-w-0 flex-1">
+                          <Text className="text-foreground text-base font-medium">
+                            {getTransactionDisplayLabel(item)}
+                          </Text>
+                          <Text className="text-muted-foreground text-sm mt-1">
+                            {item.dateLabel ?? new Date(item.date).toLocaleString()}
+                          </Text>
                         </View>
-                        <Text className="text-muted-foreground text-sm mt-1">
-                          {item.dateLabel ?? new Date(item.date).toLocaleString()}
-                        </Text>
+                        <View className="shrink-0 items-end">
+                          <Text
+                            className={`text-base font-bold ${
+                              isTransfer
+                                ? "text-orange-500"
+                                : item.direction === "outgoing"
+                                  ? "text-red-500"
+                                  : "text-green-500"
+                            }`}
+                          >
+                            {`${isTransfer ? "" : item.direction === "outgoing" ? "-" : "+"}${formatBitcoinAmount(item.amount)}`}
+                          </Text>
+                          {movementStatus ? (
+                            <Text className="mt-1 text-xs text-muted-foreground">
+                              {movementStatus}
+                            </Text>
+                          ) : null}
+                        </View>
                       </View>
                     </Pressable>
                   </View>
