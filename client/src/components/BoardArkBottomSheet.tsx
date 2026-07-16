@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Keyboard, Pressable, View } from "react-native";
+import { Keyboard, Linking, Pressable, View } from "react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
@@ -11,7 +11,8 @@ import { Text } from "~/components/ui/text";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { useBoardAllAmountArk, useBoardArk, useBoardArkFeeEstimate } from "~/hooks/usePayments";
 import { useArkInfo, useBalance } from "~/hooks/useWallet";
-import { copyToClipboard } from "~/lib/clipboardUtils";
+import { getMempoolTxUrl } from "~/constants";
+import { useCopyToClipboard } from "~/lib/clipboardUtils";
 import { COLORS } from "~/lib/styleConstants";
 
 type BoardArkBottomSheetProps = {
@@ -21,6 +22,7 @@ type BoardArkBottomSheetProps = {
 
 export function BoardArkBottomSheet({ isOpen, onClose }: BoardArkBottomSheetProps) {
   const formatBitcoinAmount = useBitcoinAmountFormatter();
+  const { copyWithState, isCopied, resetCopiedState } = useCopyToClipboard(1200);
   const { data: balance, isLoading: isBalanceLoading } = useBalance();
   const { data: arkInfo, isLoading: isArkInfoLoading } = useArkInfo(isOpen);
   const boardMutation = useBoardArk();
@@ -78,6 +80,10 @@ export function BoardArkBottomSheet({ isOpen, onClose }: BoardArkBottomSheetProp
   const isMaxEstimatePending =
     isMaxAmount && canEstimate && (isWaitingForEstimate || feeEstimateQuery.isFetching);
   const boardResult = boardMutation.data ?? boardAllMutation.data;
+  const isFundingTxCopied = isCopied("funding-txid");
+  const fundingTxExplorerUrl = boardResult?.funding_txid
+    ? getMempoolTxUrl(boardResult.funding_txid)
+    : null;
   const isSubmitting = boardMutation.isPending || boardAllMutation.isPending;
   const error = boardMutation.error ?? boardAllMutation.error;
 
@@ -85,6 +91,7 @@ export function BoardArkBottomSheet({ isOpen, onClose }: BoardArkBottomSheetProp
     setAmount("");
     setIsMaxAmount(false);
     setDebouncedEstimateParams(null);
+    resetCopiedState();
     boardMutation.reset();
     boardAllMutation.reset();
   };
@@ -125,12 +132,12 @@ export function BoardArkBottomSheet({ isOpen, onClose }: BoardArkBottomSheetProp
     }
   };
 
-  const copyFundingTxid = async () => {
+  const copyFundingTxid = () => {
     if (!boardResult?.funding_txid) {
       return;
     }
 
-    await copyToClipboard(boardResult.funding_txid);
+    void copyWithState(boardResult.funding_txid, "funding-txid");
   };
 
   return (
@@ -150,22 +157,51 @@ export function BoardArkBottomSheet({ isOpen, onClose }: BoardArkBottomSheetProp
             </Text>
           </View>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Copy boarding transaction ID"
-            onPress={copyFundingTxid}
-            className="mt-6 rounded-2xl border border-border bg-card px-4 py-4"
-          >
+          <View className="mt-6 rounded-2xl border border-border bg-card px-4 py-4">
             <Text className="text-xs font-semibold uppercase tracking-[2px] text-muted-foreground">
               Funding transaction
             </Text>
             <Text className="mt-2 text-sm text-foreground" numberOfLines={1} ellipsizeMode="middle">
               {boardResult.funding_txid}
             </Text>
-            <Text className="mt-2 text-xs font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
-              Tap to copy
-            </Text>
-          </Pressable>
+            <View className="mt-3 flex-row items-center gap-5">
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Copy boarding transaction ID"
+                onPress={copyFundingTxid}
+                className="flex-row items-center gap-2"
+              >
+                <Icon
+                  name={isFundingTxCopied ? "checkmark-circle-outline" : "copy-outline"}
+                  size={17}
+                  color={isFundingTxCopied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE}
+                />
+                <Text
+                  className="text-xs font-semibold"
+                  style={{
+                    color: isFundingTxCopied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE,
+                  }}
+                >
+                  {isFundingTxCopied ? "Copied" : "Copy"}
+                </Text>
+              </Pressable>
+              {fundingTxExplorerUrl ? (
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel="Open boarding transaction in block explorer"
+                  onPress={() => {
+                    void Linking.openURL(fundingTxExplorerUrl);
+                  }}
+                  className="flex-row items-center gap-2"
+                >
+                  <Icon name="open-outline" size={17} color={COLORS.BITCOIN_ORANGE} />
+                  <Text className="text-xs font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
+                    View in explorer
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
 
           <NativeNoahButton
             label="Done"
