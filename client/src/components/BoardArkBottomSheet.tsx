@@ -62,14 +62,21 @@ export function BoardArkBottomSheet({ isOpen, onClose }: BoardArkBottomSheetProp
   }, [amountSat, canEstimate, isMaxAmount, minimumBoardAmountSat, onchainBalance]);
 
   const feeEstimateQuery = useBoardArkFeeEstimate(debouncedEstimateParams);
-  const feeEstimate =
-    feeEstimateQuery.data?.kind === "estimate" ? feeEstimateQuery.data.estimate : undefined;
   const isWaitingForEstimate =
     canEstimate &&
     (debouncedEstimateParams?.amountSat !== amountSat ||
       debouncedEstimateParams.confirmedOnchainBalanceSat !== onchainBalance ||
       debouncedEstimateParams.isMaxAmount !== isMaxAmount ||
       debouncedEstimateParams.minimumBoardAmountSat !== minimumBoardAmountSat);
+  const currentFeeEstimateResult = isWaitingForEstimate ? undefined : feeEstimateQuery.data;
+  const feeEstimate =
+    currentFeeEstimateResult?.kind === "estimate" ? currentFeeEstimateResult.estimate : undefined;
+  const unavailableEstimate =
+    currentFeeEstimateResult?.kind === "unavailable"
+      ? currentFeeEstimateResult.unavailable
+      : undefined;
+  const isMaxEstimatePending =
+    isMaxAmount && canEstimate && (isWaitingForEstimate || feeEstimateQuery.isFetching);
   const boardResult = boardMutation.data ?? boardAllMutation.data;
   const isSubmitting = boardMutation.isPending || boardAllMutation.isPending;
   const error = boardMutation.error ?? boardAllMutation.error;
@@ -100,7 +107,14 @@ export function BoardArkBottomSheet({ isOpen, onClose }: BoardArkBottomSheetProp
   const submit = () => {
     Keyboard.dismiss();
 
-    if (!arkInfo || amountSat <= 0 || amountSat > onchainBalance || isBelowMinimum) {
+    if (
+      !arkInfo ||
+      amountSat <= 0 ||
+      amountSat > onchainBalance ||
+      isBelowMinimum ||
+      unavailableEstimate ||
+      isMaxEstimatePending
+    ) {
       return;
     }
 
@@ -233,6 +247,23 @@ export function BoardArkBottomSheet({ isOpen, onClose }: BoardArkBottomSheetProp
             compact
           />
 
+          {unavailableEstimate ? (
+            <View className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+              <Text className="text-sm font-semibold text-amber-700 dark:text-amber-200">
+                Not enough onchain balance to board MAX
+              </Text>
+              <Text className="mt-1 text-sm leading-5 text-amber-700 dark:text-amber-200">
+                After the estimated onchain fee,{" "}
+                {formatBitcoinAmount(unavailableEstimate.boardable_amount_sat)} would be available
+                to board, below the{" "}
+                {formatBitcoinAmount(unavailableEstimate.minimum_board_amount_sat)} minimum. You
+                need at least{" "}
+                {formatBitcoinAmount(unavailableEstimate.minimum_required_balance_sat)} confirmed
+                onchain.
+              </Text>
+            </View>
+          ) : null}
+
           {error ? (
             <View className="mt-4 rounded-2xl border border-destructive/35 bg-destructive/10 px-4 py-3">
               <Text className="text-sm font-semibold text-destructive">Boarding failed</Text>
@@ -259,7 +290,9 @@ export function BoardArkBottomSheet({ isOpen, onClose }: BoardArkBottomSheetProp
                 !arkInfo ||
                 amountSat <= 0 ||
                 amountSat > onchainBalance ||
-                isBelowMinimum
+                isBelowMinimum ||
+                !!unavailableEstimate ||
+                isMaxEstimatePending
               }
               className="flex-1"
               fullWidth

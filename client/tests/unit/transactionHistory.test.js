@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   getBoardingMovementAmount,
+  getMovementTransactionId,
   getTransactionDisplayLabel,
   mergeBoardingWithOnchainTransactions,
   parseMovementMetadata,
@@ -14,14 +15,29 @@ describe("boarding transaction metadata", () => {
         JSON.stringify({
           offboard_txid: "offboard-txid",
           onchain_fee_sat: 123,
-          chain_anchor: "board-txid",
+          chain_anchor: "board-txid:1",
         }),
       ),
     ).toEqual({
       offboardTxid: "offboard-txid",
       onchainFeeSat: 123,
-      chainAnchor: "board-txid",
+      chainAnchor: "board-txid:1",
     });
+  });
+
+  test("uses the transaction ID portion of a board anchor outpoint", () => {
+    expect(
+      getMovementTransactionId(
+        {
+          id: 7,
+          input_vtxos: [],
+          output_vtxos: [],
+          exited_vtxos: [],
+        },
+        { chainAnchor: "funding-txid:1" },
+        false,
+      ),
+    ).toBe("funding-txid");
   });
 
   test("prefers the intended boarding amount", () => {

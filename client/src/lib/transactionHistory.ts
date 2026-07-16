@@ -36,7 +36,8 @@ export const getMovementTransactionId = (
   metadata: MovementMetadata,
   isOutgoing: boolean,
 ): string => {
-  const metadataTxid = metadata.offboardTxid ?? metadata.chainAnchor;
+  const chainAnchorTxid = metadata.chainAnchor?.replace(/:\d+$/, "");
+  const metadataTxid = metadata.offboardTxid ?? chainAnchorTxid;
   if (metadataTxid) {
     return metadataTxid;
   }
