@@ -47,7 +47,7 @@ pub struct GetK1 {
 }
 
 const LNURLP_MIN_SENDABLE: u64 = 1000;
-const LNURLP_MAX_SENDABLE: u64 = 100000000;
+const LNURLP_MAX_SENDABLE: u64 = 1000000000;
 const COMMENT_ALLOWED_SIZE: u16 = 280;
 const POLL_INTERVAL: Duration = Duration::from_millis(500);
 const TIMEOUT: Duration = Duration::from_secs(45);
