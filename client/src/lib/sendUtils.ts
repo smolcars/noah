@@ -11,6 +11,7 @@ import logger from "./log";
 import { isNetworkMatch } from "./utils";
 
 const log = logger("sendUtils");
+const BOLT12_OFFER_REGEX = /^lno1[02-9ac-hj-np-z]+$/i;
 
 export type DestinationTypes =
   | "onchain"
@@ -38,6 +39,30 @@ export type ParsedDestination = {
 
 const LIGHTNING_PREFIX_REGEX = /^lightning:/i;
 
+const isBolt12OfferDestination = (offer: string): boolean => {
+  const chunks = offer.split("+");
+  const firstChunk = chunks.shift();
+  if (!firstChunk || /\s/.test(firstChunk)) {
+    return false;
+  }
+
+  let normalizedOffer = firstChunk;
+  for (const chunk of chunks) {
+    const trimmedChunk = chunk.trimStart();
+    if (!trimmedChunk || /\s/.test(trimmedChunk)) {
+      return false;
+    }
+    normalizedOffer += trimmedChunk;
+  }
+
+  const hasUniformCase =
+    normalizedOffer === normalizedOffer.toLowerCase() ||
+    normalizedOffer === normalizedOffer.toUpperCase();
+
+  // BOLT12 uses checksum-less Bech32. Bark performs the authoritative TLV and semantic validation.
+  return hasUniformCase && BOLT12_OFFER_REGEX.test(normalizedOffer);
+};
+
 export const normalizeLightningAddress = (address: string): string => address.trim().toLowerCase();
 
 export const normalizeLightningAddressDestination = (destination: string): string => {
@@ -58,7 +83,13 @@ export const isValidDestination = (dest: string): boolean => {
   if (dest.toLowerCase().startsWith("bitcoin:")) {
     const expectedNetwork = APP_VARIANT;
     const result = parseBIP321(dest, expectedNetwork);
-    return result.valid && result.paymentMethods.length > 0;
+    return (
+      result.valid &&
+      result.paymentMethods.some(
+        (method) =>
+          method.valid || (method.type === "offer" && isBolt12OfferDestination(method.value)),
+      )
+    );
   }
 
   const cleanedDest = dest.trim().replace(LIGHTNING_PREFIX_REGEX, "");
@@ -72,6 +103,10 @@ export const isValidDestination = (dest: string): boolean => {
   // Check Lightning invoice (BOLT11)
   const lnResult = validateLightningInvoice(cleanedDest);
   if (lnResult.valid && isNetworkMatch(lnResult.network, "lightning")) {
+    return true;
+  }
+
+  if (isBolt12OfferDestination(cleanedDest)) {
     return true;
   }
 
@@ -120,7 +155,9 @@ export const parseBip321Uri = (uri: string): ParsedDestination => {
 
     // Extract payment methods
     for (const method of result.paymentMethods) {
-      if (!method.valid) continue;
+      const isValidMethod =
+        method.valid || (method.type === "offer" && isBolt12OfferDestination(method.value));
+      if (!isValidMethod) continue;
 
       switch (method.type) {
         case "onchain":
@@ -136,6 +173,14 @@ export const parseBip321Uri = (uri: string): ParsedDestination => {
           bip321.offer = method.value;
           break;
       }
+    }
+
+    if (Object.keys(bip321).length === 0) {
+      return {
+        destinationType: null,
+        isAmountEditable: true,
+        error: result.errors.join(", ") || "No valid payment methods found",
+      };
     }
 
     const parsedAmount = typeof result.amount === "number" ? btcToSats(result.amount) : null;
@@ -224,6 +269,13 @@ export const parseDestination = (destination: string): ParsedDestination => {
         isAmountEditable: true,
       };
     }
+  }
+
+  if (isBolt12OfferDestination(cleanedDestination)) {
+    return {
+      destinationType: "offer",
+      isAmountEditable: true,
+    };
   }
 
   const btcResult = validateBitcoinAddress(cleanedDestination);
