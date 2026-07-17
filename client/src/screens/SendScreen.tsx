@@ -325,7 +325,7 @@ const SendScreen = () => {
                       <TextInput
                         ref={destinationInputRef}
                         className="min-h-9 flex-1 text-base text-foreground"
-                        placeholder="Address, invoice, or lightning address"
+                        placeholder="Address, invoice, offer, or lightning address"
                         placeholderTextColor={colors.mutedForeground}
                         keyboardType="email-address"
                         autoCorrect={false}

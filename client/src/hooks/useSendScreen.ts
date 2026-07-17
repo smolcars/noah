@@ -541,7 +541,7 @@ export const useSendScreen = () => {
       showAlert({
         title: "Invalid Destination",
         description:
-          "Please enter a valid Bitcoin address, BOLT11 invoice, Lightning Address, or Ark public key.",
+          "Please enter a valid Bitcoin address, BOLT11 invoice, BOLT12 offer, Lightning Address, or Ark public key.",
       });
       return;
     }
