@@ -183,8 +183,8 @@ export function useGenerateLightningInvoice() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async (amount: number) => {
-      const result = await bolt11Invoice(amount);
+    mutationFn: async ({ amountSat, description }: { amountSat: number; description?: string }) => {
+      const result = await bolt11Invoice(amountSat, description);
       if (result.isErr()) {
         throw result.error;
       }

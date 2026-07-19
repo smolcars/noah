@@ -200,6 +200,7 @@ const ReceiveScreen = () => {
   const fiatCurrencyInfo = getFiatCurrencyInfo(fiatCurrency);
   const { copyWithState, isCopied } = useCopyToClipboard();
   const [generatedRequest, setGeneratedRequest] = useState<GeneratedReceiveRequest | null>(null);
+  const [description, setDescription] = useState("");
   const receiveSessionIdRef = useRef(0);
   const activeReceiveSessionRef = useRef<ActiveReceiveSession | null>(null);
   const arkSubscriptionRef = useRef<BarkNotificationSubscription | null>(null);
@@ -243,7 +244,7 @@ const ReceiveScreen = () => {
     [arkAddress, generatedAmountSat, generatedOnchainAddress, lightningInvoice],
   );
   const isGenerated = Boolean(bip321Uri);
-  const isClearDisabled = isLoading || (!isGenerated && amount === "");
+  const isClearDisabled = isLoading || (!isGenerated && amount === "" && description === "");
   const isAmountLocked = isLoading || isGenerated;
   const hasEnteredAmount = amount.trim().length > 0;
   const canGenerateLightningInvoice = hasEnteredAmount && amountSat >= minAmount;
@@ -359,6 +360,7 @@ const ReceiveScreen = () => {
       setGeneratedRequest(null);
       if (resetAmount) {
         setAmount("");
+        setDescription("");
       }
     },
     [setAmount],
@@ -562,7 +564,7 @@ const ReceiveScreen = () => {
     const lightningInvoiceTask =
       requestAmountSat === null
         ? Promise.resolve<Bolt11Invoice | undefined>(undefined)
-        : generateLightningInvoice(requestAmountSat);
+        : generateLightningInvoice({ amountSat: requestAmountSat, description });
 
     const generationTasks = [
       generateOnchainAddress(),
@@ -616,6 +618,7 @@ const ReceiveScreen = () => {
     amountSat,
     cancelReceiveSession,
     canGenerateLightningInvoice,
+    description,
     generateLightningInvoice,
     generateOffchainAddress,
     generateOnchainAddress,
@@ -773,6 +776,25 @@ const ReceiveScreen = () => {
                       }`
                     : `≈ ${!isNaN(amountSat) && amount ? formatBitcoinAmount(amountSat) : formatBitcoinAmount(0)}`}
                 </Text>
+
+                <View
+                  className="mt-5 w-full rounded-[22px] border px-4 py-3"
+                  style={{
+                    borderColor: `${colors.mutedForeground}26`,
+                    backgroundColor: `${colors.card}CC`,
+                  }}
+                >
+                  <TextInput
+                    className="min-h-9 text-base text-foreground"
+                    placeholder="Description (optional)"
+                    placeholderTextColor={colors.mutedForeground}
+                    value={description}
+                    onChangeText={setDescription}
+                    editable={!isAmountLocked}
+                    returnKeyType="done"
+                    onSubmitEditing={Keyboard.dismiss}
+                  />
+                </View>
 
                 {isGenerated ? (
                   <View
