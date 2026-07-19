@@ -43,7 +43,11 @@ import {
   LightningReceive,
 } from "react-native-nitro-ark";
 import { err, ok, Result, ResultAsync } from "neverthrow";
-import { normalizeInvoiceDescription } from "./lightningInvoice";
+import {
+  isInvoiceDescriptionValid,
+  MAX_INVOICE_DESCRIPTION_BYTES,
+  normalizeInvoiceDescription,
+} from "./lightningInvoice";
 
 export type {
   ArkoorPaymentResult,
@@ -131,6 +135,14 @@ export const bolt11Invoice = async (
   description?: string,
 ): Promise<Result<Bolt11Invoice, Error>> => {
   const normalizedDescription = normalizeInvoiceDescription(description);
+
+  if (!isInvoiceDescriptionValid(normalizedDescription)) {
+    return err(
+      new Error(
+        `Lightning invoice descriptions must be ${MAX_INVOICE_DESCRIPTION_BYTES} bytes or fewer`,
+      ),
+    );
+  }
 
   return ResultAsync.fromPromise(
     bolt11InvoiceNitro(amountSat, normalizedDescription),

@@ -43,6 +43,11 @@ import { BlinkingCaret } from "~/components/BlinkingCaret";
 import { useBitcoinAmountFormatter, useBitcoinAmountUnit } from "~/hooks/useBitcoinAmountFormatter";
 import { BoardArkBottomSheet } from "~/components/BoardArkBottomSheet";
 import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
+import {
+  getInvoiceDescriptionByteLength,
+  isInvoiceDescriptionValid,
+  MAX_INVOICE_DESCRIPTION_BYTES,
+} from "~/lib/lightningInvoice";
 
 const minAmount = 1;
 const SUBSCRIPTION_RETRY_DELAY_MS = 1000;
@@ -248,6 +253,8 @@ const ReceiveScreen = () => {
   const isAmountLocked = isLoading || isGenerated;
   const hasEnteredAmount = amount.trim().length > 0;
   const canGenerateLightningInvoice = hasEnteredAmount && amountSat >= minAmount;
+  const descriptionByteLength = getInvoiceDescriptionByteLength(description);
+  const isDescriptionTooLong = !isInvoiceDescriptionValid(description);
   const isAmountlessLightningRequest = isGenerated && generatedAmountSat === null;
   const displayAmount = amount === "" ? (currency === "FIAT" ? "0.00" : "0") : amount;
   const amountPrefix =
@@ -625,6 +632,10 @@ const ReceiveScreen = () => {
   ]);
 
   const handleGenerate = () => {
+    if (isDescriptionTooLong) {
+      return;
+    }
+
     Keyboard.dismiss();
     cancelPendingReceiveGeneration();
 
@@ -795,6 +806,12 @@ const ReceiveScreen = () => {
                     onSubmitEditing={Keyboard.dismiss}
                   />
                 </View>
+                {isDescriptionTooLong ? (
+                  <Text className="mt-2 text-sm text-destructive">
+                    Description is {descriptionByteLength} bytes; maximum is{" "}
+                    {MAX_INVOICE_DESCRIPTION_BYTES}.
+                  </Text>
+                ) : null}
 
                 {isGenerated ? (
                   <View
@@ -922,7 +939,7 @@ const ReceiveScreen = () => {
                 </Button>
                 <Button
                   onPress={handleGenerate}
-                  disabled={isLoading}
+                  disabled={isLoading || isDescriptionTooLong}
                   className="h-14 flex-1 rounded-2xl"
                   style={{ backgroundColor: COLORS.BITCOIN_ORANGE }}
                 >
