@@ -44,9 +44,9 @@ import { useBitcoinAmountFormatter, useBitcoinAmountUnit } from "~/hooks/useBitc
 import { BoardArkBottomSheet } from "~/components/BoardArkBottomSheet";
 import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 import {
-  getInvoiceDescriptionByteLength,
+  getInvoiceDescriptionLength,
   isInvoiceDescriptionValid,
-  MAX_INVOICE_DESCRIPTION_BYTES,
+  MAX_INVOICE_DESCRIPTION_LENGTH,
 } from "~/lib/lightningInvoice";
 
 const minAmount = 1;
@@ -253,7 +253,7 @@ const ReceiveScreen = () => {
   const isAmountLocked = isLoading || isGenerated;
   const hasEnteredAmount = amount.trim().length > 0;
   const canGenerateLightningInvoice = hasEnteredAmount && amountSat >= minAmount;
-  const descriptionByteLength = getInvoiceDescriptionByteLength(description);
+  const descriptionLength = getInvoiceDescriptionLength(description);
   const isDescriptionTooLong = !isInvoiceDescriptionValid(description);
   const isAmountlessLightningRequest = isGenerated && generatedAmountSat === null;
   const displayAmount = amount === "" ? (currency === "FIAT" ? "0.00" : "0") : amount;
@@ -808,8 +808,8 @@ const ReceiveScreen = () => {
                 </View>
                 {isDescriptionTooLong ? (
                   <Text className="mt-2 text-sm text-destructive">
-                    Description is {descriptionByteLength} bytes; maximum is{" "}
-                    {MAX_INVOICE_DESCRIPTION_BYTES}.
+                    Description is {descriptionLength} characters; maximum is{" "}
+                    {MAX_INVOICE_DESCRIPTION_LENGTH}.
                   </Text>
                 ) : null}
 

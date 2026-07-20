@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
 import {
-  getInvoiceDescriptionByteLength,
+  getInvoiceDescriptionLength,
   isInvoiceDescriptionValid,
-  MAX_INVOICE_DESCRIPTION_BYTES,
+  MAX_INVOICE_DESCRIPTION_LENGTH,
   normalizeInvoiceDescription,
 } from "../../src/lib/lightningInvoice";
 
@@ -17,19 +17,19 @@ describe("BOLT11 invoice descriptions", () => {
     expect(normalizeInvoiceDescription()).toBeUndefined();
   });
 
-  test("accepts a description at the BOLT11 byte limit", () => {
-    expect(isInvoiceDescriptionValid("a".repeat(MAX_INVOICE_DESCRIPTION_BYTES))).toBe(true);
+  test("accepts a description at the character limit", () => {
+    expect(isInvoiceDescriptionValid("a".repeat(MAX_INVOICE_DESCRIPTION_LENGTH))).toBe(true);
   });
 
-  test("rejects a description over the BOLT11 byte limit", () => {
-    expect(isInvoiceDescriptionValid("a".repeat(MAX_INVOICE_DESCRIPTION_BYTES + 1))).toBe(false);
+  test("rejects a description over the character limit", () => {
+    expect(isInvoiceDescriptionValid("a".repeat(MAX_INVOICE_DESCRIPTION_LENGTH + 1))).toBe(false);
   });
 
-  test("counts multibyte Unicode descriptions as UTF-8 bytes", () => {
-    expect(getInvoiceDescriptionByteLength("☕️")).toBe(6);
+  test("counts emoji as characters rather than UTF-8 bytes", () => {
+    expect(getInvoiceDescriptionLength("☕️")).toBe(2);
   });
 
-  test("trims before measuring description bytes", () => {
-    expect(getInvoiceDescriptionByteLength("  coffee  ")).toBe(6);
+  test("trims before measuring description characters", () => {
+    expect(getInvoiceDescriptionLength("  coffee  ")).toBe(6);
   });
 });

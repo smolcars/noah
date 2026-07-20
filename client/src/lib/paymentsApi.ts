@@ -45,7 +45,7 @@ import {
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import {
   isInvoiceDescriptionValid,
-  MAX_INVOICE_DESCRIPTION_BYTES,
+  MAX_INVOICE_DESCRIPTION_LENGTH,
   normalizeInvoiceDescription,
 } from "./lightningInvoice";
 
@@ -139,7 +139,7 @@ export const bolt11Invoice = async (
   if (!isInvoiceDescriptionValid(normalizedDescription)) {
     return err(
       new Error(
-        `Lightning invoice descriptions must be ${MAX_INVOICE_DESCRIPTION_BYTES} bytes or fewer`,
+        `Lightning invoice descriptions must be ${MAX_INVOICE_DESCRIPTION_LENGTH} characters or fewer`,
       ),
     );
   }
