@@ -281,7 +281,7 @@ PODS:
     - ReactNativeDependencies
     - Yoga
   - MMKVCore (2.4.0)
-  - NitroArk (0.0.132):
+  - NitroArk (0.0.133):
     - hermes-engine
     - NitroModules
     - RCTRequired
@@ -3264,7 +3264,7 @@ SPEC CHECKSUMS:
   hermes-engine: 82e1b37154a8c157253ac036eccbdd3f8dbdfa89
   MapLibreReactNative: 9f1f16d5f5f522309ad1f2afc483a34cfc56fe6e
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
-  NitroArk: 8d498c5a5d7e655e512369815b1a88090e3d8984
+  NitroArk: f29571846e9d3ec9e224c5b34f318815fdf4d6ea
   NitroMmkv: 4b4f95387a15161b346a6a93b9c7072c179e0e88
   NitroModules: c41b7b778d6557f1e517a80ec681a670321fa001
   NoahTools: 690d5d90593c5634d2a9ab514a6c243d8212ef20

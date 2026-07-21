@@ -14,6 +14,7 @@ export const EXIT_STATE_ORDER: ExitProgressState[] = [
   "ClaimInProgress",
   "Claimed",
   "VtxoAlreadySpent",
+  "Canceled",
 ];
 
 export const EXIT_STATE_LABELS: Record<ExitProgressState, string> = {
@@ -24,6 +25,7 @@ export const EXIT_STATE_LABELS: Record<ExitProgressState, string> = {
   ClaimInProgress: "Claiming",
   Claimed: "Claimed",
   VtxoAlreadySpent: "Already spent",
+  Canceled: "Canceled",
 };
 
 export type ExitDetailRow = {
@@ -197,6 +199,8 @@ export const getExitStatusText = ({
         : "Claim transaction confirmed";
     case "VtxoAlreadySpent":
       return "Exit VTXO was already spent";
+    case "Canceled":
+      return "Exit processing was canceled";
     case "Processing": {
       const txSummary = getProcessingTransactionSummary(details);
       return txSummary
@@ -245,6 +249,8 @@ const getTimelineDescription = ({
         : "Funds were recovered on-chain.";
     case "VtxoAlreadySpent":
       return "Exit tracking found that this VTXO was already spent.";
+    case "Canceled":
+      return "Exit processing was canceled before completion.";
   }
 };
 

@@ -10,7 +10,7 @@ import {
   loadWalletIfNeeded as loadWalletAction,
   sync as syncAction,
   onchainSync as onchainSyncAction,
-  maintenanceWithOnchainDelegated,
+  maintenanceDelegated,
   getVtxos,
   getExpiringVtxos,
   closeWalletIfLoaded,
@@ -199,7 +199,7 @@ export function useRefreshExpiringVtxos() {
 
   return useMutation({
     mutationFn: async () => {
-      const result = await maintenanceWithOnchainDelegated();
+      const result = await maintenanceDelegated();
       if (result.isErr()) {
         throw result.error;
       }
