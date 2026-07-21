@@ -225,11 +225,11 @@ class NoahPushService : PushService() {
     ) {
         try {
             ensureWalletLoaded(clazz, instance, context)
-            clazz.getMethod("maintenanceWithOnchainDelegated").invoke(instance)
+            clazz.getMethod("maintenanceDelegated").invoke(instance)
             NoahToolsLogging.performNativeLog(
                 "info",
                 "NoahPushService",
-                "maintenanceWithOnchainDelegated() completed"
+                "maintenanceDelegated() completed"
             )
             if (server != null) {
                 reportJobStatus(clazz, instance, server, "maintenance", "success", null, k1)
