@@ -13,6 +13,7 @@ const APP_SCHEME_PLACEHOLDER = "$(APP_SCHEME)";
 const MARKETING_VERSION_PLACEHOLDER = "$(MARKETING_VERSION)";
 const CURRENT_PROJECT_VERSION_PLACEHOLDER = "$(CURRENT_PROJECT_VERSION)";
 const PRODUCT_NAME_PLACEHOLDER = "$(PRODUCT_NAME)";
+const PRODUCT_MODULE_NAME_PLACEHOLDER = "$(PRODUCT_MODULE_NAME)";
 const TARGET_NAME_PLACEHOLDER = '"$(TARGET_NAME)"';
 const ICON_NAME = "noah";
 const SENTRY_BUNDLE_SCRIPT = `if [[ -f "$PODS_ROOT/../.xcode.env" ]]; then
@@ -106,7 +107,9 @@ function getBuildSettings(configEntry) {
 
 function enforceDisplayNamePlaceholders(infoPlist) {
   infoPlist.CFBundleDisplayName = PRODUCT_NAME_PLACEHOLDER;
-  infoPlist.CFBundleName = PRODUCT_NAME_PLACEHOLDER;
+  // Work around https://github.com/expo/expo/pull/46424 when Xcode leaves a
+  // hyphenated executable name unsanitized. Restore PRODUCT_NAME once fixed upstream.
+  infoPlist.CFBundleName = PRODUCT_MODULE_NAME_PLACEHOLDER;
 }
 
 function enforceVersionPlaceholders(infoPlist) {
