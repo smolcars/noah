@@ -8,6 +8,8 @@ mock.module("expo-constants", () => ({
 }));
 mock.module("noah-tools", () => ({
   getAppVariant: () => "signet",
+  isGooglePlayServicesAvailable: () => true,
+  nativeLog: () => {},
 }));
 mock.module("react-native", () => ({
   Platform: { OS: "android" },
