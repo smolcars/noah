@@ -25,7 +25,7 @@ const WALLET_CONFIGS: Record<AppVariant, BaseWalletConfig> = {
     config: {
       esplora: "https://mempool.second.tech/api",
       ark: "https://ark.second.tech",
-      vtxo_refresh_expiry_threshold: 288,
+      vtxo_refresh_expiry_threshold: 144,
       fallback_fee_rate: 10000,
       htlc_recv_claim_delta: 18,
       vtxo_exit_margin: 12,
@@ -39,7 +39,7 @@ const WALLET_CONFIGS: Record<AppVariant, BaseWalletConfig> = {
     config: {
       esplora: "https://esplora.signet.2nd.dev",
       ark: "https://ark.signet.2nd.dev",
-      vtxo_refresh_expiry_threshold: 48,
+      vtxo_refresh_expiry_threshold: 12,
       fallback_fee_rate: 10000,
       htlc_recv_claim_delta: 18,
       vtxo_exit_margin: 12,
