@@ -45,7 +45,9 @@ abstract_target 'noah-common' do
   )
 
   post_install do |installer|
+# @generated begin @maplibre/maplibre-react-native:post-install - expo prebuild (DO NOT MODIFY) sync-6e76c80af0d70c0003d06822dd59b7c729fca472
     $MLRN.post_install(installer)
+# @generated end @maplibre/maplibre-react-native:post-install
     react_native_post_install(
       installer,
       config[:reactNativePath],
