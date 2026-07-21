@@ -17,7 +17,9 @@
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>$(PRODUCT_NAME)</string>
+    <!-- Work around expo/expo#46424 when Xcode leaves a hyphenated executable
+         name unsanitized. Restore $(PRODUCT_NAME) once Expo supports this layout. -->
+    <string>$(PRODUCT_MODULE_NAME)</string>
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
