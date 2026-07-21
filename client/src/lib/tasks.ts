@@ -1,4 +1,4 @@
-import { loadWalletIfNeeded, maintenanceWithOnchainDelegated } from "./walletApi";
+import { loadWalletIfNeeded, maintenanceDelegated } from "./walletApi";
 import logger from "~/lib/log";
 import { bolt11Invoice, tryClaimAllLightningReceives } from "./paymentsApi";
 import { err, ok, Result } from "neverthrow";
@@ -16,7 +16,7 @@ export async function maintenanceTask(): Promise<Result<void, Error>> {
     return err(e);
   }
 
-  const maintenanceResult = await maintenanceWithOnchainDelegated();
+  const maintenanceResult = await maintenanceDelegated();
   if (maintenanceResult.isErr()) {
     log.e("Maintenance failed", [maintenanceResult.error]);
     return err(maintenanceResult.error);

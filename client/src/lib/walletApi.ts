@@ -12,9 +12,7 @@ import {
   verifyMessage as verifyMessageNitro,
   maintenance as maintenanceNitro,
   maintenanceRefresh as maintenanceRefreshNitro,
-  maintenanceWithOnchain as maintenanceWithOnchainNitro,
   maintenanceDelegated as maintenanceDelegatedNitro,
-  maintenanceWithOnchainDelegated as maintenanceWithOnchainDelegatedNitro,
   refreshVtxosDelegated as refreshVtxosDelegatedNitro,
   estimateRefreshFee as estimateRefreshFeeNitro,
   refreshServer as refreshServerNitro,
@@ -26,6 +24,7 @@ import {
   decodeVtxoHex as decodeVtxoHexNitro,
   importVtxo as importVtxoNitro,
   dangerousDropVtxo as dangerousDropVtxoNitro,
+  unlockVtxos as unlockVtxosNitro,
   getExpiringVtxos as getExpiringVtxosNitro,
   type BarkArkInfo,
   type BarkFeeEstimate,
@@ -437,7 +436,7 @@ export const onchainSync = async (): Promise<Result<void, Error>> => {
   return ResultAsync.fromPromise(onchainSyncNitro(), (e) => e as Error);
 };
 
-export const maintanance = async (): Promise<Result<void, Error>> => {
+export const maintenance = async (): Promise<Result<void, Error>> => {
   return ResultAsync.fromPromise(maintenanceNitro(), (e) => e as Error);
 };
 
@@ -445,16 +444,8 @@ export const maintenanceRefresh = async (): Promise<Result<void, Error>> => {
   return ResultAsync.fromPromise(maintenanceRefreshNitro(), (e) => e as Error);
 };
 
-export const maintenanceWithOnchain = async (): Promise<Result<void, Error>> => {
-  return ResultAsync.fromPromise(maintenanceWithOnchainNitro(), (e) => e as Error);
-};
-
 export const maintenanceDelegated = async (): Promise<Result<void, Error>> => {
   return ResultAsync.fromPromise(maintenanceDelegatedNitro(), (e) => e as Error);
-};
-
-export const maintenanceWithOnchainDelegated = async (): Promise<Result<void, Error>> => {
-  return ResultAsync.fromPromise(maintenanceWithOnchainDelegatedNitro(), (e) => e as Error);
 };
 
 export const refreshVtxosDelegated = async (
@@ -532,6 +523,10 @@ export const importVtxo = async (vtxoHex: string): Promise<Result<BarkVtxo, Erro
 
 export const dropVtxo = async (vtxoId: string): Promise<Result<void, Error>> => {
   return ResultAsync.fromPromise(dangerousDropVtxoNitro(vtxoId), (e) => e as Error);
+};
+
+export const unlockVtxo = async (vtxoId: string): Promise<Result<void, Error>> => {
+  return ResultAsync.fromPromise(unlockVtxosNitro([vtxoId]), (e) => e as Error);
 };
 
 export const getExpiringVtxos = async () => {

@@ -10,13 +10,13 @@ import { Input } from "~/components/ui/input";
 import {
   getArkInfo,
   refreshServer,
-  maintanance,
+  maintenance,
   maintenanceRefresh,
   maintenanceDelegated,
-  maintenanceWithOnchainDelegated,
   decodeVtxoHex,
   importVtxo,
   dropVtxo,
+  unlockVtxo,
 } from "~/lib/walletApi";
 import { offboardAllArk } from "~/lib/paymentsApi";
 import { registerForPushNotificationsAsync } from "~/lib/pushNotifications";
@@ -40,10 +40,10 @@ type DebugAction =
   | "maintenance"
   | "maintenanceRefresh"
   | "maintenanceDelegated"
-  | "maintenanceWithOnchainDelegated"
   | "decodeVtxoHex"
   | "importVtxo"
   | "dropVtxo"
+  | "unlockVtxo"
   | "offboardAll";
 
 interface ActionOption {
@@ -73,7 +73,7 @@ const DEBUG_ACTIONS: ActionOption[] = [
   {
     id: "maintenance",
     title: "Maintenance",
-    description: "Run maintenance to refresh expiring VTXOs",
+    description: "Run wallet maintenance, including on-chain sync and exit progression",
   },
   {
     id: "maintenanceRefresh",
@@ -83,12 +83,7 @@ const DEBUG_ACTIONS: ActionOption[] = [
   {
     id: "maintenanceDelegated",
     title: "Maintenance Delegated",
-    description: "Run delegated maintenance operation",
-  },
-  {
-    id: "maintenanceWithOnchainDelegated",
-    title: "Maintenance With Onchain Delegated",
-    description: "Run delegated maintenance with onchain operation",
+    description: "Run delegated wallet maintenance, including on-chain sync",
   },
   {
     id: "offboardAll",
@@ -115,6 +110,13 @@ const DEBUG_ACTIONS: ActionOption[] = [
     id: "dropVtxo",
     title: "Drop VTXO",
     description: "Dangerously remove a VTXO from the local wallet database",
+    requiresInput: true,
+    inputPlaceholder: "Enter VTXO ID",
+  },
+  {
+    id: "unlockVtxo",
+    title: "Unlock VTXO",
+    description: "Return a locked VTXO to the spendable state",
     requiresInput: true,
     inputPlaceholder: "Enter VTXO ID",
   },
@@ -194,7 +196,7 @@ const DebugScreen = () => {
       }
       case "maintenance": {
         log.d("Executing maintenance");
-        const result = await maintanance();
+        const result = await maintenance();
         if (result.isErr()) {
           return { success: false, error: result.error.message };
         }
@@ -215,17 +217,6 @@ const DebugScreen = () => {
           return { success: false, error: result.error.message };
         }
         return { success: true, message: "Maintenance delegated completed successfully" };
-      }
-      case "maintenanceWithOnchainDelegated": {
-        log.d("Executing maintenance with onchain delegated");
-        const result = await maintenanceWithOnchainDelegated();
-        if (result.isErr()) {
-          return { success: false, error: result.error.message };
-        }
-        return {
-          success: true,
-          message: "Maintenance with onchain delegated completed successfully",
-        };
       }
       case "offboardAll": {
         log.d("Executing offboard all to address:", [input]);
@@ -265,6 +256,15 @@ const DebugScreen = () => {
           return { success: false, error: result.error.message };
         }
         return { success: true, message: `Dropped VTXO ${vtxoId}` };
+      }
+      case "unlockVtxo": {
+        const vtxoId = input.trim();
+        log.d("Unlocking VTXO", [{ vtxoId }]);
+        const result = await unlockVtxo(vtxoId);
+        if (result.isErr()) {
+          return { success: false, error: result.error.message };
+        }
+        return { success: true, message: `Unlocked VTXO ${vtxoId}` };
       }
     }
   };

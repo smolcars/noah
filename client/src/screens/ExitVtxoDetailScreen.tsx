@@ -44,6 +44,13 @@ const stateTone = (state: ExitProgressState) => {
         className: "text-muted-foreground",
         bgClassName: "bg-muted border-border",
       };
+    case "Canceled":
+      return {
+        icon: "close-circle-outline" as IconName,
+        color: "#dc2626",
+        className: "text-red-600 dark:text-red-300",
+        bgClassName: "bg-red-500/10 border-red-500/30",
+      };
     case "ClaimInProgress":
     case "AwaitingDelta":
       return {
