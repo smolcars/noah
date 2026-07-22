@@ -129,6 +129,11 @@ export const isLightningReceiveMovement = (
   return getMovementSubsystemId(movement) === toSubsystemId(BARK_SUBSYSTEM.LIGHTNING_RECEIVE);
 };
 
+export const isFailedOrCanceledMovement = (
+  movement: BarkMovement,
+): movement is BarkMovement & { status: "failed" | "canceled" } =>
+  movement.status === "failed" || movement.status === "canceled";
+
 export const isBoardMovement = (
   movement: BarkMovement | undefined,
 ): movement is BarkMovementWithTypedSubsystem<

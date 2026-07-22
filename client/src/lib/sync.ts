@@ -15,15 +15,22 @@ export const syncWallet = async () => {
 
   log.i("syncWallet");
 
-  const results = await Promise.allSettled([
-    sync(),
-    onchainSync(),
-    tryClaimAllLightningReceives(false),
-  ]);
+  const tasks = [
+    { label: "Offchain wallet sync", promise: sync() },
+    { label: "Onchain wallet sync", promise: onchainSync() },
+    { label: "Lightning receive claim", promise: tryClaimAllLightningReceives(false) },
+  ];
+  const results = await Promise.allSettled(tasks.map((task) => task.promise));
 
-  results.forEach((result) => {
+  results.forEach((result, index) => {
+    const label = tasks[index]?.label ?? "Background sync";
     if (result.status === "rejected") {
-      log.e("background sync failed:", [result.reason]);
+      log.e(`${label} failed`, [result.reason]);
+      return;
+    }
+
+    if (result.value.isErr()) {
+      log.e(`${label} failed`, [result.value.error]);
     }
   });
 
