@@ -35,7 +35,11 @@ import {
   type BarkNotificationEvent,
   type BarkNotificationSubscription,
 } from "~/lib/paymentsApi";
-import { isArkReceiveMovement, isLightningReceiveMovement } from "~/lib/barkMovement";
+import {
+  isArkReceiveMovement,
+  isFailedOrCanceledMovement,
+  isLightningReceiveMovement,
+} from "~/lib/barkMovement";
 import logger from "~/lib/log";
 import type { Bolt11Invoice } from "react-native-nitro-ark";
 import { queryClient } from "~/queryClient";
@@ -48,6 +52,7 @@ import {
   isInvoiceDescriptionValid,
   MAX_INVOICE_DESCRIPTION_LENGTH,
 } from "~/lib/lightningInvoice";
+import { useAlert } from "~/contexts/AlertProvider";
 
 const minAmount = 1;
 const SUBSCRIPTION_RETRY_DELAY_MS = 1000;
@@ -197,6 +202,7 @@ const PaymentRail = ({
 
 const ReceiveScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<TabParamList>>();
+  const { showAlert } = useAlert();
   const colors = useThemeColors();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const bitcoinAmountUnit = useBitcoinAmountUnit();
@@ -465,7 +471,27 @@ const ReceiveScreen = () => {
       }
 
       const movement = event.movement;
-      if (!movement || movement.status !== "successful" || !isLightningReceiveMovement(movement)) {
+      if (!movement || !isLightningReceiveMovement(movement)) {
+        return;
+      }
+
+      if (isFailedOrCanceledMovement(movement)) {
+        log.e("Lightning receive ended without completing", [
+          { movementId: movement.id, status: movement.status },
+        ]);
+        cancelReceiveSession({ resetAmount: false });
+        showAlert({
+          title:
+            movement.status === "canceled"
+              ? "Lightning Receive Canceled"
+              : "Lightning Receive Failed",
+          description:
+            "The Lightning payment could not be received. Generate a new payment request and try again.",
+        });
+        return;
+      }
+
+      if (movement.status !== "successful") {
         return;
       }
 
@@ -475,7 +501,7 @@ const ReceiveScreen = () => {
 
       handleReceiveComplete(activeSession.amountSat);
     },
-    [handleReceiveComplete],
+    [cancelReceiveSession, handleReceiveComplete, showAlert],
   );
 
   useEffect(() => {
