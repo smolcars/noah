@@ -9,6 +9,8 @@ jobs:
   signet-build:
     name: Build Android Signet App
     uses: ./.github/workflows/client.yml
+    with:
+      build_aab: true
     secrets: inherit
 
   mainnet-build:
@@ -51,12 +53,6 @@ jobs:
           name: ${{ needs.mainnet-build.outputs.apk_artifact_name }}
           path: release-assets/mainnet-apk
 
-      - name: 📥 Download mainnet AAB artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ needs.mainnet-build.outputs.aab_artifact_name }}
-          path: release-assets/mainnet-aab
-
       - name: 📥 Download signet IPA artifact
         uses: actions/download-artifact@v8
         with:
@@ -76,8 +72,6 @@ jobs:
             release-assets/noah-signet.apk
           mv "release-assets/mainnet-apk/${{ needs.mainnet-build.outputs.apk_filename }}" \
             release-assets/noah-mainnet.apk
-          mv "release-assets/mainnet-aab/${{ needs.mainnet-build.outputs.aab_filename }}" \
-            release-assets/noah-mainnet.aab
           mv "release-assets/signet-ipa/${{ needs.ios-signet-build.outputs.ipa_filename }}" \
             release-assets/noah-ios-signet.ipa
           mv "release-assets/mainnet-ipa/${{ needs.ios-mainnet-build.outputs.ipa_filename }}" \
@@ -93,7 +87,6 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" \
             release-assets/noah-signet.apk \
             release-assets/noah-mainnet.apk \
-            release-assets/noah-mainnet.aab \
             release-assets/noah-ios-signet.ipa \
             release-assets/noah-ios-mainnet.ipa \
             --repo "${{ github.repository }}" \
