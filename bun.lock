@@ -7,7 +7,7 @@
     },
     "client": {
       "name": "noah",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "dependencies": {
         "@bottom-tabs/react-navigation": "^1.2.0",
         "@expo/ui": "~57.0.4",
