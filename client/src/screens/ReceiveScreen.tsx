@@ -480,6 +480,8 @@ const ReceiveScreen = () => {
           { movementId: movement.id, status: movement.status },
         ]);
         cancelReceiveSession({ resetAmount: false });
+        void queryClient.invalidateQueries({ queryKey: ["balance"] });
+        void queryClient.invalidateQueries({ queryKey: ["transactions"] });
         showAlert({
           title:
             movement.status === "canceled"
