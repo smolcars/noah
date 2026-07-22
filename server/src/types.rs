@@ -679,3 +679,39 @@ pub struct EmailVerificationResponse {
     pub message: Option<String>,
     pub email: Option<String>,
 }
+
+#[cfg(test)]
+mod notification_payload_tests {
+    use super::{HeartbeatNotification, MaintenanceNotification, NotificationData};
+    use serde_json::json;
+
+    #[test]
+    fn maintenance_payload_uses_notification_k1() {
+        let payload = NotificationData::Maintenance(MaintenanceNotification {
+            notification_k1: "maintenance-correlation-id".to_string(),
+        });
+
+        assert_eq!(
+            serde_json::to_value(payload).unwrap(),
+            json!({
+                "notification_type": "maintenance",
+                "notification_k1": "maintenance-correlation-id"
+            })
+        );
+    }
+
+    #[test]
+    fn heartbeat_payload_only_requires_notification_id() {
+        let payload = NotificationData::Heartbeat(HeartbeatNotification {
+            notification_id: "heartbeat-id".to_string(),
+        });
+
+        assert_eq!(
+            serde_json::to_value(payload).unwrap(),
+            json!({
+                "notification_type": "heartbeat",
+                "notification_id": "heartbeat-id"
+            })
+        );
+    }
+}

@@ -3,11 +3,13 @@ package com.margelo.nitro.noahtools
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.Build
 
 import androidx.core.app.NotificationCompat
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
+import com.margelo.nitro.noahtools.NoahToolsHttp.performNativeGet
 import com.margelo.nitro.noahtools.NoahToolsHttp.performNativePost
 import com.margelo.nitro.JNIOnLoad
 import com.margelo.nitro.noahtools.noahtoolsOnLoad
@@ -22,6 +24,7 @@ import java.lang.reflect.Constructor
 class NoahPushService : PushService() {
     private val notificationChannelId = "noah-push-default"
     private val walletLock = Any()
+    private val authLock = Any()
 
     override fun onCreate() {
         super.onCreate()
@@ -58,41 +61,15 @@ class NoahPushService : PushService() {
         return variantJson.optNullableString("server")
     }
 
-    private fun buildAuthHeaders(
-        clazz: Class<*>,
-        instance: Any,
-        k1: String
-    ): Map<String, String> {
-        return try {
-            val peakKeyPair = clazz.getMethod("peakKeyPair", Integer.TYPE)
-            val keyPairResult = peakKeyPair.invoke(instance, 0) ?: return emptyMap()
-            val publicKey = keyPairResult.javaClass.getMethod("getPublicKey").invoke(keyPairResult) as? String
-                ?: return emptyMap()
-
-            val signMessage = clazz.getMethod("signMessage", String::class.java, Integer.TYPE)
-            val sig = signMessage.invoke(instance, k1, 0) as? String ?: return emptyMap()
-
-            mapOf(
-                "Content-Type" to "application/json",
-                "x-auth-k1" to k1,
-                "x-auth-sig" to sig,
-                "x-auth-key" to publicKey
-            )
-        } catch (e: Exception) {
-            NoahToolsLogging.performNativeLog("error", "NoahPushService", "Failed to build auth headers: ${e.message}")
-            emptyMap()
-        }
-    }
-
     private fun postJson(
         baseUrl: String,
         endpoint: String,
         body: JSONObject,
         headers: Map<String, String>
-    ): Boolean {
+    ): HttpResponse? {
         return try {
             val url = "$baseUrl/v0$endpoint"
-            val response = runBlocking {
+            runBlocking {
                 performNativePost(
                     url,
                     body.toString(),
@@ -100,34 +77,246 @@ class NoahPushService : PushService() {
                     30.0
                 ).await()
             }
-            response.status in 200.0..299.0
         } catch (e: Exception) {
             NoahToolsLogging.performNativeLog("error", "NoahPushService", "HTTP post failed: ${e.message}")
-            false
+            null
         }
     }
 
+    private fun getJson(baseUrl: String, endpoint: String): HttpResponse? {
+        return try {
+            val url = "$baseUrl/v0$endpoint"
+            runBlocking {
+                performNativeGet(url, emptyMap(), 30.0).await()
+            }
+        } catch (e: Exception) {
+            NoahToolsLogging.performNativeLog("error", "NoahPushService", "HTTP get failed: ${e.message}")
+            null
+        }
+    }
+
+    private fun nativeSecrets(context: Context): SharedPreferences? {
+        return try {
+            val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+            EncryptedSharedPreferences.create(
+                "noah_native_secrets",
+                masterKeyAlias,
+                context,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            NoahToolsLogging.performNativeLog(
+                "warn",
+                "NoahPushService",
+                "Unable to access native auth storage: ${e.message}"
+            )
+            null
+        }
+    }
+
+    private fun authStorageKey(context: Context, suffix: String): String =
+        "server_auth_${getAppVariant(context)}_$suffix"
+
+    private fun clearCachedAccessToken(context: Context) {
+        nativeSecrets(context)?.edit()
+            ?.remove(authStorageKey(context, "token"))
+            ?.remove(authStorageKey(context, "expires_at"))
+            ?.remove(authStorageKey(context, "public_key"))
+            ?.apply()
+    }
+
+    private fun currentPublicKey(clazz: Class<*>, instance: Any): String? {
+        return try {
+            val peekKeyPair = clazz.getMethod("peekKeyPair", Integer.TYPE)
+            val keyPairResult = peekKeyPair.invoke(instance, 0) ?: return null
+            keyPairResult.javaClass.getMethod("getPublicKey").invoke(keyPairResult) as? String
+        } catch (e: Exception) {
+            NoahToolsLogging.performNativeLog(
+                "error",
+                "NoahPushService",
+                "Failed to derive server auth public key: ${e.message}"
+            )
+            null
+        }
+    }
+
+    private fun getAccessToken(
+        context: Context,
+        clazz: Class<*>,
+        instance: Any,
+        server: String,
+        forceRefresh: Boolean = false
+    ): String? = synchronized(authLock) {
+        val publicKey = currentPublicKey(clazz, instance) ?: return@synchronized null
+        val prefs = nativeSecrets(context)
+        val nowSeconds = System.currentTimeMillis() / 1000
+
+        if (!forceRefresh && prefs != null) {
+            val cachedToken = prefs.getString(authStorageKey(context, "token"), null)
+            val cachedPublicKey = prefs.getString(authStorageKey(context, "public_key"), null)
+            val expiresAt = prefs.getLong(authStorageKey(context, "expires_at"), 0)
+
+            if (
+                !cachedToken.isNullOrEmpty() &&
+                cachedPublicKey == publicKey &&
+                expiresAt > nowSeconds + AUTH_TOKEN_REFRESH_WINDOW_SECONDS
+            ) {
+                return@synchronized cachedToken
+            }
+        }
+
+        val k1Response = getJson(server, "/getk1")
+        if (k1Response == null || k1Response.status !in 200.0..299.0) {
+            NoahToolsLogging.performNativeLog("warn", "NoahPushService", "Failed to request auth challenge")
+            return@synchronized null
+        }
+
+        val k1 = try {
+            JSONObject(k1Response.body).optNullableString("k1")
+        } catch (e: Exception) {
+            NoahToolsLogging.performNativeLog("warn", "NoahPushService", "Invalid auth challenge response")
+            null
+        } ?: return@synchronized null
+
+        val signature = try {
+            val signMessage = clazz.getMethod("signMessage", String::class.java, Integer.TYPE)
+            signMessage.invoke(instance, k1, 0) as? String
+        } catch (e: Exception) {
+            NoahToolsLogging.performNativeLog(
+                "error",
+                "NoahPushService",
+                "Failed to sign server auth challenge: ${e.message}"
+            )
+            null
+        } ?: return@synchronized null
+
+        val loginPayload = JSONObject()
+            .put("key", publicKey)
+            .put("sig", signature)
+            .put("k1", k1)
+        val loginResponse = postJson(
+            server,
+            "/auth/login",
+            loginPayload,
+            mapOf("Content-Type" to "application/json")
+        )
+
+        if (loginResponse == null || loginResponse.status !in 200.0..299.0) {
+            NoahToolsLogging.performNativeLog("warn", "NoahPushService", "Server auth login failed")
+            return@synchronized null
+        }
+
+        val loginJson = try {
+            JSONObject(loginResponse.body)
+        } catch (e: Exception) {
+            NoahToolsLogging.performNativeLog("warn", "NoahPushService", "Invalid auth login response")
+            return@synchronized null
+        }
+        val accessToken = loginJson.optNullableString("access_token") ?: return@synchronized null
+        val expiresInSeconds = loginJson.optLong("expires_in_seconds", 0)
+
+        if (prefs != null && expiresInSeconds > 0) {
+            prefs.edit()
+                .putString(authStorageKey(context, "token"), accessToken)
+                .putLong(authStorageKey(context, "expires_at"), nowSeconds + expiresInSeconds)
+                .putString(authStorageKey(context, "public_key"), publicKey)
+                .apply()
+        }
+
+        accessToken
+    }
+
+    private fun postAuthenticatedJson(
+        context: Context,
+        clazz: Class<*>,
+        instance: Any,
+        server: String,
+        endpoint: String,
+        body: JSONObject
+    ): HttpResponse? {
+        var accessToken = getAccessToken(context, clazz, instance, server) ?: return null
+        var response = postJson(
+            server,
+            endpoint,
+            body,
+            mapOf(
+                "Content-Type" to "application/json",
+                "Authorization" to "Bearer $accessToken"
+            )
+        )
+
+        if (response?.status == 401.0) {
+            clearCachedAccessToken(context)
+            accessToken = getAccessToken(context, clazz, instance, server, forceRefresh = true)
+                ?: return response
+            response = postJson(
+                server,
+                endpoint,
+                body,
+                mapOf(
+                    "Content-Type" to "application/json",
+                    "Authorization" to "Bearer $accessToken"
+                )
+            )
+        }
+
+        return response
+    }
+
     private fun reportJobStatus(
+        context: Context,
         clazz: Class<*>,
         instance: Any,
         server: String,
         reportType: String,
         status: String,
         errorMessage: String?,
-        k1: String?
+        notificationK1: String?
     ) {
-        if (k1.isNullOrEmpty()) return
-        val headers = buildAuthHeaders(clazz, instance, k1)
-        if (headers.isEmpty()) return
+        if (notificationK1.isNullOrEmpty()) {
+            NoahToolsLogging.performNativeLog("warn", "NoahPushService", "Maintenance notification is missing notification_k1")
+            return
+        }
 
         val payload = JSONObject()
+            .put("notification_k1", notificationK1)
             .put("report_type", reportType)
             .put("status", status)
             .put("error_message", errorMessage)
-            .put("k1", k1)
 
-        val ok = postJson(server, "/report_job_status", payload, headers)
-        if (!ok) {
+        var response = postAuthenticatedJson(
+            context,
+            clazz,
+            instance,
+            server,
+            "/report_job_status",
+            payload
+        )
+
+        for (retryDelayMillis in JOB_STATUS_RETRY_DELAYS_MILLIS) {
+            if (response?.status != 404.0) {
+                break
+            }
+
+            try {
+                Thread.sleep(retryDelayMillis)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                break
+            }
+
+            response = postAuthenticatedJson(
+                context,
+                clazz,
+                instance,
+                server,
+                "/report_job_status",
+                payload
+            )
+        }
+
+        if (response == null || response.status !in 200.0..299.0) {
             NoahToolsLogging.performNativeLog(
                 "warn",
                 "NoahPushService",
@@ -163,7 +352,6 @@ class NoahPushService : PushService() {
         try {
             val json = JSONObject(messageString)
             val type = json.optString("notification_type")
-            val k1 = json.optNullableString("k1")
             val server = getServerEndpoint(this)
 
             val clazz = Class.forName("com.margelo.nitro.nitroark.NitroArkNative")
@@ -176,15 +364,21 @@ class NoahPushService : PushService() {
                         "NoahPushService",
                         "Handling maintenance notification via JNI"
                     )
-                    handleMaintenance(this, clazz, nativeInstance, server, k1)
+                    handleMaintenance(
+                        this,
+                        clazz,
+                        nativeInstance,
+                        server,
+                        json.optNullableString("notification_k1")
+                    )
                 }
 
                 "lightning_invoice_request" -> {
-                    handleLightningInvoiceRequest(this, clazz, nativeInstance, json, server, k1)
+                    handleLightningInvoiceRequest(this, clazz, nativeInstance, json, server)
                 }
 
                 "heartbeat" -> {
-                    handleHeartbeat(clazz, nativeInstance, json, server, k1)
+                    handleHeartbeat(this, clazz, nativeInstance, json, server)
                 }
 
                 else -> NoahToolsLogging.performNativeLog(
@@ -221,7 +415,7 @@ class NoahPushService : PushService() {
         clazz: Class<*>,
         instance: Any,
         server: String?,
-        k1: String?
+        notificationK1: String?
     ) {
         try {
             ensureWalletLoaded(clazz, instance, context)
@@ -232,12 +426,30 @@ class NoahPushService : PushService() {
                 "maintenanceDelegated() completed"
             )
             if (server != null) {
-                reportJobStatus(clazz, instance, server, "maintenance", "success", null, k1)
+                reportJobStatus(
+                    context,
+                    clazz,
+                    instance,
+                    server,
+                    "maintenance",
+                    "success",
+                    null,
+                    notificationK1
+                )
             }
         } catch (e: Exception) {
             NoahToolsLogging.performNativeLog("error", "NoahPushService", "Maintenance handling failed: ${e.message}")
             if (server != null) {
-                reportJobStatus(clazz, instance, server, "maintenance", "failure", e.message, k1)
+                reportJobStatus(
+                    context,
+                    clazz,
+                    instance,
+                    server,
+                    "maintenance",
+                    "failure",
+                    e.message,
+                    notificationK1
+                )
             }
         }
     }
@@ -247,8 +459,7 @@ class NoahPushService : PushService() {
         clazz: Class<*>,
         instance: Any,
         json: JSONObject,
-        server: String?,
-        k1: String?
+        server: String?
     ) {
         try {
             ensureWalletLoaded(clazz, instance, context)
@@ -267,19 +478,21 @@ class NoahPushService : PushService() {
                 invoiceResult.javaClass.getMethod("getPaymentHash").invoke(invoiceResult) as? String
                     ?: return
 
-            if (server != null && k1 != null) {
-                val headers = buildAuthHeaders(clazz, instance, k1)
-                if (headers.isNotEmpty()) {
-                    val payload = JSONObject()
-                        .put("invoice", bolt11)
-                        .put("transaction_id", txId)
-                        .put("k1", k1)
-
-                    val ok = postJson(server, "/lnurlp/submit_invoice", payload, headers)
-                    if (!ok) {
-                        NoahToolsLogging.performNativeLog("warn", "NoahPushService", "submit_invoice failed")
-                        return
-                    }
+            if (server != null) {
+                val payload = JSONObject()
+                    .put("invoice", bolt11)
+                    .put("transaction_id", txId)
+                val response = postAuthenticatedJson(
+                    context,
+                    clazz,
+                    instance,
+                    server,
+                    "/lnurlp/submit_invoice",
+                    payload
+                )
+                if (response == null || response.status !in 200.0..299.0) {
+                    NoahToolsLogging.performNativeLog("warn", "NoahPushService", "submit_invoice failed")
+                    return
                 }
             }
 
@@ -355,23 +568,38 @@ class NoahPushService : PushService() {
     }
 
     private fun handleHeartbeat(
+        context: Context,
         clazz: Class<*>,
         instance: Any,
         json: JSONObject,
-        server: String?,
-        k1: String?
+        server: String?
     ) {
-        if (server == null || k1.isNullOrEmpty()) return
-        val notificationId = json.optString("notification_id")
-        val headers = buildAuthHeaders(clazz, instance, k1)
-        if (headers.isEmpty()) return
+        if (server == null) return
+        val notificationId = json.optNullableString("notification_id")
+        if (notificationId == null) {
+            NoahToolsLogging.performNativeLog("warn", "NoahPushService", "Heartbeat notification is missing notification_id")
+            return
+        }
+
+        try {
+            ensureWalletLoaded(clazz, instance, context)
+        } catch (e: Exception) {
+            NoahToolsLogging.performNativeLog("error", "NoahPushService", "Failed to load wallet for heartbeat: ${e.message}")
+            return
+        }
 
         val payload = JSONObject()
             .put("notification_id", notificationId)
-            .put("k1", k1)
 
-        val ok = postJson(server, "/heartbeat_response", payload, headers)
-        if (!ok) {
+        val response = postAuthenticatedJson(
+            context,
+            clazz,
+            instance,
+            server,
+            "/heartbeat_response",
+            payload
+        )
+        if (response == null || response.status !in 200.0..299.0) {
             NoahToolsLogging.performNativeLog("warn", "NoahPushService", "Failed to respond to heartbeat")
         } else {
             NoahToolsLogging.performNativeLog("debug", "NoahPushService", "Heartbeat response sent")
@@ -572,4 +800,9 @@ class NoahPushService : PushService() {
 
     private fun JSONObject.requireLong(key: String): Long =
         requireNotNull(optNullableLong(key)) { "Missing required config value '$key'." }
+
+    companion object {
+        private const val AUTH_TOKEN_REFRESH_WINDOW_SECONDS = 5 * 60
+        private val JOB_STATUS_RETRY_DELAYS_MILLIS = longArrayOf(250L, 1_000L, 2_000L)
+    }
 }

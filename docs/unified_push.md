@@ -26,21 +26,24 @@ High‑level steps for every message:
 4) Execute the action and report status when applicable.
 
 ### Supported notification types
-- `maintenance`: runs `maintenance()` then `sync()` on the wallet; reports success/failure via `/report_job_status`.
+- `maintenance`: runs delegated wallet maintenance and reports success/failure via `/report_job_status` using the notification's `notification_k1` as a correlation identifier.
 - `lightning_invoice_request`:
   - Build a Bolt11 invoice from the requested `amount` (msat) using `bolt11Invoice`.
-  - Submit the invoice back to the server with auth headers (`x-auth-k1`, `x-auth-sig`, `x-auth-key`) so the payer can see it.
+  - Submit the invoice back to the server with a JWT bearer token so the payer can see it.
   - Wait for payment by calling `tryClaimLightningReceive(paymentHash, wait=true, token=null)` on a background thread. This blocks until the receive is claimable or the OS kills the process.
   - After a successful claim, show a local high‑priority notification (“Lightning Payment Received! ⚡”).
   - If claim fails, it logs the error; no notification is shown.
-- `offboarding`: verifies the provided address signature against the wallet pubkey via `verifyMessage`, then calls `offboardAll`.
-- `heartbeat`: responds back to the server to confirm liveness.
+- `heartbeat`: responds to `/heartbeat_response` with the notification's `notification_id` and a JWT bearer token to confirm liveness.
 
-### Auth header construction
-`buildAuthHeaders` signs the provided `k1` with `signMessage(k1, 0)` and includes:
-- `x-auth-k1`: challenge value
-- `x-auth-sig`: signature
-- `x-auth-key`: wallet public key
+### Server authentication
+The background service uses the same JWT login protocol as the React Native client:
+1) Reuse the encrypted, per-wallet JWT while it is valid.
+2) If the token is missing or close to expiry, request a one-time challenge from `/v0/getk1`.
+3) Sign the challenge with wallet key index 0 and submit it to `/v0/auth/login`.
+4) Send callbacks with `Authorization: Bearer <token>`.
+5) If a callback returns HTTP 401, clear the cached token, authenticate once, and retry.
+
+The `notification_k1` in maintenance payloads is only a job-correlation identifier. It is not an authentication credential.
 
 ### Local notification channel
 `ensureNotificationChannel` creates `noah-push-default` (importance HIGH) on Android O+ so payment receipts surface immediately.
