@@ -320,6 +320,9 @@ class NoahTools : HybridNoahToolsSpec() {
 
                 prefs.edit()
                     .putString("mnemonic_$variant", mnemonic)
+                    .remove("server_auth_${variant}_token")
+                    .remove("server_auth_${variant}_expires_at")
+                    .remove("server_auth_${variant}_public_key")
                     .apply()
             } catch (e: Exception) {
                 throw Exception("Failed to store native mnemonic: ${e.message}", e)
@@ -345,7 +348,12 @@ class NoahTools : HybridNoahToolsSpec() {
                     EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
                 )
-                prefs.edit().remove("mnemonic_$variant").apply()
+                prefs.edit()
+                    .remove("mnemonic_$variant")
+                    .remove("server_auth_${variant}_token")
+                    .remove("server_auth_${variant}_expires_at")
+                    .remove("server_auth_${variant}_public_key")
+                    .apply()
             } catch (e: Exception) {
                 throw Exception("Failed to clear native mnemonic: ${e.message}", e)
             }
