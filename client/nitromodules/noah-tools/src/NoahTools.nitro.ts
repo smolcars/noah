@@ -105,4 +105,9 @@ export interface NoahTools extends HybridObject<{ ios: "swift"; android: "kotlin
   clearNativeMnemonic(): Promise<void>;
   storeNativeEsploraEndpoint(endpoint: string): Promise<void>;
   clearNativeEsploraEndpoint(): Promise<void>;
+  scheduleAndroidBackgroundSync(): void;
+  cancelAndroidBackgroundSync(): void;
+  isAndroidBackgroundWalletJobRunning(): boolean;
+  tryAcquireAndroidBackgroundWalletJob(owner: string): boolean;
+  releaseAndroidBackgroundWalletJob(owner: string): void;
 }

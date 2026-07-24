@@ -17,8 +17,12 @@ import { NotificationData, ReportType } from "~/types/serverTypes";
 import { useWalletStore } from "~/store/walletStore";
 import { formatBitcoinAmount } from "~/lib/bitcoinAmount";
 import { updateWidget } from "~/hooks/useWidget";
-import { shouldUseUnifiedPush } from "~/constants";
+import { PLATFORM, shouldUseUnifiedPush } from "~/constants";
 import { useProfileStore } from "~/store/profileStore";
+import {
+  releaseAndroidBackgroundWalletJob,
+  tryAcquireAndroidBackgroundWalletJob,
+} from "noah-tools";
 
 const log = logger("pushNotifications");
 
@@ -41,6 +45,29 @@ const KNOWN_NOTIFICATION_TYPES = new Set<string>([
   "backup_trigger",
   "heartbeat",
 ]);
+let backgroundWalletJobSequence = 0;
+
+async function acquireAndroidBackgroundWalletJob(owner: string): Promise<boolean> {
+  if (PLATFORM !== "android") {
+    return false;
+  }
+
+  let didLogWait = false;
+  while (!tryAcquireAndroidBackgroundWalletJob(owner)) {
+    if (!didLogWait) {
+      log.i("[Background Job] Waiting for another Android wallet job to complete");
+      didLogWait = true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  return true;
+}
+
+function nextBackgroundWalletJobOwner(source: string): string {
+  backgroundWalletJobSequence += 1;
+  return `${source}:${Date.now()}:${backgroundWalletJobSequence}`;
+}
 
 async function ensureDefaultNotificationChannel() {
   if (Platform.OS !== "android") {
@@ -294,6 +321,8 @@ TaskManager.defineTask<Notifications.NotificationTaskPayload>(
      * timestamp-based stale flag detection will clear it after 60 seconds.
      */
     useWalletStore.getState().setBackgroundJobRunning(true);
+    const walletJobOwner = nextBackgroundWalletJobOwner("expo-background-notification");
+    let hasNativeWalletLease = false;
 
     try {
       log.i("[Background Job] dataReceived", [data, typeof data]);
@@ -318,6 +347,8 @@ TaskManager.defineTask<Notifications.NotificationTaskPayload>(
         return;
       }
 
+      hasNativeWalletLease = await acquireAndroidBackgroundWalletJob(walletJobOwner);
+
       const taskResult = await ResultAsync.fromPromise(
         handleNotificationData(notificationData),
         (e) =>
@@ -331,6 +362,10 @@ TaskManager.defineTask<Notifications.NotificationTaskPayload>(
         log.e("[Background Job] error", [taskResult.error]);
       }
     } finally {
+      if (hasNativeWalletLease) {
+        releaseAndroidBackgroundWalletJob(walletJobOwner);
+      }
+
       /**
        * Always clear the background job flag, even if an error occurred.
        *
@@ -366,8 +401,11 @@ Notifications.addNotificationReceivedListener((notification) => {
 
   void (async () => {
     useWalletStore.getState().setBackgroundJobRunning(true);
+    const walletJobOwner = nextBackgroundWalletJobOwner("expo-foreground-notification");
+    let hasNativeWalletLease = false;
 
     try {
+      hasNativeWalletLease = await acquireAndroidBackgroundWalletJob(walletJobOwner);
       await handleNotificationData(notificationData);
     } catch (e) {
       const error =
@@ -377,6 +415,9 @@ Notifications.addNotificationReceivedListener((notification) => {
       captureException(error);
       log.e("[Foreground Notification] error", [error]);
     } finally {
+      if (hasNativeWalletLease) {
+        releaseAndroidBackgroundWalletJob(walletJobOwner);
+      }
       useWalletStore.getState().setBackgroundJobRunning(false);
     }
   })();

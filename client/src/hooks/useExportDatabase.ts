@@ -5,6 +5,7 @@ import { ResultAsync } from "neverthrow";
 import { CACHES_DIRECTORY_PATH } from "~/constants";
 import { BackupService } from "~/lib/backupService";
 import logger from "~/lib/log";
+import { runForegroundWalletOperation } from "~/lib/walletOperationCoordinator";
 
 const log = logger("useExportDatabase");
 
@@ -21,7 +22,9 @@ export const useExportDatabase = () => {
     const filename = `noah_backup_${timestamp}.noahbackup`;
     const outputPath = `${CACHES_DIRECTORY_PATH}/${filename}`;
     try {
-      const backupResult = await new BackupService().createEncryptedBackupFile(outputPath);
+      const backupResult = await runForegroundWalletOperation(() =>
+        new BackupService().createEncryptedBackupFile(outputPath),
+      );
       if (backupResult.isErr()) {
         log.e("Error creating backup:", [backupResult.error]);
         setExportError("Failed to create backup file. Please try again.");

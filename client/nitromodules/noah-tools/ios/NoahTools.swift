@@ -203,6 +203,26 @@ class NoahTools: HybridNoahToolsSpec {
         promise.resolve()
         return promise
     }
+
+    func scheduleAndroidBackgroundSync() throws {
+        // Android-only
+    }
+
+    func cancelAndroidBackgroundSync() throws {
+        // Android-only
+    }
+
+    func isAndroidBackgroundWalletJobRunning() throws -> Bool {
+        return false
+    }
+
+    func tryAcquireAndroidBackgroundWalletJob(owner: String) throws -> Bool {
+        return true
+    }
+
+    func releaseAndroidBackgroundWalletJob(owner: String) throws {
+        // Android-only
+    }
 }
 
 // Include the extensions from other files

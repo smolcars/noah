@@ -97,6 +97,11 @@ namespace margelo::nitro::noahtools {
       virtual std::shared_ptr<Promise<void>> clearNativeMnemonic() = 0;
       virtual std::shared_ptr<Promise<void>> storeNativeEsploraEndpoint(const std::string& endpoint) = 0;
       virtual std::shared_ptr<Promise<void>> clearNativeEsploraEndpoint() = 0;
+      virtual void scheduleAndroidBackgroundSync() = 0;
+      virtual void cancelAndroidBackgroundSync() = 0;
+      virtual bool isAndroidBackgroundWalletJobRunning() = 0;
+      virtual bool tryAcquireAndroidBackgroundWalletJob(const std::string& owner) = 0;
+      virtual void releaseAndroidBackgroundWalletJob(const std::string& owner) = 0;
 
     protected:
       // Hybrid Setup
