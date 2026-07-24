@@ -11,7 +11,6 @@ import {
   sendOnchainFromOffchain,
   sendArkoorPayment,
   payLightningInvoice,
-  payLightningAddress,
   payLightningOffer,
   type ArkoorPaymentResult,
   type LightningPayment,
@@ -34,34 +33,49 @@ import {
 import { queryClient } from "~/queryClient";
 import { DestinationTypes } from "~/lib/sendUtils";
 import { getArkInfo } from "~/lib/walletApi";
+import {
+  buildLnurlPayerData,
+  createLnurlPayCallbackUrl,
+  normalizeLnurlPayCommentAllowed,
+  parseLnurlPayCallbackResponse,
+  parseLnurlPayRequestResponse,
+  validateLnurlPayComment,
+  validateLnurlPayInvoice,
+  validateMatchingArkAddress,
+  type LnurlPayerData,
+  type LnurlPayerDataRequirements,
+  type LnurlPayerIdentity,
+  type LnurlPayRequestResponse,
+} from "~/lib/lnurlPay";
+import { useProfileStore } from "~/store/profileStore";
+import { useServerStore } from "~/store/serverStore";
 import logger from "~/lib/log";
+import { fetch as expoFetch } from "expo/fetch";
 import ky from "ky";
 import { Result } from "neverthrow";
 
 const log = logger("usePayments");
 
-interface LnurlpDefaultResponse {
+type LnurlPayRouteBase = {
   callback: string;
-  maxSendable: number;
-  minSendable: number;
   metadata: string;
-  tag: "payRequest";
   commentAllowed: number;
-  ark?: string;
-}
+  payerData?: LnurlPayerDataRequirements;
+  minSendableMsat: number;
+  maxSendableMsat: number;
+};
 
-export type LightningAddressPaymentRoute =
-  | {
-      method: "ark";
-      destination: string;
-      minSendableMsat: number;
-      maxSendableMsat: number;
-    }
-  | {
-      method: "lightning";
-      minSendableMsat: number;
-      maxSendableMsat: number;
-    };
+export type LnurlPayRoute = LnurlPayRouteBase &
+  (
+    | {
+        method: "ark";
+        destination: string;
+        arkServerPubkey: string;
+      }
+    | {
+        method: "lightning";
+      }
+  );
 
 const parseLightningAddress = (destination: string) => {
   const normalized = destination
@@ -76,40 +90,53 @@ const parseLightningAddress = (destination: string) => {
   return { username: parts[0], domain: parts[1] };
 };
 
-const fetchLnurlpResponse = async (url: URL): Promise<LnurlpDefaultResponse> => {
-  const response = await ky.get(url.toString()).json<LnurlpDefaultResponse>();
-  if (response.tag !== "payRequest" || !response.callback) {
-    throw new Error("Invalid LNURL response for lightning address payment");
+const fetchLnurlPayRequestResponse = async (url: URL): Promise<LnurlPayRequestResponse> => {
+  // LUD-01 assigns no protocol meaning to HTTP status codes; the JSON body is authoritative.
+  const response = await ky.get(url.toString(), { throwHttpErrors: false }).json<unknown>();
+  const parsedResponse = parseLnurlPayRequestResponse(response);
+  if (parsedResponse.isErr()) {
+    throw parsedResponse.error;
   }
 
-  return response;
+  return parsedResponse.value;
 };
 
-const paymentRouteFromLnurlpResponse = async (
-  response: LnurlpDefaultResponse,
-  acceptArkAddress: boolean,
-): Promise<LightningAddressPaymentRoute> => {
-  const limits = {
+const lnurlPayRouteFromRequestResponse = async (
+  response: LnurlPayRequestResponse,
+  arkServerPubkey: string | null,
+): Promise<LnurlPayRoute> => {
+  const routeDetails: LnurlPayRouteBase = {
+    callback: response.callback,
+    metadata: response.metadata,
+    commentAllowed: normalizeLnurlPayCommentAllowed(response.commentAllowed),
+    payerData: response.payerData,
     minSendableMsat: response.minSendable,
     maxSendableMsat: response.maxSendable,
   };
 
-  if (acceptArkAddress && response.ark) {
+  if (arkServerPubkey && response.ark) {
     const validationResult = await validateArkoorPaymentAddress(response.ark);
     if (validationResult.isOk()) {
-      return { method: "ark", destination: response.ark, ...limits };
+      return {
+        method: "ark",
+        destination: response.ark,
+        arkServerPubkey,
+        ...routeDetails,
+      };
     }
 
-    log.w("Ignoring incompatible Ark address returned by LNURL provider", [validationResult.error]);
+    log.w("Ignoring incompatible Ark address returned by LNURL-pay service", [
+      validationResult.error,
+    ]);
   }
 
-  return { method: "lightning", ...limits };
+  return { method: "lightning", ...routeDetails };
 };
 
-export const resolveLightningAddressPaymentRoute = async (
-  destination: string,
-): Promise<LightningAddressPaymentRoute> => {
-  const parsed = parseLightningAddress(destination);
+export const resolveLnurlPayRouteForLightningAddress = async (
+  lightningAddress: string,
+): Promise<LnurlPayRoute> => {
+  const parsed = parseLightningAddress(lightningAddress);
   if (!parsed) {
     throw new Error("Destination is not a lightning address");
   }
@@ -117,31 +144,45 @@ export const resolveLightningAddressPaymentRoute = async (
   const lnurlEndpoint = new URL(`https://${parsed.domain}/.well-known/lnurlp/${parsed.username}`);
   const arkInfoResult = await getArkInfo();
   if (arkInfoResult.isErr()) {
-    log.w("Unable to load Ark server info, using standard LNURL discovery", [arkInfoResult.error]);
-    const response = await fetchLnurlpResponse(lnurlEndpoint);
-    return paymentRouteFromLnurlpResponse(response, false);
+    log.w("Unable to load Ark server info, using standard LNURL-pay discovery", [
+      arkInfoResult.error,
+    ]);
+    const response = await fetchLnurlPayRequestResponse(lnurlEndpoint);
+    return lnurlPayRouteFromRequestResponse(response, null);
   }
 
   const arkLnurlEndpoint = new URL(lnurlEndpoint);
   arkLnurlEndpoint.searchParams.set("ark", arkInfoResult.value.server_pubkey);
 
-  const response = await fetchLnurlpResponse(arkLnurlEndpoint);
-  return paymentRouteFromLnurlpResponse(response, true);
+  let response: LnurlPayRequestResponse;
+  try {
+    response = await fetchLnurlPayRequestResponse(arkLnurlEndpoint);
+  } catch (error) {
+    log.w("Ark-aware LNURL-pay discovery failed, retrying standard LNURL-pay discovery", [error]);
+    const standardResponse = await fetchLnurlPayRequestResponse(lnurlEndpoint);
+    return lnurlPayRouteFromRequestResponse(standardResponse, null);
+  }
+
+  return lnurlPayRouteFromRequestResponse(response, arkInfoResult.value.server_pubkey);
 };
 
-export function useLightningAddressPaymentRoute(destination: string | null) {
-  return useQuery({
-    queryKey: ["payment-route", "lightning-address", destination],
-    queryFn: () => {
-      if (!destination) {
-        throw new Error("Lightning address payment destination is required");
-      }
+const lnurlPayRouteQueryOptions = (lightningAddress: string | null) => ({
+  queryKey: ["lnurl-pay-route", "lightning-address", lightningAddress],
+  queryFn: () => {
+    if (!lightningAddress) {
+      throw new Error("Lightning address is required for LNURL-pay discovery");
+    }
 
-      return resolveLightningAddressPaymentRoute(destination);
-    },
-    enabled: destination !== null,
-    staleTime: 0,
-    retry: false,
+    return resolveLnurlPayRouteForLightningAddress(lightningAddress);
+  },
+  staleTime: 0,
+  retry: false,
+});
+
+export function useLnurlPayRouteForLightningAddress(lightningAddress: string | null) {
+  return useQuery({
+    ...lnurlPayRouteQueryOptions(lightningAddress),
+    enabled: lightningAddress !== null,
   });
 }
 
@@ -245,7 +286,7 @@ type SendVariables = {
   isMaxAmount?: boolean;
   comment: string | null;
   onchainSource?: OnchainSendSource;
-  lightningAddressPaymentRoute?: LightningAddressPaymentRoute;
+  confirmedLnurlPayMethod?: LnurlPayRoute["method"];
   btcPrice?: number;
 };
 
@@ -444,28 +485,103 @@ const readLightningPayment = async (
   return result.value;
 };
 
-const sendLightningAddressPayment = async (
-  route: LightningAddressPaymentRoute,
-  destination: string,
+const sendLnurlPayCallbackPayment = async (
+  route: LnurlPayRoute,
   amountSat: number,
+  payerData: LnurlPayerData | null,
   comment: string | null,
 ): Promise<ArkoorPaymentResult | LightningPayment> => {
-  const amountMsat = amountSat * 1000;
-  if (amountMsat < route.minSendableMsat || amountMsat > route.maxSendableMsat) {
-    throw new Error("Payment amount is outside the supported range for this lightning address");
+  const payerDataJson = payerData === null ? null : JSON.stringify(payerData);
+  const callbackUrlResult = createLnurlPayCallbackUrl(
+    route.callback,
+    amountSat * 1000,
+    payerDataJson,
+    comment,
+    route.method === "ark" ? route.arkServerPubkey : undefined,
+  );
+  if (callbackUrlResult.isErr()) {
+    throw callbackUrlResult.error;
   }
 
+  let response: unknown;
+  const abortController = new AbortController();
+  const timeout = setTimeout(() => abortController.abort(), 60_000);
+  try {
+    const httpResponse = await expoFetch(callbackUrlResult.value, {
+      redirect: "manual",
+      signal: abortController.signal,
+    });
+    response = (await httpResponse.json()) as unknown;
+  } catch {
+    throw new Error("Failed to request a payment from this lightning address");
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const callbackResponseResult = parseLnurlPayCallbackResponse(response);
+  if (callbackResponseResult.isErr()) {
+    throw callbackResponseResult.error;
+  }
+  const callbackResponse = callbackResponseResult.value;
+
   if (route.method === "ark") {
-    log.d("Paying lightning address via Ark direct payment");
-    const result = await sendArkoorPayment(route.destination, amountSat);
+    const matchingAddressResult = validateMatchingArkAddress(
+      callbackResponse.ark,
+      route.destination,
+    );
+    if (matchingAddressResult.isErr()) {
+      throw matchingAddressResult.error;
+    }
+
+    const validationResult = await validateArkoorPaymentAddress(matchingAddressResult.value);
+    if (validationResult.isErr()) {
+      throw new Error("The recipient returned an invalid Ark address");
+    }
+
+    log.d("Paying lightning address via Ark after LNURL-pay callback");
+    const result = await sendArkoorPayment(matchingAddressResult.value, amountSat);
     if (result.isErr()) {
       throw result.error;
     }
     return result.value;
   }
 
-  log.d("Paying via standard Lightning Address flow");
-  return readLightningPayment(payLightningAddress(destination, amountSat, comment || ""));
+  if (!callbackResponse.pr) {
+    throw new Error("The recipient did not return a Lightning invoice");
+  }
+
+  const invoiceValidationResult = validateLnurlPayInvoice(callbackResponse.pr, amountSat * 1000);
+  if (invoiceValidationResult.isErr()) {
+    throw invoiceValidationResult.error;
+  }
+
+  log.d("Paying Lightning invoice after LNURL-pay callback");
+  return readLightningPayment(payLightningInvoice(callbackResponse.pr, undefined));
+};
+
+const sendLnurlPayPayment = async (
+  route: LnurlPayRoute,
+  amountSat: number,
+  comment: string | null,
+  payerIdentity: LnurlPayerIdentity,
+): Promise<ArkoorPaymentResult | LightningPayment> => {
+  const amountMsat = amountSat * 1000;
+  if (amountMsat < route.minSendableMsat || amountMsat > route.maxSendableMsat) {
+    throw new Error("Payment amount is outside the supported range for this lightning address");
+  }
+
+  const commentToSend = route.commentAllowed > 0 ? comment : null;
+  const commentResult = validateLnurlPayComment(commentToSend, route.commentAllowed);
+  if (commentResult.isErr()) {
+    throw commentResult.error;
+  }
+
+  const payerDataResult = buildLnurlPayerData(route.payerData, payerIdentity);
+  if (payerDataResult.isErr()) {
+    throw payerDataResult.error;
+  }
+
+  return sendLnurlPayCallbackPayment(route, amountSat, payerDataResult.value, commentResult.value);
 };
 
 export function useSend(destinationType: DestinationTypes) {
@@ -478,7 +594,7 @@ export function useSend(destinationType: DestinationTypes) {
         isMaxAmount = false,
         comment,
         onchainSource,
-        lightningAddressPaymentRoute,
+        confirmedLnurlPayMethod,
       } = variables;
       if (!isMaxAmount && amountSat === undefined && destinationType !== "lightning") {
         throw new Error("Amount is required");
@@ -529,29 +645,22 @@ export function useSend(destinationType: DestinationTypes) {
           break;
         case "lightning":
           return readLightningPayment(payLightningInvoice(destination, amountSat));
-        case "lnurl": {
+        case "lightning-address": {
           if (amountSat === undefined) {
-            throw new Error("Amount is required for LNURL payments");
+            throw new Error("Amount is required for LNURL-pay payments");
           }
 
-          if (lightningAddressPaymentRoute) {
-            return sendLightningAddressPayment(
-              lightningAddressPaymentRoute,
-              destination,
-              amountSat,
-              comment,
-            );
+          const payerIdentity: LnurlPayerIdentity = {
+            name: useProfileStore.getState().displayName,
+            identifier: useServerStore.getState().lightningAddress,
+          };
+
+          const route = await queryClient.fetchQuery(lnurlPayRouteQueryOptions(destination));
+          if (!confirmedLnurlPayMethod || route.method !== confirmedLnurlPayMethod) {
+            throw new Error("The payment route changed. Review the updated fee and try again.");
           }
 
-          try {
-            const route = await resolveLightningAddressPaymentRoute(destination);
-            return sendLightningAddressPayment(route, destination, amountSat, comment);
-          } catch (routeError) {
-            log.w("Failed to resolve lightning address payment route, using standard LNURL", [
-              routeError,
-            ]);
-            return readLightningPayment(payLightningAddress(destination, amountSat, comment || ""));
-          }
+          return sendLnurlPayPayment(route, amountSat, comment, payerIdentity);
         }
         case "offer":
           return readLightningPayment(payLightningOffer(destination, amountSat));

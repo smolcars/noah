@@ -80,7 +80,7 @@ const SendScreen = () => {
     isConfirmationAmountInvalid,
     isCheckingOwnOnchainAddress,
     isOwnOnchainAddress,
-    isLightningAddressPaymentRouteResolutionRequired,
+    isLightningAddressConfirmationPending,
     onchainWalletBalance,
     offchainWalletBalance,
     handleClear,
@@ -457,7 +457,7 @@ const SendScreen = () => {
           isConfirmDisabled={
             isOnchainSourceSelectionRequired ||
             isConfirmationAmountInvalid ||
-            isLightningAddressPaymentRouteResolutionRequired ||
+            isLightningAddressConfirmationPending ||
             isCheckingOwnOnchainAddress ||
             isOwnOnchainAddress
           }

@@ -17,7 +17,7 @@ export type DestinationTypes =
   | "onchain"
   | "lightning"
   | "ark"
-  | "lnurl"
+  | "lightning-address"
   | "bip321"
   | "offer"
   | null;
@@ -215,7 +215,7 @@ export const parseDestination = (destination: string): ParsedDestination => {
 
   if (isValidLightningAddress(normalizeLightningAddress(cleanedDestination))) {
     return {
-      destinationType: "lnurl",
+      destinationType: "lightning-address",
       isAmountEditable: true,
     };
   }

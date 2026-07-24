@@ -11,7 +11,7 @@ import {
   ParsedBip321,
 } from "../lib/sendUtils";
 import {
-  useLightningAddressPaymentRoute,
+  useLnurlPayRouteForLightningAddress,
   useIsOnchainAddressMine,
   useSend,
   useSendFeeEstimate,
@@ -149,12 +149,12 @@ export const useSendScreen = () => {
   const finalDestinationType =
     destinationType === "bip321" ? selectedPaymentMethod : destinationType;
   const cleanedDestination = destination.trim().replace(/^(bitcoin:|lightning:)/i, "");
-  const normalizedLnurlDestination = normalizeLightningAddress(cleanedDestination);
-  const lightningAddressPaymentRouteDestination =
-    showConfirmation && finalDestinationType === "lnurl" ? normalizedLnurlDestination : null;
-  const lightningAddressPaymentRouteQuery = useLightningAddressPaymentRoute(
-    lightningAddressPaymentRouteDestination,
-  );
+  const normalizedLightningAddress = normalizeLightningAddress(cleanedDestination);
+  const lightningAddressForLnurlPayRoute =
+    showConfirmation && finalDestinationType === "lightning-address"
+      ? normalizedLightningAddress
+      : null;
+  const lnurlPayRouteQuery = useLnurlPayRouteForLightningAddress(lightningAddressForLnurlPayRoute);
 
   const {
     mutate: send,
@@ -301,9 +301,9 @@ export const useSendScreen = () => {
       case "lightning":
       case "offer":
         return { method: "lightning", amountSat };
-      case "lnurl":
-        return lightningAddressPaymentRouteQuery.data
-          ? { method: lightningAddressPaymentRouteQuery.data.method, amountSat }
+      case "lightning-address":
+        return lnurlPayRouteQuery.data
+          ? { method: lnurlPayRouteQuery.data.method, amountSat }
           : null;
       case "onchain":
         if (isMaxSend && resolvedOnchainSource === "onchain") {
@@ -332,7 +332,7 @@ export const useSendScreen = () => {
     destinationType,
     finalDestinationType,
     isMaxSend,
-    lightningAddressPaymentRouteQuery.data,
+    lnurlPayRouteQuery.data,
     offchainWalletBalance,
     resolvedOnchainSource,
     selectedPaymentMethod,
@@ -433,14 +433,12 @@ export const useSendScreen = () => {
   }, [feeEstimateQuery.error]);
 
   useEffect(() => {
-    if (!lightningAddressPaymentRouteQuery.error) {
+    if (!lnurlPayRouteQuery.error) {
       return;
     }
 
-    log.w("Failed to resolve lightning address payment route", [
-      lightningAddressPaymentRouteQuery.error,
-    ]);
-  }, [lightningAddressPaymentRouteQuery.error]);
+    log.w("Failed to resolve LNURL-pay route for lightning address", [lnurlPayRouteQuery.error]);
+  }, [lnurlPayRouteQuery.error]);
 
   const toggleCurrency = useCallback(() => {
     if (currency === "SATS") {
@@ -650,7 +648,7 @@ export const useSendScreen = () => {
       });
     } else {
       const destinationToSend =
-        finalDestinationType === "lnurl"
+        finalDestinationType === "lightning-address"
           ? normalizeLightningAddress(cleanedDestination)
           : cleanedDestination;
       if (finalDestinationType === "onchain" && resolvedOnchainSource === null) {
@@ -674,9 +672,9 @@ export const useSendScreen = () => {
         comment: comment || null,
         onchainSource:
           finalDestinationType === "onchain" ? (resolvedOnchainSource ?? undefined) : undefined,
-        lightningAddressPaymentRoute:
-          finalDestinationType === "lnurl" && lightningAddressPaymentRouteDestination
-            ? lightningAddressPaymentRouteQuery.data
+        confirmedLnurlPayMethod:
+          finalDestinationType === "lightning-address"
+            ? lnurlPayRouteQuery.data?.method
             : undefined,
         btcPrice,
       });
@@ -783,10 +781,11 @@ export const useSendScreen = () => {
     isConfirmationAmountInvalid: !isMaxSend && amountSat <= 0,
     isCheckingOwnOnchainAddress: ownOnchainAddressQuery.isFetching,
     isOwnOnchainAddress: ownOnchainAddressQuery.data ?? false,
-    isLightningAddressPaymentRouteResolutionRequired:
-      lightningAddressPaymentRouteDestination !== null &&
-      !lightningAddressPaymentRouteQuery.data &&
-      !lightningAddressPaymentRouteQuery.error,
+    isLightningAddressConfirmationPending:
+      lightningAddressForLnurlPayRoute !== null &&
+      (lnurlPayRouteQuery.isFetching ||
+        feeEstimateQuery.isFetching ||
+        (!lnurlPayRouteQuery.data && !lnurlPayRouteQuery.error)),
     onchainWalletBalance,
     offchainWalletBalance,
     showConfirmation,
@@ -794,9 +793,9 @@ export const useSendScreen = () => {
     showSuccess,
     handleCloseSuccess,
     feeEstimate: feeEstimateQuery.data,
-    isEstimatingFee: lightningAddressPaymentRouteQuery.isFetching || feeEstimateQuery.isFetching,
-    feeEstimateError: lightningAddressPaymentRouteQuery.error ?? feeEstimateQuery.error,
-    feeEstimateUnavailableText: lightningAddressPaymentRouteQuery.error
+    isEstimatingFee: lnurlPayRouteQuery.isFetching || feeEstimateQuery.isFetching,
+    feeEstimateError: lnurlPayRouteQuery.error ?? feeEstimateQuery.error,
+    feeEstimateUnavailableText: lnurlPayRouteQuery.error
       ? "Unable to determine whether this payment will use Ark or Lightning."
       : null,
     feeEstimateNote,

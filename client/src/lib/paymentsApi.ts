@@ -7,7 +7,6 @@ import {
   subscribeLightningPaymentMovements as subscribeLightningPaymentMovementsNitro,
   sendArkoorPayment as sendArkoorPaymentNitro,
   validateArkoorAddress as validateArkoorAddressNitro,
-  payLightningAddress as payLightningAddressNitro,
   payLightningOffer as payLightningOfferNitro,
   checkLightningPayment as checkLightningPaymentNitro,
   bolt11Invoice as bolt11InvoiceNitro,
@@ -429,27 +428,6 @@ export const estimateOffboardAllFee = async (
       }`,
     );
   });
-};
-
-export const payLightningAddress = async (
-  addr: string,
-  amountSat: number,
-  comment: string,
-): Promise<Result<LightningPayment, Error>> => {
-  const normalizedAddress = addr.trim().toLowerCase();
-
-  return ResultAsync.fromPromise(
-    payLightningAddressNitro(normalizedAddress, amountSat, comment, true),
-    (error) => {
-      const e = new Error(
-        `Failed to send to lightning address: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-
-      return e;
-    },
-  );
 };
 
 export const checkLightningPayment = async (

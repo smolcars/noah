@@ -26,6 +26,15 @@ const { isValidDestination, parseDestination } = await import("../../src/lib/sen
 const BOLT12_OFFER =
   "lno1pqps7sjqpgtyzm3qv4uxzmtsd3jjqer9wd3hy6tsw35k7msjzfpy7nz5yqcnygrfdej82um5wf5k2uckyypwa3eyt44h6txtxquqh7lz5djge4afgfjn7k4rgrkuag0jsd5xvxg";
 
+describe("Lightning Address send destinations", () => {
+  test("classifies a LUD-16 identifier separately from its LNURL-pay route", () => {
+    expect(parseDestination("receiver@example.com")).toEqual({
+      destinationType: "lightning-address",
+      isAmountEditable: true,
+    });
+  });
+});
+
 describe("BOLT12 send destinations", () => {
   test("accepts a bare BOLT12 offer", () => {
     expect(isValidDestination(BOLT12_OFFER)).toBe(true);

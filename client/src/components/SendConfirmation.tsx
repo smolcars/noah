@@ -109,7 +109,7 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
         return "Ark";
       case "lightning":
         return "Lightning";
-      case "lnurl":
+      case "lightning-address":
         return "Lightning Address";
       case "onchain":
         return "On-chain";
