@@ -38,6 +38,7 @@ android {
   defaultConfig {
     minSdkVersion getExtOrIntegerDefault("minSdkVersion")
     targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
+    consumerProguardFiles "consumer-rules.pro"
 
     externalNativeBuild {
       cmake {
@@ -130,6 +131,7 @@ dependencies {
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
   implementation project(":react-native-nitro-modules")
   implementation "androidx.security:security-crypto:1.1.0"
+  implementation "androidx.work:work-runtime:2.11.2"
 
   // OkHttp for background networking
   implementation "com.squareup.okhttp3:okhttp:4.12.0"

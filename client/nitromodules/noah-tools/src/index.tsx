@@ -192,4 +192,24 @@ export function clearNativeEsploraEndpoint(): Promise<void> {
   return NoahToolsHybridObject.clearNativeEsploraEndpoint();
 }
 
+export function scheduleAndroidBackgroundSync(): void {
+  NoahToolsHybridObject.scheduleAndroidBackgroundSync();
+}
+
+export function cancelAndroidBackgroundSync(): void {
+  NoahToolsHybridObject.cancelAndroidBackgroundSync();
+}
+
+export function isAndroidBackgroundWalletJobRunning(): boolean {
+  return NoahToolsHybridObject.isAndroidBackgroundWalletJobRunning();
+}
+
+export function tryAcquireAndroidBackgroundWalletJob(owner: string): boolean {
+  return NoahToolsHybridObject.tryAcquireAndroidBackgroundWalletJob(owner);
+}
+
+export function releaseAndroidBackgroundWalletJob(owner: string): void {
+  NoahToolsHybridObject.releaseAndroidBackgroundWalletJob(owner);
+}
+
 export type { HttpResponse } from "./NoahTools.nitro";

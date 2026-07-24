@@ -3,6 +3,7 @@ import { loadWalletIfNeeded } from "~/lib/walletApi";
 import logger from "~/lib/log";
 import { useServerStore } from "~/store/serverStore";
 import { authorizeMailboxForServer, MAILBOX_AUTH_TTL_SECS } from "~/lib/server";
+import { runForegroundWalletOperation } from "~/lib/walletOperationCoordinator";
 
 const log = logger("useMailboxAuthorization");
 
@@ -34,7 +35,7 @@ export const useMailboxAuthorization = (isReady: boolean) => {
         return;
       }
 
-      const loadResult = await loadWalletIfNeeded();
+      const loadResult = await runForegroundWalletOperation(loadWalletIfNeeded);
       if (loadResult.isErr()) {
         log.w("Failed to load wallet before granting mailbox authorization", [loadResult.error]);
         return;
@@ -44,10 +45,12 @@ export const useMailboxAuthorization = (isReady: boolean) => {
       }
 
       const requestedExpiry = now + MAILBOX_AUTH_TTL_SECS;
-      const authorizeResult = await authorizeMailboxForServer({
-        requestedExpiry,
-        shouldAbort,
-      });
+      const authorizeResult = await runForegroundWalletOperation(() =>
+        authorizeMailboxForServer({
+          requestedExpiry,
+          shouldAbort,
+        }),
+      );
       if (authorizeResult.isErr()) {
         if (!shouldAbort()) {
           log.w("Failed to grant mailbox authorization on server", [authorizeResult.error]);

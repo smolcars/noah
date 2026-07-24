@@ -29,6 +29,7 @@ import { useBackupStore } from "~/store/backupStore";
 import { useEsploraStore } from "~/store/esploraStore";
 import { ResultAsync } from "neverthrow";
 import logger from "~/lib/log";
+import { runForegroundWalletOperation } from "~/lib/walletOperationCoordinator";
 
 const log = logger("useWallet");
 
@@ -36,12 +37,13 @@ export function useCreateWallet() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async () => {
-      const result = await createWalletAction();
-      if (result.isErr()) {
-        throw result.error;
-      }
-    },
+    mutationFn: () =>
+      runForegroundWalletOperation(async () => {
+        const result = await createWalletAction();
+        if (result.isErr()) {
+          throw result.error;
+        }
+      }),
     onError: async (error: Error) => {
       await deleteWalletAction();
       showAlert({ title: "Creation Failed", description: error.message });
@@ -53,13 +55,14 @@ export function useLoadWallet() {
   const { setWalletLoaded, setWalletError } = useWalletStore();
 
   return useMutation({
-    mutationFn: async () => {
-      const result = await loadWalletAction();
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value;
-    },
+    mutationFn: () =>
+      runForegroundWalletOperation(async () => {
+        const result = await loadWalletAction();
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value;
+      }),
     onSuccess: (walletExists) => {
       if (walletExists) {
         setWalletLoaded();
@@ -74,46 +77,46 @@ export function useLoadWallet() {
 
 export function useWalletSync() {
   return useMutation({
-    mutationFn: async () => {
-      const results = await Promise.allSettled([sync(), onchainSyncAction()]);
+    mutationFn: () =>
+      runForegroundWalletOperation(async () => {
+        const results = await Promise.allSettled([sync(), onchainSyncAction()]);
 
-      for (const result of results) {
-        if (result.status === "rejected") {
-          throw result.reason;
+        for (const result of results) {
+          if (result.status === "rejected") {
+            throw result.reason;
+          }
+
+          if (result.value.isErr()) {
+            throw result.value.error;
+          }
         }
-
-        if (result.value.isErr()) {
-          throw result.value.error;
-        }
-      }
-
-      return;
-    },
+      }),
     retry: false,
   });
 }
 
 export function useBalance() {
-  const { isInitialized } = useWalletStore();
+  const { isInitialized, isBackgroundJobRunning, isNativeBackgroundJobRunning } = useWalletStore();
 
   return useQuery({
     queryKey: ["balance"],
-    queryFn: async () => {
-      const [onchainResult, offchainResult] = await Promise.all([
-        fetchOnchainBalance(),
-        fetchOffchainBalance(),
-      ]);
+    queryFn: () =>
+      runForegroundWalletOperation(async () => {
+        const [onchainResult, offchainResult] = await Promise.all([
+          fetchOnchainBalance(),
+          fetchOffchainBalance(),
+        ]);
 
-      if (onchainResult.isErr()) {
-        throw onchainResult.error;
-      }
-      if (offchainResult.isErr()) {
-        throw offchainResult.error;
-      }
+        if (onchainResult.isErr()) {
+          throw onchainResult.error;
+        }
+        if (offchainResult.isErr()) {
+          throw offchainResult.error;
+        }
 
-      return { onchain: onchainResult.value, offchain: offchainResult.value };
-    },
-    enabled: isInitialized,
+        return { onchain: onchainResult.value, offchain: offchainResult.value };
+      }),
+    enabled: isInitialized && !isBackgroundJobRunning && !isNativeBackgroundJobRunning,
     retry: false,
   });
 }
@@ -121,13 +124,14 @@ export function useBalance() {
 export function useAutoBoardThreshold(enabled = true) {
   return useQuery({
     queryKey: ["auto-board-threshold"],
-    queryFn: async () => {
-      const result = await getArkInfo();
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return getAutoBoardThreshold(result.value);
-    },
+    queryFn: () =>
+      runForegroundWalletOperation(async () => {
+        const result = await getArkInfo();
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return getAutoBoardThreshold(result.value);
+      }),
     enabled,
     retry: false,
   });
@@ -136,31 +140,38 @@ export function useAutoBoardThreshold(enabled = true) {
 export function useArkInfo(enabled = true) {
   return useQuery({
     queryKey: ["ark-info"],
-    queryFn: async () => {
-      const result = await getArkInfo();
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value;
-    },
+    queryFn: () =>
+      runForegroundWalletOperation(async () => {
+        const result = await getArkInfo();
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value;
+      }),
     enabled,
     retry: false,
   });
 }
 
 export function usePendingRounds(refetchIntervalMs: number | false = false) {
-  const { isInitialized, isWalletSuspended, isBackgroundJobRunning } = useWalletStore();
+  const { isInitialized, isWalletSuspended, isBackgroundJobRunning, isNativeBackgroundJobRunning } =
+    useWalletStore();
 
   return useQuery({
     queryKey: ["pending-rounds"],
-    queryFn: async () => {
-      const result = await syncPendingRounds();
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value;
-    },
-    enabled: isInitialized && !isWalletSuspended && !isBackgroundJobRunning,
+    queryFn: () =>
+      runForegroundWalletOperation(async () => {
+        const result = await syncPendingRounds();
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value;
+      }),
+    enabled:
+      isInitialized &&
+      !isWalletSuspended &&
+      !isBackgroundJobRunning &&
+      !isNativeBackgroundJobRunning,
     refetchInterval: refetchIntervalMs,
     retry: false,
   });
@@ -169,13 +180,14 @@ export function usePendingRounds(refetchIntervalMs: number | false = false) {
 export function useGetVtxos() {
   return useQuery({
     queryKey: ["vtxos"],
-    queryFn: async () => {
-      const result = await getVtxos();
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value;
-    },
+    queryFn: () =>
+      runForegroundWalletOperation(async () => {
+        const result = await getVtxos();
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value;
+      }),
     retry: false,
   });
 }
@@ -183,13 +195,14 @@ export function useGetVtxos() {
 export function useGetExpiringVtxos() {
   return useQuery({
     queryKey: ["expiring-vtxos"],
-    queryFn: async () => {
-      const result = await getExpiringVtxos();
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value;
-    },
+    queryFn: () =>
+      runForegroundWalletOperation(async () => {
+        const result = await getExpiringVtxos();
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value;
+      }),
     retry: false,
   });
 }
@@ -198,12 +211,13 @@ export function useRefreshExpiringVtxos() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async () => {
-      const result = await maintenanceDelegated();
-      if (result.isErr()) {
-        throw result.error;
-      }
-    },
+    mutationFn: () =>
+      runForegroundWalletOperation(async () => {
+        const result = await maintenanceDelegated();
+        if (result.isErr()) {
+          throw result.error;
+        }
+      }),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["vtxos"] }),
@@ -227,17 +241,18 @@ export function useEstimateRefreshFee() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async (vtxoIds: string[]) => {
-      if (vtxoIds.length === 0) {
-        throw new Error("Select at least one VTXO.");
-      }
+    mutationFn: (vtxoIds: string[]) =>
+      runForegroundWalletOperation(async () => {
+        if (vtxoIds.length === 0) {
+          throw new Error("Select at least one VTXO.");
+        }
 
-      const result = await estimateRefreshFee(vtxoIds);
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value;
-    },
+        const result = await estimateRefreshFee(vtxoIds);
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value;
+      }),
     onError: (error: Error) => {
       log.e("Failed to estimate refresh fee", [error]);
       showAlert({ title: "Failed to estimate refresh fee", description: error.message });
@@ -249,17 +264,18 @@ export function useRefreshSelectedVtxos() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async (vtxoIds: string[]) => {
-      if (vtxoIds.length === 0) {
-        throw new Error("Select at least one VTXO.");
-      }
+    mutationFn: (vtxoIds: string[]) =>
+      runForegroundWalletOperation(async () => {
+        if (vtxoIds.length === 0) {
+          throw new Error("Select at least one VTXO.");
+        }
 
-      const result = await refreshVtxosDelegated(vtxoIds);
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value;
-    },
+        const result = await refreshVtxosDelegated(vtxoIds);
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value;
+      }),
     onSuccess: async (roundState) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["vtxos"] }),
@@ -292,7 +308,7 @@ export function useCloseWallet() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: closeWalletIfLoaded,
+    mutationFn: () => runForegroundWalletOperation(closeWalletIfLoaded),
     onError: (error: Error) => {
       showAlert({ title: "Failed to close wallet", description: error.message });
     },
@@ -306,14 +322,15 @@ export const useBalanceSync = () => {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async () => {
-      const results = await Promise.allSettled([syncAction(), onchainSyncAction()]);
-      results.forEach((result) => {
-        if (result.status === "rejected") {
-          throw result.reason;
-        }
-      });
-    },
+    mutationFn: () =>
+      runForegroundWalletOperation(async () => {
+        const results = await Promise.allSettled([syncAction(), onchainSyncAction()]);
+        results.forEach((result) => {
+          if (result.status === "rejected") {
+            throw result.reason;
+          }
+        });
+      }),
     onError: (error: Error) => {
       showAlert({ title: "Failed to sync wallet balance", description: error.message });
     },
@@ -324,12 +341,13 @@ export function useOffchainSync() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async () => {
-      const result = await syncAction();
-      if (result.isErr()) {
-        throw result.error;
-      }
-    },
+    mutationFn: () =>
+      runForegroundWalletOperation(async () => {
+        const result = await syncAction();
+        if (result.isErr()) {
+          throw result.error;
+        }
+      }),
     onError: (error: Error) => {
       showAlert({ title: "Failed to sync wallet", description: error.message });
     },
@@ -340,12 +358,13 @@ export function useOnchainSync() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async () => {
-      const result = await onchainSyncAction();
-      if (result.isErr()) {
-        throw result.error;
-      }
-    },
+    mutationFn: () =>
+      runForegroundWalletOperation(async () => {
+        const result = await onchainSyncAction();
+        if (result.isErr()) {
+          throw result.error;
+        }
+      }),
     onError: (error: Error) => {
       showAlert({ title: "Failed to sync wallet", description: error.message });
     },
@@ -356,29 +375,30 @@ export function useDeleteWallet() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async () => {
-      // Deregister from server first (best effort)
-      await ResultAsync.fromPromise(deregister(), (error) => {
-        log.w("Deregistration failed during wallet deletion:", [error]);
-        return error;
-      });
+    mutationFn: () =>
+      runForegroundWalletOperation(async () => {
+        // Deregister from server first (best effort)
+        await ResultAsync.fromPromise(deregister(), (error) => {
+          log.w("Deregistration failed during wallet deletion:", [error]);
+          return error;
+        });
 
-      // Also reset all MMKV stores
-      useTransactionStore.getState().reset();
-      useWalletStore.getState().reset();
-      useServerStore.getState().resetRegistration();
-      useBackupStore.getState().reset();
-      useEsploraStore.getState().reset();
+        // Also reset all MMKV stores
+        useTransactionStore.getState().reset();
+        useWalletStore.getState().reset();
+        useServerStore.getState().resetRegistration();
+        useBackupStore.getState().reset();
+        useEsploraStore.getState().reset();
 
-      // Clear query cache
-      queryClient.clear();
+        // Clear query cache
+        queryClient.clear();
 
-      // Now delete the wallet files
-      const result = await deleteWalletAction();
-      if (result.isErr()) {
-        throw result.error;
-      }
-    },
+        // Now delete the wallet files
+        const result = await deleteWalletAction();
+        if (result.isErr()) {
+          throw result.error;
+        }
+      }),
     onError: (error: Error) => {
       showAlert({ title: "Deletion Failed", description: error.message });
     },
@@ -389,12 +409,13 @@ export function useRestoreWallet() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async ({ mnemonic }: { mnemonic: string }) => {
-      const result = await restoreWalletAction(mnemonic);
-      if (result.isErr()) {
-        throw result.error;
-      }
-    },
+    mutationFn: ({ mnemonic }: { mnemonic: string }) =>
+      runForegroundWalletOperation(async () => {
+        const result = await restoreWalletAction(mnemonic);
+        if (result.isErr()) {
+          throw result.error;
+        }
+      }),
     onError: (error: Error) => {
       showAlert({ title: "Restore Failed", description: error.message });
     },
@@ -406,24 +427,25 @@ export function useSuspendWallet() {
   const { setWalletSuspended, setWalletLoaded } = useWalletStore();
 
   return useMutation({
-    mutationFn: async (suspend: boolean) => {
-      if (suspend) {
-        const closeResult = await closeWalletIfLoaded();
-        if (closeResult.isErr()) {
-          throw closeResult.error;
+    mutationFn: (suspend: boolean) =>
+      runForegroundWalletOperation(async () => {
+        if (suspend) {
+          const closeResult = await closeWalletIfLoaded();
+          if (closeResult.isErr()) {
+            throw closeResult.error;
+          }
+          setWalletSuspended(true);
+        } else {
+          setWalletSuspended(false);
+          const loadResult = await loadWalletAction();
+          if (loadResult.isErr()) {
+            throw loadResult.error;
+          }
+          if (loadResult.value) {
+            setWalletLoaded();
+          }
         }
-        setWalletSuspended(true);
-      } else {
-        setWalletSuspended(false);
-        const loadResult = await loadWalletAction();
-        if (loadResult.isErr()) {
-          throw loadResult.error;
-        }
-        if (loadResult.value) {
-          setWalletLoaded();
-        }
-      }
-    },
+      }),
     onError: (error: Error, suspend) => {
       if (suspend) {
         setWalletSuspended(false);

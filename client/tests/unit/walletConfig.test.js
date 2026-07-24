@@ -1,4 +1,15 @@
 import { afterAll, describe, expect, mock, test } from "bun:test";
+import { readFileSync } from "node:fs";
+
+const nativeWalletConfigs = JSON.parse(
+  readFileSync(
+    new URL(
+      "../../nitromodules/noah-tools/android/src/main/assets/noah_bark_config.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+);
 
 const originalRegtestUrl = process.env.EXPO_PUBLIC_REGTEST_URL;
 delete process.env.EXPO_PUBLIC_REGTEST_URL;
@@ -86,6 +97,26 @@ describe("base wallet configuration", () => {
         round_tx_required_confirmations: 1,
       },
     });
+  });
+
+  test("keeps the native background wallet config aligned with the JavaScript wallet", () => {
+    for (const variant of ["mainnet", "signet", "regtest"]) {
+      const config = getBaseWalletConfig(variant).config;
+
+      expect(nativeWalletConfigs[variant]).toMatchObject({
+        ark: config.ark,
+        esplora: config.esplora ?? null,
+        bitcoind: config.bitcoind ?? null,
+        bitcoindCookie: config.bitcoind_cookie ?? null,
+        bitcoindUser: config.bitcoind_user ?? null,
+        bitcoindPass: config.bitcoind_pass ?? null,
+        vtxoRefreshExpiryThreshold: config.vtxo_refresh_expiry_threshold,
+        fallbackFeeRate: config.fallback_fee_rate,
+        htlcRecvClaimDelta: config.htlc_recv_claim_delta,
+        vtxoExitMargin: config.vtxo_exit_margin,
+        roundTxRequiredConfirmations: config.round_tx_required_confirmations,
+      });
+    }
   });
 });
 

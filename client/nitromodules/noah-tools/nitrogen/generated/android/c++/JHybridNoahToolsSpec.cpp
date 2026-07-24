@@ -441,5 +441,27 @@ namespace margelo::nitro::noahtools {
       return __promise;
     }();
   }
+  void JHybridNoahToolsSpec::scheduleAndroidBackgroundSync() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("scheduleAndroidBackgroundSync");
+    method(_javaPart);
+  }
+  void JHybridNoahToolsSpec::cancelAndroidBackgroundSync() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("cancelAndroidBackgroundSync");
+    method(_javaPart);
+  }
+  bool JHybridNoahToolsSpec::isAndroidBackgroundWalletJobRunning() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("isAndroidBackgroundWalletJobRunning");
+    auto __result = method(_javaPart);
+    return static_cast<bool>(__result);
+  }
+  bool JHybridNoahToolsSpec::tryAcquireAndroidBackgroundWalletJob(const std::string& owner) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean(jni::alias_ref<jni::JString> /* owner */)>("tryAcquireAndroidBackgroundWalletJob");
+    auto __result = method(_javaPart, jni::make_jstring(owner));
+    return static_cast<bool>(__result);
+  }
+  void JHybridNoahToolsSpec::releaseAndroidBackgroundWalletJob(const std::string& owner) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* owner */)>("releaseAndroidBackgroundWalletJob");
+    method(_javaPart, jni::make_jstring(owner));
+  }
 
 } // namespace margelo::nitro::noahtools

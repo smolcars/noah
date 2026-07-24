@@ -29,6 +29,7 @@ import {
   mergeBoardingWithOnchainTransactions,
   parseMovementMetadata,
 } from "~/lib/transactionHistory";
+import { runForegroundWalletOperation } from "~/lib/walletOperationCoordinator";
 
 const log = logger("useTransactions");
 const UNKNOWN_ONCHAIN_DATE_ISO = new Date(0).toISOString();
@@ -441,15 +442,27 @@ const fetchAndTransformTransactions = async (
 };
 
 export const useTransactions = (options?: { enabled?: boolean }) => {
-  const { isInitialized, isWalletLoaded, isWalletSuspended } = useWalletStore();
+  const {
+    isInitialized,
+    isWalletLoaded,
+    isWalletSuspended,
+    isBackgroundJobRunning,
+    isNativeBackgroundJobRunning,
+  } = useWalletStore();
   const preferredCurrency = useProfileStore((state) => state.preferredCurrency);
   const endpointOverride = useEsploraStore((state) => state.endpointOverride);
   const enabled =
-    (options?.enabled ?? true) && isInitialized && isWalletLoaded && !isWalletSuspended;
+    (options?.enabled ?? true) &&
+    isInitialized &&
+    isWalletLoaded &&
+    !isWalletSuspended &&
+    !isBackgroundJobRunning &&
+    !isNativeBackgroundJobRunning;
 
   return useQuery({
     queryKey: ["transactions", preferredCurrency, endpointOverride],
-    queryFn: () => fetchAndTransformTransactions(preferredCurrency),
+    queryFn: () =>
+      runForegroundWalletOperation(() => fetchAndTransformTransactions(preferredCurrency)),
     enabled,
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,

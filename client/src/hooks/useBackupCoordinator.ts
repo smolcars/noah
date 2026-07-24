@@ -1,19 +1,16 @@
 import { useEffect, useState } from "react";
 import { AppState } from "react-native";
 import { subscribeWalletStateChanges, type WalletStateChangeEvent } from "react-native-nitro-ark";
-import {
-  cancelScheduledBackup,
-  scheduleBackup,
-  type BackupReason,
-} from "~/lib/backupCoordinator";
+import { cancelScheduledBackup, scheduleBackup, type BackupReason } from "~/lib/backupCoordinator";
 import logger from "~/lib/log";
 import { useServerStore } from "~/store/serverStore";
 import { useWalletStore } from "~/store/walletStore";
+import { isBackgroundWalletJobRunning } from "~/lib/walletOperationCoordinator";
 
 const log = logger("useBackupCoordinator");
 
 const scheduleBackupWhenIdle = (reason: BackupReason, immediate = false): boolean => {
-  if (useWalletStore.getState().isBackgroundJobRunning) {
+  if (isBackgroundWalletJobRunning()) {
     log.d("Deferring automatic backup while a background job is running", [reason]);
     return false;
   }
@@ -29,13 +26,17 @@ export const useBackupCoordinator = (isReady: boolean) => {
   const isWalletLoaded = useWalletStore((state) => state.isWalletLoaded);
   const isWalletSuspended = useWalletStore((state) => state.isWalletSuspended);
   const isBackgroundJobRunning = useWalletStore((state) => state.isBackgroundJobRunning);
+  const isNativeBackgroundJobRunning = useWalletStore(
+    (state) => state.isNativeBackgroundJobRunning,
+  );
   const canCoordinateBackups =
     isReady &&
     isBackupEnabled &&
     isInitialized &&
     isWalletLoaded &&
     !isWalletSuspended &&
-    !isBackgroundJobRunning;
+    !isBackgroundJobRunning &&
+    !isNativeBackgroundJobRunning;
 
   useEffect(() => {
     if (!canCoordinateBackups) {
@@ -74,10 +75,7 @@ export const useBackupCoordinator = (isReady: boolean) => {
       log.w("Failed to watch wallet state changes", [error]);
       scheduleBackupWhenIdle("startup", true);
     }
-  }, [
-    canCoordinateBackups,
-    subscriptionGeneration,
-  ]);
+  }, [canCoordinateBackups, subscriptionGeneration]);
 
   useEffect(() => {
     if (!canCoordinateBackups) {

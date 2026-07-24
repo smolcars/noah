@@ -45,6 +45,11 @@ public protocol HybridNoahToolsSpec_protocol: HybridObject {
   func clearNativeMnemonic() throws -> Promise<Void>
   func storeNativeEsploraEndpoint(endpoint: String) throws -> Promise<Void>
   func clearNativeEsploraEndpoint() throws -> Promise<Void>
+  func scheduleAndroidBackgroundSync() throws -> Void
+  func cancelAndroidBackgroundSync() throws -> Void
+  func isAndroidBackgroundWalletJobRunning() throws -> Bool
+  func tryAcquireAndroidBackgroundWalletJob(owner: String) throws -> Bool
+  func releaseAndroidBackgroundWalletJob(owner: String) throws -> Void
 }
 
 public extension HybridNoahToolsSpec_protocol {

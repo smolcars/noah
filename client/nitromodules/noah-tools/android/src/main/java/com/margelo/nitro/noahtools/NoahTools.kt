@@ -318,12 +318,15 @@ class NoahTools : HybridNoahToolsSpec() {
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
                 )
 
-                prefs.edit()
-                    .putString("mnemonic_$variant", mnemonic)
-                    .remove("server_auth_${variant}_token")
-                    .remove("server_auth_${variant}_expires_at")
-                    .remove("server_auth_${variant}_public_key")
-                    .apply()
+                val existingMnemonic = prefs.getString("mnemonic_$variant", null)
+                val editor = prefs.edit().putString("mnemonic_$variant", mnemonic)
+                if (existingMnemonic != mnemonic) {
+                    editor
+                        .remove("server_auth_${variant}_token")
+                        .remove("server_auth_${variant}_expires_at")
+                        .remove("server_auth_${variant}_public_key")
+                }
+                editor.apply()
             } catch (e: Exception) {
                 throw Exception("Failed to store native mnemonic: ${e.message}", e)
             }
@@ -354,6 +357,7 @@ class NoahTools : HybridNoahToolsSpec() {
                     .remove("server_auth_${variant}_expires_at")
                     .remove("server_auth_${variant}_public_key")
                     .apply()
+                NoahBackgroundSyncScheduler.cancel(context)
             } catch (e: Exception) {
                 throw Exception("Failed to clear native mnemonic: ${e.message}", e)
             }
@@ -408,6 +412,28 @@ class NoahTools : HybridNoahToolsSpec() {
                 throw Exception("Failed to clear native Esplora endpoint: ${e.message}", e)
             }
         }
+    }
+
+    override fun scheduleAndroidBackgroundSync() {
+        val context = NitroModules.applicationContext ?: return
+        NoahBackgroundSyncScheduler.schedule(context)
+    }
+
+    override fun cancelAndroidBackgroundSync() {
+        val context = NitroModules.applicationContext ?: return
+        NoahBackgroundSyncScheduler.cancel(context)
+    }
+
+    override fun isAndroidBackgroundWalletJobRunning(): Boolean {
+        return NoahBackgroundWalletLease.isWalletJobRunning()
+    }
+
+    override fun tryAcquireAndroidBackgroundWalletJob(owner: String): Boolean {
+        return NoahBackgroundWalletLease.tryAcquire("javascript:$owner")
+    }
+
+    override fun releaseAndroidBackgroundWalletJob(owner: String) {
+        NoahBackgroundWalletLease.release("javascript:$owner")
     }
 
 }

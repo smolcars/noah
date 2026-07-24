@@ -46,6 +46,11 @@ namespace margelo::nitro::noahtools {
       prototype.registerHybridMethod("clearNativeMnemonic", &HybridNoahToolsSpec::clearNativeMnemonic);
       prototype.registerHybridMethod("storeNativeEsploraEndpoint", &HybridNoahToolsSpec::storeNativeEsploraEndpoint);
       prototype.registerHybridMethod("clearNativeEsploraEndpoint", &HybridNoahToolsSpec::clearNativeEsploraEndpoint);
+      prototype.registerHybridMethod("scheduleAndroidBackgroundSync", &HybridNoahToolsSpec::scheduleAndroidBackgroundSync);
+      prototype.registerHybridMethod("cancelAndroidBackgroundSync", &HybridNoahToolsSpec::cancelAndroidBackgroundSync);
+      prototype.registerHybridMethod("isAndroidBackgroundWalletJobRunning", &HybridNoahToolsSpec::isAndroidBackgroundWalletJobRunning);
+      prototype.registerHybridMethod("tryAcquireAndroidBackgroundWalletJob", &HybridNoahToolsSpec::tryAcquireAndroidBackgroundWalletJob);
+      prototype.registerHybridMethod("releaseAndroidBackgroundWalletJob", &HybridNoahToolsSpec::releaseAndroidBackgroundWalletJob);
     });
   }
 

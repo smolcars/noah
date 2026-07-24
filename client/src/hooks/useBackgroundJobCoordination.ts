@@ -2,6 +2,7 @@ import { useCallback, useEffect } from "react";
 import { AppState } from "react-native";
 import { useWalletStore } from "~/store/walletStore";
 import logger from "~/lib/log";
+import { runForegroundWalletOperation } from "~/lib/walletOperationCoordinator";
 
 const log = logger("useBackgroundJobCoordination");
 
@@ -21,11 +22,10 @@ const log = logger("useBackgroundJobCoordination");
  * 3. Wallet loads immediately
  *
  * ### Background Job Running:
- * 1. Push notification arrives → sets isBackgroundJobRunning = true
- * 2. User opens app while background job is running
- * 3. Hook detects background job and waits (max 10s)
- * 4. Background job completes → sets isBackgroundJobRunning = false
- * 5. Hook proceeds with callback execution
+ * 1. Push notification or WorkManager acquires the native wallet lease
+ * 2. User opens app while background work is running
+ * 3. Foreground work waits, then atomically acquires the same lease
+ * 4. The callback runs only after background work releases the wallet
  *
  * ### Stale Flag Protection:
  * If background job crashes and finally block never executes:
@@ -35,12 +35,12 @@ const log = logger("useBackgroundJobCoordination");
  * 4. User opens app → triggers clearStaleBackgroundJobFlag()
  * 5. Check: Date.now() - timestamp > 60000ms?
  * 6. YES → log warning, set flag = false
- * 7. Callback executes immediately, no 10s wait.
+ * 7. The callback can acquire the native lease.
  *
  * ### Multiple Safety Checks:
  * - Before every operation: clearStaleBackgroundJobFlag()
  * - When app comes to foreground: clearStaleBackgroundJobFlag()
- * - Timeout protection: won't wait forever (max 10s)
+ * - Native lease acquisition closes the race between checking status and using the wallet
  *
  * @returns {Function} safelyExecuteWhenReady - Wrapper function that waits for background jobs
  *                                               before executing the provided callback
@@ -48,43 +48,21 @@ const log = logger("useBackgroundJobCoordination");
 export const useBackgroundJobCoordination = () => {
   const { clearStaleBackgroundJobFlag } = useWalletStore();
   const isBackgroundJobRunning = useWalletStore((state) => state.isBackgroundJobRunning);
+  const isNativeBackgroundJobRunning = useWalletStore(
+    (state) => state.isNativeBackgroundJobRunning,
+  );
 
   /**
    * Executes a callback function only after ensuring no background jobs are running.
-   * Includes timeout protection and stale flag detection.
+   * Includes stale JavaScript flag detection and native lease acquisition.
    *
    * @param callback - Async function to execute once it's safe
    * @returns Promise that resolves when callback completes
    */
   const safelyExecuteWhenReady = useCallback(
     async <T>(callback: () => Promise<T>): Promise<T> => {
-      // First, check if the background job flag is stale and clear it if needed
       clearStaleBackgroundJobFlag();
-
-      const maxWaitTime = 10000; // 10 seconds max wait
-      const checkInterval = 100; // Check every 100ms
-      let waited = 0;
-
-      // Wait for background job to complete if one is running
-      // Read the initial state from the store
-      const isInitiallyRunning = useWalletStore.getState().isBackgroundJobRunning;
-      if (isInitiallyRunning) {
-        log.i("Background job detected, waiting for completion before executing callback");
-      }
-
-      // Always read fresh value from store in the loop
-      while (useWalletStore.getState().isBackgroundJobRunning && waited < maxWaitTime) {
-        await new Promise((resolve) => setTimeout(resolve, checkInterval));
-        waited += checkInterval;
-      }
-
-      if (waited >= maxWaitTime) {
-        log.w("Timed out waiting for background job to complete, proceeding anyway");
-      } else if (waited > 0) {
-        log.d(`Background job completed after ${waited}ms, executing callback`);
-      }
-
-      return callback();
+      return runForegroundWalletOperation(callback);
     },
     [clearStaleBackgroundJobFlag],
   );
@@ -101,13 +79,11 @@ export const useBackgroundJobCoordination = () => {
       }
     });
 
-    return () => {
-      subscription.remove();
-    };
+    return () => subscription.remove();
   }, [clearStaleBackgroundJobFlag]);
 
   return {
     safelyExecuteWhenReady,
-    isBackgroundJobRunning,
+    isBackgroundJobRunning: isBackgroundJobRunning || isNativeBackgroundJobRunning,
   };
 };

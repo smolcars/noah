@@ -86,6 +86,11 @@ namespace margelo::nitro::noahtools {
     std::shared_ptr<Promise<void>> clearNativeMnemonic() override;
     std::shared_ptr<Promise<void>> storeNativeEsploraEndpoint(const std::string& endpoint) override;
     std::shared_ptr<Promise<void>> clearNativeEsploraEndpoint() override;
+    void scheduleAndroidBackgroundSync() override;
+    void cancelAndroidBackgroundSync() override;
+    bool isAndroidBackgroundWalletJobRunning() override;
+    bool tryAcquireAndroidBackgroundWalletJob(const std::string& owner) override;
+    void releaseAndroidBackgroundWalletJob(const std::string& owner) override;
 
   private:
     jni::global_ref<JHybridNoahToolsSpec::JavaPart> _javaPart;
