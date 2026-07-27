@@ -367,38 +367,9 @@ TaskManager.defineTask<Notifications.NotificationTaskPayload>(
   },
 );
 
+// Registered notification tasks run in every app state. Keep remote notification
+// work owned by this task so foreground delivery cannot process the same push twice.
 Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
-
-Notifications.addNotificationReceivedListener((notification) => {
-  const notificationDataResult = parseNotificationData(notification.request.content.data);
-  if (notificationDataResult.isErr()) {
-    captureException(notificationDataResult.error);
-    log.e("[Foreground Notification] error", [notificationDataResult.error]);
-    return;
-  }
-
-  const notificationData = notificationDataResult.value;
-  if (!notificationData) {
-    return;
-  }
-
-  void (async () => {
-    useWalletStore.getState().setBackgroundJobRunning(true);
-
-    try {
-      await handleNotificationData(notificationData);
-    } catch (e) {
-      const error =
-        e instanceof Error
-          ? e
-          : new Error(`Failed to handle foreground notification: ${String(e)}`);
-      captureException(error);
-      log.e("[Foreground Notification] error", [error]);
-    } finally {
-      useWalletStore.getState().setBackgroundJobRunning(false);
-    }
-  })();
-});
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
