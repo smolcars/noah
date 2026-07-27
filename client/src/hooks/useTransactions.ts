@@ -29,6 +29,7 @@ import {
   mergeBoardingWithOnchainTransactions,
   parseMovementMetadata,
 } from "~/lib/transactionHistory";
+import { parseLnurlPayReceiveMetadata } from "~/lib/lnurlPayReceiveMetadata";
 
 const log = logger("useTransactions");
 const UNKNOWN_ONCHAIN_DATE_ISO = new Date(0).toISOString();
@@ -217,6 +218,7 @@ const transformMovementToTransaction = async (
     ? getBoardingMovementAmount(movement)
     : getMovementAmount(movement, isOutgoing);
   const metadata = parseMovementMetadata(movement.metadata_json);
+  const lnurlPayMetadata = parseLnurlPayReceiveMetadata(movement.metadata_json);
   const txid = getMovementTransactionId(movement, metadata, isOutgoing);
   const transactionType = determineTransactionType(movement, movementKind, isOutgoing);
 
@@ -254,6 +256,8 @@ const transformMovementToTransaction = async (
     offchainFeeSat: movement.offchain_fee_sat,
     onchainFeeSat: metadata.onchainFeeSat,
     chainAnchor: metadata.chainAnchor,
+    lnurlPayPayerData: lnurlPayMetadata?.payerData,
+    lnurlPayComment: lnurlPayMetadata?.comment,
     sentTo: movement.sent_to.map((destination) => ({
       destination: getMovementDestinationValue(destination) ?? "",
       amount_sat: destination.amount_sat,

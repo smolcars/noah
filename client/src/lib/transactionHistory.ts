@@ -1,6 +1,7 @@
 import type { BarkMovement } from "react-native-nitro-ark";
 
 import type { Transaction } from "~/types/transaction";
+import { formatLnurlPayPayerLabel } from "~/lib/lnurlPayReceiveMetadata";
 
 export type MovementMetadata = {
   offboardTxid?: string;
@@ -132,6 +133,11 @@ export const getTransactionDisplayLabel = (transaction: Transaction): string => 
 
   return transaction.type;
 };
+
+export const getTransactionHistoryLabel = (transaction: Transaction): string =>
+  transaction.direction === "incoming"
+    ? (formatLnurlPayPayerLabel(transaction.lnurlPayPayerData) ?? getTransactionDisplayLabel(transaction))
+    : getTransactionDisplayLabel(transaction);
 
 export const isInternalBoardingTransfer = (transaction: Transaction): boolean =>
   transaction.movementKind === "onboard";

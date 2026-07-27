@@ -1,5 +1,6 @@
 import type { MovementStatus } from "react-native-nitro-ark";
 import type { BarkSubsystemKind, BarkSubsystemName } from "~/lib/barkMovement";
+import type { LnurlPayReceivePayerData } from "~/lib/lnurlPayReceiveMetadata";
 
 export type PaymentTypes = "Bolt11" | "Bolt12" | "Lnurl" | "Arkoor" | "Onchain";
 import type { MovementKind } from "./movement";
@@ -38,6 +39,8 @@ export type Transaction = {
   hasOnchainFee?: boolean;
   onchainFeeSat?: number;
   chainAnchor?: string;
+  lnurlPayPayerData?: LnurlPayReceivePayerData;
+  lnurlPayComment?: string;
   hasConfirmation?: boolean;
   confirmationHeight?: number;
   confirmationHash?: string;

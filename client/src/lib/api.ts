@@ -52,6 +52,8 @@ import {
   HistoricalFiatPriceResponse,
   InitiateBackupUploadPayload,
   InitiateBackupUploadResponse,
+  LnurlPayReceiveMetadataAckPayload,
+  LnurlPayReceiveMetadataListResponse,
   SubmitSupportTicketPayload,
   SubmitSupportTicketResponse,
 } from "~/types/serverTypes";
@@ -95,7 +97,11 @@ const isApiErrorResponse = (value: unknown): value is ApiErrorResponse => {
   );
 };
 
-const buildApiError = (status: number, body?: string | null): Error => {
+const buildApiError = (
+  status: number,
+  body?: string | null,
+  omitResponseBody: boolean = false,
+): Error => {
   if (!body) {
     return new Error(`HTTP ${status}: Empty response body`);
   }
@@ -110,7 +116,9 @@ const buildApiError = (status: number, body?: string | null): Error => {
     return new ApiError(parsed.message, status, parsed.code, parsed.reason);
   }
 
-  return new Error(`HTTP ${status}: ${body}`);
+  return new Error(
+    omitResponseBody ? `HTTP ${status}: Response body omitted` : `HTTP ${status}: ${body}`,
+  );
 };
 
 const parseJsonResponse = <T>(body: string, context: string): Result<T, Error> =>
@@ -123,6 +131,7 @@ const postJson = async <T>(
   endpoint: string,
   payload: unknown,
   headers: Record<string, string>,
+  options?: { sensitiveResponse?: boolean },
 ): Promise<Result<T, Error>> => {
   const responseResult = await ResultAsync.fromPromise(
     nativePost(
@@ -141,7 +150,7 @@ const postJson = async <T>(
   const response = responseResult.value;
 
   if (response.status < 200 || response.status >= 300) {
-    return err(buildApiError(response.status, response.body));
+    return err(buildApiError(response.status, response.body, options?.sensitiveResponse ?? false));
   }
 
   if (!response.body || response.body === "") {
@@ -150,7 +159,10 @@ const postJson = async <T>(
 
   const parsed = parseJsonResponse<T>(response.body, endpoint);
   if (parsed.isErr()) {
-    log.e("Failed to parse JSON response", [parsed.error, response.body]);
+    log.e(
+      "Failed to parse JSON response",
+      options?.sensitiveResponse ? [parsed.error] : [parsed.error, response.body],
+    );
     return err(parsed.error);
   }
 
@@ -285,6 +297,7 @@ async function post<T, U>(
     accessToken?: string;
     authenticated?: boolean;
     retryOnAuthFailure?: boolean;
+    sensitiveResponse?: boolean;
   },
 ): Promise<Result<U, Error>> {
   const authenticated = options?.authenticated ?? true;
@@ -294,7 +307,7 @@ async function post<T, U>(
   };
 
   if (!authenticated) {
-    return postJson<U>(endpoint, payload, headers);
+    return postJson<U>(endpoint, payload, headers, options);
   }
 
   const tokenResult =
@@ -305,7 +318,7 @@ async function post<T, U>(
 
   headers.Authorization = `Bearer ${tokenResult.value}`;
 
-  const responseResult = await postJson<U>(endpoint, payload, headers);
+  const responseResult = await postJson<U>(endpoint, payload, headers, options);
   if (
     retryOnAuthFailure &&
     options?.accessToken === undefined &&
@@ -404,6 +417,21 @@ export const reportJobStatus = (payload: ReportJobCompletionPayload) =>
 
 export const submitInvoice = (payload: SubmitInvoicePayload) =>
   post<SubmitInvoicePayload, DefaultSuccessPayload>("/lnurlp/submit_invoice", payload);
+
+export const listLnurlPayReceiveMetadata = () =>
+  post<object, LnurlPayReceiveMetadataListResponse>(
+    "/lnurlp/receive_metadata/list",
+    {},
+    {
+      sensitiveResponse: true,
+    },
+  );
+
+export const acknowledgeLnurlPayReceiveMetadata = (payload: LnurlPayReceiveMetadataAckPayload) =>
+  post<LnurlPayReceiveMetadataAckPayload, DefaultSuccessPayload>(
+    "/lnurlp/receive_metadata/ack",
+    payload,
+  );
 
 export const submitSupportTicket = (payload: SubmitSupportTicketPayload) =>
   post<SubmitSupportTicketPayload, SubmitSupportTicketResponse>("/support/ticket", payload);

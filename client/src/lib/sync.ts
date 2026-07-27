@@ -3,6 +3,7 @@ import { useWalletStore } from "~/store/walletStore";
 import { onchainSync, sync } from "~/lib/walletApi";
 import logger from "~/lib/log";
 import { tryClaimAllLightningReceives } from "./paymentsApi";
+import { reconcileLnurlPayReceiveMetadata } from "~/lib/lnurlPayReceiveMetadataService";
 
 const log = logger("sync");
 
@@ -33,6 +34,11 @@ export const syncWallet = async () => {
       log.e(`${label} failed`, [result.value.error]);
     }
   });
+
+  const metadataResult = await reconcileLnurlPayReceiveMetadata();
+  if (metadataResult.isErr()) {
+    log.w("LNURL-pay receive metadata reconciliation failed", [metadataResult.error]);
+  }
 
   await queryClient.invalidateQueries({ queryKey: ["balance"] });
   await queryClient.invalidateQueries({ queryKey: ["transactions"] });

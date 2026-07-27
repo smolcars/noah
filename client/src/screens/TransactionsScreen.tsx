@@ -18,7 +18,11 @@ import { useProfileStore } from "~/store/profileStore";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 import { NativeNoahSegmentedControl } from "~/components/ui/NativeNoahSegmentedControl";
-import { getTransactionDisplayLabel, isInternalBoardingTransfer } from "~/lib/transactionHistory";
+import {
+  getTransactionDisplayLabel,
+  getTransactionHistoryLabel,
+  isInternalBoardingTransfer,
+} from "~/lib/transactionHistory";
 import { formatMovementStatusLabel } from "~/types/movement";
 
 const log = logger("TransactionsScreen");
@@ -224,9 +228,18 @@ const TransactionsScreen = () => {
                         className="min-w-0 flex-1 flex-row justify-between gap-4"
                       >
                         <View className="min-w-0 flex-1">
-                          <Text className="text-foreground text-base font-medium">
-                            {getTransactionDisplayLabel(item)}
+                          <Text
+                            className="text-foreground text-base font-medium"
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
+                            {getTransactionHistoryLabel(item)}
                           </Text>
+                          {item.lnurlPayComment ? (
+                            <Text className="text-muted-foreground text-sm mt-1" numberOfLines={1}>
+                              {item.lnurlPayComment}
+                            </Text>
+                          ) : null}
                           <Text className="text-muted-foreground text-sm mt-1">
                             {item.dateLabel ?? new Date(item.date).toLocaleString()}
                           </Text>

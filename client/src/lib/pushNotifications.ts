@@ -19,6 +19,11 @@ import { formatBitcoinAmount } from "~/lib/bitcoinAmount";
 import { updateWidget } from "~/hooks/useWidget";
 import { shouldUseUnifiedPush } from "~/constants";
 import { useProfileStore } from "~/store/profileStore";
+import {
+  formatLnurlPayPayerLabel,
+  type PersistedLnurlPayReceiveMetadata,
+} from "~/lib/lnurlPayReceiveMetadata";
+import { getPersistedLnurlPayReceiveMetadata } from "~/lib/lnurlPayReceiveMetadataService";
 
 const log = logger("pushNotifications");
 
@@ -55,14 +60,21 @@ async function ensureDefaultNotificationChannel() {
   });
 }
 
-async function scheduleLightningPaymentNotification(amountSat: number): Promise<string> {
+async function scheduleLightningPaymentNotification(
+  amountSat: number,
+  metadata?: PersistedLnurlPayReceiveMetadata,
+): Promise<string> {
   await ensureDefaultNotificationChannel();
   const { bitcoinAmountUnit } = useProfileStore.getState();
+  const formattedAmount = formatBitcoinAmount(amountSat, bitcoinAmountUnit);
+  const payerLabel = formatLnurlPayPayerLabel(metadata?.payerData);
 
   return Notifications.scheduleNotificationAsync({
     content: {
-      title: "Lightning Payment Received! ⚡",
-      body: `You received ${formatBitcoinAmount(amountSat, bitcoinAmountUnit)}`,
+      title: payerLabel ?? "Lightning Payment Received! ⚡",
+      body: metadata?.comment
+        ? `${formattedAmount} · ${metadata.comment}`
+        : `You received ${formattedAmount}`,
       sound: "default",
       priority: Notifications.AndroidNotificationPriority.MAX,
       data: {
@@ -196,8 +208,14 @@ async function handleNotificationData(notificationData: NotificationData) {
       }
       log.i("Successfully claimed pending lightning receives", [notificationData.payment_hash]);
 
+      const metadataResult = await getPersistedLnurlPayReceiveMetadata(notificationData.payment_hash);
+      if (metadataResult.isErr()) {
+        log.w("Failed to load LNURL-pay metadata for local notification", [metadataResult.error]);
+      }
+
       const notificationId = await scheduleLightningPaymentNotification(
         notificationData.amount_sat,
+        metadataResult.isOk() ? metadataResult.value : undefined,
       );
       log.i("Local notification scheduled for lightning payment", [
         notificationId,

@@ -127,6 +127,20 @@ export type LightningClaimRequestNotification = { payment_hash: string, amount_s
 
 export type LightningInvoiceRequestNotification = { transaction_id: string, amount: number, };
 
+/**
+ * Metadata associated with a settled LNURL-pay receive movement.
+ */
+export type LnurlPayReceiveMetadata = { id: string, payment_hash: string, amount_sat: number, payer_data: LnurlPayReceivePayerData | null, comment: string | null, };
+
+export type LnurlPayReceiveMetadataAckPayload = { ids: Array<string>, };
+
+export type LnurlPayReceiveMetadataListResponse = { items: Array<LnurlPayReceiveMetadata>, };
+
+/**
+ * Payer-provided identity from an LNURL-pay callback.
+ */
+export type LnurlPayReceivePayerData = { name?: string, identifier?: string, };
+
 export type MaintenanceNotification = { notification_k1: string, };
 
 export type NotificationData = { "notification_type": "maintenance" } & MaintenanceNotification | { "notification_type": "lightning_invoice_request" } & LightningInvoiceRequestNotification | { "notification_type": "lightning_claim_request" } & LightningClaimRequestNotification | { "notification_type": "backup_trigger" } & BackupTriggerNotification | { "notification_type": "heartbeat" } & HeartbeatNotification;

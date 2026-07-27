@@ -1,8 +1,7 @@
-# LNURL-pay sender behavior
+# LNURL-pay behavior
 
-This note documents Noah's LNURL-pay sender behavior, including LUD-18 payer
-identity, comments, and the manual interoperability checks performed on
-24 July 2026.
+This note documents Noah's LNURL-pay sender and receiver behavior, including
+LUD-18 payer identity, comments, and interoperability behavior.
 
 Tracking issue: [smolcars/noah#162](https://github.com/smolcars/noah/issues/162)
 
@@ -76,6 +75,62 @@ This limitation is separate from the deliberate decision not to enforce the
 removed LNURL-pay metadata binding through BOLT11 `description_hash`. The
 BOLT11 feature itself remains valid.
 
+## Receive-side LUD-18
+
+Standard LNURL-pay discovery advertises optional `name` and `identifier`
+fields with `mandatory: false`, plus a 280-code-point comment limit. A sender
+may provide either, both, or neither identity field. Noah treats every value
+as payer-provided and unverified.
+
+The standard BOLT11 receive path handles the metadata as follows:
+
+1. Before application tracing or Sentry sees the request, middleware removes
+   `payerdata` and `comment` from the URI and places them in a private request
+   extension. The raw query is limited to 7 KiB.
+2. The callback validates and normalizes the supported fields. Payer data is
+   limited to 2 KiB; names to 80 Unicode code points; identifiers to a
+   normalized, valid Lightning address of at most 320 code points; and
+   comments to 280 code points. Control and bidirectional-control characters
+   are rejected.
+3. The server encrypts the short-lived delivery record with
+   XChaCha20-Poly1305 in Redis/Dragonfly. The unbound callback record lives for
+   two minutes.
+4. The authenticated invoice submission validates the BOLT11 signature,
+   network, exact amount, and expiry, derives its payment hash, and atomically
+   binds the encrypted record before exposing the invoice to the callback.
+   The bound record lives through the invoice expiry plus a five-minute grace
+   period. Invoice lifetimes up to the receiver's configured 48-hour Bark
+   expiry are accepted.
+5. Mailbox settlement changes the record to ready state for up to seven days.
+   The authenticated client lists only its own ready records.
+6. Once the exact payment-hash movement exists, the client writes a versioned
+   JSON Merge Patch through Bark's `update_history_metadata`, reads history
+   back to verify it, schedules the normal wallet backup, and then
+   acknowledges the relay record. Unacknowledged work is retried during
+   startup, foregrounding, sync, and Lightning claim processing.
+
+PostgreSQL never stores the payer identity or comment. Redis/Dragonfly is only
+an encrypted, expiring delivery relay; Bark's SQLite movement metadata is the
+canonical wallet copy and is included in the existing v2 wallet snapshot.
+The server's remote push remains PII-free. After claiming the payment, the
+device creates one local notification using the persisted payer label and
+comment when available, or a generic Lightning-received message otherwise.
+
+Transaction lists and details render both identity fields as
+`Name (⚡ identifier)` when both are present, with the comment below. A single
+available field is shown on its own. The detail view explicitly labels the
+values as payer-provided.
+
+### Direct Ark receive
+
+The existing direct-Ark LNURL callback remains enabled. Ark-negotiated
+discovery deliberately advertises no `payerData` and `commentAllowed: 0`, so
+it does not currently accept receive-side LUD-18 metadata. A future design can
+correlate Ark settlement without storing payer data in PostgreSQL by assigning
+one-time Bark receive addresses and matching their public VTXO identity in the
+mailbox stream. That address pool must be backed up before publication and
+addresses must never be reused.
+
 ## Manual interoperability verification
 
 A Noah wallet configured with:
@@ -137,11 +192,10 @@ indication that Noah failed to send the name.
 
 ## Deferred work
 
-- Implement the inverse flow so Noah's Lightning-address service can request
-  and consume payer identity.
+- Extend receive-side payer metadata to the direct-Ark path using one-time,
+  backed-up Bark receive addresses and mailbox correlation.
 - Validate LUD-06 metadata and show its `text/plain` description during send
   confirmation.
-- Expose Bark's `make_lightning_payment` and `update_history_metadata` APIs
-  through NitroArk so LNURL provenance and per-movement metadata remain in the
-  Bark wallet snapshot; see [Bark-Backed Wallet Metadata](wallet_metadata_storage_proposal.md).
+- Decide how payer-provided receive metadata should appear in transaction CSV
+  exports. It is intentionally omitted for now.
 - Consider showing both payer name and identifier in Blixt.

@@ -51,9 +51,13 @@ sqlx = { version = "0.9.0", default-features = false, features = [
 ] }
 reqwest = { version = "0.13.4", features = ["form", "json", "multipart", "query"] }
 base64 = "0.22.1"
+chacha20poly1305 = "0.10.1"
+form_urlencoded = "1.2.2"
+lightning-invoice = "0.34.1"
 goose = { version = "0.18.1", optional = true }
 clap = { version = "4.6.2", features = ["derive"] }
 regex = "1.13.1"
+url = "2.5.8"
 expo_push_notification_client = "2.0.2"
 jsonwebtoken = { version = "10.4.0", features = ["aws_lc_rs"] }
 

@@ -11,18 +11,21 @@ use crate::app_middleware::{auth_middleware, user_exists_middleware};
 use crate::auth::mint_access_token;
 use crate::cache::{
     email_verification_store::EmailVerificationStore, invoice_store::InvoiceStore,
-    k1_store::K1Store, maintenance_store::MaintenanceStore, redis_client::RedisClient,
+    k1_store::K1Store, lnurl_pay_receive_metadata_store::LnurlPayReceiveMetadataStore,
+    maintenance_store::MaintenanceStore, redis_client::RedisClient,
 };
 use crate::config::Config;
 use crate::email_client::EmailClient;
 use crate::routes::gated_api_v0::{
-    authorize_mailbox, complete_backup_object_upload, complete_upload, delete_backup,
-    delete_backup_object, deregister, get_backup_object_download_url, get_download_url,
-    get_upload_url, get_user_info, heartbeat_response, initiate_backup_object_upload,
-    list_backup_objects, list_backups, ln_address_suggestions, register_push_token,
+    acknowledge_lnurl_pay_receive_metadata, authorize_mailbox, complete_backup_object_upload,
+    complete_upload, delete_backup, delete_backup_object, deregister,
+    get_backup_object_download_url, get_download_url, get_upload_url, get_user_info,
+    heartbeat_response, initiate_backup_object_upload, list_backup_objects, list_backups,
+    list_lnurl_pay_receive_metadata, ln_address_suggestions, register_push_token,
     report_job_status, report_last_login, revoke_mailbox_authorization, submit_invoice,
     submit_support_ticket, update_backup_settings, update_ln_address, update_profile,
 };
+use crate::routes::lnurl_pay_privacy::redact_lnurl_pay_query_middleware;
 use crate::routes::public_api_v0::{
     auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price, lnurlp_request,
     register, send_verification_email, verify_email,
@@ -82,7 +85,7 @@ impl TestUser {
             expo_access_token: "test-token".to_string(),
             ntfy_auth_token: "test-token".to_string(),
             ark_server_url: "http://localhost:8081".to_string(),
-            server_network: "test-network".to_string(),
+            server_network: "regtest".to_string(),
             sentry_url: Some("http://localhost:8082".to_string()),
             backup_cron: "0 0 * * *".to_string(),
             maintenance_interval_rounds: 10,
@@ -102,6 +105,7 @@ impl TestUser {
             email_dev_mode: true,
             auth_jwt_secret: "test-jwt-secret".to_string(),
             auth_jwt_ttl_hours: 24,
+            lnurl_pay_receive_metadata_encryption_key: [0x42; 32],
             zoho_client_id: None,
             zoho_client_secret: None,
             zoho_refresh_token: None,
@@ -152,6 +156,7 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
 
     let k1_cache = setup_test_k1_store().await;
     let invoice_store = setup_test_invoice_store().await;
+    let lnurl_pay_receive_metadata_store = setup_test_lnurl_pay_receive_metadata_store().await;
     let email_verification_store = setup_test_email_verification_store().await;
     let email_client = EmailClient::new("test@noahwallet.com".to_string(), true)
         .await
@@ -165,6 +170,7 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
         db_pool: db_pool.clone(),
         k1_cache: k1_cache.clone(),
         invoice_store,
+        lnurl_pay_receive_metadata_store,
         email_verification_store,
         email_client,
         maintenance_store,
@@ -188,6 +194,14 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
         .route("/mailbox/authorize", post(authorize_mailbox))
         .route("/mailbox/revoke", post(revoke_mailbox_authorization))
         .route("/lnurlp/submit_invoice", post(submit_invoice))
+        .route(
+            "/lnurlp/receive_metadata/list",
+            post(list_lnurl_pay_receive_metadata),
+        )
+        .route(
+            "/lnurlp/receive_metadata/ack",
+            post(acknowledge_lnurl_pay_receive_metadata),
+        )
         .route("/ln_address_suggestions", post(ln_address_suggestions))
         .route("/user_info", post(get_user_info))
         .route("/update_ln_address", post(update_ln_address))
@@ -240,6 +254,7 @@ pub async fn setup_public_test_app() -> (Router, AppState, TestDbGuard) {
 
     let k1_cache = setup_test_k1_store().await;
     let invoice_store = setup_test_invoice_store().await;
+    let lnurl_pay_receive_metadata_store = setup_test_lnurl_pay_receive_metadata_store().await;
     let email_verification_store = setup_test_email_verification_store().await;
     let email_client = EmailClient::new("test@noahwallet.com".to_string(), true)
         .await
@@ -253,6 +268,7 @@ pub async fn setup_public_test_app() -> (Router, AppState, TestDbGuard) {
         db_pool: db_pool.clone(),
         k1_cache: k1_cache.clone(),
         invoice_store,
+        lnurl_pay_receive_metadata_store,
         email_verification_store,
         email_client,
         maintenance_store,
@@ -267,7 +283,8 @@ pub async fn setup_public_test_app() -> (Router, AppState, TestDbGuard) {
             "/.well-known/lnurlp/{username}",
             axum::routing::get(lnurlp_request),
         )
-        .with_state(app_state.clone());
+        .with_state(app_state.clone())
+        .layer(middleware::from_fn(redact_lnurl_pay_query_middleware));
 
     (app, app_state, guard)
 }
@@ -320,6 +337,13 @@ async fn setup_test_invoice_store() -> InvoiceStore {
         std::env::var("TEST_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
     let redis_client = RedisClient::new(&redis_url).expect("Failed to create Redis client");
     InvoiceStore::new(redis_client)
+}
+
+async fn setup_test_lnurl_pay_receive_metadata_store() -> LnurlPayReceiveMetadataStore {
+    let redis_url =
+        std::env::var("TEST_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+    let redis_client = RedisClient::new(&redis_url).expect("Failed to create Redis client");
+    LnurlPayReceiveMetadataStore::new(redis_client, &[0x42; 32])
 }
 
 async fn setup_test_email_verification_store() -> EmailVerificationStore {

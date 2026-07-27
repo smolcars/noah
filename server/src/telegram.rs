@@ -208,6 +208,7 @@ mod tests {
             email_dev_mode: true,
             auth_jwt_secret: "test-jwt-secret".to_string(),
             auth_jwt_ttl_hours: 24,
+            lnurl_pay_receive_metadata_encryption_key: [0x42; 32],
             zoho_client_id: None,
             zoho_client_secret: None,
             zoho_refresh_token: None,

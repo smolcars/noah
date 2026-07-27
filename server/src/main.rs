@@ -22,7 +22,8 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use crate::{
     cache::{
         email_verification_store::EmailVerificationStore, invoice_store::InvoiceStore,
-        k1_store::K1Store, maintenance_store::MaintenanceStore, redis_client::RedisClient,
+        k1_store::K1Store, lnurl_pay_receive_metadata_store::LnurlPayReceiveMetadataStore,
+        maintenance_store::MaintenanceStore, redis_client::RedisClient,
     },
     config::Config,
     cron::cron_scheduler,
@@ -31,13 +32,16 @@ use crate::{
     routes::{
         app_middleware,
         gated_api_v0::{
-            authorize_mailbox, complete_backup_object_upload, complete_upload, delete_backup,
-            delete_backup_object, deregister, get_backup_object_download_url, get_download_url,
-            get_upload_url, get_user_info, heartbeat_response, initiate_backup_object_upload,
-            list_backup_objects, list_backups, ln_address_suggestions, register_push_token,
-            report_job_status, report_last_login, revoke_mailbox_authorization, submit_invoice,
-            submit_support_ticket, update_backup_settings, update_ln_address, update_profile,
+            acknowledge_lnurl_pay_receive_metadata, authorize_mailbox,
+            complete_backup_object_upload, complete_upload, delete_backup, delete_backup_object,
+            deregister, get_backup_object_download_url, get_download_url, get_upload_url,
+            get_user_info, heartbeat_response, initiate_backup_object_upload, list_backup_objects,
+            list_backups, list_lnurl_pay_receive_metadata, ln_address_suggestions,
+            register_push_token, report_job_status, report_last_login,
+            revoke_mailbox_authorization, submit_invoice, submit_support_ticket,
+            update_backup_settings, update_ln_address, update_profile,
         },
+        lnurl_pay_privacy::redact_lnurl_pay_query_middleware,
         public_api_v0::{
             auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price,
             lnurlp_request, register, send_verification_email, verify_email,
@@ -80,6 +84,7 @@ pub struct AppStruct {
     pub db_pool: PgPool,
     pub k1_cache: K1Store,
     pub invoice_store: InvoiceStore,
+    pub lnurl_pay_receive_metadata_store: LnurlPayReceiveMetadataStore,
     pub email_verification_store: EmailVerificationStore,
     pub email_client: EmailClient,
     pub maintenance_store: MaintenanceStore,
@@ -167,6 +172,10 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
     tracing::info!("Redis connection established");
     let k1_cache = K1Store::new(redis_client.clone(), K1_TTL_SECONDS);
     let invoice_store = InvoiceStore::new(redis_client.clone());
+    let lnurl_pay_receive_metadata_store = LnurlPayReceiveMetadataStore::new(
+        redis_client.clone(),
+        &config.lnurl_pay_receive_metadata_encryption_key,
+    );
     let maintenance_store = MaintenanceStore::new(redis_client.clone());
     let email_verification_store = EmailVerificationStore::new(redis_client);
 
@@ -182,6 +191,7 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         db_pool: db_pool.clone(),
         k1_cache: k1_cache.clone(),
         invoice_store,
+        lnurl_pay_receive_metadata_store,
         email_verification_store,
         email_client,
         maintenance_store,
@@ -274,6 +284,14 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         .route("/mailbox/authorize", post(authorize_mailbox))
         .route("/mailbox/revoke", post(revoke_mailbox_authorization))
         .route("/lnurlp/submit_invoice", post(submit_invoice))
+        .route(
+            "/lnurlp/receive_metadata/list",
+            post(list_lnurl_pay_receive_metadata),
+        )
+        .route(
+            "/lnurlp/receive_metadata/ack",
+            post(acknowledge_lnurl_pay_receive_metadata),
+        )
         .route("/ln_address_suggestions", post(ln_address_suggestions))
         .route("/user_info", post(get_user_info))
         .route("/update_ln_address", post(update_ln_address))
@@ -340,7 +358,9 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         .with_state(app_state.clone())
         .layer(middleware::from_fn(trace_layer::trace_middleware))
         .layer(SentryHttpLayer::new().enable_transaction())
-        .layer(NewSentryLayer::new_from_top());
+        .layer(NewSentryLayer::new_from_top())
+        // This must remain the outermost layer so payerdata/comment never reach tracing or Sentry.
+        .layer(middleware::from_fn(redact_lnurl_pay_query_middleware));
 
     let addr = SocketAddr::from((host, config.port));
     tracing::debug!("server started listening on {}", addr);

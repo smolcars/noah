@@ -66,6 +66,8 @@ async fn test_lnurlp_request_default() {
     assert_eq!(res.tag, "payRequest");
     assert_eq!(res.callback, "https://localhost/.well-known/lnurlp/test");
     assert_eq!(res.ark, None);
+    assert_eq!(res.comment_allowed, 280);
+    assert!(res.payer_data.is_some());
 }
 
 #[tracing_test::traced_test]
@@ -100,6 +102,8 @@ async fn test_lnurlp_request_advertises_address_for_matching_ark_server() {
     let res: LnurlpDefaultResponse = serde_json::from_slice(&body).unwrap();
 
     assert_eq!(res.ark.as_deref(), Some(ark_address.as_str()));
+    assert_eq!(res.comment_allowed, 0);
+    assert!(res.payer_data.is_none());
 }
 
 #[tracing_test::traced_test]
@@ -207,6 +211,36 @@ async fn test_lnurlp_invoice_request_returns_matching_ark_address_without_mailbo
 
     assert_eq!(res.pr, "");
     assert_eq!(res.ark.as_deref(), Some(ark_address.as_str()));
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_lnurlp_ark_callback_rejects_unadvertised_payer_metadata() {
+    let (app, app_state, _guard) = setup_public_test_app().await;
+    let (server_pubkey, ark_address) = test_ark_address(0x11);
+    *app_state.ark_server_pubkey.write().await = Some(server_pubkey.to_string());
+    sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, $3)")
+        .bind("test_pubkey")
+        .bind("test@localhost")
+        .bind(&ark_address)
+        .execute(&app_state.db_pool)
+        .await
+        .unwrap();
+
+    let payer_data = form_urlencoded::byte_serialize(br#"{"name":"Alice"}"#).collect::<String>();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::GET)
+                .uri(format!(
+                    "/.well-known/lnurlp/test?amount=330000&ark={server_pubkey}&payerdata={payer_data}"
+                ))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 }
 
 #[tracing_test::traced_test]

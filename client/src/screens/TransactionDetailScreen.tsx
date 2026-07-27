@@ -14,7 +14,7 @@ import { formatMovementKindLabel, formatMovementStatusLabel } from "~/types/move
 import { getMempoolTxUrl } from "~/constants";
 import { useProfileStore } from "~/store/profileStore";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
-import { getTransactionDisplayLabel } from "~/lib/transactionHistory";
+import { getTransactionHistoryLabel } from "~/lib/transactionHistory";
 
 const TransactionDetailRow = ({
   label,
@@ -170,8 +170,12 @@ export const TransactionDetailContent = ({
             <Icon name={closeIconName} size={24} color={iconColor} />
           </Pressable>
         ) : null}
-        <Text className="text-2xl font-bold text-foreground">
-          {getTransactionDisplayLabel(transaction)}
+        <Text
+          className="min-w-0 flex-1 text-2xl font-bold text-foreground"
+          numberOfLines={2}
+          ellipsizeMode="tail"
+        >
+          {getTransactionHistoryLabel(transaction)}
         </Text>
       </View>
 
@@ -289,6 +293,21 @@ export const TransactionDetailContent = ({
       ) : null}
 
       <View className="bg-card p-4 rounded-lg">
+        {transaction.lnurlPayPayerData?.name ? (
+          <TransactionDetailRow
+            label="Payer-provided name"
+            value={transaction.lnurlPayPayerData.name}
+          />
+        ) : null}
+        {transaction.lnurlPayPayerData?.identifier ? (
+          <TransactionDetailRow
+            label="Payer-provided identifier"
+            value={transaction.lnurlPayPayerData.identifier}
+          />
+        ) : null}
+        {transaction.lnurlPayComment ? (
+          <TransactionDetailRow label="Comment" value={transaction.lnurlPayComment} />
+        ) : null}
         {transaction.description ? (
           <TransactionDetailRow label="Note" value={transaction.description} />
         ) : null}

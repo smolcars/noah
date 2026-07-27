@@ -19,7 +19,8 @@ pub mod zoho;
 use crate::{
     cache::{
         email_verification_store::EmailVerificationStore, invoice_store::InvoiceStore,
-        k1_store::K1Store, maintenance_store::MaintenanceStore, redis_client::RedisClient,
+        k1_store::K1Store, lnurl_pay_receive_metadata_store::LnurlPayReceiveMetadataStore,
+        maintenance_store::MaintenanceStore, redis_client::RedisClient,
     },
     config::Config,
     email_client::EmailClient,
@@ -36,6 +37,7 @@ pub struct AppStruct {
     pub db_pool: PgPool,
     pub k1_cache: K1Store,
     pub invoice_store: InvoiceStore,
+    pub lnurl_pay_receive_metadata_store: LnurlPayReceiveMetadataStore,
     pub email_verification_store: EmailVerificationStore,
     pub email_client: EmailClient,
     pub maintenance_store: MaintenanceStore,
@@ -56,6 +58,10 @@ pub async fn build_app_state(config: Config) -> anyhow::Result<AppState> {
 
     let k1_cache = K1Store::new(redis_client.clone(), K1_TTL_SECONDS);
     let invoice_store = InvoiceStore::new(redis_client.clone());
+    let lnurl_pay_receive_metadata_store = LnurlPayReceiveMetadataStore::new(
+        redis_client.clone(),
+        &config.lnurl_pay_receive_metadata_encryption_key,
+    );
     let maintenance_store = MaintenanceStore::new(redis_client.clone());
     let email_verification_store = EmailVerificationStore::new(redis_client);
     let email_client =
@@ -68,6 +74,7 @@ pub async fn build_app_state(config: Config) -> anyhow::Result<AppState> {
         db_pool,
         k1_cache,
         invoice_store,
+        lnurl_pay_receive_metadata_store,
         email_verification_store,
         email_client,
         maintenance_store,

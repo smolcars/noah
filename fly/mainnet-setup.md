@@ -42,11 +42,17 @@ Set the other required runtime secrets on the Fly app:
 ```sh
 fly secrets set -a noah-mainnet \
   REDIS_URL=... \
+  LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY=... \
   EXPO_ACCESS_TOKEN=... \
   ARK_SERVER_URL=... \
   S3_BUCKET_NAME=... \
   AUTH_JWT_SECRET=...
 ```
+
+`LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY` must be a base64-encoded 32-byte random value. Generate one with
+`openssl rand -base64 32`, keep it stable across deploys, and store it only as a secret. Rotating it
+makes unacknowledged LNURL-pay receive metadata encrypted with the previous key unreadable; those relay
+records expire automatically after at most seven days.
 
 You will likely also want to set:
 

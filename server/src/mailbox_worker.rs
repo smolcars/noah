@@ -730,6 +730,29 @@ async fn process_mailbox_message(
         return Ok(false);
     }
 
+    // Settlement correlation must also run while catch-up notifications are suppressed.
+    // A transient relay failure must prevent checkpoint advancement so this message is replayed.
+    if let Some(Message::IncomingLightningPayment(lightning_payment)) = &message.message {
+        let payment_hash = hex::encode(&lightning_payment.payment_hash);
+        app_state
+            .lnurl_pay_receive_metadata_store
+            .mark_ready(
+                &mailbox.pubkey,
+                &payment_hash,
+                lightning_payment.amount_msat,
+            )
+            .await
+            .map_err(|error| {
+                tracing::warn!(
+                    service = "mailbox_worker",
+                    checkpoint = message.checkpoint,
+                    error = %error,
+                    "failed to prepare LNURL-pay receive metadata for delivery"
+                );
+                ApiError::from(error)
+            })?;
+    }
+
     match &message.message {
         Some(Message::IncomingLightningPayment(lightning_payment)) if send_notifications => {
             let payment_hash = hex::encode(&lightning_payment.payment_hash);

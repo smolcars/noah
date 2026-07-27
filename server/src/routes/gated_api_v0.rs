@@ -1,3 +1,4 @@
+use crate::cache::lnurl_pay_receive_metadata_store::BindInvoiceError;
 use crate::db::backup_repo::BackupRepository;
 use crate::db::device_repo::DeviceRepository;
 use crate::db::heartbeat_repo::HeartbeatRepository;
@@ -14,7 +15,8 @@ use crate::types::{
     DefaultSuccessPayload, DeleteBackupObjectPayload, DeleteBackupPayload, DownloadUrlResponse,
     GetBackupObjectDownloadPayload, GetDownloadUrlPayload, HeartbeatResponsePayload,
     InitiateBackupUploadPayload, InitiateBackupUploadResponse, LightningAddressSuggestionsPayload,
-    LightningAddressSuggestionsResponse, ReportJobStatusPayload, ReportLastLoginPayload,
+    LightningAddressSuggestionsResponse, LnurlPayReceiveMetadataAckPayload,
+    LnurlPayReceiveMetadataListResponse, ReportJobStatusPayload, ReportLastLoginPayload,
     ReportStatus, SubmitInvoicePayload, SubmitSupportTicketPayload, SubmitSupportTicketResponse,
     UpdateProfilePayload, UserInfoResponse, UserStatus,
 };
@@ -30,6 +32,11 @@ use crate::{
 use axum::{Extension, Json, extract::State};
 use base64::Engine;
 use chrono::Utc;
+use lightning_invoice::Bolt11Invoice;
+use std::{
+    str::FromStr,
+    time::{Duration, SystemTime},
+};
 use uuid::Uuid;
 use validator::Validate;
 
@@ -39,9 +46,66 @@ const LN_SUGGESTIONS_MAX_QUERY_LEN: usize = 64;
 const LN_SUGGESTIONS_LIMIT: i64 = 8;
 const BACKUP_OBJECT_FORMAT_VERSION: i32 = 2;
 const MAX_BACKUP_OBJECT_SIZE_BYTES: u64 = 256 * 1024 * 1024;
+const MAX_LNURL_PAY_RECEIVE_METADATA_BATCH: usize = 100;
+const MAX_BOLT11_BYTES: usize = 8 * 1024;
+const MAX_INVOICE_EXPIRY_SECONDS: u64 = 48 * 60 * 60;
+const MAX_INVOICE_TIMESTAMP_SKEW_SECONDS: u64 = 5 * 60;
+const INVOICE_EXPIRY_GRACE_SECONDS: u64 = 5 * 60;
+const MAX_INVOICE_BINDING_TTL_SECONDS: u64 =
+    MAX_INVOICE_EXPIRY_SECONDS + MAX_INVOICE_TIMESTAMP_SKEW_SECONDS + INVOICE_EXPIRY_GRACE_SECONDS;
+const LNURL_PAY_RECEIVE_METADATA_BIND_ATTEMPTS: u32 = 3;
+const LNURL_PAY_RECEIVE_METADATA_BIND_RETRY_DELAY_MS: u64 = 100;
 const NON_LN_SUGGESTION_PREFIXES: [&str; 9] = [
     "bc1", "tb1", "bcrt1", "lnbc", "lntb", "lnbcrt", "ark", "tark", "lno",
 ];
+
+fn invoice_binding_ttl_seconds(
+    timestamp: Duration,
+    expiry: Duration,
+    now: Duration,
+) -> Result<u64, ApiError> {
+    if expiry > Duration::from_secs(MAX_INVOICE_EXPIRY_SECONDS) {
+        return Err(ApiError::InvalidArgument(
+            "Lightning invoice expiry is too far in the future".to_string(),
+        ));
+    }
+
+    if timestamp > now.saturating_add(Duration::from_secs(MAX_INVOICE_TIMESTAMP_SKEW_SECONDS)) {
+        return Err(ApiError::InvalidArgument(
+            "Lightning invoice timestamp is too far in the future".to_string(),
+        ));
+    }
+
+    let expires_at = timestamp.saturating_add(expiry);
+    if expires_at < now {
+        return Err(ApiError::InvalidArgument(
+            "Lightning invoice has expired".to_string(),
+        ));
+    }
+
+    Ok(expires_at
+        .saturating_sub(now)
+        .as_secs()
+        .saturating_add(INVOICE_EXPIRY_GRACE_SECONDS)
+        .min(MAX_INVOICE_BINDING_TTL_SECONDS))
+}
+
+fn bind_invoice_api_error(error: BindInvoiceError) -> ApiError {
+    match error {
+        client_error @ (BindInvoiceError::Expired
+        | BindInvoiceError::RequestMismatch
+        | BindInvoiceError::Conflict) => {
+            tracing::warn!(error = %client_error, "Rejected LNURL-pay invoice submission");
+            ApiError::InvalidArgument(
+                "Payment request is unavailable or does not match this invoice".to_string(),
+            )
+        }
+        BindInvoiceError::Infrastructure(source) => {
+            tracing::error!(error = %source, "Failed to bind LNURL-pay receive metadata");
+            ApiError::ServerErr("Failed to publish Lightning invoice".to_string())
+        }
+    }
+}
 
 fn normalize_suggestions_query(query: &str) -> String {
     query
@@ -218,23 +282,121 @@ pub async fn revoke_mailbox_authorization(
 /// this endpoint receives it and forwards it to the waiting payer.
 pub async fn submit_invoice(
     State(state): State<AppState>,
-    Extension(_auth_payload): Extension<AuthenticatedUser>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
     event: Option<Extension<WideEventHandle>>,
     Json(payload): Json<SubmitInvoicePayload>,
 ) -> anyhow::Result<Json<DefaultSuccessPayload>, ApiError> {
+    Uuid::parse_str(&payload.transaction_id).map_err(|_| {
+        ApiError::InvalidArgument("Invalid payment transaction identifier".to_string())
+    })?;
+    if payload.invoice.len() > MAX_BOLT11_BYTES {
+        return Err(ApiError::InvalidArgument(
+            "Lightning invoice is too large".to_string(),
+        ));
+    }
+    let invoice = Bolt11Invoice::from_str(&payload.invoice)
+        .map_err(|_| ApiError::InvalidArgument("Invalid Lightning invoice".to_string()))?;
+    let expected_network = state
+        .config
+        .network()
+        .map_err(|_| ApiError::ServerErr("Invalid server network configuration".to_string()))?;
+    if invoice.network() != expected_network {
+        return Err(ApiError::InvalidArgument(
+            "Lightning invoice is for the wrong network".to_string(),
+        ));
+    }
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map_err(|_| ApiError::ServerErr("Invalid server clock".to_string()))?;
+    let binding_ttl_seconds =
+        invoice_binding_ttl_seconds(invoice.duration_since_epoch(), invoice.expiry_time(), now)?;
+    let amount_msat = invoice.amount_milli_satoshis().ok_or_else(|| {
+        ApiError::InvalidArgument("Lightning invoice must specify an amount".to_string())
+    })?;
+    let payment_hash = invoice.payment_hash().to_string();
+    let canonical_invoice = invoice.to_string();
+
     if let Some(Extension(event)) = event {
         event.add_context("transaction_id", &payload.transaction_id);
+        event.add_context("amount_msats", amount_msat);
     }
 
-    state
-        .invoice_store
-        .store(&payload.transaction_id, &payload.invoice)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to store invoice in Redis: {}", e);
-            ApiError::ServerErr("Failed to store invoice".to_string())
-        })?;
+    let mut bind_attempt = 1;
+    let bind_result = loop {
+        let result = state
+            .lnurl_pay_receive_metadata_store
+            .bind_invoice(
+                &payload.transaction_id,
+                &auth_payload.key,
+                &payment_hash,
+                amount_msat,
+                &canonical_invoice,
+                binding_ttl_seconds,
+            )
+            .await;
 
+        match result {
+            Err(error)
+                if error.is_retryable()
+                    && bind_attempt < LNURL_PAY_RECEIVE_METADATA_BIND_ATTEMPTS =>
+            {
+                tracing::warn!(
+                    error = %error,
+                    attempt = bind_attempt,
+                    "Retrying LNURL-pay receive metadata bind"
+                );
+                tokio::time::sleep(Duration::from_millis(
+                    LNURL_PAY_RECEIVE_METADATA_BIND_RETRY_DELAY_MS * u64::from(bind_attempt),
+                ))
+                .await;
+                bind_attempt += 1;
+            }
+            result => break result,
+        }
+    };
+    bind_result.map_err(bind_invoice_api_error)?;
+
+    Ok(Json(DefaultSuccessPayload { success: true }))
+}
+
+pub async fn list_lnurl_pay_receive_metadata(
+    State(state): State<AppState>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
+) -> anyhow::Result<Json<LnurlPayReceiveMetadataListResponse>, ApiError> {
+    let items = state
+        .lnurl_pay_receive_metadata_store
+        .list_ready(&auth_payload.key, MAX_LNURL_PAY_RECEIVE_METADATA_BATCH)
+        .await
+        .map_err(|error| {
+            tracing::error!(error = %error, "Failed to list LNURL-pay receive metadata");
+            ApiError::ServerErr("Failed to load receive metadata".to_string())
+        })?;
+    Ok(Json(LnurlPayReceiveMetadataListResponse { items }))
+}
+
+pub async fn acknowledge_lnurl_pay_receive_metadata(
+    State(state): State<AppState>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
+    Json(payload): Json<LnurlPayReceiveMetadataAckPayload>,
+) -> anyhow::Result<Json<DefaultSuccessPayload>, ApiError> {
+    if payload.ids.len() > MAX_LNURL_PAY_RECEIVE_METADATA_BATCH {
+        return Err(ApiError::InvalidArgument(
+            "Too many receive metadata identifiers".to_string(),
+        ));
+    }
+    if payload.ids.iter().any(|id| Uuid::parse_str(id).is_err()) {
+        return Err(ApiError::InvalidArgument(
+            "Invalid receive metadata identifier".to_string(),
+        ));
+    }
+    state
+        .lnurl_pay_receive_metadata_store
+        .acknowledge(&auth_payload.key, &payload.ids)
+        .await
+        .map_err(|error| {
+            tracing::error!(error = %error, "Failed to acknowledge LNURL-pay receive metadata");
+            ApiError::ServerErr("Failed to acknowledge receive metadata".to_string())
+        })?;
     Ok(Json(DefaultSuccessPayload { success: true }))
 }
 
@@ -809,4 +971,65 @@ pub async fn report_last_login(
     }
 
     Ok(Json(DefaultSuccessPayload { success: true }))
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::{http::StatusCode, response::IntoResponse};
+
+    use super::*;
+
+    #[test]
+    fn invoice_binding_ttl_accepts_clock_skew_and_preserves_grace() {
+        let now = Duration::from_secs(1_000_000);
+        let max_expiry = Duration::from_secs(MAX_INVOICE_EXPIRY_SECONDS);
+        let max_skew = Duration::from_secs(MAX_INVOICE_TIMESTAMP_SKEW_SECONDS);
+
+        assert_eq!(
+            invoice_binding_ttl_seconds(now + max_skew, max_expiry, now).unwrap(),
+            MAX_INVOICE_BINDING_TTL_SECONDS
+        );
+    }
+
+    #[test]
+    fn invoice_binding_ttl_rejects_invalid_time_bounds() {
+        let now = Duration::from_secs(1_000_000);
+
+        assert!(
+            invoice_binding_ttl_seconds(
+                now,
+                Duration::from_secs(MAX_INVOICE_EXPIRY_SECONDS + 1),
+                now,
+            )
+            .is_err()
+        );
+        assert!(
+            invoice_binding_ttl_seconds(
+                now + Duration::from_secs(MAX_INVOICE_TIMESTAMP_SKEW_SECONDS + 1),
+                Duration::from_secs(60),
+                now,
+            )
+            .is_err()
+        );
+        assert!(
+            invoice_binding_ttl_seconds(
+                now - Duration::from_secs(61),
+                Duration::from_secs(60),
+                now,
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn bind_invoice_errors_preserve_client_and_server_classification() {
+        let expired = bind_invoice_api_error(BindInvoiceError::Expired).into_response();
+        assert_eq!(expired.status(), StatusCode::BAD_REQUEST);
+
+        let unavailable = bind_invoice_api_error(BindInvoiceError::Infrastructure(
+            anyhow::anyhow!("Redis unavailable"),
+        ))
+        .into_response();
+        assert_eq!(unavailable.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
 }

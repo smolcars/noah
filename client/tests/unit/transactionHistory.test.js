@@ -4,6 +4,7 @@ import {
   getBoardingMovementAmount,
   getMovementTransactionId,
   getTransactionDisplayLabel,
+  getTransactionHistoryLabel,
   isInternalBoardingTransfer,
   mergeBoardingWithOnchainTransactions,
   parseMovementMetadata,
@@ -111,6 +112,22 @@ describe("unified transaction history", () => {
     expect(getTransactionDisplayLabel({ type: "Onchain", movementKind: "offboard" })).toBe(
       "Offboard",
     );
+  });
+
+  test("uses payer-provided LNURL identity for incoming history without changing type labels", () => {
+    const transaction = {
+      type: "Bolt11",
+      direction: "incoming",
+      lnurlPayPayerData: {
+        name: "Alice",
+        identifier: "alice@example.com",
+      },
+    };
+
+    expect(getTransactionHistoryLabel(transaction)).toBe(
+      "Alice (⚡ alice@example.com)",
+    );
+    expect(getTransactionDisplayLabel(transaction)).toBe("Lightning");
   });
 
   test("treats boards as internal transfers but preserves offboards as outgoing sends", () => {

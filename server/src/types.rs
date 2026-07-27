@@ -217,6 +217,42 @@ pub struct SubmitInvoicePayload {
     pub transaction_id: String,
 }
 
+/// Payer-provided identity from an LNURL-pay callback.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct LnurlPayReceivePayerData {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub identifier: Option<String>,
+}
+
+/// Metadata associated with a settled LNURL-pay receive movement.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct LnurlPayReceiveMetadata {
+    pub id: String,
+    pub payment_hash: String,
+    #[ts(type = "number")]
+    pub amount_sat: u64,
+    pub payer_data: Option<LnurlPayReceivePayerData>,
+    pub comment: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct LnurlPayReceiveMetadataListResponse {
+    pub items: Vec<LnurlPayReceiveMetadata>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, TS)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct LnurlPayReceiveMetadataAckPayload {
+    pub ids: Vec<String>,
+}
+
 /// Defines the payload for updating a user's lightning address.
 #[derive(Serialize, Deserialize, TS, Validate)]
 #[ts(export, export_to = "../../client/src/types/serverTypes.ts")]

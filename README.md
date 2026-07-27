@@ -279,6 +279,8 @@ The server uses environment variables for configuration. For local development, 
    POSTGRES_URL=postgres://postgres:postgres@localhost:5432/noah
    POSTGRES_MAX_CONNECTIONS=10
    REDIS_URL=redis://127.0.0.1:6379
+   # Base64-encoded 32-byte key; generate a production value with: openssl rand -base64 32
+   LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY=QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
    EXPO_ACCESS_TOKEN=your-expo-access-token # Can set junk value for local development
    ARK_SERVER_URL=http://localhost:3535
    SERVER_NETWORK=regtest

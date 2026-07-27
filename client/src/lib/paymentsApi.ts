@@ -28,6 +28,7 @@ import {
   estimateSendOnchain as estimateSendOnchainNitro,
   estimateOffboardAll as estimateOffboardAllNitro,
   history as historyNitro,
+  updateHistoryMetadata as updateHistoryMetadataNitro,
   tryClaimAllLightningReceives as tryClaimAllLightningReceivesNitro,
   tryClaimLightningReceive as tryClaimLightningReceiveNitro,
   peekAddress as peekAddressNitro,
@@ -463,6 +464,21 @@ export const history = async (): Promise<Result<BarkMovement[], Error>> => {
 
     return e;
   });
+};
+
+export const updateHistoryMetadata = async (
+  movementId: number,
+  patchJson: string,
+): Promise<Result<void, Error>> => {
+  return ResultAsync.fromPromise(
+    updateHistoryMetadataNitro(movementId, patchJson),
+    (error) =>
+      new Error(
+        `Failed to update movement metadata: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      ),
+  );
 };
 
 export const onchainTransactions = async (): Promise<Result<OnchainTransactionInfo[], Error>> => {

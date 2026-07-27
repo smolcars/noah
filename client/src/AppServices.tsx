@@ -4,6 +4,7 @@ import { useServerRegistration } from "~/hooks/useServerRegistration";
 import { usePushNotifications } from "~/hooks/usePushNotifications";
 import { useMailboxAuthorization } from "~/hooks/useMailboxAuthorization";
 import { useBackupCoordinator } from "~/hooks/useBackupCoordinator";
+import { useLnurlPayReceiveMetadata } from "~/hooks/useLnurlPayReceiveMetadata";
 import { reportLastLoginForServer } from "~/lib/server";
 import logger from "~/lib/log";
 import { AutoBoardingService } from "~/components/AutoBoardingService";
@@ -19,6 +20,7 @@ const AppServices = memo(() => {
   useMailboxAuthorization(isReady);
   usePushNotifications(isReady);
   useBackupCoordinator(isReady);
+  useLnurlPayReceiveMetadata(isReady);
 
   useEffect(() => {
     setIsReady(true);

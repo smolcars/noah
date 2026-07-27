@@ -45,7 +45,7 @@ import { usePrivacyStore } from "~/store/privacyStore";
 import { useProfileStore } from "~/store/profileStore";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { NativeHomeHeaderActions } from "~/components/ui/NativeHomeHeaderActions";
-import { getTransactionDisplayLabel, isInternalBoardingTransfer } from "~/lib/transactionHistory";
+import { getTransactionHistoryLabel, isInternalBoardingTransfer } from "~/lib/transactionHistory";
 
 const getTransactionIcon = (transaction: Transaction) => {
   if (transaction.movementKind === "onboard") {
@@ -433,9 +433,18 @@ const HomeScreen = () => {
                           />
                         </View>
                         <View className="min-w-0 flex-1">
-                          <Text className="text-sm font-semibold text-foreground">
-                            {getTransactionDisplayLabel(transaction)}
+                          <Text
+                            className="text-sm font-semibold text-foreground"
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
+                            {getTransactionHistoryLabel(transaction)}
                           </Text>
+                          {transaction.lnurlPayComment ? (
+                            <Text className="mt-1 text-xs text-muted-foreground" numberOfLines={1}>
+                              {transaction.lnurlPayComment}
+                            </Text>
+                          ) : null}
                           <Text className="mt-1 text-xs text-muted-foreground">
                             {transaction.dateLabel ??
                               new Date(transaction.date).toLocaleDateString(undefined, {

@@ -5,6 +5,7 @@ import { err, ok, Result } from "neverthrow";
 import { flushBackup } from "~/lib/backupCoordinator";
 import { submitInvoice as submitInvoiceApi } from "./api";
 import { Bolt11Invoice } from "react-native-nitro-ark";
+import { reconcileLnurlPayReceiveMetadata } from "~/lib/lnurlPayReceiveMetadataService";
 
 const log = logger("tasks");
 
@@ -71,6 +72,12 @@ export async function claimLightningReceivesTask(): Promise<Result<void, Error>>
   if (claimResult.isErr()) {
     log.e("Failed to claim lightning receives", [claimResult.error]);
     return err(claimResult.error);
+  }
+
+  const metadataResult = await reconcileLnurlPayReceiveMetadata();
+  if (metadataResult.isErr()) {
+    // Metadata delivery is best-effort and must not turn a settled payment into a failed claim.
+    log.w("Failed to reconcile LNURL-pay receive metadata after claim", [metadataResult.error]);
   }
 
   log.d("[Claim Lightning Receives Job] completed");

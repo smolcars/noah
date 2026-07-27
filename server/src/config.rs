@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use bitcoin::Network;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
@@ -44,6 +45,7 @@ pub struct Config {
     pub email_dev_mode: bool,
     pub auth_jwt_secret: String,
     pub auth_jwt_ttl_hours: u64,
+    pub lnurl_pay_receive_metadata_encryption_key: [u8; 32],
     pub zoho_client_id: Option<String>,
     pub zoho_client_secret: Option<String>,
     pub zoho_refresh_token: Option<String>,
@@ -134,6 +136,10 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(72),
+            lnurl_pay_receive_metadata_encryption_key: parse_encryption_key(
+                &std::env::var("LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY")
+                    .context("LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY is required")?,
+            )?,
             zoho_client_id: std::env::var("ZOHO_CLIENT_ID").ok(),
             zoho_client_secret: std::env::var("ZOHO_CLIENT_SECRET").ok(),
             zoho_refresh_token: std::env::var("ZOHO_REFRESH_TOKEN").ok(),
@@ -272,4 +278,13 @@ impl Config {
         tracing::debug!("JWT TTL Hours: {}", self.auth_jwt_ttl_hours);
         tracing::debug!("============================");
     }
+}
+
+fn parse_encryption_key(value: &str) -> Result<[u8; 32]> {
+    let decoded = BASE64
+        .decode(value)
+        .context("LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY must be valid base64")?;
+    decoded.try_into().map_err(|_| {
+        anyhow::anyhow!("LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY must decode to exactly 32 bytes")
+    })
 }
