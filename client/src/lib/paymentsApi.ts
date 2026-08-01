@@ -13,10 +13,12 @@ import {
   type ArkoorPaymentResult,
   type OnchainPaymentResult,
   type LightningPayment,
+  type LightningPaymentOrigin,
   newAddress as newAddressNitro,
   onchainAddress as onchainAddressNitro,
   onchainIsMine as onchainIsMineNitro,
   payLightningInvoice as payLightningInvoiceNitro,
+  payLightningInvoiceWithOrigin as payLightningInvoiceWithOriginNitro,
   onchainDrain as onchainDrainNitro,
   onchainSend as onchainSendNitro,
   sendOnchain as sendOnchainNitro,
@@ -56,6 +58,7 @@ export type {
   BarkFeeEstimate,
   BarkFeeRates,
   OnchainTransactionInfo,
+  LightningPaymentOrigin,
 };
 export type { BarkNotificationEvent };
 
@@ -225,6 +228,23 @@ export const payLightningInvoice = async (
     (error) => {
       const e = new Error(
         `Failed to send bolt11 payment: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return e;
+    },
+  );
+};
+
+export const payLightningInvoiceWithOrigin = async (
+  invoice: string,
+  origin: LightningPaymentOrigin,
+): Promise<Result<LightningPayment, Error>> => {
+  return ResultAsync.fromPromise(
+    payLightningInvoiceWithOriginNitro(invoice, origin, true),
+    (error) => {
+      const e = new Error(
+        `Failed to send resolved bolt11 payment: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       );
       return e;
     },

@@ -11,6 +11,7 @@ import {
   sendOnchainFromOffchain,
   sendArkoorPayment,
   payLightningInvoice,
+  payLightningInvoiceWithOrigin,
   payLightningOffer,
   type ArkoorPaymentResult,
   type LightningPayment,
@@ -29,6 +30,7 @@ import {
   estimateStandardOnchainTxFee,
   validateArkoorPaymentAddress,
   type StandardOnchainWalletFeeEstimate,
+  type LightningPaymentOrigin,
 } from "../lib/paymentsApi";
 import { queryClient } from "~/queryClient";
 import { DestinationTypes } from "~/lib/sendUtils";
@@ -63,6 +65,7 @@ type LnurlPayRouteBase = {
   payerData?: LnurlPayerDataRequirements;
   minSendableMsat: number;
   maxSendableMsat: number;
+  origin: LightningPaymentOrigin;
 };
 
 export type LnurlPayRoute = LnurlPayRouteBase &
@@ -87,7 +90,11 @@ const parseLightningAddress = (destination: string) => {
     return null;
   }
 
-  return { username: parts[0], domain: parts[1] };
+  return {
+    username: parts[0],
+    domain: parts[1],
+    normalizedAddress: `${parts[0]}@${parts[1]}`,
+  };
 };
 
 const fetchLnurlPayRequestResponse = async (url: URL): Promise<LnurlPayRequestResponse> => {
@@ -104,6 +111,7 @@ const fetchLnurlPayRequestResponse = async (url: URL): Promise<LnurlPayRequestRe
 const lnurlPayRouteFromRequestResponse = async (
   response: LnurlPayRequestResponse,
   arkServerPubkey: string | null,
+  origin: LightningPaymentOrigin,
 ): Promise<LnurlPayRoute> => {
   const routeDetails: LnurlPayRouteBase = {
     callback: response.callback,
@@ -112,6 +120,7 @@ const lnurlPayRouteFromRequestResponse = async (
     payerData: response.payerData,
     minSendableMsat: response.minSendable,
     maxSendableMsat: response.maxSendable,
+    origin,
   };
 
   if (arkServerPubkey && response.ark) {
@@ -141,6 +150,11 @@ export const resolveLnurlPayRouteForLightningAddress = async (
     throw new Error("Destination is not a lightning address");
   }
 
+  // Persist only the public identifier; callback URLs can contain payer data and tokens.
+  const origin: LightningPaymentOrigin = {
+    method: "lightning-address",
+    value: parsed.normalizedAddress,
+  };
   const lnurlEndpoint = new URL(`https://${parsed.domain}/.well-known/lnurlp/${parsed.username}`);
   const arkInfoResult = await getArkInfo();
   if (arkInfoResult.isErr()) {
@@ -148,7 +162,7 @@ export const resolveLnurlPayRouteForLightningAddress = async (
       arkInfoResult.error,
     ]);
     const response = await fetchLnurlPayRequestResponse(lnurlEndpoint);
-    return lnurlPayRouteFromRequestResponse(response, null);
+    return lnurlPayRouteFromRequestResponse(response, null, origin);
   }
 
   const arkLnurlEndpoint = new URL(lnurlEndpoint);
@@ -160,10 +174,10 @@ export const resolveLnurlPayRouteForLightningAddress = async (
   } catch (error) {
     log.w("Ark-aware LNURL-pay discovery failed, retrying standard LNURL-pay discovery", [error]);
     const standardResponse = await fetchLnurlPayRequestResponse(lnurlEndpoint);
-    return lnurlPayRouteFromRequestResponse(standardResponse, null);
+    return lnurlPayRouteFromRequestResponse(standardResponse, null, origin);
   }
 
-  return lnurlPayRouteFromRequestResponse(response, arkInfoResult.value.server_pubkey);
+  return lnurlPayRouteFromRequestResponse(response, arkInfoResult.value.server_pubkey, origin);
 };
 
 const lnurlPayRouteQueryOptions = (lightningAddress: string | null) => ({
@@ -556,7 +570,7 @@ const sendLnurlPayCallbackPayment = async (
   }
 
   log.d("Paying Lightning invoice after LNURL-pay callback");
-  return readLightningPayment(payLightningInvoice(callbackResponse.pr, undefined));
+  return readLightningPayment(payLightningInvoiceWithOrigin(callbackResponse.pr, route.origin));
 };
 
 const sendLnurlPayPayment = async (

@@ -7,6 +7,7 @@ const kyGet = mock();
 const expoFetch = mock();
 const queryClientFetchQuery = mock();
 const payLightningInvoice = mock();
+const payLightningInvoiceWithOrigin = mock();
 const sendArkoorPayment = mock();
 const validateArkoorPaymentAddress = mock();
 const getArkInfo = mock();
@@ -64,6 +65,7 @@ mock.module("../../src/lib/paymentsApi", () => ({
   sendOnchainFromOffchain: unusedPaymentApi,
   sendArkoorPayment,
   payLightningInvoice,
+  payLightningInvoiceWithOrigin,
   payLightningOffer: unusedPaymentApi,
   boardAllArk: unusedPaymentApi,
   offboardAllArk: unusedPaymentApi,
@@ -87,6 +89,10 @@ const standardRoute = {
   commentAllowed: 0,
   minSendableMsat: 1_000,
   maxSendableMsat: 10_000_000,
+  origin: {
+    method: "lightning-address",
+    value: "receiver@example.com",
+  },
 };
 
 beforeEach(() => {
@@ -94,6 +100,7 @@ beforeEach(() => {
   expoFetch.mockClear();
   queryClientFetchQuery.mockClear();
   payLightningInvoice.mockClear();
+  payLightningInvoiceWithOrigin.mockClear();
   sendArkoorPayment.mockClear();
   validateArkoorPaymentAddress.mockClear();
   getArkInfo.mockClear();
@@ -115,6 +122,9 @@ beforeEach(() => {
   }));
   queryClientFetchQuery.mockImplementation(async () => standardRoute);
   payLightningInvoice.mockImplementation(async () =>
+    ok({ state: "paid", payment_hash: "payment-hash" }),
+  );
+  payLightningInvoiceWithOrigin.mockImplementation(async () =>
     ok({ state: "paid", payment_hash: "payment-hash" }),
   );
   sendArkoorPayment.mockImplementation(async () => ok({ txid: "ark-payment" }));
@@ -151,7 +161,9 @@ describe("LNURL-pay routing", () => {
         }),
       }));
 
-    const route = await resolveLnurlPayRouteForLightningAddress("receiver@example.com");
+    const route = await resolveLnurlPayRouteForLightningAddress(
+      "LIGHTNING:Receiver@Example.com",
+    );
 
     expect(kyGet).toHaveBeenCalledTimes(2);
     expect(kyGet).toHaveBeenNthCalledWith(
@@ -164,6 +176,10 @@ describe("LNURL-pay routing", () => {
     });
     expect(route.method).toBe("lightning");
     expect(route.callback).toBe(standardRoute.callback);
+    expect(route.origin).toEqual({
+      method: "lightning-address",
+      value: "receiver@example.com",
+    });
   });
 
   test("accepts a valid LNURL-pay discovery body from a non-2xx response", async () => {
@@ -256,7 +272,11 @@ describe("LNURL-pay routing", () => {
       null,
       undefined,
     );
-    expect(payLightningInvoice).toHaveBeenCalledWith("lnbc1callbackinvoice", undefined);
+    expect(payLightningInvoiceWithOrigin).toHaveBeenCalledWith(
+      "lnbc1callbackinvoice",
+      standardRoute.origin,
+    );
+    expect(payLightningInvoice).not.toHaveBeenCalled();
     expect(result.state).toBe("paid");
   });
 
@@ -339,7 +359,11 @@ describe("LNURL-pay routing", () => {
       confirmedLnurlPayMethod: "lightning",
     });
 
-    expect(payLightningInvoice).toHaveBeenCalledWith("lnbc1callbackinvoice", undefined);
+    expect(payLightningInvoiceWithOrigin).toHaveBeenCalledWith(
+      "lnbc1callbackinvoice",
+      standardRoute.origin,
+    );
+    expect(payLightningInvoice).not.toHaveBeenCalled();
     expect(result.state).toBe("paid");
   });
 
@@ -396,6 +420,7 @@ describe("LNURL-pay routing", () => {
       }),
     ).rejects.toThrow("Discovery failed");
     expect(payLightningInvoice).not.toHaveBeenCalled();
+    expect(payLightningInvoiceWithOrigin).not.toHaveBeenCalled();
   });
 
   test("waits for the callback before paying a negotiated Ark address", async () => {
@@ -430,5 +455,21 @@ describe("LNURL-pay routing", () => {
     );
     expect(sendArkoorPayment).toHaveBeenCalledWith(route.destination.toUpperCase(), 2_000);
     expect(payLightningInvoice).not.toHaveBeenCalled();
+    expect(payLightningInvoiceWithOrigin).not.toHaveBeenCalled();
+  });
+
+  test("keeps direct BOLT11 payments on the ordinary invoice API", async () => {
+    const mutation = useSend("lightning");
+
+    const result = await mutation.mutationFn({
+      destination: "lnbc1directinvoice",
+      amountSat: 2_000,
+      resolvedAmountSat: 2_000,
+      comment: null,
+    });
+
+    expect(payLightningInvoice).toHaveBeenCalledWith("lnbc1directinvoice", 2_000);
+    expect(payLightningInvoiceWithOrigin).not.toHaveBeenCalled();
+    expect(result.state).toBe("paid");
   });
 });

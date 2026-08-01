@@ -47,6 +47,7 @@ mock.module("../../src/lib/paymentsApi", () => ({
   sendOnchainFromOffchain: mock(),
   sendArkoorPayment: mock(),
   payLightningInvoice: mock(),
+  payLightningInvoiceWithOrigin: mock(),
   payLightningOffer: mock(),
   boardAllArk: mock(),
   offboardAllArk: mock(),

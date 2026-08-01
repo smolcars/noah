@@ -60,6 +60,12 @@ the callback rather than failing the payment.
 - The parsed LNURL body controls success or failure independently of the HTTP
   status code, as specified by LUD-01.
 - A returned BOLT11 is checked for the requested amount and Bitcoin network.
+- Standard Lightning callbacks pay the validated invoice through NitroArk's
+  `payLightningInvoiceWithOrigin`. Noah supplies the normalized Lightning
+  Address as the origin, so Bark stores it as the movement's
+  `PaymentMethod::LightningAddress`. The origin therefore remains available
+  in Bark history and the existing wallet snapshot. The direct-Ark route is
+  unchanged.
 - Noah does not require or validate the former LNURL-pay metadata binding via a
   BOLT11 `description_hash`; that LUD-06 requirement has been removed.
 
