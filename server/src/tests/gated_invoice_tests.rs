@@ -47,7 +47,7 @@ fn test_invoice_with_expiry(amount_msat: u64, payment_hash_byte: u8, expiry: Dur
     )
 }
 
-fn test_invoice(amount_msat: u64, payment_hash_byte: u8) -> String {
+pub(crate) fn test_invoice(amount_msat: u64, payment_hash_byte: u8) -> String {
     test_invoice_with_expiry(amount_msat, payment_hash_byte, Duration::from_secs(3600))
 }
 

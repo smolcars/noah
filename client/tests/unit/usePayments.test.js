@@ -14,7 +14,6 @@ const getArkInfo = mock();
 const createLnurlPayCallbackUrl = mock();
 const parseLnurlPayCallbackResponse = mock();
 const validateLnurlPayInvoice = mock();
-const validateMatchingArkAddress = mock();
 const validateLnurlPayComment = mock();
 const buildLnurlPayerData = mock();
 
@@ -47,12 +46,11 @@ mock.module("../../src/store/serverStore", () => ({
 mock.module("../../src/lib/lnurlPay", () => ({
   buildLnurlPayerData,
   createLnurlPayCallbackUrl,
-  normalizeLnurlPayCommentAllowed: () => 0,
+  normalizeLnurlPayCommentAllowed: (value) => (typeof value === "number" ? value : 0),
   parseLnurlPayCallbackResponse,
   parseLnurlPayRequestResponse: (value) => ok(value),
   validateLnurlPayComment,
   validateLnurlPayInvoice,
-  validateMatchingArkAddress,
 }));
 mock.module("../../src/lib/paymentsApi", () => ({
   newAddress: unusedPaymentApi,
@@ -82,6 +80,9 @@ mock.module("../../src/lib/paymentsApi", () => ({
 const { resolveLnurlPayRouteForLightningAddress, useSend } =
   await import("../../src/hooks/usePayments");
 
+const ARK_SERVER_PUBKEY = `02${"ab".repeat(32)}`;
+const OTHER_ARK_SERVER_PUBKEY = `03${"cd".repeat(32)}`;
+
 const standardRoute = {
   method: "lightning",
   callback: "https://pay.example/callback",
@@ -107,7 +108,6 @@ beforeEach(() => {
   createLnurlPayCallbackUrl.mockClear();
   parseLnurlPayCallbackResponse.mockClear();
   validateLnurlPayInvoice.mockClear();
-  validateMatchingArkAddress.mockClear();
   validateLnurlPayComment.mockClear();
   buildLnurlPayerData.mockClear();
 
@@ -135,43 +135,28 @@ beforeEach(() => {
   );
   parseLnurlPayCallbackResponse.mockImplementation((value) => ok(value));
   validateLnurlPayInvoice.mockImplementation(() => ok(undefined));
-  validateMatchingArkAddress.mockImplementation((returned, expected) =>
-    returned?.toLowerCase() === expected.toLowerCase()
-      ? ok(returned)
-      : err(new Error("Ark address mismatch")),
-  );
   validateLnurlPayComment.mockImplementation((comment) => ok(comment));
   buildLnurlPayerData.mockImplementation(() => ok(null));
 });
 
 describe("LNURL-pay routing", () => {
-  test("retries discovery without Ark support when Ark-aware discovery fails", async () => {
-    getArkInfo.mockImplementationOnce(async () => ok({ server_pubkey: "02abc" }));
-    kyGet
-      .mockImplementationOnce(() => {
-        throw new Error("Ark-aware discovery failed");
-      })
-      .mockImplementationOnce(() => ({
-        json: async () => ({
-          callback: standardRoute.callback,
-          metadata: standardRoute.metadata,
-          minSendable: standardRoute.minSendableMsat,
-          maxSendable: standardRoute.maxSendableMsat,
-          tag: "payRequest",
-        }),
-      }));
+  test("discovers once without sending the payer's Ark server", async () => {
+    kyGet.mockImplementationOnce(() => ({
+      json: async () => ({
+        callback: standardRoute.callback,
+        metadata: standardRoute.metadata,
+        minSendable: standardRoute.minSendableMsat,
+        maxSendable: standardRoute.maxSendableMsat,
+        tag: "payRequest",
+      }),
+    }));
 
     const route = await resolveLnurlPayRouteForLightningAddress(
       "LIGHTNING:Receiver@Example.com",
     );
 
-    expect(kyGet).toHaveBeenCalledTimes(2);
-    expect(kyGet).toHaveBeenNthCalledWith(
-      1,
-      "https://example.com/.well-known/lnurlp/receiver?ark=02abc",
-      { throwHttpErrors: false },
-    );
-    expect(kyGet).toHaveBeenNthCalledWith(2, "https://example.com/.well-known/lnurlp/receiver", {
+    expect(kyGet).toHaveBeenCalledTimes(1);
+    expect(kyGet).toHaveBeenCalledWith("https://example.com/.well-known/lnurlp/receiver", {
       throwHttpErrors: false,
     });
     expect(route.method).toBe("lightning");
@@ -209,8 +194,11 @@ describe("LNURL-pay routing", () => {
     });
   });
 
-  test("accepts a valid Ark-aware response without retrying standard discovery", async () => {
-    getArkInfo.mockImplementationOnce(async () => ok({ server_pubkey: "02abc" }));
+  test("uses Lightning and preserves LUD-12/18 when no advertised Ark server matches", async () => {
+    getArkInfo.mockImplementationOnce(async () =>
+      ok({ server_pubkey: ARK_SERVER_PUBKEY.toUpperCase() }),
+    );
+    const payerData = { name: { mandatory: false } };
     kyGet.mockImplementationOnce(() => ({
       json: async () => ({
         callback: standardRoute.callback,
@@ -218,13 +206,51 @@ describe("LNURL-pay routing", () => {
         minSendable: standardRoute.minSendableMsat,
         maxSendable: standardRoute.maxSendableMsat,
         tag: "payRequest",
+        commentAllowed: 64,
+        payerData,
+        arkServers: [OTHER_ARK_SERVER_PUBKEY],
       }),
     }));
 
     const route = await resolveLnurlPayRouteForLightningAddress("receiver@example.com");
 
     expect(kyGet).toHaveBeenCalledTimes(1);
-    expect(route.method).toBe("lightning");
+    expect(route).toMatchObject({
+      method: "lightning",
+      commentAllowed: 64,
+      payerData,
+    });
+  });
+
+  test("selects a matching Ark server without receiving an address or payer metadata", async () => {
+    getArkInfo.mockImplementationOnce(async () =>
+      ok({ server_pubkey: ARK_SERVER_PUBKEY.toUpperCase() }),
+    );
+    kyGet.mockImplementationOnce(() => ({
+      json: async () => ({
+        callback: standardRoute.callback,
+        metadata: standardRoute.metadata,
+        minSendable: standardRoute.minSendableMsat,
+        maxSendable: standardRoute.maxSendableMsat,
+        tag: "payRequest",
+        commentAllowed: 64,
+        payerData: { name: { mandatory: false } },
+        arkServers: [OTHER_ARK_SERVER_PUBKEY, ARK_SERVER_PUBKEY],
+      }),
+    }));
+
+    const route = await resolveLnurlPayRouteForLightningAddress("receiver@example.com");
+
+    expect(route).toMatchObject({
+      method: "ark",
+      arkServerPubkey: ARK_SERVER_PUBKEY,
+      commentAllowed: 0,
+    });
+    expect(route).not.toHaveProperty("destination");
+    expect(route).not.toHaveProperty("payerData");
+    expect(kyGet).toHaveBeenCalledWith("https://example.com/.well-known/lnurlp/receiver", {
+      throwHttpErrors: false,
+    });
   });
 
   test("waits for fresh LNURL-pay discovery before requesting an invoice", async () => {
@@ -284,7 +310,6 @@ describe("LNURL-pay routing", () => {
     queryClientFetchQuery.mockImplementationOnce(async () => ({
       ...standardRoute,
       method: "ark",
-      destination: "ark1receiver",
       arkServerPubkey: "02abc",
     }));
     const mutation = useSend("lightning-address");
@@ -427,12 +452,11 @@ describe("LNURL-pay routing", () => {
     const route = {
       ...standardRoute,
       method: "ark",
-      destination: "ark1receiver",
-      arkServerPubkey: "02abc",
+      arkServerPubkey: ARK_SERVER_PUBKEY,
     };
     expoFetch.mockImplementation(() => ({
       ok: true,
-      json: async () => ({ ark: route.destination.toUpperCase() }),
+      json: async () => ({ ark: "ARK1RECEIVER" }),
     }));
     queryClientFetchQuery.mockImplementationOnce(async () => route);
     const mutation = useSend("lightning-address");
@@ -453,9 +477,62 @@ describe("LNURL-pay routing", () => {
       null,
       route.arkServerPubkey,
     );
-    expect(sendArkoorPayment).toHaveBeenCalledWith(route.destination.toUpperCase(), 2_000);
+    expect(validateArkoorPaymentAddress).toHaveBeenCalledWith("ARK1RECEIVER");
+    expect(sendArkoorPayment).toHaveBeenCalledWith("ARK1RECEIVER", 2_000);
     expect(payLightningInvoice).not.toHaveBeenCalled();
     expect(payLightningInvoiceWithOrigin).not.toHaveBeenCalled();
+  });
+
+  test("rejects an Ark route when the callback omits its destination", async () => {
+    const route = {
+      ...standardRoute,
+      method: "ark",
+      arkServerPubkey: "02abc",
+    };
+    expoFetch.mockImplementationOnce(async () => ({
+      json: async () => ({ pr: "lnbc1unexpectedinvoice" }),
+    }));
+    queryClientFetchQuery.mockImplementationOnce(async () => route);
+    const mutation = useSend("lightning-address");
+
+    await expect(
+      mutation.mutationFn({
+        destination: "receiver@example.com",
+        amountSat: 2_000,
+        comment: null,
+        confirmedLnurlPayMethod: "ark",
+      }),
+    ).rejects.toThrow("did not return the negotiated Ark address");
+
+    expect(validateArkoorPaymentAddress).not.toHaveBeenCalled();
+    expect(sendArkoorPayment).not.toHaveBeenCalled();
+  });
+
+  test("rejects an invalid Ark address returned by the callback", async () => {
+    const route = {
+      ...standardRoute,
+      method: "ark",
+      arkServerPubkey: "02abc",
+    };
+    expoFetch.mockImplementationOnce(async () => ({
+      json: async () => ({ ark: "ark1invalid" }),
+    }));
+    queryClientFetchQuery.mockImplementationOnce(async () => route);
+    validateArkoorPaymentAddress.mockImplementationOnce(async () =>
+      err(new Error("invalid address")),
+    );
+    const mutation = useSend("lightning-address");
+
+    await expect(
+      mutation.mutationFn({
+        destination: "receiver@example.com",
+        amountSat: 2_000,
+        comment: null,
+        confirmedLnurlPayMethod: "ark",
+      }),
+    ).rejects.toThrow("returned an invalid Ark address");
+
+    expect(sendArkoorPayment).not.toHaveBeenCalled();
   });
 
   test("keeps direct BOLT11 payments on the ordinary invoice API", async () => {

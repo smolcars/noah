@@ -257,9 +257,9 @@ pub struct LnurlpDefaultResponse {
     /// Optional payer identity fields supported by this callback.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payer_data: Option<LnurlPayPayerDataSpec>,
-    /// The user's Ark address when requested for a compatible Ark server.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ark: Option<String>,
+    /// Ark servers on which this recipient can receive a non-interactive payment.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ark_servers: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -286,12 +286,28 @@ pub struct LnurlpInvoiceResponse {
     pub ark: Option<String>,
 }
 
+fn bolt11_invoice_response(pr: String) -> LnurlpInvoiceResponse {
+    LnurlpInvoiceResponse {
+        pr,
+        routes: vec![],
+        ark: None,
+    }
+}
+
+fn ark_invoice_response(ark: String) -> LnurlpInvoiceResponse {
+    LnurlpInvoiceResponse {
+        pr: "".to_string(),
+        routes: vec![],
+        ark: Some(ark),
+    }
+}
+
 /// Defines the query parameters for an LNURL-pay request.
 #[derive(Deserialize)]
 pub struct LnurlpRequestQuery {
     /// The amount of the payment in millisatoshis.
     amount: Option<u64>,
-    /// The payer's Ark server pubkey, used to negotiate a compatible Ark address.
+    /// The Ark server selected from discovery, used to request a compatible Ark address.
     ark: Option<String>,
     /// Deprecated Noah-specific Ark capability signal.
     wallet: Option<String>,
@@ -423,24 +439,17 @@ fn is_unsafe_payer_character(character: char) -> bool {
         )
 }
 
-async fn negotiated_ark_address(
+async fn ark_address_for_selected_server(
     state: &AppState,
-    query: &LnurlpRequestQuery,
+    selected_server_pubkey: &str,
     ark_address: Option<&String>,
 ) -> Option<String> {
     let ark_address = ark_address?;
-
-    if let Some(requested_server_pubkey) = query.ark.as_deref() {
-        let configured_server_pubkey = state.ark_server_pubkey.read().await;
-        let matches_configured_server = configured_server_pubkey
-            .as_deref()
-            .is_some_and(|pubkey| pubkey.eq_ignore_ascii_case(requested_server_pubkey));
-
-        return matches_configured_server.then(|| ark_address.clone());
-    }
-
-    // Deprecated compatibility path. Remove after Noah clients have migrated to `ark`.
-    (query.wallet.as_deref() == Some("noahwallet")).then(|| ark_address.clone())
+    let configured_server_pubkey = state.ark_server_pubkey.read().await;
+    configured_server_pubkey
+        .as_deref()
+        .is_some_and(|pubkey| pubkey.eq_ignore_ascii_case(selected_server_pubkey))
+        .then(|| ark_address.clone())
 }
 
 /// Handles LNURL-pay requests.
@@ -493,24 +502,29 @@ pub async fn lnurlp_request(
         ])
         .to_string();
 
-        let ark = negotiated_ark_address(&state, &query, user.ark_address.as_ref()).await;
-        let supports_payer_data = ark.is_none();
+        let ark_servers = if user.ark_address.is_some() {
+            state
+                .ark_server_pubkey
+                .read()
+                .await
+                .iter()
+                .cloned()
+                .collect()
+        } else {
+            vec![]
+        };
         let response = LnurlpDefaultResponse {
             callback: format!("https://{}/.well-known/lnurlp/{}", lnurl_domain, username),
             min_sendable: LNURLP_MIN_SENDABLE,
             max_sendable: LNURLP_MAX_SENDABLE,
             metadata,
             tag: "payRequest".to_string(),
-            comment_allowed: if supports_payer_data {
-                COMMENT_ALLOWED_SIZE
-            } else {
-                0
-            },
-            payer_data: supports_payer_data.then_some(LnurlPayPayerDataSpec {
+            comment_allowed: COMMENT_ALLOWED_SIZE,
+            payer_data: Some(LnurlPayPayerDataSpec {
                 name: LnurlPayPayerDataFieldSpec { mandatory: false },
                 identifier: LnurlPayPayerDataFieldSpec { mandatory: false },
             }),
-            ark,
+            ark_servers,
         };
         return Ok(Json(
             serde_json::to_value(response).map_err(|e| ApiError::SerializeErr(e.to_string()))?,
@@ -539,9 +553,16 @@ pub async fn lnurlp_request(
         ));
     }
 
-    if let Some(ark_address) =
-        negotiated_ark_address(&state, &query, user.ark_address.as_ref()).await
-    {
+    if let Some(selected_server_pubkey) = query.ark.as_deref() {
+        let ark_address = ark_address_for_selected_server(
+            &state,
+            selected_server_pubkey,
+            user.ark_address.as_ref(),
+        )
+        .await
+        .ok_or_else(|| {
+            ApiError::InvalidArgument("Selected Ark payment route is unavailable.".to_string())
+        })?;
         if sensitive.as_ref().is_some_and(|Extension(sensitive)| {
             sensitive.payer_data.is_some() || sensitive.comment.is_some()
         }) {
@@ -549,11 +570,28 @@ pub async fn lnurlp_request(
                 "Payer metadata is not supported for Ark LNURL-pay callbacks".to_string(),
             ));
         }
-        let response = LnurlpInvoiceResponse {
-            pr: "".to_string(),
-            routes: vec![],
-            ark: Some(ark_address),
-        };
+        let response = ark_invoice_response(ark_address);
+        return Ok(Json(
+            serde_json::to_value(response).map_err(|e| ApiError::SerializeErr(e.to_string()))?,
+        ));
+    }
+
+    if query.wallet.as_deref() == Some("noahwallet")
+        && let Some(ark_address) = user.ark_address.clone()
+    {
+        if sensitive
+            .as_ref()
+            .is_some_and(|Extension(sensitive)| sensitive.payer_data.is_some())
+        {
+            return Err(ApiError::InvalidArgument(
+                "Payer metadata is not supported for Ark LNURL-pay callbacks".to_string(),
+            ));
+        }
+
+        // Deprecated compatibility for the released `wallet=noahwallet` callback contract.
+        // Those clients can include a LUD-12 comment that old servers silently ignored, so keep
+        // ignoring it until support for that legacy query contract is removed.
+        let response = ark_invoice_response(ark_address);
         return Ok(Json(
             serde_json::to_value(response).map_err(|e| ApiError::SerializeErr(e.to_string()))?,
         ));
@@ -659,11 +697,7 @@ pub async fn lnurlp_request(
         }
     };
 
-    let response = LnurlpInvoiceResponse {
-        pr: invoice,
-        routes: vec![],
-        ark: user.ark_address,
-    };
+    let response = bolt11_invoice_response(invoice);
     Ok(Json(
         serde_json::to_value(response).map_err(|e| ApiError::SerializeErr(e.to_string()))?,
     ))
@@ -952,8 +986,17 @@ pub async fn verify_email(
 }
 
 #[cfg(test)]
-mod lnurl_pay_payer_data_tests {
+mod lnurl_pay_tests {
     use super::*;
+
+    #[test]
+    fn bolt11_invoice_response_does_not_include_an_ark_route() {
+        let response = bolt11_invoice_response("lnbc1invoice".to_string());
+        assert_eq!(
+            serde_json::to_value(response).unwrap(),
+            serde_json::json!({"pr": "lnbc1invoice", "routes": []})
+        );
+    }
 
     #[test]
     fn accepts_direct_lud18_strings_and_normalizes_identity() {

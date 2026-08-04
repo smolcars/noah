@@ -27,7 +27,7 @@ export type LnurlPayRequestResponse = {
   metadata: string;
   tag: "payRequest";
   commentAllowed?: unknown;
-  ark?: string;
+  arkServers?: string[];
   payerData?: LnurlPayerDataRequirements;
 };
 
@@ -38,6 +38,27 @@ export type LnurlPayCallbackResponse = {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const normalizeArkServers = (value: unknown): string[] | undefined => {
+  if (!Array.isArray(value) || value.length === 0) {
+    return undefined;
+  }
+
+  const canonicalServers = new Set<string>();
+  for (const server of value) {
+    if (
+      typeof server !== "string" ||
+      !/^(02|03)[0-9a-f]{64}$/.test(server) ||
+      canonicalServers.has(server)
+    ) {
+      return undefined;
+    }
+
+    canonicalServers.add(server);
+  }
+
+  return [...canonicalServers];
+};
 
 const parseLnurlPayerDataRequirements = (
   value: unknown,
@@ -90,14 +111,11 @@ export const parseLnurlPayRequestResponse = (
     return err(new Error("The LNURL service returned an invalid payment request."));
   }
 
-  if (value.ark !== undefined && typeof value.ark !== "string") {
-    return err(new Error("The LNURL service returned an invalid Ark payment option."));
-  }
-
   const payerDataResult = parseLnurlPayerDataRequirements(value.payerData);
   if (payerDataResult.isErr()) {
     return err(payerDataResult.error);
   }
+  const arkServers = normalizeArkServers(value.arkServers);
 
   return ok({
     callback: value.callback,
@@ -106,7 +124,7 @@ export const parseLnurlPayRequestResponse = (
     metadata: value.metadata,
     tag: "payRequest",
     ...(value.commentAllowed !== undefined ? { commentAllowed: value.commentAllowed } : {}),
-    ...(value.ark !== undefined ? { ark: value.ark } : {}),
+    ...(arkServers !== undefined ? { arkServers } : {}),
     ...(payerDataResult.value !== undefined ? { payerData: payerDataResult.value } : {}),
   });
 };
@@ -236,6 +254,10 @@ export const parseLnurlPayCallbackResponse = (
   const pr = typeof value.pr === "string" ? value.pr.trim() : "";
   const ark = typeof value.ark === "string" ? value.ark.trim() : "";
 
+  if (pr && ark) {
+    return err(new Error("The LNURL service returned multiple payment options."));
+  }
+
   return ok({
     ...(pr ? { pr } : {}),
     ...(ark ? { ark } : {}),
@@ -278,21 +300,4 @@ export const validateLnurlPayInvoice = (
   }
 
   return ok(undefined);
-};
-
-export const validateMatchingArkAddress = (
-  returned: string | undefined,
-  expected: string,
-): Result<string, Error> => {
-  const returnedAddress = returned?.trim();
-  if (!returnedAddress) {
-    return err(new Error("The LNURL service did not return the negotiated Ark address."));
-  }
-
-  const expectedAddress = expected.trim();
-  if (!expectedAddress || returnedAddress.toLowerCase() !== expectedAddress.toLowerCase()) {
-    return err(new Error("The LNURL service returned a different Ark address."));
-  }
-
-  return ok(returnedAddress);
 };

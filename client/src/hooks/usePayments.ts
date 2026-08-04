@@ -43,7 +43,6 @@ import {
   parseLnurlPayRequestResponse,
   validateLnurlPayComment,
   validateLnurlPayInvoice,
-  validateMatchingArkAddress,
   type LnurlPayerData,
   type LnurlPayerDataRequirements,
   type LnurlPayerIdentity,
@@ -72,7 +71,6 @@ export type LnurlPayRoute = LnurlPayRouteBase &
   (
     | {
         method: "ark";
-        destination: string;
         arkServerPubkey: string;
       }
     | {
@@ -108,38 +106,34 @@ const fetchLnurlPayRequestResponse = async (url: URL): Promise<LnurlPayRequestRe
   return parsedResponse.value;
 };
 
-const lnurlPayRouteFromRequestResponse = async (
+const lnurlPayRouteFromRequestResponse = (
   response: LnurlPayRequestResponse,
   arkServerPubkey: string | null,
   origin: LightningPaymentOrigin,
-): Promise<LnurlPayRoute> => {
-  const routeDetails: LnurlPayRouteBase = {
+): LnurlPayRoute => {
+  const routeDetails = {
     callback: response.callback,
     metadata: response.metadata,
-    commentAllowed: normalizeLnurlPayCommentAllowed(response.commentAllowed),
-    payerData: response.payerData,
     minSendableMsat: response.minSendable,
     maxSendableMsat: response.maxSendable,
     origin,
   };
 
-  if (arkServerPubkey && response.ark) {
-    const validationResult = await validateArkoorPaymentAddress(response.ark);
-    if (validationResult.isOk()) {
-      return {
-        method: "ark",
-        destination: response.ark,
-        arkServerPubkey,
-        ...routeDetails,
-      };
-    }
-
-    log.w("Ignoring incompatible Ark address returned by LNURL-pay service", [
-      validationResult.error,
-    ]);
+  if (arkServerPubkey) {
+    return {
+      method: "ark",
+      arkServerPubkey,
+      commentAllowed: 0,
+      ...routeDetails,
+    };
   }
 
-  return { method: "lightning", ...routeDetails };
+  return {
+    method: "lightning",
+    commentAllowed: normalizeLnurlPayCommentAllowed(response.commentAllowed),
+    ...(response.payerData !== undefined ? { payerData: response.payerData } : {}),
+    ...routeDetails,
+  };
 };
 
 export const resolveLnurlPayRouteForLightningAddress = async (
@@ -156,28 +150,20 @@ export const resolveLnurlPayRouteForLightningAddress = async (
     value: parsed.normalizedAddress,
   };
   const lnurlEndpoint = new URL(`https://${parsed.domain}/.well-known/lnurlp/${parsed.username}`);
+  const response = await fetchLnurlPayRequestResponse(lnurlEndpoint);
   const arkInfoResult = await getArkInfo();
   if (arkInfoResult.isErr()) {
-    log.w("Unable to load Ark server info, using standard LNURL-pay discovery", [
-      arkInfoResult.error,
-    ]);
-    const response = await fetchLnurlPayRequestResponse(lnurlEndpoint);
+    log.w("Unable to load Ark server info, using Lightning for LNURL-pay", [arkInfoResult.error]);
     return lnurlPayRouteFromRequestResponse(response, null, origin);
   }
 
-  const arkLnurlEndpoint = new URL(lnurlEndpoint);
-  arkLnurlEndpoint.searchParams.set("ark", arkInfoResult.value.server_pubkey);
+  const currentArkServer = arkInfoResult.value.server_pubkey.trim();
+  const advertisedArkServer =
+    response.arkServers?.find(
+      (serverPubkey) => serverPubkey.toLowerCase() === currentArkServer.toLowerCase(),
+    ) ?? null;
 
-  let response: LnurlPayRequestResponse;
-  try {
-    response = await fetchLnurlPayRequestResponse(arkLnurlEndpoint);
-  } catch (error) {
-    log.w("Ark-aware LNURL-pay discovery failed, retrying standard LNURL-pay discovery", [error]);
-    const standardResponse = await fetchLnurlPayRequestResponse(lnurlEndpoint);
-    return lnurlPayRouteFromRequestResponse(standardResponse, null, origin);
-  }
-
-  return lnurlPayRouteFromRequestResponse(response, arkInfoResult.value.server_pubkey, origin);
+  return lnurlPayRouteFromRequestResponse(response, advertisedArkServer, origin);
 };
 
 const lnurlPayRouteQueryOptions = (lightningAddress: string | null) => ({
@@ -539,21 +525,17 @@ const sendLnurlPayCallbackPayment = async (
   const callbackResponse = callbackResponseResult.value;
 
   if (route.method === "ark") {
-    const matchingAddressResult = validateMatchingArkAddress(
-      callbackResponse.ark,
-      route.destination,
-    );
-    if (matchingAddressResult.isErr()) {
-      throw matchingAddressResult.error;
+    if (!callbackResponse.ark) {
+      throw new Error("The LNURL service did not return the negotiated Ark address.");
     }
 
-    const validationResult = await validateArkoorPaymentAddress(matchingAddressResult.value);
+    const validationResult = await validateArkoorPaymentAddress(callbackResponse.ark);
     if (validationResult.isErr()) {
       throw new Error("The recipient returned an invalid Ark address");
     }
 
     log.d("Paying lightning address via Ark after LNURL-pay callback");
-    const result = await sendArkoorPayment(matchingAddressResult.value, amountSat);
+    const result = await sendArkoorPayment(callbackResponse.ark, amountSat);
     if (result.isErr()) {
       throw result.error;
     }

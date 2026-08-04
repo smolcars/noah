@@ -28,7 +28,6 @@ const {
   parseLnurlPayRequestResponse,
   validateLnurlPayComment,
   validateLnurlPayInvoice,
-  validateMatchingArkAddress,
 } = await import("../../src/lib/lnurlPay");
 
 const MAINNET_INVOICE =
@@ -37,6 +36,8 @@ const TESTNET_INVOICE =
   "lntb2500n1pwxlkl5pp5g8hz28tlf950ps942lu3dknfete8yax2ctywpwjs872x9kngvvuqdqage5hyum5yp6x2um5yp5kuan0d93k2cqzyskdc5s2ltgm9kklz42x3e4tggdd9lcep2s9t2yk54gnfxg48wxushayrt52zjmua43gdnxmuc5s0c8g29ja9vnxs6x3kxgsha07htcacpmdyl64";
 const AMOUNTLESS_MAINNET_INVOICE =
   "lnbc1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6twvus8g6rfwvs8qun0dfjkxaq9qrsgq357wnc5r2ueh7ck6q93dj32dlqnls087fxdwk8qakdyafkq3yap9us6v52vjjsrvywa6rt52cm9r9zqt8r2t7mlcwspyetp5h2tztugp9lfyql";
+const ARK_SERVER_PUBKEY = `02${"ab".repeat(32)}`;
+const OTHER_ARK_SERVER_PUBKEY = `03${"cd".repeat(32)}`;
 
 const identity = {
   name: "  Alice  ",
@@ -54,6 +55,37 @@ describe("LNURL-pay requests", () => {
 
   test("accepts a valid payment request", () => {
     expect(parseLnurlPayRequestResponse(validRequest)._unsafeUnwrap()).toEqual(validRequest);
+  });
+
+  test("parses canonical Ark servers without accepting a discovery address", () => {
+    expect(
+      parseLnurlPayRequestResponse({
+        ...validRequest,
+        arkServers: [ARK_SERVER_PUBKEY, OTHER_ARK_SERVER_PUBKEY],
+        ark: "ark1ignored",
+      })._unsafeUnwrap(),
+    ).toEqual({
+      ...validRequest,
+      arkServers: [ARK_SERVER_PUBKEY, OTHER_ARK_SERVER_PUBKEY],
+    });
+  });
+
+  test("ignores the whole optional Ark extension when its list is unusable", () => {
+    for (const arkServers of [
+      null,
+      "not-an-array",
+      { server: ARK_SERVER_PUBKEY },
+      [],
+      [ARK_SERVER_PUBKEY.toUpperCase()],
+      [` ${ARK_SERVER_PUBKEY} `],
+      [ARK_SERVER_PUBKEY, ARK_SERVER_PUBKEY],
+      [ARK_SERVER_PUBKEY, "invalid"],
+      [ARK_SERVER_PUBKEY, 42],
+    ]) {
+      expect(
+        parseLnurlPayRequestResponse({ ...validRequest, arkServers })._unsafeUnwrap(),
+      ).toEqual(validRequest);
+    }
   });
 
   test("parses payer data requirements and preserves descriptor properties", () => {
@@ -297,19 +329,23 @@ describe("LNURL-pay callback responses", () => {
     expect(result._unsafeUnwrapErr().message).toBe("Payment is unavailable");
   });
 
-  test("rejects non-objects and returns only non-empty payment fields", () => {
+  test("rejects non-objects and returns only one non-empty payment field", () => {
     expect(parseLnurlPayCallbackResponse(null).isErr()).toBe(true);
     expect(parseLnurlPayCallbackResponse([]).isErr()).toBe(true);
     expect(
       parseLnurlPayCallbackResponse({
         pr: `  ${MAINNET_INVOICE}  `,
-        ark: "  ARK1ADDRESS  ",
         ignored: true,
       })._unsafeUnwrap(),
     ).toEqual({
       pr: MAINNET_INVOICE,
+    });
+    expect(parseLnurlPayCallbackResponse({ ark: "  ARK1ADDRESS  " })._unsafeUnwrap()).toEqual({
       ark: "ARK1ADDRESS",
     });
+    expect(
+      parseLnurlPayCallbackResponse({ pr: MAINNET_INVOICE, ark: "ARK1ADDRESS" }).isErr(),
+    ).toBe(true);
     expect(parseLnurlPayCallbackResponse({ pr: " ", ark: 1 })._unsafeUnwrap()).toEqual({});
   });
 });
@@ -336,9 +372,4 @@ describe("LNURL-pay callback validation", () => {
     expect(result._unsafeUnwrapErr().message).toContain("different network");
   });
 
-  test("accepts only the negotiated Ark address", () => {
-    expect(validateMatchingArkAddress("  ARK1ABC  ", "ark1abc")._unsafeUnwrap()).toBe("ARK1ABC");
-    expect(validateMatchingArkAddress(undefined, "ark1abc").isErr()).toBe(true);
-    expect(validateMatchingArkAddress("ark1def", "ark1abc").isErr()).toBe(true);
-  });
 });
