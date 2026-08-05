@@ -26,6 +26,7 @@ import type {
   ExitVtxoResult,
 } from "react-native-nitro-ark";
 import logger from "~/lib/log";
+import { runForegroundWalletOperation } from "~/lib/walletOperationCoordinator";
 
 const log = logger("useUnilateralExit");
 
@@ -65,80 +66,81 @@ const readResult = <T>(result: Result<T, Error>): T => {
 };
 
 export function useExitOverview() {
-  const { isInitialized } = useWalletStore();
+  const { isInitialized, isBackgroundJobRunning, isNativeBackgroundJobRunning } = useWalletStore();
 
   return useQuery({
     queryKey: ["exit-overview"],
-    queryFn: async (): Promise<ExitOverview> => {
-      log.d("Loading exit overview");
-      readResult(await syncExit());
+    queryFn: () =>
+      runForegroundWalletOperation(async (): Promise<ExitOverview> => {
+        log.d("Loading exit overview");
+        readResult(await syncExit());
 
-      const [
-        exitsResult,
-        claimableResult,
-        hasPendingResult,
-        pendingTotalResult,
-        allClaimableAtHeightResult,
-        spendableVtxosResult,
-        blockHeightResult,
-      ] = await Promise.all([
-        getExitVtxos(),
-        listClaimable(),
-        hasPendingExits(),
-        pendingExitTotal(),
-        allClaimableAtHeight(),
-        getVtxos(),
-        getBlockHeight(),
-      ]);
+        const [
+          exitsResult,
+          claimableResult,
+          hasPendingResult,
+          pendingTotalResult,
+          allClaimableAtHeightResult,
+          spendableVtxosResult,
+          blockHeightResult,
+        ] = await Promise.all([
+          getExitVtxos(),
+          listClaimable(),
+          hasPendingExits(),
+          pendingExitTotal(),
+          allClaimableAtHeight(),
+          getVtxos(),
+          getBlockHeight(),
+        ]);
 
-      const exits = readResult(exitsResult);
-      const spendableVtxos = readResult(spendableVtxosResult).filter(
-        (vtxo) => vtxo.state === "Spendable",
-      );
-      const statusResults = await Promise.all(
-        exits.map(async (exit) => ({
-          vtxoId: exit.vtxo_id,
-          result: await getExitStatus(exit.vtxo_id, true, false),
-        })),
-      );
+        const exits = readResult(exitsResult);
+        const spendableVtxos = readResult(spendableVtxosResult).filter(
+          (vtxo) => vtxo.state === "Spendable",
+        );
+        const statusResults = await Promise.all(
+          exits.map(async (exit) => ({
+            vtxoId: exit.vtxo_id,
+            result: await getExitStatus(exit.vtxo_id, true, false),
+          })),
+        );
 
-      const statuses = statusResults.reduce<Record<string, ExitStatusResult | undefined>>(
-        (acc, item) => {
-          acc[item.vtxoId] = readResult(item.result);
-          return acc;
-        },
-        {},
-      );
+        const statuses = statusResults.reduce<Record<string, ExitStatusResult | undefined>>(
+          (acc, item) => {
+            acc[item.vtxoId] = readResult(item.result);
+            return acc;
+          },
+          {},
+        );
 
-      const overview = {
-        exits,
-        statuses,
-        claimable: readResult(claimableResult),
-        spendableVtxos,
-        spendableVtxoCount: spendableVtxos.length,
-        spendableVtxoTotal: spendableVtxos.reduce((total, vtxo) => total + vtxo.amount, 0),
-        hasPending: readResult(hasPendingResult),
-        pendingTotal: readResult(pendingTotalResult),
-        allClaimableAtHeight: readResult(allClaimableAtHeightResult),
-        blockHeight: readResult(blockHeightResult),
-      };
+        const overview = {
+          exits,
+          statuses,
+          claimable: readResult(claimableResult),
+          spendableVtxos,
+          spendableVtxoCount: spendableVtxos.length,
+          spendableVtxoTotal: spendableVtxos.reduce((total, vtxo) => total + vtxo.amount, 0),
+          hasPending: readResult(hasPendingResult),
+          pendingTotal: readResult(pendingTotalResult),
+          allClaimableAtHeight: readResult(allClaimableAtHeightResult),
+          blockHeight: readResult(blockHeightResult),
+        };
 
-      log.d("Loaded exit overview", [
-        {
-          exit_count: overview.exits.length,
-          claimable_count: overview.claimable.length,
-          spendable_vtxo_count: overview.spendableVtxoCount,
-          spendable_vtxo_total_sat: overview.spendableVtxoTotal,
-          has_pending: overview.hasPending,
-          pending_total_sat: overview.pendingTotal,
-          all_claimable_at_height: overview.allClaimableAtHeight,
-          block_height: overview.blockHeight,
-        },
-      ]);
+        log.d("Loaded exit overview", [
+          {
+            exit_count: overview.exits.length,
+            claimable_count: overview.claimable.length,
+            spendable_vtxo_count: overview.spendableVtxoCount,
+            spendable_vtxo_total_sat: overview.spendableVtxoTotal,
+            has_pending: overview.hasPending,
+            pending_total_sat: overview.pendingTotal,
+            all_claimable_at_height: overview.allClaimableAtHeight,
+            block_height: overview.blockHeight,
+          },
+        ]);
 
-      return overview;
-    },
-    enabled: isInitialized,
+        return overview;
+      }),
+    enabled: isInitialized && !isBackgroundJobRunning && !isNativeBackgroundJobRunning,
     retry: false,
     refetchInterval: (query) => (query.state.data?.hasPending ? 60_000 : false),
   });
@@ -148,10 +150,11 @@ export function useStartWalletExit() {
   const { showAlert } = useAlert();
 
   return useMutation<void, Error>({
-    mutationFn: async () => {
-      log.i("User requested wallet exit start");
-      readResult(await startExitForEntireWallet());
-    },
+    mutationFn: () =>
+      runForegroundWalletOperation(async () => {
+        log.i("User requested wallet exit start");
+        readResult(await startExitForEntireWallet());
+      }),
     onSuccess: async () => {
       await invalidateExitQueries();
       showAlert({
@@ -170,10 +173,11 @@ export function useStartVtxoExit() {
   const { showAlert } = useAlert();
 
   return useMutation<void, Error, string[]>({
-    mutationFn: async (vtxoIds) => {
-      log.i("User requested selected VTXO exit start", [{ vtxo_ids: vtxoIds }]);
-      readResult(await startExitForVtxos(vtxoIds));
-    },
+    mutationFn: (vtxoIds) =>
+      runForegroundWalletOperation(async () => {
+        log.i("User requested selected VTXO exit start", [{ vtxo_ids: vtxoIds }]);
+        readResult(await startExitForVtxos(vtxoIds));
+      }),
     onSuccess: async () => {
       await invalidateExitQueries();
       showAlert({
@@ -192,10 +196,11 @@ export function useProgressExits() {
   const { showAlert } = useAlert();
 
   return useMutation<ExitProgressStatusResult[], Error, number | undefined>({
-    mutationFn: async (feeRateSatPerKvb) => {
-      log.i("User requested exit progress", [{ fee_rate_sat_per_kvb: feeRateSatPerKvb }]);
-      return readResult(await progressExits(feeRateSatPerKvb));
-    },
+    mutationFn: (feeRateSatPerKvb) =>
+      runForegroundWalletOperation(async () => {
+        log.i("User requested exit progress", [{ fee_rate_sat_per_kvb: feeRateSatPerKvb }]);
+        return readResult(await progressExits(feeRateSatPerKvb));
+      }),
     onSuccess: async () => {
       await invalidateExitQueries();
       showAlert({
@@ -214,10 +219,11 @@ export function useSyncExits() {
   const { showAlert } = useAlert();
 
   return useMutation<void, Error>({
-    mutationFn: async () => {
-      log.i("User requested exit sync");
-      readResult(await syncExit());
-    },
+    mutationFn: () =>
+      runForegroundWalletOperation(async () => {
+        log.i("User requested exit sync");
+        readResult(await syncExit());
+      }),
     onSuccess: async () => {
       await invalidateExitQueries();
     },
@@ -232,10 +238,11 @@ export function useClaimExits() {
   const { showAlert } = useAlert();
 
   return useMutation<ExitClaimResult, Error, ClaimExitsVariables>({
-    mutationFn: async (variables) => {
-      log.i("User requested exit claim", [{ vtxo_ids: variables.vtxoIds }]);
-      return readResult(await claimExits(variables));
-    },
+    mutationFn: (variables) =>
+      runForegroundWalletOperation(async () => {
+        log.i("User requested exit claim", [{ vtxo_ids: variables.vtxoIds }]);
+        return readResult(await claimExits(variables));
+      }),
     onSuccess: async (result) => {
       await invalidateExitQueries();
       showAlert({

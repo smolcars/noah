@@ -681,4 +681,61 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
     }
   }
+
+  @inline(__always)
+  public final func scheduleAndroidBackgroundSync() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.scheduleAndroidBackgroundSync()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+
+  @inline(__always)
+  public final func cancelAndroidBackgroundSync() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.cancelAndroidBackgroundSync()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+
+  @inline(__always)
+  public final func isAndroidBackgroundWalletJobRunning() -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.isAndroidBackgroundWalletJobRunning()
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
+    }
+  }
+
+  @inline(__always)
+  public final func tryAcquireAndroidBackgroundWalletJob(owner: std.string) -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.tryAcquireAndroidBackgroundWalletJob(owner: String(owner))
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
+    }
+  }
+
+  @inline(__always)
+  public final func releaseAndroidBackgroundWalletJob(owner: std.string) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.releaseAndroidBackgroundWalletJob(owner: String(owner))
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
 }

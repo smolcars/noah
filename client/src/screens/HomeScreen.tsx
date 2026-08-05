@@ -109,14 +109,15 @@ const HomeScreen = () => {
   }, [getRandomFact, safelyExecuteWhenReady, loadWallet]);
 
   const onRefresh = useCallback(async () => {
-    await safelyExecuteWhenReady(() => loadWallet());
-
-    await sync();
-    await onchainSync();
-    await queryClient.invalidateQueries({ queryKey: ["pending-rounds"] });
-    await refetch();
-    await updateWidget();
-    getRandomFact();
+    await safelyExecuteWhenReady(async () => {
+      await loadWallet();
+      await sync();
+      await onchainSync();
+      await queryClient.invalidateQueries({ queryKey: ["pending-rounds"] });
+      await refetch();
+      await updateWidget();
+      getRandomFact();
+    });
   }, [refetch, getRandomFact, safelyExecuteWhenReady, loadWallet]);
 
   const openHistory = () => {

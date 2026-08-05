@@ -1,0 +1,2 @@
+-keep class com.margelo.nitro.noahtools.NoahVtxoRefreshWorker { *; }
+-keep class com.margelo.nitro.noahtools.NoahPushMessageWorker { *; }

@@ -40,7 +40,7 @@ import {
   ARK_DATA_PATH,
   CACHES_DIRECTORY_PATH,
   DOCUMENT_DIRECTORY_PATH,
-  shouldUseUnifiedPush,
+  PLATFORM,
 } from "../constants";
 import {
   clearMnemonic,
@@ -111,7 +111,7 @@ const createWalletFromMnemonic = async (mnemonic: string): Promise<Result<void, 
     return err(setMnemonicResult.error);
   }
 
-  if (shouldUseUnifiedPush()) {
+  if (PLATFORM === "android") {
     const storeNativeResult = await ResultAsync.fromPromise(
       storeNativeMnemonic(mnemonic),
       (e) => e as Error,
@@ -158,7 +158,7 @@ export const restoreWallet = async (mnemonic: string): Promise<Result<boolean, E
     return err(setResult.error);
   }
 
-  if (shouldUseUnifiedPush()) {
+  if (PLATFORM === "android") {
     const storeNativeResult = await ResultAsync.fromPromise(
       storeNativeMnemonic(mnemonic),
       (e) => e as Error,
@@ -570,7 +570,7 @@ export const clearStaleKeychain = async (): Promise<Result<void, Error>> => {
     return err(mnemonicResetResult.error);
   }
 
-  if (shouldUseUnifiedPush()) {
+  if (PLATFORM === "android") {
     const nativeResetResult = await ResultAsync.fromPromise(
       clearNativeMnemonic(),
       (e) => e as Error,

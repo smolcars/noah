@@ -7,6 +7,7 @@ import { getVtxos, fetchOnchainBalance, fetchOffchainBalance } from "~/lib/walle
 import { getBlockHeight } from "~/hooks/useMarketData";
 import { calculateBalances, type BalanceData } from "~/lib/balanceUtils";
 import { getWalletRefreshExpiryThreshold } from "~/lib/walletConfig";
+import { runForegroundWalletOperation } from "~/lib/walletOperationCoordinator";
 
 const log = logger("useWidget");
 
@@ -32,7 +33,7 @@ export function useWidget(balanceData: BalanceData | null) {
       return;
     }
 
-    updateWidget(balanceData);
+    void runForegroundWalletOperation(() => updateWidget(balanceData));
   }, [balanceData]);
 }
 

@@ -54,6 +54,8 @@ interface WalletState {
   isWalletSuspended: boolean;
   /** Flag indicating if a background push notification job is currently running */
   isBackgroundJobRunning: boolean;
+  /** Ephemeral status for Android WorkManager and native push wallet jobs */
+  isNativeBackgroundJobRunning: boolean;
   /** Timestamp (Date.now()) when the current background job started, used to detect stale flags */
   backgroundJobStartTime: number | null;
   finishOnboarding: () => void;
@@ -66,6 +68,7 @@ interface WalletState {
   setDebugModeEnabled: (enabled: boolean) => void;
   setWalletSuspended: (suspended: boolean) => void;
   setBackgroundJobRunning: (running: boolean) => void;
+  setNativeBackgroundJobRunning: (running: boolean) => void;
   clearStaleBackgroundJobFlag: () => void;
   reset: () => void;
 }
@@ -80,6 +83,7 @@ const initialState = {
   isDebugModeEnabled: false,
   isWalletSuspended: false,
   isBackgroundJobRunning: false,
+  isNativeBackgroundJobRunning: false,
   backgroundJobStartTime: null,
 };
 
@@ -111,6 +115,7 @@ export const useWalletStore = create<WalletState>()(
           isBackgroundJobRunning: running,
           backgroundJobStartTime: running ? Date.now() : null,
         }),
+      setNativeBackgroundJobRunning: (running) => set({ isNativeBackgroundJobRunning: running }),
       /**
        * Clears the background job flag if it has been set for too long (>60s).
        *
