@@ -4,6 +4,7 @@ import logger from "~/lib/log";
 import { loadWalletIfNeeded } from "~/lib/walletApi";
 import { BackupService } from "~/lib/backupService";
 import { registerPushNotificationsForServer } from "~/lib/server";
+import { runForegroundWalletOperation } from "~/lib/walletOperationCoordinator";
 
 const log = logger("usePushNotifications");
 
@@ -16,9 +17,10 @@ export const usePushNotifications = (isReady: boolean) => {
         return;
       }
 
-      await loadWalletIfNeeded();
-
-      const registerResult = await registerPushNotificationsForServer();
+      const registerResult = await runForegroundWalletOperation(async () => {
+        await loadWalletIfNeeded();
+        return registerPushNotificationsForServer();
+      });
       if (registerResult.isErr()) {
         log.w("Failed to register for push notifications", [registerResult.error]);
         return;

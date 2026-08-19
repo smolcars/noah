@@ -7,6 +7,7 @@ import { useBackupCoordinator } from "~/hooks/useBackupCoordinator";
 import { reportLastLoginForServer } from "~/lib/server";
 import logger from "~/lib/log";
 import { AutoBoardingService } from "~/components/AutoBoardingService";
+import { useAndroidBackgroundSync } from "~/hooks/useAndroidBackgroundSync";
 
 const log = logger("AppServices");
 
@@ -19,6 +20,7 @@ const AppServices = memo(() => {
   useMailboxAuthorization(isReady);
   usePushNotifications(isReady);
   useBackupCoordinator(isReady);
+  useAndroidBackgroundSync(isReady);
 
   useEffect(() => {
     setIsReady(true);

@@ -14,6 +14,7 @@ import logger from "~/lib/log";
 import { cn } from "~/lib/utils";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { useTransactionStore } from "~/store/transactionStore";
+import { runForegroundWalletOperation } from "~/lib/walletOperationCoordinator";
 
 const log = logger("AutoBoardingService");
 
@@ -147,10 +148,12 @@ export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) 
       `Confirmed onchain balance: ${confirmedOnchainBalance} sats`,
     ]);
 
-    buildAutoBoardPlan({
-      arkInfo,
-      confirmedOnchainBalanceSat: confirmedOnchainBalance,
-    })
+    runForegroundWalletOperation(() =>
+      buildAutoBoardPlan({
+        arkInfo,
+        confirmedOnchainBalanceSat: confirmedOnchainBalance,
+      }),
+    )
       .then((planResult) => {
         if (!isActive) {
           return;

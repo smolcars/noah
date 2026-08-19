@@ -158,6 +158,26 @@ abstract class HybridNoahToolsSpec: HybridObject() {
   @Keep
   abstract fun clearNativeEsploraEndpoint(): Promise<Unit>
 
+  @DoNotStrip
+  @Keep
+  abstract fun scheduleAndroidBackgroundSync(): Unit
+
+  @DoNotStrip
+  @Keep
+  abstract fun cancelAndroidBackgroundSync(): Unit
+
+  @DoNotStrip
+  @Keep
+  abstract fun isAndroidBackgroundWalletJobRunning(): Boolean
+
+  @DoNotStrip
+  @Keep
+  abstract fun tryAcquireAndroidBackgroundWalletJob(owner: String): Boolean
+
+  @DoNotStrip
+  @Keep
+  abstract fun releaseAndroidBackgroundWalletJob(owner: String): Unit
+
   // Default implementation of `HybridObject.toString()`
   override fun toString(): String {
     return "[HybridObject NoahTools]"

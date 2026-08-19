@@ -5,6 +5,7 @@ import logger from "~/lib/log";
 import { useBackupStore } from "~/store/backupStore";
 import { useServerStore } from "~/store/serverStore";
 import { useWalletStore } from "~/store/walletStore";
+import { runForegroundWalletOperation } from "~/lib/walletOperationCoordinator";
 
 const BACKUP_DEBOUNCE_MS = 5_000;
 const BACKUP_RETRY_INITIAL_MS = 15_000;
@@ -70,14 +71,8 @@ const scheduleBackupRetry = () => {
     return;
   }
 
-  const baseDelay = Math.min(
-    BACKUP_RETRY_INITIAL_MS * 2 ** retryAttempt,
-    BACKUP_RETRY_MAX_MS,
-  );
-  const delay = Math.min(
-    Math.round(baseDelay * (0.8 + Math.random() * 0.4)),
-    BACKUP_RETRY_MAX_MS,
-  );
+  const baseDelay = Math.min(BACKUP_RETRY_INITIAL_MS * 2 ** retryAttempt, BACKUP_RETRY_MAX_MS);
+  const delay = Math.min(Math.round(baseDelay * (0.8 + Math.random() * 0.4)), BACKUP_RETRY_MAX_MS);
   retryAttempt = Math.min(retryAttempt + 1, 10);
   retryTimer = setTimeout(() => {
     retryTimer = null;
@@ -89,14 +84,18 @@ const scheduleBackupRetry = () => {
 const performBackupPass = async (
   passGeneration: number,
   requireEnabled: boolean,
+  isBackgroundJob: boolean,
 ): Promise<Result<void, Error>> => {
   const backupStore = useBackupStore.getState();
 
   const service = new BackupService();
-  const result = await service.performBackup(
-    backupStore.lastUploadedSnapshotSha256,
-    () => useBackupStore.getState().setBackupInProgress(),
-  );
+  const performBackup = () =>
+    service.performBackup(backupStore.lastUploadedSnapshotSha256, () =>
+      useBackupStore.getState().setBackupInProgress(),
+    );
+  const result = await (isBackgroundJob
+    ? performBackup()
+    : runForegroundWalletOperation(performBackup));
   if (result.isErr()) {
     const safeMessage = redactSensitiveErrorMessage(result.error);
     useBackupStore.getState().setBackupFailed(safeMessage);
@@ -126,7 +125,7 @@ const performBackupPass = async (
   return ok(undefined);
 };
 
-async function runBackupPass(): Promise<Result<void, Error>> {
+async function runBackupPass(isBackgroundJob = false): Promise<Result<void, Error>> {
   if (backupInFlight) {
     return backupInFlight;
   }
@@ -139,7 +138,7 @@ async function runBackupPass(): Promise<Result<void, Error>> {
 
   const passGeneration = requestedGeneration;
   pendingRequireEnabled = true;
-  backupInFlight = performBackupPass(passGeneration, requireEnabled);
+  backupInFlight = performBackupPass(passGeneration, requireEnabled, isBackgroundJob);
   try {
     return await backupInFlight;
   } finally {
@@ -191,9 +190,10 @@ export const flushBackup = async (
   clearRetryTimer();
   log.d("Immediate backup requested", [reason, targetGeneration]);
 
-  let result = await runBackupPass();
+  const isBackgroundJob = reason === "push";
+  let result = await runBackupPass(isBackgroundJob);
   while (result.isOk() && completedGeneration < targetGeneration) {
-    result = await runBackupPass();
+    result = await runBackupPass(isBackgroundJob);
   }
   return result;
 };

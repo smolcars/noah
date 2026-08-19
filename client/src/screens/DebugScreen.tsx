@@ -26,10 +26,8 @@ import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { copyToClipboard } from "~/lib/clipboardUtils";
 import { ConfirmationDialog } from "~/components/ConfirmationDialog";
 import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
-import {
-  NativeNoahPicker,
-  type NativeNoahPickerOption,
-} from "~/components/ui/NativeNoahPicker";
+import { NativeNoahPicker, type NativeNoahPickerOption } from "~/components/ui/NativeNoahPicker";
+import { runForegroundWalletOperation } from "~/lib/walletOperationCoordinator";
 
 const log = logger("DebugScreen");
 
@@ -289,7 +287,9 @@ const DebugScreen = () => {
     setIsLoading(true);
     setResultState(null);
 
-    const result = await executeAction(selectedAction, inputValue);
+    const result = await runForegroundWalletOperation(() =>
+      executeAction(selectedAction, inputValue),
+    );
 
     setIsLoading(false);
 
@@ -314,7 +314,7 @@ const DebugScreen = () => {
     setIsLoading(true);
     setResultState(null);
 
-    const result = await executeAction("dropVtxo", inputValue);
+    const result = await runForegroundWalletOperation(() => executeAction("dropVtxo", inputValue));
 
     setIsLoading(false);
     setDropConfirmText("");
