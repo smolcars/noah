@@ -7,6 +7,7 @@ import type { OnboardingStackParamList } from "~/Navigators";
 import { Text } from "~/components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { useAlert } from "~/contexts/AlertProvider";
+import { useWalletStore } from "~/store/walletStore";
 import {
   openBatteryOptimizationSettings,
   shouldPromptForBatteryOptimization,
@@ -27,33 +28,45 @@ const highlights = [
   },
 ];
 
-const BatteryOptimizationScreen = () => {
+type BatteryOptimizationScreenProps = {
+  onContinue?: () => void;
+};
+
+const BatteryOptimizationScreen = ({ onContinue }: BatteryOptimizationScreenProps) => {
   const navigation = useNavigation<NativeStackNavigationProp<OnboardingStackParamList>>();
+  const markBatteryOptimizationPromptShown = useWalletStore(
+    (state) => state.markBatteryOptimizationPromptShown,
+  );
   const { showAlert } = useAlert();
   const [isPromptApplicable, setIsPromptApplicable] = useState(false);
 
-  const continueToLightningAddress = useCallback(() => {
+  const continueFlow = useCallback(() => {
+    markBatteryOptimizationPromptShown();
+    if (onContinue) {
+      onContinue();
+      return;
+    }
     navigation.replace("LightningAddress", { fromOnboarding: true });
-  }, [navigation]);
+  }, [markBatteryOptimizationPromptShown, onContinue, navigation]);
 
   useEffect(() => {
     if (shouldPromptForBatteryOptimization()) {
       setIsPromptApplicable(true);
       return;
     }
-    continueToLightningAddress();
-  }, [continueToLightningAddress]);
+    continueFlow();
+  }, [continueFlow]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active" && !shouldPromptForBatteryOptimization()) {
-        continueToLightningAddress();
+        continueFlow();
       }
     });
     return () => {
       subscription.remove();
     };
-  }, [continueToLightningAddress]);
+  }, [continueFlow]);
 
   const handleOpenSettings = () => {
     const opened = openBatteryOptimizationSettings();
@@ -67,7 +80,7 @@ const BatteryOptimizationScreen = () => {
   };
 
   const handleSkip = () => {
-    continueToLightningAddress();
+    continueFlow();
   };
 
   if (!isPromptApplicable) {

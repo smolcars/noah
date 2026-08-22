@@ -56,6 +56,8 @@ interface WalletState {
   isBackgroundJobRunning: boolean;
   /** Timestamp (Date.now()) when the current background job started, used to detect stale flags */
   backgroundJobStartTime: number | null;
+  /** Whether the battery optimization prompt has been shown once */
+  hasSeenBatteryOptimizationPrompt: boolean;
   finishOnboarding: () => void;
   setWalletLoaded: () => void;
   setWalletUnloaded: () => void;
@@ -67,6 +69,7 @@ interface WalletState {
   setWalletSuspended: (suspended: boolean) => void;
   setBackgroundJobRunning: (running: boolean) => void;
   clearStaleBackgroundJobFlag: () => void;
+  markBatteryOptimizationPromptShown: () => void;
   reset: () => void;
 }
 
@@ -81,6 +84,7 @@ const initialState = {
   isWalletSuspended: false,
   isBackgroundJobRunning: false,
   backgroundJobStartTime: null,
+  hasSeenBatteryOptimizationPrompt: false,
 };
 
 export const useWalletStore = create<WalletState>()(
@@ -146,6 +150,8 @@ export const useWalletStore = create<WalletState>()(
           }
           return state;
         }),
+      markBatteryOptimizationPromptShown: () =>
+        set({ hasSeenBatteryOptimizationPrompt: true }),
       reset: () => set(initialState),
     }),
     {
@@ -158,6 +164,7 @@ export const useWalletStore = create<WalletState>()(
         isBiometricsEnabled: state.isBiometricsEnabled,
         isDebugModeEnabled: state.isDebugModeEnabled,
         isWalletSuspended: state.isWalletSuspended,
+        hasSeenBatteryOptimizationPrompt: state.hasSeenBatteryOptimizationPrompt,
       }),
     },
   ),
