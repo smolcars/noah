@@ -160,6 +160,14 @@ export function isGooglePlayServicesAvailable(): boolean {
   return NoahToolsHybridObject.isGooglePlayServicesAvailable();
 }
 
+export function isBatteryOptimizationEnabled(): boolean {
+  return NoahToolsHybridObject.isBatteryOptimizationEnabled();
+}
+
+export function openBatteryOptimizationSettings(): boolean {
+  return NoahToolsHybridObject.openBatteryOptimizationSettings();
+}
+
 export function registerUnifiedPush(): void {
   NoahToolsHybridObject.registerUnifiedPush();
 }

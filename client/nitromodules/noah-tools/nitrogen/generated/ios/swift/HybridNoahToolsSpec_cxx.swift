@@ -84,7 +84,7 @@ open class HybridNoahToolsSpec_cxx {
     }
   }
 
-
+  
 
   /**
    * Get the memory size of the Swift class (plus size of any other allocations)
@@ -274,7 +274,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
     }
   }
-
+  
   @inline(__always)
   public final func rollbackWalletSnapshotInstall(walletDataPath: std.string, rollbackPath: std.string) -> bridge.Result_std__shared_ptr_Promise_void___ {
     do {
@@ -536,6 +536,30 @@ open class HybridNoahToolsSpec_cxx {
   }
   
   @inline(__always)
+  public final func isBatteryOptimizationEnabled() -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.isBatteryOptimizationEnabled()
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func openBatteryOptimizationSettings() -> bridge.Result_bool_ {
+    do {
+      let __result = try self.__implementation.openBatteryOptimizationSettings()
+      let __resultCpp = __result
+      return bridge.create_Result_bool_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_bool_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
   public final func registerUnifiedPush() -> bridge.Result_void_ {
     do {
       try self.__implementation.registerUnifiedPush()
@@ -624,7 +648,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
     }
   }
-
+  
   @inline(__always)
   public final func clearNativeMnemonic() -> bridge.Result_std__shared_ptr_Promise_void___ {
     do {
@@ -643,7 +667,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
     }
   }
-
+  
   @inline(__always)
   public final func storeNativeEsploraEndpoint(endpoint: std.string) -> bridge.Result_std__shared_ptr_Promise_void___ {
     do {
@@ -662,7 +686,7 @@ open class HybridNoahToolsSpec_cxx {
       return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
     }
   }
-
+  
   @inline(__always)
   public final func clearNativeEsploraEndpoint() -> bridge.Result_std__shared_ptr_Promise_void___ {
     do {

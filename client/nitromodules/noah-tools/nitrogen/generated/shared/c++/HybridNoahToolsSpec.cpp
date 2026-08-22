@@ -38,6 +38,8 @@ namespace margelo::nitro::noahtools {
       prototype.registerHybridMethod("isAudioPlaying", &HybridNoahToolsSpec::isAudioPlaying);
       prototype.registerHybridMethod("updateWidgetData", &HybridNoahToolsSpec::updateWidgetData);
       prototype.registerHybridMethod("isGooglePlayServicesAvailable", &HybridNoahToolsSpec::isGooglePlayServicesAvailable);
+      prototype.registerHybridMethod("isBatteryOptimizationEnabled", &HybridNoahToolsSpec::isBatteryOptimizationEnabled);
+      prototype.registerHybridMethod("openBatteryOptimizationSettings", &HybridNoahToolsSpec::openBatteryOptimizationSettings);
       prototype.registerHybridMethod("registerUnifiedPush", &HybridNoahToolsSpec::registerUnifiedPush);
       prototype.registerHybridMethod("getUnifiedPushEndpoint", &HybridNoahToolsSpec::getUnifiedPushEndpoint);
       prototype.registerHybridMethod("getUnifiedPushDistributors", &HybridNoahToolsSpec::getUnifiedPushDistributors);
