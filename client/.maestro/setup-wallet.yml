@@ -15,6 +15,10 @@ appId: com.noahwallet.regtest
 - assertVisible: "Emergency Email"
 - tapOn: "Continue without email"
 
+# Battery optimization prompt (Android)
+- assertVisible: "Disable battery optimization"
+- tapOn: "Skip"
+
 # Lightning Address screen
 - extendedWaitUntil:
     visible: "Choose your Lightning Address"

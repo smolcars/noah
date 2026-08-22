@@ -1,5 +1,4 @@
 import { Platform } from "react-native";
-import * as Device from "expo-device";
 import {
   isBatteryOptimizationEnabled as nativeIsBatteryOptimizationEnabled,
   openBatteryOptimizationSettings as nativeOpenBatteryOptimizationSettings,
@@ -14,7 +13,5 @@ export function openBatteryOptimizationSettings(): boolean {
 }
 
 export function shouldPromptForBatteryOptimization(): boolean {
-  return (
-    Platform.OS === "android" && Device.isDevice && isBatteryOptimizationEnabled()
-  );
+  return Platform.OS === "android" && isBatteryOptimizationEnabled();
 }
