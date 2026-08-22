@@ -318,8 +318,6 @@ pub struct LnurlpRequestQuery {
     amount: Option<u64>,
     /// The payer's Ark server pubkey, used to negotiate a compatible Ark address.
     ark: Option<String>,
-    /// Deprecated Noah-specific Ark capability signal.
-    wallet: Option<String>,
 }
 
 async fn negotiated_ark_address(
@@ -340,8 +338,7 @@ async fn negotiated_ark_address(
         return matches_configured_server.then(|| ark_address.clone());
     }
 
-    // Deprecated compatibility path. Remove after Noah clients have migrated to `ark`.
-    (query.wallet.as_deref() == Some("noahwallet")).then(|| ark_address.clone())
+    None
 }
 
 /// Handles LNURL-pay requests.

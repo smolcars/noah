@@ -302,14 +302,14 @@ async fn test_lnurlp_request_omits_address_for_different_ark_server() {
 
 #[tracing_test::traced_test]
 #[tokio::test]
-async fn test_lnurlp_request_supports_legacy_noah_wallet_parameter() {
+async fn test_lnurlp_request_ignores_deprecated_wallet_parameter() {
     let (app, app_state, _guard) = setup_public_test_app().await;
     let (_, ark_address) = test_ark_address(0x11);
 
     sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, $3)")
         .bind("test_pubkey")
         .bind("test@localhost")
-        .bind(&ark_address)
+        .bind(ark_address)
         .execute(&app_state.db_pool)
         .await
         .unwrap();
@@ -330,7 +330,9 @@ async fn test_lnurlp_request_supports_legacy_noah_wallet_parameter() {
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let res: LnurlpDefaultResponse = serde_json::from_slice(&body).unwrap();
 
-    assert_eq!(res.ark.as_deref(), Some(ark_address.as_str()));
+    assert_eq!(res.tag, "payRequest");
+    assert_eq!(res.callback, "https://localhost/.well-known/lnurlp/test");
+    assert_eq!(res.ark, None);
 }
 
 #[tracing_test::traced_test]
