@@ -55,6 +55,7 @@ import UnilateralExitScreen from "~/screens/UnilateralExitScreen";
 import ExitVtxoDetailScreen from "~/screens/ExitVtxoDetailScreen";
 import PushNotificationsRequiredScreen from "~/screens/PushNotificationsRequiredScreen";
 import UnifiedPushScreen from "~/screens/UnifiedPushScreen";
+import BatteryOptimizationScreen from "~/screens/BatteryOptimizationScreen";
 import {
   getPushPermissionStatus,
   registerForPushNotificationsAsync,
@@ -102,6 +103,7 @@ export type OnboardingStackParamList = {
   EmailVerification: { fromSettings?: boolean } | undefined;
   LightningAddress: { fromOnboarding: boolean };
   UnifiedPush: { fromOnboarding?: boolean } | undefined;
+  BatteryOptimization: undefined;
 };
 
 export type HomeStackParamList = {
@@ -281,6 +283,11 @@ const OnboardingStackScreen = () => (
     <OnboardingStack.Screen
       name="UnifiedPush"
       component={UnifiedPushScreen}
+      options={{ animation: "default" }}
+    />
+    <OnboardingStack.Screen
+      name="BatteryOptimization"
+      component={BatteryOptimizationScreen}
       options={{ animation: "default" }}
     />
   </OnboardingStack.Navigator>

@@ -89,6 +89,8 @@ namespace margelo::nitro::noahtools {
       virtual bool isAudioPlaying() = 0;
       virtual void updateWidgetData(double totalBalance, double onchainBalance, double offchainBalance, double pendingBalance, double closestExpiryBlocks, double expiryThreshold, const std::string& appGroup) = 0;
       virtual bool isGooglePlayServicesAvailable() = 0;
+      virtual bool isBatteryOptimizationEnabled() = 0;
+      virtual bool openBatteryOptimizationSettings() = 0;
       virtual void registerUnifiedPush() = 0;
       virtual std::string getUnifiedPushEndpoint() = 0;
       virtual std::vector<UnifiedPushDistributor> getUnifiedPushDistributors() = 0;

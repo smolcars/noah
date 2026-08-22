@@ -354,6 +354,16 @@ namespace margelo::nitro::noahtools {
     auto __result = method(_javaPart);
     return static_cast<bool>(__result);
   }
+  bool JHybridNoahToolsSpec::isBatteryOptimizationEnabled() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("isBatteryOptimizationEnabled");
+    auto __result = method(_javaPart);
+    return static_cast<bool>(__result);
+  }
+  bool JHybridNoahToolsSpec::openBatteryOptimizationSettings() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("openBatteryOptimizationSettings");
+    auto __result = method(_javaPart);
+    return static_cast<bool>(__result);
+  }
   void JHybridNoahToolsSpec::registerUnifiedPush() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("registerUnifiedPush");
     method(_javaPart);

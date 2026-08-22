@@ -158,6 +158,16 @@ class NoahTools: HybridNoahToolsSpec {
         return false
     }
 
+    func isBatteryOptimizationEnabled() throws -> Bool {
+        // Battery optimization is Android-only
+        return false
+    }
+
+    func openBatteryOptimizationSettings() throws -> Bool {
+        // Battery optimization is Android-only
+        return false
+    }
+
     func registerUnifiedPush() throws {
         // UnifiedPush is Android-only, no-op on iOS
     }
