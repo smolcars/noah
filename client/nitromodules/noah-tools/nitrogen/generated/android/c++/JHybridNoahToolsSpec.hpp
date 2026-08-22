@@ -78,6 +78,8 @@ namespace margelo::nitro::noahtools {
     bool isAudioPlaying() override;
     void updateWidgetData(double totalBalance, double onchainBalance, double offchainBalance, double pendingBalance, double closestExpiryBlocks, double expiryThreshold, const std::string& appGroup) override;
     bool isGooglePlayServicesAvailable() override;
+    bool isBatteryOptimizationEnabled() override;
+    bool openBatteryOptimizationSettings() override;
     void registerUnifiedPush() override;
     std::string getUnifiedPushEndpoint() override;
     std::vector<UnifiedPushDistributor> getUnifiedPushDistributors() override;

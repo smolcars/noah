@@ -37,6 +37,8 @@ public protocol HybridNoahToolsSpec_protocol: HybridObject {
   func isAudioPlaying() throws -> Bool
   func updateWidgetData(totalBalance: Double, onchainBalance: Double, offchainBalance: Double, pendingBalance: Double, closestExpiryBlocks: Double, expiryThreshold: Double, appGroup: String) throws -> Void
   func isGooglePlayServicesAvailable() throws -> Bool
+  func isBatteryOptimizationEnabled() throws -> Bool
+  func openBatteryOptimizationSettings() throws -> Bool
   func registerUnifiedPush() throws -> Void
   func getUnifiedPushEndpoint() throws -> String
   func getUnifiedPushDistributors() throws -> [UnifiedPushDistributor]

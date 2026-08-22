@@ -97,6 +97,8 @@ export interface NoahTools extends HybridObject<{ ios: "swift"; android: "kotlin
 
   // Android methods only!
   isGooglePlayServicesAvailable(): boolean;
+  isBatteryOptimizationEnabled(): boolean;
+  openBatteryOptimizationSettings(): boolean;
   registerUnifiedPush(): void;
   getUnifiedPushEndpoint(): string;
   getUnifiedPushDistributors(): UnifiedPushDistributor[];

@@ -19,6 +19,7 @@ import { useServerRegistrationMutation } from "~/hooks/useServerRegistration";
 import { useServerStore } from "~/store/serverStore";
 import type { OnboardingStackParamList, SettingsStackParamList } from "../Navigators";
 import { shouldUseUnifiedPush } from "~/constants";
+import { shouldPromptForBatteryOptimization } from "~/lib/batteryOptimization";
 import logger from "~/lib/log";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
@@ -78,6 +79,8 @@ const EmailVerificationScreen = () => {
   const navigateToNextOnboardingStep = useCallback(() => {
     if (shouldUseUnifiedPush()) {
       navigation.navigate("UnifiedPush", { fromOnboarding: true });
+    } else if (shouldPromptForBatteryOptimization()) {
+      navigation.navigate("BatteryOptimization");
     } else {
       navigation.navigate("LightningAddress", { fromOnboarding: true });
     }

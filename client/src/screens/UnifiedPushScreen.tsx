@@ -93,7 +93,7 @@ const UnifiedPushScreen = () => {
 
   const handleSkip = () => {
     if (fromOnboarding) {
-      navigation.navigate("LightningAddress", { fromOnboarding: true });
+      navigation.navigate("BatteryOptimization");
     } else {
       navigation.goBack();
     }
@@ -101,7 +101,7 @@ const UnifiedPushScreen = () => {
 
   const handleContinue = () => {
     if (fromOnboarding) {
-      navigation.navigate("LightningAddress", { fromOnboarding: true });
+      navigation.navigate("BatteryOptimization");
     } else {
       navigation.goBack();
     }

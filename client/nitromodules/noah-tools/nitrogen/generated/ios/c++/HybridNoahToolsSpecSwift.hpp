@@ -263,6 +263,22 @@ namespace margelo::nitro::noahtools {
       auto __value = std::move(__result.value());
       return __value;
     }
+    inline bool isBatteryOptimizationEnabled() override {
+      auto __result = _swiftPart.isBatteryOptimizationEnabled();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline bool openBatteryOptimizationSettings() override {
+      auto __result = _swiftPart.openBatteryOptimizationSettings();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
     inline void registerUnifiedPush() override {
       auto __result = _swiftPart.registerUnifiedPush();
       if (__result.hasError()) [[unlikely]] {
