@@ -66,18 +66,6 @@ const BatteryOptimizationScreen = () => {
     }
   };
 
-  const handleContinue = () => {
-    if (shouldPromptForBatteryOptimization()) {
-      showAlert({
-        title: "Battery optimization is still enabled",
-        description:
-          "Push notifications may be delayed while Noah is in the background. You can still continue.",
-      });
-      return;
-    }
-    continueToLightningAddress();
-  };
-
   const handleSkip = () => {
     continueToLightningAddress();
   };
@@ -127,11 +115,6 @@ const BatteryOptimizationScreen = () => {
             fullWidth
           />
           <View className="space-y-3 mt-3">
-            <NativeNoahSecondaryButton
-              label="I've disabled it - continue"
-              onPress={handleContinue}
-              fullWidth
-            />
             <NativeNoahSecondaryButton
               label="Skip"
               emphasis="ghost"
