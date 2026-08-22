@@ -14,8 +14,16 @@ export const UpdateWarningBanner: React.FC<UpdateWarningBannerProps> = ({
 }) => {
   const handleUpdate = () => {
     if (APP_VARIANT === "mainnet") {
-      // Mainnet private distribution stays outside the repo; do not hardcode the
-      // private TestFlight channel or any equivalent mainnet release URL here.
+      const iosMainnetUrl =
+        process.env.EXPO_PUBLIC_MAINNET_TESTFLIGHT_URL ??
+        "itms-beta://testflight.apple.com/join/YQW6fu9w";
+      const androidMainnetUrl =
+        process.env.EXPO_PUBLIC_MAINNET_PLAY_STORE_URL ??
+        "https://play.google.com/store/apps/details?id=com.noahwallet.mainnet";
+
+      const storeUrl = Platform.OS === "ios" ? iosMainnetUrl : androidMainnetUrl;
+
+      Linking.openURL(storeUrl);
       return;
     }
 
