@@ -1,6 +1,7 @@
 package com.margelo.nitro.noahtools
 
 import android.appwidget.AppWidgetManager
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -234,21 +235,24 @@ class NoahTools : HybridNoahToolsSpec() {
     override fun openBatteryOptimizationSettings(): Boolean {
         val context = NitroModules.applicationContext ?: return false
         return try {
-            // Prefer the per-app "Don't optimize" dialog when the system allows requesting it,
+            // Prefer the per-app "Don't optimize" dialog when the system supports it,
             // otherwise fall back to the standard battery optimization settings list.
-            if (context.canRequestIgnoreBatteryOptimizations()) {
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = Uri.parse("package:${context.packageName}")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(intent)
-            } else {
+            val requestIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(requestIntent)
+            true
+        } catch (e: ActivityNotFoundException) {
+            try {
                 val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 context.startActivity(intent)
+                true
+            } catch (e: Exception) {
+                false
             }
-            true
         } catch (e: Exception) {
             false
         }
