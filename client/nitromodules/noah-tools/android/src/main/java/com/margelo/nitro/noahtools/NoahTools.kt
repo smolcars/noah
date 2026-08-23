@@ -1,7 +1,6 @@
 package com.margelo.nitro.noahtools
 
 import android.appwidget.AppWidgetManager
-import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -234,27 +233,27 @@ class NoahTools : HybridNoahToolsSpec() {
 
     override fun openBatteryOptimizationSettings(): Boolean {
         val context = NitroModules.applicationContext ?: return false
-        return try {
-            // Prefer the per-app "Don't optimize" dialog when the system supports it,
-            // otherwise fall back to the standard battery optimization settings list.
-            val requestIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+
+        // Prefer the per-app "Don't optimize" dialog, then the battery optimization list,
+        // and finally the app details page which is available on virtually any Android device.
+        val attempts = listOf(
+            Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                 data = Uri.parse("package:${context.packageName}")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:${context.packageName}")
             }
-            context.startActivity(requestIntent)
-            true
-        } catch (e: ActivityNotFoundException) {
+        )
+
+        return attempts.any { intent ->
             try {
-                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
                 true
             } catch (e: Exception) {
                 false
             }
-        } catch (e: Exception) {
-            false
         }
     }
 

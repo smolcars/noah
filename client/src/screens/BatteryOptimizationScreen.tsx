@@ -17,13 +17,13 @@ import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryBu
 
 const highlights = [
   {
-    title: "Reliable push notifications",
-    description: "Background notifications keep arriving even while the app is closed.",
+    title: "Push notifications keep arriving",
+    description: "Without optimization, notifications can drop off completely, not just be delayed.",
     icon: Zap,
   },
   {
-    title: "Prevent expiring VTXOs",
-    description: "We refresh VTXOs in the background to stop them from expiring.",
+    title: "Background activity keeps working",
+    description: "VTXOs keep refreshing in the background so they don't expire while the app is closed.",
     icon: RefreshCcw,
   },
 ];
@@ -98,8 +98,9 @@ const BatteryOptimizationScreen = ({ onContinue }: BatteryOptimizationScreenProp
             Disable battery optimization
           </Text>
           <Text className="mt-3 text-center text-muted-foreground">
-            Android may put Noah to sleep to save battery, delaying push notifications. Disabling
-            battery optimization for Noah keeps notifications arriving on time.
+            Android can put Noah to sleep in the background to save energy. This has a negligible
+            effect on battery life, but can cause push notifications to stop arriving entirely.
+            Disabling battery optimization for Noah keeps the wallet operating correctly.
           </Text>
         </View>
 
