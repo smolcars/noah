@@ -32,7 +32,7 @@ import { useWalletStore } from "~/store/walletStore";
 import { useBackupStore } from "~/store/backupStore";
 import logger from "~/lib/log";
 import ky from "ky";
-import { ARK_DATA_PATH, CACHES_DIRECTORY_PATH, shouldUseUnifiedPush } from "~/constants";
+import { ARK_DATA_PATH, CACHES_DIRECTORY_PATH, PLATFORM } from "~/constants";
 import { APP_VARIANT } from "~/config";
 import { redactSensitiveErrorMessage } from "~/lib/errorUtils";
 
@@ -448,11 +448,9 @@ export const restoreWallet = async (mnemonic: string): Promise<Result<void, Erro
       keychainMnemonicMayHaveChanged = false;
     }
 
-    if (nativeMnemonicMayHaveChanged && shouldUseUnifiedPush()) {
+    if (nativeMnemonicMayHaveChanged && PLATFORM === "android") {
       const nativeRestoreResult = await ResultAsync.fromPromise(
-        previousMnemonic
-          ? storeNativeMnemonic(previousMnemonic)
-          : clearNativeMnemonic(),
+        previousMnemonic ? storeNativeMnemonic(previousMnemonic) : clearNativeMnemonic(),
         asError,
       );
       if (nativeRestoreResult.isErr()) {
@@ -515,7 +513,7 @@ export const restoreWallet = async (mnemonic: string): Promise<Result<void, Erro
       return failRestore(setMnemonicResult.error);
     }
 
-    if (shouldUseUnifiedPush()) {
+    if (PLATFORM === "android") {
       nativeMnemonicMayHaveChanged = true;
       const storeNativeResult = await ResultAsync.fromPromise(
         storeNativeMnemonic(mnemonic),

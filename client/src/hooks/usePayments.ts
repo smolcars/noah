@@ -37,6 +37,8 @@ import { getArkInfo } from "~/lib/walletApi";
 import logger from "~/lib/log";
 import ky from "ky";
 import { Result } from "neverthrow";
+import { runForegroundWalletOperation } from "~/lib/walletOperationCoordinator";
+import { useWalletStore } from "~/store/walletStore";
 
 const log = logger("usePayments");
 
@@ -130,6 +132,10 @@ export const resolveLightningAddressPaymentRoute = async (
 };
 
 export function useLightningAddressPaymentRoute(destination: string | null) {
+  const isBackgroundJobRunning = useWalletStore(
+    (state) => state.isBackgroundJobRunning || state.isNativeBackgroundJobRunning,
+  );
+
   return useQuery({
     queryKey: ["payment-route", "lightning-address", destination],
     queryFn: () => {
@@ -137,9 +143,9 @@ export function useLightningAddressPaymentRoute(destination: string | null) {
         throw new Error("Lightning address payment destination is required");
       }
 
-      return resolveLightningAddressPaymentRoute(destination);
+      return runForegroundWalletOperation(() => resolveLightningAddressPaymentRoute(destination));
     },
-    enabled: destination !== null,
+    enabled: destination !== null && !isBackgroundJobRunning,
     staleTime: 0,
     retry: false,
   });
@@ -149,13 +155,14 @@ export function useGenerateOffchainAddress() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async () => {
-      const result = await newAddress();
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value.address;
-    },
+    mutationFn: () =>
+      runForegroundWalletOperation(async () => {
+        const result = await newAddress();
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value.address;
+      }),
     onError: (error: Error) => {
       showAlert({ title: "Vtxo Pubkey Generation Failed", description: error.message });
     },
@@ -166,13 +173,14 @@ export function useGenerateOnchainAddress() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async () => {
-      const result = await onchainAddress();
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value;
-    },
+    mutationFn: () =>
+      runForegroundWalletOperation(async () => {
+        const result = await onchainAddress();
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value;
+      }),
     onError: (error: Error) => {
       showAlert({ title: "On-chain Address Generation Failed", description: error.message });
     },
@@ -183,13 +191,14 @@ export function useGenerateLightningInvoice() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async ({ amountSat, description }: { amountSat: number; description?: string }) => {
-      const result = await bolt11Invoice(amountSat, description);
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value;
-    },
+    mutationFn: ({ amountSat, description }: { amountSat: number; description?: string }) =>
+      runForegroundWalletOperation(async () => {
+        const result = await bolt11Invoice(amountSat, description);
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value;
+      }),
     onError: (error: Error) => {
       showAlert({ title: "Lightning Invoice Generation Failed", description: error.message });
     },
@@ -200,13 +209,14 @@ export function useBoardArk() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async (amount: number) => {
-      const result = await boardArk(amount);
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value;
-    },
+    mutationFn: (amount: number) =>
+      runForegroundWalletOperation(async () => {
+        const result = await boardArk(amount);
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value;
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["balance"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
@@ -221,13 +231,14 @@ export function useBoardAllAmountArk() {
   const { showAlert } = useAlert();
 
   return useMutation({
-    mutationFn: async () => {
-      const result = await boardAllArk();
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value;
-    },
+    mutationFn: () =>
+      runForegroundWalletOperation(async () => {
+        const result = await boardAllArk();
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value;
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["balance"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
@@ -276,32 +287,37 @@ const readEstimateResult = async <T>(estimatePromise: Promise<Result<T, Error>>)
 };
 
 export function useSendFeeEstimate(params: SendFeeEstimateParams | null) {
+  const isBackgroundJobRunning = useWalletStore(
+    (state) => state.isBackgroundJobRunning || state.isNativeBackgroundJobRunning,
+  );
+
   return useQuery({
     queryKey: ["fee-estimate", "send", params],
-    queryFn: async () => {
-      if (!params) {
-        throw new Error("Fee estimate parameters are required");
-      }
+    queryFn: () =>
+      runForegroundWalletOperation(async () => {
+        if (!params) {
+          throw new Error("Fee estimate parameters are required");
+        }
 
-      switch (params.method) {
-        case "ark":
-          return readEstimateResult(estimateArkoorPaymentFee(params.amountSat));
-        case "lightning":
-          return readEstimateResult(estimateLightningSendFee(params.amountSat));
-        case "onchain":
-          return params.source === "offchain" && params.isMaxAmount
-            ? readEstimateResult(estimateOffboardAllFee(params.destination))
-            : params.source === "offchain"
-              ? readEstimateResult(
-                  estimateSendOnchainFee({
-                    destination: params.destination,
-                    amountSat: params.amountSat,
-                  }),
-                )
-              : readEstimateResult(estimateOnchainWalletSendFee({ amountSat: params.amountSat }));
-      }
-    },
-    enabled: params !== null && params.amountSat > 0,
+        switch (params.method) {
+          case "ark":
+            return readEstimateResult(estimateArkoorPaymentFee(params.amountSat));
+          case "lightning":
+            return readEstimateResult(estimateLightningSendFee(params.amountSat));
+          case "onchain":
+            return params.source === "offchain" && params.isMaxAmount
+              ? readEstimateResult(estimateOffboardAllFee(params.destination))
+              : params.source === "offchain"
+                ? readEstimateResult(
+                    estimateSendOnchainFee({
+                      destination: params.destination,
+                      amountSat: params.amountSat,
+                    }),
+                  )
+                : readEstimateResult(estimateOnchainWalletSendFee({ amountSat: params.amountSat }));
+        }
+      }),
+    enabled: params !== null && params.amountSat > 0 && !isBackgroundJobRunning,
     staleTime: 20 * 1000,
     retry: false,
   });
@@ -343,84 +359,98 @@ type BoardArkFeeEstimateParams = {
 };
 
 export function useBoardArkFeeEstimate(params: BoardArkFeeEstimateParams | null) {
+  const isBackgroundJobRunning = useWalletStore(
+    (state) => state.isBackgroundJobRunning || state.isNativeBackgroundJobRunning,
+  );
+
   return useQuery({
     queryKey: ["fee-estimate", "board-ark", params],
-    queryFn: async (): Promise<BoardArkFeeEstimateResult> => {
-      if (!params) {
-        throw new Error("Boarding fee estimate parameters are required");
-      }
-
-      const onchainEstimate = await readEstimateResult(estimateStandardOnchainTxFee("regular"));
-      const grossBoardAmountSat = params.isMaxAmount
-        ? Math.max(params.confirmedOnchainBalanceSat - onchainEstimate.fee_sat, 0)
-        : params.amountSat;
-      const isBelowMinimumBoardAmount = grossBoardAmountSat < params.minimumBoardAmountSat;
-
-      const boardEstimateResult = await estimateBoardOffchainFee(grossBoardAmountSat);
-      if (boardEstimateResult.isErr()) {
-        if (!isBelowMinimumBoardAmount) {
-          throw boardEstimateResult.error;
+    queryFn: () =>
+      runForegroundWalletOperation(async (): Promise<BoardArkFeeEstimateResult> => {
+        if (!params) {
+          throw new Error("Boarding fee estimate parameters are required");
         }
 
+        const onchainEstimate = await readEstimateResult(estimateStandardOnchainTxFee("regular"));
+        const grossBoardAmountSat = params.isMaxAmount
+          ? Math.max(params.confirmedOnchainBalanceSat - onchainEstimate.fee_sat, 0)
+          : params.amountSat;
+        const isBelowMinimumBoardAmount = grossBoardAmountSat < params.minimumBoardAmountSat;
+
+        const boardEstimateResult = await estimateBoardOffchainFee(grossBoardAmountSat);
+        if (boardEstimateResult.isErr()) {
+          if (!isBelowMinimumBoardAmount) {
+            throw boardEstimateResult.error;
+          }
+
+          return {
+            kind: "unavailable",
+            unavailable: {
+              reason: "below_minimum_board_amount",
+              minimum_board_amount_sat: params.minimumBoardAmountSat,
+              boardable_amount_sat: grossBoardAmountSat,
+              estimated_onchain_fee_sat: onchainEstimate.fee_sat,
+              estimated_remaining_onchain_sat:
+                params.confirmedOnchainBalanceSat - grossBoardAmountSat - onchainEstimate.fee_sat,
+              minimum_required_balance_sat: params.minimumBoardAmountSat + onchainEstimate.fee_sat,
+              estimated_vbytes: onchainEstimate.estimated_vbytes,
+              fee_rate_sat_vb: onchainEstimate.fee_rate_sat_vb,
+              fee_rate_tier: onchainEstimate.fee_rate_tier,
+              is_max_amount: params.isMaxAmount,
+            },
+          };
+        }
+
+        const boardEstimate = boardEstimateResult.value;
+
         return {
-          kind: "unavailable",
-          unavailable: {
-            reason: "below_minimum_board_amount",
-            minimum_board_amount_sat: params.minimumBoardAmountSat,
-            boardable_amount_sat: grossBoardAmountSat,
+          kind: "estimate",
+          estimate: {
+            ...boardEstimate,
             estimated_onchain_fee_sat: onchainEstimate.fee_sat,
             estimated_remaining_onchain_sat:
-              params.confirmedOnchainBalanceSat - grossBoardAmountSat - onchainEstimate.fee_sat,
-            minimum_required_balance_sat: params.minimumBoardAmountSat + onchainEstimate.fee_sat,
-            estimated_vbytes: onchainEstimate.estimated_vbytes,
+              params.confirmedOnchainBalanceSat -
+              boardEstimate.gross_amount_sat -
+              onchainEstimate.fee_sat,
             fee_rate_sat_vb: onchainEstimate.fee_rate_sat_vb,
+            estimated_vbytes: onchainEstimate.estimated_vbytes,
             fee_rate_tier: onchainEstimate.fee_rate_tier,
             is_max_amount: params.isMaxAmount,
+            is_below_minimum_board_amount: isBelowMinimumBoardAmount,
+            minimum_board_amount_sat: params.minimumBoardAmountSat,
           },
         };
-      }
-
-      const boardEstimate = boardEstimateResult.value;
-
-      return {
-        kind: "estimate",
-        estimate: {
-          ...boardEstimate,
-          estimated_onchain_fee_sat: onchainEstimate.fee_sat,
-          estimated_remaining_onchain_sat:
-            params.confirmedOnchainBalanceSat -
-            boardEstimate.gross_amount_sat -
-            onchainEstimate.fee_sat,
-          fee_rate_sat_vb: onchainEstimate.fee_rate_sat_vb,
-          estimated_vbytes: onchainEstimate.estimated_vbytes,
-          fee_rate_tier: onchainEstimate.fee_rate_tier,
-          is_max_amount: params.isMaxAmount,
-          is_below_minimum_board_amount: isBelowMinimumBoardAmount,
-          minimum_board_amount_sat: params.minimumBoardAmountSat,
-        },
-      };
-    },
-    enabled: params !== null && params.amountSat > 0 && params.confirmedOnchainBalanceSat > 0,
+      }),
+    enabled:
+      params !== null &&
+      params.amountSat > 0 &&
+      params.confirmedOnchainBalanceSat > 0 &&
+      !isBackgroundJobRunning,
     staleTime: 20 * 1000,
     retry: false,
   });
 }
 
 export function useIsOnchainAddressMine(address: string | null) {
+  const isBackgroundJobRunning = useWalletStore(
+    (state) => state.isBackgroundJobRunning || state.isNativeBackgroundJobRunning,
+  );
+
   return useQuery({
     queryKey: ["is-onchain-address-mine", address],
-    queryFn: async () => {
-      if (!address) {
-        throw new Error("Address is required");
-      }
+    queryFn: () =>
+      runForegroundWalletOperation(async () => {
+        if (!address) {
+          throw new Error("Address is required");
+        }
 
-      const result = await onchainIsMine(address);
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value;
-    },
-    enabled: !!address,
+        const result = await onchainIsMine(address);
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value;
+      }),
+    enabled: !!address && !isBackgroundJobRunning,
     staleTime: Infinity,
     retry: false,
   });
@@ -470,100 +500,103 @@ const sendLightningAddressPayment = async (
 
 export function useSend(destinationType: DestinationTypes) {
   return useMutation<SendResult, Error, SendVariables>({
-    mutationFn: async (variables) => {
-      const {
-        destination,
-        amountSat,
-        resolvedAmountSat,
-        isMaxAmount = false,
-        comment,
-        onchainSource,
-        lightningAddressPaymentRoute,
-      } = variables;
-      if (!isMaxAmount && amountSat === undefined && destinationType !== "lightning") {
-        throw new Error("Amount is required");
-      }
-
-      let result;
-      switch (destinationType) {
-        case "onchain":
-          if (isMaxAmount) {
-            if (!onchainSource) {
-              throw new Error("A balance source is required to send the maximum amount");
-            }
-
-            if (onchainSource === "offchain") {
-              const estimateResult = await estimateOffboardAllFee(destination);
-              const sentAmountSat = estimateResult.isOk()
-                ? estimateResult.value.net_amount_sat
-                : resolvedAmountSat;
-              const offboardResult = await offboardAllArk(destination);
-              result = offboardResult.map((txid) => ({
-                txid,
-                amount_sat: sentAmountSat,
-                destination_address: destination,
-                source: "offchain" as const,
-              }));
-            } else {
-              result = await onchainDrain({
-                destination,
-                fallbackAmountSat: resolvedAmountSat,
-              });
-            }
-            break;
-          }
-
-          if (amountSat === undefined) {
-            throw new Error("Amount is required for onchain payments");
-          }
-          result =
-            onchainSource === "offchain"
-              ? await sendOnchainFromOffchain({ destination, amountSat })
-              : await onchainSend({ destination, amountSat });
-          break;
-        case "ark":
-          if (amountSat === undefined) {
-            throw new Error("Amount is required for Ark payments");
-          }
-          result = await sendArkoorPayment(destination, amountSat);
-          break;
-        case "lightning":
-          return readLightningPayment(payLightningInvoice(destination, amountSat));
-        case "lnurl": {
-          if (amountSat === undefined) {
-            throw new Error("Amount is required for LNURL payments");
-          }
-
-          if (lightningAddressPaymentRoute) {
-            return sendLightningAddressPayment(
-              lightningAddressPaymentRoute,
-              destination,
-              amountSat,
-              comment,
-            );
-          }
-
-          try {
-            const route = await resolveLightningAddressPaymentRoute(destination);
-            return sendLightningAddressPayment(route, destination, amountSat, comment);
-          } catch (routeError) {
-            log.w("Failed to resolve lightning address payment route, using standard LNURL", [
-              routeError,
-            ]);
-            return readLightningPayment(payLightningAddress(destination, amountSat, comment || ""));
-          }
+    mutationFn: (variables) =>
+      runForegroundWalletOperation(async () => {
+        const {
+          destination,
+          amountSat,
+          resolvedAmountSat,
+          isMaxAmount = false,
+          comment,
+          onchainSource,
+          lightningAddressPaymentRoute,
+        } = variables;
+        if (!isMaxAmount && amountSat === undefined && destinationType !== "lightning") {
+          throw new Error("Amount is required");
         }
-        case "offer":
-          return readLightningPayment(payLightningOffer(destination, amountSat));
-        default:
-          throw new Error("Invalid destination type");
-      }
 
-      if (result.isErr()) {
-        throw result.error;
-      }
-      return result.value;
-    },
+        let result;
+        switch (destinationType) {
+          case "onchain":
+            if (isMaxAmount) {
+              if (!onchainSource) {
+                throw new Error("A balance source is required to send the maximum amount");
+              }
+
+              if (onchainSource === "offchain") {
+                const estimateResult = await estimateOffboardAllFee(destination);
+                const sentAmountSat = estimateResult.isOk()
+                  ? estimateResult.value.net_amount_sat
+                  : resolvedAmountSat;
+                const offboardResult = await offboardAllArk(destination);
+                result = offboardResult.map((txid) => ({
+                  txid,
+                  amount_sat: sentAmountSat,
+                  destination_address: destination,
+                  source: "offchain" as const,
+                }));
+              } else {
+                result = await onchainDrain({
+                  destination,
+                  fallbackAmountSat: resolvedAmountSat,
+                });
+              }
+              break;
+            }
+
+            if (amountSat === undefined) {
+              throw new Error("Amount is required for onchain payments");
+            }
+            result =
+              onchainSource === "offchain"
+                ? await sendOnchainFromOffchain({ destination, amountSat })
+                : await onchainSend({ destination, amountSat });
+            break;
+          case "ark":
+            if (amountSat === undefined) {
+              throw new Error("Amount is required for Ark payments");
+            }
+            result = await sendArkoorPayment(destination, amountSat);
+            break;
+          case "lightning":
+            return readLightningPayment(payLightningInvoice(destination, amountSat));
+          case "lnurl": {
+            if (amountSat === undefined) {
+              throw new Error("Amount is required for LNURL payments");
+            }
+
+            if (lightningAddressPaymentRoute) {
+              return sendLightningAddressPayment(
+                lightningAddressPaymentRoute,
+                destination,
+                amountSat,
+                comment,
+              );
+            }
+
+            try {
+              const route = await resolveLightningAddressPaymentRoute(destination);
+              return sendLightningAddressPayment(route, destination, amountSat, comment);
+            } catch (routeError) {
+              log.w("Failed to resolve lightning address payment route, using standard LNURL", [
+                routeError,
+              ]);
+              return readLightningPayment(
+                payLightningAddress(destination, amountSat, comment || ""),
+              );
+            }
+          }
+          case "offer":
+            return readLightningPayment(payLightningOffer(destination, amountSat));
+          default:
+            throw new Error("Invalid destination type");
+        }
+
+        if (result.isErr()) {
+          throw result.error;
+        }
+        return result.value;
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["balance"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });

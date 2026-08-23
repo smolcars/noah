@@ -323,6 +323,40 @@ namespace margelo::nitro::noahtools {
       auto __value = std::move(__result.value());
       return __value;
     }
+    inline void scheduleAndroidBackgroundSync() override {
+      auto __result = _swiftPart.scheduleAndroidBackgroundSync();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void cancelAndroidBackgroundSync() override {
+      auto __result = _swiftPart.cancelAndroidBackgroundSync();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline bool isAndroidBackgroundWalletJobRunning() override {
+      auto __result = _swiftPart.isAndroidBackgroundWalletJobRunning();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline bool tryAcquireAndroidBackgroundWalletJob(const std::string& owner) override {
+      auto __result = _swiftPart.tryAcquireAndroidBackgroundWalletJob(owner);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void releaseAndroidBackgroundWalletJob(const std::string& owner) override {
+      auto __result = _swiftPart.releaseAndroidBackgroundWalletJob(owner);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
 
   private:
     NoahTools::HybridNoahToolsSpec_cxx _swiftPart;
