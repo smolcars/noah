@@ -146,7 +146,7 @@ struct CreateNoahLightningInvoiceIntent: AppIntent {
 }
 
 @available(iOS 26.0, *)
-private struct CreateNoahLightningInvoiceWithSnippetIntent: AppIntent {
+struct CreateNoahLightningInvoiceWithSnippetIntent: AppIntent {
   static let title: LocalizedStringResource = "Create Lightning Invoice"
   static let description = IntentDescription(
     "Creates a BOLT11 Lightning invoice from Noah without opening the app."
@@ -191,7 +191,7 @@ private struct CreateNoahLightningInvoiceWithSnippetIntent: AppIntent {
 }
 
 @available(iOS 26.0, *)
-private struct NoahLightningInvoiceSnippetIntent: SnippetIntent {
+struct NoahLightningInvoiceSnippetIntent: SnippetIntent {
   static let title: LocalizedStringResource = "Lightning Invoice"
   static let isDiscoverable = false
 
@@ -219,7 +219,7 @@ private struct NoahLightningInvoiceSnippetIntent: SnippetIntent {
 }
 
 @available(iOS 26.0, *)
-private struct CopyNoahLightningInvoiceIntent: AppIntent {
+struct CopyNoahLightningInvoiceIntent: AppIntent {
   static let title: LocalizedStringResource = "Copy Invoice"
   static let description = IntentDescription("Copies a Lightning invoice to the clipboard.")
   static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
