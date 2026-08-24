@@ -201,14 +201,16 @@ class NoahTools: HybridNoahToolsSpec {
     }
 
     func storeNativeEsploraEndpoint(endpoint: String) throws -> Promise<Void> {
-        // This is Android-only, no-op on iOS
+        let variant = try performGetAppVariant()
+        UserDefaults.standard.set(endpoint, forKey: "noah.native.esplora.\(variant)")
         let promise = Promise<Void>()
         promise.resolve()
         return promise
     }
 
     func clearNativeEsploraEndpoint() throws -> Promise<Void> {
-        // This is Android-only, no-op on iOS
+        let variant = try performGetAppVariant()
+        UserDefaults.standard.removeObject(forKey: "noah.native.esplora.\(variant)")
         let promise = Promise<Void>()
         promise.resolve()
         return promise
