@@ -381,17 +381,6 @@ private struct NoahLightningInvoiceSnippetView: View {
 struct NoahAppShortcuts: AppShortcutsProvider {
   @AppShortcutsBuilder
   static var appShortcuts: [AppShortcut] {
-    AppShortcut(
-      intent: GetNoahBalanceIntent(),
-      phrases: [
-        "What's my balance in \(.applicationName)",
-        "Check my \(.applicationName) balance",
-        "How many sats are in \(.applicationName)",
-      ],
-      shortTitle: "Check Balance",
-      systemImageName: "bitcoinsign.circle"
-    )
-
     if #available(iOS 26.0, *) {
       AppShortcut(
         intent: CreateNoahArkAddressWithSnippetIntent(),
@@ -404,6 +393,17 @@ struct NoahAppShortcuts: AppShortcutsProvider {
         systemImageName: "qrcode"
       )
     }
+
+    AppShortcut(
+      intent: GetNoahBalanceIntent(),
+      phrases: [
+        "What's my balance in \(.applicationName)",
+        "Check my \(.applicationName) balance",
+        "How many sats are in \(.applicationName)",
+      ],
+      shortTitle: "Check Balance",
+      systemImageName: "bitcoinsign.circle"
+    )
 
     if #available(iOS 26.0, *) {
       AppShortcut(
