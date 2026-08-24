@@ -1,4 +1,6 @@
 import { View, Pressable, ActivityIndicator } from "react-native";
+import { type NavigationProp, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Share from "react-native-share";
 import { useState } from "react";
@@ -26,6 +28,8 @@ import {
 } from "~/lib/transactionHistory";
 import { formatMovementStatusLabel } from "~/types/movement";
 import { useThemeColors } from "~/hooks/useTheme";
+import type { TabParamList, TransactionsStackParamList } from "~/Navigators";
+import type { RepeatPaymentDetails } from "~/types/repeatPayment";
 
 const log = logger("TransactionsScreen");
 
@@ -39,6 +43,8 @@ const TRANSACTION_FILTER_OPTIONS = [
 ] as const;
 
 const TransactionsScreen = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<TransactionsStackParamList>>();
+  const tabNavigation = navigation.getParent<NavigationProp<TabParamList>>();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const { mutedForeground } = useThemeColors();
   const { data: transactions = [], isLoading, isError, isRefetching, refetch } = useTransactions();
@@ -61,6 +67,11 @@ const TransactionsScreen = () => {
   const openTransaction = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setIsTransactionSheetOpen(true);
+  };
+
+  const repeatPayment = (details: RepeatPaymentDetails) => {
+    setIsTransactionSheetOpen(false);
+    tabNavigation?.navigate("Send", { repeatPayment: details, requestId: Date.now() });
   };
 
   const exportToCSV = async () => {
@@ -276,6 +287,7 @@ const TransactionsScreen = () => {
               transaction={selectedTransaction}
               fiatCurrency={fiatCurrency}
               onClose={() => setIsTransactionSheetOpen(false)}
+              onRepeatPayment={repeatPayment}
               closeIconName="close-outline"
             />
           </AppBottomSheet>

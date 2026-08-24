@@ -1,5 +1,6 @@
 import type { MovementStatus } from "react-native-nitro-ark";
 import type { BarkSubsystemKind, BarkSubsystemName } from "~/lib/barkMovement";
+import type { RepeatPaymentDetails } from "~/types/repeatPayment";
 
 export type PaymentTypes = "Bolt11" | "Bolt12" | "Lnurl" | "Arkoor" | "Onchain";
 import type { MovementKind } from "./movement";
@@ -41,9 +42,11 @@ export type Transaction = {
   hasConfirmation?: boolean;
   confirmationHeight?: number;
   confirmationHash?: string;
+  repeatPayment?: RepeatPaymentDetails;
 };
 
 export type MovementDestination = {
   destination: string;
   amount_sat: number;
+  paymentMethod?: string;
 };

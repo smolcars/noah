@@ -10,6 +10,14 @@ import {
   mergeBoardingWithOnchainTransactions,
   parseMovementMetadata,
 } from "../../src/lib/transactionHistory";
+import {
+  buildRepeatPaymentMetadataPatch,
+  canRepeatPayment,
+  findNewArkoorMovementId,
+  getRepeatPaymentPrefill,
+  resolveRepeatPaymentDetails,
+  shouldUseArkDirectLightningAddressRoute,
+} from "../../src/lib/repeatPayment";
 
 describe("boarding transaction metadata", () => {
   test("extracts the chain transaction and fees", () => {
@@ -52,6 +60,138 @@ describe("boarding transaction metadata", () => {
         received_on: [],
       }),
     ).toBe(50_000);
+  });
+});
+
+describe("repeat payment metadata", () => {
+  test("round trips a fiat lightning-address payment", () => {
+    const details = {
+      destination: "merchant@example.com",
+      comment: "Order 307",
+      amountMode: "FIAT",
+      amountInput: "12.50",
+      amountSat: 10_000,
+      fiatCurrency: "USD",
+    };
+
+    const metadata = parseMovementMetadata(buildRepeatPaymentMetadataPatch(details));
+
+    expect(metadata.repeatPayment).toEqual({
+      destination: "merchant@example.com",
+      comment: "Order 307",
+      amountMode: "FIAT",
+      amountInput: "12.50",
+      fiatCurrency: "USD",
+    });
+    expect(
+      resolveRepeatPaymentDetails({ metadata: metadata.repeatPayment, amountSat: 10_000 }),
+    ).toEqual(details);
+  });
+
+  test("derives a sats repeat action for legacy lightning-address history", () => {
+    expect(
+      resolveRepeatPaymentDetails({
+        destination: "LEGACY@EXAMPLE.COM",
+        paymentMethod: "lightning-address",
+        amountSat: 2_100,
+      }),
+    ).toEqual({
+      destination: "legacy@example.com",
+      comment: "",
+      amountMode: "SATS",
+      amountInput: "2100",
+      amountSat: 2_100,
+    });
+  });
+
+  test("derives a sats repeat action for an Ark payment", () => {
+    expect(
+      resolveRepeatPaymentDetails({
+        destination: "  tark1recipient  ",
+        paymentMethod: "ark",
+        amountSat: 5_000,
+      }),
+    ).toEqual({
+      destination: "tark1recipient",
+      comment: "",
+      amountMode: "SATS",
+      amountInput: "5000",
+      amountSat: 5_000,
+    });
+  });
+
+  test("only enables repeat for successful outgoing payments", () => {
+    const repeatPayment = {
+      destination: "merchant@example.com",
+      comment: "",
+      amountMode: "SATS",
+      amountInput: "2100",
+      amountSat: 2_100,
+    };
+
+    expect(
+      canRepeatPayment({ direction: "outgoing", movementStatus: "successful", repeatPayment }),
+    ).toBe(true);
+    expect(
+      canRepeatPayment({ direction: "incoming", movementStatus: "successful", repeatPayment }),
+    ).toBe(false);
+    expect(
+      canRepeatPayment({ direction: "outgoing", movementStatus: "failed", repeatPayment }),
+    ).toBe(false);
+  });
+
+  test("restores fiat only when the preferred currency still matches", () => {
+    const repeatPayment = {
+      destination: "merchant@example.com",
+      comment: "",
+      amountMode: "FIAT",
+      amountInput: "12.50",
+      amountSat: 10_000,
+      fiatCurrency: "USD",
+    };
+
+    expect(getRepeatPaymentPrefill(repeatPayment, "USD")).toEqual({
+      amountInput: "12.50",
+      amountMode: "FIAT",
+    });
+    expect(getRepeatPaymentPrefill(repeatPayment, "EUR")).toEqual({
+      amountInput: "10000",
+      amountMode: "SATS",
+    });
+  });
+
+  test("uses standard LNURL when a comment must be delivered", () => {
+    expect(shouldUseArkDirectLightningAddressRoute("ark", null)).toBe(true);
+    expect(shouldUseArkDirectLightningAddressRoute("ark", "Order 307")).toBe(false);
+    expect(shouldUseArkDirectLightningAddressRoute("lightning", null)).toBe(false);
+  });
+
+  test("finds the new matching Ark-routed movement", () => {
+    const movement = {
+      id: 9,
+      status: "successful",
+      subsystem: { name: "bark.arkoor", kind: "send" },
+      sent_to: [
+        { destination: "tark-destination", payment_method: "ark", amount_sat: 3_000 },
+      ],
+    };
+
+    expect(
+      findNewArkoorMovementId({
+        existingMovementIds: new Set([8]),
+        movements: [movement],
+        destination: "tark-destination",
+        amountSat: 3_000,
+      }),
+    ).toBe(9);
+    expect(
+      findNewArkoorMovementId({
+        existingMovementIds: new Set([9]),
+        movements: [movement],
+        destination: "tark-destination",
+        amountSat: 3_000,
+      }),
+    ).toBeUndefined();
   });
 });
 

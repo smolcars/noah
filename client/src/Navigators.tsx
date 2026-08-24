@@ -63,12 +63,17 @@ import {
 } from "~/lib/pushNotifications";
 import { PermissionStatus } from "expo-notifications";
 import logger from "~/lib/log";
+import type { RepeatPaymentDetails } from "~/types/repeatPayment";
 
 // Param list types
 export type TabParamList = {
   Home: NavigatorScreenParams<HomeStackParamList> | undefined;
   Receive: undefined;
-  Send: { destination?: string; requestId?: number };
+  Send: {
+    destination?: string;
+    repeatPayment?: RepeatPaymentDetails;
+    requestId?: number;
+  };
   History: NavigatorScreenParams<TransactionsStackParamList> | undefined;
 };
 

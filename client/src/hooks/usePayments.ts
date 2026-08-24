@@ -30,6 +30,8 @@ import {
   estimateStandardOnchainTxFee,
   validateArkoorPaymentAddress,
   type StandardOnchainWalletFeeEstimate,
+  history,
+  updateHistoryMetadata,
 } from "../lib/paymentsApi";
 import { queryClient } from "~/queryClient";
 import { DestinationTypes } from "~/lib/sendUtils";
@@ -37,6 +39,12 @@ import { getArkInfo } from "~/lib/walletApi";
 import logger from "~/lib/log";
 import ky from "ky";
 import { Result } from "neverthrow";
+import {
+  buildRepeatPaymentMetadataPatch,
+  findNewArkoorMovementId,
+  shouldUseArkDirectLightningAddressRoute,
+} from "~/lib/repeatPayment";
+import type { RepeatPaymentDetails } from "~/types/repeatPayment";
 
 const log = logger("usePayments");
 
@@ -247,9 +255,11 @@ type SendVariables = {
   onchainSource?: OnchainSendSource;
   lightningAddressPaymentRoute?: LightningAddressPaymentRoute;
   btcPrice?: number;
+  repeatPayment?: RepeatPaymentDetails;
 };
 
-type SendResult = ArkoorPaymentResult | LightningPayment | NoahOnchainPaymentResult;
+type ArkoorPaymentWithMovement = ArkoorPaymentResult & { movement_id?: number };
+type SendResult = ArkoorPaymentWithMovement | LightningPayment | NoahOnchainPaymentResult;
 
 export type SendFeeEstimateParams =
   | {
@@ -449,19 +459,52 @@ const sendLightningAddressPayment = async (
   destination: string,
   amountSat: number,
   comment: string | null,
-): Promise<ArkoorPaymentResult | LightningPayment> => {
+): Promise<ArkoorPaymentWithMovement | LightningPayment> => {
   const amountMsat = amountSat * 1000;
   if (amountMsat < route.minSendableMsat || amountMsat > route.maxSendableMsat) {
     throw new Error("Payment amount is outside the supported range for this lightning address");
   }
 
-  if (route.method === "ark") {
+  if (
+    route.method === "ark" &&
+    shouldUseArkDirectLightningAddressRoute(route.method, comment)
+  ) {
     log.d("Paying lightning address via Ark direct payment");
+    const historyBeforeResult = await history();
+    const existingMovementIds = historyBeforeResult.isOk()
+      ? new Set(historyBeforeResult.value.map((movement) => movement.id))
+      : undefined;
+    if (historyBeforeResult.isErr()) {
+      log.w("Unable to snapshot history before Ark-routed lightning address payment", [
+        historyBeforeResult.error,
+      ]);
+    }
+
     const result = await sendArkoorPayment(route.destination, amountSat);
     if (result.isErr()) {
       throw result.error;
     }
-    return result.value;
+
+    if (!existingMovementIds) {
+      return result.value;
+    }
+
+    const historyAfterResult = await history();
+    if (historyAfterResult.isErr()) {
+      log.w("Unable to load history after Ark-routed lightning address payment", [
+        historyAfterResult.error,
+      ]);
+      return result.value;
+    }
+
+    const movementId = findNewArkoorMovementId({
+      existingMovementIds,
+      movements: historyAfterResult.value,
+      destination: route.destination,
+      amountSat,
+    });
+
+    return movementId === undefined ? result.value : { ...result.value, movement_id: movementId };
   }
 
   log.d("Paying via standard Lightning Address flow");
@@ -479,6 +522,7 @@ export function useSend(destinationType: DestinationTypes) {
         comment,
         onchainSource,
         lightningAddressPaymentRoute,
+        repeatPayment,
       } = variables;
       if (!isMaxAmount && amountSat === undefined && destinationType !== "lightning") {
         throw new Error("Amount is required");
@@ -534,24 +578,47 @@ export function useSend(destinationType: DestinationTypes) {
             throw new Error("Amount is required for LNURL payments");
           }
 
+          let paymentResult: ArkoorPaymentWithMovement | LightningPayment;
           if (lightningAddressPaymentRoute) {
-            return sendLightningAddressPayment(
+            paymentResult = await sendLightningAddressPayment(
               lightningAddressPaymentRoute,
               destination,
               amountSat,
               comment,
             );
+          } else {
+            let route: LightningAddressPaymentRoute | undefined;
+            try {
+              route = await resolveLightningAddressPaymentRoute(destination);
+            } catch (routeError) {
+              log.w("Failed to resolve lightning address payment route, using standard LNURL", [
+                routeError,
+              ]);
+            }
+
+            paymentResult = route
+              ? await sendLightningAddressPayment(route, destination, amountSat, comment)
+              : await readLightningPayment(
+                  payLightningAddress(destination, amountSat, comment || ""),
+                );
           }
 
-          try {
-            const route = await resolveLightningAddressPaymentRoute(destination);
-            return sendLightningAddressPayment(route, destination, amountSat, comment);
-          } catch (routeError) {
-            log.w("Failed to resolve lightning address payment route, using standard LNURL", [
-              routeError,
-            ]);
-            return readLightningPayment(payLightningAddress(destination, amountSat, comment || ""));
+          const movementId = paymentResult.movement_id;
+          if (repeatPayment && movementId !== undefined) {
+            const updateResult = await updateHistoryMetadata(
+              movementId,
+              buildRepeatPaymentMetadataPatch(repeatPayment),
+            );
+            if (updateResult.isErr()) {
+              log.w("Payment succeeded but repeat-payment metadata could not be saved", [
+                updateResult.error,
+              ]);
+            }
+          } else if (repeatPayment) {
+            log.w("Payment succeeded without a movement ID; repeat-payment metadata was not saved");
           }
+
+          return paymentResult;
         }
         case "offer":
           return readLightningPayment(payLightningOffer(destination, amountSat));

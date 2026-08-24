@@ -29,6 +29,7 @@ import {
   mergeBoardingWithOnchainTransactions,
   parseMovementMetadata,
 } from "~/lib/transactionHistory";
+import { resolveRepeatPaymentDetails } from "~/lib/repeatPayment";
 
 const log = logger("useTransactions");
 const UNKNOWN_ONCHAIN_DATE_ISO = new Date(0).toISOString();
@@ -218,18 +219,29 @@ const transformMovementToTransaction = async (
     : getMovementAmount(movement, isOutgoing);
   const metadata = parseMovementMetadata(movement.metadata_json);
   const txid = getMovementTransactionId(movement, metadata, isOutgoing);
-  const transactionType = determineTransactionType(movement, movementKind, isOutgoing);
+  const destinationEntry = isOutgoing ? movement.sent_to?.[0] : movement.received_on?.[0];
+  const movementDestination = getMovementDestinationValue(destinationEntry);
+  const repeatPayment =
+    isOutgoing && movement.sent_to.length === 1
+      ? resolveRepeatPaymentDetails({
+          metadata: metadata.repeatPayment,
+          destination: movementDestination,
+          paymentMethod: destinationEntry?.payment_method,
+          amountSat: amount,
+        })
+      : undefined;
+  const isLightningAddressPayment = Boolean(
+    metadata.repeatPayment || destinationEntry?.payment_method === "lightning-address",
+  );
+  const transactionType = isLightningAddressPayment
+    ? "Lnurl"
+    : determineTransactionType(movement, movementKind, isOutgoing);
 
   let btcPrice: number | undefined;
   const btcPriceResult = await getHistoricalBtcToFiatRate(dateIso, currency);
   if (btcPriceResult.isOk()) {
     btcPrice = btcPriceResult.value;
   }
-
-  const destinationEntry = isOutgoing
-    ? movement.sent_to?.[0]?.destination
-    : movement.received_on?.[0]?.destination;
-  const destination = getMovementDestinationValue({ destination: destinationEntry });
 
   return {
     id: `movement-${movement.id}`,
@@ -242,7 +254,7 @@ const transformMovementToTransaction = async (
     source: "ark",
     btcPrice,
     description: "",
-    destination: destination ?? "",
+    destination: repeatPayment?.destination ?? movementDestination ?? "",
     movementId: movement.id,
     movementStatus: movement.status as MovementStatus,
     movementKind,
@@ -257,14 +269,17 @@ const transformMovementToTransaction = async (
     sentTo: movement.sent_to.map((destination) => ({
       destination: getMovementDestinationValue(destination) ?? "",
       amount_sat: destination.amount_sat,
+      paymentMethod: destination.payment_method,
     })),
     receivedOn: movement.received_on.map((destination) => ({
       destination: getMovementDestinationValue(destination) ?? "",
       amount_sat: destination.amount_sat,
+      paymentMethod: destination.payment_method,
     })),
     inputVtxos: movement.input_vtxos,
     outputVtxos: movement.output_vtxos,
     exitedVtxos: movement.exited_vtxos,
+    repeatPayment,
   };
 };
 

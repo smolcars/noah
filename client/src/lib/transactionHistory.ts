@@ -1,11 +1,14 @@
 import type { BarkMovement } from "react-native-nitro-ark";
 
+import { parseRepeatPaymentMetadata } from "~/lib/repeatPayment";
 import type { Transaction } from "~/types/transaction";
+import type { RepeatPaymentMetadata } from "~/types/repeatPayment";
 
 export type MovementMetadata = {
   offboardTxid?: string;
   onchainFeeSat?: number;
   chainAnchor?: string;
+  repeatPayment?: RepeatPaymentMetadata;
 };
 
 export const parseMovementMetadata = (metadataJson: string): MovementMetadata => {
@@ -20,11 +23,18 @@ export const parseMovementMetadata = (metadataJson: string): MovementMetadata =>
     }
 
     const metadata = parsed as Record<string, unknown>;
+    const noahMetadata =
+      metadata.noah && typeof metadata.noah === "object" && !Array.isArray(metadata.noah)
+        ? (metadata.noah as Record<string, unknown>)
+        : undefined;
+    const repeatPayment = parseRepeatPaymentMetadata(noahMetadata?.repeat_payment);
+
     return {
       offboardTxid: typeof metadata.offboard_txid === "string" ? metadata.offboard_txid : undefined,
       onchainFeeSat:
         typeof metadata.onchain_fee_sat === "number" ? metadata.onchain_fee_sat : undefined,
       chainAnchor: typeof metadata.chain_anchor === "string" ? metadata.chain_anchor : undefined,
+      ...(repeatPayment ? { repeatPayment } : {}),
     };
   } catch {
     return {};

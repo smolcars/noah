@@ -50,6 +50,7 @@ import {
   isCanceledTransaction,
   isInternalBoardingTransfer,
 } from "~/lib/transactionHistory";
+import type { RepeatPaymentDetails } from "~/types/repeatPayment";
 
 const getTransactionIcon = (transaction: Transaction) => {
   if (transaction.movementKind === "onboard") {
@@ -130,6 +131,11 @@ const HomeScreen = () => {
   const openTransaction = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setIsTransactionSheetOpen(true);
+  };
+
+  const repeatPayment = (details: RepeatPaymentDetails) => {
+    setIsTransactionSheetOpen(false);
+    parentNavigation?.navigate("Send", { repeatPayment: details, requestId: Date.now() });
   };
 
   const isLoading = isBalanceLoading || isSyncPending || isRateLoading;
@@ -490,6 +496,7 @@ const HomeScreen = () => {
             transaction={selectedTransaction}
             fiatCurrency={fiatCurrency}
             onClose={() => setIsTransactionSheetOpen(false)}
+            onRepeatPayment={repeatPayment}
             closeIconName="close-outline"
           />
         </AppBottomSheet>

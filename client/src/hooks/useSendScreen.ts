@@ -28,9 +28,14 @@ import { useBalance } from "./useWallet";
 import { useLightningAddressSuggestions } from "./useLightningAddressSuggestions";
 import { formatBitcoinAmount } from "~/lib/bitcoinAmount";
 import { fiatToSats, satsToFiat } from "~/lib/fiatCurrency";
+import {
+  getRepeatPaymentPrefill,
+  shouldUseArkDirectLightningAddressRoute,
+} from "~/lib/repeatPayment";
 import { getMaxSendBalanceSat } from "~/lib/onchainSend";
 import { useProfileStore } from "~/store/profileStore";
 import logger from "~/lib/log";
+import type { TabParamList } from "~/Navigators";
 
 const log = logger("useSendScreen");
 
@@ -43,10 +48,7 @@ type DisplayResult = {
   type: string;
 };
 
-type SendScreenRouteProp = RouteProp<
-  { params: { destination?: string; requestId?: number } },
-  "params"
->;
+type SendScreenRouteProp = RouteProp<TabParamList, "Send">;
 
 const formatFeeRate = (feeRateSatVb: number) => {
   if (Number.isInteger(feeRateSatVb)) {
@@ -165,17 +167,23 @@ export const useSendScreen = () => {
   } = useSend(finalDestinationType);
 
   useEffect(() => {
-    if (!route.params?.destination) {
+    const repeatPayment = route.params?.repeatPayment;
+    const requestedDestination = repeatPayment?.destination ?? route.params?.destination;
+    if (!requestedDestination) {
       return;
     }
 
+    const repeatPaymentPrefill = repeatPayment
+      ? getRepeatPaymentPrefill(repeatPayment, fiatCurrency)
+      : undefined;
+
     reset();
-    setAmount("");
+    setAmount(repeatPaymentPrefill?.amountInput ?? "");
     setIsAmountEditable(true);
-    setComment("");
+    setComment(repeatPayment?.comment ?? "");
     setParsedResult(null);
     setDestinationType(null);
-    setCurrency("SATS");
+    setCurrency(repeatPaymentPrefill?.amountMode ?? "SATS");
     setParsedAmount(null);
     setBip321Data(null);
     setSelectedPaymentMethod("onchain");
@@ -184,9 +192,9 @@ export const useSendScreen = () => {
     setShowConfirmation(false);
     setShowSuccess(false);
     setIsDestinationFocused(false);
-    setDestination(normalizeLightningAddressDestination(route.params.destination));
+    setDestination(normalizeLightningAddressDestination(requestedDestination));
     setDestinationRequestRevision((revision) => revision + 1);
-  }, [reset, route.params]);
+  }, [fiatCurrency, reset, route.params]);
 
   const { suggestions: lightningAddressSuggestions } = useLightningAddressSuggestions({
     destination,
@@ -301,10 +309,17 @@ export const useSendScreen = () => {
       case "lightning":
       case "offer":
         return { method: "lightning", amountSat };
-      case "lnurl":
-        return lightningAddressPaymentRouteQuery.data
-          ? { method: lightningAddressPaymentRouteQuery.data.method, amountSat }
+      case "lnurl": {
+        const route = lightningAddressPaymentRouteQuery.data;
+        return route
+          ? {
+              method: shouldUseArkDirectLightningAddressRoute(route.method, comment || null)
+                ? "ark"
+                : "lightning",
+              amountSat,
+            }
           : null;
+      }
       case "onchain":
         if (isMaxSend && resolvedOnchainSource === "onchain") {
           return null;
@@ -329,6 +344,7 @@ export const useSendScreen = () => {
     amountSat,
     bip321Data,
     cleanedDestination,
+    comment,
     destinationType,
     finalDestinationType,
     isMaxSend,
@@ -679,6 +695,17 @@ export const useSendScreen = () => {
             ? lightningAddressPaymentRouteQuery.data
             : undefined,
         btcPrice,
+        repeatPayment:
+          finalDestinationType === "lnurl"
+            ? {
+                destination: destinationToSend,
+                comment,
+                amountMode: currency,
+                amountInput: amount,
+                amountSat,
+                ...(currency === "FIAT" ? { fiatCurrency } : {}),
+              }
+            : undefined,
       });
     }
   };
