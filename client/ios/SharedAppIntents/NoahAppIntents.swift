@@ -5,6 +5,7 @@ import UIKit
 import UniformTypeIdentifiers
 
 private enum NoahAppIntentError: LocalizedError {
+  case addressCopyUnavailable
   case addressUnavailable
   case balanceUnavailable
   case copyUnavailable
@@ -14,6 +15,8 @@ private enum NoahAppIntentError: LocalizedError {
 
   var errorDescription: String? {
     switch self {
+    case .addressCopyUnavailable:
+      return "Noah couldn't copy the Ark address. Try again while Noah is open."
     case .addressUnavailable:
       return "Noah couldn't create an Ark address. Try again."
     case .balanceUnavailable:
@@ -70,14 +73,111 @@ struct CreateNoahArkAddressIntent: AppIntent {
       throw NoahAppIntentError.addressUnavailable
     }
 
-    await MainActor.run {
-      UIPasteboard.general.string = address
+    return .result(
+      value: address,
+      dialog: "Created a new Ark address."
+    )
+  }
+}
+
+@available(iOS 26.0, *)
+struct CreateNoahArkAddressWithSnippetIntent: AppIntent {
+  static let title: LocalizedStringResource = "Create Ark Address"
+  static let description = IntentDescription(
+    "Creates a new Ark address from Noah without opening the app."
+  )
+  static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+
+  func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog & ShowsSnippetIntent {
+    let address: String
+    do {
+      address = try await NoahNativeWalletService.shared.newAddress()
+    } catch {
+      throw NoahAppIntentError.addressUnavailable
     }
 
     return .result(
       value: address,
-      dialog: "Created a new Ark address and copied it to your clipboard."
+      dialog: IntentDialog(
+        full: "Created a new Ark address. Tap Copy Address to open Noah and copy it.",
+        supporting: "Your new Ark address is ready."
+      ),
+      snippetIntent: NoahArkAddressSnippetIntent(address: address)
     )
+  }
+}
+
+@available(iOS 26.0, *)
+struct NoahArkAddressSnippetIntent: SnippetIntent {
+  static let title: LocalizedStringResource = "Ark Address"
+  static let isDiscoverable = false
+
+  @Parameter(title: "Address")
+  var address: String
+
+  init() {}
+
+  init(address: String) {
+    self.address = address
+  }
+
+  func perform() async throws -> some IntentResult & ShowsSnippetView {
+    return .result(view: NoahArkAddressSnippetView(address: address))
+  }
+}
+
+@available(iOS 26.0, *)
+struct CopyNoahArkAddressIntent: AppIntent {
+  static let title: LocalizedStringResource = "Copy Address"
+  static let description = IntentDescription("Copies an Ark address to the clipboard.")
+  static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+  static let isDiscoverable = false
+  static let supportedModes: IntentModes = .foreground(.immediate)
+
+  @Parameter(title: "Address")
+  var address: String
+
+  init() {}
+
+  init(address: String) {
+    self.address = address
+  }
+
+  @MainActor
+  func perform() async throws -> some IntentResult & ProvidesDialog {
+    let pasteboard = UIPasteboard.general
+    pasteboard.setItems([
+      [UTType.utf8PlainText.identifier: address]
+    ])
+
+    guard pasteboard.string == address else {
+      throw NoahAppIntentError.addressCopyUnavailable
+    }
+
+    return .result(dialog: "Copied the Ark address to your clipboard.")
+  }
+}
+
+@available(iOS 26.0, *)
+private struct NoahArkAddressSnippetView: View {
+  let address: String
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Label("Ark Address", systemImage: "qrcode")
+        .font(.headline)
+
+      Text(address)
+        .font(.caption.monospaced())
+        .lineLimit(4)
+        .truncationMode(.middle)
+
+      Button(intent: CopyNoahArkAddressIntent(address: address)) {
+        Label("Copy Address", systemImage: "doc.on.doc")
+      }
+      .buttonStyle(.borderedProminent)
+    }
+    .padding()
   }
 }
 
@@ -282,17 +382,6 @@ struct NoahAppShortcuts: AppShortcutsProvider {
   @AppShortcutsBuilder
   static var appShortcuts: [AppShortcut] {
     AppShortcut(
-      intent: CreateNoahArkAddressIntent(),
-      phrases: [
-        "Create an Ark address with \(.applicationName)",
-        "Get an Ark address from \(.applicationName)",
-        "Generate an Ark address with \(.applicationName)",
-      ],
-      shortTitle: "Create Ark Address",
-      systemImageName: "qrcode"
-    )
-
-    AppShortcut(
       intent: GetNoahBalanceIntent(),
       phrases: [
         "What's my balance in \(.applicationName)",
@@ -302,6 +391,19 @@ struct NoahAppShortcuts: AppShortcutsProvider {
       shortTitle: "Check Balance",
       systemImageName: "bitcoinsign.circle"
     )
+
+    if #available(iOS 26.0, *) {
+      AppShortcut(
+        intent: CreateNoahArkAddressWithSnippetIntent(),
+        phrases: [
+          "Create an Ark address with \(.applicationName)",
+          "Get an Ark address from \(.applicationName)",
+          "Generate an Ark address with \(.applicationName)",
+        ],
+        shortTitle: "Create Ark Address",
+        systemImageName: "qrcode"
+      )
+    }
 
     if #available(iOS 26.0, *) {
       AppShortcut(
