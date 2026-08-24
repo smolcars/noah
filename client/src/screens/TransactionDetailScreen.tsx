@@ -14,7 +14,10 @@ import { formatMovementKindLabel, formatMovementStatusLabel } from "~/types/move
 import { getMempoolTxUrl } from "~/constants";
 import { useProfileStore } from "~/store/profileStore";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
-import { getTransactionDisplayLabel } from "~/lib/transactionHistory";
+import {
+  getTransactionAccountingValues,
+  getTransactionDisplayLabel,
+} from "~/lib/transactionHistory";
 import { canRepeatPayment } from "~/lib/repeatPayment";
 import type { RepeatPaymentDetails } from "~/types/repeatPayment";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
@@ -250,18 +253,27 @@ export const TransactionDetailContent = ({
           : "Unconfirmed"
         : "Recorded");
   const statusColor = isCompleted ? COLORS.SUCCESS : isFailed ? "#ef4444" : COLORS.BITCOIN_ORANGE;
+  const accountingDirection = getTransactionAccountingValues(transaction).direction;
+  const receiptActionLabel =
+    accountingDirection === "Transfer"
+      ? "Transferred"
+      : accountingDirection === "None"
+        ? "Canceled"
+        : accountingDirection === "Outgoing"
+          ? "Sent"
+          : "Received";
   const paymentRoute =
     transaction.type === "Lnurl" ? "Lightning address" : getTransactionDisplayLabel(transaction);
   const enteredAmount =
     repeatPaymentDetails?.amountMode === "FIAT" && repeatPaymentDetails.fiatCurrency
       ? formatFiatAmount(repeatPaymentDetails.amountInput, repeatPaymentDetails.fiatCurrency)
       : null;
-  const paymentFeeSat =
-    typeof transaction.offchainFeeSat === "number"
-      ? transaction.offchainFeeSat
-      : transaction.hasOnchainFee && typeof transaction.onchainFeeSat === "number"
-        ? transaction.onchainFeeSat
-        : undefined;
+  const offchainFeeSat =
+    typeof transaction.offchainFeeSat === "number" ? transaction.offchainFeeSat : undefined;
+  const onchainFeeSat =
+    transaction.hasOnchainFee && typeof transaction.onchainFeeSat === "number"
+      ? transaction.onchainFeeSat
+      : undefined;
 
   return (
     <ScrollView
@@ -303,7 +315,7 @@ export const TransactionDetailContent = ({
           <Icon name={getTransactionIcon(transaction)} size={26} color={COLORS.BITCOIN_ORANGE} />
         </View>
         <Text className="mt-4 text-xs font-semibold uppercase tracking-[2px] text-muted-foreground">
-          {transaction.direction === "outgoing" ? "Sent" : "Received"}
+          {receiptActionLabel}
         </Text>
         <Text className="mt-1 text-4xl font-bold tracking-tight text-foreground">
           {formatBitcoinAmount(transaction.amount)}
@@ -338,10 +350,16 @@ export const TransactionDetailContent = ({
         />
         <TransactionDetailRow label="Route" value={paymentRoute} />
         {enteredAmount ? <TransactionDetailRow label="Entered as" value={enteredAmount} /> : null}
-        {paymentFeeSat !== undefined ? (
+        {offchainFeeSat !== undefined ? (
           <TransactionDetailRow
-            label="Fee"
-            value={paymentFeeSat === 0 ? "No fee" : formatBitcoinAmount(paymentFeeSat)}
+            label={onchainFeeSat !== undefined ? "Offchain fee" : "Fee"}
+            value={offchainFeeSat === 0 ? "No fee" : formatBitcoinAmount(offchainFeeSat)}
+          />
+        ) : null}
+        {onchainFeeSat !== undefined ? (
+          <TransactionDetailRow
+            label={offchainFeeSat !== undefined ? "Onchain fee" : "Fee"}
+            value={onchainFeeSat === 0 ? "No fee" : formatBitcoinAmount(onchainFeeSat)}
           />
         ) : null}
         {transaction.description ? (
