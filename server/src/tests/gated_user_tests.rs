@@ -78,63 +78,6 @@ async fn test_get_user_info() {
 
 #[tracing_test::traced_test]
 #[tokio::test]
-async fn test_update_ln_address() {
-    let (app, app_state, _guard) = setup_test_app().await;
-
-    let user = TestUser::new();
-    let access_token = user.access_token(&app_state);
-
-    // Setup: Create user with the repository
-    let mut tx = app_state.db_pool.begin().await.unwrap();
-    UserRepository::create(
-        &mut tx,
-        &user.pubkey().to_string(),
-        "existing@localhost",
-        None,
-    )
-    .await
-    .unwrap();
-    tx.commit().await.unwrap();
-
-    let response = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method(http::Method::POST)
-                .uri("/update_ln_address")
-                .header(http::header::CONTENT_TYPE, "application/json")
-                .header(
-                    http::header::AUTHORIZATION,
-                    format!("Bearer {}", access_token),
-                )
-                .body(Body::from(
-                    serde_json::to_vec(&json!({
-                        "ln_address": "new@localhost"
-                    }))
-                    .unwrap(),
-                ))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-
-    assert_eq!(response.status(), StatusCode::OK);
-
-    // Verification: Check for updated address with the repository
-    let user_repo = UserRepository::new(&app_state.db_pool);
-    let updated_user = user_repo
-        .find_by_pubkey(&user.pubkey().to_string())
-        .await
-        .unwrap()
-        .unwrap();
-    assert_eq!(
-        updated_user.lightning_address,
-        Some("new@localhost".to_string())
-    );
-}
-
-#[tracing_test::traced_test]
-#[tokio::test]
 async fn test_update_lightning_identity() {
     let (app, app_state, _guard) = setup_test_app().await;
 
