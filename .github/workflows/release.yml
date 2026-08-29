@@ -6,23 +6,39 @@ on:
       - "v*"
 
 jobs:
-  signet-build:
-    name: Build Android Signet App
-    uses: ./.github/workflows/client.yml
+  android-signet-build:
+    name: Build Android Signet Artifacts
+    uses: ./.github/workflows/android-artifacts.yml
     with:
-      build_aab: true
-    secrets: inherit
-
-  mainnet-build:
-    name: Build Android Mainnet Artifacts
-    uses: ./.github/workflows/android-mainnet-artifacts.yml
-    with:
+      variant: signet
       git_ref: ${{ github.ref }}
     secrets: inherit
 
-  ios-mainnet-archive:
-    name: Build iOS Mainnet Archive
+  android-mainnet-build:
+    name: Build Android Mainnet Artifacts
+    uses: ./.github/workflows/android-artifacts.yml
+    with:
+      variant: mainnet
+      git_ref: ${{ github.ref }}
+    secrets: inherit
+
+  ios-archive:
+    name: Build iOS ${{ matrix.display_name }} Archive
     runs-on: macOS
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: mainnet
+            display_name: Mainnet
+            build_script: build:ios:mainnet:archive
+            archive_name: Noah-mainnet.xcarchive
+            artifact_filename: noah-mainnet.xcarchive.tar.gz
+          - variant: signet
+            display_name: Signet
+            build_script: build:ios:signet:archive
+            archive_name: Noah-signet.xcarchive
+            artifact_filename: noah-signet.xcarchive.tar.gz
     env:
       # Self-hosted runners persist /nix/store; avoid stale Magic Nix Cache hooks/proxies.
       NIX_CONFIG: |
@@ -42,17 +58,17 @@ jobs:
         run: ./scripts/create_sentry_properties.sh
 
       - name: 🛠️ Build development-signed archive
-        run: nix develop .# --command bash -c "bun client ios:prebuild && bun client build:ios:mainnet:archive"
+        run: nix develop .# --command bash -c "bun client ios:prebuild && bun client ${{ matrix.build_script }}"
 
       - name: 📦 Package archive
         run: |
-          tar -czf client/ios/build/noah-mainnet.xcarchive.tar.gz \
-            -C client/ios/build Noah-mainnet.xcarchive
+          tar -czf "client/ios/build/${{ matrix.artifact_filename }}" \
+            -C client/ios/build "${{ matrix.archive_name }}"
 
       - name: 📤 Upload archive artifact
         uses: actions/upload-artifact@v7
         with:
-          path: client/ios/build/noah-mainnet.xcarchive.tar.gz
+          path: client/ios/build/${{ matrix.artifact_filename }}
           archive: false
           if-no-files-found: error
           retention-days: 90
@@ -67,28 +83,28 @@ jobs:
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [signet-build, mainnet-build, ios-mainnet-archive]
+    needs: [android-signet-build, android-mainnet-build, ios-archive]
     permissions:
       contents: write
     steps:
       - name: 📥 Download signet APK artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ needs.signet-build.outputs.apk_artifact_name }}
+          name: ${{ needs.android-signet-build.outputs.apk_artifact_name }}
           path: release-assets/signet
 
       - name: 📥 Download mainnet APK artifact
         uses: actions/download-artifact@v8
         with:
-          name: ${{ needs.mainnet-build.outputs.apk_artifact_name }}
+          name: ${{ needs.android-mainnet-build.outputs.apk_artifact_name }}
           path: release-assets/mainnet-apk
 
       - name: 📝 Prepare release assets
         run: |
           set -euo pipefail
-          mv "release-assets/signet/${{ needs.signet-build.outputs.apk_filename }}" \
+          mv "release-assets/signet/${{ needs.android-signet-build.outputs.apk_filename }}" \
             release-assets/noah-signet.apk
-          mv "release-assets/mainnet-apk/${{ needs.mainnet-build.outputs.apk_filename }}" \
+          mv "release-assets/mainnet-apk/${{ needs.android-mainnet-build.outputs.apk_filename }}" \
             release-assets/noah-mainnet.apk
 
       - name: 🚀 Create GitHub Release

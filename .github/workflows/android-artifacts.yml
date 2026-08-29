@@ -1,4 +1,4 @@
-name: Android Mainnet Artifacts
+name: Android Artifacts
 
 env:
   # Self-hosted runners persist /nix/store; avoid stale Magic Nix Cache hooks/proxies.
@@ -10,6 +10,10 @@ env:
 on:
   workflow_call:
     inputs:
+      variant:
+        description: "Android app variant to build"
+        required: true
+        type: string
       git_ref:
         description: "Git ref to build"
         required: false
@@ -18,18 +22,26 @@ on:
     outputs:
       apk_filename:
         description: "The filename of the APK"
-        value: ${{ jobs.android-mainnet-build.outputs.apk_filename }}
+        value: ${{ jobs.android-build.outputs.apk_filename }}
       apk_artifact_name:
         description: "The artifact name for the APK"
-        value: ${{ jobs.android-mainnet-build.outputs.apk_artifact_name }}
+        value: ${{ jobs.android-build.outputs.apk_artifact_name }}
       aab_filename:
         description: "The filename of the AAB"
-        value: ${{ jobs.android-mainnet-build.outputs.aab_filename }}
+        value: ${{ jobs.android-build.outputs.aab_filename }}
       aab_artifact_name:
         description: "The artifact name for the AAB"
-        value: ${{ jobs.android-mainnet-build.outputs.aab_artifact_name }}
+        value: ${{ jobs.android-build.outputs.aab_artifact_name }}
   workflow_dispatch:
     inputs:
+      variant:
+        description: "Android app variant to build"
+        required: true
+        default: "mainnet"
+        type: choice
+        options:
+          - mainnet
+          - signet
       git_ref:
         description: "Git ref to build"
         required: true
@@ -37,8 +49,8 @@ on:
         type: string
 
 jobs:
-  android-mainnet-build:
-    name: Build Android Mainnet Artifacts
+  android-build:
+    name: Build Android Artifacts
     runs-on: self-hosted
     outputs:
       apk_filename: ${{ steps.rename_outputs.outputs.apk_filename }}
@@ -46,13 +58,28 @@ jobs:
       aab_filename: ${{ steps.rename_outputs.outputs.aab_filename }}
       aab_artifact_name: ${{ steps.rename_outputs.outputs.aab_filename }}
     steps:
-      - name: 🔒 Validate trusted git ref
-        id: validate_ref
+      - name: 🔒 Validate build inputs
+        id: validate_inputs
         shell: bash
         env:
+          BUILD_VARIANT: ${{ inputs.variant }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+
+          case "$BUILD_VARIANT" in
+            mainnet|signet)
+              ;;
+            *)
+              echo "Variant '$BUILD_VARIANT' is not supported."
+              exit 1
+              ;;
+          esac
+
+          echo "variant=$BUILD_VARIANT" >> "$GITHUB_OUTPUT"
+          echo "apk_script=build:android:${BUILD_VARIANT}:ci:apk" >> "$GITHUB_OUTPUT"
+          echo "aab_script=build:android:${BUILD_VARIANT}:ci:aab" >> "$GITHUB_OUTPUT"
+
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             git_ref="${{ inputs.git_ref }}"
           elif [[ -n "${{ inputs.git_ref }}" ]]; then
@@ -82,14 +109,14 @@ jobs:
             exit 1
           fi
 
-          echo "Ref '$git_ref' is not allowed for the self-hosted mainnet artifact workflow."
+          echo "Ref '$git_ref' is not allowed for the self-hosted Android artifact workflow."
           echo "Use master or a real v* tag."
           exit 1
 
       - name: 🏗 Checkout code
         uses: actions/checkout@v6
         with:
-          ref: ${{ steps.validate_ref.outputs.checkout_ref }}
+          ref: ${{ steps.validate_inputs.outputs.checkout_ref }}
 
       - name: 🧾 Resolve artifact metadata
         id: git_meta
@@ -127,23 +154,26 @@ jobs:
           MYAPP_RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./scripts/create_local_properties.sh
 
-      - name: 🔨 Build mainnet Android app (APK)
-        run: nix develop .# --command bash -c "bun client build:android:mainnet:ci:apk"
+      - name: 🔨 Build Android app (APK)
+        run: nix develop .# --command bash -c "bun client ${{ steps.validate_inputs.outputs.apk_script }}"
 
-      - name: 📦 Build mainnet Android app (AAB)
-        run: nix develop .# --command bash -c "bun client build:android:mainnet:ci:aab"
+      - name: 📦 Build Android app (AAB)
+        run: nix develop .# --command bash -c "bun client ${{ steps.validate_inputs.outputs.aab_script }}"
 
       - name: 📝 Rename Android artifacts
         id: rename_outputs
         shell: bash
+        env:
+          BUILD_VARIANT: ${{ steps.validate_inputs.outputs.variant }}
+          SHORT_SHA: ${{ steps.git_meta.outputs.short_sha }}
         run: |
           set -euo pipefail
-          apk_path="client/android/app/build/outputs/apk/mainnet/release/app-mainnet-release.apk"
-          aab_path="client/android/app/build/outputs/bundle/mainnetRelease/app-mainnet-release.aab"
-          apk_filename="noah-mainnet-${{ steps.git_meta.outputs.short_sha }}.apk"
-          aab_filename="noah-mainnet-${{ steps.git_meta.outputs.short_sha }}.aab"
-          apk_target="client/android/app/build/outputs/apk/mainnet/release/${apk_filename}"
-          aab_target="client/android/app/build/outputs/bundle/mainnetRelease/${aab_filename}"
+          apk_path="client/android/app/build/outputs/apk/${BUILD_VARIANT}/release/app-${BUILD_VARIANT}-release.apk"
+          aab_path="client/android/app/build/outputs/bundle/${BUILD_VARIANT}Release/app-${BUILD_VARIANT}-release.aab"
+          apk_filename="noah-${BUILD_VARIANT}-${SHORT_SHA}.apk"
+          aab_filename="noah-${BUILD_VARIANT}-${SHORT_SHA}.aab"
+          apk_target="client/android/app/build/outputs/apk/${BUILD_VARIANT}/release/${apk_filename}"
+          aab_target="client/android/app/build/outputs/bundle/${BUILD_VARIANT}Release/${aab_filename}"
           mv "$apk_path" "$apk_target"
           mv "$aab_path" "$aab_target"
           echo "apk_path=${apk_target}" >> "$GITHUB_OUTPUT"
