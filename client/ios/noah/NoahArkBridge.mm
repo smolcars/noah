@@ -256,8 +256,6 @@ BOOL PerformVoidOperation(NSString *name, NSError **error, Operation operation) 
       nativeToken = std::make_unique<rust::String>(ToStdString(token));
     }
 
-    // The generated CXX argument is named amount_msat, but the current Bark API
-    // and Noah's existing React Native integration both interpret it as sats.
     const auto invoice = bark_cxx::bolt11_invoice(
         amountSat, nativeDescription.get(), nativeToken.get());
     return [[NoahArkBolt11Invoice alloc]

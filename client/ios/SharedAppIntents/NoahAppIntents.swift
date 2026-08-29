@@ -388,6 +388,9 @@ struct NoahAppShortcuts: AppShortcutsProvider {
           "Create an Ark address with \(.applicationName)",
           "Get an Ark address from \(.applicationName)",
           "Generate an Ark address with \(.applicationName)",
+          "Make an Ark address with \(.applicationName)",
+          "Show me an Ark address from \(.applicationName)",
+          "Receive with Ark in \(.applicationName)",
         ],
         shortTitle: "Create Ark Address",
         systemImageName: "qrcode"
@@ -412,6 +415,12 @@ struct NoahAppShortcuts: AppShortcutsProvider {
           "Create a Lightning invoice with \(.applicationName)",
           "Request sats with \(.applicationName)",
           "Generate an invoice with \(.applicationName)",
+          "Make a Lightning invoice with \(.applicationName)",
+          "Create a payment request with \(.applicationName)",
+          "Receive sats with \(.applicationName)",
+          "Create a \(\.$amountSats) sat Lightning invoice with \(.applicationName)",
+          "Make a \(\.$amountSats) sat invoice with \(.applicationName)",
+          "Request \(\.$amountSats) sats with \(.applicationName)",
         ],
         shortTitle: "Create Lightning Invoice",
         systemImageName: "bolt.badge.plus"
