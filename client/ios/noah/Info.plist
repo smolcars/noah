@@ -80,6 +80,8 @@
     <string>Allow $(PRODUCT_NAME) to detect your current motion activity</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your photos so that you can pick screenshots to share feedback.</string>
+    <key>RCTMetroPort</key>
+    <string>$(RCT_METRO_PORT)</string>
     <key>RCTNewArchEnabled</key>
     <true/>
     <key>UIBackgroundModes</key>
