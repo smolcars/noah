@@ -41,6 +41,7 @@
     "build:ios:ci": "xcrun xcodebuild -scheme 'Noah-Regtest' -workspace 'ios/noah.xcworkspace' -configuration Release -sdk 'iphonesimulator' -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build -quiet ARCHS=arm64",
     "build:ios:mainnet:device": "xcrun xcodebuild -scheme 'Noah' -workspace 'ios/noah.xcworkspace' -configuration Release -sdk iphoneos -derivedDataPath ios/build -allowProvisioningUpdates build -quiet ARCHS=arm64",
     "build:ios:signet:device": "xcrun xcodebuild -scheme 'Noah-Signet' -workspace 'ios/noah.xcworkspace' -configuration Release -sdk iphoneos -derivedDataPath ios/build -allowProvisioningUpdates build -quiet ARCHS=arm64",
+    "build:ios:mainnet:archive": "xcrun xcodebuild -scheme 'Noah' -workspace 'ios/noah.xcworkspace' -configuration Release -destination 'generic/platform=iOS' -derivedDataPath ios/build/DerivedData -archivePath ios/build/Noah-mainnet.xcarchive -allowProvisioningUpdates archive -quiet CODE_SIGN_STYLE=Automatic",
     "nitrogen": "bun --cwd nitromodules/noah-tools nitrogen",
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
