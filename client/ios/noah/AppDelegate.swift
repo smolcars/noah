@@ -1,4 +1,5 @@
 internal import Expo
+import AppIntents
 import React
 import ReactAppDependencyProvider
 
@@ -27,6 +28,10 @@ class AppDelegate: ExpoAppDelegate {
       in: window,
       launchOptions: launchOptions)
 #endif
+
+    if #available(iOS 17.4, *) {
+      NoahAppShortcuts.updateAppShortcutParameters()
+    }
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }

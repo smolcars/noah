@@ -16,6 +16,15 @@
 		90A46AE18A163BF183119CB6 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC16E7980CEC87034661C98D /* ExpoModulesProvider.swift */; };
 		91774CF337F101C31032D925 /* libPods-noah-common-Noah-Signet.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F05BC2FED16A519F831B178 /* libPods-noah-common-Noah-Signet.a */; };
 		A29D6E062D7F45109FBD3DBF /* noah.icon in Resources */ = {isa = PBXBuildFile; fileRef = 4750FC36FC574FD6949E1B64 /* noah.icon */; };
+		A91F6B022F4A100100ABC001 /* NoahAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91F6B012F4A100100ABC001 /* NoahAppIntents.swift */; };
+		A91F6B032F4A100100ABC001 /* NoahAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91F6B012F4A100100ABC001 /* NoahAppIntents.swift */; };
+		A91F6B042F4A100100ABC001 /* NoahAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91F6B012F4A100100ABC001 /* NoahAppIntents.swift */; };
+		B71A00112F4B100100ABC001 /* NoahArkBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = B71A00022F4B100100ABC001 /* NoahArkBridge.mm */; };
+		B71A00122F4B100100ABC001 /* NoahArkBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = B71A00022F4B100100ABC001 /* NoahArkBridge.mm */; };
+		B71A00132F4B100100ABC001 /* NoahArkBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = B71A00022F4B100100ABC001 /* NoahArkBridge.mm */; };
+		B71A00212F4B100100ABC001 /* NoahNativeWalletService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71A00032F4B100100ABC001 /* NoahNativeWalletService.swift */; };
+		B71A00222F4B100100ABC001 /* NoahNativeWalletService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71A00032F4B100100ABC001 /* NoahNativeWalletService.swift */; };
+		B71A00232F4B100100ABC001 /* NoahNativeWalletService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B71A00032F4B100100ABC001 /* NoahNativeWalletService.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		C39DD7062E0C95AF000CB6A9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 		C39DD70B2E0C95AF000CB6A9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
@@ -135,7 +144,11 @@
 		5EFBDBE072290378716253F8 /* Pods-noah-common-Noah-Signet.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-noah-common-Noah-Signet.release.xcconfig"; path = "Target Support Files/Pods-noah-common-Noah-Signet/Pods-noah-common-Noah-Signet.release.xcconfig"; sourceTree = "<group>"; };
 		85BF3676FE0AADD8774596BB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = noah/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		8B5FFA8A288023BD8CCB7C91 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-noah-common-Noah-Regtest/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		A91F6B012F4A100100ABC001 /* NoahAppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NoahAppIntents.swift; path = SharedAppIntents/NoahAppIntents.swift; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = noah/SplashScreen.storyboard; sourceTree = "<group>"; };
+		B71A00012F4B100100ABC001 /* NoahArkBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = NoahArkBridge.h; path = noah/NoahArkBridge.h; sourceTree = "<group>"; };
+		B71A00022F4B100100ABC001 /* NoahArkBridge.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = NoahArkBridge.mm; path = noah/NoahArkBridge.mm; sourceTree = "<group>"; };
+		B71A00032F4B100100ABC001 /* NoahNativeWalletService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NoahNativeWalletService.swift; path = noah/NoahNativeWalletService.swift; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		BF9E301C9E066D61A855F010 /* Pods-noah-common-Noah-Regtest.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-noah-common-Noah-Regtest.release.xcconfig"; path = "Target Support Files/Pods-noah-common-Noah-Regtest/Pods-noah-common-Noah-Regtest.release.xcconfig"; sourceTree = "<group>"; };
 		C379B55F2EC4D043004DFDC1 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -281,6 +294,10 @@
 			isa = PBXGroup;
 			children = (
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
+				A91F6B012F4A100100ABC001 /* NoahAppIntents.swift */,
+				B71A00012F4B100100ABC001 /* NoahArkBridge.h */,
+				B71A00022F4B100100ABC001 /* NoahArkBridge.mm */,
+				B71A00032F4B100100ABC001 /* NoahNativeWalletService.swift */,
 				F11748442D0722820044C1D9 /* noah-Bridging-Header.h */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
@@ -1064,6 +1081,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
+				A91F6B022F4A100100ABC001 /* NoahAppIntents.swift in Sources */,
+				B71A00112F4B100100ABC001 /* NoahArkBridge.mm in Sources */,
+				B71A00212F4B100100ABC001 /* NoahNativeWalletService.swift in Sources */,
 				90A46AE18A163BF183119CB6 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1073,6 +1093,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				C39DD7062E0C95AF000CB6A9 /* AppDelegate.swift in Sources */,
+				A91F6B032F4A100100ABC001 /* NoahAppIntents.swift in Sources */,
+				B71A00122F4B100100ABC001 /* NoahArkBridge.mm in Sources */,
+				B71A00222F4B100100ABC001 /* NoahNativeWalletService.swift in Sources */,
 				7DF2E503400EE172682AF07B /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1082,6 +1105,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				C39DD71B2E0C973E000CB6A9 /* AppDelegate.swift in Sources */,
+				A91F6B042F4A100100ABC001 /* NoahAppIntents.swift in Sources */,
+				B71A00132F4B100100ABC001 /* NoahArkBridge.mm in Sources */,
+				B71A00232F4B100100ABC001 /* NoahNativeWalletService.swift in Sources */,
 				601942D0AB763A941862EDE2 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
