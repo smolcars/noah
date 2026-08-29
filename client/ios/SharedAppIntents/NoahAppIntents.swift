@@ -418,9 +418,6 @@ struct NoahAppShortcuts: AppShortcutsProvider {
           "Make a Lightning invoice with \(.applicationName)",
           "Create a payment request with \(.applicationName)",
           "Receive sats with \(.applicationName)",
-          "Create a \(\.$amountSats) sat Lightning invoice with \(.applicationName)",
-          "Make a \(\.$amountSats) sat invoice with \(.applicationName)",
-          "Request \(\.$amountSats) sats with \(.applicationName)",
         ],
         shortTitle: "Create Lightning Invoice",
         systemImageName: "bolt.badge.plus"
