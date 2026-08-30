@@ -1,6 +1,6 @@
 import Icon from "@react-native-vector-icons/ionicons";
 import { useEffect, useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { Keyboard, Pressable, TextInput, View } from "react-native";
 
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
@@ -63,7 +63,8 @@ export function ReceiveAmountBottomSheet({
   } = useReceiveScreen();
   const fiatCurrencyInfo = getFiatCurrencyInfo(fiatCurrency);
   const [description, setDescription] = useState("");
-  const [isNoteVisible, setIsNoteVisible] = useState(false);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [isEditingNote, setIsEditingNote] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -73,15 +74,22 @@ export function ReceiveAmountBottomSheet({
     setCurrency("SATS");
     setAmount(initialAmountSat?.toString() ?? "");
     setDescription(initialDescription);
-    setIsNoteVisible(initialDescription.length > 0);
+    setNoteDraft(initialDescription);
+    setIsEditingNote(false);
   }, [initialAmountSat, initialDescription, isOpen, setAmount, setCurrency]);
 
-  const descriptionLength = getInvoiceDescriptionLength(description);
   const isDescriptionValid = isInvoiceDescriptionValid(description);
+  const noteDraftLength = getInvoiceDescriptionLength(noteDraft);
+  const isNoteDraftValid = isInvoiceDescriptionValid(noteDraft);
+  const canSaveNote =
+    isNoteDraftValid && (noteDraft.trim().length > 0 || description.trim().length > 0);
   const canSubmit = Number.isInteger(amountSat) && amountSat > 0 && isDescriptionValid;
   const displayAmount = amount.length === 0 ? "0" : formatNumber(amount);
   const amountPrefix =
     currency === "FIAT" ? fiatCurrencyInfo.symbol : bitcoinAmountUnit === "bip177" ? "₿" : null;
+  const primaryAmount = amountPrefix ? `${amountPrefix}${displayAmount}` : displayAmount;
+  const primaryAmountFontSize =
+    primaryAmount.length <= 7 ? 56 : primaryAmount.length <= 10 ? 44 : 34;
   const amountSuffix = currency === "SATS" && bitcoinAmountUnit === "sats" ? "sats" : null;
   const convertedAmount =
     currency === "SATS"
@@ -92,8 +100,30 @@ export function ReceiveAmountBottomSheet({
 
   const close = () => {
     if (!isSubmitting) {
+      Keyboard.dismiss();
       onClose();
     }
+  };
+
+  const openNoteEditor = () => {
+    setNoteDraft(description);
+    setIsEditingNote(true);
+  };
+
+  const closeNoteEditor = () => {
+    Keyboard.dismiss();
+    setNoteDraft(description);
+    setIsEditingNote(false);
+  };
+
+  const saveNote = () => {
+    if (!canSaveNote || isSubmitting) {
+      return;
+    }
+
+    Keyboard.dismiss();
+    setDescription(noteDraft.trim());
+    setIsEditingNote(false);
   };
 
   const enterKey = (key: KeypadKey) => {
@@ -136,164 +166,199 @@ export function ReceiveAmountBottomSheet({
   };
 
   return (
-    <AppBottomSheet isOpen={isOpen} onClose={close} avoidKeyboard>
-      <View className="flex-1 pb-4">
-        <View className="flex-row items-center justify-between">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close amount entry"
-            accessibilityState={{ disabled: isSubmitting }}
-            disabled={isSubmitting}
-            onPress={close}
-            className="h-12 w-12 items-center justify-center rounded-full border border-border"
-          >
-            <Icon name="close" size={24} color={colors.foreground} />
-          </Pressable>
-
-          {isNoteVisible ? (
-            <Text className="text-sm font-semibold text-muted-foreground">Lightning note</Text>
-          ) : (
+    <AppBottomSheet isOpen={isOpen} onClose={close}>
+      {isEditingNote ? (
+        <View className="flex-1">
+          <View className="flex-row items-center justify-between">
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Add a Lightning note"
-              onPress={() => setIsNoteVisible(true)}
-              className="rounded-full border border-border bg-card px-5 py-3"
+              accessibilityLabel="Close note editor"
+              onPress={closeNoteEditor}
+              className="h-12 w-12 items-center justify-center rounded-full border border-border"
             >
-              <Text className="font-semibold text-foreground">Add a note</Text>
+              <Icon name="close" size={24} color={colors.foreground} />
             </Pressable>
-          )}
+            <View className="h-12 w-12" />
+          </View>
 
-          <View className="h-12 w-12" />
-        </View>
+          <Text
+            accessibilityRole="header"
+            className="mt-8 text-2xl font-bold leading-8 text-foreground"
+          >
+            What is the payment for?
+          </Text>
 
-        {isNoteVisible ? (
-          <View className="mt-4">
-            <TextInput
-              accessibilityLabel="Lightning note"
-              autoFocus={initialDescription.length === 0}
-              className="rounded-2xl border border-border bg-card px-4 py-4 text-base text-foreground"
-              editable={!isSubmitting}
-              maxLength={MAX_INVOICE_DESCRIPTION_LENGTH}
-              onChangeText={setDescription}
-              placeholder="What is this payment for?"
-              placeholderTextColor={colors.mutedForeground}
-              returnKeyType="done"
-              value={description}
-            />
+          <TextInput
+            accessibilityLabel="Lightning note"
+            autoFocus
+            className="mt-8 rounded-2xl border border-foreground bg-background px-5 py-4 text-lg text-foreground"
+            editable={!isSubmitting}
+            maxLength={MAX_INVOICE_DESCRIPTION_LENGTH}
+            onChangeText={setNoteDraft}
+            onSubmitEditing={saveNote}
+            placeholder="Your note"
+            placeholderTextColor={colors.mutedForeground}
+            returnKeyType="done"
+            testID="receive-note-input"
+            value={noteDraft}
+          />
+          {noteDraftLength >= MAX_INVOICE_DESCRIPTION_LENGTH - 40 || !isNoteDraftValid ? (
             <Text
-              className={`mt-2 text-right text-xs ${
-                isDescriptionValid ? "text-muted-foreground" : "text-destructive"
+              className={`mt-2 text-right text-sm ${
+                isNoteDraftValid ? "text-muted-foreground" : "text-destructive"
               }`}
             >
-              {descriptionLength}/{MAX_INVOICE_DESCRIPTION_LENGTH}
+              {noteDraftLength}/{MAX_INVOICE_DESCRIPTION_LENGTH}
             </Text>
-          </View>
-        ) : null}
+          ) : null}
 
-        <View className="flex-1 items-center justify-center py-5">
-          <View
-            accessibilityRole="text"
-            accessibilityLabel={`${amount.length === 0 ? "0" : amount} ${
-              currency === "SATS" ? "sats" : fiatCurrency
-            }`}
-            className="flex-row items-baseline justify-center px-4"
-          >
-            {amountPrefix ? (
-              <Text className="mr-2 text-[56px] font-bold leading-[64px] text-foreground">
-                {amountPrefix}
-              </Text>
-            ) : null}
-            <Text
-              adjustsFontSizeToFit
-              className="max-w-[260px] text-[56px] font-bold leading-[64px] text-foreground"
-              minimumFontScale={0.55}
-              numberOfLines={1}
-            >
-              {displayAmount}
-            </Text>
-            {amountSuffix ? (
-              <Text className="ml-2 text-xl font-semibold text-muted-foreground">
-                {amountSuffix}
-              </Text>
-            ) : null}
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Switch to ${currency === "SATS" ? fiatCurrency : "sats"}`}
-            accessibilityState={{ disabled: !btcPrice || isSubmitting }}
-            disabled={!btcPrice || isSubmitting}
-            onPress={toggleCurrency}
-            className="mt-3 flex-row items-center gap-2 px-4 py-2"
-          >
-            <Text
-              className="text-base font-semibold"
-              style={{ color: btcPrice ? COLORS.SUCCESS : colors.mutedForeground }}
-            >
-              {convertedAmount}
-            </Text>
-            <Icon
-              name="swap-vertical"
-              size={18}
-              color={btcPrice ? COLORS.SUCCESS : colors.mutedForeground}
+          <View className="mt-6 px-1">
+            <NativeNoahButton
+              label="Done"
+              onPress={saveNote}
+              disabled={!canSaveNote}
+              size="lg"
+              fullWidth
+              testID="receive-note-done"
             />
-          </Pressable>
+          </View>
         </View>
+      ) : (
+        <View className="flex-1">
+          <View className="flex-row items-center justify-between">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close amount entry"
+              accessibilityState={{ disabled: isSubmitting }}
+              disabled={isSubmitting}
+              onPress={close}
+              className="h-12 w-12 items-center justify-center rounded-full border border-border"
+            >
+              <Icon name="close" size={24} color={colors.foreground} />
+            </Pressable>
 
-        <View accessibilityLabel="Amount keypad" className="mb-5">
-          {KEYPAD_ROWS.map((row, rowIndex) => (
-            <View key={rowIndex} className="flex-row">
-              {row.map((key) => {
-                const isDecimalDisabled =
-                  key === "." && (currency !== "FIAT" || fiatCurrencyInfo.decimals === 0);
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={description ? "Edit Lightning note" : "Add a Lightning note"}
+              accessibilityState={{ disabled: isSubmitting }}
+              disabled={isSubmitting}
+              onPress={openNoteEditor}
+              className="rounded-full border border-border bg-card px-5 py-3"
+              testID="receive-note-button"
+            >
+              <Text className="font-semibold text-foreground">
+                {description ? "Edit note" : "Add a note"}
+              </Text>
+            </Pressable>
 
-                return (
-                  <Pressable
-                    key={key}
-                    accessibilityRole="button"
-                    accessibilityLabel={key === "backspace" ? "Delete digit" : key}
-                    accessibilityState={{ disabled: isDecimalDisabled || isSubmitting }}
-                    disabled={isDecimalDisabled || isSubmitting}
-                    onPress={() => enterKey(key)}
-                    className="h-[66px] flex-1 items-center justify-center"
-                    testID={`receive-key-${key}`}
-                  >
-                    {key === "backspace" ? (
-                      <Icon name="backspace-outline" size={27} color={colors.foreground} />
-                    ) : isDecimalDisabled ? null : (
-                      <Text className="text-3xl font-medium text-foreground">{key}</Text>
-                    )}
-                  </Pressable>
-                );
-              })}
+            <View className="h-12 w-12" />
+          </View>
+
+          <View className="flex-1 items-center justify-center py-5">
+            <View
+              accessibilityRole="text"
+              accessibilityLabel={`${amount.length === 0 ? "0" : amount} ${
+                currency === "SATS" ? "sats" : fiatCurrency
+              }`}
+              className="flex-row items-baseline justify-center px-4"
+            >
+              <Text
+                className="text-center font-bold text-foreground"
+                numberOfLines={1}
+                style={{
+                  width: amountSuffix ? 250 : 320,
+                  fontSize: primaryAmountFontSize,
+                  lineHeight: primaryAmountFontSize + 8,
+                }}
+              >
+                {primaryAmount}
+              </Text>
+              {amountSuffix ? (
+                <Text className="ml-2 text-xl font-semibold text-muted-foreground">
+                  {amountSuffix}
+                </Text>
+              ) : null}
             </View>
-          ))}
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Switch to ${currency === "SATS" ? fiatCurrency : "sats"}`}
+              accessibilityState={{ disabled: !btcPrice || isSubmitting }}
+              disabled={!btcPrice || isSubmitting}
+              onPress={toggleCurrency}
+              className="mt-2 flex-row items-center gap-2 px-4 py-2"
+            >
+              <Text
+                className="text-xl font-semibold leading-7"
+                style={{ color: btcPrice ? COLORS.SUCCESS : colors.mutedForeground }}
+              >
+                {convertedAmount}
+              </Text>
+              <Icon
+                name="swap-vertical"
+                size={21}
+                color={btcPrice ? COLORS.SUCCESS : colors.mutedForeground}
+              />
+            </Pressable>
+          </View>
+
+          <View accessibilityLabel="Amount keypad" className="mb-5">
+            {KEYPAD_ROWS.map((row, rowIndex) => (
+              <View key={rowIndex} className="flex-row">
+                {row.map((key) => {
+                  const isDecimalDisabled =
+                    key === "." && (currency !== "FIAT" || fiatCurrencyInfo.decimals === 0);
+
+                  return (
+                    <Pressable
+                      key={key}
+                      accessibilityRole="button"
+                      accessibilityLabel={key === "backspace" ? "Delete digit" : key}
+                      accessibilityState={{ disabled: isDecimalDisabled || isSubmitting }}
+                      disabled={isDecimalDisabled || isSubmitting}
+                      onPress={() => enterKey(key)}
+                      className="h-[66px] flex-1 items-center justify-center"
+                      testID={`receive-key-${key}`}
+                    >
+                      {key === "backspace" ? (
+                        <Icon name="backspace-outline" size={27} color={colors.foreground} />
+                      ) : isDecimalDisabled ? null : (
+                        <Text className="text-3xl font-medium text-foreground">{key}</Text>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+
+          <View className="px-1">
+            <NativeNoahButton
+              label={initialAmountSat === null ? "Next" : "Update request"}
+              loadingLabel="Generating…"
+              onPress={submit}
+              disabled={!canSubmit}
+              isLoading={isSubmitting}
+              size="lg"
+              fullWidth
+              testID="receive-amount-submit"
+            />
+          </View>
+
+          {initialAmountSat !== null ? (
+            <NativeNoahSecondaryButton
+              label="Remove amount"
+              onPress={onRemove}
+              disabled={isSubmitting}
+              emphasis="ghost"
+              tone="destructive"
+              className="mt-2"
+              fullWidth
+              testID="receive-amount-remove"
+            />
+          ) : null}
         </View>
-
-        <NativeNoahButton
-          label={initialAmountSat === null ? "Next" : "Update request"}
-          loadingLabel="Generating…"
-          onPress={submit}
-          disabled={!canSubmit}
-          isLoading={isSubmitting}
-          size="lg"
-          fullWidth
-          testID="receive-amount-submit"
-        />
-
-        {initialAmountSat !== null ? (
-          <NativeNoahSecondaryButton
-            label="Remove amount"
-            onPress={onRemove}
-            disabled={isSubmitting}
-            emphasis="ghost"
-            tone="destructive"
-            className="mt-2"
-            fullWidth
-            testID="receive-amount-remove"
-          />
-        ) : null}
-      </View>
+      )}
     </AppBottomSheet>
   );
 }

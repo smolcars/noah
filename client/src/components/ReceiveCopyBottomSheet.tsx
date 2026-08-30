@@ -86,7 +86,7 @@ export function ReceiveCopyBottomSheet({
 
   return (
     <AppBottomSheet isOpen={isOpen} onClose={onClose} detents={[0, "content"]}>
-      <View className="pb-4">
+      <View>
         <View className="flex-row items-start justify-between gap-4">
           <View className="flex-1">
             <Text accessibilityRole="header" className="text-2xl font-bold text-foreground">

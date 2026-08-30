@@ -276,7 +276,7 @@ const ReceiveScreen = () => {
         }}
         detents={[0, "content"]}
       >
-        <View className="pb-4">
+        <View>
           <Text accessibilityRole="header" className="text-xl font-bold text-foreground">
             More receive actions
           </Text>

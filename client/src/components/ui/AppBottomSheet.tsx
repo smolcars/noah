@@ -134,7 +134,10 @@ export const AppBottomSheet = ({
     >
       <View
         className="px-4 pt-3"
-        style={contentHeight === undefined ? undefined : { height: contentHeight }}
+        style={[
+          contentHeight === undefined ? undefined : { height: contentHeight },
+          scrollable ? undefined : { paddingBottom: Math.max(insets.bottom, 12) },
+        ]}
       >
         <View className="mb-3 h-1 w-12 self-center rounded-full bg-muted-foreground/30" />
         {scrollable ? (

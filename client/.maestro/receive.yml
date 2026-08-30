@@ -45,6 +45,16 @@ appId: com.noahwallet.regtest
 
 - tapOn: "Add amount"
 - tapOn:
+    id: "receive-note-button"
+- assertVisible: "What is the payment for?"
+- tapOn:
+    id: "receive-note-input"
+- inputText: "Test payment"
+- tapOn:
+    id: "receive-note-done"
+- assertVisible:
+    id: "receive-key-5"
+- tapOn:
     id: "receive-key-5"
 - tapOn:
     id: "receive-key-0"
