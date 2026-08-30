@@ -46,6 +46,7 @@ export const useReceiveScreen = () => {
     amount,
     setAmount,
     currency,
+    setCurrency,
     toggleCurrency,
     amountSat,
     btcPrice,

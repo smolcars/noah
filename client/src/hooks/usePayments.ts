@@ -187,6 +187,34 @@ export function useGenerateOnchainAddress() {
   });
 }
 
+export function useGenerateReceiveAddresses() {
+  const { showAlert } = useAlert();
+
+  return useMutation({
+    mutationFn: async () => {
+      const [arkAddressResult, onchainAddressResult] = await Promise.all([
+        newAddress(),
+        onchainAddress(),
+      ]);
+
+      if (arkAddressResult.isErr()) {
+        throw arkAddressResult.error;
+      }
+      if (onchainAddressResult.isErr()) {
+        throw onchainAddressResult.error;
+      }
+
+      return {
+        arkAddress: arkAddressResult.value.address,
+        onchainAddress: onchainAddressResult.value,
+      };
+    },
+    onError: (error: Error) => {
+      showAlert({ title: "Receive Request Failed", description: error.message });
+    },
+  });
+}
+
 export function useGenerateLightningInvoice() {
   const { showAlert } = useAlert();
 

@@ -17,7 +17,7 @@ import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
 import { useTheme } from "~/hooks/useTheme";
 import { COLORS } from "~/lib/styleConstants";
 
-export type NativeNoahIcon = "back" | "board" | "history" | "refresh" | "share";
+export type NativeNoahIcon = "back" | "board" | "copy" | "history" | "more" | "refresh" | "share";
 
 const ICONS = {
   back: {
@@ -28,9 +28,17 @@ const ICONS = {
     ios: "ferry",
     android: "boat-outline",
   },
+  copy: {
+    ios: "doc.on.doc",
+    android: "copy-outline",
+  },
   history: {
     ios: "clock.arrow.circlepath",
     android: "time-outline",
+  },
+  more: {
+    ios: "ellipsis",
+    android: "ellipsis-horizontal",
   },
   refresh: {
     ios: "arrow.clockwise",
