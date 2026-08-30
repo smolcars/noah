@@ -214,7 +214,7 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
   );
 
   const handleLightningReceiveEvent = useCallback(
-    (event: BarkNotificationEvent, sessionId: number) => {
+    (event: BarkNotificationEvent, sessionId: number, paymentHash: string) => {
       if (event.kind === "channelLagging") {
         return;
       }
@@ -224,6 +224,7 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
       if (
         !activeSession ||
         activeSession.sessionId !== sessionId ||
+        activeSession.paymentHash !== paymentHash ||
         !movement ||
         !isLightningReceiveMovement(movement)
       ) {
@@ -319,32 +320,35 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
   ]);
 
   useEffect(() => {
-    const lightningInvoice = request?.lightningInvoice;
-    if (!lightningInvoice?.payment_hash) {
+    const paymentHash = request?.lightningInvoice?.payment_hash;
+    if (!paymentHash) {
       return;
     }
 
     const activeSession = activeReceiveSessionRef.current;
-    if (!activeSession || activeSession.paymentHash === lightningInvoice.payment_hash) {
+    if (!activeSession || activeSession.paymentHash === paymentHash) {
       return;
     }
 
     releaseLightningSubscription();
-    const subscriptionResult = subscribeLightningPaymentMovements(
-      lightningInvoice.payment_hash,
-      (event) => {
-        handleLightningReceiveEvent(event, activeSession.sessionId);
-      },
-    );
+    activeSession.paymentHash = paymentHash;
+    const subscriptionResult = subscribeLightningPaymentMovements(paymentHash, (event) => {
+      handleLightningReceiveEvent(event, activeSession.sessionId, paymentHash);
+    });
 
     if (subscriptionResult.isErr()) {
+      if (
+        activeReceiveSessionRef.current?.sessionId === activeSession.sessionId &&
+        activeReceiveSessionRef.current.paymentHash === paymentHash
+      ) {
+        activeReceiveSessionRef.current.paymentHash = undefined;
+      }
       log.w("Failed to subscribe to Lightning receive updates", [subscriptionResult.error.message]);
       scheduleLightningSubscriptionRetry(activeSession.sessionId);
       return;
     }
 
     clearLightningSubscriptionRetry();
-    activeSession.paymentHash = lightningInvoice.payment_hash;
     lightningSubscriptionRef.current = subscriptionResult.value;
   }, [
     clearLightningSubscriptionRetry,
