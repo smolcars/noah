@@ -44,6 +44,11 @@ const ReceiveScreen = () => {
 
   const handleReceiveComplete = useCallback(
     (amountSat: number) => {
+      setIsAmountSheetOpen(false);
+      setIsCopySheetOpen(false);
+      setIsActionsSheetOpen(false);
+      setShouldOpenBoardArkSheet(false);
+      setIsBoardArkSheetOpen(false);
       navigation.navigate("Home", {
         screen: "ReceiveSuccess",
         params: { amountSat },
