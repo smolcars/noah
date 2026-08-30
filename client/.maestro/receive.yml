@@ -34,9 +34,11 @@ appId: com.noahwallet.regtest
 
 - tapOn:
     id: "receive-qr-button"
-- assertVisible: "Payment request"
-- assertVisible: "Ark"
-- assertVisible: "On-chain"
+- assertVisible: "Copy payment details"
+- assertVisible:
+    id: "receive-copy-ark"
+- assertVisible:
+    id: "receive-copy-onchain"
 - assertNotVisible:
     id: "receive-copy-lightning"
 - tapOn: "Close payment details"
