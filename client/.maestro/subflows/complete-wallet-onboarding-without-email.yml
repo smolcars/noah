@@ -1,0 +1,16 @@
+appId: com.noahwallet.regtest
+---
+- tapOn: "Continue without email"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible: "Disable battery optimization"
+      - tapOn: "Skip"
+- extendedWaitUntil:
+    visible: "Choose your Lightning Address"
+    timeout: 10000
+- tapOn: "Skip"
+- extendedWaitUntil:
+    visible: "History"
+    timeout: 10000

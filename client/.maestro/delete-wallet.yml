@@ -1,0 +1,21 @@
+appId: com.noahwallet.regtest
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- runFlow: subflows/start-wallet-onboarding.yml
+- runFlow: subflows/complete-wallet-onboarding-without-email.yml
+
+- tapOn: "Open settings"
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+- tapOn: "Delete Wallet"
+- tapOn:
+    text: 'Type "delete" to confirm'
+- inputText: "delete"
+- tapOn:
+    id: "confirm-delete-wallet"
+- assertVisible: "Welcome to Noah"

@@ -6,12 +6,9 @@ appId: com.noahwallet.regtest
 
 - launchApp:
     clearState: true
+    clearKeychain: true
 
-- tapOn: "Create Wallet"
-- assertVisible: "Noah is in beta"
-- tapOn: "I accept"
-- assertVisible: "Your Recovery Phrase"
-- tapOn: "I Have Saved It, Continue"
+- runFlow: subflows/start-wallet-onboarding.yml
 
 # Emergency Email screen
 - extendedWaitUntil:
@@ -49,17 +46,3 @@ appId: com.noahwallet.regtest
 - extendedWaitUntil:
     visible: "History"
     timeout: 10000
-
-# Clean up: Delete the wallet
-- tapOn: "Open settings"
-- swipe:
-    direction: UP
-- swipe:
-    direction: UP
-- tapOn: "Delete Wallet"
-- tapOn:
-    text: 'Type "delete" to confirm'
-- inputText: "delete"
-- tapOn:
-    id: "confirm-delete-wallet"
-- assertVisible: "Welcome to Noah"
