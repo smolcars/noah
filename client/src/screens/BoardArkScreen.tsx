@@ -3,6 +3,7 @@ import { Keyboard, Linking, Pressable, ScrollView, View } from "react-native";
 import { useNavigation, usePreventRemove } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
+import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 
 import { FeeEstimateSummary } from "~/components/FeeEstimateSummary";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
@@ -23,6 +24,7 @@ type NavigationProp = NativeStackNavigationProp<SettingsStackParamList, "BoardAr
 
 const BoardArkScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const tabBarHeight = useBottomTabBarHeight();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const { copyWithState, isCopied, resetCopiedState } = useCopyToClipboard(1200);
   const { data: balance, isLoading: isBalanceLoading } = useBalance();
@@ -166,7 +168,7 @@ const BoardArkScreen = () => {
 
         <ScrollView
           className="flex-1 px-5"
-          contentContainerStyle={{ paddingBottom: 32 }}
+          contentContainerStyle={{ paddingBottom: tabBarHeight + 32 }}
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
         >
