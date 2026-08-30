@@ -76,7 +76,12 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
 
 ### Mobile app execution policy for autonomous agents
 
-- Feel free to run simulator/emulator commands like `just android`, `just ios`, or variant-specific equivalents to test app behavior.
+- Feel free to run simulator/emulator commands.
+- If Nix shell is available run inside commands using Nix.
+- When installing Pods, use `just ios-prebuild`.
+- When working with simulators in debug mode, you will need to start expo dev server.
+- When spinning up simulator, for iOS, use xcode cli to build the regtest app.
+- For Android, `just android-regtest` should work.
 - Rely on GitHub Actions client pipelines for platform builds (Android and iOS).
 
 ### Server run commands

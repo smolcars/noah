@@ -16,12 +16,11 @@ Operate Noah's local Ark regtest stack from the repository root. Use the `just` 
   docker-compose -f scripts/docker-compose.yml ps
   ```
 
+- `just setup-everything` will fund all necessary wallets and set up the stack.
 - Use `just up` when an initialized stack is merely stopped. Use `just stop` when services should stop without deleting data.
 - Obtain explicit confirmation before running any state-resetting command unless the user directly requested that reset:
   - `just down` removes the stack's Docker volumes.
   - `just create-bark-wallet` deletes the existing Bark wallet data before creating a wallet.
-  - `just setup-everything` recreates Bark wallet state while bootstrapping and funding the stack.
-- Never expose a mnemonic, private key, macaroon, credential, or raw signature in commentary, logs, or the final response.
 
 ## Establish readiness
 
