@@ -39,6 +39,7 @@ import ProfileScreen from "~/screens/ProfileScreen";
 import CurrencySettingsScreen from "~/screens/CurrencySettingsScreen";
 import BitcoinUnitSettingsScreen from "~/screens/BitcoinUnitSettingsScreen";
 import EsploraSettingsScreen from "~/screens/EsploraSettingsScreen";
+import BoardArkScreen from "~/screens/BoardArkScreen";
 import WalletLoader from "~/components/WalletLoader";
 import { useWalletStore } from "~/store/walletStore";
 import { useServerStore } from "~/store/serverStore";
@@ -88,6 +89,7 @@ export type SettingsStackParamList = {
   EmailVerification: { fromSettings?: boolean } | undefined;
   LightningAddress: { fromOnboarding?: boolean };
   BackupSettings: undefined;
+  BoardArk: undefined;
   ArkInfo: undefined;
   ExportDatabase: undefined;
   Feedback: undefined;
@@ -171,6 +173,7 @@ const SettingsStackNav = () => (
       component={BackupSettingsScreen}
       options={{ animation: "default" }}
     />
+    <Stack.Screen name="BoardArk" component={BoardArkScreen} options={{ animation: "default" }} />
     <Stack.Screen name="ArkInfo" component={ArkInfoScreen} options={{ animation: "default" }} />
     <Stack.Screen
       name="ExportDatabase"

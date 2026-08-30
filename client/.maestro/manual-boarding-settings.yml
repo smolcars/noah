@@ -1,0 +1,29 @@
+appId: com.noahwallet.regtest
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- runFlow: subflows/start-wallet-onboarding.yml
+- runFlow: subflows/complete-wallet-onboarding-without-email.yml
+
+- tapOn: "Open settings"
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "settings-board-ark"
+    commands:
+      - swipe:
+          start: 50%, 80%
+          end: 50%, 55%
+          duration: 800
+- tapOn:
+    id: "settings-board-ark"
+- assertVisible:
+    id: "board-ark-screen"
+- assertVisible: "Confirmed onchain balance"
+- assertVisible:
+    id: "board-ark-amount-input"
+- assertVisible:
+    id: "board-ark-submit-button"
