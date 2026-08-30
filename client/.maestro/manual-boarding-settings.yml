@@ -1,0 +1,48 @@
+appId: com.noahwallet.regtest
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Create Wallet"
+- assertVisible: "Noah is in beta"
+- tapOn: "I accept"
+- assertVisible: "Your Recovery Phrase"
+- tapOn: "I Have Saved It, Continue"
+- extendedWaitUntil:
+    visible: "Emergency Email"
+    timeout: 10000
+- tapOn: "Continue without email"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible: "Disable battery optimization"
+      - tapOn: "Skip"
+- extendedWaitUntil:
+    visible: "Choose your Lightning Address"
+    timeout: 10000
+- tapOn: "Skip"
+- extendedWaitUntil:
+    visible: "History"
+    timeout: 10000
+
+- tapOn: "Open settings"
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: "settings-board-ark"
+    commands:
+      - swipe:
+          start: 50%, 80%
+          end: 50%, 55%
+          duration: 800
+- tapOn:
+    id: "settings-board-ark"
+- assertVisible:
+    id: "board-ark-screen"
+- assertVisible: "Confirmed onchain balance"
+- assertVisible:
+    id: "board-ark-amount-input"
+- assertVisible:
+    id: "board-ark-submit-button"

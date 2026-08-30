@@ -59,6 +59,7 @@ type Setting = {
     | "showLogs"
     | "resetRegistration"
     | "backup"
+    | "boardArk"
     | "arkInfo"
     | "vtxos"
     | "emergencyExit"
@@ -70,6 +71,7 @@ type Setting = {
   value?: string;
   description?: string;
   isPressable: boolean;
+  testID?: string;
 };
 
 const SettingsScreen = () => {
@@ -239,6 +241,8 @@ const SettingsScreen = () => {
       // This is handled by the AlertDialog now
     } else if (item.id === "backup") {
       navigation.navigate("BackupSettings");
+    } else if (item.id === "boardArk") {
+      navigation.navigate("BoardArk");
     } else if (item.id === "arkInfo") {
       navigation.navigate("ArkInfo");
     } else if (item.id === "vtxos") {
@@ -327,6 +331,14 @@ const SettingsScreen = () => {
       });
     }
 
+    walletData.push({
+      id: "boardArk",
+      title: "Board to Ark",
+      description: "Manually move onchain bitcoin into Ark.",
+      isPressable: true,
+      testID: "settings-board-ark",
+    });
+
     debugData.push({
       id: "showLogs",
       title: "Show Logs",
@@ -394,6 +406,7 @@ const SettingsScreen = () => {
         key={item.id}
         onPress={() => handlePress(item)}
         disabled={!item.isPressable}
+        testID={item.testID}
         className="flex-row justify-between items-center p-4 border-b border-border bg-card rounded-lg mb-2"
       >
         <View className="flex-1">

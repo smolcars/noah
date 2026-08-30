@@ -7,11 +7,9 @@ import QRCode from "react-native-qrcode-svg";
 
 import logoImage from "../../assets/All_Files/light_dark_tinted/icon_clear_tinted_ios.png";
 import type { TabParamList } from "~/Navigators";
-import { BoardArkBottomSheet } from "~/components/BoardArkBottomSheet";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { ReceiveAmountBottomSheet } from "~/components/ReceiveAmountBottomSheet";
 import { ReceiveCopyBottomSheet } from "~/components/ReceiveCopyBottomSheet";
-import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
@@ -20,7 +18,6 @@ import { Text } from "~/components/ui/text";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { useBtcToFiatRate } from "~/hooks/useMarketData";
 import { useReceiveRequest } from "~/hooks/useReceiveRequest";
-import { useThemeColors } from "~/hooks/useTheme";
 import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
 import logger from "~/lib/log";
 import { COLORS } from "~/lib/styleConstants";
@@ -31,24 +28,17 @@ const DESTRUCTIVE_COLOR = "#dc2626";
 
 const ReceiveScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<TabParamList>>();
-  const colors = useThemeColors();
   const { width } = useWindowDimensions();
   const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const { data: btcPrice } = useBtcToFiatRate();
   const [isAmountSheetOpen, setIsAmountSheetOpen] = useState(false);
   const [isCopySheetOpen, setIsCopySheetOpen] = useState(false);
-  const [isActionsSheetOpen, setIsActionsSheetOpen] = useState(false);
-  const [shouldOpenBoardArkSheet, setShouldOpenBoardArkSheet] = useState(false);
-  const [isBoardArkSheetOpen, setIsBoardArkSheetOpen] = useState(false);
 
   const handleReceiveComplete = useCallback(
     (amountSat: number) => {
       setIsAmountSheetOpen(false);
       setIsCopySheetOpen(false);
-      setIsActionsSheetOpen(false);
-      setShouldOpenBoardArkSheet(false);
-      setIsBoardArkSheetOpen(false);
       navigation.navigate("Home", {
         screen: "ReceiveSuccess",
         params: { amountSat },
@@ -103,11 +93,6 @@ const ReceiveScreen = () => {
     setIsAmountSheetOpen(false);
   };
 
-  const openBoardToArk = () => {
-    setShouldOpenBoardArkSheet(true);
-    setIsActionsSheetOpen(false);
-  };
-
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
       <ScrollView
@@ -118,21 +103,13 @@ const ReceiveScreen = () => {
         <View className="flex-1 px-5 pb-8">
           <View className="flex-row items-center justify-between pt-1">
             <Text className="text-2xl font-bold text-foreground">Receive</Text>
-            <View className="flex-row items-center gap-2">
-              <NativeNoahIconButton
-                icon="copy"
-                accessibilityLabel="Show payment details"
-                onPress={() => setIsCopySheetOpen(true)}
-                disabled={!request}
-                testID="receive-copy-button"
-              />
-              <NativeNoahIconButton
-                icon="more"
-                accessibilityLabel="More receive actions"
-                onPress={() => setIsActionsSheetOpen(true)}
-                testID="receive-more-button"
-              />
-            </View>
+            <NativeNoahIconButton
+              icon="copy"
+              accessibilityLabel="Show payment details"
+              onPress={() => setIsCopySheetOpen(true)}
+              disabled={!request}
+              testID="receive-copy-button"
+            />
           </View>
 
           <View className="flex-1 items-center justify-center py-8">
@@ -269,47 +246,6 @@ const ReceiveScreen = () => {
           />
         </>
       ) : null}
-
-      <AppBottomSheet
-        isOpen={isActionsSheetOpen}
-        onClose={() => setIsActionsSheetOpen(false)}
-        onDismiss={() => {
-          if (shouldOpenBoardArkSheet) {
-            setShouldOpenBoardArkSheet(false);
-            setIsBoardArkSheetOpen(true);
-          }
-        }}
-        detents={[0, "content"]}
-      >
-        <View>
-          <Text accessibilityRole="header" className="text-xl font-bold text-foreground">
-            More receive actions
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Board bitcoin to Ark"
-            onPress={openBoardToArk}
-            className="mt-5 flex-row items-center gap-4 rounded-[20px] border border-border bg-card px-4 py-4"
-            testID="receive-board-ark-button"
-          >
-            <View className="h-11 w-11 items-center justify-center rounded-full bg-primary/10">
-              <Icon name="boat-outline" size={21} color={colors.foreground} />
-            </View>
-            <View className="flex-1">
-              <Text className="text-base font-semibold text-foreground">Board to Ark</Text>
-              <Text className="mt-1 text-sm text-muted-foreground">
-                Move on-chain bitcoin into Ark
-              </Text>
-            </View>
-            <Icon name="chevron-forward" size={18} color={colors.mutedForeground} />
-          </Pressable>
-        </View>
-      </AppBottomSheet>
-
-      <BoardArkBottomSheet
-        isOpen={isBoardArkSheetOpen}
-        onClose={() => setIsBoardArkSheetOpen(false)}
-      />
     </NoahSafeAreaView>
   );
 };
