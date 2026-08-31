@@ -25,14 +25,14 @@ asset through BuildKit's `TARGETARCH` and verifies a pinned SHA-256 for each arc
 ```sh
 docker build \
   --file fly/barkd.Dockerfile \
-  --tag noah-barkd:0.6.1 \
+  --tag noah-barkd:0.6.2 \
   .
 
-docker run --rm noah-barkd:0.6.1 barkd --version
+docker run --rm noah-barkd:0.6.2 barkd --version
 ```
 
 The manual build workflow builds natively on amd64 and arm64 runners, then publishes shared
-`0.6.1` and `latest` manifests to `niteshbalusu/noah-barkd` on Docker Hub and
+`0.6.2` and `latest` manifests to `niteshbalusu/noah-barkd` on Docker Hub and
 `ghcr.io/smolcars/noah-barkd` on GHCR:
 
 ```sh
@@ -40,7 +40,7 @@ gh workflow run barkd-build-push.yml --ref master
 ```
 
 The workflow uses the existing `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets.
-The Fly configs deliberately use the immutable `0.6.1` tag rather than `latest`, so signet and
+The Fly configs deliberately use the immutable `0.6.2` tag rather than `latest`, so signet and
 mainnet promote the same image version.
 
 ## Provision signet

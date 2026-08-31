@@ -167,14 +167,14 @@ services:
         condition: service_started
 
   barkd:
-    image: ${BARKD_IMAGE:-niteshbalusu/noah-barkd:0.6.1}
+    image: ${BARKD_IMAGE:-niteshbalusu/noah-barkd:0.6.2}
+    command: ["barkd", "--dangerously-allow-remote-no-auth"]
     restart: on-failure
     network_mode: "service:noah-server"
     environment:
       BARKD_BIND_HOST: 0.0.0.0
       BARKD_BIND_PORT: "3001"
       BARKD_DATADIR: /data/barkd
-      BARKD_NO_AUTH: "true"
     volumes:
       - barkd:/data
     depends_on:
