@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { Keyboard } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import { useAlert } from "~/contexts/AlertProvider";
@@ -862,6 +863,7 @@ export const useSendScreen = () => {
       return;
     }
 
+    Keyboard.dismiss();
     continueToStage(
       getNextStage({
         amountConfirmed: isMaxSend || amountSat > 0,
