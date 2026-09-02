@@ -5,6 +5,9 @@ appId: com.noahwallet.regtest
     clearKeychain: true
 
 - openLink: "exp+noahs-ark-wallet://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
+- tapOn:
+    text: "Close"
+    optional: true
 - extendedWaitUntil:
     visible: "Create Wallet"
     timeout: 30000
