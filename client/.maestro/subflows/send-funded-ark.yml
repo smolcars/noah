@@ -42,6 +42,9 @@ appId: com.noahwallet.regtest
     timeout: 15000
 - assertVisible: "Pay via"
 - assertVisible: "Ark"
+- extendedWaitUntil:
+    visible: "Estimated fee"
+    timeout: 15000
 - tapOn:
     id: "send-review-confirm"
 

@@ -518,6 +518,8 @@ export const useSendScreen = () => {
   ]);
 
   const feeEstimateQuery = useSendFeeEstimate(feeEstimateParams);
+  const isWaitingForFeeEstimate =
+    feeEstimateParams !== null && !feeEstimateQuery.data && !feeEstimateQuery.error;
 
   const feeEstimateNote = useMemo(() => {
     if (isMaxSend && resolvedOnchainSource === "onchain") {
@@ -1135,7 +1137,10 @@ export const useSendScreen = () => {
     destinationType,
     showSuccess,
     feeEstimate: feeEstimateQuery.data,
-    isEstimatingFee: lightningAddressPaymentRouteQuery.isFetching || feeEstimateQuery.isFetching,
+    isEstimatingFee:
+      lightningAddressPaymentRouteQuery.isFetching ||
+      feeEstimateQuery.isFetching ||
+      isWaitingForFeeEstimate,
     feeEstimateError: lightningAddressPaymentRouteQuery.error ?? feeEstimateQuery.error,
     feeEstimateUnavailableText: lightningAddressPaymentRouteQuery.error
       ? "Unable to determine whether this payment will use Ark or Lightning."

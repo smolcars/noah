@@ -251,6 +251,7 @@ const SendScreen = () => {
             isOnchainSourceSelectionRequired ||
             isConfirmationAmountInvalid ||
             isLightningAddressPaymentRouteResolutionRequired ||
+            isEstimatingFee ||
             isCheckingOwnOnchainAddress ||
             isOwnOnchainAddress
           }
