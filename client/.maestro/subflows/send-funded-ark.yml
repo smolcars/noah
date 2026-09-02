@@ -1,11 +1,6 @@
 appId: com.noahwallet.regtest
 ---
 - launchApp
-- waitForAnimationToEnd:
-    timeout: 5000
-- tapOn:
-    text: "Close"
-    optional: true
 - tapOn: "Send"
 - extendedWaitUntil:
     visible:

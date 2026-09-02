@@ -98,7 +98,7 @@ jobs:
           done
 
       - name: 🧪 Run Maestro tests
-        run: nix develop .# --command bash -c "xcrun simctl install booted ios-release-build/ios-release.app && bun client maestro:test"
+        run: nix develop .# --command bash -c "xcrun simctl install booted ios-release-build/ios-release.app && bun client maestro:test && scripts/test-send-regtest.sh"
         env:
           MAESTRO_DRIVER_STARTUP_TIMEOUT: 120000
 

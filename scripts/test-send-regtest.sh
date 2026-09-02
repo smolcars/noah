@@ -4,6 +4,7 @@ set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 maestro_command="${MAESTRO_COMMAND:-maestro}"
+maestro_debug_output="${MAESTRO_DEBUG_OUTPUT:-client/maestro-debug-output/send-funded}"
 simulator_id="${SIMULATOR_ID:-}"
 
 if [[ -z "$simulator_id" ]]; then
@@ -17,7 +18,8 @@ fi
 cd "$project_root"
 
 "$maestro_command" test --udid "$simulator_id" \
-  client/.maestro/subflows/prepare-send-wallet-ios.yml
+  --debug-output "$maestro_debug_output/prepare" \
+  client/.maestro/subflows/prepare-funded-send-ios.yml
 
 simulator_ark_address="$(xcrun simctl pbpaste "$simulator_id" | tr -d '\r\n')"
 if [[ ! "$simulator_ark_address" =~ ^tark1 ]]; then
@@ -38,6 +40,7 @@ fi
 printf 'Sending 5000 sats from the simulator to Bark address %s.\n' "$bark_ark_address"
 printf '%s' "$bark_ark_address" | xcrun simctl pbcopy "$simulator_id"
 "$maestro_command" test --udid "$simulator_id" \
+  --debug-output "$maestro_debug_output/payment" \
   client/.maestro/subflows/send-funded-ark.yml
 
 just bark balance
