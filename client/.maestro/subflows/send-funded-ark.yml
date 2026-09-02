@@ -1,6 +1,9 @@
 appId: com.noahwallet.regtest
 ---
 - launchApp
+- tapOn:
+    text: "Close"
+    optional: true
 - tapOn: "Send"
 - extendedWaitUntil:
     visible:
