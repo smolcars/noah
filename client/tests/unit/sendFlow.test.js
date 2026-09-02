@@ -135,6 +135,21 @@ describe("send stage progression", () => {
     ).toBe("source");
   });
 
+  test("reviews MAX after its source and recipient are confirmed", () => {
+    expect(
+      getNextSendStage({
+        entry: "max",
+        amountConfirmed: true,
+        recipientConfirmed: true,
+        railConfirmed: true,
+        sourceConfirmed: true,
+        rails: ["onchain"],
+        selectedRail: "onchain",
+        sourceOptions: ["offchain", "onchain"],
+      }),
+    ).toBe("review");
+  });
+
   test("shows funding sources when no balance can cover an on-chain payment", () => {
     expect(
       getNextSendStage({

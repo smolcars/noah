@@ -13,7 +13,7 @@ import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { useSendScreen } from "~/hooks/useSendScreen";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import type { OnchainSendSource } from "~/lib/paymentsApi";
-import type { SendRail } from "~/lib/sendFlow";
+import { getOnchainSourceLabel, getSendRailLabel, type SendRail } from "~/lib/sendFlow";
 
 const SendScreen = () => {
   const isFocused = useIsFocused();
@@ -84,6 +84,7 @@ const SendScreen = () => {
     confirmationError,
     isMaxSend,
     maxSendAmountSat,
+    confirmationAmountSat,
   } = useSendScreen();
 
   useEffect(() => {
@@ -108,7 +109,7 @@ const SendScreen = () => {
 
   const railChoices: SendChoiceOption<SendRail>[] = paymentRailOptions.map((rail) => ({
     value: rail,
-    title: rail === "ark" ? "Ark" : rail === "lightning" ? "Lightning" : "On-chain",
+    title: getSendRailLabel(rail),
     subtitle:
       rail === "ark"
         ? "Direct Ark payment with the lowest latency"
@@ -124,7 +125,7 @@ const SendScreen = () => {
   const sourceChoices: SendChoiceOption<OnchainSendSource>[] = [
     {
       value: "offchain",
-      title: "Ark balance",
+      title: getOnchainSourceLabel("offchain"),
       subtitle: "Send on-chain by offboarding from Ark",
       detail: formatBitcoinAmount(offchainWalletBalance),
       unavailableReason: onchainSourceOptions.includes("offchain")
@@ -135,7 +136,7 @@ const SendScreen = () => {
     },
     {
       value: "onchain",
-      title: "On-chain wallet",
+      title: getOnchainSourceLabel("onchain"),
       subtitle: "Spend confirmed on-chain funds",
       detail: formatBitcoinAmount(onchainWalletBalance),
       unavailableReason: onchainSourceOptions.includes("onchain")
@@ -223,16 +224,19 @@ const SendScreen = () => {
       >
         <SendConfirmation
           destination={destination}
-          amount={isMaxSend ? maxSendAmountSat : amountSat}
+          amount={confirmationAmountSat}
           amountNote={
             isMaxSend
               ? selectedOnchainSource === "offchain"
-                ? "Estimated amount after offboarding fees"
+                ? feeEstimate
+                  ? "Estimated amount after offboarding fees"
+                  : "The final offboarding fee is deducted from the amount"
                 : selectedOnchainSource === "onchain"
                   ? "The final miner fee is calculated when the transaction is built"
                   : "Choose the balance to sweep"
               : null
           }
+          isMaxAmount={isMaxSend}
           destinationType={destinationType}
           comment={comment}
           btcPrice={btcPrice}

@@ -1,5 +1,4 @@
 import Icon from "@react-native-vector-icons/ionicons";
-import * as Haptics from "expo-haptics";
 import { Pressable, View } from "react-native";
 
 import { Text } from "~/components/ui/text";
@@ -40,8 +39,6 @@ export function AmountKeypad({
     if (disabled) {
       return;
     }
-
-    void Haptics.selectionAsync();
 
     if (key === "backspace") {
       onChange(amount.slice(0, -1));

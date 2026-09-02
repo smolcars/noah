@@ -213,9 +213,7 @@ export function SendAmountStage({
           <Text className="text-sm font-semibold text-foreground">
             Amount set by payment request
           </Text>
-          <Text className="mt-1 text-sm text-muted-foreground">
-            Go back to change the recipient.
-          </Text>
+          <Text className="mt-1 text-sm text-muted-foreground">This amount cannot be edited.</Text>
         </View>
       )}
 

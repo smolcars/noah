@@ -15,7 +15,7 @@ import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { Text } from "~/components/ui/text";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { useThemeColors } from "~/hooks/useTheme";
-import { getBip321Rails } from "~/lib/sendFlow";
+import { canAddRecipientNote, getBip321Rails, getSendRailLabel } from "~/lib/sendFlow";
 import type { DestinationTypes, ParsedBip321 } from "~/lib/sendUtils";
 import { COLORS } from "~/lib/styleConstants";
 
@@ -84,12 +84,9 @@ export function SendRecipientStage({
   const destinationLabel = getDestinationLabel(destinationType);
   const railSummary =
     destinationType === "bip321" && bip321Data
-      ? getBip321Rails(bip321Data)
-          .map((rail) =>
-            rail === "onchain" ? "On-chain" : `${rail[0].toUpperCase()}${rail.slice(1)}`,
-          )
-          .join(" · ")
+      ? getBip321Rails(bip321Data).map(getSendRailLabel).join(" · ")
       : destinationLabel;
+  const canAddNote = canAddRecipientNote(destinationType, commentAllowed);
   const canContinue = destinationType !== null && !error && !isResolving;
 
   return (
@@ -221,7 +218,7 @@ export function SendRecipientStage({
           </View>
         ) : null}
 
-        {commentAllowed > 0 ? (
+        {canAddNote ? (
           <View className="mt-5">
             {isEditingNote ? (
               <>

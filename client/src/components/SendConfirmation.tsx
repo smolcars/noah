@@ -6,13 +6,14 @@ import { Text } from "~/components/ui/text";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { formatFiatAmount, satsToFiat, type FiatCurrencyCode } from "~/lib/fiatCurrency";
 import type { BarkFeeEstimate, OnchainSendSource } from "~/lib/paymentsApi";
-import type { SendRail } from "~/lib/sendFlow";
+import { getOnchainSourceLabel, getSendRailLabel, type SendRail } from "~/lib/sendFlow";
 import type { DestinationTypes, ParsedBip321 } from "~/lib/sendUtils";
 
 type SendConfirmationProps = {
   destination: string;
   amount: number;
   amountNote?: string | null;
+  isMaxAmount?: boolean;
   destinationType: DestinationTypes;
   comment?: string;
   btcPrice?: number;
@@ -55,6 +56,7 @@ export function SendConfirmation({
   destination,
   amount,
   amountNote = null,
+  isMaxAmount = false,
   destinationType,
   comment,
   btcPrice,
@@ -92,20 +94,30 @@ export function SendConfirmation({
     }
     return bip321Data.onchainAddress ?? destination;
   })();
-  const railLabel =
-    selectedRail === "ark" ? "Ark" : selectedRail === "lightning" ? "Lightning" : "On-chain";
-  const sourceLabel =
-    selectedOnchainSource === "offchain"
-      ? "Ark balance"
-      : selectedOnchainSource === "onchain"
-        ? "On-chain wallet"
-        : null;
+  const railLabel = getSendRailLabel(selectedRail);
+  const sourceLabel = selectedOnchainSource
+    ? getOnchainSourceLabel(selectedOnchainSource)
+    : getOnchainSourceLabel("offchain");
   const fiatAmount = btcPrice ? satsToFiat(amount, btcPrice, fiatCurrency) : null;
   const unavailableFeeText =
     feeEstimateUnavailableText ??
     (feeEstimateError
       ? "Fee estimate unavailable. The final fee will be calculated when sending."
       : null);
+  const amountPrefix = isMaxAmount ? (feeEstimate ? "Pay ≈ " : "Pay up to ") : "Pay ";
+  const fiatPrefix = isMaxAmount ? (feeEstimate ? "Estimated ≈ " : "Up to ≈ ") : "≈ ";
+  const feeValue = feeEstimate
+    ? formatBitcoinAmount(feeEstimate.fee_sat)
+    : isEstimatingFee
+      ? "Estimating…"
+      : isMaxAmount
+        ? "Deducted from amount"
+        : "Calculated when sent";
+  const totalValue = feeEstimate
+    ? formatBitcoinAmount(feeEstimate.gross_amount_sat)
+    : isMaxAmount
+      ? formatBitcoinAmount(amount)
+      : `${formatBitcoinAmount(amount)} + fee`;
 
   return (
     <View className="pb-2" testID="send-review-sheet">
@@ -114,11 +126,13 @@ export function SendConfirmation({
           {isLoading ? "Sending payment" : sendError ? "Payment failed" : "Review payment"}
         </Text>
         <Text className="mt-3 text-center text-4xl font-bold text-foreground">
-          Pay {formatBitcoinAmount(amount)}
+          {amountPrefix}
+          {formatBitcoinAmount(amount)}
         </Text>
         {fiatAmount ? (
           <Text className="mt-2 text-base font-medium text-muted-foreground">
-            ≈ {formatFiatAmount(fiatAmount, fiatCurrency)}
+            {fiatPrefix}
+            {formatFiatAmount(fiatAmount, fiatCurrency)}
           </Text>
         ) : null}
         {amountNote ? (
@@ -132,12 +146,8 @@ export function SendConfirmation({
         <ReviewRow label="To" value={truncateValue(resolvedDestination)} />
         <View className="h-px bg-border/60" />
         <ReviewRow label="Pay via" value={railLabel} />
-        {sourceLabel ? (
-          <>
-            <View className="h-px bg-border/60" />
-            <ReviewRow label="Pay from" value={sourceLabel} />
-          </>
-        ) : null}
+        <View className="h-px bg-border/60" />
+        <ReviewRow label="Pay from" value={sourceLabel} />
         <View className="h-px bg-border/60" />
         <ReviewRow
           label="Settlement"
@@ -152,17 +162,9 @@ export function SendConfirmation({
       </View>
 
       <View className="mt-4">
-        {feeEstimate ? (
-          <>
-            <ReviewRow label="Estimated fee" value={formatBitcoinAmount(feeEstimate.fee_sat)} />
-            <ReviewRow
-              label="Total deducted"
-              value={formatBitcoinAmount(feeEstimate.gross_amount_sat)}
-            />
-          </>
-        ) : isEstimatingFee ? (
-          <ReviewRow label="Fee" value="Estimating…" />
-        ) : unavailableFeeText ? (
+        <ReviewRow label={feeEstimate ? "Estimated fee" : "Fee"} value={feeValue} />
+        <ReviewRow label="Total deducted" value={totalValue} />
+        {unavailableFeeText ? (
           <Text className="text-sm leading-5 text-muted-foreground">{unavailableFeeText}</Text>
         ) : null}
         {feeEstimateNote ? (

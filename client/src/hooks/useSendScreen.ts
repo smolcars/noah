@@ -34,7 +34,6 @@ import {
 } from "~/lib/repeatPayment";
 import { getMaxSendBalanceSat } from "~/lib/onchainSend";
 import {
-  canAddRecipientNote,
   getBip321MethodForRail,
   getBip321Rails,
   getNextSendStage,
@@ -105,7 +104,6 @@ export const useSendScreen = () => {
   );
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [isDestinationFocused, setIsDestinationFocused] = useState(false);
   const [destinationRequestRevision, setDestinationRequestRevision] = useState(0);
   const [isMaxSend, setIsMaxSend] = useState(false);
   const [stageHistory, setStageHistory] = useState<SendStage[]>(["amount"]);
@@ -135,6 +133,23 @@ export const useSendScreen = () => {
 
   const handleStageBack = () => {
     setShowConfirmation(false);
+    if (stage === "recipient" && !isAmountEditable) {
+      setDestination("");
+      setAmount("");
+      setParsedAmount(null);
+      setBip321Data(null);
+      setDestinationType(null);
+      setIsAmountEditable(true);
+      setComment("");
+      setEntry("amount-first");
+      setSelectedRail("onchain");
+      setSelectedPaymentMethod("onchain");
+      setSelectedOnchainSource(null);
+      setRailConfirmed(false);
+      setSourceConfirmed(false);
+      setStageHistory(["amount"]);
+      return;
+    }
     if (stage === "method") {
       setRailConfirmed(false);
     }
@@ -148,7 +163,7 @@ export const useSendScreen = () => {
 
   const startRecipientEntry = () => {
     setRecipientError(null);
-    if (!amount.trim()) {
+    if (!isMaxSend && !amount.trim()) {
       setEntry("recipient-first");
     }
     showStage("recipient");
@@ -207,17 +222,21 @@ export const useSendScreen = () => {
           setSelectedPaymentMethod("onchain");
         }
       }
-      setRailConfirmed(false);
-      setSourceConfirmed(false);
+      if (!isMaxSend) {
+        setRailConfirmed(false);
+        setSourceConfirmed(false);
+      }
     } else {
       setDestinationType(null);
       setIsAmountEditable(true);
       setParsedAmount(null);
       setBip321Data(null);
-      setRailConfirmed(false);
-      setSourceConfirmed(false);
+      if (!isMaxSend) {
+        setRailConfirmed(false);
+        setSourceConfirmed(false);
+      }
     }
-  }, [destination, destinationRequestRevision]);
+  }, [destination, destinationRequestRevision, isMaxSend]);
 
   const finalDestinationType =
     destinationType === "bip321" ? selectedPaymentMethod : destinationType;
@@ -281,7 +300,6 @@ export const useSendScreen = () => {
     setSourceConfirmed(false);
     setShowConfirmation(false);
     setShowSuccess(false);
-    setIsDestinationFocused(false);
     setAmountError(null);
     setRecipientError(null);
     setStageHistory(["recipient"]);
@@ -601,15 +619,6 @@ export const useSendScreen = () => {
     setStageHistory(["source"]);
   };
 
-  const handleSelectPaymentMethod = (method: "ark" | "lightning" | "onchain" | "offer") => {
-    setSelectedPaymentMethod(method);
-    setSelectedRail(method === "offer" ? "lightning" : method);
-    setRailConfirmed(false);
-    if (method !== "onchain") {
-      setIsMaxSend(false);
-    }
-  };
-
   const handleSelectRail = (rail: SendRail) => {
     setSelectedRail(rail);
     setRailConfirmed(false);
@@ -781,7 +790,6 @@ export const useSendScreen = () => {
     }
 
     // Show confirmation instead of sending immediately
-    setIsDestinationFocused(false);
     setShowConfirmation(true);
   };
 
@@ -915,7 +923,6 @@ export const useSendScreen = () => {
       }
     }
 
-    setIsDestinationFocused(false);
     reset();
     setParsedResult(null);
     setShowSuccess(false);
@@ -1033,27 +1040,6 @@ export const useSendScreen = () => {
     setComment("");
     setShowConfirmation(false);
     setShowSuccess(false);
-    setIsDestinationFocused(false);
-    setEntry("amount-first");
-    setSelectedRail("onchain");
-    setSelectedPaymentMethod("onchain");
-    setSelectedOnchainSource(null);
-    setRailConfirmed(false);
-    setSourceConfirmed(false);
-    setStageHistory(["amount"]);
-    setAmountError(null);
-    setRecipientError(null);
-  };
-
-  const handleClear = () => {
-    reset();
-    setDestination("");
-    setComment("");
-    setAmount("");
-    setIsMaxSend(false);
-    setShowConfirmation(false);
-    setShowSuccess(false);
-    setIsDestinationFocused(false);
     setEntry("amount-first");
     setSelectedRail("onchain");
     setSelectedPaymentMethod("onchain");
@@ -1067,7 +1053,6 @@ export const useSendScreen = () => {
 
   const handleSelectLightningAddressSuggestion = (suggestion: string) => {
     setEnteredDestination(suggestion);
-    setIsDestinationFocused(false);
   };
 
   const { showCamera, setShowCamera, handleScanPress, codeScanner } = useQRCodeScanner({
@@ -1085,8 +1070,6 @@ export const useSendScreen = () => {
   return {
     destination,
     setDestination: setEnteredDestination,
-    isDestinationFocused,
-    setIsDestinationFocused,
     lightningAddressSuggestions,
     handleSelectLightningAddressSuggestion,
     stage,
@@ -1107,23 +1090,15 @@ export const useSendScreen = () => {
     isAmountEditable,
     comment,
     setComment: setEnteredComment,
-    canAddNote: canAddRecipientNote(
-      finalDestinationType,
-      lightningAddressPaymentRouteQuery.data?.commentAllowed ?? 0,
-    ),
     commentAllowed: lightningAddressPaymentRouteQuery.data?.commentAllowed ?? 0,
     noteUsesLightning:
       lightningAddressPaymentRouteQuery.data?.method === "ark" && comment.trim().length > 0,
     isResolvingRecipient,
     parsedResult,
-    handleSend,
     handleConfirmSend,
     handleCancelConfirmation,
     handleDone,
-    handleClear,
     isSending,
-    error,
-    errorMessage,
     confirmationError: showConfirmation && error ? errorMessage : null,
     showCamera,
     setShowCamera,
@@ -1134,18 +1109,16 @@ export const useSendScreen = () => {
     toggleCurrency,
     amountSat,
     btcPrice,
-    parsedAmount,
     bip321Data,
     paymentRailOptions,
     railAvailability,
     selectedRail,
     setSelectedRail: handleSelectRail,
     selectedPaymentMethod,
-    setSelectedPaymentMethod: handleSelectPaymentMethod,
     onchainSourceOptions,
     selectedOnchainSource: resolvedOnchainSource,
     setSelectedOnchainSource: handleSelectOnchainSource,
-    resolvedOnchainSource,
+    confirmationAmountSat,
     isOnchainSourceSelectionRequired,
     isConfirmationAmountInvalid: !isMaxSend && amountSat <= 0,
     isCheckingOwnOnchainAddress: ownOnchainAddressQuery.isFetching,

@@ -5,6 +5,22 @@ export type SendRail = "ark" | "lightning" | "onchain";
 export type SendStage = "amount" | "recipient" | "method" | "source" | "review";
 export type SendEntry = "amount-first" | "recipient-first" | "max";
 
+const SEND_RAIL_LABELS: Record<SendRail, string> = {
+  ark: "Ark",
+  lightning: "Lightning",
+  onchain: "On-chain",
+};
+
+const ONCHAIN_SOURCE_LABELS: Record<OnchainSendSource, string> = {
+  offchain: "Ark balance",
+  onchain: "On-chain wallet",
+};
+
+export const getSendRailLabel = (rail: SendRail): string => SEND_RAIL_LABELS[rail];
+
+export const getOnchainSourceLabel = (source: OnchainSendSource): string =>
+  ONCHAIN_SOURCE_LABELS[source];
+
 export type SendFlowProgress = {
   entry: SendEntry;
   amountConfirmed: boolean;

@@ -75,6 +75,7 @@ export const AppBottomSheet = ({
     ? requestedDetents
     : [programmatic(0), ...requestedDetents.slice(1)];
   const openIndex = resolvedDetents.length - 1;
+  const [sheetIndex, setSheetIndex] = useState(isOpen ? openIndex : 0);
   const openDetent = resolvedDetents[openIndex];
   const openDetentValue =
     typeof openDetent === "object" && openDetent !== null ? openDetent.value : openDetent;
@@ -85,6 +86,10 @@ export const AppBottomSheet = ({
         ? openDetentValue
         : undefined;
   const showsLiquidGlass = liquidGlass && Platform.OS === "ios" && Number(Platform.Version) >= 26;
+
+  useEffect(() => {
+    setSheetIndex(isOpen ? openIndex : 0);
+  }, [isOpen, openIndex]);
 
   useEffect(() => {
     if (!avoidKeyboard) {
@@ -112,10 +117,15 @@ export const AppBottomSheet = ({
 
   return (
     <ModalBottomSheet
-      index={isOpen ? openIndex : 0}
+      index={sheetIndex}
       detents={resolvedDetents}
       onIndexChange={(index) => {
+        setSheetIndex(index);
         if (index === 0) {
+          if (!dismissible && isOpen) {
+            requestAnimationFrame(() => setSheetIndex(openIndex));
+            return;
+          }
           onClose();
         }
       }}
