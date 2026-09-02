@@ -43,4 +43,16 @@ printf '%s' "$bark_ark_address" | xcrun simctl pbcopy "$simulator_id"
   --debug-output "$maestro_debug_output/payment" \
   client/.maestro/subflows/send-funded-ark.yml
 
+fixed_request_address="$(just bcli getnewaddress 2>&1 | sed -n '/^bcrt1/p' | tail -n 1)"
+if [[ ! "$fixed_request_address" =~ ^bcrt1 ]]; then
+  printf 'Could not generate a regtest Bitcoin address for the fixed-request regression.\n' >&2
+  exit 1
+fi
+
+printf 'Verifying MAX resets before pasting a fixed-amount payment request.\n'
+printf 'bitcoin:%s?amount=0.00005' "$fixed_request_address" | xcrun simctl pbcopy "$simulator_id"
+"$maestro_command" test --udid "$simulator_id" \
+  --debug-output "$maestro_debug_output/max-back-fixed-request" \
+  client/.maestro/subflows/send-max-back-fixed-request.yml
+
 just bark balance

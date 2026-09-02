@@ -140,6 +140,7 @@ export const useSendScreen = () => {
       setParsedAmount(null);
       setBip321Data(null);
       setDestinationType(null);
+      setIsMaxSend(false);
       setIsAmountEditable(true);
       setComment("");
       setEntry("amount-first");
@@ -156,6 +157,11 @@ export const useSendScreen = () => {
     }
     if (stage === "source") {
       setSourceConfirmed(false);
+      if (entry === "max" && stageHistory.length === 1) {
+        setIsMaxSend(false);
+        setEntry("amount-first");
+        setSelectedOnchainSource(null);
+      }
     }
     setStageHistory((history) =>
       history.length > 1 ? history.slice(0, -1) : history[0] === "amount" ? history : ["amount"],
