@@ -813,6 +813,7 @@ export const useSendScreen = () => {
       sourceConfirmed: nextSourceConfirmed,
       rails: paymentRailOptions,
       selectedRail,
+      selectedRailAvailable: railAvailability[selectedRail],
       sourceOptions: onchainSourceOptions,
     });
 

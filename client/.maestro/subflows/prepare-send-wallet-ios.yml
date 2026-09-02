@@ -1,0 +1,25 @@
+appId: com.noahwallet.regtest
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- openLink: "exp+noahs-ark-wallet://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
+- extendedWaitUntil:
+    visible: "Create Wallet"
+    timeout: 30000
+
+- runFlow: start-wallet-onboarding.yml
+- runFlow: complete-wallet-onboarding-without-email.yml
+
+- tapOn: "Receive"
+- extendedWaitUntil:
+    visible:
+      id: "receive-qr-button"
+    timeout: 15000
+- tapOn:
+    id: "receive-qr-button"
+- assertVisible: "Copy payment details"
+- tapOn:
+    id: "receive-copy-ark"
+- tapOn: "Close payment details"

@@ -1,0 +1,60 @@
+appId: com.noahwallet.regtest
+---
+- launchApp
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible:
+      id: "send-amount-stage"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: ".*100,000.*available"
+    timeout: 30000
+
+- tapOn:
+    id: "send-key-5"
+- tapOn:
+    id: "send-key-0"
+- tapOn:
+    id: "send-key-0"
+- tapOn:
+    id: "send-key-0"
+- tapOn:
+    id: "send-amount-next"
+
+- extendedWaitUntil:
+    visible:
+      id: "send-recipient-input"
+    timeout: 10000
+- tapOn:
+    id: "send-recipient-input"
+- inputText: ${BARK_ARK_ADDRESS}
+- tapOn:
+    id: "send-recipient-next"
+
+- extendedWaitUntil:
+    visible:
+      id: "send-review-sheet"
+    timeout: 15000
+- assertVisible: "Pay via"
+- assertVisible: "Ark"
+- tapOn:
+    id: "send-review-confirm"
+
+- extendedWaitUntil:
+    visible:
+      id: "send-success-sheet"
+    timeout: 30000
+- assertVisible: "Payment sent"
+- tapOn:
+    id: "send-success-view-receipt"
+- assertVisible:
+    id: "send-success-receipt"
+- tapOn:
+    id: "send-success-back-to-summary"
+- tapOn:
+    id: "send-success-done"
+
+- assertVisible:
+    id: "send-amount-stage"
+- assertVisible:
+    id: "send-amount-value"

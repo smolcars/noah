@@ -149,4 +149,20 @@ describe("send stage progression", () => {
       }),
     ).toBe("source");
   });
+
+  test("hard-blocks a single unavailable rail before review", () => {
+    expect(
+      getNextSendStage({
+        entry: "amount-first",
+        amountConfirmed: true,
+        recipientConfirmed: true,
+        railConfirmed: false,
+        sourceConfirmed: false,
+        rails: ["ark"],
+        selectedRail: "ark",
+        selectedRailAvailable: false,
+        sourceOptions: [],
+      }),
+    ).toBe("method");
+  });
 });

@@ -13,6 +13,7 @@ export type SendFlowProgress = {
   sourceConfirmed: boolean;
   rails: readonly SendRail[];
   selectedRail: SendRail | null;
+  selectedRailAvailable: boolean;
   sourceOptions: readonly OnchainSendSource[];
 };
 
@@ -84,7 +85,10 @@ export const getNextSendStage = (progress: SendFlowProgress): SendStage => {
     }
   }
 
-  if (progress.rails.length > 1 && !progress.railConfirmed) {
+  if (
+    (progress.rails.length > 1 || progress.selectedRailAvailable === false) &&
+    !progress.railConfirmed
+  ) {
     return "method";
   }
 
