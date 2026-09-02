@@ -81,7 +81,7 @@ export function SendAmountStage({
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Show wallet balances"
+            accessibilityLabel={`Show wallet balances, ${formatBitcoinAmount(arkBalanceSat)} available`}
             onPress={() => setShowBalances((visible) => !visible)}
             className="mt-1 px-3 py-1"
             testID="send-balance-details"
