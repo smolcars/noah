@@ -64,11 +64,13 @@ export type LightningAddressPaymentRoute =
       destination: string;
       minSendableMsat: number;
       maxSendableMsat: number;
+      commentAllowed: number;
     }
   | {
       method: "lightning";
       minSendableMsat: number;
       maxSendableMsat: number;
+      commentAllowed: number;
     };
 
 const parseLightningAddress = (destination: string) => {
@@ -100,6 +102,7 @@ const paymentRouteFromLnurlpResponse = async (
   const limits = {
     minSendableMsat: response.minSendable,
     maxSendableMsat: response.maxSendable,
+    commentAllowed: response.commentAllowed,
   };
 
   if (acceptArkAddress && response.ark) {
@@ -493,10 +496,7 @@ const sendLightningAddressPayment = async (
     throw new Error("Payment amount is outside the supported range for this lightning address");
   }
 
-  if (
-    route.method === "ark" &&
-    shouldUseArkDirectLightningAddressRoute(route.method, comment)
-  ) {
+  if (route.method === "ark" && shouldUseArkDirectLightningAddressRoute(route.method, comment)) {
     log.d("Paying lightning address via Ark direct payment");
     const historyBeforeResult = await history();
     const existingMovementIds = historyBeforeResult.isOk()

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import { useAlert } from "~/contexts/AlertProvider";
@@ -33,6 +33,8 @@ import {
   shouldUseArkDirectLightningAddressRoute,
 } from "~/lib/repeatPayment";
 import { getMaxSendBalanceSat } from "~/lib/onchainSend";
+import type { SendStage } from "~/lib/sendFlow";
+import { canAddRecipientNote } from "~/lib/sendFlow";
 import { useProfileStore } from "~/store/profileStore";
 import logger from "~/lib/log";
 import type { TabParamList } from "~/Navigators";
@@ -97,6 +99,38 @@ export const useSendScreen = () => {
   const [isDestinationFocused, setIsDestinationFocused] = useState(false);
   const [destinationRequestRevision, setDestinationRequestRevision] = useState(0);
   const [isMaxSend, setIsMaxSend] = useState(false);
+  const [stageHistory, setStageHistory] = useState<SendStage[]>(["amount"]);
+  const [amountError, setAmountError] = useState<string | null>(null);
+  const [recipientError, setRecipientError] = useState<string | null>(null);
+  const stage = stageHistory.at(-1) ?? "amount";
+
+  const setEnteredDestination = (nextDestination: string) => {
+    if (parsedAmount !== null) {
+      setAmount("");
+      setParsedAmount(null);
+    }
+    setRecipientError(null);
+    setDestination(nextDestination);
+  };
+
+  const showStage = (nextStage: SendStage) => {
+    setShowConfirmation(false);
+    setStageHistory((history) =>
+      history.at(-1) === nextStage ? history : [...history, nextStage],
+    );
+  };
+
+  const handleStageBack = () => {
+    setShowConfirmation(false);
+    setStageHistory((history) =>
+      history.length > 1 ? history.slice(0, -1) : history[0] === "amount" ? history : ["amount"],
+    );
+  };
+
+  const startRecipientEntry = () => {
+    setRecipientError(null);
+    showStage("recipient");
+  };
 
   useEffect(() => {
     if (destination) {
@@ -108,9 +142,7 @@ export const useSendScreen = () => {
         bip321,
       } = parseDestination(destination);
 
-      if (parseError) {
-        showAlert({ title: "Invalid Destination", description: parseError });
-      }
+      setRecipientError(parseError ?? null);
 
       setDestinationType(newDestinationType);
       if (newAmount) {
@@ -140,20 +172,19 @@ export const useSendScreen = () => {
       }
     } else {
       setDestinationType(null);
-      setAmount("");
       setIsAmountEditable(true);
       setParsedAmount(null);
       setBip321Data(null);
       setIsMaxSend(false);
     }
-  }, [destination, destinationRequestRevision, showAlert]);
+  }, [destination, destinationRequestRevision]);
 
   const finalDestinationType =
     destinationType === "bip321" ? selectedPaymentMethod : destinationType;
   const cleanedDestination = destination.trim().replace(/^(bitcoin:|lightning:)/i, "");
   const normalizedLnurlDestination = normalizeLightningAddress(cleanedDestination);
   const lightningAddressPaymentRouteDestination =
-    showConfirmation && finalDestinationType === "lnurl" ? normalizedLnurlDestination : null;
+    finalDestinationType === "lnurl" ? normalizedLnurlDestination : null;
   const lightningAddressPaymentRouteQuery = useLightningAddressPaymentRoute(
     lightningAddressPaymentRouteDestination,
   );
@@ -192,13 +223,16 @@ export const useSendScreen = () => {
     setShowConfirmation(false);
     setShowSuccess(false);
     setIsDestinationFocused(false);
+    setAmountError(null);
+    setRecipientError(null);
+    setStageHistory(["recipient"]);
     setDestination(normalizeLightningAddressDestination(requestedDestination));
     setDestinationRequestRevision((revision) => revision + 1);
   }, [fiatCurrency, reset, route.params]);
 
   const { suggestions: lightningAddressSuggestions } = useLightningAddressSuggestions({
     destination,
-    isDestinationFocused,
+    isDestinationFocused: stage === "recipient",
   });
 
   const amountSat = useMemo(() => {
@@ -423,6 +457,7 @@ export const useSendScreen = () => {
 
   const setEnteredAmount = (nextAmount: string) => {
     setIsMaxSend(false);
+    setAmountError(null);
     setAmount(nextAmount);
   };
 
@@ -431,6 +466,7 @@ export const useSendScreen = () => {
     setCurrency("SATS");
     setParsedAmount(null);
     setIsMaxSend(true);
+    setAmountError(null);
   };
 
   const handleSelectPaymentMethod = (method: "ark" | "lightning" | "onchain" | "offer") => {
@@ -458,7 +494,7 @@ export const useSendScreen = () => {
     ]);
   }, [lightningAddressPaymentRouteQuery.error]);
 
-  const toggleCurrency = useCallback(() => {
+  const toggleCurrency = () => {
     if (currency === "SATS") {
       if (btcPrice && amount) {
         setAmount(satsToFiat(parseInt(amount, 10), btcPrice, fiatCurrency));
@@ -470,7 +506,7 @@ export const useSendScreen = () => {
       }
       setCurrency("SATS");
     }
-  }, [currency, btcPrice, amount, fiatCurrency]);
+  };
 
   useEffect(() => {
     if (!result) {
@@ -554,15 +590,15 @@ export const useSendScreen = () => {
   const handleSend = () => {
     // Validation
     if (!isValidDestination(destination)) {
-      showAlert({
-        title: "Invalid Destination",
-        description:
-          "Please enter a valid Bitcoin address, BOLT11 invoice, BOLT12 offer, Lightning Address, or Ark public key.",
-      });
+      setRecipientError(
+        "Enter a valid Bitcoin address, Lightning invoice, Lightning offer, Lightning address, or Ark address.",
+      );
+      showStage("recipient");
       return;
     }
     if (!isMaxSend && (isNaN(amountSat) || amountSat <= 0)) {
-      showAlert({ title: "Invalid Amount", description: "Please enter a valid amount." });
+      setAmountError("Enter an amount greater than zero.");
+      showStage("amount");
       return;
     }
     if (isOnchainSend) {
@@ -587,6 +623,38 @@ export const useSendScreen = () => {
     // Show confirmation instead of sending immediately
     setIsDestinationFocused(false);
     setShowConfirmation(true);
+  };
+
+  const handleAmountContinue = () => {
+    if (isNaN(amountSat) || amountSat <= 0) {
+      setAmountError("Enter an amount greater than zero.");
+      return;
+    }
+
+    setAmountError(null);
+    if (isValidDestination(destination)) {
+      handleSend();
+      return;
+    }
+
+    showStage("recipient");
+  };
+
+  const handleRecipientContinue = () => {
+    if (!isValidDestination(destination)) {
+      setRecipientError(
+        "Enter a valid Bitcoin address, Lightning invoice, Lightning offer, Lightning address, or Ark address.",
+      );
+      return;
+    }
+
+    setRecipientError(null);
+    if (!isMaxSend && amountSat <= 0) {
+      showStage("amount");
+      return;
+    }
+
+    handleSend();
   };
 
   const handleConfirmSend = () => {
@@ -733,6 +801,9 @@ export const useSendScreen = () => {
     setShowConfirmation(false);
     setShowSuccess(false);
     setIsDestinationFocused(false);
+    setStageHistory(["amount"]);
+    setAmountError(null);
+    setRecipientError(null);
     handleCloseSuccess();
   };
 
@@ -745,16 +816,20 @@ export const useSendScreen = () => {
     setShowConfirmation(false);
     setShowSuccess(false);
     setIsDestinationFocused(false);
+    setStageHistory(["amount"]);
+    setAmountError(null);
+    setRecipientError(null);
   };
 
-  const handleSelectLightningAddressSuggestion = useCallback((suggestion: string) => {
-    setDestination(suggestion);
+  const handleSelectLightningAddressSuggestion = (suggestion: string) => {
+    setEnteredDestination(suggestion);
     setIsDestinationFocused(false);
-  }, []);
+  };
 
   const { showCamera, setShowCamera, handleScanPress, codeScanner } = useQRCodeScanner({
     onScan: (value) => {
-      setDestination(normalizeLightningAddressDestination(value));
+      setEnteredDestination(normalizeLightningAddressDestination(value));
+      showStage("recipient");
     },
   });
 
@@ -765,11 +840,18 @@ export const useSendScreen = () => {
 
   return {
     destination,
-    setDestination,
+    setDestination: setEnteredDestination,
     isDestinationFocused,
     setIsDestinationFocused,
     lightningAddressSuggestions,
     handleSelectLightningAddressSuggestion,
+    stage,
+    startRecipientEntry,
+    handleStageBack,
+    handleAmountContinue,
+    handleRecipientContinue,
+    amountError,
+    recipientError,
     amount,
     setAmount: setEnteredAmount,
     isMaxSend,
@@ -779,6 +861,15 @@ export const useSendScreen = () => {
     isAmountEditable,
     comment,
     setComment,
+    canAddNote: canAddRecipientNote(
+      finalDestinationType,
+      lightningAddressPaymentRouteQuery.data?.commentAllowed ?? 0,
+    ),
+    commentAllowed: lightningAddressPaymentRouteQuery.data?.commentAllowed ?? 0,
+    noteUsesLightning:
+      lightningAddressPaymentRouteQuery.data?.method === "ark" && comment.trim().length > 0,
+    isResolvingRecipient:
+      finalDestinationType === "lnurl" && lightningAddressPaymentRouteQuery.isFetching,
     parsedResult,
     handleSend,
     handleConfirmSend,
