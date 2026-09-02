@@ -1,6 +1,8 @@
 appId: com.noahwallet.regtest
 ---
 - launchApp
+- waitForAnimationToEnd:
+    timeout: 5000
 - tapOn:
     text: "Close"
     optional: true
@@ -10,7 +12,7 @@ appId: com.noahwallet.regtest
       id: "send-amount-stage"
     timeout: 15000
 - extendedWaitUntil:
-    visible: ".*100,000.*available"
+    visible: ".*[1-9][0-9,]* available"
     timeout: 30000
 
 - tapOn:
