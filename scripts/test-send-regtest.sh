@@ -27,7 +27,7 @@ if [[ ! "$simulator_ark_address" =~ ^tark1 ]]; then
 fi
 
 printf 'Funding simulator address %s with 100000 sats from Bark.\n' "$simulator_ark_address"
-just bark send-to "$simulator_ark_address" "100000 sats"
+just bark send --wait "$simulator_ark_address" "100000 sats"
 
 bark_ark_address="$(just bark address 2>&1 | sed -n '/^tark1/p' | tail -n 1)"
 if [[ ! "$bark_ark_address" =~ ^tark1 ]]; then
