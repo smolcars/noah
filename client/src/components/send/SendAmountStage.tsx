@@ -180,20 +180,20 @@ export function SendAmountStage({
             onPress={onMax}
             disabled={!canSendMax}
             accessibilityState={{ disabled: !canSendMax }}
-            className="rounded-full border px-4 py-2"
+            className="h-12 min-w-[88px] items-center justify-center rounded-full border px-6"
             testID="send-max"
             style={{
               borderColor: `${COLORS.BITCOIN_ORANGE}88`,
               opacity: canSendMax ? 1 : 0.45,
             }}
           >
-            <Text className="text-xs font-bold tracking-[2px] text-foreground">MAX</Text>
+            <Text className="text-sm font-bold tracking-[1.5px] text-foreground">MAX</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Paste payment request"
             onPress={onPaste}
-            className="rounded-full border border-border px-4 py-2"
+            className="h-12 min-w-[88px] items-center justify-center rounded-full border border-border px-6"
             testID="send-paste-from-amount"
           >
             <Text className="text-sm font-semibold text-foreground">Paste</Text>
