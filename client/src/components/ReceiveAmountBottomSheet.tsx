@@ -125,7 +125,7 @@ export function ReceiveAmountBottomSheet({
   };
 
   return (
-    <AppBottomSheet isOpen={isOpen} onClose={close}>
+    <AppBottomSheet isOpen={isOpen} onClose={close} dismissible={!isSubmitting}>
       {isEditingNote ? (
         <View className="flex-1">
           <View className="flex-row items-center justify-between">

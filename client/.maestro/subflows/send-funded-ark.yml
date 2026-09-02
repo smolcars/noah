@@ -16,6 +16,28 @@ appId: com.noahwallet.regtest
     timeout: 30000
 
 - tapOn:
+    id: "send-paste-from-amount"
+- tapOn:
+    text: "Allow Paste"
+    optional: true
+
+- extendedWaitUntil:
+    visible:
+      id: "send-recipient-input"
+    timeout: 10000
+- tapOn:
+    id: "send-recipient-next"
+
+- assertVisible:
+    id: "send-amount-back"
+- tapOn:
+    id: "send-amount-back"
+- assertVisible:
+    id: "send-recipient-input"
+- tapOn:
+    id: "send-recipient-next"
+
+- tapOn:
     id: "send-key-5"
 - tapOn:
     id: "send-key-0"
@@ -25,16 +47,6 @@ appId: com.noahwallet.regtest
     id: "send-key-0"
 - tapOn:
     id: "send-amount-next"
-
-- extendedWaitUntil:
-    visible:
-      id: "send-recipient-input"
-    timeout: 10000
-- tapOn:
-    id: "send-recipient-input"
-- inputText: ${BARK_ARK_ADDRESS}
-- tapOn:
-    id: "send-recipient-next"
 
 - extendedWaitUntil:
     visible:

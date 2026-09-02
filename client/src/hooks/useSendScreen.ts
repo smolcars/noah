@@ -1077,6 +1077,7 @@ export const useSendScreen = () => {
     lightningAddressSuggestions,
     handleSelectLightningAddressSuggestion,
     stage,
+    canGoBack: stageHistory.length > 1,
     startRecipientEntry,
     handleStageBack,
     handleAmountContinue,

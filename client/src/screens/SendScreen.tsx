@@ -20,6 +20,7 @@ const SendScreen = () => {
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const {
     stage,
+    canGoBack,
     amount,
     amountSat,
     setAmount,
@@ -207,6 +208,7 @@ const SendScreen = () => {
           error={amountError}
           isAmountEditable={isAmountEditable}
           canSendMax={canSendMax}
+          onBack={canGoBack ? handleStageBack : undefined}
           onAmountChange={setAmount}
           onToggleCurrency={toggleCurrency}
           onContinue={handleAmountContinue}

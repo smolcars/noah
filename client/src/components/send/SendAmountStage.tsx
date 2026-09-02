@@ -5,6 +5,7 @@ import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 
 import { AmountKeypad } from "~/components/AmountKeypad";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import { Text } from "~/components/ui/text";
 import { useBitcoinAmountFormatter, useBitcoinAmountUnit } from "~/hooks/useBitcoinAmountFormatter";
 import { useThemeColors } from "~/hooks/useTheme";
@@ -24,6 +25,7 @@ type SendAmountStageProps = {
   error: string | null;
   isAmountEditable: boolean;
   canSendMax: boolean;
+  onBack?: () => void;
   onAmountChange: (amount: string) => void;
   onToggleCurrency: () => void;
   onContinue: () => void;
@@ -43,6 +45,7 @@ export function SendAmountStage({
   error,
   isAmountEditable,
   canSendMax,
+  onBack,
   onAmountChange,
   onToggleCurrency,
   onContinue,
@@ -74,7 +77,11 @@ export function SendAmountStage({
   return (
     <View className="flex-1 px-5" testID="send-amount-stage">
       <View className="flex-row items-center justify-between pt-4">
-        <View className="w-12" />
+        {onBack ? (
+          <NativeNoahBackButton onPress={onBack} testID="send-amount-back" />
+        ) : (
+          <View className="w-12" />
+        )}
         <View className="items-center">
           <Text accessibilityRole="header" className="text-xl font-bold text-foreground">
             Send bitcoin

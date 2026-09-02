@@ -36,8 +36,8 @@ if [[ ! "$bark_ark_address" =~ ^tark1 ]]; then
 fi
 
 printf 'Sending 5000 sats from the simulator to Bark address %s.\n' "$bark_ark_address"
+printf '%s' "$bark_ark_address" | xcrun simctl pbcopy "$simulator_id"
 "$maestro_command" test --udid "$simulator_id" \
-  -e "BARK_ARK_ADDRESS=$bark_ark_address" \
   client/.maestro/subflows/send-funded-ark.yml
 
 just bark balance
