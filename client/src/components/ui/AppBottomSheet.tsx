@@ -11,7 +11,7 @@ import {
   type KeyboardEvent,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ModalBottomSheet, type Detent } from "@swmansion/react-native-bottom-sheet";
+import { ModalBottomSheet, programmatic, type Detent } from "@swmansion/react-native-bottom-sheet";
 
 import { useTheme } from "~/hooks/useTheme";
 
@@ -25,6 +25,7 @@ type AppBottomSheetProps = {
   scrollable?: boolean;
   avoidKeyboard?: boolean;
   liquidGlass?: boolean;
+  dismissible?: boolean;
 };
 
 function LiquidGlassSheetSurface() {
@@ -63,12 +64,16 @@ export const AppBottomSheet = ({
   scrollable = false,
   avoidKeyboard = false,
   liquidGlass = false,
+  dismissible = true,
 }: AppBottomSheetProps) => {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const sheetHeight = Math.max(windowHeight - Math.max(insets.top, 16) - 12, 320);
-  const resolvedDetents: Detent[] = detents ?? [0, "content"];
+  const requestedDetents: Detent[] = detents ?? [0, "content"];
+  const resolvedDetents: Detent[] = dismissible
+    ? requestedDetents
+    : [programmatic(0), ...requestedDetents.slice(1)];
   const openIndex = resolvedDetents.length - 1;
   const openDetent = resolvedDetents[openIndex];
   const openDetentValue =

@@ -19,6 +19,7 @@ import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
 import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
 import { COLORS } from "~/lib/styleConstants";
 import { NativeNoahButton } from "./ui/NativeNoahButton";
+import { NativeNoahSecondaryButton } from "./ui/NativeNoahSecondaryButton";
 import { Text } from "./ui/text";
 import noahIcon from "../../assets/icon.png";
 
@@ -150,6 +151,7 @@ export const SendSuccessBottomSheet: React.FC<SendSuccessBottomSheetProps> = ({
   const { isDark } = useTheme();
   const shouldReduceMotion = useReducedMotion();
   const [completedAt] = useState(() => new Date());
+  const [showReceipt, setShowReceipt] = useState(false);
   const paperOffset = useSharedValue(shouldReduceMotion ? 0 : -PAPER_TRAVEL);
   const paperOpacity = useSharedValue(shouldReduceMotion ? 1 : 0);
   const fiatAmount = btcPrice ? satsToFiat(parsedResult.amount_sat, btcPrice, fiatCurrency) : null;
@@ -193,8 +195,67 @@ export const SendSuccessBottomSheet: React.FC<SendSuccessBottomSheetProps> = ({
     transform: [{ translateY: paperOffset.value }],
   }));
 
+  if (!showReceipt) {
+    return (
+      <View className="pb-2" testID="send-success-sheet">
+        <View className="items-center px-5 pt-8">
+          <View className="size-20 items-center justify-center rounded-full bg-success/15">
+            <Icon name="checkmark" size={48} color={COLORS.SUCCESS} />
+          </View>
+          <Text className="mt-7 text-center text-4xl font-bold text-foreground">Payment sent</Text>
+          <Text className="mt-3 text-center text-3xl font-semibold text-foreground">
+            {formatBitcoinAmount(parsedResult.amount_sat)}
+          </Text>
+          {fiatAmount ? (
+            <Text className="mt-2 text-base text-muted-foreground">
+              ≈ {formatFiatAmount(fiatAmount, fiatCurrency)}
+            </Text>
+          ) : null}
+
+          <View className="mt-8 w-full border-y border-border/70 py-4">
+            <View className="flex-row items-center justify-between gap-5">
+              <Text className="text-base text-muted-foreground">Paid via</Text>
+              <Text className="text-base font-semibold text-foreground">{parsedResult.type}</Text>
+            </View>
+            <View className="mt-4 flex-row items-start justify-between gap-5">
+              <Text className="text-base text-muted-foreground">To</Text>
+              <Text className="min-w-0 flex-1 text-right text-base font-semibold text-foreground">
+                {truncateValue(parsedResult.destination)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View className="mt-10 gap-3 px-1">
+          <NativeNoahSecondaryButton
+            label="View receipt"
+            onPress={() => setShowReceipt(true)}
+            size="lg"
+            fullWidth
+            testID="send-success-view-receipt"
+          />
+          <NativeNoahButton
+            label="Done"
+            onPress={handleDone}
+            size="lg"
+            fullWidth
+            testID="send-success-done"
+          />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View className="pb-2" testID="send-success-receipt">
+      <View className="mb-4 px-1">
+        <NativeNoahSecondaryButton
+          label="Back to summary"
+          onPress={() => setShowReceipt(false)}
+          fullWidth
+          testID="send-success-back-to-summary"
+        />
+      </View>
       <View className="items-center px-1">
         <View
           className="z-20 w-full rounded-[30px] border px-4 pt-4 pb-12"

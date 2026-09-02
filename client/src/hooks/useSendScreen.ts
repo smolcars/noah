@@ -683,7 +683,7 @@ export const useSendScreen = () => {
           amount_sat: res.amount_sat,
           destination: res.destination_address,
           txid: res.txid,
-          type: res.source === "offchain" ? "Onchain from Ark" : "Onchain",
+          type: res.source === "offchain" ? "On-chain from Ark balance" : "On-chain wallet",
         };
       }
 
@@ -693,7 +693,7 @@ export const useSendScreen = () => {
           success: true,
           amount_sat: res.amount_sat,
           destination: res.destination_pubkey,
-          type: "Arkoor",
+          type: "Ark",
         };
       }
 
@@ -1023,10 +1023,6 @@ export const useSendScreen = () => {
     setShowConfirmation(false);
   };
 
-  const handleCloseSuccess = () => {
-    setShowSuccess(false);
-  };
-
   const handleDone = () => {
     reset();
     setParsedResult(null);
@@ -1046,7 +1042,6 @@ export const useSendScreen = () => {
     setStageHistory(["amount"]);
     setAmountError(null);
     setRecipientError(null);
-    handleCloseSuccess();
   };
 
   const handleClear = () => {
@@ -1163,7 +1158,6 @@ export const useSendScreen = () => {
     showConfirmation,
     destinationType,
     showSuccess,
-    handleCloseSuccess,
     feeEstimate: feeEstimateQuery.data,
     isEstimatingFee: lightningAddressPaymentRouteQuery.isFetching || feeEstimateQuery.isFetching,
     feeEstimateError: lightningAddressPaymentRouteQuery.error ?? feeEstimateQuery.error,

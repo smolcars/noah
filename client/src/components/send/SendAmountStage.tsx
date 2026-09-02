@@ -22,6 +22,8 @@ type SendAmountStageProps = {
   arkBalanceSat: number;
   onchainBalanceSat: number;
   error: string | null;
+  isAmountEditable: boolean;
+  canSendMax: boolean;
   onAmountChange: (amount: string) => void;
   onToggleCurrency: () => void;
   onContinue: () => void;
@@ -39,6 +41,8 @@ export function SendAmountStage({
   arkBalanceSat,
   onchainBalanceSat,
   error,
+  isAmountEditable,
+  canSendMax,
   onAmountChange,
   onToggleCurrency,
   onContinue,
@@ -167,9 +171,14 @@ export function SendAmountStage({
             accessibilityRole="button"
             accessibilityLabel="Send maximum amount"
             onPress={onMax}
+            disabled={!canSendMax}
+            accessibilityState={{ disabled: !canSendMax }}
             className="rounded-full border px-4 py-2"
-            style={{ borderColor: `${COLORS.BITCOIN_ORANGE}88` }}
             testID="send-max"
+            style={{
+              borderColor: `${COLORS.BITCOIN_ORANGE}88`,
+              opacity: canSendMax ? 1 : 0.45,
+            }}
           >
             <Text className="text-xs font-bold tracking-[2px] text-foreground">MAX</Text>
           </Pressable>
@@ -191,13 +200,24 @@ export function SendAmountStage({
         ) : null}
       </View>
 
-      <AmountKeypad
-        amount={amount}
-        currency={currency}
-        fiatDecimals={fiatCurrencyInfo.decimals}
-        onChange={onAmountChange}
-        testIDPrefix="send-key"
-      />
+      {isAmountEditable ? (
+        <AmountKeypad
+          amount={amount}
+          currency={currency}
+          fiatDecimals={fiatCurrencyInfo.decimals}
+          onChange={onAmountChange}
+          testIDPrefix="send-key"
+        />
+      ) : (
+        <View className="mb-6 items-center border-y border-border/60 py-5">
+          <Text className="text-sm font-semibold text-foreground">
+            Amount set by payment request
+          </Text>
+          <Text className="mt-1 text-sm text-muted-foreground">
+            Go back to change the recipient.
+          </Text>
+        </View>
+      )}
 
       <View style={{ paddingBottom: Math.max(bottomTabBarHeight, 20) + 8 }}>
         <NativeNoahButton

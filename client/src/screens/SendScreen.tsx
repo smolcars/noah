@@ -24,6 +24,8 @@ const SendScreen = () => {
     amountSat,
     setAmount,
     amountError,
+    isAmountEditable,
+    canSendMax,
     currency,
     fiatCurrency,
     btcPrice,
@@ -73,7 +75,6 @@ const SendScreen = () => {
     isLightningAddressPaymentRouteResolutionRequired,
     showConfirmation,
     showSuccess,
-    handleCloseSuccess,
     feeEstimate,
     isEstimatingFee,
     feeEstimateError,
@@ -203,6 +204,8 @@ const SendScreen = () => {
           arkBalanceSat={offchainWalletBalance}
           onchainBalanceSat={onchainWalletBalance}
           error={amountError}
+          isAmountEditable={isAmountEditable}
+          canSendMax={canSendMax}
           onAmountChange={setAmount}
           onToggleCurrency={toggleCurrency}
           onContinue={handleAmountContinue}
@@ -212,7 +215,12 @@ const SendScreen = () => {
         />
       )}
 
-      <AppBottomSheet isOpen={showConfirmation} onClose={handleCancelConfirmation} scrollable>
+      <AppBottomSheet
+        isOpen={showConfirmation}
+        onClose={handleCancelConfirmation}
+        scrollable
+        dismissible={!isSending}
+      >
         <SendConfirmation
           destination={destination}
           amount={isMaxSend ? maxSendAmountSat : amountSat}
@@ -253,7 +261,7 @@ const SendScreen = () => {
         />
       </AppBottomSheet>
 
-      <AppBottomSheet isOpen={showSuccess} onClose={handleCloseSuccess} scrollable>
+      <AppBottomSheet isOpen={showSuccess} onClose={handleDone} scrollable>
         {parsedResult ? (
           <SendSuccessBottomSheet
             parsedResult={parsedResult}
