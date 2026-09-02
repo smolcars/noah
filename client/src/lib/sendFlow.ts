@@ -45,6 +45,11 @@ export const getBip321MethodForRail = (
   return request.onchainAddress ? "onchain" : null;
 };
 
+export const getRecommendedRail = (
+  rails: readonly SendRail[],
+  availability: Readonly<Partial<Record<SendRail, boolean>>>,
+): SendRail | null => rails.find((rail) => availability[rail] !== false) ?? rails[0] ?? null;
+
 export const canAddRecipientNote = (
   destinationType: DestinationTypes,
   commentAllowed: number,
@@ -85,7 +90,7 @@ export const getNextSendStage = (progress: SendFlowProgress): SendStage => {
 
   if (
     progress.selectedRail === "onchain" &&
-    progress.sourceOptions.length > 1 &&
+    progress.sourceOptions.length !== 1 &&
     !progress.sourceConfirmed
   ) {
     return "source";

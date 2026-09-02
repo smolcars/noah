@@ -5,6 +5,7 @@ import {
   getBip321Rails,
   getBip321MethodForRail,
   getNextSendStage,
+  getRecommendedRail,
   isMaxCompatibleDestination,
 } from "../../src/lib/sendFlow";
 
@@ -28,6 +29,23 @@ describe("send payment rail choices", () => {
       }),
     ).toBe("lightning");
     expect(getBip321MethodForRail("lightning", { offer: "lno1offer" })).toBe("offer");
+  });
+
+  test("recommends the first eligible rail without hiding unavailable rails", () => {
+    expect(
+      getRecommendedRail(["ark", "lightning", "onchain"], {
+        ark: false,
+        lightning: false,
+        onchain: true,
+      }),
+    ).toBe("onchain");
+    expect(
+      getRecommendedRail(["ark", "lightning", "onchain"], {
+        ark: false,
+        lightning: false,
+        onchain: false,
+      }),
+    ).toBe("ark");
   });
 });
 
@@ -113,6 +131,21 @@ describe("send stage progression", () => {
         rails: ["onchain"],
         selectedRail: "onchain",
         sourceOptions: ["offchain", "onchain"],
+      }),
+    ).toBe("source");
+  });
+
+  test("shows funding sources when no balance can cover an on-chain payment", () => {
+    expect(
+      getNextSendStage({
+        entry: "amount-first",
+        amountConfirmed: true,
+        recipientConfirmed: true,
+        railConfirmed: true,
+        sourceConfirmed: false,
+        rails: ["onchain"],
+        selectedRail: "onchain",
+        sourceOptions: [],
       }),
     ).toBe("source");
   });
