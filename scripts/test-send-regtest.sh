@@ -37,8 +37,13 @@ if [[ ! "$bark_ark_address" =~ ^tark1 ]]; then
   exit 1
 fi
 
-printf 'Sending 5000 sats from the simulator to Bark address %s.\n' "$bark_ark_address"
 printf '%s' "$bark_ark_address" | xcrun simctl pbcopy "$simulator_id"
+printf 'Verifying an abandoned recipient is not reused for a new amount.\n'
+"$maestro_command" test --udid "$simulator_id" \
+  --debug-output "$maestro_debug_output/recipient-reset-on-back" \
+  client/.maestro/subflows/send-recipient-reset-on-back.yml
+
+printf 'Sending 5000 sats from the simulator to Bark address %s.\n' "$bark_ark_address"
 "$maestro_command" test --udid "$simulator_id" \
   --debug-output "$maestro_debug_output/payment" \
   client/.maestro/subflows/send-funded-ark.yml

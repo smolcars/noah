@@ -155,6 +155,22 @@ export const useSendScreen = () => {
       setStageHistory(["amount"]);
       return;
     }
+    if (
+      stage === "recipient" &&
+      entry === "amount-first" &&
+      stageHistory.at(-2) === "amount"
+    ) {
+      setDestination("");
+      setBip321Data(null);
+      setDestinationType(null);
+      setComment("");
+      setSelectedRail("onchain");
+      setSelectedPaymentMethod("onchain");
+      setSelectedOnchainSource(null);
+      setRailConfirmed(false);
+      setSourceConfirmed(false);
+      setRecipientError(null);
+    }
     if (stage === "method") {
       setRailConfirmed(false);
     }
