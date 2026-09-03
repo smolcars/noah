@@ -53,6 +53,10 @@ export const satsToFiat = (sats: number, btcPrice: number, currency: FiatCurrenc
 };
 
 export const fiatToSats = (amount: number, btcPrice: number): number => {
+  if (!Number.isFinite(amount)) {
+    return 0;
+  }
+
   return Math.round((amount / btcPrice) * 100_000_000);
 };
 

@@ -11,6 +11,11 @@ appId: com.noahwallet.regtest
     timeout: 30000
 
 - tapOn:
+    id: "send-currency-toggle"
+- assertNotVisible: "NaN"
+- tapOn:
+    id: "send-currency-toggle"
+- tapOn:
     id: "send-paste-from-amount"
 - tapOn:
     text: "Allow Paste"
