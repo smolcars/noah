@@ -9,6 +9,7 @@ import { SendSuccessBottomSheet } from "~/components/SendSuccessBottomSheet";
 import { SendAmountStage } from "~/components/send/SendAmountStage";
 import { SendChoiceStage, type SendChoiceOption } from "~/components/send/SendChoiceStage";
 import { SendRecipientStage } from "~/components/send/SendRecipientStage";
+import { SendStageTransition } from "~/components/send/SendStageTransition";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { useSendScreen } from "~/hooks/useSendScreen";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
@@ -20,6 +21,7 @@ const SendScreen = () => {
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const {
     stage,
+    stageDirection,
     canGoBack,
     amount,
     amountSat,
@@ -164,73 +166,77 @@ const SendScreen = () => {
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
-      {stage === "method" ? (
-        <SendChoiceStage
-          title="How should Noah pay?"
-          description="Noah recommends the first available method. You can choose another method supplied by this request."
-          options={railChoices}
-          value={selectedRail}
-          onBack={handleStageBack}
-          onChange={setSelectedRail}
-          onContinue={handleRailContinue}
-          testIDPrefix="send-method"
-        />
-      ) : stage === "source" ? (
-        <SendChoiceStage
-          title={isMaxSend ? "Which balance should Noah empty?" : "Which balance should Noah use?"}
-          description={
-            isMaxSend
-              ? "MAX sends one balance in full. The miner fee is deducted from the final amount."
-              : "Choose the balance that will fund this on-chain payment."
-          }
-          options={sourceChoices}
-          value={selectedOnchainSource}
-          onBack={handleStageBack}
-          onChange={setSelectedOnchainSource}
-          onContinue={handleSourceContinue}
-          testIDPrefix="send-source"
-        />
-      ) : stage === "recipient" ? (
-        <SendRecipientStage
-          amountSat={isMaxSend ? maxSendAmountSat : amountSat}
-          destination={destination}
-          destinationType={destinationType}
-          bip321Data={bip321Data}
-          suggestions={lightningAddressSuggestions}
-          error={recipientError}
-          comment={comment}
-          commentAllowed={commentAllowed}
-          noteUsesLightning={noteUsesLightning}
-          isResolving={isResolvingRecipient}
-          onBack={handleStageBack}
-          onDestinationChange={setDestination}
-          onSelectSuggestion={handleSelectLightningAddressSuggestion}
-          onCommentChange={setComment}
-          onPaste={pasteDestination}
-          onScan={handleScanPress}
-          onContinue={handleRecipientContinue}
-        />
-      ) : (
-        <SendAmountStage
-          amount={amount}
-          amountSat={amountSat}
-          currency={currency}
-          fiatCurrency={fiatCurrency}
-          btcPrice={btcPrice}
-          arkBalanceSat={offchainWalletBalance}
-          onchainBalanceSat={onchainWalletBalance}
-          error={amountError}
-          isAmountEditable={isAmountEditable}
-          canSendMax={canSendMax}
-          onBack={canGoBack ? handleStageBack : undefined}
-          onAmountChange={setAmount}
-          onToggleCurrency={toggleCurrency}
-          onContinue={handleAmountContinue}
-          onMax={handleMaxSend}
-          onPaste={pasteDestination}
-          onScan={handleScanPress}
-        />
-      )}
+      <SendStageTransition direction={stageDirection} stage={stage}>
+        {stage === "method" ? (
+          <SendChoiceStage
+            title="How should Noah pay?"
+            description="Noah recommends the first available method. You can choose another method supplied by this request."
+            options={railChoices}
+            value={selectedRail}
+            onBack={handleStageBack}
+            onChange={setSelectedRail}
+            onContinue={handleRailContinue}
+            testIDPrefix="send-method"
+          />
+        ) : stage === "source" ? (
+          <SendChoiceStage
+            title={
+              isMaxSend ? "Which balance should Noah empty?" : "Which balance should Noah use?"
+            }
+            description={
+              isMaxSend
+                ? "MAX sends one balance in full. The miner fee is deducted from the final amount."
+                : "Choose the balance that will fund this on-chain payment."
+            }
+            options={sourceChoices}
+            value={selectedOnchainSource}
+            onBack={handleStageBack}
+            onChange={setSelectedOnchainSource}
+            onContinue={handleSourceContinue}
+            testIDPrefix="send-source"
+          />
+        ) : stage === "recipient" ? (
+          <SendRecipientStage
+            amountSat={isMaxSend ? maxSendAmountSat : amountSat}
+            destination={destination}
+            destinationType={destinationType}
+            bip321Data={bip321Data}
+            suggestions={lightningAddressSuggestions}
+            error={recipientError}
+            comment={comment}
+            commentAllowed={commentAllowed}
+            noteUsesLightning={noteUsesLightning}
+            isResolving={isResolvingRecipient}
+            onBack={handleStageBack}
+            onDestinationChange={setDestination}
+            onSelectSuggestion={handleSelectLightningAddressSuggestion}
+            onCommentChange={setComment}
+            onPaste={pasteDestination}
+            onScan={handleScanPress}
+            onContinue={handleRecipientContinue}
+          />
+        ) : (
+          <SendAmountStage
+            amount={amount}
+            amountSat={amountSat}
+            currency={currency}
+            fiatCurrency={fiatCurrency}
+            btcPrice={btcPrice}
+            arkBalanceSat={offchainWalletBalance}
+            onchainBalanceSat={onchainWalletBalance}
+            error={amountError}
+            isAmountEditable={isAmountEditable}
+            canSendMax={canSendMax}
+            onBack={canGoBack ? handleStageBack : undefined}
+            onAmountChange={setAmount}
+            onToggleCurrency={toggleCurrency}
+            onContinue={handleAmountContinue}
+            onMax={handleMaxSend}
+            onPaste={pasteDestination}
+            onScan={handleScanPress}
+          />
+        )}
+      </SendStageTransition>
 
       <AppBottomSheet
         isOpen={showConfirmation}

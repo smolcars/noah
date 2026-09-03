@@ -108,6 +108,7 @@ export const useSendScreen = () => {
   const [destinationRequestRevision, setDestinationRequestRevision] = useState(0);
   const [isMaxSend, setIsMaxSend] = useState(false);
   const [stageHistory, setStageHistory] = useState<SendStage[]>(["amount"]);
+  const [stageDirection, setStageDirection] = useState<"back" | "forward">("forward");
   const [amountError, setAmountError] = useState<string | null>(null);
   const [recipientError, setRecipientError] = useState<string | null>(null);
   const [entry, setEntry] = useState<SendEntry>("amount-first");
@@ -127,6 +128,7 @@ export const useSendScreen = () => {
 
   const showStage = (nextStage: SendStage) => {
     setShowConfirmation(false);
+    setStageDirection("forward");
     setStageHistory((history) =>
       history.at(-1) === nextStage ? history : [...history, nextStage],
     );
@@ -134,6 +136,7 @@ export const useSendScreen = () => {
 
   const handleStageBack = () => {
     setShowConfirmation(false);
+    setStageDirection("back");
     if (stage === "recipient" && !isAmountEditable) {
       setDestination("");
       setAmount("");
@@ -309,6 +312,7 @@ export const useSendScreen = () => {
     setShowSuccess(false);
     setAmountError(null);
     setRecipientError(null);
+    setStageDirection("forward");
     setStageHistory(["recipient"]);
     setDestination(normalizeLightningAddressDestination(requestedDestination));
     setDestinationRequestRevision((revision) => revision + 1);
@@ -625,6 +629,7 @@ export const useSendScreen = () => {
     setAmountError(null);
     setRecipientError(null);
     setShowConfirmation(false);
+    setStageDirection("forward");
     setStageHistory(["source"]);
   };
 
@@ -1056,6 +1061,7 @@ export const useSendScreen = () => {
     setSelectedOnchainSource(null);
     setRailConfirmed(false);
     setSourceConfirmed(false);
+    setStageDirection("forward");
     setStageHistory(["amount"]);
     setAmountError(null);
     setRecipientError(null);
@@ -1083,6 +1089,7 @@ export const useSendScreen = () => {
     lightningAddressSuggestions,
     handleSelectLightningAddressSuggestion,
     stage,
+    stageDirection,
     canGoBack: stageHistory.length > 1,
     startRecipientEntry,
     handleStageBack,
