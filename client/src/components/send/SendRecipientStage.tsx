@@ -15,7 +15,12 @@ import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { Text } from "~/components/ui/text";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { useThemeColors } from "~/hooks/useTheme";
-import { canAddRecipientNote, getBip321Rails, getSendRailLabel } from "~/lib/sendFlow";
+import {
+  canAddRecipientNote,
+  getBip321Rails,
+  getDestinationLabel,
+  getSendRailLabel,
+} from "~/lib/sendFlow";
 import type { DestinationTypes, ParsedBip321 } from "~/lib/sendUtils";
 import { COLORS } from "~/lib/styleConstants";
 
@@ -37,25 +42,6 @@ type SendRecipientStageProps = {
   onPaste: () => void;
   onScan: () => void;
   onContinue: () => void;
-};
-
-const getDestinationLabel = (destinationType: DestinationTypes) => {
-  switch (destinationType) {
-    case "ark":
-      return "Ark address";
-    case "lightning":
-      return "Lightning invoice";
-    case "offer":
-      return "Lightning offer";
-    case "lnurl":
-      return "Lightning address";
-    case "onchain":
-      return "On-chain address";
-    case "bip321":
-      return "Bitcoin payment request";
-    default:
-      return null;
-  }
 };
 
 export function SendRecipientStage({

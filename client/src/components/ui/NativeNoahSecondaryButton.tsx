@@ -5,10 +5,7 @@ import {
   Text as ComposeText,
   TextButton as ComposeTextButton,
 } from "@expo/ui/jetpack-compose";
-import {
-  fillMaxSize,
-  testID as composeTestID,
-} from "@expo/ui/jetpack-compose/modifiers";
+import { fillMaxSize, testID as composeTestID } from "@expo/ui/jetpack-compose/modifiers";
 import {
   Platform,
   Pressable,
@@ -42,6 +39,8 @@ type NativeNoahSecondaryButtonProps = {
 const SECONDARY_COLORS = {
   accent: COLORS.BITCOIN_ORANGE,
   destructive: "#dc2626",
+  neutralDark: "#64748b",
+  neutralLight: "#94a3b8",
   darkText: "#f8fafc",
   lightText: "#1a2332",
   disabledText: "#64748b",
@@ -75,7 +74,13 @@ export function NativeNoahSecondaryButton({
   const height = BUTTON_HEIGHT[size];
   const buttonWidth = width ?? BUTTON_MIN_WIDTH[size];
   const accentColor =
-    tone === "destructive" ? SECONDARY_COLORS.destructive : SECONDARY_COLORS.accent;
+    tone === "destructive"
+      ? SECONDARY_COLORS.destructive
+      : tone === "neutral"
+        ? isDark
+          ? SECONDARY_COLORS.neutralDark
+          : SECONDARY_COLORS.neutralLight
+        : SECONDARY_COLORS.accent;
   const textColor = isDark ? SECONDARY_COLORS.darkText : SECONDARY_COLORS.lightText;
   const hostStyle = {
     width: "100%",

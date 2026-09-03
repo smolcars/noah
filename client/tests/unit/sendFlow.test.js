@@ -4,6 +4,8 @@ import {
   canAddRecipientNote,
   getBip321Rails,
   getBip321MethodForRail,
+  getDestinationLabel,
+  getDestinationRails,
   getNextSendStage,
   getRecommendedRail,
   isMaxCompatibleDestination,
@@ -19,6 +21,19 @@ describe("send payment rail choices", () => {
         arkAddress: "ark1destination",
       }),
     ).toEqual(["ark", "lightning", "onchain"]);
+  });
+
+  test("maps pasted destinations to their available rails and display labels", () => {
+    expect(getDestinationRails("ark", null)).toEqual(["ark"]);
+    expect(getDestinationRails("onchain", null)).toEqual(["onchain"]);
+    expect(
+      getDestinationRails("bip321", {
+        onchainAddress: "bc1qdestination",
+        arkAddress: "ark1destination",
+      }),
+    ).toEqual(["ark", "onchain"]);
+    expect(getDestinationLabel("bip321")).toBe("Bitcoin payment request");
+    expect(getDestinationLabel(null)).toBeNull();
   });
 
   test("uses an invoice before an offer for the Lightning rail", () => {
@@ -69,6 +84,28 @@ describe("MAX recipient compatibility", () => {
 });
 
 describe("send stage progression", () => {
+  test("keeps a confirmed amountless recipient on the amount composer", () => {
+    const importedRecipient = {
+      entry: "recipient-first",
+      recipientConfirmed: true,
+      railConfirmed: false,
+      sourceConfirmed: false,
+      rails: ["ark"],
+      selectedRail: "ark",
+      selectedRailAvailable: false,
+      sourceOptions: [],
+    };
+
+    expect(getNextSendStage({ ...importedRecipient, amountConfirmed: false })).toBe("amount");
+    expect(
+      getNextSendStage({
+        ...importedRecipient,
+        amountConfirmed: true,
+        selectedRailAvailable: true,
+      }),
+    ).toBe("review");
+  });
+
   test("walks an amount-first payment through each unresolved decision", () => {
     const baseProgress = {
       entry: "amount-first",

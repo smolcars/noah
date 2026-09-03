@@ -21,6 +21,25 @@ export const getSendRailLabel = (rail: SendRail): string => SEND_RAIL_LABELS[rai
 export const getOnchainSourceLabel = (source: OnchainSendSource): string =>
   ONCHAIN_SOURCE_LABELS[source];
 
+export const getDestinationLabel = (destinationType: DestinationTypes): string | null => {
+  switch (destinationType) {
+    case "ark":
+      return "Ark address";
+    case "lightning":
+      return "Lightning invoice";
+    case "offer":
+      return "Lightning offer";
+    case "lnurl":
+      return "Lightning address";
+    case "onchain":
+      return "On-chain address";
+    case "bip321":
+      return "Bitcoin payment request";
+    default:
+      return null;
+  }
+};
+
 export type SendFlowProgress = {
   entry: SendEntry;
   amountConfirmed: boolean;
@@ -47,6 +66,29 @@ export const getBip321Rails = (request: ParsedBip321): SendRail[] => {
   }
 
   return rails;
+};
+
+export const getDestinationRails = (
+  destinationType: DestinationTypes,
+  request: ParsedBip321 | null,
+): SendRail[] => {
+  if (destinationType === "bip321" && request) {
+    return getBip321Rails(request);
+  }
+  if (destinationType === "ark") {
+    return ["ark"];
+  }
+  if (
+    destinationType === "lightning" ||
+    destinationType === "offer" ||
+    destinationType === "lnurl"
+  ) {
+    return ["lightning"];
+  }
+  if (destinationType === "onchain") {
+    return ["onchain"];
+  }
+  return [];
 };
 
 export const getBip321MethodForRail = (

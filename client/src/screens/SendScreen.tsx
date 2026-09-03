@@ -14,7 +14,12 @@ import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { useSendScreen } from "~/hooks/useSendScreen";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import type { OnchainSendSource } from "~/lib/paymentsApi";
-import { getOnchainSourceLabel, getSendRailLabel, type SendRail } from "~/lib/sendFlow";
+import {
+  getDestinationLabel,
+  getOnchainSourceLabel,
+  getSendRailLabel,
+  type SendRail,
+} from "~/lib/sendFlow";
 
 const SendScreen = () => {
   const isFocused = useIsFocused();
@@ -29,6 +34,7 @@ const SendScreen = () => {
     amountError,
     isAmountEditable,
     canSendMax,
+    canClear,
     currency,
     fiatCurrency,
     btcPrice,
@@ -47,7 +53,9 @@ const SendScreen = () => {
     commentAllowed,
     noteUsesLightning,
     isResolvingRecipient,
-    startRecipientEntry,
+    handleImportedDestination,
+    handleEditRecipient,
+    handleClear,
     handleStageBack,
     handleAmountContinue,
     handleRecipientContinue,
@@ -96,22 +104,13 @@ const SendScreen = () => {
     }
   }, [isFocused, setShowCamera, showCamera]);
 
-  const applyPastedDestination = (value: string) => {
-    if (!value.trim()) {
-      return;
-    }
-
-    setDestination(value);
-    startRecipientEntry();
-  };
-
   const pasteDestination = async () => {
-    applyPastedDestination(await Clipboard.getStringAsync());
+    handleImportedDestination(await Clipboard.getStringAsync());
   };
 
   const pasteDestinationFromScanner = (value: string) => {
     setShowCamera(false);
-    applyPastedDestination(value);
+    handleImportedDestination(value);
   };
 
   if (showCamera) {
@@ -163,6 +162,10 @@ const SendScreen = () => {
           : "Insufficient confirmed balance",
     },
   ];
+  const recipientLabel =
+    destinationType === "bip321"
+      ? paymentRailOptions.map(getSendRailLabel).join(" · ")
+      : getDestinationLabel(destinationType);
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
@@ -227,10 +230,15 @@ const SendScreen = () => {
             error={amountError}
             isAmountEditable={isAmountEditable}
             canSendMax={canSendMax}
+            canClear={canClear}
+            recipient={recipientLabel ? destination : null}
+            recipientLabel={recipientLabel}
             onBack={canGoBack ? handleStageBack : undefined}
             onAmountChange={setAmount}
             onToggleCurrency={toggleCurrency}
             onContinue={handleAmountContinue}
+            onClear={handleClear}
+            onEditRecipient={handleEditRecipient}
             onMax={handleMaxSend}
             onPaste={pasteDestination}
             onScan={handleScanPress}

@@ -25,6 +25,7 @@ const { isValidDestination, parseDestination } = await import("../../src/lib/sen
 // Fixture from LDK's BOLT12 parser tests. BOLT12 uses Bech32 encoding without a checksum.
 const BOLT12_OFFER =
   "lno1pqps7sjqpgtyzm3qv4uxzmtsd3jjqer9wd3hy6tsw35k7msjzfpy7nz5yqcnygrfdej82um5wf5k2uckyypwa3eyt44h6txtxquqh7lz5djge4afgfjn7k4rgrkuag0jsd5xvxg";
+const ONCHAIN_ADDRESS = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
 
 describe("BOLT12 send destinations", () => {
   test("accepts a bare BOLT12 offer", () => {
@@ -77,5 +78,17 @@ describe("BOLT12 send destinations", () => {
     expect(isValidDestination(mixedCaseOffer)).toBe(false);
     expect(isValidDestination("bitcoin:?lno=lno1not-an-offer")).toBe(false);
     expect(parseDestination("bitcoin:?lno=lno1not-an-offer").destinationType).toBeNull();
+  });
+});
+
+describe("amountless send destinations", () => {
+  test("treats a zero-amount BIP-321 request as editable", () => {
+    expect(parseDestination(`bitcoin:${ONCHAIN_ADDRESS}?amount=0`)).toEqual({
+      destinationType: "bip321",
+      isAmountEditable: true,
+      bip321: {
+        onchainAddress: ONCHAIN_ADDRESS,
+      },
+    });
   });
 });

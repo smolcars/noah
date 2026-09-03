@@ -1,11 +1,14 @@
 import Icon from "@react-native-vector-icons/ionicons";
+import * as Haptics from "expo-haptics";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
+import Animated, { FadeIn, FadeOut, useReducedMotion } from "react-native-reanimated";
 
 import { AmountKeypad } from "~/components/AmountKeypad";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
+import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 import { Text } from "~/components/ui/text";
 import { useBitcoinAmountFormatter, useBitcoinAmountUnit } from "~/hooks/useBitcoinAmountFormatter";
 import { useThemeColors } from "~/hooks/useTheme";
@@ -25,10 +28,15 @@ type SendAmountStageProps = {
   error: string | null;
   isAmountEditable: boolean;
   canSendMax: boolean;
+  canClear: boolean;
+  recipient: string | null;
+  recipientLabel: string | null;
   onBack?: () => void;
   onAmountChange: (amount: string) => void;
   onToggleCurrency: () => void;
   onContinue: () => void;
+  onClear: () => void;
+  onEditRecipient: () => void;
   onMax: () => void;
   onPaste: () => void;
   onScan: () => void;
@@ -45,15 +53,21 @@ export function SendAmountStage({
   error,
   isAmountEditable,
   canSendMax,
+  canClear,
+  recipient,
+  recipientLabel,
   onBack,
   onAmountChange,
   onToggleCurrency,
   onContinue,
+  onClear,
+  onEditRecipient,
   onMax,
   onPaste,
   onScan,
 }: SendAmountStageProps) {
   const colors = useThemeColors();
+  const shouldReduceMotion = useReducedMotion();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const bitcoinAmountUnit = useBitcoinAmountUnit();
   const bottomTabBarHeight = useBottomTabBarHeight();
@@ -73,6 +87,10 @@ export function SendAmountStage({
         : `${fiatCurrencyInfo.code} rate unavailable`
       : formatBitcoinAmount(amountSat);
   const canContinue = Number.isInteger(amountSat) && amountSat > 0;
+  const handleClear = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClear();
+  };
 
   return (
     <View className="flex-1 px-5" testID="send-amount-stage">
@@ -173,32 +191,84 @@ export function SendAmountStage({
           />
         </Pressable>
 
-        <View className="mt-3 flex-row items-center gap-3">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Send maximum amount"
-            onPress={onMax}
-            disabled={!canSendMax}
-            accessibilityState={{ disabled: !canSendMax }}
-            className="h-12 min-w-[88px] items-center justify-center rounded-full border px-6"
-            testID="send-max"
-            style={{
-              borderColor: `${COLORS.BITCOIN_ORANGE}88`,
-              opacity: canSendMax ? 1 : 0.45,
-            }}
+        {recipient && recipientLabel ? (
+          <Animated.View
+            entering={FadeIn.duration(shouldReduceMotion ? 100 : 180)}
+            exiting={FadeOut.duration(shouldReduceMotion ? 80 : 120)}
+            className="mt-3 w-full max-w-[370px] flex-row items-center rounded-2xl border border-border/70 bg-card px-4 py-3"
+            testID="send-amount-recipient"
           >
-            <Text className="text-sm font-bold tracking-[1.5px] text-foreground">MAX</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Paste payment request"
-            onPress={onPaste}
-            className="h-12 min-w-[88px] items-center justify-center rounded-full border border-border px-6"
-            testID="send-paste-from-amount"
+            <View className="min-w-0 flex-1">
+              <Text className="text-xs font-medium uppercase tracking-[1.2px] text-muted-foreground">
+                To · {recipientLabel}
+              </Text>
+              <Text
+                className="mt-1 text-sm font-semibold text-foreground"
+                ellipsizeMode="middle"
+                numberOfLines={1}
+                testID="send-amount-recipient-value"
+              >
+                {recipient}
+              </Text>
+            </View>
+            <View className="ml-3 flex-row items-center gap-1">
+              {canSendMax ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Send maximum amount"
+                  onPress={onMax}
+                  className="h-10 items-center justify-center rounded-full px-3"
+                  testID="send-max"
+                  style={{ backgroundColor: `${COLORS.BITCOIN_ORANGE}14` }}
+                >
+                  <Text className="text-xs font-bold tracking-[1.2px] text-foreground">MAX</Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Change recipient"
+                onPress={onEditRecipient}
+                className="h-10 items-center justify-center rounded-full px-3"
+                testID="send-amount-change-recipient"
+              >
+                <Text className="text-sm font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
+                  Change
+                </Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        ) : (
+          <Animated.View
+            entering={FadeIn.duration(shouldReduceMotion ? 100 : 180)}
+            exiting={FadeOut.duration(shouldReduceMotion ? 80 : 120)}
+            className="mt-3 flex-row items-center gap-3"
           >
-            <Text className="text-sm font-semibold text-foreground">Paste</Text>
-          </Pressable>
-        </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Send maximum amount"
+              onPress={onMax}
+              disabled={!canSendMax}
+              accessibilityState={{ disabled: !canSendMax }}
+              className="h-12 min-w-[88px] items-center justify-center rounded-full border px-6"
+              testID="send-max"
+              style={{
+                borderColor: `${COLORS.BITCOIN_ORANGE}88`,
+                opacity: canSendMax ? 1 : 0.45,
+              }}
+            >
+              <Text className="text-sm font-bold tracking-[1.5px] text-foreground">MAX</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Paste payment request"
+              onPress={onPaste}
+              className="h-12 min-w-[88px] items-center justify-center rounded-full border border-border px-6"
+              testID="send-paste-from-amount"
+            >
+              <Text className="text-sm font-semibold text-foreground">Paste</Text>
+            </Pressable>
+          </Animated.View>
+        )}
 
         {error ? (
           <Text className="mt-3 text-center text-sm text-destructive" testID="send-amount-error">
@@ -225,14 +295,29 @@ export function SendAmountStage({
       )}
 
       <View style={{ paddingBottom: Math.max(bottomTabBarHeight, 20) + 8 }}>
-        <NativeNoahButton
-          label="Next"
-          onPress={onContinue}
-          disabled={!canContinue}
-          size="lg"
-          fullWidth
-          testID="send-amount-next"
-        />
+        <View className="flex-row gap-3">
+          <View className="flex-1">
+            <NativeNoahSecondaryButton
+              label="Clear"
+              onPress={handleClear}
+              disabled={!canClear}
+              size="lg"
+              tone="neutral"
+              fullWidth
+              testID="send-amount-clear"
+            />
+          </View>
+          <View className="flex-[2]">
+            <NativeNoahButton
+              label="Next"
+              onPress={onContinue}
+              disabled={!canContinue}
+              size="lg"
+              fullWidth
+              testID="send-amount-next"
+            />
+          </View>
+        </View>
       </View>
     </View>
   );
