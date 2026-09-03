@@ -94,8 +94,7 @@ const SendScreen = () => {
     }
   }, [isFocused, setShowCamera, showCamera]);
 
-  const pasteDestination = async () => {
-    const value = await Clipboard.getStringAsync();
+  const applyPastedDestination = (value: string) => {
     if (!value.trim()) {
       return;
     }
@@ -104,8 +103,23 @@ const SendScreen = () => {
     startRecipientEntry();
   };
 
+  const pasteDestination = async () => {
+    applyPastedDestination(await Clipboard.getStringAsync());
+  };
+
+  const pasteDestinationFromScanner = (value: string) => {
+    setShowCamera(false);
+    applyPastedDestination(value);
+  };
+
   if (showCamera) {
-    return <QRCodeScanner codeScanner={codeScanner} onClose={() => setShowCamera(false)} />;
+    return (
+      <QRCodeScanner
+        codeScanner={codeScanner}
+        onClose={() => setShowCamera(false)}
+        onPaste={pasteDestinationFromScanner}
+      />
+    );
   }
 
   const railChoices: SendChoiceOption<SendRail>[] = paymentRailOptions.map((rail) => ({
