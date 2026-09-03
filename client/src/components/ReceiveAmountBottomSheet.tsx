@@ -5,6 +5,7 @@ import { Keyboard, Pressable, TextInput, View } from "react-native";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
+import { AmountKeypad } from "~/components/AmountKeypad";
 import { Text } from "~/components/ui/text";
 import { useBitcoinAmountFormatter, useBitcoinAmountUnit } from "~/hooks/useBitcoinAmountFormatter";
 import { useReceiveScreen } from "~/hooks/useReceiveScreen";
@@ -27,17 +28,6 @@ type ReceiveAmountBottomSheetProps = {
   onRemove: () => void;
   onSubmit: (request: { amountSat: number; description: string }) => void;
 };
-
-type KeypadKey = "backspace" | "." | `${number}`;
-
-const KEYPAD_ROWS: KeypadKey[][] = [
-  ["1", "2", "3"],
-  ["4", "5", "6"],
-  ["7", "8", "9"],
-  [".", "0", "backspace"],
-];
-
-const MAX_AMOUNT_LENGTH = 12;
 
 export function ReceiveAmountBottomSheet({
   initialAmountSat,
@@ -126,37 +116,6 @@ export function ReceiveAmountBottomSheet({
     setIsEditingNote(false);
   };
 
-  const enterKey = (key: KeypadKey) => {
-    if (isSubmitting) {
-      return;
-    }
-
-    if (key === "backspace") {
-      setAmount(amount.slice(0, -1));
-      return;
-    }
-
-    if (key === ".") {
-      if (currency !== "FIAT" || fiatCurrencyInfo.decimals === 0 || amount.includes(".")) {
-        return;
-      }
-
-      setAmount(amount.length === 0 ? "0." : `${amount}.`);
-      return;
-    }
-
-    if (amount.length >= MAX_AMOUNT_LENGTH) {
-      return;
-    }
-
-    const decimalPlaces = amount.split(".")[1]?.length ?? 0;
-    if (currency === "FIAT" && amount.includes(".") && decimalPlaces >= fiatCurrencyInfo.decimals) {
-      return;
-    }
-
-    setAmount(amount === "0" ? key : `${amount}${key}`);
-  };
-
   const submit = () => {
     if (!canSubmit || isSubmitting) {
       return;
@@ -166,7 +125,7 @@ export function ReceiveAmountBottomSheet({
   };
 
   return (
-    <AppBottomSheet isOpen={isOpen} onClose={close}>
+    <AppBottomSheet isOpen={isOpen} onClose={close} dismissible={!isSubmitting}>
       {isEditingNote ? (
         <View className="flex-1">
           <View className="flex-row items-center justify-between">
@@ -302,34 +261,15 @@ export function ReceiveAmountBottomSheet({
             </Pressable>
           </View>
 
-          <View accessibilityLabel="Amount keypad" className="mb-5">
-            {KEYPAD_ROWS.map((row, rowIndex) => (
-              <View key={rowIndex} className="flex-row">
-                {row.map((key) => {
-                  const isDecimalDisabled =
-                    key === "." && (currency !== "FIAT" || fiatCurrencyInfo.decimals === 0);
-
-                  return (
-                    <Pressable
-                      key={key}
-                      accessibilityRole="button"
-                      accessibilityLabel={key === "backspace" ? "Delete digit" : key}
-                      accessibilityState={{ disabled: isDecimalDisabled || isSubmitting }}
-                      disabled={isDecimalDisabled || isSubmitting}
-                      onPress={() => enterKey(key)}
-                      className="h-[66px] flex-1 items-center justify-center"
-                      testID={`receive-key-${key}`}
-                    >
-                      {key === "backspace" ? (
-                        <Icon name="backspace-outline" size={27} color={colors.foreground} />
-                      ) : isDecimalDisabled ? null : (
-                        <Text className="text-3xl font-medium text-foreground">{key}</Text>
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ))}
+          <View className="mb-5">
+            <AmountKeypad
+              amount={amount}
+              currency={currency}
+              fiatDecimals={fiatCurrencyInfo.decimals}
+              onChange={setAmount}
+              disabled={isSubmitting}
+              testIDPrefix="receive-key"
+            />
           </View>
 
           <View className="px-1">

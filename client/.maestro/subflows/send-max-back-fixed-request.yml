@@ -1,0 +1,30 @@
+appId: com.noahwallet.regtest
+---
+- launchApp
+- tapOn: "Send"
+- assertVisible:
+    id: "send-amount-stage"
+- tapOn:
+    id: "send-max"
+- assertVisible:
+    id: "send-source-stage"
+- tapOn:
+    id: "send-source-back"
+- assertVisible:
+    id: "send-amount-stage"
+- tapOn:
+    id: "send-paste-from-amount"
+- tapOn:
+    text: "Allow Paste"
+    optional: true
+- assertNotVisible: "MAX cannot be used with a fixed-amount payment request."
+- extendedWaitUntil:
+    visible:
+      id: "send-review-sheet"
+    timeout: 30000
+- tapOn:
+    id: "send-review-back"
+- assertVisible:
+    id: "send-amount-recipient"
+- assertNotVisible:
+    id: "send-recipient-stage"

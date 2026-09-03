@@ -1,0 +1,24 @@
+appId: com.noahwallet.regtest
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- extendedWaitUntil:
+    visible: "Create Wallet"
+    timeout: 30000
+
+- runFlow: start-wallet-onboarding.yml
+- runFlow: complete-wallet-onboarding-without-email.yml
+
+- tapOn: "Receive"
+- extendedWaitUntil:
+    visible:
+      id: "receive-qr-button"
+    timeout: 15000
+- tapOn:
+    id: "receive-qr-button"
+- assertVisible: "Copy payment details"
+- tapOn:
+    id: "receive-copy-ark"
+- tapOn: "Close payment details"

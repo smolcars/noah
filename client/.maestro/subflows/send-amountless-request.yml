@@ -1,0 +1,25 @@
+appId: com.noahwallet.regtest
+---
+- launchApp
+- tapOn: "Send"
+- assertVisible:
+    id: "send-amount-stage"
+- tapOn:
+    id: "send-paste-from-amount"
+- tapOn:
+    text: "Allow Paste"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "send-amount-recipient"
+    timeout: 10000
+- assertNotVisible:
+    id: "send-recipient-stage"
+- assertVisible:
+    id: "send-max"
+- tapOn:
+    id: "send-amount-clear"
+- assertNotVisible:
+    id: "send-amount-recipient"
+- assertVisible:
+    id: "send-paste-from-amount"

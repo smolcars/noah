@@ -55,8 +55,11 @@ export const QRCodeScanner = ({ codeScanner, onClose, onPaste }: QRCodeScannerPr
           <View className="flex-row items-center gap-3">
             {onPaste ? (
               <Pressable
+                accessibilityLabel="Paste payment request"
+                accessibilityRole="button"
                 onPress={handlePaste}
                 className="bg-white/20 rounded-full p-4 border border-white/30"
+                testID="qr-scanner-paste"
               >
                 <View className="flex-row items-center justify-center space-x-2">
                   <Icon name="clipboard" size={28} color="white" />
@@ -65,8 +68,11 @@ export const QRCodeScanner = ({ codeScanner, onClose, onPaste }: QRCodeScannerPr
               </Pressable>
             ) : null}
             <Pressable
+              accessibilityLabel="Close scanner"
+              accessibilityRole="button"
               onPress={onClose}
               className="bg-white/20 rounded-full p-4 border border-white/30"
+              testID="qr-scanner-close"
             >
               <View className="flex-row items-center justify-center space-x-2">
                 <Icon name="close-circle" size={28} color="white" />

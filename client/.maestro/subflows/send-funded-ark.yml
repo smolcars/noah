@@ -1,0 +1,93 @@
+appId: com.noahwallet.regtest
+---
+- launchApp
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible:
+      id: "send-amount-stage"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: ".*[1-9][0-9,]* available"
+    timeout: 30000
+
+- tapOn:
+    id: "send-currency-toggle"
+- assertNotVisible: "NaN"
+- tapOn:
+    id: "send-currency-toggle"
+- tapOn:
+    id: "send-paste-from-amount"
+- tapOn:
+    text: "Allow Paste"
+    optional: true
+
+- extendedWaitUntil:
+    visible:
+      id: "send-amount-recipient"
+    timeout: 10000
+- assertNotVisible:
+    id: "send-recipient-stage"
+- tapOn:
+    id: "send-amount-change-recipient"
+- assertVisible:
+    id: "send-recipient-stage"
+- tapOn:
+    id: "send-recipient-back"
+- assertVisible:
+    id: "send-amount-recipient"
+
+- tapOn:
+    id: "send-key-9"
+- tapOn:
+    id: "send-amount-clear"
+- assertNotVisible:
+    id: "send-amount-recipient"
+- assertVisible:
+    id: "send-paste-from-amount"
+- tapOn:
+    id: "send-paste-from-amount"
+- tapOn:
+    text: "Allow Paste"
+    optional: true
+- assertVisible:
+    id: "send-amount-recipient"
+
+- tapOn:
+    id: "send-key-5"
+- tapOn:
+    id: "send-key-0"
+- tapOn:
+    id: "send-key-0"
+- tapOn:
+    id: "send-key-0"
+- tapOn:
+    id: "send-amount-next"
+
+- extendedWaitUntil:
+    visible:
+      id: "send-review-sheet"
+    timeout: 15000
+- assertVisible: "Pay via"
+- assertVisible: "Ark"
+- extendedWaitUntil:
+    visible: "Estimated fee"
+    timeout: 15000
+- tapOn:
+    id: "send-review-confirm"
+
+- extendedWaitUntil:
+    visible:
+      id: "send-success-sheet"
+    timeout: 30000
+- assertVisible: "Payment sent"
+- tapOn:
+    id: "send-success-copy-destination"
+- assertVisible: "To copied"
+- assertVisible: "Completed"
+- tapOn:
+    id: "send-success-done"
+
+- assertVisible:
+    id: "send-amount-stage"
+- assertVisible:
+    id: "send-amount-value"

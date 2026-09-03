@@ -1,33 +1,27 @@
-import React from "react";
-import { Pressable, View } from "react-native";
-import { Text } from "./ui/text";
-import { Button } from "./ui/button";
-import type { FiatCurrencyCode } from "~/lib/fiatCurrency";
-import { formatFiatAmount, satsToFiat } from "~/lib/fiatCurrency";
-import { DestinationTypes, ParsedBip321 } from "~/lib/sendUtils";
-import { useThemeColors } from "~/hooks/useTheme";
-import { COLORS } from "~/lib/styleConstants";
-import { Bip321Picker } from "./Bip321Picker";
-import { FeeEstimateSummary } from "./FeeEstimateSummary";
-import type { BarkFeeEstimate, OnchainSendSource } from "~/lib/paymentsApi";
-import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
+import { View } from "react-native";
 
-interface SendConfirmationProps {
+import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
+import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
+import { Text } from "~/components/ui/text";
+import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
+import { formatFiatAmount, satsToFiat, type FiatCurrencyCode } from "~/lib/fiatCurrency";
+import type { BarkFeeEstimate, OnchainSendSource } from "~/lib/paymentsApi";
+import { getOnchainSourceLabel, getSendRailLabel, type SendRail } from "~/lib/sendFlow";
+import type { DestinationTypes, ParsedBip321 } from "~/lib/sendUtils";
+
+type SendConfirmationProps = {
   destination: string;
   amount: number;
   amountNote?: string | null;
+  isMaxAmount?: boolean;
   destinationType: DestinationTypes;
   comment?: string;
   btcPrice?: number;
   fiatCurrency: FiatCurrencyCode;
   bip321Data?: ParsedBip321 | null;
   selectedPaymentMethod?: "ark" | "lightning" | "onchain" | "offer";
-  onSelectPaymentMethod?: (type: "ark" | "lightning" | "onchain" | "offer") => void;
-  onchainSourceOptions?: OnchainSendSource[];
+  selectedRail: SendRail;
   selectedOnchainSource?: OnchainSendSource | null;
-  onSelectOnchainSource?: (source: OnchainSendSource) => void;
-  onchainWalletBalance?: number;
-  offchainWalletBalance?: number;
   onConfirm: () => void;
   onCancel: () => void;
   isConfirmDisabled?: boolean;
@@ -39,32 +33,38 @@ interface SendConfirmationProps {
   feeEstimateNote?: string | null;
   feeEstimateWarning?: string | null;
   sendError?: string | null;
-}
+};
 
 const truncateValue = (value: string) => {
   if (value.length <= 32) {
     return value;
   }
 
-  return `${value.slice(0, 14)}...${value.slice(-10)}`;
+  return `${value.slice(0, 14)}…${value.slice(-10)}`;
 };
 
-export const SendConfirmation: React.FC<SendConfirmationProps> = ({
+const ReviewRow = ({ label, value }: { label: string; value: string }) => (
+  <View className="flex-row items-start justify-between gap-5 py-3">
+    <Text className="text-base text-muted-foreground">{label}</Text>
+    <Text className="min-w-0 flex-1 text-right text-base font-semibold text-foreground">
+      {value}
+    </Text>
+  </View>
+);
+
+export function SendConfirmation({
   destination,
   amount,
   amountNote = null,
+  isMaxAmount = false,
   destinationType,
   comment,
   btcPrice,
   fiatCurrency,
   bip321Data,
   selectedPaymentMethod,
-  onSelectPaymentMethod,
-  onchainSourceOptions = [],
+  selectedRail,
   selectedOnchainSource = null,
-  onSelectOnchainSource,
-  onchainWalletBalance = 0,
-  offchainWalletBalance = 0,
   onConfirm,
   onCancel,
   isConfirmDisabled = false,
@@ -76,225 +76,104 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
   feeEstimateNote = null,
   feeEstimateWarning = null,
   sendError = null,
-}) => {
+}: SendConfirmationProps) {
   const formatBitcoinAmount = useBitcoinAmountFormatter();
-  const colors = useThemeColors();
-  const isOnchainDestination =
-    destinationType === "onchain" ||
-    (destinationType === "bip321" && selectedPaymentMethod === "onchain");
 
-  const getOnchainSourceLabel = (source: OnchainSendSource) =>
-    source === "offchain" ? "Ark balance" : "Onchain wallet";
-
-  const getOnchainSourceBalance = (source: OnchainSendSource) =>
-    source === "offchain" ? offchainWalletBalance : onchainWalletBalance;
-
-  const getPaymentMethodLabel = () => {
-    if (destinationType === "bip321") {
-      switch (selectedPaymentMethod) {
-        case "ark":
-          return "Ark";
-        case "lightning":
-          return "Lightning";
-        case "offer":
-          return "Offer";
-        case "onchain":
-        default:
-          return "On-chain";
-      }
+  const resolvedDestination = (() => {
+    if (destinationType !== "bip321" || !bip321Data) {
+      return destination;
     }
-
-    switch (destinationType) {
-      case "ark":
-        return "Ark";
-      case "lightning":
-        return "Lightning";
-      case "lnurl":
-        return "Lightning Address";
-      case "onchain":
-        return "On-chain";
-      case "offer":
-        return "Offer";
-      default:
-        return "Bitcoin";
+    if (selectedPaymentMethod === "ark") {
+      return bip321Data.arkAddress ?? destination;
     }
-  };
-
-  const getDestinationDisplay = () => {
-    if (destinationType === "bip321" && bip321Data) {
-      if (selectedPaymentMethod === "ark" && bip321Data.arkAddress) {
-        return bip321Data.arkAddress;
-      }
-
-      if (selectedPaymentMethod === "lightning" && bip321Data.lightningInvoice) {
-        return bip321Data.lightningInvoice;
-      }
-
-      if (selectedPaymentMethod === "offer" && bip321Data.offer) {
-        return bip321Data.offer;
-      }
-
-      if (selectedPaymentMethod === "onchain" && bip321Data.onchainAddress) {
-        return bip321Data.onchainAddress;
-      }
+    if (selectedPaymentMethod === "lightning") {
+      return bip321Data.lightningInvoice ?? destination;
     }
-
-    return destination;
-  };
-
+    if (selectedPaymentMethod === "offer") {
+      return bip321Data.offer ?? destination;
+    }
+    return bip321Data.onchainAddress ?? destination;
+  })();
+  const railLabel = getSendRailLabel(selectedRail);
+  const sourceLabel = selectedOnchainSource
+    ? getOnchainSourceLabel(selectedOnchainSource)
+    : getOnchainSourceLabel("offchain");
   const fiatAmount = btcPrice ? satsToFiat(amount, btcPrice, fiatCurrency) : null;
-  const resolvedDestination = getDestinationDisplay();
-  const title = isLoading ? "Sending payment" : sendError ? "Send failed" : "Confirm send";
-  const description = isLoading
-    ? "Keep Noah open while this completes."
-    : sendError
-      ? "Review the error, then retry or cancel."
-      : "Review the route and fee before sending.";
+  const unavailableFeeText =
+    feeEstimateUnavailableText ??
+    (feeEstimateError
+      ? "Fee estimate unavailable. The final fee will be calculated when sending."
+      : null);
+  const amountPrefix = isMaxAmount ? (feeEstimate ? "Pay ≈ " : "Pay up to ") : "Pay ";
+  const fiatPrefix = isMaxAmount ? (feeEstimate ? "Estimated ≈ " : "Up to ≈ ") : "≈ ";
+  const feeValue = feeEstimate
+    ? formatBitcoinAmount(feeEstimate.fee_sat)
+    : isEstimatingFee
+      ? "Estimating…"
+      : isMaxAmount
+        ? "Deducted from amount"
+        : "Calculated when sent";
+  const totalValue = feeEstimate
+    ? formatBitcoinAmount(feeEstimate.gross_amount_sat)
+    : isMaxAmount
+      ? formatBitcoinAmount(amount)
+      : `${formatBitcoinAmount(amount)} + fee`;
 
   return (
-    <View>
+    <View className="pb-2" testID="send-review-sheet">
       <View className="items-center">
-        <Text className="text-center text-2xl font-bold text-foreground">{title}</Text>
-        <Text className="mt-1 max-w-[280px] text-center text-sm text-muted-foreground">
-          {description}
+        <Text className="text-center text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
+          {isLoading ? "Sending payment" : sendError ? "Payment failed" : "Review payment"}
         </Text>
-      </View>
-
-      <View className="mt-4 items-center">
-        <Text className="text-center text-3xl font-bold text-foreground">
+        <Text className="mt-3 text-center text-4xl font-bold text-foreground">
+          {amountPrefix}
           {formatBitcoinAmount(amount)}
         </Text>
+        {fiatAmount ? (
+          <Text className="mt-2 text-base font-medium text-muted-foreground">
+            {fiatPrefix}
+            {formatFiatAmount(fiatAmount, fiatCurrency)}
+          </Text>
+        ) : null}
         {amountNote ? (
-          <Text className="mt-1 max-w-[300px] text-center text-sm text-muted-foreground">
+          <Text className="mt-2 max-w-[310px] text-center text-sm leading-5 text-muted-foreground">
             {amountNote}
           </Text>
-        ) : btcPrice ? (
-          <Text className="mt-1 text-sm font-medium text-muted-foreground">
-            ≈ {fiatAmount ? formatFiatAmount(fiatAmount, fiatCurrency) : null}
-          </Text>
         ) : null}
       </View>
 
-      <View
-        className="mt-5 rounded-[20px] border px-4 py-4"
-        style={{
-          borderColor: `${colors.mutedForeground}22`,
-          backgroundColor: `${colors.card}CC`,
-        }}
-      >
-        <View className="flex-row items-center justify-between">
-          <Text className="text-xs font-medium uppercase tracking-[2px] text-muted-foreground">
-            Route
-          </Text>
-          {destinationType !== "bip321" ? (
-            <Text className="text-sm font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
-              {getPaymentMethodLabel()}
-            </Text>
-          ) : null}
-        </View>
-
-        {destinationType === "bip321" &&
-        bip321Data &&
-        selectedPaymentMethod &&
-        onSelectPaymentMethod ? (
-          <Bip321Picker
-            bip321Data={bip321Data}
-            selectedPaymentMethod={selectedPaymentMethod}
-            onSelect={isLoading ? () => undefined : onSelectPaymentMethod}
-            showSectionHeader={false}
-            showSelectedDestination={false}
-          />
-        ) : (
-          <View className="mt-3 h-px bg-border" />
-        )}
-
-        {isOnchainDestination && onchainSourceOptions.length > 0 ? (
-          <>
-            <View className="h-px bg-border" />
-            <View className="py-3">
-              <Text className="text-xs font-medium uppercase tracking-[2px] text-muted-foreground">
-                Send from
-              </Text>
-              {onchainSourceOptions.length > 1 && onSelectOnchainSource ? (
-                <View className="mt-3 flex-row gap-2">
-                  {onchainSourceOptions.map((source) => {
-                    const isSelected = selectedOnchainSource === source;
-                    return (
-                      <Pressable
-                        key={source}
-                        onPress={() => onSelectOnchainSource(source)}
-                        disabled={isLoading}
-                        className="flex-1 rounded-2xl border px-3 py-3"
-                        style={{
-                          borderColor: isSelected
-                            ? COLORS.BITCOIN_ORANGE
-                            : `${colors.mutedForeground}26`,
-                          backgroundColor: isSelected
-                            ? "rgba(201, 138, 60, 0.14)"
-                            : `${colors.card}99`,
-                          opacity: isLoading ? 0.65 : 1,
-                        }}
-                      >
-                        <Text
-                          className={`text-sm font-semibold ${
-                            isSelected ? "text-foreground" : "text-muted-foreground"
-                          }`}
-                        >
-                          {getOnchainSourceLabel(source)}
-                        </Text>
-                        <Text className="mt-1 text-xs text-muted-foreground">
-                          {formatBitcoinAmount(getOnchainSourceBalance(source))}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ) : selectedOnchainSource ? (
-                <Text className="mt-1 text-sm font-semibold text-foreground">
-                  {getOnchainSourceLabel(selectedOnchainSource)}
-                </Text>
-              ) : null}
-            </View>
-          </>
-        ) : null}
-
-        <View className="py-3">
-          <Text className="text-xs font-medium uppercase tracking-[2px] text-muted-foreground">
-            Destination
-          </Text>
-          <Text className="mt-1 text-sm leading-5 text-foreground">
-            {truncateValue(resolvedDestination)}
-          </Text>
-        </View>
-
+      <View className="mt-6 border-y border-border/70 py-1">
+        <ReviewRow label="To" value={truncateValue(resolvedDestination)} />
+        <View className="h-px bg-border/60" />
+        <ReviewRow label="Pay via" value={railLabel} />
+        <View className="h-px bg-border/60" />
+        <ReviewRow label="Pay from" value={sourceLabel} />
+        <View className="h-px bg-border/60" />
+        <ReviewRow
+          label="Settlement"
+          value={selectedRail === "onchain" ? "Requires network confirmation" : "Usually instant"}
+        />
         {comment ? (
           <>
-            <View className="h-px bg-border" />
-            <View className="pt-3">
-              <Text className="text-xs font-medium uppercase tracking-[2px] text-muted-foreground">
-                Note
-              </Text>
-              <Text className="mt-1 text-sm leading-5 text-foreground" numberOfLines={2}>
-                {comment}
-              </Text>
-            </View>
+            <View className="h-px bg-border/60" />
+            <ReviewRow label="Note" value={comment} />
           </>
         ) : null}
       </View>
 
-      <FeeEstimateSummary
-        estimate={feeEstimate}
-        isLoading={isEstimatingFee}
-        error={
-          feeEstimateUnavailableText ? new Error(feeEstimateUnavailableText) : feeEstimateError
-        }
-        unavailableText={feeEstimateUnavailableText ?? undefined}
-        note={feeEstimateNote}
-        compact
-      />
+      <View className="mt-4">
+        <ReviewRow label={feeEstimate ? "Estimated fee" : "Fee"} value={feeValue} />
+        <ReviewRow label="Total deducted" value={totalValue} />
+        {unavailableFeeText ? (
+          <Text className="text-sm leading-5 text-muted-foreground">{unavailableFeeText}</Text>
+        ) : null}
+        {feeEstimateNote ? (
+          <Text className="mt-2 text-xs leading-5 text-muted-foreground">{feeEstimateNote}</Text>
+        ) : null}
+      </View>
 
       {feeEstimateWarning ? (
-        <View className="mt-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+        <View className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
           <Text className="text-sm leading-5 text-amber-700 dark:text-amber-200">
             {feeEstimateWarning}
           </Text>
@@ -302,32 +181,32 @@ export const SendConfirmation: React.FC<SendConfirmationProps> = ({
       ) : null}
 
       {sendError ? (
-        <View className="mt-3 rounded-2xl border border-destructive/35 bg-destructive/10 px-4 py-3">
+        <View className="mt-4 rounded-2xl border border-destructive/35 bg-destructive/10 px-4 py-3">
           <Text className="text-sm font-semibold text-destructive">Payment did not send</Text>
           <Text className="mt-1 text-sm leading-5 text-destructive/90">{sendError}</Text>
         </View>
       ) : null}
 
-      <View className="mt-5 flex-row gap-3">
-        <Button
+      <View className="mt-6 gap-3">
+        <NativeNoahSecondaryButton
+          label="Back"
           onPress={onCancel}
-          variant="outline"
           disabled={isLoading}
-          className="flex-1 rounded-2xl py-3"
-        >
-          <Text className="font-semibold">Cancel</Text>
-        </Button>
-        <Button
+          size="lg"
+          fullWidth
+          testID="send-review-back"
+        />
+        <NativeNoahButton
+          label={sendError ? "Retry payment" : "Confirm payment"}
+          loadingLabel="Sending…"
           onPress={onConfirm}
-          disabled={isLoading || isConfirmDisabled}
-          className="flex-1 rounded-2xl py-3"
-          style={{ backgroundColor: COLORS.BITCOIN_ORANGE }}
-        >
-          <Text className="font-bold" style={{ color: "#1a1a1a" }}>
-            {isLoading ? "Sending..." : "Confirm & Send"}
-          </Text>
-        </Button>
+          disabled={isConfirmDisabled}
+          isLoading={isLoading}
+          size="lg"
+          fullWidth
+          testID="send-review-confirm"
+        />
       </View>
     </View>
   );
-};
+}
