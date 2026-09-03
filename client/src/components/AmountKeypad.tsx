@@ -1,4 +1,5 @@
 import Icon from "@react-native-vector-icons/ionicons";
+import * as Haptics from "expo-haptics";
 import { Pressable, View } from "react-native";
 
 import { Text } from "~/components/ui/text";
@@ -35,13 +36,20 @@ export function AmountKeypad({
 }: AmountKeypadProps) {
   const colors = useThemeColors();
 
+  const confirmKeyPress = (nextAmount: string) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onChange(nextAmount);
+  };
+
   const enterKey = (key: KeypadKey) => {
     if (disabled) {
       return;
     }
 
     if (key === "backspace") {
-      onChange(amount.slice(0, -1));
+      if (amount.length > 0) {
+        confirmKeyPress(amount.slice(0, -1));
+      }
       return;
     }
 
@@ -50,7 +58,7 @@ export function AmountKeypad({
         return;
       }
 
-      onChange(amount.length === 0 ? "0." : `${amount}.`);
+      confirmKeyPress(amount.length === 0 ? "0." : `${amount}.`);
       return;
     }
 
@@ -63,7 +71,7 @@ export function AmountKeypad({
       return;
     }
 
-    onChange(amount === "0" ? key : `${amount}${key}`);
+    confirmKeyPress(amount === "0" ? key : `${amount}${key}`);
   };
 
   return (
