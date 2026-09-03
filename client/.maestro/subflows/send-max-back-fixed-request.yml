@@ -17,10 +17,6 @@ appId: com.noahwallet.regtest
 - tapOn:
     text: "Allow Paste"
     optional: true
-- assertVisible:
-    id: "send-recipient-stage"
-- tapOn:
-    id: "send-recipient-next"
 - assertNotVisible: "MAX cannot be used with a fixed-amount payment request."
 - extendedWaitUntil:
     visible:
@@ -29,4 +25,6 @@ appId: com.noahwallet.regtest
 - tapOn:
     id: "send-review-back"
 - assertVisible:
+    id: "send-amount-recipient"
+- assertNotVisible:
     id: "send-recipient-stage"

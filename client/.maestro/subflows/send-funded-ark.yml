@@ -23,19 +23,34 @@ appId: com.noahwallet.regtest
 
 - extendedWaitUntil:
     visible:
-      id: "send-recipient-input"
+      id: "send-amount-recipient"
     timeout: 10000
+- assertNotVisible:
+    id: "send-recipient-stage"
 - tapOn:
-    id: "send-recipient-next"
+    id: "send-amount-change-recipient"
+- assertVisible:
+    id: "send-recipient-stage"
+- tapOn:
+    id: "send-recipient-back"
+- assertVisible:
+    id: "send-amount-recipient"
 
-- assertVisible:
-    id: "send-amount-back"
 - tapOn:
-    id: "send-amount-back"
-- assertVisible:
-    id: "send-recipient-input"
+    id: "send-key-9"
 - tapOn:
-    id: "send-recipient-next"
+    id: "send-amount-clear"
+- assertNotVisible:
+    id: "send-amount-recipient"
+- assertVisible:
+    id: "send-paste-from-amount"
+- tapOn:
+    id: "send-paste-from-amount"
+- tapOn:
+    text: "Allow Paste"
+    optional: true
+- assertVisible:
+    id: "send-amount-recipient"
 
 - tapOn:
     id: "send-key-5"
