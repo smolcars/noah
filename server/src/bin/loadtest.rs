@@ -64,8 +64,9 @@ struct RegisterPushTokenPayload {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct UpdateLnAddressPayload {
-    ln_address: String,
+struct UpdateLightningIdentityPayload {
+    username: String,
+    nostr_pubkey: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -379,15 +380,15 @@ async fn loadtest_register_push_token(user: &mut GooseUser) -> TransactionResult
     Ok(())
 }
 
-// Register + update ln address (DB write + write)
-async fn loadtest_update_ln_address(user: &mut GooseUser) -> TransactionResult {
+// Register + update lightning identity (DB write + write)
+async fn loadtest_update_lightning_identity(user: &mut GooseUser) -> TransactionResult {
     let test_user = TestUser::new_random();
-    let access_token = match login_test_user(user, &test_user, "update_ln").await {
+    let access_token = match login_test_user(user, &test_user, "update_identity").await {
         Some(token) => token,
         None => return Ok(()),
     };
 
-    if register_test_user(user, &test_user, "update_ln_register")
+    if register_test_user(user, &test_user, "update_identity_register")
         .await
         .is_none()
     {
@@ -395,19 +396,20 @@ async fn loadtest_update_ln_address(user: &mut GooseUser) -> TransactionResult {
     }
 
     let user_num = USER_COUNTER.fetch_add(1, Ordering::SeqCst);
-    let payload = UpdateLnAddressPayload {
-        ln_address: format!("updated{}@localhost", user_num),
+    let payload = UpdateLightningIdentityPayload {
+        username: format!("updated{}", user_num),
+        nostr_pubkey: None,
     };
 
     let request_builder = user
-        .get_request_builder(&GooseMethod::Post, "/v0/update_ln_address")?
+        .get_request_builder(&GooseMethod::Post, "/v0/update_lightning_identity")?
         .header("Content-Type", "application/json")
         .header("Authorization", format!("Bearer {}", access_token))
         .body(serde_json::to_string(&payload).unwrap());
 
     let goose_request = GooseRequest::builder()
         .set_request_builder(request_builder)
-        .name("update_ln_address")
+        .name("update_lightning_identity")
         .build();
 
     let _response = user.request(goose_request).await?;
@@ -493,7 +495,7 @@ fn build_db_stress_scenario() -> Scenario {
                 .unwrap(),
         )
         .register_transaction(
-            transaction!(loadtest_update_ln_address)
+            transaction!(loadtest_update_lightning_identity)
                 .set_weight(2)
                 .unwrap(),
         )

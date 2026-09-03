@@ -39,7 +39,7 @@ use crate::{
             list_backup_objects, list_backups, ln_address_suggestions, register_push_token,
             report_job_status, report_last_login, revoke_mailbox_authorization, submit_invoice,
             submit_support_ticket, update_backup_settings, update_lightning_identity,
-            update_ln_address, update_profile,
+            update_profile,
         },
         public_api_v0::{
             auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price,
@@ -301,7 +301,6 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         .route("/lnurlp/submit_invoice", post(submit_invoice))
         .route("/ln_address_suggestions", post(ln_address_suggestions))
         .route("/user_info", post(get_user_info))
-        .route("/update_ln_address", post(update_ln_address))
         .route(
             "/update_lightning_identity",
             post(update_lightning_identity),
