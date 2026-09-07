@@ -73,7 +73,7 @@ services:
         condition: service_healthy
 
   captaind:
-    image: niteshbalusu/captaind:nightly-2026-08-10
+    image: niteshbalusu/captaind:nightly-2026-09-04
     volumes:
       - captaind:/data/captaind
       - ./captaind.toml:/data/captaind/captaind.toml
@@ -94,7 +94,7 @@ services:
         condition: service_healthy
 
   bark:
-    image: niteshbalusu/bark:nightly-2026-08-10
+    image: niteshbalusu/bark:nightly-2026-09-04
     volumes:
       - bark:/root
     depends_on:
@@ -167,7 +167,7 @@ services:
         condition: service_started
 
   barkd:
-    image: ${BARKD_IMAGE:-niteshbalusu/noah-barkd:0.6.2}
+    image: ${BARKD_IMAGE:-niteshbalusu/noah-barkd:0.7.0}
     command: ["barkd", "--dangerously-allow-remote-no-auth"]
     restart: on-failure
     network_mode: "service:noah-server"
