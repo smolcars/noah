@@ -38,6 +38,11 @@ txindex_check_interval = "30s"
 # The interval at which the SyncManager polls for new blocks
 sync_manager_block_poll_interval = "100ms"
 
+# The number of blocks within which a tx broadcast via the TxNursery is
+# expected to confirm; when the target passes the operator is warned
+# on every new block
+nursery_confirm_target_blocks = 6
+
 # The minimum balance to maintain for the forfeit watcher, if running
 watchman_min_balance = "1 btc"
 
