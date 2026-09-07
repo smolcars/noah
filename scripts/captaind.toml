@@ -33,16 +33,16 @@ min_trusted_confs = 2
 # Whether to provide rich errors and stacktraces in RPC error returns
 rpc_rich_errors = true
 
-# The interval to update the tx index
-txindex_check_interval = "30s"
 # The interval at which the SyncManager polls for new blocks
 sync_manager_block_poll_interval = "100ms"
 
-# The minimum balance to maintain for the forfeit watcher, if running
-watchman_min_balance = "1 btc"
+# The number of blocks within which a tx broadcast via the TxNursery is
+# expected to confirm; when the target passes the operator is warned
+# on every new block
+nursery_confirm_target_blocks = 6
 
-# The interval to rebroadcast transactions
-transaction_rebroadcast_interval = "1m"
+# Required by the pinned nightly; local regtest disables the watchman.
+watchman_min_balance = "0 sat"
 
 # A public service announcement to send on each client-server handshake request
 #
@@ -169,21 +169,8 @@ ln_receive_anti_dos_required = false
 # and the ln_max_fee_ppm is set to 750000, we set CLN's maxfee to 3 sats.
 ln_max_fee_ppm = 900000
 
-#############
-# LIGHTNING #
-#############
 [watchman]
-enabled = true
-# How often to react to on-chain exit activity: progressing exit chains and
-# claiming VTXOs before a counterparty's timelock matures.
-reaction_interval = "10m"
-# How often to sweep VTXOs only the watchman can spend. Sweeps have no
-# deadline, so this can be much longer than reaction_interval.
-sweep_interval = "2h"
-progress_grace_period = 2
-claim_chunksize = 20
-incremental_relay_fee = "100 sat/kvb"
-min_cpfp_amount = "10000 sat"
+enabled = false
 
 
 ########

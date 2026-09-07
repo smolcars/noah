@@ -2,10 +2,10 @@
 
 FROM debian:bookworm-slim AS downloader
 
-ARG BARK_VERSION=0.6.2
+ARG BARK_VERSION=0.7.0
 ARG TARGETARCH
-ARG BARKD_SHA256_AMD64=cc38da1b83743c70a2e979e0762da69fbc88d03c6def8bb42fa2c986c0f52fcb
-ARG BARKD_SHA256_ARM64=8fab02cea5dd97299ec73a3ced2ffc6c8cf2a17e17917a300cad948bbb4905b5
+ARG BARKD_SHA256_AMD64=9da7f19150d37e16ec20e91c25a8e76b01b244b8524ebcd534ea72c25d988370
+ARG BARKD_SHA256_ARM64=7f689baf69ef7678d135caafcce8c81dd658ed11eb61e58a9220cbdd5688d68d
 
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends ca-certificates curl \
