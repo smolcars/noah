@@ -40,30 +40,32 @@ export function ExitDepositBottomSheet({
   });
   const address = addressQuery.data;
   const copied = !!address && isCopied(address);
+  const displayAddress =
+    address && address.length > 42 ? `${address.slice(0, 18)}…${address.slice(-12)}` : address;
 
   return (
     <AppBottomSheet isOpen={isOpen} onClose={onClose} detents={[0, "content"]}>
-      <View className="gap-5">
+      <View className="gap-6 px-2 pb-2">
         <View className="flex-row items-center justify-between gap-3">
-          <Text accessibilityRole="header" className="flex-1 text-2xl font-bold text-foreground">
+          <Text accessibilityRole="header" className="flex-1 text-xl font-semibold text-foreground">
             Deposit Onchain Funds
           </Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close deposit details"
             onPress={onClose}
-            className="h-11 w-11 items-center justify-center rounded-full border border-border"
+            className="h-11 w-11 items-center justify-center rounded-full bg-muted/60"
           >
-            <Icon name="close" size={22} color={colors.foreground} />
+            <Icon name="close" size={20} color={colors.mutedForeground} />
           </Pressable>
         </View>
-        <View className="items-center gap-1">
+        <View className="items-center gap-2">
           <Text className="text-sm text-muted-foreground">Suggested deposit</Text>
-          <Text className="text-2xl font-semibold text-foreground">
+          <Text className="text-4xl font-semibold tracking-tight text-foreground">
             {formatAmount(broadcastFeeSat)}
           </Text>
-          <Text className="text-center text-sm text-muted-foreground">
-            Based on estimated broadcast fees. The amount needed may vary.
+          <Text className="text-center text-xs text-muted-foreground">
+            Estimated broadcast fees · amount may vary
           </Text>
         </View>
         {address ? (
@@ -71,45 +73,49 @@ export function ExitDepositBottomSheet({
             <View
               accessible
               accessibilityLabel="Bitcoin deposit address QR code"
-              className="self-center rounded-2xl bg-white p-4"
+              className="self-center rounded-[24px] bg-white p-5"
             >
               <QRCode value={address} size={Math.min(width - 96, 220)} />
             </View>
-            <View className="flex-row items-center gap-3">
-              <Text
-                selectable
-                className="flex-1 text-sm text-foreground"
-                numberOfLines={1}
-                ellipsizeMode="middle"
-              >
-                {address}
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={copied ? "Address copied" : "Copy Bitcoin address"}
-                className="h-11 min-w-11 items-center justify-center gap-1"
-                onPress={() =>
-                  void copyWithState(address, address, {
-                    onCopy: () =>
-                      AccessibilityInfo.announceForAccessibility("Bitcoin address copied"),
-                  })
-                }
-                testID="exit-deposit-copy-button"
-              >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={copied ? "Address copied" : "Copy Bitcoin address"}
+              accessibilityHint="Copies the full Bitcoin address"
+              className="flex-row items-center gap-4 rounded-2xl bg-card px-4 py-3"
+              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+              onPress={() =>
+                void copyWithState(address, address, {
+                  onCopy: () =>
+                    AccessibilityInfo.announceForAccessibility("Bitcoin address copied"),
+                })
+              }
+              testID="exit-deposit-copy-button"
+            >
+              <View className="min-w-0 flex-1 gap-1">
+                <Text className="text-xs text-muted-foreground">Bitcoin address</Text>
+                <Text
+                  className="text-sm font-medium text-foreground"
+                  numberOfLines={1}
+                  ellipsizeMode="middle"
+                >
+                  {displayAddress}
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-2">
                 <Icon
                   name={copied ? "checkmark-circle" : "copy-outline"}
-                  size={21}
+                  size={20}
                   color={copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE}
                 />
                 <Text
                   accessibilityLiveRegion="polite"
-                  className="text-[11px] font-semibold"
+                  className="text-sm font-semibold"
                   style={{ color: copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE }}
                 >
                   {copied ? "Copied" : "Copy"}
                 </Text>
-              </Pressable>
-            </View>
+              </View>
+            </Pressable>
           </>
         ) : addressQuery.isError ? (
           <View className="gap-3">
@@ -128,8 +134,8 @@ export function ExitDepositBottomSheet({
             <Text className="text-sm text-muted-foreground">Generating Bitcoin address…</Text>
           </View>
         )}
-        <Text className="text-center text-sm text-muted-foreground">
-          Wait for the deposit to confirm before progressing your exit.
+        <Text className="px-4 text-center text-xs leading-5 text-muted-foreground">
+          Wait for confirmation before progressing your exit.
         </Text>
       </View>
     </AppBottomSheet>
