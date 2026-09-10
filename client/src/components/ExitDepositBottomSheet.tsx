@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { AccessibilityInfo, Pressable, useWindowDimensions, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
-import { NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
 import { Text } from "~/components/ui/text";
@@ -11,6 +10,7 @@ import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { useThemeColors } from "~/hooks/useTheme";
 import { useCopyToClipboard } from "~/lib/clipboardUtils";
 import { onchainAddress } from "~/lib/paymentsApi";
+import { COLORS } from "~/lib/styleConstants";
 
 export function ExitDepositBottomSheet({
   isOpen,
@@ -39,6 +39,7 @@ export function ExitDepositBottomSheet({
     retry: false,
   });
   const address = addressQuery.data;
+  const copied = !!address && isCopied(address);
 
   return (
     <AppBottomSheet isOpen={isOpen} onClose={onClose} detents={[0, "content"]}>
@@ -75,12 +76,18 @@ export function ExitDepositBottomSheet({
               <QRCode value={address} size={Math.min(width - 96, 220)} />
             </View>
             <View className="flex-row items-center gap-3">
-              <Text selectable className="flex-1 text-sm text-foreground">
+              <Text
+                selectable
+                className="flex-1 text-sm text-foreground"
+                numberOfLines={1}
+                ellipsizeMode="middle"
+              >
                 {address}
               </Text>
-              <NativeNoahIconButton
-                icon="copy"
-                accessibilityLabel={isCopied(address) ? "Address copied" : "Copy Bitcoin address"}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={copied ? "Address copied" : "Copy Bitcoin address"}
+                className="h-11 min-w-11 items-center justify-center gap-1"
                 onPress={() =>
                   void copyWithState(address, address, {
                     onCopy: () =>
@@ -88,7 +95,20 @@ export function ExitDepositBottomSheet({
                   })
                 }
                 testID="exit-deposit-copy-button"
-              />
+              >
+                <Icon
+                  name={copied ? "checkmark-circle" : "copy-outline"}
+                  size={21}
+                  color={copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE}
+                />
+                <Text
+                  accessibilityLiveRegion="polite"
+                  className="text-[11px] font-semibold"
+                  style={{ color: copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE }}
+                >
+                  {copied ? "Copied" : "Copy"}
+                </Text>
+              </Pressable>
             </View>
           </>
         ) : addressQuery.isError ? (
