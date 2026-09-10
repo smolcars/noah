@@ -122,7 +122,12 @@ export function NativeNoahButton({
         style,
       ]}
     >
-      <Host seedColor={activeColor} style={hostStyle}>
+      {/* The screen handles keyboard avoidance; SwiftUI must not shift this fixed-height content. */}
+      <Host
+        seedColor={activeColor}
+        style={hostStyle}
+        ignoreSafeArea={Platform.OS === "ios" ? "keyboard" : undefined}
+      >
         {Platform.OS === "android" ? (
           <AndroidButton
             label={displayedLabel}

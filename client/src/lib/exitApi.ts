@@ -3,12 +3,24 @@ import { err, ok, Result, ResultAsync } from "neverthrow";
 import logger from "~/lib/log";
 import type {
   ExitProgressStatusResult,
+  ExitFeeEstimate,
   ExitStateDetails,
   ExitStatusResult,
   ExitVtxoResult,
 } from "react-native-nitro-ark";
 
 const log = logger("exitApi");
+
+export const estimateEmergencyExitFee = async (
+  vtxoIds: string[],
+  destinationAddress?: string,
+): Promise<Result<ExitFeeEstimate, Error>> => {
+  // Do not sync here: Bark's sync can progress initialized exits.
+  return ResultAsync.fromPromise(
+    NitroArk.estimateEmergencyExitFee(vtxoIds, undefined, destinationAddress),
+    (error) => (error instanceof Error ? error : new Error(String(error))),
+  );
+};
 
 export type ExitClaimResult = {
   txid: string;
@@ -57,21 +69,6 @@ const summarizeProgress = (progress: ExitProgressStatusResult) => ({
   state_details: summarizeStateDetails(progress.state_details),
   error: progress.error,
 });
-
-export const startExitForEntireWallet = async (): Promise<Result<void, Error>> => {
-  log.i("Starting exit for entire wallet");
-  const result = await ResultAsync.fromPromise(
-    NitroArk.startExitForEntireWallet(),
-    (e) => e as Error,
-  );
-
-  if (result.isErr()) {
-    log.e("Failed to start exit for entire wallet", [result.error]);
-  } else {
-    log.i("Started exit for entire wallet");
-  }
-  return result;
-};
 
 export const startExitForVtxos = async (vtxoIds: string[]): Promise<Result<void, Error>> => {
   log.i("Starting exit for selected VTXOs", [{ vtxo_ids: vtxoIds }]);
