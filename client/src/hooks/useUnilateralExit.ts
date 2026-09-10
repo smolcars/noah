@@ -1,4 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { AppState } from "react-native";
+import { useIsFocused } from "@react-navigation/native";
 import { queryClient } from "~/queryClient";
 import { useAlert } from "~/contexts/AlertProvider";
 import { useWalletStore } from "~/store/walletStore";
@@ -7,13 +10,13 @@ import {
   allClaimableAtHeight,
   cancelExit,
   claimExits,
+  estimateEmergencyExitFee,
   getExitStatus,
   getExitVtxos,
   hasPendingExits,
   listClaimable,
   pendingExitTotal,
   progressExits,
-  startExitForEntireWallet,
   startExitForVtxos,
   syncExit,
   type ExitClaimResult,
@@ -27,6 +30,13 @@ import type {
   ExitVtxoResult,
 } from "react-native-nitro-ark";
 import logger from "~/lib/log";
+import {
+  exitEstimateKey,
+  isExitReviewCurrent,
+  EXIT_ESTIMATE_MAX_AGE_MS,
+  type ExitEstimateInputs,
+  type ExitFeeReview,
+} from "~/lib/exitFeeEstimate";
 
 const log = logger("useUnilateralExit");
 
@@ -55,6 +65,7 @@ const invalidateExitQueries = async () => {
     queryClient.invalidateQueries({ queryKey: ["balance"] }),
     queryClient.invalidateQueries({ queryKey: ["vtxos"] }),
     queryClient.invalidateQueries({ queryKey: ["getBlockHeight"] }),
+    queryClient.invalidateQueries({ queryKey: ["exit-fee-estimate"] }),
   ]);
 };
 
@@ -66,13 +77,13 @@ const readResult = <T>(result: Result<T, Error>): T => {
 };
 
 export function useExitOverview() {
-  const { isInitialized } = useWalletStore();
+  const { isInitialized, staticVtxoPubkey } = useWalletStore();
 
   return useQuery({
-    queryKey: ["exit-overview"],
+    queryKey: ["exit-overview", staticVtxoPubkey],
     queryFn: async (): Promise<ExitOverview> => {
       log.d("Loading exit overview");
-      readResult(await syncExit());
+      // Bark 0.7 syncExit permits progression. Reading this screen must not broadcast.
 
       const [
         exitsResult,
@@ -145,26 +156,83 @@ export function useExitOverview() {
   });
 }
 
-export function useStartWalletExit() {
-  const { showAlert } = useAlert();
-
-  return useMutation<void, Error>({
-    mutationFn: async () => {
-      log.i("User requested wallet exit start");
-      readResult(await startExitForEntireWallet());
-    },
-    onSuccess: async () => {
-      await invalidateExitQueries();
-      showAlert({
-        title: "Exit Started",
-        description: "Your wallet exits have been registered. Progress them until claimable.",
-      });
-    },
-    onError: (error) => {
-      log.e("Wallet exit start mutation failed", [error]);
-      showAlert({ title: "Failed to Start Exit", description: error.message });
-    },
+export function useExitFeeEstimate(inputs: ExitEstimateInputs, enabled: boolean) {
+  const isFocused = useIsFocused();
+  const [isForeground, setIsForeground] = useState(AppState.currentState === "active");
+  const [foregroundRevision, setForegroundRevision] = useState(0);
+  const [settledKey, setSettledKey] = useState("");
+  const [isReviewing, setIsReviewing] = useState(false);
+  const contextKey = exitEstimateKey({
+    ...inputs,
+    revision: `${inputs.revision}:${isFocused}:${isForeground}:${foregroundRevision}`,
   });
+  const canEstimate = enabled && isFocused && isForeground && inputs.vtxoIds.length > 0;
+  const currentContext = useRef({ contextKey, canEstimate });
+  useLayoutEffect(() => {
+    currentContext.current = { contextKey, canEstimate };
+  }, [contextKey, canEstimate]);
+
+  useEffect(() => {
+    if (isFocused) setForegroundRevision((revision) => revision + 1);
+  }, [isFocused]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      setIsForeground(state === "active");
+      if (state === "active") setForegroundRevision((revision) => revision + 1);
+    });
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (!canEstimate) return;
+    const timer = setTimeout(() => setSettledKey(contextKey), 350);
+    return () => clearTimeout(timer);
+  }, [contextKey, canEstimate]);
+
+  const query = useQuery({
+    // Switch keys immediately, before debounce: never expose the previous selection's quote.
+    queryKey: ["exit-fee-estimate", contextKey],
+    queryFn: async () =>
+      readResult(await estimateEmergencyExitFee(inputs.vtxoIds, inputs.destinationAddress)),
+    enabled: canEstimate && settledKey === contextKey,
+    retry: false,
+    staleTime: EXIT_ESTIMATE_MAX_AGE_MS,
+    refetchInterval: EXIT_ESTIMATE_MAX_AGE_MS,
+  });
+
+  const review = async (): Promise<ExitFeeReview | undefined> => {
+    if (!canEstimate || isReviewing) return;
+    setIsReviewing(true);
+    // Always refresh before review; the snapshot also pins the eventual action inputs.
+    const result = await estimateEmergencyExitFee(
+      inputs.vtxoIds,
+      inputs.destinationAddress,
+    ).finally(() => setIsReviewing(false));
+    return {
+      inputs: { ...inputs, vtxoIds: [...inputs.vtxoIds] },
+      contextKey,
+      estimate: result.isOk() ? result.value : undefined,
+      reviewedAt: Date.now(),
+    };
+  };
+
+  return {
+    contextKey,
+    estimate: canEstimate && settledKey === contextKey && !query.isError ? query.data : undefined,
+    isLoading: canEstimate && (settledKey !== contextKey || query.isPending),
+    isError: canEstimate && settledKey === contextKey && query.isError,
+    retry: () => query.refetch(),
+    review,
+    isReviewing,
+    isCurrentReview: (snapshot: ExitFeeReview) =>
+      currentContext.current.canEstimate &&
+      isExitReviewCurrent(snapshot, currentContext.current.contextKey) &&
+      useWalletStore.getState().staticVtxoPubkey === snapshot.inputs.walletId &&
+      useWalletStore.getState().isWalletLoaded &&
+      !useWalletStore.getState().isWalletSuspended &&
+      !useWalletStore.getState().isBackgroundJobRunning,
+  };
 }
 
 export function useStartVtxoExit() {
@@ -173,6 +241,14 @@ export function useStartVtxoExit() {
   return useMutation<void, Error, string[]>({
     mutationFn: async (vtxoIds) => {
       log.i("User requested selected VTXO exit start", [{ vtxo_ids: vtxoIds }]);
+      const available = new Set(
+        readResult(await getVtxos())
+          .filter((vtxo) => vtxo.state === "Spendable")
+          .map((vtxo) => vtxo.id),
+      );
+      if (vtxoIds.some((id) => !available.has(id))) {
+        throw new Error("Available VTXOs changed. Refresh and review the exit again.");
+      }
       readResult(await startExitForVtxos(vtxoIds));
     },
     onSuccess: async () => {

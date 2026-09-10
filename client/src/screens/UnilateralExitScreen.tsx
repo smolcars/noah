@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -8,7 +8,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import { useIsFocused, useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
 import { AlertTriangle } from "lucide-react-native";
@@ -23,15 +23,19 @@ import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryBu
 import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { ConfirmationDialog } from "~/components/ConfirmationDialog";
+import { ExitDepositBottomSheet } from "~/components/ExitDepositBottomSheet";
 import {
   useCancelExit,
   useClaimExits,
   useExitOverview,
+  useExitFeeEstimate,
   useProgressExits,
   useStartVtxoExit,
-  useStartWalletExit,
-  useSyncExits,
 } from "~/hooks/useUnilateralExit";
+import { useBalance } from "~/hooks/useWallet";
+import { useWalletStore } from "~/store/walletStore";
+import { useAlert } from "~/contexts/AlertProvider";
+import { exitReceiveAmount, exitFeeWarning, type ExitFeeReview } from "~/lib/exitFeeEstimate";
 import { APP_VARIANT } from "~/config";
 import { getMempoolTxUrl } from "~/constants";
 import {
@@ -443,6 +447,151 @@ const ExitModePicker = ({
   />
 );
 
+type ExitQuote = ReturnType<typeof useExitFeeEstimate>;
+
+function exitReviewDescription(review: ExitFeeReview, formatAmount: (amount: number) => string) {
+  const { inputs, estimate } = review;
+  const claimOnly = inputs.scope === "claim";
+  const scope =
+    inputs.scope === "wallet"
+      ? "Entire wallet (available VTXOs)"
+      : claimOnly
+        ? "Claimable exits"
+        : "Selected VTXOs";
+  const count = inputs.vtxoIds.length;
+  const lines = [
+    `${scope}: ${count} ${count === 1 ? "VTXO" : "VTXOs"} · ${formatAmount(inputs.amountSat)}`,
+  ];
+  if (inputs.destinationAddress) lines.push(`Destination: ${inputs.destinationAddress}`);
+  if (estimate) {
+    if (!claimOnly) {
+      lines.push(`Estimated total fees: ${formatAmount(estimate.total_fee_sat)}`);
+      lines.push(
+        `Broadcast: ${formatAmount(estimate.exit_broadcast_fee_sat)} (paid separately from confirmed onchain funds)`,
+      );
+    }
+    lines.push(
+      `Claim fee: ${formatAmount(estimate.claim_fee_sat)} (deducted from recovered funds)`,
+    );
+    lines.push(
+      `Estimated amount to receive: ${formatAmount(exitReceiveAmount(inputs.amountSat, estimate.claim_fee_sat))}`,
+    );
+    if (!claimOnly) {
+      lines.push(
+        estimate.fundable
+          ? "Broadcast funding: sufficient confirmed onchain funds at this estimate."
+          : "Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing.",
+      );
+    }
+    const warning = exitFeeWarning(inputs.amountSat, estimate, claimOnly);
+    if (warning) lines.push(warning);
+  } else {
+    lines.push(
+      "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.",
+    );
+    if (!claimOnly)
+      lines.push("Broadcast funding status is unknown; confirmed onchain funds are required.");
+  }
+  lines.push(
+    claimOnly
+      ? "This broadcasts the claim transaction. Earlier broadcast fees are not deducted again. Fees may change."
+      : "This starts tracking. Use Progress to broadcast exit transactions. Fees may change; the claim estimate updates when you enter a destination.",
+  );
+  return lines.join("\n\n");
+}
+
+const ExitFeePreview = ({
+  quote,
+  amountSat,
+  claimOnly = false,
+}: {
+  quote: ExitQuote;
+  amountSat: number;
+  claimOnly?: boolean;
+}) => {
+  const formatAmount = useBitcoinAmountFormatter();
+  const estimate = quote.estimate;
+  if (quote.isLoading) {
+    return (
+      <View className="mt-4 flex-row items-center gap-3">
+        <NoahActivityIndicator />
+        <Text className="text-sm text-muted-foreground">Estimating fees…</Text>
+      </View>
+    );
+  }
+  if (quote.isError) {
+    return (
+      <View className="mt-4 gap-2">
+        <Text className="font-semibold text-foreground">Fee estimate unavailable</Text>
+        <Text className="text-sm text-muted-foreground">
+          Fees and amount to receive are unknown. You can retry or continue without an estimate.
+        </Text>
+        <NativeNoahSecondaryButton
+          label="Retry estimate"
+          onPress={() => void quote.retry()}
+          fullWidth
+        />
+      </View>
+    );
+  }
+  if (!estimate) return null;
+  const warning = exitFeeWarning(amountSat, estimate, claimOnly);
+  return (
+    <View className="mt-4 gap-3 rounded-lg border border-border bg-background p-3">
+      <View>
+        <Text className="text-sm text-muted-foreground">
+          {claimOnly ? "Estimated claim fee" : "Estimated total fees"}
+        </Text>
+        <Text className="mt-1 text-xl font-semibold text-foreground">
+          {formatAmount(claimOnly ? estimate.claim_fee_sat : estimate.total_fee_sat)}
+        </Text>
+      </View>
+      {!claimOnly ? (
+        <>
+          <ExitFeeRow label="Broadcast fees" amount={estimate.exit_broadcast_fee_sat} />
+          <Text className="text-xs leading-4 text-muted-foreground">
+            Paid separately from confirmed onchain funds.
+          </Text>
+          <ExitFeeRow label="Claim fee" amount={estimate.claim_fee_sat} />
+        </>
+      ) : null}
+      <Text className="text-xs leading-4 text-muted-foreground">
+        Claim fee is deducted from recovered funds.
+        {claimOnly ? " Earlier broadcast fees are not deducted again." : ""}
+      </Text>
+      <ExitFeeRow
+        label="Estimated amount to receive"
+        amount={exitReceiveAmount(amountSat, estimate.claim_fee_sat)}
+      />
+      {warning ? (
+        <Text accessibilityRole="alert" className="font-semibold text-destructive">
+          {warning}
+        </Text>
+      ) : null}
+      {!claimOnly && !estimate.fundable ? (
+        <Text className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+          Additional confirmed onchain funds required. Deposit funds and wait for confirmation
+          before progressing.
+        </Text>
+      ) : null}
+      <Text className="text-xs leading-4 text-muted-foreground">
+        Fees may change.
+        {!claimOnly ? " Claim fee updates when you enter a destination at the claim stage." : ""}
+      </Text>
+    </View>
+  );
+};
+
+const ExitFeeRow = ({ label, amount }: { label: string; amount: number }) => {
+  const formatAmount = useBitcoinAmountFormatter();
+  return (
+    <View className="flex-row justify-between gap-3">
+      <Text className="flex-1 text-sm text-muted-foreground">{label}</Text>
+      <Text className="text-sm font-semibold text-foreground">{formatAmount(amount)}</Text>
+    </View>
+  );
+};
+
 const StartExitPanel = ({
   title = "Start Emergency Exit",
   description = "Choose whether to exit all available VTXOs or only specific ones.",
@@ -458,6 +607,8 @@ const StartExitPanel = ({
   onClear,
   onStart,
   onCollapse,
+  quote,
+  onDeposit,
 }: {
   title?: string;
   description?: string;
@@ -473,11 +624,16 @@ const StartExitPanel = ({
   onClear: () => void;
   onStart: () => void;
   onCollapse?: () => void;
+  quote: ExitQuote;
+  onDeposit: () => void;
 }) => {
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const hasSelection = selectedCount > 0;
   const startDisabled =
-    isBusy || spendableVtxos.length === 0 || (mode === "selected" && !hasSelection);
+    isBusy ||
+    quote.isLoading ||
+    spendableVtxos.length === 0 ||
+    (mode === "selected" && !hasSelection);
 
   return (
     <View className="rounded-lg border border-border bg-card p-4">
@@ -551,15 +707,48 @@ const StartExitPanel = ({
         </View>
       )}
 
-      <NativeNoahButton
-        label={mode === "wallet" ? "Start Wallet Exit" : "Start Selected Exit"}
-        className="mt-4"
-        onPress={onStart}
-        disabled={startDisabled}
-        isLoading={isBusy}
-        loadingLabel="Starting..."
-        fullWidth
-      />
+      {mode === "selected" && !hasSelection ? (
+        <Text className="mt-4 text-sm text-muted-foreground">
+          Select VTXOs to estimate exit fees.
+        </Text>
+      ) : (
+        <ExitFeePreview
+          quote={quote}
+          amountSat={
+            mode === "wallet"
+              ? spendableVtxos.reduce((total, vtxo) => total + vtxo.amount, 0)
+              : selectedAmount
+          }
+        />
+      )}
+      {quote.estimate && !quote.estimate.fundable ? (
+        <>
+          <NativeNoahButton
+            label="Deposit Onchain Funds"
+            className="mt-4"
+            onPress={onDeposit}
+            disabled={isBusy}
+            fullWidth
+          />
+          <NativeNoahSecondaryButton
+            label={quote.isReviewing ? "Refreshing estimate..." : "Start tracking anyway"}
+            className="mt-3"
+            onPress={onStart}
+            disabled={startDisabled}
+            fullWidth
+          />
+        </>
+      ) : (
+        <NativeNoahButton
+          label={quote.isError ? "Continue without estimate" : "Review Exit"}
+          className="mt-4"
+          onPress={onStart}
+          disabled={startDisabled}
+          isLoading={isBusy}
+          loadingLabel={quote.isReviewing ? "Refreshing estimate..." : "Starting..."}
+          fullWidth
+        />
+      )}
     </View>
   );
 };
@@ -636,17 +825,25 @@ const UnilateralExitScreen = () => {
     () => new Set(routeSelectedVtxoIds ?? []),
   );
   const [isNewExitExpanded, setIsNewExitExpanded] = useState(!!routeSelectedVtxoIds?.length);
-  const [showStartConfirm, setShowStartConfirm] = useState(false);
+  const [deposit, setDeposit] = useState<{ walletId: string | null; broadcastFeeSat: number }>();
+  const [startReview, setStartReview] = useState<ExitFeeReview>();
   const [showProgressConfirm, setShowProgressConfirm] = useState(false);
-  const [showClaimConfirm, setShowClaimConfirm] = useState(false);
+  const [claimReview, setClaimReview] = useState<ExitFeeReview>();
   const [cancelExitVtxoId, setCancelExitVtxoId] = useState<string | null>(null);
 
   const overviewQuery = useExitOverview();
-  const startWalletExit = useStartWalletExit();
+  const { showAlert } = useAlert();
+  const { staticVtxoPubkey, isWalletLoaded, isWalletSuspended, isBackgroundJobRunning } =
+    useWalletStore();
+  const balanceQuery = useBalance();
+  const isFocused = useIsFocused();
+  const { refetch: refetchOverview } = overviewQuery;
+  useEffect(() => {
+    if (isFocused) void refetchOverview();
+  }, [isFocused, balanceQuery.dataUpdatedAt, refetchOverview]);
   const startVtxoExit = useStartVtxoExit();
   const cancelExit = useCancelExit();
   const progressExits = useProgressExits();
-  const syncExits = useSyncExits();
   const claimExits = useClaimExits();
 
   const overview = overviewQuery.data;
@@ -707,22 +904,43 @@ const UnilateralExitScreen = () => {
   const btcValidation = trimmedDestination ? validateBitcoinAddress(trimmedDestination) : null;
   const isValidDestination =
     !!btcValidation?.valid && isNetworkMatch(btcValidation.network, "onchain");
+  const startVtxos = exitStartMode === "wallet" ? spendableVtxos : selectedExitVtxos;
+  const startAmount = startVtxos.reduce((total, vtxo) => total + vtxo.amount, 0);
+  const walletReady = isWalletLoaded && !isWalletSuspended && !isBackgroundJobRunning;
+  const revision = `${overviewQuery.dataUpdatedAt}:${balanceQuery.dataUpdatedAt}:${walletReady}`;
+  const startQuote = useExitFeeEstimate(
+    {
+      walletId: staticVtxoPubkey,
+      vtxoIds: startVtxos.map((vtxo) => vtxo.id),
+      amountSat: startAmount,
+      scope: exitStartMode,
+      revision,
+    },
+    walletReady && (exits.length === 0 || isNewExitExpanded),
+  );
+  const claimQuote = useExitFeeEstimate(
+    {
+      walletId: staticVtxoPubkey,
+      vtxoIds: claimableIds,
+      amountSat: claimableTotal,
+      scope: "claim",
+      destinationAddress: trimmedDestination,
+      revision,
+    },
+    walletReady && isValidDestination,
+  );
+  useEffect(() => setStartReview(undefined), [startQuote.contextKey]);
+  useEffect(() => setClaimReview(undefined), [claimQuote.contextKey]);
   const isBusy =
-    startWalletExit.isPending ||
+    !walletReady ||
+    startQuote.isReviewing ||
+    claimQuote.isReviewing ||
     startVtxoExit.isPending ||
     progressExits.isPending ||
-    syncExits.isPending ||
     claimExits.isPending ||
     cancelExit.isPending;
   const canStartNewExit = spendableVtxos.length > 0;
 
-  const startLabel = exitStartMode === "selected" ? "Start Selected Exit" : "Start Wallet Exit";
-  const startDescription =
-    exitStartMode === "selected"
-      ? `This starts unilateral exit tracking for ${selectedExitVtxoIdList.length} selected ${
-          selectedExitVtxoIdList.length === 1 ? "VTXO" : "VTXOs"
-        }. Use this only if normal offboarding is unavailable.`
-      : "This starts unilateral exit tracking for all available funds. Use this only if normal offboarding is unavailable.";
   const allClaimableHeight = overview?.allClaimableAtHeight;
   const currentBlockHeight = overview?.blockHeight;
   const claimableBlockLabel =
@@ -735,16 +953,40 @@ const UnilateralExitScreen = () => {
         : "Unknown";
   const allClaimableRemainingLabel = formatBlocksRemaining(currentBlockHeight, allClaimableHeight);
 
+  const staleReview = () =>
+    showAlert({
+      title: "Review Exit Again",
+      description:
+        "The estimate expired or your wallet changed. Review the current details before continuing.",
+    });
+
   const handleStart = () => {
-    if (exitStartMode === "selected") {
-      if (selectedExitVtxoIdList.length === 0) {
-        return;
-      }
-      startVtxoExit.mutate(selectedExitVtxoIdList);
-    } else {
-      startWalletExit.mutate();
+    if (!startReview || !startQuote.isCurrentReview(startReview)) {
+      setStartReview(undefined);
+      staleReview();
+      return;
     }
-    setShowStartConfirm(false);
+    // Even wallet mode uses the reviewed IDs, so newly arriving funds are never added silently.
+    startVtxoExit.mutate(startReview.inputs.vtxoIds);
+    setStartReview(undefined);
+  };
+
+  const reviewStart = async () => {
+    const snapshot = await startQuote.review();
+    if (snapshot && startQuote.isCurrentReview(snapshot)) setStartReview(snapshot);
+  };
+
+  const reviewClaim = async () => {
+    const snapshot = await claimQuote.review();
+    if (snapshot && claimQuote.isCurrentReview(snapshot)) setClaimReview(snapshot);
+  };
+
+  const depositOnchain = () => {
+    if (!startQuote.estimate || !walletReady) return;
+    setDeposit({
+      walletId: staticVtxoPubkey,
+      broadcastFeeSat: startQuote.estimate.exit_broadcast_fee_sat,
+    });
   };
 
   const toggleExitVtxoSelection = (vtxoId: string) => {
@@ -776,15 +1018,20 @@ const UnilateralExitScreen = () => {
   };
 
   const handleClaim = () => {
-    if (!isValidDestination) {
+    if (
+      !claimReview ||
+      !claimQuote.isCurrentReview(claimReview) ||
+      !claimReview.inputs.destinationAddress
+    ) {
+      setClaimReview(undefined);
+      staleReview();
       return;
     }
-
     claimExits.mutate({
-      vtxoIds: claimableIds,
-      destinationAddress: trimmedDestination,
+      vtxoIds: claimReview.inputs.vtxoIds,
+      destinationAddress: claimReview.inputs.destinationAddress,
     });
-    setShowClaimConfirm(false);
+    setClaimReview(undefined);
   };
 
   const handleCancelExit = () => {
@@ -817,9 +1064,9 @@ const UnilateralExitScreen = () => {
               <NativeNoahIconButton
                 icon="refresh"
                 accessibilityLabel="Refresh emergency exits"
-                onPress={() => syncExits.mutate()}
+                onPress={() => void overviewQuery.refetch()}
                 disabled={isBusy}
-                isLoading={syncExits.isPending}
+                isLoading={overviewQuery.isFetching}
                 testID="emergency-exits-refresh-button"
               />
             </View>
@@ -858,7 +1105,9 @@ const UnilateralExitScreen = () => {
                     onToggleVtxo={toggleExitVtxoSelection}
                     onSelectAll={selectAllExitVtxos}
                     onClear={clearExitVtxoSelection}
-                    onStart={() => setShowStartConfirm(true)}
+                    onStart={reviewStart}
+                    quote={startQuote}
+                    onDeposit={depositOnchain}
                   />
                 ) : null}
               </EmptyExitState>
@@ -923,7 +1172,8 @@ const UnilateralExitScreen = () => {
                   {staleExitCount > 0 ? (
                     <Text className="mt-3 text-sm leading-5 text-muted-foreground">
                       {staleExitCount} {staleExitCount === 1 ? "exit is" : "exits are"} behind the
-                      current chain height. Sync status to refresh chain-derived state.
+                      current chain height. Use Progress to check the chain; this can also broadcast
+                      exit transactions.
                     </Text>
                   ) : null}
                 </View>
@@ -935,7 +1185,7 @@ const UnilateralExitScreen = () => {
                     </Text>
                     <Text className="mt-1 text-sm leading-5 text-amber-700/90 dark:text-amber-200/90">
                       No further claim action is available for VTXOs in Claiming. Wait for the claim
-                      transaction to confirm, then sync status to mark them claimed.
+                      transaction to confirm, then use Progress to update tracked state.
                     </Text>
                   </View>
                 ) : null}
@@ -978,13 +1228,13 @@ const UnilateralExitScreen = () => {
 
                 <View className="mb-5 flex-row gap-x-3">
                   <NativeNoahSecondaryButton
-                    label={syncExits.isPending ? "Syncing..." : "Sync Status"}
+                    label={overviewQuery.isFetching ? "Refreshing..." : "Refresh Status"}
                     className="flex-1"
-                    onPress={() => syncExits.mutate()}
+                    onPress={() => void overviewQuery.refetch()}
                     disabled={isBusy}
                     fullWidth
                   />
-                  {overview?.hasPending ? (
+                  {overview?.hasPending || claimable.length > 0 || claimInProgressCount > 0 ? (
                     <NativeNoahButton
                       label="Progress"
                       className="flex-1"
@@ -996,6 +1246,11 @@ const UnilateralExitScreen = () => {
                     />
                   ) : null}
                 </View>
+
+                <Text className="mb-5 text-sm leading-5 text-muted-foreground">
+                  Refresh Status reloads saved wallet state. Progress checks the chain and can
+                  broadcast or fee-bump exit transactions.
+                </Text>
 
                 {claimable.length > 0 ? (
                   <View className="mb-5 rounded-lg border border-border bg-card p-4">
@@ -1018,13 +1273,18 @@ const UnilateralExitScreen = () => {
                         Enter a valid {APP_VARIANT} on-chain address.
                       </Text>
                     ) : null}
+                    {isValidDestination ? (
+                      <ExitFeePreview quote={claimQuote} amountSat={claimableTotal} claimOnly />
+                    ) : null}
                     <NativeNoahButton
-                      label="Claim Claimable Exits"
+                      label={claimQuote.isError ? "Continue without estimate" : "Review Claim"}
                       className="mt-4"
-                      disabled={!isValidDestination || isBusy}
-                      isLoading={claimExits.isPending}
-                      loadingLabel="Claiming..."
-                      onPress={() => setShowClaimConfirm(true)}
+                      disabled={!isValidDestination || isBusy || claimQuote.isLoading}
+                      isLoading={claimExits.isPending || claimQuote.isReviewing}
+                      loadingLabel={
+                        claimQuote.isReviewing ? "Refreshing estimate..." : "Claiming..."
+                      }
+                      onPress={reviewClaim}
                       fullWidth
                     />
                   </View>
@@ -1046,7 +1306,9 @@ const UnilateralExitScreen = () => {
                         onToggleVtxo={toggleExitVtxoSelection}
                         onSelectAll={selectAllExitVtxos}
                         onClear={clearExitVtxoSelection}
-                        onStart={() => setShowStartConfirm(true)}
+                        onStart={reviewStart}
+                        quote={startQuote}
+                        onDeposit={depositOnchain}
                         onCollapse={() => setIsNewExitExpanded(false)}
                       />
                     ) : (
@@ -1062,12 +1324,19 @@ const UnilateralExitScreen = () => {
             )}
 
             <ConfirmationDialog
-              open={showStartConfirm}
-              onOpenChange={setShowStartConfirm}
-              title="Start Emergency Exit"
-              description={startDescription}
-              confirmText={startLabel}
+              open={!!startReview && startReview.contextKey === startQuote.contextKey}
+              onOpenChange={(open) => {
+                if (!open) setStartReview(undefined);
+              }}
+              title={startReview?.estimate ? "Start Emergency Exit" : "Continue without estimate?"}
+              description={
+                startReview ? exitReviewDescription(startReview, formatBitcoinAmount) : ""
+              }
+              confirmText={
+                startReview?.inputs.scope === "wallet" ? "Start Wallet Exit" : "Start Selected Exit"
+              }
               onConfirm={handleStart}
+              isConfirmDisabled={isBusy}
             />
             <ConfirmationDialog
               open={cancelExitVtxoId !== null}
@@ -1093,16 +1362,27 @@ const UnilateralExitScreen = () => {
               }}
             />
             <ConfirmationDialog
-              open={showClaimConfirm}
-              onOpenChange={setShowClaimConfirm}
-              title="Claim Exits"
-              description="This broadcasts the final claim transaction for all currently claimable exits."
-              confirmText="Broadcast Claim"
+              open={!!claimReview && claimReview.contextKey === claimQuote.contextKey}
+              onOpenChange={(open) => {
+                if (!open) setClaimReview(undefined);
+              }}
+              title={claimReview?.estimate ? "Claim Exits" : "Continue without estimate?"}
+              description={
+                claimReview ? exitReviewDescription(claimReview, formatBitcoinAmount) : ""
+              }
+              confirmText={claimReview?.estimate ? "Broadcast Claim" : "Broadcast without estimate"}
               onConfirm={handleClaim}
+              isConfirmDisabled={isBusy}
             />
           </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
+      <ExitDepositBottomSheet
+        isOpen={!!deposit && deposit.walletId === staticVtxoPubkey && walletReady && isFocused}
+        onClose={() => setDeposit(undefined)}
+        walletId={staticVtxoPubkey}
+        broadcastFeeSat={deposit?.broadcastFeeSat ?? 0}
+      />
     </NoahSafeAreaView>
   );
 };
