@@ -77,11 +77,29 @@ const readResult = <T>(result: Result<T, Error>): T => {
 };
 
 export function useExitOverview() {
-  const { isInitialized, staticVtxoPubkey } = useWalletStore();
+  const {
+    isInitialized,
+    isWalletLoaded,
+    isWalletSuspended,
+    isBackgroundJobRunning,
+    staticVtxoPubkey,
+  } = useWalletStore();
+  const walletReady =
+    isInitialized && isWalletLoaded && !isWalletSuspended && !isBackgroundJobRunning;
 
   return useQuery({
     queryKey: ["exit-overview", staticVtxoPubkey],
     queryFn: async (): Promise<ExitOverview> => {
+      // Explicit refetch bypasses enabled and may come from a stale render.
+      const wallet = useWalletStore.getState();
+      if (
+        !wallet.isInitialized ||
+        !wallet.isWalletLoaded ||
+        wallet.isWalletSuspended ||
+        wallet.isBackgroundJobRunning
+      ) {
+        throw new Error("Wait for the wallet to be ready before refreshing exits.");
+      }
       log.d("Loading exit overview");
       // Bark 0.7 syncExit permits progression. Reading this screen must not broadcast.
 
@@ -150,7 +168,7 @@ export function useExitOverview() {
 
       return overview;
     },
-    enabled: isInitialized,
+    enabled: walletReady,
     retry: false,
     refetchInterval: (query) => (query.state.data?.hasPending ? 60_000 : false),
   });

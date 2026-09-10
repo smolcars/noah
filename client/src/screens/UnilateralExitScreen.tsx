@@ -835,12 +835,13 @@ const UnilateralExitScreen = () => {
   const { showAlert } = useAlert();
   const { staticVtxoPubkey, isWalletLoaded, isWalletSuspended, isBackgroundJobRunning } =
     useWalletStore();
+  const walletReady = isWalletLoaded && !isWalletSuspended && !isBackgroundJobRunning;
   const balanceQuery = useBalance();
   const isFocused = useIsFocused();
   const { refetch: refetchOverview } = overviewQuery;
   useEffect(() => {
-    if (isFocused) void refetchOverview();
-  }, [isFocused, balanceQuery.dataUpdatedAt, refetchOverview]);
+    if (isFocused && walletReady) void refetchOverview();
+  }, [isFocused, walletReady, balanceQuery.dataUpdatedAt, refetchOverview]);
   const startVtxoExit = useStartVtxoExit();
   const cancelExit = useCancelExit();
   const progressExits = useProgressExits();
@@ -906,7 +907,6 @@ const UnilateralExitScreen = () => {
     !!btcValidation?.valid && isNetworkMatch(btcValidation.network, "onchain");
   const startVtxos = exitStartMode === "wallet" ? spendableVtxos : selectedExitVtxos;
   const startAmount = startVtxos.reduce((total, vtxo) => total + vtxo.amount, 0);
-  const walletReady = isWalletLoaded && !isWalletSuspended && !isBackgroundJobRunning;
   const revision = `${overviewQuery.dataUpdatedAt}:${balanceQuery.dataUpdatedAt}:${walletReady}`;
   const startQuote = useExitFeeEstimate(
     {
