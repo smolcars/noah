@@ -35,7 +35,6 @@ import {
   LightningAddressSuggestionsPayload,
   LightningAddressSuggestionsResponse,
   LightningIdentityResponse,
-  UpdateLnAddressPayload,
   UpdateLightningIdentityPayload,
   UpdateProfilePayload,
   UploadUrlResponse,
@@ -372,9 +371,6 @@ export const deleteBackupObject = (payload: DeleteBackupObjectPayload) =>
 
 export const registerWithServer = (payload: RegisterPayload) =>
   post<RegisterPayload, RegisterResponse>("/register", payload);
-
-export const updateLightningAddress = (payload: UpdateLnAddressPayload) =>
-  post<UpdateLnAddressPayload, DefaultSuccessPayload>("/update_ln_address", payload);
 
 export const updateLightningIdentity = (payload: UpdateLightningIdentityPayload) =>
   post<UpdateLightningIdentityPayload, LightningIdentityResponse>(

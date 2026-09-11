@@ -24,10 +24,7 @@ use crate::{
     AppState,
     errors::ApiError,
     mailbox_auth::validate_authorize_mailbox_payload,
-    types::{
-        AuthenticatedUser, GetUploadUrlPayload, RegisterPushToken, UpdateLnAddressPayload,
-        UploadUrlResponse,
-    },
+    types::{AuthenticatedUser, GetUploadUrlPayload, RegisterPushToken, UploadUrlResponse},
 };
 use axum::{Extension, Json, extract::State};
 use base64::Engine;
@@ -322,6 +319,8 @@ pub async fn get_user_info(
     }))
 }
 
+/// The sole supported identity-update endpoint.
+///
 /// Atomically configures a user's hosted Lightning address and optional NIP-05 public key.
 pub async fn update_lightning_identity(
     State(state): State<AppState>,
@@ -366,36 +365,6 @@ pub async fn update_lightning_identity(
         lightning_address,
         nostr_pubkey,
     }))
-}
-
-/// Updates a user's lightning address.
-///
-/// This endpoint allows a user to update their lightning address.
-pub async fn update_ln_address(
-    State(state): State<AppState>,
-    Extension(auth_payload): Extension<AuthenticatedUser>,
-    Json(payload): Json<UpdateLnAddressPayload>,
-) -> anyhow::Result<Json<DefaultSuccessPayload>, ApiError> {
-    if let Err(e) = payload.validate() {
-        return Err(ApiError::InvalidArgument(e.to_string()));
-    }
-
-    let user_repo = UserRepository::new(&state.db_pool);
-
-    let result = user_repo
-        .update_lightning_address(&auth_payload.key, &payload.ln_address)
-        .await;
-
-    if let Err(e) = result {
-        if e.is::<crate::db::user_repo::LightningAddressTakenError>() {
-            return Err(ApiError::InvalidArgument(
-                "Lightning address already taken".to_string(),
-            ));
-        }
-        return Err(e.into());
-    }
-
-    Ok(Json(DefaultSuccessPayload { success: true }))
 }
 
 /// Updates a user's profile fields.
