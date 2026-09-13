@@ -166,7 +166,7 @@ services:
         condition: service_started
 
   barkd:
-    image: ${BARKD_IMAGE:-niteshbalusu/noah-barkd:0.7.0}
+    image: ${BARKD_IMAGE:-niteshbalusu/noah-barkd:0.7.1}
     command: ["barkd", "--dangerously-allow-remote-no-auth"]
     restart: on-failure
     network_mode: "service:noah-server"
