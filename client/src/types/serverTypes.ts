@@ -257,15 +257,6 @@ username: string,
 nostr_pubkey: string | null, };
 
 /**
- * Defines the payload for updating a user's lightning address.
- */
-export type UpdateLnAddressPayload = { 
-/**
- * The new lightning address for the user.
- */
-ln_address: string, };
-
-/**
  * Defines the payload for updating a user's profile.
  */
 export type UpdateProfilePayload = { 
