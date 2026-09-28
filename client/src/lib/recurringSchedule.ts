@@ -21,6 +21,12 @@ export const MAX_CUSTOM_INTERVAL_DAYS = 365;
 export const STALE_IN_FLIGHT_MS = 10 * 60 * 1000;
 export const REMINDER_LEAD_MS = 24 * 60 * 60 * 1000;
 export const OVERDUE_NAG_DELAY_MS = 2 * 60 * 60 * 1000;
+export const RETRY_BASE_DELAY_MS = 15 * 60 * 1000;
+export const RETRY_MAX_DELAY_MS = 6 * 60 * 60 * 1000;
+
+/** Delay before the next automatic attempt after `failures` retryable failures in a row. */
+export const retryDelayMs = (failures: number): number =>
+  Math.min(RETRY_BASE_DELAY_MS * 2 ** Math.max(0, Math.min(failures, 16) - 1), RETRY_MAX_DELAY_MS);
 
 const RECURRING_DESTINATION_TYPES: readonly RecurringDestinationType[] = ["ark", "lnurl", "offer"];
 
@@ -174,6 +180,7 @@ export type RecurringExecutionPlan =
 export const planRecurringExecution = (
   schedule: RecurringPayment,
   now: number,
+  options: { ignoreRetryBackoff?: boolean } = {},
 ): RecurringExecutionPlan => {
   if (schedule.status !== "active") return { kind: "idle" };
 
@@ -186,6 +193,9 @@ export const planRecurringExecution = (
   const first = nextRunAtForIndex(schedule, schedule.nextOccurrenceIndex);
   if (first === null) return { kind: "complete" };
   if (first > now) return { kind: "idle" };
+  if (!options.ignoreRetryBackoff && schedule.retryNotBefore && schedule.retryNotBefore > now) {
+    return { kind: "idle" };
+  }
 
   let latest = schedule.nextOccurrenceIndex;
   // Walk forward to the most recent occurrence that is due and within limits.
@@ -260,6 +270,7 @@ export const applySuccessfulRun = (
       occurrencesPaid: schedule.occurrencesPaid + 1,
       consecutiveFailures: 0,
       lastError: null,
+      retryNotBefore: null,
       runs: appendRuns(schedule.runs, [...skipped, paid]),
       updatedAt: now,
     },
@@ -287,6 +298,7 @@ export const applyFailedRun = (
   status: retryable ? schedule.status : "needs_attention",
   consecutiveFailures: schedule.consecutiveFailures + 1,
   lastError: error,
+  retryNotBefore: retryable ? now + retryDelayMs(schedule.consecutiveFailures + 1) : null,
   runs: appendRuns(schedule.runs, [
     {
       occurrenceIndex: plan.occurrenceIndex,
@@ -331,6 +343,7 @@ export const resumeRecurringPayment = (
       status: "active",
       inFlight: null,
       lastError: null,
+      retryNotBefore: null,
       consecutiveFailures: 0,
       updatedAt: now,
     },

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { Linking, ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
@@ -19,6 +19,7 @@ import {
   pauseRecurringPayment,
   resumeRecurringPaymentById,
 } from "~/lib/recurringPayments";
+import { isRecurringBackgroundTaskSupported } from "~/lib/recurringBackgroundTask";
 import { describeInterval } from "~/lib/recurringSchedule";
 import { useRecurringPaymentStore } from "~/store/recurringPaymentStore";
 import type { RecurringPayment, RecurringPaymentStatus } from "~/types/recurringPayment";
@@ -196,6 +197,24 @@ const RecurringPaymentsScreen = () => {
           className="mb-4"
           testID="recurring-new-button"
         />
+
+        {isRecurringBackgroundTaskSupported && list.some((s) => s.status === "active") ? (
+          <View className="mb-4 rounded-2xl border border-border bg-card p-4">
+            <Text className="font-semibold text-foreground">Runs in the background</Text>
+            <Text className="mt-1 text-sm text-muted-foreground">
+              Android checks for due payments about every 15 minutes, even when Noah is closed. For
+              reliable timing, set Noah's battery usage to "Unrestricted" in the app settings.
+            </Text>
+            <View className="mt-3">
+              <NativeNoahSecondaryButton
+                label="Open app settings"
+                onPress={() => void Linking.openSettings()}
+                fullWidth
+                testID="recurring-open-app-settings"
+              />
+            </View>
+          </View>
+        ) : null}
 
         {list.length === 0 ? (
           <View className="items-center rounded-2xl border border-border bg-card p-6">

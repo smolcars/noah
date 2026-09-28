@@ -68,6 +68,8 @@ export type RecurringPayment = {
   occurrencesPaid: number;
   consecutiveFailures: number;
   lastError: string | null;
+  /** After a retryable failure, automatic runs wait until this time (ms). */
+  retryNotBefore?: number | null;
   inFlight: RecurringPaymentInFlight | null;
   runs: RecurringPaymentRun[];
   createdAt: number;
