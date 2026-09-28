@@ -123,6 +123,16 @@ impl<'a> NotificationTrackingRepository<'a> {
                 .fetch_one(self.pool)
                 .await?
             }
+            NotificationData::RecurringPaymentDue(_) => {
+                sqlx::query_scalar::<_, Option<DateTime<Utc>>>(
+                    "SELECT MAX(last_notified_at)
+                     FROM recurring_payment_schedules
+                     WHERE pubkey = $1",
+                )
+                .bind(pubkey)
+                .fetch_one(self.pool)
+                .await?
+            }
             NotificationData::LightningInvoiceRequest(_)
             | NotificationData::LightningClaimRequest(_) => None,
         };

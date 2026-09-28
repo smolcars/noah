@@ -4,6 +4,7 @@ use crate::db::heartbeat_repo::HeartbeatRepository;
 use crate::db::job_status_repo::JobStatusRepository;
 use crate::db::mailbox_authorization_repo::MailboxAuthorizationRepository;
 use crate::db::push_token_repo::PushTokenRepository;
+use crate::db::recurring_payment_repo::RecurringPaymentRepository;
 use crate::db::user_repo::UserRepository;
 use crate::push::validate_push_token;
 use crate::wide_event::WideEventHandle;
@@ -17,8 +18,9 @@ use crate::types::{
     InitiateBackupUploadPayload, InitiateBackupUploadResponse, LightningAddressSuggestionsPayload,
     LightningAddressSuggestionsResponse, LightningIdentityResponse, ReportJobStatusPayload,
     ReportLastLoginPayload, ReportStatus, SubmitInvoicePayload, SubmitSupportTicketPayload,
-    SubmitSupportTicketResponse, UpdateLightningIdentityPayload, UpdateProfilePayload,
-    UserInfoResponse, UserStatus, is_valid_ln_username, normalize_nostr_pubkey,
+    SubmitSupportTicketResponse, SyncRecurringPaymentsPayload, UpdateLightningIdentityPayload,
+    UpdateProfilePayload, UserInfoResponse, UserStatus, is_valid_ln_username,
+    normalize_nostr_pubkey,
 };
 use crate::{
     AppState,
@@ -31,11 +33,14 @@ use crate::{
 };
 use axum::{Extension, Json, extract::State};
 use base64::Engine;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
+use std::collections::HashSet;
 use uuid::Uuid;
 use validator::Validate;
 
 const MAX_MAILBOX_AUTH_TTL_SECS: i64 = 90 * 24 * 60 * 60;
+pub(crate) const MAX_RECURRING_PAYMENT_SCHEDULES: usize = 50;
+const MAX_RECURRING_PAYMENT_HORIZON_SECS: i64 = 10 * 366 * 24 * 60 * 60;
 const LN_SUGGESTIONS_MIN_USERNAME_LEN: usize = 2;
 const LN_SUGGESTIONS_MAX_QUERY_LEN: usize = 64;
 const LN_SUGGESTIONS_LIMIT: i64 = 8;
@@ -814,6 +819,7 @@ pub async fn deregister(
     PushTokenRepository::delete_by_pubkey(&mut tx, &pubkey).await?;
     MailboxAuthorizationRepository::delete_by_pubkey(&mut tx, &pubkey).await?;
     HeartbeatRepository::delete_by_pubkey_tx(&mut tx, &pubkey).await?;
+    RecurringPaymentRepository::delete_by_pubkey(&mut tx, &pubkey).await?;
 
     tx.commit().await?;
 
@@ -863,6 +869,68 @@ pub async fn report_last_login(
         DeviceRepository::upsert(&mut tx, &auth_payload.key, &device_info).await?;
         tx.commit().await?;
     }
+
+    Ok(Json(DefaultSuccessPayload { success: true }))
+}
+
+fn is_valid_recurring_schedule_id(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 64
+        && value
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+/// Replaces the set of active recurring payment wake-up schedules for the user.
+///
+/// Recurring payments are executed and signed on the device. The server only
+/// stores opaque schedule ids and due times so it can send a silent push when a
+/// payment is due. It never learns amounts or recipients and cannot move funds.
+pub async fn sync_recurring_payments(
+    State(state): State<AppState>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
+    event: Option<Extension<WideEventHandle>>,
+    Json(payload): Json<SyncRecurringPaymentsPayload>,
+) -> anyhow::Result<Json<DefaultSuccessPayload>, ApiError> {
+    if let Some(Extension(event)) = event {
+        event.add_context("recurring_schedule_count", payload.schedules.len());
+    }
+
+    if payload.schedules.len() > MAX_RECURRING_PAYMENT_SCHEDULES {
+        return Err(ApiError::InvalidArgument(format!(
+            "At most {MAX_RECURRING_PAYMENT_SCHEDULES} recurring payments are supported"
+        )));
+    }
+
+    let now = Utc::now().timestamp();
+    let mut seen = HashSet::with_capacity(payload.schedules.len());
+    let mut schedules = Vec::with_capacity(payload.schedules.len());
+    for entry in payload.schedules {
+        if !is_valid_recurring_schedule_id(&entry.schedule_id) {
+            return Err(ApiError::InvalidArgument(
+                "Invalid recurring payment schedule id".to_string(),
+            ));
+        }
+        if !seen.insert(entry.schedule_id.clone()) {
+            return Err(ApiError::InvalidArgument(
+                "Duplicate recurring payment schedule id".to_string(),
+            ));
+        }
+        if entry.next_run_at <= 0 || entry.next_run_at > now + MAX_RECURRING_PAYMENT_HORIZON_SECS {
+            return Err(ApiError::InvalidArgument(
+                "Invalid recurring payment due time".to_string(),
+            ));
+        }
+        let next_run_at =
+            DateTime::<Utc>::from_timestamp(entry.next_run_at, 0).ok_or_else(|| {
+                ApiError::InvalidArgument("Invalid recurring payment due time".to_string())
+            })?;
+        schedules.push((entry.schedule_id, next_run_at));
+    }
+
+    let mut tx = state.db_pool.begin().await?;
+    RecurringPaymentRepository::replace_for_pubkey(&mut tx, &auth_payload.key, &schedules).await?;
+    tx.commit().await?;
 
     Ok(Json(DefaultSuccessPayload { success: true }))
 }

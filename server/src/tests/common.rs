@@ -22,8 +22,8 @@ use crate::routes::gated_api_v0::{
     get_upload_url, get_user_info, heartbeat_response, initiate_backup_object_upload,
     list_backup_objects, list_backups, ln_address_suggestions, register_push_token,
     report_job_status, report_last_login, revoke_mailbox_authorization, submit_invoice,
-    submit_support_ticket, update_backup_settings, update_lightning_identity, update_ln_address,
-    update_profile,
+    submit_support_ticket, sync_recurring_payments, update_backup_settings,
+    update_lightning_identity, update_ln_address, update_profile,
 };
 use crate::routes::public_api_v0::{
     auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price, nip05_request,
@@ -218,6 +218,7 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
         .route("/heartbeat_response", post(heartbeat_response))
         .route("/report_last_login", post(report_last_login))
         .route("/support/ticket", post(submit_support_ticket))
+        .route("/recurring_payments/sync", post(sync_recurring_payments))
         .layer(user_exists_layer.clone());
 
     let fiat_router = Router::new()
@@ -367,6 +368,7 @@ async fn reset_database(pool: &PgPool) -> sqlx::Result<()> {
             backup_settings,
             mailbox_authorizations,
             push_tokens,
+            recurring_payment_schedules,
             users
         RESTART IDENTITY CASCADE
         "#,

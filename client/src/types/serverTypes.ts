@@ -142,7 +142,27 @@ export type LightningInvoiceRequestNotification = { transaction_id: string, amou
 
 export type MaintenanceNotification = { notification_k1: string, };
 
-export type NotificationData = { "notification_type": "maintenance" } & MaintenanceNotification | { "notification_type": "lightning_invoice_request" } & LightningInvoiceRequestNotification | { "notification_type": "lightning_claim_request" } & LightningClaimRequestNotification | { "notification_type": "backup_trigger" } & BackupTriggerNotification | { "notification_type": "heartbeat" } & HeartbeatNotification;
+export type NotificationData = { "notification_type": "maintenance" } & MaintenanceNotification | { "notification_type": "lightning_invoice_request" } & LightningInvoiceRequestNotification | { "notification_type": "lightning_claim_request" } & LightningClaimRequestNotification | { "notification_type": "backup_trigger" } & BackupTriggerNotification | { "notification_type": "heartbeat" } & HeartbeatNotification | { "notification_type": "recurring_payment_due" } & RecurringPaymentDueNotification;
+
+/**
+ * Silent push asking the device to execute its locally stored recurring
+ * payments that are due. Carries no amounts or recipients: the device checks
+ * its own schedules and only pays within the policy the user approved.
+ */
+export type RecurringPaymentDueNotification = { due_count: number, };
+
+/**
+ * One active recurring payment schedule, as known to the server.
+ */
+export type RecurringPaymentScheduleEntry = { 
+/**
+ * Opaque, client-generated id (`[A-Za-z0-9_-]{1,64}`).
+ */
+schedule_id: string, 
+/**
+ * Next due time as a unix timestamp in seconds.
+ */
+next_run_at: number, };
 
 /**
  * Defines the payload for a user registration request.
@@ -242,6 +262,11 @@ export type SubmitSupportTicketPayload = { subject: string, body: string, name: 
 export type SubmitSupportTicketResponse = { ticket_id: string, ticket_number: string | null, };
 
 export type SupportTicketAttachment = { filename: string, content_type: string, base64_data: string, };
+
+/**
+ * Replaces the full set of active recurring payment schedules for the user.
+ */
+export type SyncRecurringPaymentsPayload = { schedules: Array<RecurringPaymentScheduleEntry>, };
 
 /**
  * Defines the payload for atomically configuring a hosted Lightning identity.

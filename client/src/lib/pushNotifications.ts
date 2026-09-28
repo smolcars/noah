@@ -19,6 +19,7 @@ import { formatBitcoinAmount } from "~/lib/bitcoinAmount";
 import { updateWidget } from "~/hooks/useWidget";
 import { shouldUseUnifiedPush } from "~/constants";
 import { useProfileStore } from "~/store/profileStore";
+import { executeDueRecurringPayments } from "~/lib/recurringPayments";
 
 const log = logger("pushNotifications");
 
@@ -40,6 +41,7 @@ const KNOWN_NOTIFICATION_TYPES = new Set<string>([
   "lightning_claim_request",
   "backup_trigger",
   "heartbeat",
+  "recurring_payment_due",
 ]);
 
 async function ensureDefaultNotificationChannel() {
@@ -227,6 +229,16 @@ async function handleNotificationData(notificationData: NotificationData) {
       } else {
         log.d("Successfully responded to heartbeat", [notificationData.notification_id]);
       }
+      break;
+    }
+
+    case "recurring_payment_due": {
+      // The push carries no payment details. The executor re-checks every
+      // locally stored schedule against its approved policy before paying.
+      log.i("Received recurring payment wake-up", [notificationData.due_count]);
+      const summary = await executeDueRecurringPayments("push");
+      log.i("Recurring payment wake-up handled", [summary]);
+      await updateWidget();
       break;
     }
 

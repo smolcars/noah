@@ -56,6 +56,7 @@ import {
   InitiateBackupUploadResponse,
   SubmitSupportTicketPayload,
   SubmitSupportTicketResponse,
+  SyncRecurringPaymentsPayload,
 } from "~/types/serverTypes";
 import logger from "~/lib/log";
 import { nativeGet, nativePost } from "noah-tools";
@@ -530,6 +531,9 @@ export const deregister = () => post<object, DefaultSuccessPayload>("/deregister
 
 export const reportLastLogin = (payload: ReportLastLoginPayload = {}) =>
   post<ReportLastLoginPayload, DefaultSuccessPayload>("/report_last_login", payload);
+
+export const syncRecurringPayments = (payload: SyncRecurringPaymentsPayload) =>
+  post<SyncRecurringPaymentsPayload, DefaultSuccessPayload>("/recurring_payments/sync", payload);
 
 export const checkAppVersion = async (
   clientVersion: string,
