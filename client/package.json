@@ -80,6 +80,7 @@
     "expo": "~57.0.14",
     "expo-application": "~57.0.2",
     "expo-asset": "~57.0.12",
+    "expo-background-task": "57.0.11",
     "expo-build-properties": "~57.0.12",
     "expo-clipboard": "~57.0.1",
     "expo-constants": "~57.0.12",

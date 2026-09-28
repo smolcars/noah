@@ -11,6 +11,9 @@ import {
   occurrenceAt,
   planRecurringExecution,
   resumeRecurringPayment,
+  RETRY_BASE_DELAY_MS,
+  RETRY_MAX_DELAY_MS,
+  retryDelayMs,
   serverScheduleEntries,
   STALE_IN_FLIGHT_MS,
   validateRecurringPaymentInput,
@@ -141,11 +144,31 @@ describe("recurring payment execution policy", () => {
     const retry = applyFailedRun(schedule, plan, "Insufficient balance", true, at);
     expect(retry.status).toBe("active");
     expect(retry.nextOccurrenceIndex).toBe(0);
-    expect(planRecurringExecution(retry, at + 1000).kind).toBe("pay");
+    expect(planRecurringExecution(retry, at + RETRY_BASE_DELAY_MS).kind).toBe("pay");
 
     const stopped = applyFailedRun(schedule, plan, "timeout", false, at);
     expect(stopped.status).toBe("needs_attention");
     expect(planRecurringExecution(stopped, at + 1000)).toEqual({ kind: "idle" });
+  });
+
+  test("automatic retries back off; a manual run retries immediately", () => {
+    const at = local(2026, 2, 1);
+    const plan = planRecurringExecution(schedule, at);
+    const first = applyFailedRun(schedule, plan, "Insufficient balance", true, at);
+
+    expect(planRecurringExecution(first, at + 60_000)).toEqual({ kind: "idle" });
+    expect(planRecurringExecution(first, at + 60_000, { ignoreRetryBackoff: true }).kind).toBe(
+      "pay",
+    );
+
+    const second = applyFailedRun(first, plan, "Insufficient balance", true, at);
+    expect(second.retryNotBefore).toBe(at + 2 * RETRY_BASE_DELAY_MS);
+    expect(retryDelayMs(1)).toBe(RETRY_BASE_DELAY_MS);
+    expect(retryDelayMs(50)).toBe(RETRY_MAX_DELAY_MS);
+
+    const paid = applySuccessfulRun(second, plan, at + 3 * RETRY_BASE_DELAY_MS);
+    expect(paid.retryNotBefore).toBeNull();
+    expect(paid.consecutiveFailures).toBe(0);
   });
 
   test("an interrupted payment is never retried automatically", () => {

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { AppState } from "react-native";
 
 import logger from "~/lib/log";
+import { syncRecurringBackgroundTask } from "~/lib/recurringBackgroundTask";
 import {
   executeDueRecurringPayments,
   hasRecurringPayments,
@@ -24,6 +25,16 @@ export const useRecurringPaymentsRunner = (isReady: boolean) => {
   const hasSchedules = useRecurringPaymentStore(
     (state) => Object.keys(state.schedules).length > 0 || state.serverSyncPending,
   );
+
+  const activeScheduleCount = useRecurringPaymentStore(
+    (state) => Object.values(state.schedules).filter((s) => s.status === "active").length,
+  );
+
+  // Keep the Android WorkManager job registered only while something is active.
+  useEffect(() => {
+    if (!isReady) return;
+    void syncRecurringBackgroundTask();
+  }, [isReady, activeScheduleCount]);
 
   const canRun =
     isReady && isWalletLoaded && !isWalletSuspended && !isBackgroundJobRunning && hasSchedules;

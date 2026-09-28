@@ -41,6 +41,9 @@ Executor guarantees (`client/src/lib/recurringSchedule.ts`, covered by
   never paid in bulk, so a long outage can't drain the wallet.
 - An in-flight marker is persisted before sending. If the app dies mid-payment,
   the schedule moves to `needs_attention` instead of retrying automatically.
+- Retryable failures back off before the next automatic attempt (15 minutes,
+  doubling up to 6 hours) and only the first one triggers a notification.
+  "Run due payments now" retries immediately.
 - Failures that happen before funds could move (wallet not loaded, insufficient
   balance incl. estimated fee, LNURL server unreachable, amount outside the
   LNURL limits) are retried on the next wake-up. Failures during the send itself
@@ -54,10 +57,18 @@ Executor guarantees (`client/src/lib/recurringSchedule.ts`, covered by
    with a due schedule, at most once per hour per user while the payment stays
    due, and stops after 72 hours. The background notification task in
    `client/src/lib/pushNotifications.ts` runs `executeDueRecurringPayments("push")`.
-2. **Foreground** — `useRecurringPaymentsRunner` (mounted in `AppServices`) runs
+2. **Android background job** — while at least one schedule is active,
+   `client/src/lib/recurringBackgroundTask.ts` registers a periodic WorkManager
+   job (`expo-background-task`, minimum interval 15 minutes, requires network).
+   It runs the same executor when the app is not in the foreground, so payments
+   also go through while Noah is closed, without depending on the server. The
+   job is removed when no schedule is active. Timing depends on Android battery
+   optimisation (Doze, OEM restrictions); the Recurring Payments screen links to
+   the app settings so the user can set battery usage to "Unrestricted".
+3. **Foreground** — `useRecurringPaymentsRunner` (mounted in `AppServices`) runs
    due payments on start, every minute while open, and whenever the app becomes
    active.
-3. **Manual** — "Run due payments now" on the Recurring Payments screen.
+4. **Manual** — "Run due payments now" on the Recurring Payments screen.
 
 Local notifications:
 
@@ -97,6 +108,8 @@ Schedules are deleted on `/deregister` and inactive-user deregistration.
 - Fixed sats amounts only (no fiat-denominated amounts yet).
 - No BOLT12 `recurrence` TLV support yet (the spec extension is still in draft);
   offers are paid with the user-defined schedule instead.
-- Android WorkManager fallback (see PR #303) and a self-hosted always-on
-  executor for power users are not included in the MVP.
+- iOS has no equivalent background job yet (BGTaskScheduler needs Info.plist
+  changes); the WorkManager job is Android-only. A self-hosted always-on
+  executor for power users is not included in the MVP. The native wallet worker
+  in PR #303 could later replace the JS job on Android.
 - Schedules are device-local and are not part of encrypted wallet backups yet.

@@ -16,6 +16,8 @@
  *
  * Execution happens:
  * - when a `recurring_payment_due` push wakes the app in the background,
+ * - on Android, from a periodic WorkManager job (`recurringBackgroundTask.ts`)
+ *   that works without the server,
  * - whenever the app comes to the foreground,
  * and local notifications remind the user before a payment and nag them if a
  * payment is overdue (e.g. push was not delivered or the OS killed the task).
@@ -71,7 +73,7 @@ const log = logger("recurringPayments");
 
 const RECURRING_CHANNEL_ID = "recurring-payments";
 
-export type RecurringExecutionTrigger = "push" | "foreground" | "manual";
+export type RecurringExecutionTrigger = "push" | "background" | "foreground" | "manual";
 
 export type RecurringExecutionSummary = {
   paid: number;
@@ -430,7 +432,10 @@ async function runDueRecurringPayments(
   let changed = false;
 
   for (const schedule of schedules) {
-    const plan = planRecurringExecution(schedule, Date.now());
+    // A manual run retries immediately; automatic runs respect the retry backoff.
+    const plan = planRecurringExecution(schedule, Date.now(), {
+      ignoreRetryBackoff: trigger === "manual",
+    });
 
     if (plan.kind === "idle") continue;
 
@@ -470,6 +475,9 @@ async function runDueRecurringPayments(
       );
     } else {
       summary.failed += 1;
+      // Only notify on the first failure (or a manual run) to avoid a
+      // notification on every automatic retry.
+      if (updated.consecutiveFailures > 1 && trigger !== "manual") continue;
       await notifyNow(
         "Recurring payment will retry",
         `${amount} to ${schedule.label} could not be sent yet: ${updated.lastError ?? "unknown error"}`,
