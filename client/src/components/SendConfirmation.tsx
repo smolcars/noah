@@ -24,6 +24,8 @@ type SendConfirmationProps = {
   selectedOnchainSource?: OnchainSendSource | null;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Shown for reusable recipients; opens the recurring payment editor prefilled. */
+  onMakeRecurring?: () => void;
   isConfirmDisabled?: boolean;
   isLoading?: boolean;
   feeEstimate?: BarkFeeEstimate;
@@ -67,6 +69,7 @@ export function SendConfirmation({
   selectedOnchainSource = null,
   onConfirm,
   onCancel,
+  onMakeRecurring,
   isConfirmDisabled = false,
   isLoading = false,
   feeEstimate,
@@ -206,6 +209,16 @@ export function SendConfirmation({
           fullWidth
           testID="send-review-confirm"
         />
+        {onMakeRecurring ? (
+          <NativeNoahSecondaryButton
+            label="Make this a recurring payment"
+            onPress={onMakeRecurring}
+            disabled={isLoading}
+            size="lg"
+            fullWidth
+            testID="send-review-make-recurring"
+          />
+        ) : null}
       </View>
     </View>
   );

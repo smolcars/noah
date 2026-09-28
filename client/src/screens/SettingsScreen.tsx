@@ -60,6 +60,7 @@ type Setting = {
     | "resetRegistration"
     | "backup"
     | "boardArk"
+    | "recurringPayments"
     | "arkInfo"
     | "vtxos"
     | "emergencyExit"
@@ -243,6 +244,8 @@ const SettingsScreen = () => {
       navigation.navigate("BackupSettings");
     } else if (item.id === "boardArk") {
       navigation.navigate("BoardArk");
+    } else if (item.id === "recurringPayments") {
+      navigation.navigate("RecurringPayments");
     } else if (item.id === "arkInfo") {
       navigation.navigate("ArkInfo");
     } else if (item.id === "vtxos") {
@@ -314,6 +317,13 @@ const SettingsScreen = () => {
       title: "Emergency Exit",
       description: "Recover funds if the Ark server is unavailable.",
       isPressable: true,
+    });
+    walletData.push({
+      id: "recurringPayments",
+      title: "Recurring Payments",
+      description: "Schedule automatic weekly or monthly payments, and pause or cancel them.",
+      isPressable: true,
+      testID: "settings-recurring-payments",
     });
     walletData.push({
       id: "backup",
