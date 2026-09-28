@@ -59,9 +59,10 @@ Executor guarantees (`client/src/lib/recurringSchedule.ts`, covered by
    `client/src/lib/pushNotifications.ts` runs `executeDueRecurringPayments("push")`.
 2. **Android background job** — while at least one schedule is active,
    `client/src/lib/recurringBackgroundTask.ts` registers a periodic WorkManager
-   job (`expo-background-task`, minimum interval 15 minutes, requires network).
+   job (`expo-background-task`, once every 24 hours, requires network).
    It runs the same executor when the app is not in the foreground, so payments
-   also go through while Noah is closed, without depending on the server. The
+   also go through while Noah is closed, without depending on the server, at
+   most about a day late (the overdue notification still fires after 2 hours). The
    job is removed when no schedule is active. Timing depends on Android battery
    optimisation (Doze, OEM restrictions); the Recurring Payments screen links to
    the app settings so the user can set battery usage to "Unrestricted".

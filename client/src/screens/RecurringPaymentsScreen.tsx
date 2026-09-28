@@ -202,8 +202,9 @@ const RecurringPaymentsScreen = () => {
           <View className="mb-4 rounded-2xl border border-border bg-card p-4">
             <Text className="font-semibold text-foreground">Runs in the background</Text>
             <Text className="mt-1 text-sm text-muted-foreground">
-              Android checks for due payments about every 15 minutes, even when Noah is closed. For
-              reliable timing, set Noah's battery usage to "Unrestricted" in the app settings.
+              Android checks for due payments about once a day, even when Noah is closed. Opening
+              Noah sends a due payment right away. For reliable timing, set Noah's battery usage to
+              "Unrestricted" in the app settings.
             </Text>
             <View className="mt-3">
               <NativeNoahSecondaryButton

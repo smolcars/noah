@@ -2,8 +2,8 @@
  * Android background execution for recurring payments.
  *
  * Registers a periodic WorkManager job (via expo-background-task) while there
- * are active recurring payments. Android wakes the app roughly every 15
- * minutes or later (depending on battery optimisation, Doze and network), and
+ * are active recurring payments. Android wakes the app about once a day
+ * (later with battery optimisation, Doze or no network), and
  * the job runs the same executor as the push and foreground paths. This works
  * without the server: the push is only a faster, more precise wake-up.
  *
@@ -27,8 +27,12 @@ const log = logger("recurringBackgroundTask");
 
 export const RECURRING_PAYMENTS_BACKGROUND_TASK = "recurring-payments-background-task";
 
-/** WorkManager's minimum period is 15 minutes. */
-const MINIMUM_INTERVAL_MINUTES = 15;
+/**
+ * Once a day keeps the battery cost negligible. A payment that comes due while
+ * Noah is closed is sent within about 24 hours (sooner via push or when the app
+ * is opened), and the overdue notification still fires 2 hours after the due time.
+ */
+const MINIMUM_INTERVAL_MINUTES = 24 * 60;
 
 const isSupported = Platform.OS === "android";
 
