@@ -518,11 +518,40 @@ pub struct HeartbeatNotification {
     pub notification_id: String,
 }
 
+/// Silent push asking the device to execute its locally stored recurring
+/// payments that are due. Carries no amounts or recipients: the device checks
+/// its own schedules and only pays within the policy the user approved.
+#[derive(Debug, Serialize, Deserialize, TS, Clone)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct RecurringPaymentDueNotification {
+    #[ts(type = "number")]
+    pub due_count: u32,
+}
+
+/// One active recurring payment schedule, as known to the server.
+#[derive(Debug, Serialize, Deserialize, TS, Clone)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct RecurringPaymentScheduleEntry {
+    /// Opaque, client-generated id (`[A-Za-z0-9_-]{1,64}`).
+    pub schedule_id: String,
+    /// Next due time as a unix timestamp in seconds.
+    #[ts(type = "number")]
+    pub next_run_at: i64,
+}
+
+/// Replaces the full set of active recurring payment schedules for the user.
+#[derive(Debug, Serialize, Deserialize, TS, Clone)]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub struct SyncRecurringPaymentsPayload {
+    pub schedules: Vec<RecurringPaymentScheduleEntry>,
+}
+
 #[derive(Debug, Clone)]
 pub enum NotificationRequestData {
     Maintenance,
     BackupTrigger,
     Heartbeat(HeartbeatNotification),
+    RecurringPaymentDue(RecurringPaymentDueNotification),
 }
 
 impl NotificationRequestData {
@@ -531,6 +560,7 @@ impl NotificationRequestData {
             NotificationRequestData::Maintenance => "maintenance",
             NotificationRequestData::BackupTrigger => "backup_trigger",
             NotificationRequestData::Heartbeat(_) => "heartbeat",
+            NotificationRequestData::RecurringPaymentDue(_) => "recurring_payment_due",
         }
     }
 
@@ -545,7 +575,8 @@ impl NotificationRequestData {
         match self {
             NotificationRequestData::Maintenance => Some(ReportType::Maintenance),
             NotificationRequestData::BackupTrigger => Some(ReportType::Backup),
-            NotificationRequestData::Heartbeat(_) => None,
+            NotificationRequestData::Heartbeat(_)
+            | NotificationRequestData::RecurringPaymentDue(_) => None,
         }
     }
 
@@ -573,6 +604,9 @@ impl NotificationRequestData {
             NotificationRequestData::Heartbeat(notification) => {
                 Ok(NotificationData::Heartbeat(notification))
             }
+            NotificationRequestData::RecurringPaymentDue(notification) => {
+                Ok(NotificationData::RecurringPaymentDue(notification))
+            }
         }
     }
 }
@@ -587,6 +621,7 @@ pub enum NotificationData {
     LightningClaimRequest(LightningClaimRequestNotification),
     BackupTrigger(BackupTriggerNotification),
     Heartbeat(HeartbeatNotification),
+    RecurringPaymentDue(RecurringPaymentDueNotification),
 }
 
 impl NotificationData {
@@ -611,6 +646,7 @@ impl NotificationData {
             NotificationData::LightningClaimRequest(_) => "lightning_claim_request",
             NotificationData::BackupTrigger(_) => "backup_trigger",
             NotificationData::Heartbeat(_) => "heartbeat",
+            NotificationData::RecurringPaymentDue(_) => "recurring_payment_due",
         }
     }
 
@@ -628,6 +664,7 @@ impl NotificationData {
             NotificationData::Maintenance(n) => n.notification_k1 = k1,
             NotificationData::BackupTrigger(n) => n.notification_k1 = k1,
             NotificationData::Heartbeat(_)
+            | NotificationData::RecurringPaymentDue(_)
             | NotificationData::LightningInvoiceRequest(_)
             | NotificationData::LightningClaimRequest(_) => {}
         }

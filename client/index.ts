@@ -1,5 +1,6 @@
 import { registerRootComponent } from "expo";
 import "~/lib/pushNotifications";
+import "~/lib/recurringBackgroundTask";
 import "react-native-quick-base64";
 import App from "./App";
 

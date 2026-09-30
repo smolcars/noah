@@ -467,7 +467,7 @@ export function useIsOnchainAddressMine(address: string | null) {
   });
 }
 
-const readLightningPayment = async (
+export const readLightningPayment = async (
   paymentPromise: Promise<Result<LightningPayment, Error>>,
 ): Promise<LightningPayment> => {
   const result = await paymentPromise;
@@ -485,7 +485,7 @@ const readLightningPayment = async (
   return result.value;
 };
 
-const sendLightningAddressPayment = async (
+export const sendLightningAddressPayment = async (
   route: LightningAddressPaymentRoute,
   destination: string,
   amountSat: number,

@@ -7,4 +7,5 @@ pub mod mailbox_authorization_repo;
 pub mod migrations;
 pub mod notification_tracking_repo;
 pub mod push_token_repo;
+pub mod recurring_payment_repo;
 pub mod user_repo;
