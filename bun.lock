@@ -7,7 +7,7 @@
     },
     "client": {
       "name": "noah",
-      "version": "0.1.12",
+      "version": "0.1.13",
       "dependencies": {
         "@bottom-tabs/react-navigation": "1.2.0",
         "@expo/ui": "~57.0.11",
@@ -64,7 +64,7 @@
         "react-native-gesture-handler": "2.32.0",
         "react-native-keychain": "10.0.0",
         "react-native-mmkv": "4.3.1",
-        "react-native-nitro-ark": "0.0.142",
+        "react-native-nitro-ark": "0.0.143",
         "react-native-nitro-modules": "0.35.6",
         "react-native-qrcode-svg": "6.3.21",
         "react-native-quick-base64": "3.0.0",
@@ -1533,7 +1533,7 @@
 
     "react-native-mmkv": ["react-native-mmkv@4.3.1", "", { "peerDependencies": { "react": "*", "react-native": "*", "react-native-nitro-modules": "*" } }, "sha512-APyGGaaHtayVgT18dBM8QGGZKr9pGfSTiBwbbPNzhGGfJQSU7awLGRGq879OqYl31HmVks9hOBLCs+qfgacRZg=="],
 
-    "react-native-nitro-ark": ["react-native-nitro-ark@0.0.142", "", { "peerDependencies": { "react": "*", "react-native": "*", "react-native-nitro-modules": "^0.35.6" } }, "sha512-J8oUtYQV+o5umjXChUlS0tG5KkkjYvMu9USvLtzSbDki2/ya3vpXpq0vvR4qB45X83Q804C3MPb64Tq4mTRTNg=="],
+    "react-native-nitro-ark": ["react-native-nitro-ark@0.0.143", "", { "peerDependencies": { "react": "*", "react-native": "*", "react-native-nitro-modules": "^0.35.6" } }, "sha512-GCjDvZp7vcjvnCHnvfXfluwy55sbRn7EraNNwuEH5TYxlpiQerikDYUFKImQ6GqqBL3nj8c4wnHaHbJ1wReaPA=="],
 
     "react-native-nitro-modules": ["react-native-nitro-modules@0.35.6", "", { "peerDependencies": { "react": "*", "react-native": "*" } }, "sha512-3Cb7s+O5tpZ6RdIiPOB/wi3IMfBxD6tl6VDF8gJ5zvM/BEGTWxwMMLjzmWmsYPKekdbYBznF6qp2d2SxixPy8g=="],
 
