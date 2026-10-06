@@ -7,6 +7,7 @@ import {
   createRecurringPayment,
   describeInterval,
   isStillDueForPayment,
+  isStillInFlightFor,
   markInFlight,
   mergeExecutionResult,
   nextRunAtForIndex,
@@ -246,6 +247,17 @@ describe("recurring payment changes while a payment is in progress", () => {
   test("does not send if another run already marked the occurrence in flight", () => {
     const inFlight = markInFlight(schedule, plan.occurrenceIndex, at);
     expect(isStillDueForPayment(inFlight, plan, at + 1000)).toBe(false);
+  });
+
+  test("submits only while the schedule is still active and marked in flight for it", () => {
+    const inFlight = markInFlight(schedule, plan.occurrenceIndex, at);
+    expect(isStillInFlightFor(inFlight, plan.occurrenceIndex)).toBe(true);
+    expect(isStillInFlightFor({ ...inFlight, status: "paused" }, plan.occurrenceIndex)).toBe(false);
+    expect(isStillInFlightFor(undefined, plan.occurrenceIndex)).toBe(false);
+    expect(isStillInFlightFor(schedule, plan.occurrenceIndex)).toBe(false);
+    expect(isStillInFlightFor(inFlight, plan.occurrenceIndex + 1)).toBe(false);
+    const resumed = resumeRecurringPayment({ ...inFlight, status: "paused" }, at + 1000);
+    expect(isStillInFlightFor(resumed, plan.occurrenceIndex)).toBe(false);
   });
 
   test("a payment that finishes after a pause records the run but stays paused", () => {

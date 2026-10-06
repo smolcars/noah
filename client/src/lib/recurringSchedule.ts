@@ -339,6 +339,18 @@ export const isStillDueForPayment = (
 };
 
 /**
+ * Final check right before a transfer is submitted, after the in-flight marker
+ * was saved. True only if the stored schedule still exists, is still active
+ * and is still marked as paying this occurrence. A pause, cancel, resume or
+ * wallet deletion while the payment was being prepared makes this false.
+ */
+export const isStillInFlightFor = (
+  latest: RecurringPayment | undefined,
+  occurrenceIndex: number,
+): latest is RecurringPayment =>
+  !!latest && latest.status === "active" && latest.inFlight?.occurrenceIndex === occurrenceIndex;
+
+/**
  * Combines the result of an execution with the latest stored copy of the
  * schedule, so a pause or cancel made while a payment was in progress wins.
  *

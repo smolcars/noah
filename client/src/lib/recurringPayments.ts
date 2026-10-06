@@ -55,6 +55,7 @@ import {
   applySuccessfulRun,
   createRecurringPayment,
   isStillDueForPayment,
+  isStillInFlightFor,
   markInFlight,
   MAX_RECURRING_PAYMENTS,
   mergeExecutionResult,
@@ -86,6 +87,13 @@ export type RecurringExecutionSummary = {
 };
 
 class RetryableRecurringPaymentError extends Error {}
+
+/**
+ * Thrown right before a transfer would be submitted when the user paused,
+ * cancelled or changed the schedule while the payment was being prepared.
+ * No funds have moved when this is thrown.
+ */
+class RecurringPaymentStoppedError extends Error {}
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -405,18 +413,31 @@ async function preflight(
   return {};
 }
 
-/** The only place a recurring payment moves funds. Uses the stored policy only. */
+/**
+ * The only place a recurring payment moves funds. Uses the stored policy only.
+ *
+ * `beforeSubmit` runs after every asynchronous step (history snapshot, address
+ * validation, ...) and immediately before the native send, with no `await` in
+ * between. It throws `RecurringPaymentStoppedError` if the user stopped the
+ * schedule meanwhile, so nothing is submitted.
+ */
 async function sendPayment(
   schedule: RecurringPayment,
   lightningAddressRoute: LightningAddressPaymentRoute | undefined,
+  beforeSubmit: () => void,
 ): Promise<void> {
   switch (schedule.destinationType) {
     case "ark": {
-      const result = await sendArkoorPayment(schedule.destination, schedule.amountSat);
+      const result = await sendArkoorPayment(
+        schedule.destination,
+        schedule.amountSat,
+        beforeSubmit,
+      );
       if (result.isErr()) throw result.error;
       return;
     }
     case "offer": {
+      beforeSubmit();
       await readLightningPayment(payLightningOffer(schedule.destination, schedule.amountSat));
       return;
     }
@@ -429,6 +450,7 @@ async function sendPayment(
         schedule.destination,
         schedule.amountSat,
         schedule.comment || null,
+        beforeSubmit,
       );
       return;
     }
@@ -437,6 +459,21 @@ async function sendPayment(
       throw new Error(`Unsupported recurring destination: ${String(_exhaustive)}`);
     }
   }
+}
+
+/**
+ * Removes our in-flight marker after a payment was stopped before submitting,
+ * so a later resume isn't mistaken for an interrupted payment. Keeps the
+ * user's pause; a removed schedule is not re-created.
+ */
+async function clearInFlight(id: string, occurrenceIndex: number) {
+  const current = getSchedule(id);
+  if (!current) {
+    await cancelScheduledNotifications(id);
+    return;
+  }
+  if (current.inFlight?.occurrenceIndex !== occurrenceIndex) return;
+  await persist({ ...current, inFlight: null, updatedAt: Date.now() });
 }
 
 /** Returns the updated schedule, or null if nothing was attempted. */
@@ -466,9 +503,22 @@ async function executeOne(
   const inFlight = markInFlight(latest, plan.occurrenceIndex, Date.now());
   useRecurringPaymentStore.getState().upsertSchedule(inFlight);
 
+  // Sending still awaits (history snapshot, address validation) before the
+  // transfer is submitted, so check once more right before submitting.
+  const beforeSubmit = () => {
+    if (!isStillInFlightFor(getSchedule(schedule.id), plan.occurrenceIndex)) {
+      throw new RecurringPaymentStoppedError("Recurring payment was stopped before sending");
+    }
+  };
+
   try {
-    await sendPayment(inFlight, lightningAddressRoute);
+    await sendPayment(inFlight, lightningAddressRoute, beforeSubmit);
   } catch (e) {
+    if (e instanceof RecurringPaymentStoppedError) {
+      log.i("Recurring payment stopped before submitting, not sending", [schedule.id]);
+      await clearInFlight(schedule.id, plan.occurrenceIndex);
+      return null;
+    }
     // Ambiguous: the payment may have partially gone through.
     return applyFailedRun(inFlight, plan, errorMessage(e), false, Date.now());
   }

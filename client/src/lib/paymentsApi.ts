@@ -200,13 +200,28 @@ export const validateArkoorPaymentAddress = async (
   });
 };
 
+/**
+ * Called right before a payment is handed to the native wallet, after every
+ * other asynchronous step. Throw to stop the payment before any funds move.
+ */
+export type BeforeSubmitPayment = () => void;
+
 export const sendArkoorPayment = async (
   destination: string,
   amountSat: number,
+  beforeSubmit?: BeforeSubmitPayment,
 ): Promise<Result<ArkoorPaymentResult, Error>> => {
   const validationResult = await validateArkoorPaymentAddress(destination);
   if (validationResult.isErr()) {
     return err(validationResult.error);
+  }
+
+  if (beforeSubmit) {
+    try {
+      beforeSubmit();
+    } catch (error) {
+      return err(error instanceof Error ? error : new Error(String(error)));
+    }
   }
 
   return ResultAsync.fromPromise(sendArkoorPaymentNitro(destination, amountSat), (error) => {

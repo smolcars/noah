@@ -49,6 +49,14 @@ Executor guarantees (`client/src/lib/recurringSchedule.ts`, covered by
   LNURL limits) are retried on the next wake-up. Failures during the send itself
   are treated as ambiguous and pause the schedule (`needs_attention`).
 - Resuming a paused schedule skips occurrences that passed while it was paused.
+- Pausing or cancelling while a payment is being prepared stops it. The stored
+  schedule is checked again immediately before the transfer is handed to the
+  native wallet, after every other asynchronous step (history snapshot, Ark
+  address validation). If it is no longer active and marked in flight for this
+  occurrence, nothing is sent and no failure is recorded (covered by
+  `client/tests/integration/recurringPaymentsExecutor.test.js`). A transfer that
+  was already submitted may still finish, but it never turns the schedule back
+  on.
 
 ## Execution paths
 
