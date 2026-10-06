@@ -27,6 +27,8 @@ import { queryClient } from "~/queryClient";
 import { useTransactionStore } from "../store/transactionStore";
 import { useBackupStore } from "~/store/backupStore";
 import { useEsploraStore } from "~/store/esploraStore";
+import { clearAllRecurringPayments } from "~/lib/recurringPayments";
+import { syncRecurringBackgroundTask } from "~/lib/recurringBackgroundTask";
 import { ResultAsync } from "neverthrow";
 import logger from "~/lib/log";
 
@@ -369,6 +371,12 @@ export function useDeleteWallet() {
       useServerStore.getState().resetRegistration();
       useBackupStore.getState().reset();
       useEsploraStore.getState().reset();
+
+      // Clear local recurring payment schedules and their reminders, then drop
+      // the background task, so they can never spend from a new or restored
+      // wallet created without restarting the app.
+      await clearAllRecurringPayments();
+      await syncRecurringBackgroundTask();
 
       // Clear query cache
       queryClient.clear();

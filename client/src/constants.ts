@@ -26,6 +26,10 @@ export const CACHES_DIRECTORY_PATH = RNFSTurbo.CachesDirectoryPath;
 export const shouldUseUnifiedPush = () =>
   PLATFORM === "android" && Device.isDevice && !isGooglePlayServicesAvailable();
 
+// The native UnifiedPush handler can't process recurring payment wake-ups yet,
+// so recurring payments are disabled for those users in this MVP.
+export const isRecurringPaymentsSupported = () => !shouldUseUnifiedPush();
+
 const REGTEST_SERVER_URL = process.env.EXPO_PUBLIC_REGTEST_SERVER_URL
   ? process.env.EXPO_PUBLIC_REGTEST_SERVER_URL
   : PLATFORM === "android"

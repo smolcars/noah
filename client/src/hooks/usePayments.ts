@@ -28,6 +28,7 @@ import {
   estimateOffboardAllFee,
   estimateBoardOffchainFee,
   estimateStandardOnchainTxFee,
+  type BeforeSubmitPayment,
   validateArkoorPaymentAddress,
   type StandardOnchainWalletFeeEstimate,
   history,
@@ -467,7 +468,7 @@ export function useIsOnchainAddressMine(address: string | null) {
   });
 }
 
-const readLightningPayment = async (
+export const readLightningPayment = async (
   paymentPromise: Promise<Result<LightningPayment, Error>>,
 ): Promise<LightningPayment> => {
   const result = await paymentPromise;
@@ -485,11 +486,12 @@ const readLightningPayment = async (
   return result.value;
 };
 
-const sendLightningAddressPayment = async (
+export const sendLightningAddressPayment = async (
   route: LightningAddressPaymentRoute,
   destination: string,
   amountSat: number,
   comment: string | null,
+  beforeSubmit?: BeforeSubmitPayment,
 ): Promise<ArkoorPaymentWithMovement | LightningPayment> => {
   const amountMsat = amountSat * 1000;
   if (amountMsat < route.minSendableMsat || amountMsat > route.maxSendableMsat) {
@@ -508,7 +510,7 @@ const sendLightningAddressPayment = async (
       ]);
     }
 
-    const result = await sendArkoorPayment(route.destination, amountSat);
+    const result = await sendArkoorPayment(route.destination, amountSat, beforeSubmit);
     if (result.isErr()) {
       throw result.error;
     }
@@ -536,6 +538,7 @@ const sendLightningAddressPayment = async (
   }
 
   log.d("Paying via standard Lightning Address flow");
+  beforeSubmit?.();
   return readLightningPayment(payLightningAddress(destination, amountSat, comment || ""));
 };
 

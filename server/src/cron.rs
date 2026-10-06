@@ -4,12 +4,15 @@ use crate::{
         backup_repo::BackupRepository, fiat_rate_repo::FiatRateRepository,
         heartbeat_repo::HeartbeatRepository, job_status_repo::JobStatusRepository,
         mailbox_authorization_repo::MailboxAuthorizationRepository,
-        push_token_repo::PushTokenRepository, user_repo::UserRepository,
+        push_token_repo::PushTokenRepository, recurring_payment_repo::RecurringPaymentRepository,
+        user_repo::UserRepository,
     },
     fiat_rates,
     notification_coordinator::{NotificationCoordinator, NotificationRequest},
     s3_client::S3BackupClient,
-    types::{HeartbeatNotification, NotificationRequestData, UserStatus},
+    types::{
+        HeartbeatNotification, NotificationRequestData, RecurringPaymentDueNotification, UserStatus,
+    },
 };
 use expo_push_notification_client::Priority;
 use tokio_cron_scheduler::{Job, JobScheduler};
@@ -23,6 +26,12 @@ const STALE_BACKUP_UPLOAD_TIMEOUT_MINUTES: i64 = 30;
 const SUPERSEDED_BACKUP_UPLOAD_TIMEOUT_MINUTES: i64 = 20;
 const STALE_BACKUP_UPLOAD_SWEEP_SCHEDULE: &str = "every 5 minutes";
 const FIAT_RATE_REFRESH_LOCK_ID: i64 = 2025110501;
+const RECURRING_PAYMENT_SWEEP_SCHEDULE: &str = "every 5 minutes";
+/// Re-send the wake-up push at most once per hour while a payment stays due.
+pub(crate) const RECURRING_PAYMENT_RENOTIFY_MINUTES: i64 = 60;
+/// Stop pushing for payments that are overdue for more than 3 days; the device
+/// shows a local reminder asking the user to open the app instead.
+pub(crate) const RECURRING_PAYMENT_MAX_OVERDUE_HOURS: i64 = 72;
 
 pub async fn send_backup_notifications(app_state: AppState) -> anyhow::Result<()> {
     let backup_repo = BackupRepository::new(&app_state.db_pool);
@@ -91,6 +100,55 @@ pub async fn send_heartbeat_notifications(app_state: AppState) -> anyhow::Result
     Ok(())
 }
 
+/// Wakes devices that have recurring payments due.
+///
+/// The push is silent and carries only a count. The device executes its own
+/// locally stored, user-approved schedules; the server cannot move funds.
+pub async fn send_recurring_payment_notifications(app_state: AppState) -> anyhow::Result<()> {
+    let repo = RecurringPaymentRepository::new(&app_state.db_pool);
+    let now = chrono::Utc::now();
+    let due_users = repo
+        .find_due_users(
+            now,
+            RECURRING_PAYMENT_RENOTIFY_MINUTES,
+            RECURRING_PAYMENT_MAX_OVERDUE_HOURS,
+        )
+        .await?;
+
+    if due_users.is_empty() {
+        return Ok(());
+    }
+
+    tracing::info!(
+        job = "recurring_payments",
+        user_count = due_users.len(),
+        "sending recurring payment wake-ups"
+    );
+
+    let coordinator = NotificationCoordinator::new(app_state.clone());
+    for user in due_users {
+        let request = NotificationRequest {
+            // Payments are time-sensitive, so bypass normal spacing rules.
+            priority: Priority::High,
+            data: NotificationRequestData::RecurringPaymentDue(RecurringPaymentDueNotification {
+                due_count: u32::try_from(user.due_count).unwrap_or(u32::MAX),
+            }),
+            target_pubkey: Some(user.pubkey.clone()),
+        };
+
+        if let Err(e) = coordinator.send_notification(request).await {
+            tracing::error!(job = "recurring_payments", pubkey = %user.pubkey, error = %e, "notification failed");
+            continue;
+        }
+
+        if let Err(e) = repo.mark_due_notified(&user.pubkey, now).await {
+            tracing::error!(job = "recurring_payments", pubkey = %user.pubkey, error = %e, "failed to mark schedules notified");
+        }
+    }
+
+    Ok(())
+}
+
 pub async fn check_and_deregister_inactive_users(app_state: AppState) -> anyhow::Result<()> {
     let heartbeat_repo = HeartbeatRepository::new(&app_state.db_pool);
 
@@ -131,6 +189,11 @@ pub async fn check_and_deregister_inactive_users(app_state: AppState) -> anyhow:
 
         if let Err(e) = HeartbeatRepository::delete_by_pubkey_tx(&mut tx, &pubkey).await {
             tracing::error!(job = "deregister_inactive", pubkey = %pubkey, step = "heartbeat", error = %e, "delete failed");
+            continue;
+        }
+
+        if let Err(e) = RecurringPaymentRepository::delete_by_pubkey(&mut tx, &pubkey).await {
+            tracing::error!(job = "deregister_inactive", pubkey = %pubkey, step = "recurring_payments", error = %e, "delete failed");
             continue;
         }
 
@@ -309,6 +372,7 @@ pub async fn cron_scheduler(
         stale_backup_upload_cleanup_schedule = %STALE_BACKUP_UPLOAD_SWEEP_SCHEDULE,
         stale_backup_upload_timeout_minutes = STALE_BACKUP_UPLOAD_TIMEOUT_MINUTES,
         superseded_backup_upload_timeout_minutes = SUPERSEDED_BACKUP_UPLOAD_TIMEOUT_MINUTES,
+        recurring_payment_schedule = %RECURRING_PAYMENT_SWEEP_SCHEDULE,
         "scheduler initialized"
     );
 
@@ -410,6 +474,17 @@ pub async fn cron_scheduler(
             })
         })?;
     sched.add(stale_backup_upload_cleanup).await?;
+
+    let recurring_payment_state = app_state.clone();
+    let recurring_payment_job = Job::new_async(RECURRING_PAYMENT_SWEEP_SCHEDULE, move |_, _| {
+        let app_state = recurring_payment_state.clone();
+        Box::pin(async move {
+            if let Err(e) = send_recurring_payment_notifications(app_state).await {
+                tracing::error!(job = "recurring_payments", error = %e, "job failed");
+            }
+        })
+    })?;
+    sched.add(recurring_payment_job).await?;
 
     // Redis keepalive to prevent Upstash idle connection timeout
     let keepalive_app_state = app_state.clone();

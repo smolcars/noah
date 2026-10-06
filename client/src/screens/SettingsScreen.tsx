@@ -10,7 +10,7 @@ import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { useWalletStore } from "../store/walletStore";
 import { useBiometrics } from "../hooks/useBiometrics";
-import { PLATFORM, shouldUseUnifiedPush } from "../constants";
+import { isRecurringPaymentsSupported, PLATFORM, shouldUseUnifiedPush } from "../constants";
 import { useServerStore } from "../store/serverStore";
 import { useTransactionStore } from "../store/transactionStore";
 import { Input } from "../components/ui/input";
@@ -60,6 +60,7 @@ type Setting = {
     | "resetRegistration"
     | "backup"
     | "boardArk"
+    | "recurringPayments"
     | "arkInfo"
     | "vtxos"
     | "emergencyExit"
@@ -243,6 +244,8 @@ const SettingsScreen = () => {
       navigation.navigate("BackupSettings");
     } else if (item.id === "boardArk") {
       navigation.navigate("BoardArk");
+    } else if (item.id === "recurringPayments") {
+      navigation.navigate("RecurringPayments");
     } else if (item.id === "arkInfo") {
       navigation.navigate("ArkInfo");
     } else if (item.id === "vtxos") {
@@ -315,6 +318,17 @@ const SettingsScreen = () => {
       description: "Recover funds if the Ark server is unavailable.",
       isPressable: true,
     });
+    // Hidden for UnifiedPush users: their push handler can't wake Noah for
+    // recurring payments yet.
+    if (isRecurringPaymentsSupported()) {
+      walletData.push({
+        id: "recurringPayments",
+        title: "Recurring Payments",
+        description: "Schedule automatic weekly or monthly payments, and pause or cancel them.",
+        isPressable: true,
+        testID: "settings-recurring-payments",
+      });
+    }
     walletData.push({
       id: "backup",
       title: "Backup & Restore",

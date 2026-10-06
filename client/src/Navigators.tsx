@@ -40,6 +40,8 @@ import CurrencySettingsScreen from "~/screens/CurrencySettingsScreen";
 import BitcoinUnitSettingsScreen from "~/screens/BitcoinUnitSettingsScreen";
 import EsploraSettingsScreen from "~/screens/EsploraSettingsScreen";
 import BoardArkScreen from "~/screens/BoardArkScreen";
+import RecurringPaymentsScreen from "~/screens/RecurringPaymentsScreen";
+import RecurringPaymentEditorScreen from "~/screens/RecurringPaymentEditorScreen";
 import WalletLoader from "~/components/WalletLoader";
 import { useWalletStore } from "~/store/walletStore";
 import { useServerStore } from "~/store/serverStore";
@@ -90,6 +92,10 @@ export type SettingsStackParamList = {
   LightningAddress: { fromOnboarding?: boolean };
   BackupSettings: undefined;
   BoardArk: undefined;
+  RecurringPayments: undefined;
+  RecurringPaymentEditor:
+    | { destination?: string; amountSat?: number; comment?: string }
+    | undefined;
   ArkInfo: undefined;
   ExportDatabase: undefined;
   Feedback: undefined;
@@ -174,6 +180,16 @@ const SettingsStackNav = () => (
       options={{ animation: "default" }}
     />
     <Stack.Screen name="BoardArk" component={BoardArkScreen} options={{ animation: "default" }} />
+    <Stack.Screen
+      name="RecurringPayments"
+      component={RecurringPaymentsScreen}
+      options={{ animation: "default" }}
+    />
+    <Stack.Screen
+      name="RecurringPaymentEditor"
+      component={RecurringPaymentEditorScreen}
+      options={{ animation: "default" }}
+    />
     <Stack.Screen name="ArkInfo" component={ArkInfoScreen} options={{ animation: "default" }} />
     <Stack.Screen
       name="ExportDatabase"

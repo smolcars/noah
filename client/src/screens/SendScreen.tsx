@@ -1,4 +1,4 @@
-import { useIsFocused } from "@react-navigation/native";
+import { useIsFocused, useNavigation, type NavigationProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { useEffect } from "react";
 
@@ -14,6 +14,9 @@ import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
 import { useSendScreen } from "~/hooks/useSendScreen";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import type { OnchainSendSource } from "~/lib/paymentsApi";
+import { resolveRecurringDestination } from "~/lib/recurringPayments";
+import { isRecurringPaymentsSupported } from "~/constants";
+import type { TabParamList } from "~/Navigators";
 import {
   getDestinationLabel,
   getOnchainSourceLabel,
@@ -23,6 +26,7 @@ import {
 
 const SendScreen = () => {
   const isFocused = useIsFocused();
+  const navigation = useNavigation<NavigationProp<TabParamList>>();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const {
     stage,
@@ -167,6 +171,24 @@ const SendScreen = () => {
       ? paymentRailOptions.map(getSendRailLabel).join(" · ")
       : getDestinationLabel(destinationType);
 
+  const recurringDestination =
+    isMaxSend || !isRecurringPaymentsSupported() ? null : resolveRecurringDestination(destination);
+  const handleMakeRecurring =
+    recurringDestination?.isOk() && confirmationAmountSat > 0
+      ? () => {
+          const prefill = {
+            destination: recurringDestination.value.destination,
+            amountSat: confirmationAmountSat,
+            comment,
+          };
+          handleCancelConfirmation();
+          navigation.navigate("Home", {
+            screen: "Settings",
+            params: { screen: "RecurringPaymentEditor", params: prefill },
+          });
+        }
+      : undefined;
+
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
       <SendStageTransition direction={stageDirection} stage={stage}>
@@ -277,6 +299,7 @@ const SendScreen = () => {
           selectedOnchainSource={selectedOnchainSource}
           onConfirm={handleConfirmSend}
           onCancel={handleCancelConfirmation}
+          onMakeRecurring={handleMakeRecurring}
           isConfirmDisabled={
             isOnchainSourceSelectionRequired ||
             isConfirmationAmountInvalid ||
