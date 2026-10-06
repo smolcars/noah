@@ -196,6 +196,34 @@ async fn test_nip05_request_omits_unlinked_and_inactive_users() {
 
 #[tracing_test::traced_test]
 #[tokio::test]
+async fn test_lnurlp_request_cors_preflight() {
+    let (app, _app_state, _guard) = setup_public_test_app().await;
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::OPTIONS)
+                .uri("/.well-known/lnurlp/test")
+                .header(http::header::ORIGIN, "https://lightningdecoder.com")
+                .header(http::header::ACCESS_CONTROL_REQUEST_METHOD, "GET")
+                .header(http::header::ACCESS_CONTROL_REQUEST_HEADERS, "content-type")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    for (header, value) in [
+        (http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*"),
+        (http::header::ACCESS_CONTROL_ALLOW_METHODS, "GET"),
+        (http::header::ACCESS_CONTROL_ALLOW_HEADERS, "*"),
+    ] {
+        assert_eq!(response.headers().get(header).unwrap(), value);
+    }
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
 async fn test_lnurlp_request_default() {
     let (app, app_state, _guard) = setup_public_test_app().await;
     let (_, ark_address) = test_ark_address(0x11);
@@ -213,6 +241,7 @@ async fn test_lnurlp_request_default() {
             Request::builder()
                 .method(http::Method::GET)
                 .uri("/.well-known/lnurlp/test")
+                .header(http::header::ORIGIN, "https://bitcoin.psycarlo.com")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -220,6 +249,12 @@ async fn test_lnurlp_request_default() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response
+            .headers()
+            .get(http::header::ACCESS_CONTROL_ALLOW_ORIGIN),
+        Some(&http::HeaderValue::from_static("*"))
+    );
 
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let res: LnurlpDefaultResponse = serde_json::from_slice(&body).unwrap();
@@ -392,6 +427,7 @@ async fn test_lnurlp_invoice_request_uses_barkd_without_waking_device() {
             Request::builder()
                 .method(http::Method::GET)
                 .uri("/.well-known/lnurlp/test?amount=330000")
+                .header(http::header::ORIGIN, "https://lightningdecoder.com")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -399,6 +435,12 @@ async fn test_lnurlp_invoice_request_uses_barkd_without_waking_device() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response
+            .headers()
+            .get(http::header::ACCESS_CONTROL_ALLOW_ORIGIN),
+        Some(&http::HeaderValue::from_static("*"))
+    );
 
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let res: LnurlpInvoiceResponse = serde_json::from_slice(&body).unwrap();
@@ -580,6 +622,7 @@ async fn test_lnurlp_request_rejects_deregistered_user() {
             Request::builder()
                 .method(http::Method::GET)
                 .uri("/.well-known/lnurlp/test")
+                .header(http::header::ORIGIN, "https://lightningdecoder.com")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -587,6 +630,12 @@ async fn test_lnurlp_request_rejects_deregistered_user() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(
+        response
+            .headers()
+            .get(http::header::ACCESS_CONTROL_ALLOW_ORIGIN),
+        Some(&http::HeaderValue::from_static("*"))
+    );
 
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let err: ApiErrorResponse = serde_json::from_slice(&body).unwrap();

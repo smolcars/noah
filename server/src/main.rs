@@ -1,7 +1,7 @@
 use axum::{
     Router,
     extract::DefaultBodyLimit,
-    http::StatusCode,
+    http::{Method, StatusCode},
     middleware,
     routing::{get, post},
 };
@@ -17,6 +17,7 @@ use sentry::integrations::{
     tracing::EventFilter,
 };
 use std::{net::SocketAddr, sync::Arc};
+use tower_http::cors::{Any, CorsLayer};
 
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -87,6 +88,20 @@ pub struct AppStruct {
     pub email_client: EmailClient,
     pub maintenance_store: MaintenanceStore,
     pub barkd_invoice_provider: Option<Arc<dyn ForwardingInvoiceProvider>>,
+}
+
+fn lnurlp_router() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/.well-known/lnurlp/{username}",
+            get(lnurlp_request).layer(rate_limit::create_lnurl_rate_limiter()),
+        )
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods([Method::GET])
+                .allow_headers(Any),
+        )
 }
 
 fn spawn_barkd_startup_probe(provider: Option<Arc<dyn ForwardingInvoiceProvider>>) {
@@ -283,7 +298,6 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
     let public_rate_limiter = rate_limit::create_public_rate_limiter();
     let nip05_rate_limiter = rate_limit::create_public_rate_limiter();
     let auth_login_rate_limiter = rate_limit::create_public_rate_limiter();
-    let lnurl_rate_limiter = rate_limit::create_lnurl_rate_limiter();
     let auth_rate_limiter = rate_limit::create_auth_rate_limiter();
     let fiat_rate_limiter = rate_limit::create_fiat_rate_limiter();
 
@@ -360,15 +374,10 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
 
     // Public well-known routes have independent rate limiters because LNURL creates durable
     // wallet actions while NIP-05 performs a read-only identity lookup.
-    let lnurl_router = Router::new()
-        .route(
-            "/.well-known/lnurlp/{username}",
-            get(lnurlp_request).layer(lnurl_rate_limiter),
-        )
-        .route(
-            "/.well-known/nostr.json",
-            get(nip05_request).layer(nip05_rate_limiter),
-        );
+    let lnurl_router = lnurlp_router().route(
+        "/.well-known/nostr.json",
+        get(nip05_request).layer(nip05_rate_limiter),
+    );
 
     let app = Router::new()
         .route("/", get(|| async { StatusCode::NO_CONTENT }))
