@@ -6,7 +6,9 @@ import {
   applySuccessfulRun,
   createRecurringPayment,
   describeInterval,
+  isStillDueForPayment,
   markInFlight,
+  mergeExecutionResult,
   nextRunAtForIndex,
   occurrenceAt,
   planRecurringExecution,
@@ -189,11 +191,95 @@ describe("recurring payment execution policy", () => {
     expect(planRecurringExecution(resumed, local(2026, 3, 6))).toEqual({ kind: "idle" });
   });
 
+  test("resuming during a retry wait still skips the overdue payment", () => {
+    // 09:00 payment fails and a retry is set for 09:15.
+    const dueAt = local(2026, 1, 31, 9, 0);
+    const plan = planRecurringExecution(schedule, dueAt);
+    const failed = applyFailedRun(schedule, plan, "Insufficient balance", true, dueAt);
+    expect(failed.retryNotBefore).toBe(dueAt + RETRY_BASE_DELAY_MS);
+
+    // Paused at 09:01, resumed at 09:02.
+    const paused = { ...failed, status: "paused" };
+    const resumeAt = local(2026, 1, 31, 9, 2);
+    const resumed = resumeRecurringPayment(paused, resumeAt);
+
+    expect(resumed.status).toBe("active");
+    expect(resumed.retryNotBefore).toBeNull();
+    expect(resumed.nextOccurrenceIndex).toBe(1);
+    expect(resumed.nextRunAt).toBe(local(2026, 2, 28, 9, 0));
+    // The runner must not immediately attempt the skipped 09:00 payment.
+    expect(planRecurringExecution(resumed, resumeAt)).toEqual({ kind: "idle" });
+    expect(planRecurringExecution(resumed, resumeAt, { ignoreRetryBackoff: true })).toEqual({
+      kind: "idle",
+    });
+  });
+
   test("only active schedules are shared with the server, without amounts or recipients", () => {
     const entries = serverScheduleEntries([schedule, { ...schedule, id: "p", status: "paused" }]);
     expect(entries).toEqual([
       { schedule_id: "rent", next_run_at: Math.floor(schedule.startAt / 1000) },
     ]);
     expect(Object.keys(entries[0])).toEqual(["schedule_id", "next_run_at"]);
+  });
+});
+
+describe("recurring payment changes while a payment is in progress", () => {
+  const schedule = createRecurringPayment("rent", baseInput(), local(2026, 1, 1));
+  const at = local(2026, 2, 1);
+  const plan = planRecurringExecution(schedule, at);
+
+  test("sends only if the latest stored schedule still plans the same payment", () => {
+    expect(isStillDueForPayment(schedule, plan, at + 1000)).toBe(true);
+  });
+
+  test("does not send after a pause, cancel or wallet deletion during the checks", () => {
+    expect(isStillDueForPayment({ ...schedule, status: "paused" }, plan, at + 1000)).toBe(false);
+    expect(isStillDueForPayment(undefined, plan, at + 1000)).toBe(false);
+  });
+
+  test("does not send after a pause and resume moved past the occurrence", () => {
+    const resumed = resumeRecurringPayment({ ...schedule, status: "paused" }, at + 1000);
+    expect(resumed.status).toBe("active");
+    expect(isStillDueForPayment(resumed, plan, at + 2000)).toBe(false);
+  });
+
+  test("does not send if another run already marked the occurrence in flight", () => {
+    const inFlight = markInFlight(schedule, plan.occurrenceIndex, at);
+    expect(isStillDueForPayment(inFlight, plan, at + 1000)).toBe(false);
+  });
+
+  test("a payment that finishes after a pause records the run but stays paused", () => {
+    const inFlight = markInFlight(schedule, plan.occurrenceIndex, at);
+    const pausedDuringSend = { ...inFlight, status: "paused" };
+    const result = applySuccessfulRun(inFlight, plan, at + 5000);
+    expect(result.status).toBe("active");
+
+    const merged = mergeExecutionResult(pausedDuringSend, result);
+    expect(merged.status).toBe("paused");
+    expect(merged.inFlight).toBeNull();
+    expect(merged.occurrencesPaid).toBe(1);
+    expect(merged.nextOccurrenceIndex).toBe(1);
+    expect(merged.runs[0].status).toBe("success");
+    expect(planRecurringExecution(merged, local(2026, 3, 1))).toEqual({ kind: "idle" });
+    expect(serverScheduleEntries([merged])).toEqual([]);
+  });
+
+  test("a payment that finishes after a cancel does not re-create the schedule", () => {
+    const result = applySuccessfulRun(markInFlight(schedule, 0, at), plan, at + 5000);
+    expect(mergeExecutionResult(undefined, result)).toBeNull();
+  });
+
+  test("a failure after a pause keeps it stopped, and needs-attention wins", () => {
+    const paused = { ...schedule, status: "paused" };
+    const retryable = applyFailedRun(schedule, plan, "Insufficient balance", true, at);
+    expect(mergeExecutionResult(paused, retryable).status).toBe("paused");
+
+    const ambiguous = applyFailedRun(schedule, plan, "timeout", false, at);
+    expect(mergeExecutionResult(paused, ambiguous).status).toBe("needs_attention");
+  });
+
+  test("results for a schedule that stayed active are saved unchanged", () => {
+    const result = applySuccessfulRun(schedule, plan, at);
+    expect(mergeExecutionResult(schedule, result)).toEqual(result);
   });
 });

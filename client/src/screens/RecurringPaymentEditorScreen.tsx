@@ -23,6 +23,7 @@ import {
 } from "~/lib/recurringPayments";
 import { describeInterval, MAX_CUSTOM_INTERVAL_DAYS, occurrenceAt } from "~/lib/recurringSchedule";
 import type { RecurringInterval } from "~/types/recurringPayment";
+import { isRecurringPaymentsSupported } from "~/constants";
 
 type Frequency = "weekly" | "monthly" | "custom";
 type EndMode = "never" | "date" | "count";
@@ -68,6 +69,9 @@ const FIELD_ERRORS: Record<string, string> = {
   end: "The end date must be after the first payment.",
   occurrences: "Enter how many payments should be made.",
 };
+
+const UNSUPPORTED_MESSAGE =
+  "Recurring payments aren't available on devices that use UnifiedPush yet.";
 
 const SectionLabel = ({ children }: { children: string }) => (
   <Text className="mb-2 mt-5 text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
@@ -164,7 +168,9 @@ const RecurringPaymentEditorScreen = () => {
       setError(
         result.error.kind === "limit"
           ? "You've reached the maximum number of recurring payments."
-          : (FIELD_ERRORS[result.error.field] ?? "Invalid recurring payment"),
+          : result.error.kind === "unsupported"
+            ? UNSUPPORTED_MESSAGE
+            : (FIELD_ERRORS[result.error.field] ?? "Invalid recurring payment"),
       );
       return;
     }
@@ -182,6 +188,24 @@ const RecurringPaymentEditorScreen = () => {
     : recipient.trim()
       ? resolvedDestination.error
       : "Ark address, Lightning address or BOLT12 offer";
+
+  if (!isRecurringPaymentsSupported()) {
+    return (
+      <NoahSafeAreaView className="flex-1 bg-background">
+        <View className="flex-row items-center mb-4 mt-4 px-4">
+          <NativeNoahBackButton
+            onPress={() => navigation.goBack()}
+            className="mr-3"
+            testID="recurring-editor-back-button"
+          />
+          <Text className="text-2xl font-bold text-foreground">Recurring payments</Text>
+        </View>
+        <Text className="px-4 text-muted-foreground" testID="recurring-editor-unsupported">
+          {UNSUPPORTED_MESSAGE}
+        </Text>
+      </NoahSafeAreaView>
+    );
+  }
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">

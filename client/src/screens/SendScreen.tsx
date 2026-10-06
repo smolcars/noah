@@ -15,6 +15,7 @@ import { useSendScreen } from "~/hooks/useSendScreen";
 import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import type { OnchainSendSource } from "~/lib/paymentsApi";
 import { resolveRecurringDestination } from "~/lib/recurringPayments";
+import { isRecurringPaymentsSupported } from "~/constants";
 import type { TabParamList } from "~/Navigators";
 import {
   getDestinationLabel,
@@ -170,7 +171,8 @@ const SendScreen = () => {
       ? paymentRailOptions.map(getSendRailLabel).join(" · ")
       : getDestinationLabel(destinationType);
 
-  const recurringDestination = isMaxSend ? null : resolveRecurringDestination(destination);
+  const recurringDestination =
+    isMaxSend || !isRecurringPaymentsSupported() ? null : resolveRecurringDestination(destination);
   const handleMakeRecurring =
     recurringDestination?.isOk() && confirmationAmountSat > 0
       ? () => {

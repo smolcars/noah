@@ -322,6 +322,42 @@ export const applyStaleInFlight = (schedule: RecurringPayment, now: number): Rec
 });
 
 /**
+ * Re-checks a schedule right before funds move. The executor plans a payment,
+ * then runs slow checks (wallet, balance, recipient). If the user paused,
+ * resumed, cancelled or deleted the schedule in the meantime, the latest stored
+ * copy no longer plans the same occurrence and nothing may be sent.
+ */
+export const isStillDueForPayment = (
+  latest: RecurringPayment | undefined,
+  plan: Extract<RecurringExecutionPlan, { kind: "pay" }>,
+  now: number,
+): latest is RecurringPayment => {
+  if (!latest) return false;
+  // The original plan already respected (or deliberately ignored) the backoff.
+  const current = planRecurringExecution(latest, now, { ignoreRetryBackoff: true });
+  return current.kind === "pay" && current.occurrenceIndex === plan.occurrenceIndex;
+};
+
+/**
+ * Combines the result of an execution with the latest stored copy of the
+ * schedule, so a pause or cancel made while a payment was in progress wins.
+ *
+ * - Removed (cancelled or wallet deleted): returns null, the schedule must not
+ *   be re-created.
+ * - No longer active (e.g. paused): the run is recorded, but the result can't
+ *   turn the schedule back on. A stronger stop from the result
+ *   (`needs_attention` / `completed`) is kept.
+ */
+export const mergeExecutionResult = (
+  latest: RecurringPayment | undefined,
+  result: RecurringPayment,
+): RecurringPayment | null => {
+  if (!latest) return null;
+  if (latest.status === "active") return result;
+  return { ...result, status: result.status === "active" ? latest.status : result.status };
+};
+
+/**
  * Resumes a paused or needs-attention schedule. Occurrences that passed while
  * it was not active are skipped so resuming never triggers a burst of payments.
  */
@@ -332,7 +368,11 @@ export const resumeRecurringPayment = (
   let index = schedule.nextOccurrenceIndex;
   const current = nextRunAtForIndex(schedule, index);
   if (current !== null && current <= now) {
-    const plan = planRecurringExecution({ ...schedule, status: "active", inFlight: null }, now);
+    // Ignore the retry backoff: resuming must always skip to the next future
+    // occurrence, even if a recent failure set `retryNotBefore`.
+    const plan = planRecurringExecution({ ...schedule, status: "active", inFlight: null }, now, {
+      ignoreRetryBackoff: true,
+    });
     if (plan.kind === "pay") {
       index = plan.occurrenceIndex + 1;
     }

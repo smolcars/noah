@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { AppState } from "react-native";
 
 import logger from "~/lib/log";
+import { isRecurringPaymentsSupported } from "~/constants";
 import { syncRecurringBackgroundTask } from "~/lib/recurringBackgroundTask";
 import {
   executeDueRecurringPayments,
@@ -37,7 +38,12 @@ export const useRecurringPaymentsRunner = (isReady: boolean) => {
   }, [isReady, activeScheduleCount]);
 
   const canRun =
-    isReady && isWalletLoaded && !isWalletSuspended && !isBackgroundJobRunning && hasSchedules;
+    isRecurringPaymentsSupported() &&
+    isReady &&
+    isWalletLoaded &&
+    !isWalletSuspended &&
+    !isBackgroundJobRunning &&
+    hasSchedules;
 
   useEffect(() => {
     if (!canRun) return;

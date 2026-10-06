@@ -61,7 +61,9 @@ export const useRecurringPaymentStore = create<RecurringPaymentState>()(
           return { schedules: rest, serverSyncPending: true };
         }),
       setServerSyncPending: (pending) => set({ serverSyncPending: pending }),
-      reset: () => set({ schedules: {}, serverSyncPending: true }),
+      // Used on wallet deletion. Deregistration already removes the server
+      // records, so there is nothing left to sync.
+      reset: () => set({ schedules: {}, serverSyncPending: false }),
     }),
     {
       name: "recurring-payment-storage",

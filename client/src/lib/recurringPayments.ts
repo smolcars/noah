@@ -43,6 +43,8 @@ import {
   type LightningAddressPaymentRoute,
 } from "~/hooks/usePayments";
 import { formatBitcoinAmount } from "~/lib/bitcoinAmount";
+import { isRecurringPaymentsSupported } from "~/constants";
+import { createSerializedSync } from "~/lib/serializedSync";
 import { normalizeLightningAddress, parseDestination } from "~/lib/sendUtils";
 import { queryClient } from "~/queryClient";
 import { useProfileStore } from "~/store/profileStore";
@@ -52,8 +54,10 @@ import {
   applyStaleInFlight,
   applySuccessfulRun,
   createRecurringPayment,
+  isStillDueForPayment,
   markInFlight,
   MAX_RECURRING_PAYMENTS,
+  mergeExecutionResult,
   OVERDUE_NAG_DELAY_MS,
   planRecurringExecution,
   REMINDER_LEAD_MS,
@@ -184,22 +188,47 @@ async function notifyNow(title: string, body: string) {
 // Server wake-up schedule
 // ---------------------------------------------------------------------------
 
-/** Pushes the opaque (id, due time) list of active schedules to the server. */
-export async function syncRecurringPaymentsWithServer(): Promise<Result<void, Error>> {
-  const schedules = serverScheduleEntries(getRecurringPayments());
-  const result = await syncRecurringPaymentsApi({ schedules });
-  if (result.isErr()) {
-    log.w("Failed to sync recurring payment schedule with server", [result.error]);
-    useRecurringPaymentStore.getState().setServerSyncPending(true);
-    return err(result.error);
-  }
-  useRecurringPaymentStore.getState().setServerSyncPending(false);
-  return ok(undefined);
-}
+/**
+ * Pushes the opaque (id, due time) list of active schedules to the server.
+ *
+ * Each request replaces the server's whole list, so requests are sent one at a
+ * time. If the local schedules change while a request is running, the latest
+ * list is sent again afterwards, and `serverSyncPending` is only cleared once
+ * the server has that latest list.
+ */
+export const syncRecurringPaymentsWithServer = createSerializedSync({
+  // Users without wake-up support get an empty list so the server never pushes.
+  getPayload: () =>
+    isRecurringPaymentsSupported() ? serverScheduleEntries(getRecurringPayments()) : [],
+  send: async (schedules) => {
+    const result = await syncRecurringPaymentsApi({ schedules });
+    if (result.isErr()) {
+      log.w("Failed to sync recurring payment schedule with server", [result.error]);
+      return err(result.error);
+    }
+    return ok(undefined);
+  },
+  onSettled: (pending) => useRecurringPaymentStore.getState().setServerSyncPending(pending),
+});
 
 async function persist(schedule: RecurringPayment) {
   useRecurringPaymentStore.getState().upsertSchedule(schedule);
   await refreshScheduledNotifications(schedule);
+}
+
+/**
+ * Saves the outcome of an execution without undoing a pause or cancel the user
+ * made while it was running. Returns the saved schedule, or null if the
+ * schedule was removed in the meantime (it is not re-created).
+ */
+async function persistExecutionResult(result: RecurringPayment): Promise<RecurringPayment | null> {
+  const merged = mergeExecutionResult(getSchedule(result.id), result);
+  if (!merged) {
+    await cancelScheduledNotifications(result.id);
+    return null;
+  }
+  await persist(merged);
+  return merged;
 }
 
 // ---------------------------------------------------------------------------
@@ -256,11 +285,15 @@ export const resolveRecurringDestination = (raw: string): Result<RecurringDestin
 
 export type CreateRecurringPaymentError =
   | { kind: "invalid"; field: RecurringInputError }
-  | { kind: "limit" };
+  | { kind: "limit" }
+  | { kind: "unsupported" };
 
 export async function createRecurringPaymentSchedule(
   input: NewRecurringPaymentInput,
 ): Promise<Result<RecurringPayment, CreateRecurringPaymentError>> {
+  if (!isRecurringPaymentsSupported()) {
+    return err({ kind: "unsupported" });
+  }
   const now = Date.now();
   const invalidField = validateRecurringPaymentInput(input, now);
   if (invalidField) {
@@ -298,6 +331,17 @@ export async function cancelRecurringPayment(id: string): Promise<void> {
   await cancelScheduledNotifications(id);
   useRecurringPaymentStore.getState().removeSchedule(id);
   await syncRecurringPaymentsWithServer();
+}
+
+/**
+ * Removes every local schedule and its reminders. Called when the wallet is
+ * deleted so old schedules can never spend from a new or restored wallet.
+ * The server records are removed by deregistration.
+ */
+export async function clearAllRecurringPayments(): Promise<void> {
+  const ids = Object.keys(useRecurringPaymentStore.getState().schedules);
+  useRecurringPaymentStore.getState().reset();
+  await Promise.allSettled(ids.map((id) => cancelScheduledNotifications(id)));
 }
 
 // ---------------------------------------------------------------------------
@@ -395,10 +439,11 @@ async function sendPayment(
   }
 }
 
+/** Returns the updated schedule, or null if nothing was attempted. */
 async function executeOne(
   schedule: RecurringPayment,
   plan: Extract<RecurringExecutionPlan, { kind: "pay" }>,
-): Promise<RecurringPayment> {
+): Promise<RecurringPayment | null> {
   let lightningAddressRoute: LightningAddressPaymentRoute | undefined;
   try {
     ({ lightningAddressRoute } = await preflight(schedule));
@@ -407,9 +452,18 @@ async function executeOne(
     return applyFailedRun(schedule, plan, errorMessage(e), retryable, Date.now());
   }
 
+  // The checks above take time. If the user paused, resumed, cancelled or
+  // deleted the schedule meanwhile, the stored copy no longer plans this
+  // occurrence: send nothing and leave it as the user set it.
+  const latest = getSchedule(schedule.id);
+  if (!isStillDueForPayment(latest, plan, Date.now())) {
+    log.i("Recurring payment changed during checks, not sending", [schedule.id]);
+    return null;
+  }
+
   // Persist the in-flight marker *before* sending so a crash mid-payment can
   // never lead to an automatic second attempt.
-  const inFlight = markInFlight(schedule, plan.occurrenceIndex, Date.now());
+  const inFlight = markInFlight(latest, plan.occurrenceIndex, Date.now());
   useRecurringPaymentStore.getState().upsertSchedule(inFlight);
 
   try {
@@ -428,10 +482,16 @@ async function runDueRecurringPayments(
   trigger: RecurringExecutionTrigger,
 ): Promise<RecurringExecutionSummary> {
   const summary: RecurringExecutionSummary = { paid: 0, failed: 0, needsAttention: 0 };
-  const schedules = getRecurringPayments();
+  if (!isRecurringPaymentsSupported()) return summary;
+
+  const scheduleIds = getRecurringPayments().map((s) => s.id);
   let changed = false;
 
-  for (const schedule of schedules) {
+  for (const id of scheduleIds) {
+    // Re-read every time: earlier iterations await, and the user may have
+    // paused or cancelled this schedule in the meantime.
+    const schedule = getSchedule(id);
+    if (!schedule) continue;
     // A manual run retries immediately; automatic runs respect the retry backoff.
     const plan = planRecurringExecution(schedule, Date.now(), {
       ignoreRetryBackoff: trigger === "manual",
@@ -458,29 +518,34 @@ async function runDueRecurringPayments(
     }
 
     log.i("Executing recurring payment", [schedule.id, trigger, plan.occurrenceIndex]);
-    const updated = await executeOne(schedule, plan);
-    await persist(updated);
+    const result = await executeOne(schedule, plan);
+    if (!result) continue;
+    // `updated` is null when the schedule was cancelled or deleted meanwhile.
+    const updated = await persistExecutionResult(result);
     changed = true;
 
     const amount = formatAmount(schedule.amountSat);
-    const lastRun = updated.runs[0];
-    if (lastRun?.status === "success") {
+    const lastRun = result.runs[0];
+    if (lastRun?.status === "success" && lastRun.occurrenceIndex === plan.occurrenceIndex) {
+      // Always report money that moved, even if the schedule was stopped meanwhile.
       summary.paid += 1;
       await notifyNow("Recurring payment sent", `${amount} sent to ${schedule.label}.`);
-    } else if (updated.status === "needs_attention") {
+    } else if (result.status === "needs_attention") {
       summary.needsAttention += 1;
       await notifyNow(
         "Recurring payment needs your attention",
-        `Sending ${amount} to ${schedule.label} failed: ${updated.lastError ?? "unknown error"}. It has been paused.`,
+        `Sending ${amount} to ${schedule.label} failed: ${result.lastError ?? "unknown error"}. It has been paused.`,
       );
     } else {
       summary.failed += 1;
       // Only notify on the first failure (or a manual run) to avoid a
-      // notification on every automatic retry.
-      if (updated.consecutiveFailures > 1 && trigger !== "manual") continue;
+      // notification on every automatic retry, and never for a schedule the
+      // user stopped meanwhile.
+      if (updated?.status !== "active") continue;
+      if (result.consecutiveFailures > 1 && trigger !== "manual") continue;
       await notifyNow(
         "Recurring payment will retry",
-        `${amount} to ${schedule.label} could not be sent yet: ${updated.lastError ?? "unknown error"}`,
+        `${amount} to ${schedule.label} could not be sent yet: ${result.lastError ?? "unknown error"}`,
       );
     }
   }

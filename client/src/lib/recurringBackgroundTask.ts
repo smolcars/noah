@@ -19,6 +19,7 @@ import * as TaskManager from "expo-task-manager";
 import { ResultAsync } from "neverthrow";
 
 import logger from "~/lib/log";
+import { isRecurringPaymentsSupported } from "~/constants";
 import { executeDueRecurringPayments } from "~/lib/recurringPayments";
 import { getRecurringPayments } from "~/store/recurringPaymentStore";
 import { useWalletStore } from "~/store/walletStore";
@@ -40,7 +41,7 @@ const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e)
 
 if (isSupported) {
   TaskManager.defineTask(RECURRING_PAYMENTS_BACKGROUND_TASK, async () => {
-    if (AppState.currentState === "active") {
+    if (AppState.currentState === "active" || !isRecurringPaymentsSupported()) {
       return BackgroundTask.BackgroundTaskResult.Success;
     }
     if (!getRecurringPayments().some((schedule) => schedule.status === "active")) {
@@ -72,7 +73,9 @@ if (isSupported) {
 export async function syncRecurringBackgroundTask(): Promise<void> {
   if (!isSupported) return;
 
-  const hasActive = getRecurringPayments().some((schedule) => schedule.status === "active");
+  const hasActive =
+    isRecurringPaymentsSupported() &&
+    getRecurringPayments().some((schedule) => schedule.status === "active");
 
   const result = await ResultAsync.fromPromise(
     (async () => {
