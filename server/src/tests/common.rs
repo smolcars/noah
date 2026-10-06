@@ -1,6 +1,6 @@
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
-use axum::Router;
+use axum::{Extension, Router, extract::ConnectInfo};
 use axum::{middleware, routing::post};
 use bitcoin::key::Keypair;
 use once_cell::sync::Lazy;
@@ -26,8 +26,8 @@ use crate::routes::gated_api_v0::{
     update_profile,
 };
 use crate::routes::public_api_v0::{
-    auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price, lnurlp_request,
-    nip05_request, register, send_verification_email, verify_email,
+    auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price, nip05_request,
+    register, send_verification_email, verify_email,
 };
 use crate::types::AuthLoginPayload;
 use crate::{AppState, AppStruct};
@@ -280,12 +280,13 @@ pub async fn setup_public_test_app_with_barkd(
         .route("/getk1", axum::routing::get(get_k1))
         .route("/auth/login", post(auth_login))
         .route("/app_version", post(check_app_version))
-        .route(
-            "/.well-known/lnurlp/{username}",
-            axum::routing::get(lnurlp_request),
-        )
+        .merge(crate::lnurlp_router())
         .route("/.well-known/nostr.json", axum::routing::get(nip05_request))
-        .with_state(app_state.clone());
+        .with_state(app_state.clone())
+        .layer(Extension(ConnectInfo(SocketAddr::from((
+            [127, 0, 0, 1],
+            3000,
+        )))));
 
     (app, app_state, guard)
 }
