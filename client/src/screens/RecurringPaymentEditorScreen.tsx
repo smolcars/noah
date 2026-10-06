@@ -21,7 +21,11 @@ import {
   createRecurringPaymentSchedule,
   resolveRecurringDestination,
 } from "~/lib/recurringPayments";
-import { describeInterval, MAX_CUSTOM_INTERVAL_DAYS, occurrenceAt } from "~/lib/recurringSchedule";
+import {
+  describeInterval,
+  MAX_CUSTOM_INTERVAL_DAYS,
+  nextRunAtForIndex,
+} from "~/lib/recurringSchedule";
 import type { RecurringInterval } from "~/types/recurringPayment";
 import { isRecurringPaymentsSupported } from "~/constants";
 
@@ -120,11 +124,16 @@ const RecurringPaymentEditorScreen = () => {
         ? { unit: "month", every: 1 }
         : { unit: "day", every: Number(customDays) };
   const startAt = parseLocalDateTime(startDate, startTime);
+  const endAt = endMode === "date" ? parseLocalDateTime(endDate, "23:59") : null;
+  const maxOccurrences = endMode === "count" ? Number(endCount) : null;
 
   const preview =
     startAt === null || !Number.isInteger(interval.every) || interval.every < 1
       ? []
-      : [0, 1, 2].map((index) => new Date(occurrenceAt(startAt, interval, index)));
+      : [0, 1, 2]
+          .map((index) => nextRunAtForIndex({ startAt, interval, endAt, maxOccurrences }, index))
+          .filter((at) => at !== null)
+          .map((at) => new Date(at));
 
   const handleSave = async () => {
     Keyboard.dismiss();
@@ -139,15 +148,10 @@ const RecurringPaymentEditorScreen = () => {
       return;
     }
 
-    let endAt: number | null = null;
-    if (endMode === "date") {
-      endAt = parseLocalDateTime(endDate, "23:59");
-      if (endAt === null) {
-        setError("Enter the end date as YYYY-MM-DD.");
-        return;
-      }
+    if (endMode === "date" && endAt === null) {
+      setError("Enter the end date as YYYY-MM-DD.");
+      return;
     }
-    const maxOccurrences = endMode === "count" ? Number(endCount) : null;
 
     setIsSaving(true);
     const result = await createRecurringPaymentSchedule({
