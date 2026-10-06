@@ -1,14 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { View, Pressable, Keyboard } from "react-native";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { View, Pressable, Keyboard, type TextInputInstance } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
-import {
-  CodeField,
-  Cursor,
-  useBlurOnFulfill,
-  useClearByFocusCell,
-} from "react-native-confirmation-code-field";
+import { CodeField, Cursor, useClearByFocusCell } from "react-native-confirmation-code-field";
 import { Input } from "../components/ui/input";
 import { Text } from "../components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
@@ -70,7 +65,10 @@ const EmailVerificationScreen = () => {
     });
   }, []);
 
-  const ref = useBlurOnFulfill({ value: code, cellCount: CELL_COUNT });
+  const ref = useRef<TextInputInstance>(null);
+  useEffect(() => {
+    if (code.length === CELL_COUNT) ref.current?.blur();
+  }, [code]);
   const [props, getCellOnLayoutHandler] = useClearByFocusCell({
     value: code,
     setValue: setCode,

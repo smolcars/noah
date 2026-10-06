@@ -42,12 +42,15 @@
         system:
         android-nixpkgs.sdk.${system} (
           sdkPkgs: with sdkPkgs; [
-            cmdline-tools-latest
+            # Version 23's android-cli bootstrap currently has a checksum mismatch.
+            cmdline-tools-21-0
             build-tools-35-0-0
             build-tools-36-0-0
+            build-tools-37-0-0
             platform-tools
             platforms-android-35
             platforms-android-36
+            platforms-android-37-0
             ndk-27-1-12297006
             ndk-27-0-12077973
             cmake-3-22-1
@@ -133,7 +136,24 @@
 
           darwinPackages = with pkgs; [
             bundler
-            cocoapods
+            (cocoapods.override {
+              bundlerApp =
+                args:
+                pkgs.bundlerApp (
+                  args
+                  // {
+                    # Apple's older libffi fork aborts on macOS 27.
+                    gemConfig = pkgs.defaultGemConfig // {
+                      ffi =
+                        attrs:
+                        (pkgs.defaultGemConfig.ffi attrs)
+                        // {
+                          buildInputs = [ pkgs.libffiReal ];
+                        };
+                    };
+                  }
+                );
+            })
             (darwinDerivations.xcode-wrapper pkgs)
             maestro
           ];
