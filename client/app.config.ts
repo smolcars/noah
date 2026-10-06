@@ -16,6 +16,8 @@ const config: { expo: ExpoConfig } = {
     },
     plugins: [
       ["expo-asset"],
+      ["expo-background-task"],
+      ["expo-font"],
       ["expo-status-bar"],
       "@maplibre/maplibre-react-native",
       [
