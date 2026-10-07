@@ -8,16 +8,11 @@ appId: com.noahwallet.regtest
 - runFlow: subflows/complete-wallet-onboarding-without-email.yml
 
 - tapOn: "Open settings"
-- repeat:
-    times: 4
-    while:
-      notVisible:
-        id: "settings-board-ark"
-    commands:
-      - swipe:
-          start: 50%, 80%
-          end: 50%, 55%
-          duration: 800
+- scrollUntilVisible:
+    element:
+      id: "settings-board-ark"
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: "settings-board-ark"
 - assertVisible:

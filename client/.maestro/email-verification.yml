@@ -36,13 +36,19 @@ appId: com.noahwallet.regtest
 - eraseText: 40
 - inputText: ${output.lightningUsername}
 - assertVisible: ${output.lightningUsername}
-- tapOn: "Choose your Lightning Address"
+- scrollUntilVisible:
+    element:
+      text: "Save"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Save"
-- extendedWaitUntil:
-    visible: "Success!"
-    timeout: 10000
 
-# Home screen
+# Verify the saved identity, rather than the transient success banner.
 - extendedWaitUntil:
     visible: "History"
     timeout: 10000
+- tapOn: "Open settings"
+- tapOn:
+    id: "settings-profile"
+- assertVisible: ".*${output.lightningUsername}@localhost[.]com.*"
+- assertVisible: ".*maestro@example[.]com.*"
