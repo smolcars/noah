@@ -51,7 +51,10 @@ appId: com.noahwallet.regtest
     id: "receive-note-button"
 - tapOn:
     id: "receive-note-input"
-- inputText: "Layout draft"
+- inputText: "12345"
+- assertVisible:
+    id: "receive-note-input"
+    text: "12345"
 - runFlow:
     when:
       platform: iOS
@@ -59,14 +62,14 @@ appId: com.noahwallet.regtest
       - setOrientation: LANDSCAPE_RIGHT
 - assertVisible:
     id: "receive-note-input"
-    text: "Layout draft"
-- hideKeyboard
-- scrollUntilVisible:
-    element:
-      id: "receive-note-done"
-    direction: DOWN
-- tapOn:
-    id: "receive-note-done"
+    text: "12345"
+- pressKey: Enter
+- assertVisible: "Edit Lightning note"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setOrientation: PORTRAIT
 - tapOn:
     id: "receive-key-5"
 - tapOn:
