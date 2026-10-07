@@ -145,7 +145,8 @@ jobs:
 
       - name: Install Android build SDK
         if: steps.build_config.outputs.variant == 'regtest'
-        run: sdkmanager 'platforms;android-37.0' 'build-tools;37.0.0' 'ndk;27.1.12297006' 'cmake;3.22.1'
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-37.0' 'build-tools;37.0.0' 'ndk;27.1.12297006' 'cmake;3.22.1'
 
       - name: 📦 Install app dependencies
         run: nix develop .#${{ steps.build_config.outputs.shell }} --command bun install --frozen-lockfile
