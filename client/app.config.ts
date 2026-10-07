@@ -111,6 +111,12 @@ const config: { expo: ExpoConfig } = {
       bundleIdentifier: "com.noahwallet.mainnet",
       scheme: "com.noahwallet.mainnet",
       infoPlist: {
+        UISupportedInterfaceOrientations: [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight",
+        ],
         UIBackgroundModes: ["remote-notification", "fetch"],
       },
       icon: "./assets/noah.icon",

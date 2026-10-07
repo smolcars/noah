@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { AlertTriangle } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -26,8 +26,8 @@ const BetaWarningScreen = () => {
   };
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 justify-center px-6 py-10">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
+      <ScrollView contentContainerClassName="grow justify-center px-6 py-10">
         <View className="items-center">
           <View className="h-20 w-20 items-center justify-center rounded-3xl border border-border bg-card">
             <AlertTriangle size={40} color="#f97316" />
@@ -66,7 +66,7 @@ const BetaWarningScreen = () => {
             </View>
           )}
         </View>
-      </View>
+      </ScrollView>
     </NoahSafeAreaView>
   );
 };

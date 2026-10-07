@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -87,8 +87,8 @@ const MnemonicScreen = () => {
   };
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background p-4">
-      <View className="p-4">
+    <NoahSafeAreaView className="flex-1 bg-background p-4" maxContentWidth={640}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
         <View className="flex-row items-center mb-8">
           {!fromOnboarding && (
             <NativeNoahBackButton
@@ -137,7 +137,7 @@ const MnemonicScreen = () => {
           className="mt-4"
           fullWidth
         />
-      </View>
+      </ScrollView>
     </NoahSafeAreaView>
   );
 };

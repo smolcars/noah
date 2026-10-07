@@ -16,7 +16,7 @@ const ExportDatabaseScreen = () => {
     useExportDatabase();
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
       <ScrollView contentContainerClassName="p-4 flex-grow">
         <View className="flex-row items-center mb-8">
           <NativeNoahBackButton

@@ -160,11 +160,16 @@ const FeedbackScreen = () => {
     !name.trim() || !subject.trim() || !body.trim() || submitState !== "idle";
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background" style={{ paddingBottom: 0 }}>
+    <NoahSafeAreaView
+      className="flex-1 bg-background"
+      style={{ paddingBottom: 0 }}
+      maxContentWidth={640}
+    >
       <TouchableWithoutFeedback onPress={dismissKeyboard} accessible={false}>
         <ScrollView
           className="flex-1 px-4"
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
           keyboardDismissMode="on-drag"
           onScrollBeginDrag={dismissKeyboard}
           showsVerticalScrollIndicator={false}

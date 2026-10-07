@@ -1,0 +1,107 @@
+appId: com.noahwallet.regtest
+---
+# Run with an already-open test wallet. Does not reset or submit payments.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setOrientation: PORTRAIT
+- tapOn: "Home"
+- assertVisible:
+    id: "home-content"
+
+- tapOn: "Send"
+- tapOn:
+    id: "send-amount-clear"
+    optional: true
+- tapOn:
+    id: "send-key-5"
+- tapOn:
+    id: "send-key-0"
+- tapOn:
+    id: "send-key-0"
+- assertVisible:
+    id: "send-amount-value"
+    text: ".*500"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setOrientation: LANDSCAPE_LEFT
+- assertVisible:
+    id: "send-amount-value"
+    text: ".*500"
+- takeScreenshot: adaptive-send
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setOrientation: PORTRAIT
+- assertVisible:
+    id: "send-amount-value"
+    text: ".*500"
+
+- tapOn: "Receive"
+- extendedWaitUntil:
+    visible:
+      id: "receive-qr-button"
+    timeout: 30000
+- tapOn: "Add amount"
+- tapOn:
+    id: "receive-note-button"
+- tapOn:
+    id: "receive-note-input"
+- inputText: "12345"
+- assertVisible:
+    id: "receive-note-input"
+    text: "12345"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setOrientation: LANDSCAPE_RIGHT
+- assertVisible:
+    id: "receive-note-input"
+    text: "12345"
+- pressKey: Enter
+- assertVisible: "Edit Lightning note"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setOrientation: PORTRAIT
+- tapOn:
+    id: "receive-key-5"
+- tapOn:
+    id: "receive-key-0"
+- tapOn:
+    id: "receive-key-0"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setOrientation: LANDSCAPE_RIGHT
+- assertVisible: ".*500"
+- takeScreenshot: adaptive-receive-sheet
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setOrientation: PORTRAIT
+- assertVisible: ".*500"
+- tapOn: "Close amount entry"
+
+- tapOn: "History"
+- assertVisible: "All"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setOrientation: LANDSCAPE_LEFT
+- assertVisible: "All"
+- takeScreenshot: adaptive-history
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setOrientation: PORTRAIT

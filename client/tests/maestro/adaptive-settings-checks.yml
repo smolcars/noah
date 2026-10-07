@@ -1,0 +1,133 @@
+appId: com.noahwallet.regtest
+---
+# Uses an existing regtest wallet. Does not reset it, send funds, or submit feedback.
+- tapOn: "Home"
+- tapOn:
+    id: "settings-back-button"
+    optional: true
+- tapOn: "Open settings"
+- assertVisible: "Settings"
+- takeScreenshot: adaptive-settings
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    id: "settings-currency"
+- tapOn:
+    id: "currency-option-EUR"
+- assertVisible:
+    id: "settings-currency"
+- tapOn:
+    id: "settings-bitcoinUnit"
+- tapOn:
+    id: "bitcoin-unit-option-sats"
+- tapOn:
+    id: "settings-profile"
+- tapOn: "Edit name"
+- tapOn:
+    id: "profile-name-input"
+- inputText: "Foldable draft"
+- assertVisible:
+    id: "profile-name-input"
+    text: "Foldable draft"
+- takeScreenshot: adaptive-profile-draft
+- scrollUntilVisible:
+    element:
+      id: "profile-back-button"
+    direction: UP
+    centerElement: true
+- tapOn:
+    id: "profile-back-button"
+- scrollUntilVisible:
+    element:
+      id: "settings-backup"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "settings-backup"
+- assertVisible: "Enable Automatic Backups"
+- scrollUntilVisible:
+    element:
+      text: "List Backups"
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: adaptive-backup
+- tapOn:
+    id: "backup-settings-back-button"
+- scrollUntilVisible:
+    element:
+      id: "settings-emergencyExit"
+    direction: UP
+    centerElement: true
+- tapOn:
+    id: "settings-emergencyExit"
+- assertVisible: "Emergency Exit"
+- assertVisible: "Emergency use only"
+- takeScreenshot: adaptive-exit
+- tapOn:
+    id: "emergency-exit-back-button"
+- assertVisible: "Settings"
+- tapOn:
+    id: "settings-vtxos"
+- assertVisible: "VTXOs"
+- takeScreenshot: adaptive-vtxos
+- tapOn:
+    id: "vtxos-back-button"
+- scrollUntilVisible:
+    element:
+      id: "settings-board-ark"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "settings-board-ark"
+- tapOn:
+    id: "board-ark-amount-input"
+- inputText: "12345"
+- assertVisible:
+    id: "board-ark-amount-input"
+    text: "12345"
+- takeScreenshot: adaptive-board-draft
+- scrollUntilVisible:
+    element:
+      id: "board-ark-back-button"
+    direction: UP
+    centerElement: true
+- tapOn:
+    id: "board-ark-back-button"
+- assertVisible: "Settings"
+- scrollUntilVisible:
+    element:
+      id: "settings-recurring-payments"
+    direction: UP
+    centerElement: true
+- runFlow:
+    when:
+      visible:
+        id: "settings-recurring-payments"
+    commands:
+      - tapOn:
+          id: "settings-recurring-payments"
+      - tapOn:
+          id: "recurring-new-button"
+      - tapOn:
+          id: "recurring-label-input"
+      - inputText: "Layout schedule"
+      - pressKey: Enter
+      - scrollUntilVisible:
+          element:
+            id: "recurring-save-button"
+          direction: DOWN
+          centerElement: true
+      - takeScreenshot: adaptive-schedule
+      - scrollUntilVisible:
+          element:
+            id: "recurring-editor-back-button"
+          direction: UP
+          centerElement: true
+      - tapOn:
+          id: "recurring-editor-back-button"
+      - tapOn:
+          id: "recurring-payments-back-button"
+- tapOn:
+    id: "settings-back-button"
+- assertVisible:
+    id: "home-content"

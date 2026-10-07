@@ -1,0 +1,32 @@
+appId: com.noahwallet.regtest
+---
+# iOS regression: Reanimated 4.7.0 crashed when returning from a rotated form.
+# Run with an initialized regtest wallet on Home. Drafts are never saved.
+- setOrientation: PORTRAIT
+- tapOn: "Home"
+- tapOn: "Open settings"
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "settings-profile"
+      - tapOn: "Edit name"
+      - tapOn:
+          id: "profile-name-input"
+      - inputText: "Rotation draft"
+      - setOrientation: LANDSCAPE_LEFT
+      - assertVisible:
+          id: "profile-name-input"
+          text: "Rotation draft"
+      - setOrientation: PORTRAIT
+      - scrollUntilVisible:
+          element:
+            id: "profile-back-button"
+          direction: UP
+      - tapOn:
+          id: "profile-back-button"
+      - assertVisible: "Settings"
+- tapOn:
+    id: "settings-back-button"
+- assertVisible:
+    id: "home-content"

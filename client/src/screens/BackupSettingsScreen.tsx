@@ -33,8 +33,8 @@ export const BackupSettingsScreen = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
-      <ScrollView contentContainerClassName="p-4 flex-1">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
+      <ScrollView contentContainerClassName="p-4 grow">
         <View className="flex-row items-center mb-8">
           <NativeNoahBackButton
             onPress={() => navigation.goBack()}
@@ -49,7 +49,7 @@ export const BackupSettingsScreen = () => {
         </Text>
 
         <View className="flex-row justify-between items-center p-4 border-b border-border bg-card rounded-lg mb-4">
-          <Label className="text-foreground text-lg">Enable Automatic Backups</Label>
+          <Label className="flex-1 mr-3 text-foreground text-lg">Enable Automatic Backups</Label>
           <NativeSwitch
             value={isBackupEnabled}
             onValueChange={setBackupEnabled}
@@ -121,7 +121,7 @@ export const BackupSettingsScreen = () => {
                     key={backup.backup_id}
                     className="flex-row justify-between items-center py-2 border-b border-border"
                   >
-                    <View>
+                    <View className="min-w-0 flex-1 mr-3">
                       <Text className="font-medium">Encrypted wallet snapshot</Text>
                       <Text className="text-sm text-muted-foreground">
                         {new Date(backup.created_at).toLocaleString()} -{" "}

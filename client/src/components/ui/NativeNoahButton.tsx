@@ -1,7 +1,7 @@
 import { Host } from "@expo/ui";
 import { useState } from "react";
 import { Button as ComposeButton, Shape, Text as ComposeText } from "@expo/ui/jetpack-compose";
-import { fillMaxSize } from "@expo/ui/jetpack-compose/modifiers";
+import { fillMaxSize, testID as composeTestID } from "@expo/ui/jetpack-compose/modifiers";
 import { Button as SwiftButton, Text as SwiftText } from "@expo/ui/swift-ui";
 import {
   background,
@@ -192,6 +192,7 @@ function AndroidButton({
   disabledContainerColor,
   disabledTextColor,
   height,
+  testID,
 }: {
   label: string;
   onPress?: () => void;
@@ -210,7 +211,7 @@ function AndroidButton({
     <ButtonComponent
       onClick={disabled ? undefined : onPress}
       enabled={!disabled}
-      modifiers={[fillMaxSize()]}
+      modifiers={[fillMaxSize(), ...(testID ? [composeTestID(testID)] : [])]}
       shape={Shape.Pill({})}
       contentPadding={{ start: 18, top: 0, end: 18, bottom: 0 }}
       colors={{

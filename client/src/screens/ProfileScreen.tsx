@@ -166,11 +166,13 @@ const ProfileScreen = () => {
         : COLORS.BITCOIN_ORANGE;
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
       >
         <View className="px-5 pb-8 pt-4">
           <View className="flex-row items-center">
@@ -189,6 +191,7 @@ const ProfileScreen = () => {
             <View className="mt-3">
               <Input
                 ref={nameInputRef}
+                testID="profile-name-input"
                 value={draftDisplayName}
                 onChangeText={(value) => {
                   setDraftDisplayName(value);

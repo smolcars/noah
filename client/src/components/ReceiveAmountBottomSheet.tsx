@@ -1,6 +1,6 @@
 import Icon from "@react-native-vector-icons/ionicons";
 import { useEffect, useState } from "react";
-import { Keyboard, Pressable, TextInput, View } from "react-native";
+import { Keyboard, Pressable, ScrollView, TextInput, View } from "react-native";
 
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
@@ -125,9 +125,13 @@ export function ReceiveAmountBottomSheet({
   };
 
   return (
-    <AppBottomSheet isOpen={isOpen} onClose={close} dismissible={!isSubmitting}>
+    <AppBottomSheet isOpen={isOpen} onClose={close} dismissible={!isSubmitting} avoidKeyboard>
       {isEditingNote ? (
-        <View className="flex-1">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
           <View className="flex-row items-center justify-between">
             <Pressable
               accessibilityRole="button"
@@ -181,9 +185,13 @@ export function ReceiveAmountBottomSheet({
               testID="receive-note-done"
             />
           </View>
-        </View>
+        </ScrollView>
       ) : (
-        <View className="flex-1">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
           <View className="flex-row items-center justify-between">
             <Pressable
               accessibilityRole="button"
@@ -223,9 +231,11 @@ export function ReceiveAmountBottomSheet({
             >
               <Text
                 className="text-center font-bold text-foreground"
+                adjustsFontSizeToFit
                 numberOfLines={1}
                 style={{
-                  width: amountSuffix ? 250 : 320,
+                  maxWidth: "100%",
+                  flexShrink: 1,
                   fontSize: primaryAmountFontSize,
                   lineHeight: primaryAmountFontSize + 8,
                 }}
@@ -297,7 +307,7 @@ export function ReceiveAmountBottomSheet({
               testID="receive-amount-remove"
             />
           ) : null}
-        </View>
+        </ScrollView>
       )}
     </AppBottomSheet>
   );

@@ -90,7 +90,7 @@ create_bark_wallet() {
 
     # Remove existing bark directory to allow fresh creation with new flags
     echo "🧹 Cleaning existing bark data if present..."
-    docker run --rm -v scripts_bark:/data alpine sh -c "rm -rf /data/.bark" 2>/dev/null || true
+    dcr run --rm --no-deps --entrypoint sh "$BARK_SERVICE" -c 'rm -rf /root/.bark'
 
     dcr run --rm "$BARK_SERVICE" bark create \
         --regtest \

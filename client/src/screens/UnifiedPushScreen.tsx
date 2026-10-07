@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { Text } from "~/components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import {
@@ -112,8 +112,8 @@ const UnifiedPushScreen = () => {
   };
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background p-4">
-      <View className="flex-1">
+    <NoahSafeAreaView className="flex-1 bg-background p-4" maxContentWidth={640}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}>
         <View className="flex-row items-center mb-4 mt-2">
           {!fromOnboarding && (
             <NativeNoahBackButton
@@ -211,7 +211,7 @@ const UnifiedPushScreen = () => {
         <Text className="text-sm text-muted-foreground text-center">
           Install a distributor app like "ntfy" from F-Droid to enable push notifications.
         </Text>
-      </View>
+      </ScrollView>
     </NoahSafeAreaView>
   );
 };

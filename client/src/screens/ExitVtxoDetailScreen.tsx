@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
 import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
+import { AdaptiveColumns } from "~/components/AdaptiveColumns";
 import { NativeNoahBackButton, NativeNoahIconButton } from "~/components/ui/NativeNoahIconButton";
 import { Text } from "~/components/ui/text";
 import { useExitOverview, useSyncExits } from "~/hooks/useUnilateralExit";
@@ -196,13 +197,13 @@ const ExitVtxoDetailScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         <View className="mb-8 flex-row items-center justify-between">
-          <View className="flex-row items-center">
+          <View className="mr-3 flex-1 flex-row items-center">
             <NativeNoahBackButton
               onPress={() => navigation.goBack()}
               className="mr-3"
               testID="exit-timeline-back-button"
             />
-            <Text className="text-2xl font-bold text-foreground">Exit Timeline</Text>
+            <Text className="flex-1 text-2xl font-bold text-foreground">Exit Timeline</Text>
           </View>
           <NativeNoahIconButton
             icon="refresh"
@@ -231,75 +232,78 @@ const ExitVtxoDetailScreen = () => {
             </Text>
           </View>
         ) : (
-          <>
-            <View className="mb-5 rounded-lg border border-border bg-card p-4">
-              <View className="flex-row items-start justify-between">
-                <View className="flex-1">
-                  <Text className="text-3xl font-bold text-foreground">
-                    {formatBitcoinAmount(exit.amount_sat)}
-                  </Text>
-                  <Text className="mt-2 text-base font-medium text-foreground">
-                    {getExitStatusText({
-                      state,
-                      details,
-                      currentBlockHeight: overview?.blockHeight,
-                    })}
-                  </Text>
-                  <Text className="mt-2 text-sm text-muted-foreground">
-                    {truncateMiddle(exit.vtxo_id, 14, 12)}
-                  </Text>
-                </View>
-                <View className={cn("rounded-full border px-3 py-2", tone.bgClassName)}>
-                  <Text className={cn("text-sm font-semibold", tone.className)}>
-                    {EXIT_STATE_LABELS[state]}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View className="mb-5 rounded-lg border border-border bg-card p-4">
-              <Text className="mb-3 text-lg font-semibold text-foreground">Block Status</Text>
-              <View className="flex-row gap-x-4">
-                <View className="flex-1">
-                  <Text className="text-xs uppercase text-muted-foreground">Current Height</Text>
-                  <Text className="mt-1 text-base font-semibold text-foreground">
-                    {overview?.blockHeight !== undefined ? overview.blockHeight : "Unknown"}
-                  </Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-xs uppercase text-muted-foreground">Exit Tip</Text>
-                  <Text className="mt-1 text-base font-semibold text-foreground">
-                    {details.tip_height}
-                  </Text>
-                </View>
-              </View>
-              <View className="mt-4 flex-row gap-x-4">
-                <View className="flex-1">
-                  <Text className="text-xs uppercase text-muted-foreground">Claimable Height</Text>
-                  <Text className="mt-1 text-base font-semibold text-foreground">
-                    {claimableHeight ?? "Unknown"}
-                  </Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-xs uppercase text-muted-foreground">Remaining</Text>
-                  <Text className="mt-1 text-base font-semibold text-foreground">
-                    {remaining ?? "Unknown"}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {blockRows.length > 0 ? (
+          <AdaptiveColumns>
+            <View>
               <View className="mb-5 rounded-lg border border-border bg-card p-4">
-                <Text className="mb-1 text-lg font-semibold text-foreground">Current State</Text>
-                <View className="mt-2 rounded-md border border-border/60 bg-background/60 px-3">
-                  {blockRows.map((row) => (
-                    <DetailRow key={`${row.label}-${row.value}`} row={row} />
-                  ))}
+                <View className="flex-row items-start justify-between">
+                  <View className="flex-1">
+                    <Text className="text-3xl font-bold text-foreground">
+                      {formatBitcoinAmount(exit.amount_sat)}
+                    </Text>
+                    <Text className="mt-2 text-base font-medium text-foreground">
+                      {getExitStatusText({
+                        state,
+                        details,
+                        currentBlockHeight: overview?.blockHeight,
+                      })}
+                    </Text>
+                    <Text className="mt-2 text-sm text-muted-foreground">
+                      {truncateMiddle(exit.vtxo_id, 14, 12)}
+                    </Text>
+                  </View>
+                  <View className={cn("rounded-full border px-3 py-2", tone.bgClassName)}>
+                    <Text className={cn("text-sm font-semibold", tone.className)}>
+                      {EXIT_STATE_LABELS[state]}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            ) : null}
 
+              <View className="mb-5 rounded-lg border border-border bg-card p-4">
+                <Text className="mb-3 text-lg font-semibold text-foreground">Block Status</Text>
+                <View className="flex-row gap-x-4">
+                  <View className="flex-1">
+                    <Text className="text-xs uppercase text-muted-foreground">Current Height</Text>
+                    <Text className="mt-1 text-base font-semibold text-foreground">
+                      {overview?.blockHeight !== undefined ? overview.blockHeight : "Unknown"}
+                    </Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xs uppercase text-muted-foreground">Exit Tip</Text>
+                    <Text className="mt-1 text-base font-semibold text-foreground">
+                      {details.tip_height}
+                    </Text>
+                  </View>
+                </View>
+                <View className="mt-4 flex-row gap-x-4">
+                  <View className="flex-1">
+                    <Text className="text-xs uppercase text-muted-foreground">
+                      Claimable Height
+                    </Text>
+                    <Text className="mt-1 text-base font-semibold text-foreground">
+                      {claimableHeight ?? "Unknown"}
+                    </Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xs uppercase text-muted-foreground">Remaining</Text>
+                    <Text className="mt-1 text-base font-semibold text-foreground">
+                      {remaining ?? "Unknown"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {blockRows.length > 0 ? (
+                <View className="mb-5 rounded-lg border border-border bg-card p-4">
+                  <Text className="mb-1 text-lg font-semibold text-foreground">Current State</Text>
+                  <View className="mt-2 rounded-md border border-border/60 bg-background/60 px-3">
+                    {blockRows.map((row) => (
+                      <DetailRow key={`${row.label}-${row.value}`} row={row} />
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+            </View>
             <View className="mb-2">
               <Text className="mb-4 text-lg font-semibold text-foreground">Timeline</Text>
               {timelineItems.map((item, index) => (
@@ -310,7 +314,7 @@ const ExitVtxoDetailScreen = () => {
                 />
               ))}
             </View>
-          </>
+          </AdaptiveColumns>
         )}
       </ScrollView>
     </NoahSafeAreaView>

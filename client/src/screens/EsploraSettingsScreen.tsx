@@ -65,7 +65,7 @@ const EsploraSettingsScreen = () => {
   };
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
       <View className="flex-row items-center px-5 pt-4">
         <NativeNoahBackButton
           onPress={() => navigation.goBack()}
@@ -80,6 +80,7 @@ const EsploraSettingsScreen = () => {
         contentContainerStyle={{ paddingBottom: 32 }}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
         <Text className="mt-5 text-base leading-6 text-muted-foreground">
           Used for Bitcoin network data throughout the wallet.

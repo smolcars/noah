@@ -8,6 +8,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { QRCodeScanner } from "~/components/QRCodeScanner";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
+import { AdaptiveColumns } from "~/components/AdaptiveColumns";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { Text } from "~/components/ui/text";
 import type { HomeStackParamList, TabParamList } from "~/Navigators";
@@ -40,6 +41,7 @@ const QRHubScreen = () => {
   const displayName = useProfileStore((state) => state.displayName);
   const [mode, setMode] = useState<QRMode>("my-code");
   const [copied, setCopied] = useState(false);
+  const [qrPaneWidth, setQrPaneWidth] = useState(0);
   const displayLightningAddress = lightningAddress
     ? addAddressBreakOpportunities(lightningAddress)
     : "";
@@ -141,45 +143,51 @@ const QRHubScreen = () => {
           </View>
 
           {mode === "my-code" ? (
-            <Animated.View entering={FadeInDown.duration(360)} className="items-center pt-10">
+            <Animated.View entering={FadeInDown.duration(360)} className="pt-6">
               {lightningAddress ? (
-                <>
-                  <View className="rounded-[28px] bg-white p-5 shadow-sm shadow-foreground/5">
-                    <QRCode
-                      value={lightningAddress}
-                      size={230}
-                      backgroundColor="white"
-                      color="black"
-                      logo={logoImage}
-                      logoSize={54}
-                      logoBackgroundColor="white"
-                      logoMargin={5}
-                      logoBorderRadius={12}
-                      ecl="H"
-                    />
+                <AdaptiveColumns>
+                  <View
+                    className="items-center"
+                    onLayout={(event) => setQrPaneWidth(event.nativeEvent.layout.width)}
+                  >
+                    <View className="rounded-[28px] bg-white p-5 shadow-sm shadow-foreground/5">
+                      <QRCode
+                        value={lightningAddress}
+                        size={Math.max(1, Math.min(280, qrPaneWidth - 40))}
+                        backgroundColor="white"
+                        color="black"
+                        logo={logoImage}
+                        logoSize={54}
+                        logoBackgroundColor="white"
+                        logoMargin={5}
+                        logoBorderRadius={12}
+                        ecl="H"
+                      />
+                    </View>
                   </View>
 
-                  <View className="mt-7 items-center">
-                    {displayName.trim().length > 0 ? (
-                      <Text className="text-xl font-bold text-foreground">{displayName}</Text>
-                    ) : null}
-                    <Pressable onPress={copyLightningAddress} className="mt-2 w-full px-4">
-                      <Text
-                        className="text-center text-base font-semibold"
-                        numberOfLines={2}
-                        ellipsizeMode="tail"
-                        maxFontSizeMultiplier={1.2}
-                        style={{ color: copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE }}
-                      >
-                        {copied ? "Copied" : displayLightningAddress}
-                      </Text>
-                    </Pressable>
-                  </View>
+                  <View className="items-center justify-center">
+                    <View className="mt-7 items-center">
+                      {displayName.trim().length > 0 ? (
+                        <Text className="text-xl font-bold text-foreground">{displayName}</Text>
+                      ) : null}
+                      <Pressable onPress={copyLightningAddress} className="mt-2 w-full px-4">
+                        <Text
+                          className="text-center text-base font-semibold"
+                          numberOfLines={2}
+                          ellipsizeMode="tail"
+                          style={{ color: copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE }}
+                        >
+                          {copied ? "Copied" : displayLightningAddress}
+                        </Text>
+                      </Pressable>
+                    </View>
 
-                  <Text className="mt-5 max-w-[300px] text-center text-sm leading-6 text-muted-foreground">
-                    This QR contains only your Lightning address.
-                  </Text>
-                </>
+                    <Text className="mt-5 max-w-[300px] text-center text-sm leading-6 text-muted-foreground">
+                      This QR contains only your Lightning address.
+                    </Text>
+                  </View>
+                </AdaptiveColumns>
               ) : (
                 <View className="w-full rounded-[18px] border border-border/60 bg-card/70 px-4 py-5">
                   <Text className="text-lg font-semibold text-foreground">

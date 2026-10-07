@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Linking } from "react-native";
+import { View, Linking, ScrollView } from "react-native";
 import { BellRing, Zap, RefreshCcw } from "lucide-react-native";
 import { Text } from "~/components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
@@ -35,8 +35,8 @@ export const PushNotificationsRequiredScreen = ({
   onRetryStatus,
 }: PushNotificationsRequiredScreenProps) => {
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 px-6 py-10">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
+      <ScrollView contentContainerClassName="grow px-6 py-10">
         <View className="items-center">
           <View className="h-24 w-24 items-center justify-center rounded-3xl bg-card border border-border shadow-lg shadow-black/30">
             <BellRing size={48} color="#f97316" />
@@ -90,7 +90,7 @@ export const PushNotificationsRequiredScreen = ({
             />
           </View>
         </View>
-      </View>
+      </ScrollView>
     </NoahSafeAreaView>
   );
 };

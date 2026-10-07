@@ -1,11 +1,4 @@
-import {
-  Image,
-  Keyboard,
-  Linking,
-  Pressable,
-  ScrollView,
-  View,
-} from "react-native";
+import { Image, Keyboard, Linking, Pressable, ScrollView, View } from "react-native";
 import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { useWalletStore } from "../store/walletStore";
@@ -43,6 +36,7 @@ import { NativeSwitch } from "~/components/ui/native-switch";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
+import { AdaptiveColumns } from "~/components/AdaptiveColumns";
 import {
   GitHubBrandIcon,
   GITHUB_URL,
@@ -420,11 +414,11 @@ const SettingsScreen = () => {
         key={item.id}
         onPress={() => handlePress(item)}
         disabled={!item.isPressable}
-        testID={item.testID}
+        testID={item.testID ?? `settings-${item.id}`}
         className="flex-row justify-between items-center p-4 border-b border-border bg-card rounded-lg mb-2"
       >
         <View className="flex-1">
-          <Label className="text-foreground text-lg">{item.title}</Label>
+          <Text className="text-foreground text-lg font-medium">{item.title}</Text>
           {item.value && <Text className="text-muted-foreground text-base mt-1">{item.value}</Text>}
           {item.description && (
             <Text className="text-muted-foreground text-base mt-1">{item.description}</Text>
@@ -483,132 +477,144 @@ const SettingsScreen = () => {
           paddingBottom: safeBottomInset + (PLATFORM === "android" ? 0 : tabBarHeight),
         }}
       >
-        <View className="items-center mb-6">
-          <Pressable onPress={() => navigation.navigate("NoahStory")}>
-            <Image
-              source={logoImage}
-              style={{ width: 120, height: 120, borderRadius: 12 }}
-              resizeMode="contain"
-            />
-          </Pressable>
-        </View>
-
-        {profileData.length > 0 && (
-          <View className="mb-6">
-            <Text
-              className="text-lg font-bold text-foreground mb-2"
-              style={{ color: COLORS.BITCOIN_ORANGE }}
-            >
-              Account
-            </Text>
-            {profileData.map(renderSettingItem)}
-          </View>
-        )}
-
-        {infoData.length > 0 && (
-          <View className="mb-6">
-            <Text
-              className="text-lg font-bold text-foreground mb-2"
-              style={{ color: COLORS.BITCOIN_ORANGE }}
-            >
-              Info
-            </Text>
-            {infoData.map(renderSettingItem)}
-          </View>
-        )}
-
-        {walletData.length > 0 && (
-          <View className="mb-6">
-            <Text
-              className="text-lg font-bold text-foreground mb-2"
-              style={{ color: COLORS.BITCOIN_ORANGE }}
-            >
-              Wallet
-            </Text>
-            {walletData.map(renderSettingItem)}
-            <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
-              <View className="flex-1">
-                <Label className="text-foreground text-lg">Auto-Board to Ark</Label>
-                <Text className="text-base mt-1 text-muted-foreground">{autoBoardDescription}</Text>
-              </View>
-              <NativeSwitch value={isAutoBoardingEnabled} onValueChange={setAutoBoardingEnabled} />
+        <AdaptiveColumns>
+          <View>
+            <View className="items-center mb-6">
+              <Pressable onPress={() => navigation.navigate("NoahStory")}>
+                <Image
+                  source={logoImage}
+                  style={{ width: 120, height: 120, borderRadius: 12 }}
+                  resizeMode="contain"
+                />
+              </Pressable>
             </View>
-            {isBiometricsAvailable && (
-              <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
-                <View className="flex-1">
-                  <Label className="text-foreground text-lg">Biometric Authentication</Label>
-                  <Text className="text-base mt-1 text-muted-foreground">
-                    Require biometric authentication to unlock your wallet
-                  </Text>
-                </View>
-                <NativeSwitch value={isBiometricsEnabled} onValueChange={handleBiometricsToggle} />
+
+            {profileData.length > 0 && (
+              <View className="mb-6">
+                <Text
+                  className="text-lg font-bold text-foreground mb-2"
+                  style={{ color: COLORS.BITCOIN_ORANGE }}
+                >
+                  Account
+                </Text>
+                {profileData.map(renderSettingItem)}
               </View>
             )}
-            <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
-              <View className="flex-1">
-                <Label className="text-foreground text-lg">Mailbox Notifications</Label>
-                <Text className="text-base mt-1 text-muted-foreground">
-                  Allow Noah to monitor your Ark mailbox so it can wake this app to claim Lightning
-                  payments in the background.
+
+            {infoData.length > 0 && (
+              <View className="mb-6">
+                <Text
+                  className="text-lg font-bold text-foreground mb-2"
+                  style={{ color: COLORS.BITCOIN_ORANGE }}
+                >
+                  Info
                 </Text>
+                {infoData.map(renderSettingItem)}
               </View>
-              <NativeSwitch
-                value={isMailboxAuthorizationEnabled}
-                onValueChange={handleMailboxAuthorizationToggle}
-                disabled={isMailboxTogglePending}
-              />
-            </View>
+            )}
           </View>
-        )}
-
-        {debugData.length > 0 && (
-          <View className="mb-6">
-            <Text
-              className="text-lg font-bold text-foreground mb-2"
-              style={{ color: COLORS.BITCOIN_ORANGE }}
-            >
-              Debug
-            </Text>
-            {debugData.map(renderSettingItem)}
-          </View>
-        )}
-
-        {isInitialized && (
-          <View className="mb-6">
-            <Text className="text-lg font-bold text-destructive mb-2">Danger Zone</Text>
-
-            <View className="p-4 border-b border-border bg-card rounded-lg mb-4 flex-row justify-between items-center">
-              <View className="flex-1">
-                <Label className="text-foreground text-lg">Suspend Wallet</Label>
-                <Text className="text-base mt-1 text-muted-foreground">
-                  Disable all wallet operations. The wallet will be closed and won't load until
-                  re-enabled.
+          <View>
+            {walletData.length > 0 && (
+              <View className="mb-6">
+                <Text
+                  className="text-lg font-bold text-foreground mb-2"
+                  style={{ color: COLORS.BITCOIN_ORANGE }}
+                >
+                  Wallet
                 </Text>
+                {walletData.map(renderSettingItem)}
+                <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
+                  <View className="flex-1">
+                    <Label className="text-foreground text-lg">Auto-Board to Ark</Label>
+                    <Text className="text-base mt-1 text-muted-foreground">
+                      {autoBoardDescription}
+                    </Text>
+                  </View>
+                  <NativeSwitch
+                    value={isAutoBoardingEnabled}
+                    onValueChange={setAutoBoardingEnabled}
+                  />
+                </View>
+                {isBiometricsAvailable && (
+                  <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
+                    <View className="flex-1">
+                      <Label className="text-foreground text-lg">Biometric Authentication</Label>
+                      <Text className="text-base mt-1 text-muted-foreground">
+                        Require biometric authentication to unlock your wallet
+                      </Text>
+                    </View>
+                    <NativeSwitch
+                      value={isBiometricsEnabled}
+                      onValueChange={handleBiometricsToggle}
+                    />
+                  </View>
+                )}
+                <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
+                  <View className="flex-1">
+                    <Label className="text-foreground text-lg">Mailbox Notifications</Label>
+                    <Text className="text-base mt-1 text-muted-foreground">
+                      Allow Noah to monitor your Ark mailbox so it can wake this app to claim
+                      Lightning payments in the background.
+                    </Text>
+                  </View>
+                  <NativeSwitch
+                    value={isMailboxAuthorizationEnabled}
+                    onValueChange={handleMailboxAuthorizationToggle}
+                    disabled={isMailboxTogglePending}
+                  />
+                </View>
               </View>
-              <NativeSwitch
-                value={isWalletSuspended}
-                onValueChange={(value) => suspendWalletMutation.mutate(value)}
-                disabled={suspendWalletMutation.isPending}
-                tone="destructive"
-              />
-            </View>
+            )}
 
-            <DangerZoneRow
-              title="Export Database"
-              description="Create an encrypted backup file containing your wallet database."
-              isPressable
-              onPress={() => navigation.navigate("ExportDatabase")}
-            />
+            {debugData.length > 0 && (
+              <View className="mb-6">
+                <Text
+                  className="text-lg font-bold text-foreground mb-2"
+                  style={{ color: COLORS.BITCOIN_ORANGE }}
+                >
+                  Debug
+                </Text>
+                {debugData.map(renderSettingItem)}
+              </View>
+            )}
 
-            <NativeNoahButton
-              label="Delete Wallet"
-              variant="destructive"
-              onPress={() => setIsDeleteWalletDialogOpen(true)}
-              fullWidth
-            />
+            {isInitialized && (
+              <View className="mb-6">
+                <Text className="text-lg font-bold text-destructive mb-2">Danger Zone</Text>
+
+                <View className="p-4 border-b border-border bg-card rounded-lg mb-4 flex-row justify-between items-center">
+                  <View className="flex-1">
+                    <Label className="text-foreground text-lg">Suspend Wallet</Label>
+                    <Text className="text-base mt-1 text-muted-foreground">
+                      Disable all wallet operations. The wallet will be closed and won't load until
+                      re-enabled.
+                    </Text>
+                  </View>
+                  <NativeSwitch
+                    value={isWalletSuspended}
+                    onValueChange={(value) => suspendWalletMutation.mutate(value)}
+                    disabled={suspendWalletMutation.isPending}
+                    tone="destructive"
+                  />
+                </View>
+
+                <DangerZoneRow
+                  title="Export Database"
+                  description="Create an encrypted backup file containing your wallet database."
+                  isPressable
+                  onPress={() => navigation.navigate("ExportDatabase")}
+                />
+
+                <NativeNoahButton
+                  label="Delete Wallet"
+                  variant="destructive"
+                  onPress={() => setIsDeleteWalletDialogOpen(true)}
+                  fullWidth
+                />
+              </View>
+            )}
           </View>
-        )}
-
+        </AdaptiveColumns>
         <View className="items-center py-8 px-4">
           <Pressable onPress={handleVersionTap}>
             <Text className="text-muted-foreground text-sm mb-1">
@@ -646,10 +652,7 @@ const SettingsScreen = () => {
         detents={[0, "content"]}
         avoidKeyboard
       >
-        <View
-          className="gap-4 pt-2"
-          style={{ paddingBottom: Math.max(safeBottomInset, 16) + 12 }}
-        >
+        <View className="gap-4 pt-2" style={{ paddingBottom: Math.max(safeBottomInset, 16) + 12 }}>
           <View className="gap-2">
             <Text className="text-xl font-bold text-foreground">Delete Wallet</Text>
             <Text className="text-base text-muted-foreground">

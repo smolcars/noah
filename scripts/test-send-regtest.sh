@@ -27,6 +27,9 @@ copy_to_simulator() {
   --debug-output "$maestro_debug_output/prepare" \
   client/.maestro/subflows/prepare-funded-send-ios.yml
 
+# iOS 27's simulator can deny clipboard reads without showing the Allow Paste prompt.
+xcrun simctl privacy "$simulator_id" grant pasteboard com.noahwallet.regtest
+
 simulator_ark_address="$(xcrun simctl pbpaste "$simulator_id" | tr -d '\r\n')"
 if [[ ! "$simulator_ark_address" =~ ^tark1 ]]; then
   printf 'Expected a regtest Ark address in the simulator clipboard, got: %s\n' \
@@ -77,5 +80,10 @@ copy_to_simulator "bitcoin:$amountless_request_address?amount=0"
 "$maestro_command" test --udid "$simulator_id" \
   --debug-output "$maestro_debug_output/amountless-request" \
   client/.maestro/subflows/send-amountless-request.yml
+
+printf 'Verifying the exit deposit address stays reachable in landscape.\n'
+"$maestro_command" test --udid "$simulator_id" \
+  --debug-output "$maestro_debug_output/exit-deposit-landscape" \
+  client/.maestro/subflows/exit-deposit-landscape.yml
 
 just bark balance

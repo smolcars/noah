@@ -1,5 +1,5 @@
 import Icon from "@react-native-vector-icons/ionicons";
-import { Pressable, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 
 import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
@@ -43,7 +43,12 @@ export function SendChoiceStage<T extends string>({
   const canContinue = selectedOption !== undefined && !selectedOption.unavailableReason;
 
   return (
-    <View className="flex-1 px-5" testID={`${testIDPrefix}-stage`}>
+    <ScrollView
+      className="flex-1"
+      contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20 }}
+      keyboardShouldPersistTaps="handled"
+      testID={`${testIDPrefix}-stage`}
+    >
       <View className="flex-row items-center pt-4">
         <NativeNoahBackButton onPress={onBack} testID={`${testIDPrefix}-back`} />
       </View>
@@ -125,6 +130,6 @@ export function SendChoiceStage<T extends string>({
           testID={`${testIDPrefix}-next`}
         />
       </View>
-    </View>
+    </ScrollView>
   );
 }

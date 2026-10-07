@@ -1,7 +1,7 @@
 import Icon from "@react-native-vector-icons/ionicons";
 import * as Haptics from "expo-haptics";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import Animated, { FadeIn, FadeOut, useReducedMotion } from "react-native-reanimated";
 
@@ -93,7 +93,12 @@ export function SendAmountStage({
   };
 
   return (
-    <View className="flex-1 px-5" testID="send-amount-stage">
+    <ScrollView
+      className="flex-1"
+      contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20 }}
+      keyboardShouldPersistTaps="handled"
+      testID="send-amount-stage"
+    >
       <View className="flex-row items-center justify-between pt-4">
         {onBack ? (
           <NativeNoahBackButton onPress={onBack} testID="send-amount-back" />
@@ -155,8 +160,10 @@ export function SendAmountStage({
           <Text
             className="text-center font-bold text-foreground"
             numberOfLines={1}
+            adjustsFontSizeToFit
             style={{
-              maxWidth: amountSuffix ? 280 : 340,
+              maxWidth: "100%",
+              flexShrink: 1,
               fontSize: primaryAmountFontSize,
               lineHeight: primaryAmountFontSize + 8,
             }}
@@ -319,6 +326,6 @@ export function SendAmountStage({
           </View>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }

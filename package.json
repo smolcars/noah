@@ -8,8 +8,10 @@
     "react-native-nitro-modules": "0.37.1"
   },
   "patchedDependencies": {
+    "@swmansion/react-native-bottom-sheet@0.14.1": "patches/swmansion-react-native-bottom-sheet@0.14.1.patch",
     "react-native-bottom-tabs@1.3.1": "patches/react-native-bottom-tabs@1.3.1.patch",
-    "react-native-fs-turbo@0.5.1": "patches/react-native-fs-turbo@0.5.1.patch"
+    "react-native-fs-turbo@0.5.1": "patches/react-native-fs-turbo@0.5.1.patch",
+    "expo-modules-jsi@58.0.9": "patches/expo-modules-jsi@58.0.9.patch"
   },
   "scripts": {
     "client": "bun --cwd client",

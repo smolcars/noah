@@ -8,12 +8,20 @@ env:
     substituters = https://cache.nixos.org/
 
 on:
+  workflow_dispatch:
+    inputs:
+      simulator:
+        description: "Duo is experimental while Maestro's iOS 27.1 tab hierarchy support is pending"
+        type: choice
+        options: ["iPhone 17 Pro", "iPhone Duo"]
+        default: "iPhone 17 Pro"
   pull_request:
     paths:
       - "client/**"
       - "scripts/**"
       - "package.json"
       - "bun.lock"
+      - "patches/**"
       - ".github/workflows/**"
       - "!**/*.md"
 
@@ -24,16 +32,19 @@ jobs:
     secrets: inherit
 
   maestro-test-ios:
-    name: Maestro Test iOS
+    name: Maestro Test iOS (${{ inputs.simulator || 'iPhone 17 Pro' }})
     needs: build-release-ios
     runs-on: macOS
-    timeout-minutes: 15
+    timeout-minutes: 25
+    env:
+      COMPOSE_PROJECT_NAME: noah-maestro-${{ github.run_id }}-${{ github.run_attempt }}
     permissions:
       checks: read
       contents: read
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
+      # The native app uses fixed localhost ports shared by the macOS runners.
+      group: noah-regtest-macos
+      cancel-in-progress: false
     steps:
       - name: 🏗 Checkout repository
         uses: actions/checkout@v6
@@ -51,88 +62,47 @@ jobs:
           rm ios-release.zip
 
       - name: 🔧 Setup Regtest Environment
-        run: cd scripts && docker-compose pull && docker-compose build && ./ark-dev.sh setup-everything
-
-      - name: 📱 Boot iOS Simulator (iPhone 17 Pro)
         run: |
-          DEVICE_ID=$(xcrun simctl list devices available | grep "iPhone 17 Pro" | head -n 1 | awk -F "[()]" '{print $2}')
-          if [ -z "$DEVICE_ID" ]; then
-            echo "No available simulator found for the criteria."
-            exit 1
-          fi
+          python3 scripts/test_regtest_isolation.py
+          python3 scripts/test_ios_simulator_selection.py
+          cd scripts
+          docker-compose pull
+          docker-compose build
+          ./ark-dev.sh setup-everything
 
-          echo "Found simulator with DEVICE_ID=$DEVICE_ID"
-          echo "SIMULATOR_ID=$DEVICE_ID" >> "$GITHUB_ENV"
-
-          # Check if simulator is already booted
-          STATUS=$(xcrun simctl list | grep "$DEVICE_ID" | grep "(Booted)" || echo "")
-          if [[ -n "$STATUS" ]]; then
-            echo "Simulator is already booted. Shutting down first..."
-            xcrun simctl shutdown "$DEVICE_ID" || true
-            sleep 2
-          fi
-
-          echo "Booting iPhone 17 Pro simulator with DEVICE_ID=$DEVICE_ID..."
-          xcrun simctl boot "$DEVICE_ID"
-
-          TIMEOUT=120
-          START_TIME=$(date +%s)
-          echo "Waiting for simulator to boot..."
-
-          while true; do
-            CURRENT_TIME=$(date +%s)
-            ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
-
-            if [ $ELAPSED_TIME -ge $TIMEOUT ]; then
-              echo "Timeout: simulator failed to boot for $TIMEOUT seconds."
-              exit 1
-            fi
-
-            STATUS=$(xcrun simctl list | grep "$DEVICE_ID" | grep "(Booted)")
-            if [[ -n "$STATUS" ]]; then
-              echo "Simulator is booted!"
-              break
-            else
-              echo "Still waiting for the simulator to boot..."
-              sleep 5
-            fi
-          done
+      - name: 📱 Create isolated iOS simulator
+        env:
+          SIMULATOR_MODEL: ${{ inputs.simulator || 'iPhone 17 Pro' }}
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, subprocess
+          def simctl(*args):
+              return subprocess.check_output(["xcrun", "simctl", *args], text=True).strip()
+          devices = json.loads(simctl("list", "devicetypes", "-j"))["devicetypes"]
+          device = next(d for d in devices if d["name"] == os.environ["SIMULATOR_MODEL"])
+          runtimes = json.loads(simctl("list", "runtimes", "-j"))["runtimes"]
+          runtimes = [r for r in runtimes if r["isAvailable"] and ".iOS-" in r["identifier"] and any(d["identifier"] == device["identifier"] for d in r["supportedDeviceTypes"])]
+          assert runtimes, f"Install an available iOS runtime supporting {device['name']}"
+          runtime = max(runtimes, key=lambda r: tuple(map(int, r["version"].split("."))))
+          print(f"Using {runtime['name']} for {device['name']}", flush=True)
+          udid = simctl("create", "Noah CI " + os.environ["SIMULATOR_MODEL"], device["identifier"], runtime["identifier"])
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"SIMULATOR_ID={udid}\n")
+          subprocess.check_call(["xcrun", "simctl", "boot", udid])
+          subprocess.check_call(["xcrun", "simctl", "bootstatus", udid, "-b"])
+          PYTHON
 
       - name: 🧪 Run Maestro tests
-        run: nix develop .# --command bash -c "xcrun simctl install \"$SIMULATOR_ID\" ios-release-build/ios-release.app && bun client maestro:test --udid \"$SIMULATOR_ID\" && scripts/test-send-regtest.sh"
+        run: nix develop .# --command bash -c "xcrun simctl install \"$SIMULATOR_ID\" ios-release-build/ios-release.app && bun client maestro:test --udid \"$SIMULATOR_ID\" && maestro --udid \"$SIMULATOR_ID\" test --debug-output client/maestro-debug-output/adaptive client/tests/maestro/adaptive-layout-smoke.yml && scripts/test-send-regtest.sh"
         env:
           MAESTRO_DRIVER_STARTUP_TIMEOUT: 120000
 
-      - name: 🧹 Shutdown and erase simulator
+      - name: 🧹 Delete CI simulator
         if: always()
         run: |
-          DEVICE_UDID="${SIMULATOR_ID:-}"
-
-          if [ -n "$DEVICE_UDID" ]; then
-            echo "Shutting down simulator: $DEVICE_UDID"
-            if xcrun simctl shutdown "$DEVICE_UDID" 2>&1; then
-              echo "✓ Shutdown command executed"
-            else
-              echo "⚠ Warning: Shutdown command failed"
-            fi
-
-            # Verify shutdown
-            sleep 2
-            SHUTDOWN_STATUS=$(xcrun simctl list devices | grep "$DEVICE_UDID" | grep "(Shutdown)" || echo "")
-            if [[ -n "$SHUTDOWN_STATUS" ]]; then
-              echo "✓ Simulator is now in Shutdown state"
-            else
-              echo "⚠ Warning: Simulator may not be in Shutdown state"
-            fi
-
-            echo "Erasing simulator to clear all app data: $DEVICE_UDID"
-            if xcrun simctl erase "$DEVICE_UDID" 2>&1; then
-              echo "✓ Erase command executed successfully"
-            else
-              echo "⚠ Warning: Erase command failed"
-            fi
-          else
-            echo "No simulator selected"
+          if [ -n "${SIMULATOR_ID:-}" ]; then
+            xcrun simctl shutdown "$SIMULATOR_ID" || true
+            xcrun simctl delete "$SIMULATOR_ID"
           fi
 
       - name: 🧹 Teardown Regtest Environment

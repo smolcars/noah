@@ -37,6 +37,8 @@ import { updateWidget, useWidget } from "~/hooks/useWidget";
 import { formatFiatAmount, getFiatCurrencyInfo, satsToFiat } from "~/lib/fiatCurrency";
 import { calculateBalances } from "~/lib/balanceUtils";
 import { onchainSync, sync } from "~/lib/walletApi";
+import { useAdaptiveLayout } from "~/hooks/useAdaptiveLayout";
+import { PANE_GAP } from "~/lib/adaptiveLayout";
 import { useTransactions } from "~/hooks/useTransactions";
 import { Transaction } from "~/types/transaction";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
@@ -92,6 +94,7 @@ const HomeScreen = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isTransactionSheetOpen, setIsTransactionSheetOpen] = useState(false);
   const bottomTabBarHeight = useBottomTabBarHeight();
+  const { isExpanded, onLayout } = useAdaptiveLayout();
   const { isUpdateRequired, minimumVersion, currentVersion } = useAppVersionCheck();
   const { isEmailVerified, isEmailPromptDismissed, setEmailPromptDismissed } = useServerStore();
   const { data: transactions = [], isLoading: isTransactionsLoading } = useTransactions();
@@ -256,7 +259,7 @@ const HomeScreen = () => {
             </View>
           </View>
         )}
-        <View className="px-5 pt-16 pb-10">
+        <View onLayout={onLayout} className="py-8" testID="home-content">
           {isLoading && !balance ? (
             <View className="items-center justify-center py-28">
               <NoahActivityIndicator size="large" />
@@ -271,8 +274,11 @@ const HomeScreen = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            <>
-              <View className="items-center pb-10">
+            <View style={{ flexDirection: isExpanded ? "row" : "column", gap: PANE_GAP }}>
+              <View
+                className="min-w-0 items-center pb-6"
+                style={{ flex: isExpanded ? 1 : undefined }}
+              >
                 <View className="items-center">
                   {isHomeBalanceHidden ? (
                     <Text className="mb-2 text-2xl text-muted-foreground">
@@ -287,7 +293,7 @@ const HomeScreen = () => {
                       <NoahActivityIndicator />
                     </View>
                   )}
-                  <View className="relative flex-row items-center justify-center">
+                  <View className="flex-row items-center justify-center gap-2">
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel="Toggle balance details"
@@ -295,7 +301,11 @@ const HomeScreen = () => {
                       onPress={() => setIsOpen((current) => !current)}
                     >
                       <View className="flex-row items-center space-x-2">
-                        <Text className="text-4xl font-bold">
+                        <Text
+                          className="shrink text-4xl font-bold"
+                          adjustsFontSizeToFit
+                          numberOfLines={1}
+                        >
                           {formatHomeBalance(totalBalance)}
                         </Text>
                         <Animated.View style={animatedRotation}>
@@ -310,7 +320,7 @@ const HomeScreen = () => {
                         isHomeBalanceHidden ? "Show wallet balance" : "Hide wallet balance"
                       }
                       hitSlop={12}
-                      className="absolute -right-9 h-8 w-8 items-center justify-center"
+                      className="h-8 w-8 items-center justify-center"
                     >
                       {isHomeBalanceHidden ? (
                         <Eye color={iconColor} size={18} />
@@ -328,8 +338,12 @@ const HomeScreen = () => {
                   )}
                 </View>
                 {isOpen && (
-                  <Animated.View entering={FadeInDown} exiting={FadeOutDown}>
-                    <View className="p-4 rounded-lg bg-card mt-4 min-w-[300px]">
+                  <Animated.View
+                    entering={FadeInDown}
+                    exiting={FadeOutDown}
+                    className="w-full max-w-[380px]"
+                  >
+                    <View className="p-4 rounded-lg bg-card mt-4">
                       <Text className="text-lg font-bold mb-4 text-center">Balance Details</Text>
 
                       <View className="mb-4">
@@ -400,7 +414,11 @@ const HomeScreen = () => {
                 )}
               </View>
 
-              <View className="gap-4">
+              <View
+                className="min-w-0 gap-4"
+                style={{ flex: isExpanded ? 1 : undefined }}
+                testID={isExpanded ? "home-activity-pane" : "home-activity"}
+              >
                 <View className="rounded-[18px] border border-border/60 bg-card/70 px-4 py-4">
                   <View className="mb-3 flex-row items-center justify-between">
                     <Text className="text-base font-bold text-foreground">Recent Activity</Text>
@@ -479,7 +497,7 @@ const HomeScreen = () => {
                   )}
                 </View>
               </View>
-            </>
+            </View>
           )}
         </View>
         <View className="p-4 items-center justify-center mb-16" style={{ marginTop: "auto" }}>

@@ -506,7 +506,7 @@ const TransactionDetailScreen = () => {
   const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
       <TransactionDetailContent
         transaction={transaction}
         fiatCurrency={fiatCurrency}

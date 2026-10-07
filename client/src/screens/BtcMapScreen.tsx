@@ -41,6 +41,7 @@ import {
 import { useBtcMapPlace, useBtcMapPlaces } from "~/hooks/useBtcMap";
 import { useCitySearch } from "~/hooks/useCitySearch";
 import { useTheme } from "~/hooks/useTheme";
+import { useAdaptiveLayout } from "~/hooks/useAdaptiveLayout";
 import {
   cityDisplayLabel,
   citySecondaryLabel,
@@ -529,6 +530,7 @@ export default function BtcMapScreen() {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
+  const { width, isExpanded, onLayout } = useAdaptiveLayout();
   const cameraRef = useRef<CameraRef>(null);
   const placesSourceRef = useRef<GeoJSONSourceRef>(null);
   const snapshotQuery = useBtcMapPlaces();
@@ -768,305 +770,335 @@ export default function BtcMapScreen() {
   const panelBottom = tabBarHeight + 10;
 
   return (
-    <View className="flex-1 bg-background">
-      <Map
-        mapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
-        style={{ flex: 1 }}
-        attribution={false}
-        logo
-        logoPosition={{ bottom: panelBottom + 4, left: 8 }}
-        compass
-        compassPosition={{ top: insets.top + 118, right: 14 }}
-        touchPitch={false}
-        onRegionDidChange={handleRegionDidChange}
-        onPress={() => {
-          setIsSearchFocused(false);
-          Keyboard.dismiss();
-        }}
-      >
-        <Camera
-          ref={cameraRef}
-          initialViewState={initialViewport ?? DEFAULT_VIEWPORT}
-          minZoom={1}
-          maxZoom={19}
-        />
-        <GeoJSONSource
-          ref={placesSourceRef}
-          id="btc-map-places"
-          data={placesGeoJson}
-          cluster
-          clusterRadius={46}
-          clusterMaxZoom={14}
-          onPress={(event) => void handlePlacePress(event)}
+    <View
+      className="flex-1 flex-row bg-background"
+      onLayout={onLayout}
+      style={{ paddingRight: insets.right }}
+    >
+      <View className="min-w-0 flex-1">
+        <Map
+          mapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
+          style={{ flex: 1 }}
+          attribution={false}
+          logo
+          logoPosition={{ bottom: panelBottom + 4, left: 8 }}
+          compass
+          compassPosition={{ top: insets.top + 118, right: 14 }}
+          touchPitch={false}
+          onRegionDidChange={handleRegionDidChange}
+          onPress={() => {
+            setIsSearchFocused(false);
+            Keyboard.dismiss();
+          }}
         >
-          <Layer
-            id="btc-map-clusters"
-            type="circle"
-            filter={["has", "point_count"]}
-            paint={{
-              "circle-color": COLORS.BITCOIN_ORANGE,
-              "circle-radius": ["step", ["get", "point_count"], 18, 20, 22, 100, 27],
-              "circle-stroke-color": "#ffffff",
-              "circle-stroke-width": 2,
-            }}
+          <Camera
+            ref={cameraRef}
+            initialViewState={initialViewport ?? DEFAULT_VIEWPORT}
+            minZoom={1}
+            maxZoom={19}
           />
-          <Layer
-            id="btc-map-cluster-count"
-            type="symbol"
-            filter={["has", "point_count"]}
-            layout={{
-              "text-field": ["get", "point_count_abbreviated"],
-              "text-font": ["Noto Sans Regular"],
-              "text-size": 12,
-            }}
-            paint={{ "text-color": "#ffffff" }}
-          />
-          <Layer
-            id="btc-map-points"
-            type="circle"
-            filter={["!", ["has", "point_count"]]}
-            paint={{
-              "circle-color": COLORS.BITCOIN_ORANGE,
-              "circle-radius": 7,
-              "circle-stroke-color": "#ffffff",
-              "circle-stroke-width": 2,
-            }}
-          />
-        </GeoJSONSource>
-        <GeoJSONSource id="btc-map-user-location" data={userLocationGeoJson}>
-          <Layer
-            id="btc-map-user-location-halo"
-            type="circle"
-            paint={{ "circle-color": "#2f80ed", "circle-opacity": 0.2, "circle-radius": 16 }}
-          />
-          <Layer
-            id="btc-map-user-location-dot"
-            type="circle"
-            paint={{
-              "circle-color": "#2f80ed",
-              "circle-radius": 7,
-              "circle-stroke-color": "#ffffff",
-              "circle-stroke-width": 2,
-            }}
-          />
-        </GeoJSONSource>
-      </Map>
-
-      <View
-        pointerEvents="box-none"
-        className="absolute left-3 right-3"
-        style={{ top: insets.top + 8 }}
-      >
-        <View className="flex-row items-center gap-2">
-          <NativeNoahBackButton onPress={() => navigation.goBack()} />
-          <View className="h-12 flex-1 flex-row items-center rounded-full border border-border bg-background px-4">
-            <Icon name="search" size={19} color={colors.mutedForeground} />
-            <TextInput
-              value={search}
-              onChangeText={(value) => {
-                setSearch(value);
-                setSelectedCity(undefined);
+          <GeoJSONSource
+            ref={placesSourceRef}
+            id="btc-map-places"
+            data={placesGeoJson}
+            cluster
+            clusterRadius={46}
+            clusterMaxZoom={14}
+            onPress={(event) => void handlePlacePress(event)}
+          >
+            <Layer
+              id="btc-map-clusters"
+              type="circle"
+              filter={["has", "point_count"]}
+              paint={{
+                "circle-color": COLORS.BITCOIN_ORANGE,
+                "circle-radius": ["step", ["get", "point_count"], 18, 20, 22, 100, 27],
+                "circle-stroke-color": "#ffffff",
+                "circle-stroke-width": 2,
               }}
-              onFocus={() => setIsSearchFocused(true)}
-              onSubmitEditing={() => {
-                const city = cityResults[0];
-                if (city) {
-                  selectCity(city);
-                }
-              }}
-              accessibilityLabel="Search places or cities"
-              placeholder="Search places or cities"
-              placeholderTextColor={colors.mutedForeground}
-              className="ml-2 flex-1 text-base text-foreground"
-              returnKeyType="search"
-              autoCorrect={false}
             />
-            {search.length > 0 && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Clear search"
-                onPress={() => {
-                  setSearch("");
+            <Layer
+              id="btc-map-cluster-count"
+              type="symbol"
+              filter={["has", "point_count"]}
+              layout={{
+                "text-field": ["get", "point_count_abbreviated"],
+                "text-font": ["Noto Sans Regular"],
+                "text-size": 12,
+              }}
+              paint={{ "text-color": "#ffffff" }}
+            />
+            <Layer
+              id="btc-map-points"
+              type="circle"
+              filter={["!", ["has", "point_count"]]}
+              paint={{
+                "circle-color": COLORS.BITCOIN_ORANGE,
+                "circle-radius": 7,
+                "circle-stroke-color": "#ffffff",
+                "circle-stroke-width": 2,
+              }}
+            />
+          </GeoJSONSource>
+          <GeoJSONSource id="btc-map-user-location" data={userLocationGeoJson}>
+            <Layer
+              id="btc-map-user-location-halo"
+              type="circle"
+              paint={{ "circle-color": "#2f80ed", "circle-opacity": 0.2, "circle-radius": 16 }}
+            />
+            <Layer
+              id="btc-map-user-location-dot"
+              type="circle"
+              paint={{
+                "circle-color": "#2f80ed",
+                "circle-radius": 7,
+                "circle-stroke-color": "#ffffff",
+                "circle-stroke-width": 2,
+              }}
+            />
+          </GeoJSONSource>
+        </Map>
+
+        <View
+          pointerEvents="box-none"
+          className="absolute left-3 right-3"
+          style={{ top: insets.top + 8, left: insets.left + 12 }}
+        >
+          <View className="flex-row items-center gap-2">
+            <NativeNoahBackButton onPress={() => navigation.goBack()} />
+            <View className="h-12 flex-1 flex-row items-center rounded-full border border-border bg-background px-4">
+              <Icon name="search" size={19} color={colors.mutedForeground} />
+              <TextInput
+                value={search}
+                onChangeText={(value) => {
+                  setSearch(value);
                   setSelectedCity(undefined);
                 }}
-              >
-                <Icon name="close-circle" size={20} color={colors.mutedForeground} />
-              </Pressable>
-            )}
-          </View>
-        </View>
-        {isAutocompleteOpen ? (
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            bounces={false}
-            showsVerticalScrollIndicator={false}
-            className="mt-2 max-h-80 rounded-3xl border border-border bg-background"
-          >
-            <Text className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              Locations
-            </Text>
-            {cityIndexQuery.isLoading && (
-              <View className="flex-row items-center gap-2 px-4 py-3">
-                <NoahActivityIndicator size="small" />
-                <Text className="text-sm text-muted-foreground">Loading city search…</Text>
-              </View>
-            )}
-            {cityResults.map((city) => (
-              <SearchResultRow
-                key={city.id}
-                icon="location-outline"
-                label={city.name}
-                detail={citySecondaryLabel(city)}
-                onPress={() => selectCity(city)}
+                onFocus={() => setIsSearchFocused(true)}
+                onSubmitEditing={() => {
+                  const city = cityResults[0];
+                  if (city) {
+                    selectCity(city);
+                  }
+                }}
+                accessibilityLabel="Search places or cities"
+                placeholder="Search places or cities"
+                placeholderTextColor={colors.mutedForeground}
+                className="ml-2 flex-1 text-base text-foreground"
+                returnKeyType="search"
+                autoCorrect={false}
               />
-            ))}
-
-            {merchantResults.length > 0 && (
-              <>
-                <View className="mx-4 h-px bg-border" />
-                <Text className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Bitcoin places
-                </Text>
-                {merchantResults.map((place) => (
-                  <SearchResultRow
-                    key={place.id}
-                    icon="storefront-outline"
-                    label={place.name}
-                    detail={categoryLabel(place)}
-                    onPress={() => selectPlace(place)}
-                  />
-                ))}
-              </>
-            )}
-
-            {!cityIndexQuery.isLoading &&
-              cityResults.length === 0 &&
-              merchantResults.length === 0 && (
-                <Text className="px-4 pb-5 pt-2 text-sm text-muted-foreground">
-                  No matching cities or Bitcoin places
-                </Text>
-              )}
-          </ScrollView>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerClassName="mt-2 gap-2 pr-4"
-          >
-            {PLACE_CATEGORIES.map((item) => {
-              const selected = category === item.value;
-              return (
+              {search.length > 0 && (
                 <Pressable
-                  key={item.value}
                   accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  onPress={() => setCategory(item.value)}
-                  className={`rounded-full border px-4 py-2 ${
-                    selected ? "border-[#f7931a] bg-[#f7931a]" : "border-border bg-background"
-                  }`}
+                  accessibilityLabel="Clear search"
+                  onPress={() => {
+                    setSearch("");
+                    setSelectedCity(undefined);
+                  }}
                 >
-                  <Text className={`text-sm font-semibold ${selected ? "text-white" : ""}`}>
-                    {item.label}
-                  </Text>
+                  <Icon name="close-circle" size={20} color={colors.mutedForeground} />
                 </Pressable>
-              );
-            })}
-          </ScrollView>
-        )}
-        {!isAutocompleteOpen && (
-          <View pointerEvents="box-none" className="mt-3 flex-row items-center justify-end gap-2">
-            <View
-              pointerEvents="box-none"
-              className="flex-shrink flex-row flex-wrap items-center justify-end gap-x-1 gap-y-0.5 rounded-full bg-black/60 px-2.5 py-1.5"
+              )}
+            </View>
+          </View>
+          {isAutocompleteOpen ? (
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              bounces={false}
+              showsVerticalScrollIndicator={false}
+              className="mt-2 max-h-80 rounded-3xl border border-border bg-background"
             >
-              <Pressable
-                accessibilityRole="link"
-                onPress={() =>
-                  void openUrl("https://www.openstreetmap.org/copyright").catch((error) =>
-                    log.w("Could not open map attribution", [error]),
-                  )
-                }
+              <Text className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                Locations
+              </Text>
+              {cityIndexQuery.isLoading && (
+                <View className="flex-row items-center gap-2 px-4 py-3">
+                  <NoahActivityIndicator size="small" />
+                  <Text className="text-sm text-muted-foreground">Loading city search…</Text>
+                </View>
+              )}
+              {cityResults.map((city) => (
+                <SearchResultRow
+                  key={city.id}
+                  icon="location-outline"
+                  label={city.name}
+                  detail={citySecondaryLabel(city)}
+                  onPress={() => selectCity(city)}
+                />
+              ))}
+
+              {merchantResults.length > 0 && (
+                <>
+                  <View className="mx-4 h-px bg-border" />
+                  <Text className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Bitcoin places
+                  </Text>
+                  {merchantResults.map((place) => (
+                    <SearchResultRow
+                      key={place.id}
+                      icon="storefront-outline"
+                      label={place.name}
+                      detail={categoryLabel(place)}
+                      onPress={() => selectPlace(place)}
+                    />
+                  ))}
+                </>
+              )}
+
+              {!cityIndexQuery.isLoading &&
+                cityResults.length === 0 &&
+                merchantResults.length === 0 && (
+                  <Text className="px-4 pb-5 pt-2 text-sm text-muted-foreground">
+                    No matching cities or Bitcoin places
+                  </Text>
+                )}
+            </ScrollView>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerClassName="mt-2 gap-2 pr-4"
+            >
+              {PLACE_CATEGORIES.map((item) => {
+                const selected = category === item.value;
+                return (
+                  <Pressable
+                    key={item.value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => setCategory(item.value)}
+                    className={`rounded-full border px-4 py-2 ${
+                      selected ? "border-[#f7931a] bg-[#f7931a]" : "border-border bg-background"
+                    }`}
+                  >
+                    <Text className={`text-sm font-semibold ${selected ? "text-white" : ""}`}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
+          {!isAutocompleteOpen && (
+            <View pointerEvents="box-none" className="mt-3 flex-row items-center justify-end gap-2">
+              <View
+                pointerEvents="box-none"
+                className="flex-shrink flex-row flex-wrap items-center justify-end gap-x-1 gap-y-0.5 rounded-full bg-black/60 px-2.5 py-1.5"
               >
-                <Text className="text-[10px] text-white">© OpenStreetMap</Text>
-              </Pressable>
-              <Text className="text-[10px] text-white">·</Text>
+                <Pressable
+                  accessibilityRole="link"
+                  onPress={() =>
+                    void openUrl("https://www.openstreetmap.org/copyright").catch((error) =>
+                      log.w("Could not open map attribution", [error]),
+                    )
+                  }
+                >
+                  <Text className="text-[10px] text-white">© OpenStreetMap</Text>
+                </Pressable>
+                <Text className="text-[10px] text-white">·</Text>
+                <Pressable
+                  accessibilityRole="link"
+                  onPress={() =>
+                    void openUrl("https://openmaptiles.org").catch((error) =>
+                      log.w("Could not open OpenMapTiles attribution", [error]),
+                    )
+                  }
+                >
+                  <Text className="text-[10px] text-white">© OpenMapTiles</Text>
+                </Pressable>
+                <Text className="text-[10px] text-white">·</Text>
+                <Pressable
+                  accessibilityRole="link"
+                  onPress={() =>
+                    void openUrl("https://btcmap.org").catch((error) =>
+                      log.w("Could not open BTC Map attribution", [error]),
+                    )
+                  }
+                >
+                  <Text className="text-[10px] text-white">BTC Map</Text>
+                </Pressable>
+                <Text className="text-[10px] text-white">·</Text>
+                <Pressable
+                  accessibilityRole="link"
+                  onPress={() =>
+                    void openUrl("https://www.geonames.org").catch((error) =>
+                      log.w("Could not open GeoNames attribution", [error]),
+                    )
+                  }
+                >
+                  <Text className="text-[10px] text-white">GeoNames</Text>
+                </Pressable>
+              </View>
               <Pressable
-                accessibilityRole="link"
-                onPress={() =>
-                  void openUrl("https://openmaptiles.org").catch((error) =>
-                    log.w("Could not open OpenMapTiles attribution", [error]),
-                  )
-                }
+                accessibilityRole="button"
+                accessibilityLabel="Find places near me"
+                disabled={isLocating}
+                onPress={() => void handleLocate()}
+                className="h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-border bg-background"
+                style={{ opacity: isLocating ? 0.6 : 1 }}
               >
-                <Text className="text-[10px] text-white">© OpenMapTiles</Text>
-              </Pressable>
-              <Text className="text-[10px] text-white">·</Text>
-              <Pressable
-                accessibilityRole="link"
-                onPress={() =>
-                  void openUrl("https://btcmap.org").catch((error) =>
-                    log.w("Could not open BTC Map attribution", [error]),
-                  )
-                }
-              >
-                <Text className="text-[10px] text-white">BTC Map</Text>
-              </Pressable>
-              <Text className="text-[10px] text-white">·</Text>
-              <Pressable
-                accessibilityRole="link"
-                onPress={() =>
-                  void openUrl("https://www.geonames.org").catch((error) =>
-                    log.w("Could not open GeoNames attribution", [error]),
-                  )
-                }
-              >
-                <Text className="text-[10px] text-white">GeoNames</Text>
+                {isLocating ? (
+                  <NoahActivityIndicator size="small" />
+                ) : (
+                  <Icon name="locate" size={22} color={COLORS.BITCOIN_ORANGE} />
+                )}
               </Pressable>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Find places near me"
-              disabled={isLocating}
-              onPress={() => void handleLocate()}
-              className="h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-border bg-background"
-              style={{ opacity: isLocating ? 0.6 : 1 }}
-            >
-              {isLocating ? (
-                <NoahActivityIndicator size="small" />
-              ) : (
-                <Icon name="locate" size={22} color={COLORS.BITCOIN_ORANGE} />
-              )}
-            </Pressable>
+          )}
+        </View>
+
+        {!selectedPlace && userLocation && (
+          <NearbyPlaces
+            places={filteredPlaces}
+            location={userLocation}
+            bottom={Platform.OS === "android" ? 4 : tabBarHeight + 4}
+            onSelect={selectPlace}
+          />
+        )}
+
+        {!selectedPlace && !userLocation && (
+          <View
+            className="absolute left-3 rounded-full bg-black/65 px-3 py-2"
+            style={{ bottom: panelBottom }}
+          >
+            <Text className="text-xs font-semibold text-white">
+              {filteredPlaces.length.toLocaleString()} places
+              {snapshotQuery.isSyncing ? " · Updating…" : ""}
+            </Text>
           </View>
         )}
       </View>
-
-      {!selectedPlace && userLocation && (
-        <NearbyPlaces
-          places={filteredPlaces}
-          location={userLocation}
-          bottom={Platform.OS === "android" ? 4 : tabBarHeight + 4}
-          onSelect={selectPlace}
-        />
-      )}
-
-      {!selectedPlace && !userLocation && (
-        <View
-          className="absolute left-3 rounded-full bg-black/65 px-3 py-2"
-          style={{ bottom: panelBottom }}
+      {isExpanded && selectedPlace && isDetailSheetOpen ? (
+        <ScrollView
+          className="border-l border-border"
+          style={{ width: Math.min(380, width * 0.42), flexGrow: 0 }}
+          contentContainerStyle={{
+            padding: 16,
+            paddingTop: insets.top + 16,
+            paddingBottom: tabBarHeight + insets.bottom + 16,
+          }}
+          testID="map-place-pane"
         >
-          <Text className="text-xs font-semibold text-white">
-            {filteredPlaces.length.toLocaleString()} places
-            {snapshotQuery.isSyncing ? " · Updating…" : ""}
-          </Text>
-        </View>
-      )}
-
+          <PlaceDetailPanel
+            place={selectedPlace}
+            userLocation={userLocation}
+            onClose={() => {
+              setIsDetailSheetOpen(false);
+              setSelectedPlaceId(undefined);
+            }}
+          />
+        </ScrollView>
+      ) : null}
       {selectedPlace && (
         <AppBottomSheet
-          isOpen={isDetailSheetOpen}
-          onClose={() => setIsDetailSheetOpen(false)}
-          onDismiss={() => setSelectedPlaceId(undefined)}
+          isOpen={isDetailSheetOpen && !isExpanded}
+          onClose={() => {
+            if (!isExpanded) setIsDetailSheetOpen(false);
+          }}
+          onDismiss={() => {
+            if (!isExpanded && !isDetailSheetOpen) setSelectedPlaceId(undefined);
+          }}
           detents={[0, PLACE_DETAIL_SHEET_HEIGHT]}
           scrimColor="rgba(0, 0, 0, 0.18)"
           scrollable

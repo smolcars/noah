@@ -26,10 +26,7 @@ import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { copyToClipboard } from "~/lib/clipboardUtils";
 import { ConfirmationDialog } from "~/components/ConfirmationDialog";
 import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
-import {
-  NativeNoahPicker,
-  type NativeNoahPickerOption,
-} from "~/components/ui/NativeNoahPicker";
+import { NativeNoahPicker, type NativeNoahPickerOption } from "~/components/ui/NativeNoahPicker";
 
 const log = logger("DebugScreen");
 
@@ -349,7 +346,7 @@ const DebugScreen = () => {
   };
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
       <View className="flex-row items-center px-4 pb-4">
         <NativeNoahBackButton
           onPress={() => navigation.goBack()}
@@ -363,6 +360,8 @@ const DebugScreen = () => {
         className="flex-1 px-4"
         showsVerticalScrollIndicator
         contentContainerStyle={{ paddingBottom: 24 }}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
       >
         <View className="mb-6 mt-6">
           <Label className="text-foreground text-2xl mb-2">Select Action</Label>

@@ -5,6 +5,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
+  ScrollView,
 } from "react-native";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { OnboardingStackParamList } from "../Navigators";
@@ -34,10 +35,14 @@ const RestoreWalletScreen = ({ navigation }: Props) => {
   };
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
       <KeyboardAvoidingView className="flex-1">
         <TouchableWithoutFeedback onPress={dismissKeyboard}>
-          <View className="p-4 flex-1">
+          <ScrollView
+            contentContainerClassName="p-4 grow"
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+          >
             <View className="flex-row items-center mb-4">
               <NativeNoahBackButton
                 onPress={() => navigation.goBack()}
@@ -91,7 +96,7 @@ const RestoreWalletScreen = ({ navigation }: Props) => {
                 width={168}
               />
             </View>
-          </View>
+          </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </NoahSafeAreaView>

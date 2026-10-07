@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Pressable, Image, Platform } from "react-native";
+import { View, Pressable, Image, Platform, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { SettingsStackParamList } from "../Navigators";
@@ -171,7 +171,7 @@ const NoahStoryScreen = () => {
   }, []);
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
       <View className="p-4 flex-1">
         <View className="flex-row items-center mb-4">
           <NativeNoahBackButton
@@ -182,7 +182,7 @@ const NoahStoryScreen = () => {
           <Text className="text-2xl font-bold text-foreground">Noah's Ark Story</Text>
         </View>
 
-        <View className="flex-1 items-center justify-center px-4">
+        <ScrollView contentContainerClassName="grow items-center justify-center px-4 pb-6">
           <View className="items-center mb-8">
             <Image
               source={logoImage}
@@ -241,7 +241,7 @@ const NoahStoryScreen = () => {
               </Pressable>
             </View>
           </View>
-        </View>
+        </ScrollView>
       </View>
     </NoahSafeAreaView>
   );
