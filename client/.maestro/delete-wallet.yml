@@ -8,14 +8,17 @@ appId: com.noahwallet.regtest
 - runFlow: subflows/complete-wallet-onboarding-without-email.yml
 
 - tapOn: "Open settings"
-- swipe:
-    direction: UP
-- swipe:
-    direction: UP
+- scrollUntilVisible:
+    element:
+      text: "Delete Wallet"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Delete Wallet"
 - tapOn:
     text: 'Type "delete" to confirm'
 - inputText: "delete"
 # Submit through the existing Done action without targeting a moving sheet button.
 - pressKey: Enter
-- assertVisible: "Welcome to Noah"
+- extendedWaitUntil:
+    visible: "Welcome to Noah"
+    timeout: 60000

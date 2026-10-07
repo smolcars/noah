@@ -57,6 +57,27 @@
           ]
         );
 
+      cocoapodsFor =
+        pkgs:
+        pkgs.cocoapods.override {
+          bundlerApp =
+            args:
+            pkgs.bundlerApp (
+              args
+              // {
+                # Apple's older libffi fork aborts on macOS 27.
+                gemConfig = pkgs.defaultGemConfig // {
+                  ffi =
+                    attrs:
+                    (pkgs.defaultGemConfig.ffi attrs)
+                    // {
+                      buildInputs = [ pkgs.libffiReal ];
+                    };
+                };
+              }
+            );
+        };
+
       # macOS-specific derivations
       darwinDerivations = {
         xcode-wrapper =
@@ -136,24 +157,7 @@
 
           darwinPackages = with pkgs; [
             bundler
-            (cocoapods.override {
-              bundlerApp =
-                args:
-                pkgs.bundlerApp (
-                  args
-                  // {
-                    # Apple's older libffi fork aborts on macOS 27.
-                    gemConfig = pkgs.defaultGemConfig // {
-                      ffi =
-                        attrs:
-                        (pkgs.defaultGemConfig.ffi attrs)
-                        // {
-                          buildInputs = [ pkgs.libffiReal ];
-                        };
-                    };
-                  }
-                );
-            })
+            (cocoapodsFor pkgs)
             (darwinDerivations.xcode-wrapper pkgs)
             maestro
           ];
@@ -211,9 +215,59 @@
         };
     in
     {
-      devShells = forAllSystems (system: {
-        default = mkShellFor system;
-        server = mkServerShellFor system;
-      });
+      devShells = forAllSystems (
+        system:
+        {
+          default = mkShellFor system;
+          server = mkServerShellFor system;
+          android-ci =
+            let
+              pkgs = pkgsFor system;
+            in
+            pkgs.mkShellNoCC {
+              buildInputs = with pkgs; [
+                bun
+                nodejs_22
+                just
+                jq
+                grpcurl
+                jdk17
+                (maestro.overrideAttrs {
+                  version = "2.11.0";
+                  src = fetchurl {
+                    url = "https://github.com/mobile-dev-inc/maestro/releases/download/cli-2.11.0/maestro.zip";
+                    hash = "sha256-U4RZPLTnoQZInnWoIdFX3UP05Djfa8MIty6CxoXhKDo=";
+                  };
+                })
+              ];
+              shellHook = ''
+                export LC_ALL=en_US.UTF-8
+                export LANG=en_US.UTF-8
+                export JAVA_HOME="${pkgs.jdk17.home}"
+              '';
+            };
+        }
+        // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
+          ios-ci =
+            let
+              pkgs = pkgsFor system;
+            in
+            pkgs.mkShellNoCC {
+              buildInputs = with pkgs; [
+                bun
+                # Node 24.15.0 has broken Darwin worker I/O (nixpkgs#536039).
+                nodejs_22
+                (cocoapodsFor pkgs)
+              ];
+              shellHook = ''
+                export LC_ALL=en_US.UTF-8
+                export LANG=en_US.UTF-8
+                unset SDKROOT
+                export LD=/usr/bin/clang
+                export LD_FOR_TARGET=/usr/bin/clang
+              '';
+            };
+        }
+      );
     };
 }

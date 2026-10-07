@@ -1,0 +1,118 @@
+name: Maestro Test Android
+
+on:
+  workflow_call:
+    inputs:
+      apk_artifact_name:
+        required: true
+        type: string
+
+env:
+  NIX_CONFIG: |
+    post-build-hook =
+    extra-substituters =
+    substituters = https://cache.nixos.org/
+
+jobs:
+  maestro-test:
+    name: Maestro Test Android
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      COMPOSE_PROJECT_NAME: noah-maestro-${{ github.run_id }}-${{ github.run_attempt }}
+      ANDROID_SERIAL: emulator-5554
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: "120000"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Restore Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-android-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-android-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Prepare Maestro environment
+        run: nix build .#devShells.x86_64-linux.android-ci --no-link
+
+      - name: Set up cached Docker builder
+        uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2.2.0
+        with:
+          cache-key: noah/maestro-server-amd64
+
+      - name: Build server image for regtest
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          tags: ${{ env.COMPOSE_PROJECT_NAME }}-noah-server
+          load: true
+
+      - name: Set up regtest
+        run: |
+          docker compose -f scripts/docker-compose.yml pull --ignore-buildable
+          nix develop .#android-ci --command just setup-everything
+
+      - name: Enable KVM
+        run: |
+          emulator_runtime_dir="$RUNNER_TEMP/android-runtime"
+          mkdir -p "$emulator_runtime_dir"
+          chmod 700 "$emulator_runtime_dir"
+          echo "XDG_RUNTIME_DIR=$emulator_runtime_dir" >> "$GITHUB_ENV"
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm && test -w /dev/kvm
+
+      - name: Resolve emulator SDK path
+        id: sdk
+        run: echo "root=$ANDROID_HOME" >> "$GITHUB_OUTPUT"
+
+      - name: Cache emulator system image
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          key: android-emulator-image-${{ runner.os }}-${{ runner.arch }}-36-google-apis
+          path: ${{ steps.sdk.outputs.root }}/system-images/android-36/google_apis/x86_64
+
+      - name: Download existing CI APK
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.apk_artifact_name }}
+          path: android-release-build
+
+      - name: Run release Maestro suite
+        uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc # v2.38.0
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -grpc 8556 -grpc-use-token
+          # Disabling system animations leaves Send's stage transition blank.
+          disable-animations: false
+          script: nix develop .#android-ci --command scripts/test-maestro-android.sh android-release-build/noah.apk
+
+      - name: Collect regtest logs
+        if: failure()
+        run: docker compose -f scripts/docker-compose.yml logs --no-color > regtest.log 2>&1
+
+      - name: Clean up regtest
+        if: always()
+        run: docker compose -f scripts/docker-compose.yml down --volumes
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: maestro-android-debug
+          include-hidden-files: true
+          path: |
+            client/maestro-debug-output
+            regtest.log
+          if-no-files-found: ignore

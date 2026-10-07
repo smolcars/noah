@@ -28,7 +28,12 @@ appId: com.noahwallet.regtest
     direction: DOWN
 - tapOn:
     id: "exit-deposit-copy-button"
-- assertVisible: "Address copied"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible: "Address copied"
+# Android's clipboard toast outlasts the 2s label; the harness checks the clipboard.
 - setOrientation: PORTRAIT
 - scrollUntilVisible:
     element:

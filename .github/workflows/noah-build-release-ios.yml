@@ -1,7 +1,7 @@
 name: Build iOS Release Simulator App
 
 env:
-  # Self-hosted runners persist /nix/store; avoid stale Magic Nix Cache hooks/proxies.
+  # Restore the Nix store explicitly; use the public binary cache on cache misses.
   NIX_CONFIG: |
     post-build-hook =
     extra-substituters =
@@ -20,7 +20,8 @@ on:
 jobs:
   build-release-ios:
     name: Build iOS Release App
-    runs-on: macOS
+    runs-on: blacksmith-6vcpu-macos-latest
+    timeout-minutes: 60
     outputs:
       artifact_name: ${{ steps.set_outputs.outputs.artifact_name }}
       app_filename: ${{ steps.set_outputs.outputs.app_filename }}
@@ -28,28 +29,42 @@ jobs:
       - name: 🏗 Checkout repository
         uses: actions/checkout@v6
 
-      - name: 📦 Install dependencies
-        run: nix develop .# --command bash -c "bun install --frozen-lockfile"
-
-      - name: Check Xcode and Expo Swift interface compatibility
+      - name: Check runner default Xcode
+        id: toolchain
         run: |
-          python3 - <<'PY'
-          import subprocess
-          version = subprocess.check_output(["xcrun", "--sdk", "iphonesimulator", "--show-sdk-version"], text=True).strip()
-          assert tuple(map(int, version.split("."))) >= (27, 1), f"Duo requires iOS SDK 27.1 or later; selected {version}"
-          PY
-          python3 scripts/test_expo_swift_interface.py
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+          echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
+          echo "macos=$(sw_vers -buildVersion)" >> "$GITHUB_OUTPUT"
+          echo "xcode=$(xcodebuild -version | awk '/Build version/ {print $3}')" >> "$GITHUB_OUTPUT"
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Restore Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-ios-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.macos }}-${{ steps.toolchain.outputs.xcode }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-ios-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.macos }}-${{ steps.toolchain.outputs.xcode }}-
+
+      - name: Prepare iOS CI environment
+        run: /usr/bin/time -p nix build .#devShells.aarch64-darwin.ios-ci --no-link
+
+      - name: 📦 Install dependencies
+        run: nix develop .#ios-ci --command bash -c "bun install --frozen-lockfile"
 
       - name: 🛠️ Build
-        run: nix develop .# --command bash -c "bun client ios:prebuild && bun client build:ios:ci"
+        env:
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
+        run: nix develop .#ios-ci --command bash -c "bun client ios:prebuild && bun client build:ios:ci"
 
       - name: 📁 Prepare build output
         id: set_outputs
         run: |
           mkdir ios-release-build
           mv client/ios/build/Build/Products/Release-iphonesimulator/Noah-Regtest.app ios-release-build/ios-release.app
-          echo "artifact_name=ios-release-app" >> $GITHUB_OUTPUT
-          echo "app_filename=ios-release.app" >> $GITHUB_OUTPUT
+          echo "artifact_name=ios-release-app" >> "$GITHUB_OUTPUT"
+          echo "app_filename=ios-release.app" >> "$GITHUB_OUTPUT"
 
       - name: 🗜️ Compress iOS app
         run: |

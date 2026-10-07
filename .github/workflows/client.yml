@@ -9,6 +9,7 @@ env:
 
 on:
   pull_request:
+  workflow_dispatch:
   workflow_call:
     inputs:
       build_aab:
@@ -50,6 +51,10 @@ jobs:
               - 'scripts/**'
               - 'package.json'
               - 'bun.lock'
+              - 'patches/**'
+              - 'flake.nix'
+              - 'flake.lock'
+              - 'Dockerfile'
               - '.github/workflows/**'
 
       - name: 🧭 Set client change output
@@ -86,7 +91,8 @@ jobs:
         run: nix develop .# --command bash -c "bun client typecheck"
 
   android_build:
-    runs-on: self-hosted
+    runs-on: ${{ (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && 'blacksmith-8vcpu-ubuntu-2404' || 'self-hosted' }}
+    timeout-minutes: 60
     needs: [changes, lint]
     if: needs.changes.outputs.client_changed == 'true'
     outputs:
@@ -98,38 +104,82 @@ jobs:
       - name: 🏗 Checkout code
         uses: actions/checkout@v6
 
-      - name: 📦 Install signet app dependencies
-        run: nix develop .# --command bash -c "bun install --frozen-lockfile"
+      - name: Select Android build
+        id: build_config
+        env:
+          REGTEST_BUILD: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        run: |
+          if [[ "$REGTEST_BUILD" == "true" ]]; then
+            printf 'shell=android-ci\nvariant=regtest\nscript=build:android:regtest:release\nsdk_root=%s\n' "$ANDROID_HOME" >> "$GITHUB_OUTPUT"
+          else
+            printf 'shell=default\nvariant=signet\nscript=build:android:signet:ci:apk\n' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Nix
+        if: steps.build_config.outputs.variant == 'regtest'
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Restore Nix store
+        if: steps.build_config.outputs.variant == 'regtest'
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-android-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-android-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Cache Gradle
+        if: steps.build_config.outputs.variant == 'regtest'
+        uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
+        with:
+          cache-read-only: false
+
+      - name: Cache Android build SDK
+        if: steps.build_config.outputs.variant == 'regtest'
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          key: android-build-sdk-${{ runner.os }}-${{ runner.arch }}-37.0-ndk27.1-cmake3.22.1
+          path: |
+            ${{ steps.build_config.outputs.sdk_root }}/platforms/android-37.0
+            ${{ steps.build_config.outputs.sdk_root }}/build-tools/37.0.0
+            ${{ steps.build_config.outputs.sdk_root }}/ndk/27.1.12297006
+            ${{ steps.build_config.outputs.sdk_root }}/cmake/3.22.1
+
+      - name: Install Android build SDK
+        if: steps.build_config.outputs.variant == 'regtest'
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-37.0' 'build-tools;37.0.0' 'ndk;27.1.12297006' 'cmake;3.22.1'
+
+      - name: 📦 Install app dependencies
+        run: nix develop .#${{ steps.build_config.outputs.shell }} --command bun install --frozen-lockfile
 
       - name: 🔧 Create sentry.properties
-        if: github.event_name != 'pull_request'
+        if: steps.build_config.outputs.variant == 'signet'
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: ./scripts/create_sentry_properties.sh
 
       - name: 🔐 Decode keystore
-        if: github.event_name != 'pull_request'
+        if: steps.build_config.outputs.variant == 'signet'
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > client/android/app/release.keystore
 
       - name: 🔧 Create local.properties for release signing
-        if: github.event_name != 'pull_request'
+        if: steps.build_config.outputs.variant == 'signet'
         env:
           MYAPP_RELEASE_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           MYAPP_RELEASE_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           MYAPP_RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./scripts/create_local_properties.sh
 
-      - name: 🔨 Build signet Android app (APK)
+      - name: 🔨 Build Android release APK
         env:
-          CI_DEBUG_SIGNING: ${{ github.event_name == 'pull_request' }}
-          SENTRY_DISABLE_AUTO_UPLOAD: ${{ github.event_name == 'pull_request' }}
-        run: nix develop .# --command bash -c "bun client build:android:signet:ci:apk"
+          CI_DEBUG_SIGNING: ${{ steps.build_config.outputs.variant == 'regtest' }}
+          SENTRY_DISABLE_AUTO_UPLOAD: ${{ steps.build_config.outputs.variant == 'regtest' }}
+        run: nix develop .#${{ steps.build_config.outputs.shell }} --command bun client ${{ steps.build_config.outputs.script }}
 
       - name: 📦 Build signet Android app (AAB)
-        if: ${{ inputs.build_aab }}
+        if: ${{ inputs.build_aab && steps.build_config.outputs.variant == 'signet' }}
         run: nix develop .# --command bash -c "bun client build:android:signet:ci:aab"
 
       - name: 🧹 Clean up keystore & local.properties
@@ -140,9 +190,11 @@ jobs:
 
       - name: 📝 Rename APK for publication
         id: rename_apk
+        env:
+          BUILD_VARIANT: ${{ steps.build_config.outputs.variant }}
         run: |
-          apk_path="client/android/app/build/outputs/apk/signet/release/app-signet-release.apk"
-          new_apk_path="client/android/app/build/outputs/apk/signet/release/noah.apk"
+          apk_path="client/android/app/build/outputs/apk/${BUILD_VARIANT}/release/app-${BUILD_VARIANT}-release.apk"
+          new_apk_path="client/android/app/build/outputs/apk/${BUILD_VARIANT}/release/noah.apk"
           mv "${apk_path}" "${new_apk_path}"
           echo "new_path=${new_apk_path}" >> $GITHUB_OUTPUT
           echo "apk_filename=noah.apk" >> $GITHUB_OUTPUT
@@ -189,9 +241,21 @@ jobs:
           if-no-files-found: error
           overwrite: true
 
+  ios_build:
+    needs: changes
+    if: needs.changes.outputs.client_changed == 'true' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+    uses: ./.github/workflows/noah-build-release-ios.yml
+
+  maestro_test:
+    needs: [changes, android_build]
+    if: needs.changes.outputs.client_changed == 'true' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+    uses: ./.github/workflows/noah-maestro-test-android.yml
+    with:
+      apk_artifact_name: ${{ needs.android_build.outputs.apk_artifact_name }}
+
   client_gate:
     runs-on: ubuntu-latest
-    needs: [changes, lint, android_build]
+    needs: [changes, lint, android_build, ios_build, maestro_test]
     if: always()
     steps:
       - name: ✅ Gate
@@ -204,6 +268,13 @@ jobs:
           if [[ "${{ needs.changes.outputs.client_changed }}" != "true" ]]; then
             echo "No client-related changes; client checks not required"
             exit 0
+          fi
+
+          if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ needs.ios_build.result }}" != "success" || "${{ needs.maestro_test.result }}" != "success" ]]; then
+              echo "iOS build or Android Maestro failed"
+              exit 1
+            fi
           fi
 
           if [[ "${{ needs.lint.result }}" == "success" ]] && \
