@@ -50,6 +50,9 @@ jobs:
       - name: Prepare iOS CI environment
         run: /usr/bin/time -p nix build .#devShells.aarch64-darwin.ios-ci --no-link
 
+      - name: Check Node worker file I/O
+        run: nix develop .#ios-ci --command node scripts/test_node_worker_io.mjs
+
       - name: 📦 Install dependencies
         run: nix develop .#ios-ci --command bash -c "bun install --frozen-lockfile"
 

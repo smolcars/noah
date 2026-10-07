@@ -10,11 +10,13 @@ Start with the simulator build before migrating Maestro or signed device/release
 
 ## Implemented simulator-build pilot
 
-The simulator build now uses `blacksmith-6vcpu-macos-latest` and the runner's selected default Xcode. The Darwin-only `ios-ci` shell contains Bun, Node, and the same customized CocoaPods package used locally; it excludes Android tooling, Maestro, and the host-specific Xcode wrapper. The regular development shells are unchanged. [Build workflow](../.github/workflows/noah-build-release-ios.yml), [flake.nix](../flake.nix)
+The simulator build now uses `blacksmith-6vcpu-macos-latest` and the runner's selected default Xcode. The Darwin-only `ios-ci` shell contains Bun, Node 22, and the same customized CocoaPods package used locally; it excludes Android tooling, Maestro, and the host-specific Xcode wrapper. The regular development shells are unchanged. [Build workflow](../.github/workflows/noah-build-release-ios.yml), [flake.nix](../flake.nix)
 
 The workflow installs Nix using the pinned Cachix installer and restores/saves its store with the pinned `cache-nix-action`. Cache keys include OS/architecture, macOS and Xcode build versions, and both Nix files, with a compatible fallback when the Nix files change. A separate timed step realizes the environment before application dependencies/building so hosted cold/warm setup is observable. Simulator builds disable Sentry source-map uploads, avoiding a dependency on the old host's credentials.
 
 Maestro execution and signed device/archive jobs still use the Mac mini until their Docker and signing setup is migrated. Hosted build success, actual cache reuse, and cache-backend throughput remain to be verified through the PR.
+
+The first hosted run selected Xcode 26.6 and installed Nix in 28 seconds. On its cold cache, the timed environment realization took 37.28 seconds. Native compilation progressed to Expo bundling, which failed with `EBADF` while writing the bundle. The same command reproduced locally with Nix Node 24.15.0. A minimal worker file-I/O check reproduced the known Darwin Node build defect; both checks passed after selecting the existing Node 22.22.3 package, which satisfies the installed Expo/React Native engine requirements. CI now runs the worker check before building. The failed run skipped cache saving, so a successful hosted build and subsequent warm run are still needed. [First hosted run](https://github.com/smolcars/noah/actions/runs/37650157516), [Nixpkgs Node defect](https://github.com/NixOS/nixpkgs/issues/536039), [Worker regression](../scripts/test_node_worker_io.mjs)
 
 ## Hosted macOS is available
 
@@ -85,7 +87,7 @@ A read-only local snapshot of the current Darwin default shell found 154 dedupli
 
 The Android SDK input alone has a **7.64 GiB** runtime closure; custom CocoaPods has a **0.84 GiB** closure, measured with `nix path-info --offline --json --closure-size`. These closures overlap and must not be added together. Android dominates the current iOS job's tool footprint, making an iOS-only CI shell a concrete simplification.
 
-The implemented `ios-ci` shell was built and entered locally: Bun 1.3.13, Node 24.15.0, and CocoaPods 1.16.2 run successfully, while `xcodebuild` and `xcrun` resolve to `/usr/bin`. Its deduplicated runtime closure is **117 paths / 1.11 GiB uncompressed**, measured with the same input/closure queries. All four pre-existing Darwin/Linux development and server shell derivation paths match the original `master` definitions. These local checks do not establish hosted cache performance or application build success.
+The implemented `ios-ci` shell was built and entered locally: Bun 1.3.13, Node 22.22.3, and CocoaPods 1.16.2 run successfully, while `xcodebuild` and `xcrun` resolve to `/usr/bin`. Its deduplicated runtime closure is **117 paths / 1.10 GiB uncompressed**, measured with the same input/closure queries. All four pre-existing Darwin/Linux development and server shell derivation paths match the original `master` definitions. These local checks do not establish hosted cache performance or application build success.
 
 Public-cache `.narinfo` HEAD probes returned HTTP 200 for the current `bun-1.3.13` output and 404 for the composed Android SDK, custom CocoaPods, and Xcode wrapper outputs. This is a snapshot of four outputs, not an audit of all dependencies. A missing top-level custom output may require assembly/download of prebuilt inputs, not compiling its whole dependency tree. These observations favor caching the store or reducing the iOS shell's footprint; they do not establish a hosted run duration.
 

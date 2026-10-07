@@ -229,7 +229,8 @@
             pkgs.mkShellNoCC {
               buildInputs = with pkgs; [
                 bun
-                nodejs
+                # Node 24.15.0 has broken Darwin worker I/O (nixpkgs#536039).
+                nodejs_22
                 (cocoapodsFor pkgs)
               ];
               shellHook = ''
