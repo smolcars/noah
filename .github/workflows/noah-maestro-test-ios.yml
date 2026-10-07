@@ -64,6 +64,7 @@ jobs:
       - name: 🔧 Setup Regtest Environment
         run: |
           python3 scripts/test_regtest_isolation.py
+          python3 scripts/test_ios_simulator_selection.py
           cd scripts
           docker-compose pull
           docker-compose build
@@ -80,9 +81,10 @@ jobs:
           devices = json.loads(simctl("list", "devicetypes", "-j"))["devicetypes"]
           device = next(d for d in devices if d["name"] == os.environ["SIMULATOR_MODEL"])
           runtimes = json.loads(simctl("list", "runtimes", "-j"))["runtimes"]
-          runtimes = [r for r in runtimes if r["isAvailable"] and ".iOS-" in r["identifier"] and tuple(map(int, r["version"].split("."))) >= (27, 1)]
-          assert runtimes, "Install iOS 27.1 or later on the macOS runner for Duo coverage"
+          runtimes = [r for r in runtimes if r["isAvailable"] and ".iOS-" in r["identifier"] and any(d["identifier"] == device["identifier"] for d in r["supportedDeviceTypes"])]
+          assert runtimes, f"Install an available iOS runtime supporting {device['name']}"
           runtime = max(runtimes, key=lambda r: tuple(map(int, r["version"].split("."))))
+          print(f"Using {runtime['name']} for {device['name']}", flush=True)
           udid = simctl("create", "Noah CI " + os.environ["SIMULATOR_MODEL"], device["identifier"], runtime["identifier"])
           with open(os.environ["GITHUB_ENV"], "a") as env:
               env.write(f"SIMULATOR_ID={udid}\n")
