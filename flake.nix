@@ -57,6 +57,27 @@
           ]
         );
 
+      cocoapodsFor =
+        pkgs:
+        pkgs.cocoapods.override {
+          bundlerApp =
+            args:
+            pkgs.bundlerApp (
+              args
+              // {
+                # Apple's older libffi fork aborts on macOS 27.
+                gemConfig = pkgs.defaultGemConfig // {
+                  ffi =
+                    attrs:
+                    (pkgs.defaultGemConfig.ffi attrs)
+                    // {
+                      buildInputs = [ pkgs.libffiReal ];
+                    };
+                };
+              }
+            );
+        };
+
       # macOS-specific derivations
       darwinDerivations = {
         xcode-wrapper =
@@ -136,24 +157,7 @@
 
           darwinPackages = with pkgs; [
             bundler
-            (cocoapods.override {
-              bundlerApp =
-                args:
-                pkgs.bundlerApp (
-                  args
-                  // {
-                    # Apple's older libffi fork aborts on macOS 27.
-                    gemConfig = pkgs.defaultGemConfig // {
-                      ffi =
-                        attrs:
-                        (pkgs.defaultGemConfig.ffi attrs)
-                        // {
-                          buildInputs = [ pkgs.libffiReal ];
-                        };
-                    };
-                  }
-                );
-            })
+            (cocoapodsFor pkgs)
             (darwinDerivations.xcode-wrapper pkgs)
             maestro
           ];
@@ -211,9 +215,32 @@
         };
     in
     {
-      devShells = forAllSystems (system: {
-        default = mkShellFor system;
-        server = mkServerShellFor system;
-      });
+      devShells = forAllSystems (
+        system:
+        {
+          default = mkShellFor system;
+          server = mkServerShellFor system;
+        }
+        // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
+          ios-ci =
+            let
+              pkgs = pkgsFor system;
+            in
+            pkgs.mkShellNoCC {
+              buildInputs = with pkgs; [
+                bun
+                nodejs
+                (cocoapodsFor pkgs)
+              ];
+              shellHook = ''
+                export LC_ALL=en_US.UTF-8
+                export LANG=en_US.UTF-8
+                unset SDKROOT
+                export LD=/usr/bin/clang
+                export LD_FOR_TARGET=/usr/bin/clang
+              '';
+            };
+        }
+      );
     };
 }
