@@ -1,0 +1,12 @@
+diff --git a/ios/RCTTabViewComponentView.mm b/ios/RCTTabViewComponentView.mm
+--- a/ios/RCTTabViewComponentView.mm
++++ b/ios/RCTTabViewComponentView.mm
+@@ -18,7 +18,7 @@
+ #import <React/RCTImageSource.h>
+ #import <React/RCTBridge+Private.h>
+ #import "RCTImagePrimitivesConversions.h"
+-#import "RCTConversions.h"
++#import <React/RCTConversions.h>
+ #import <react/utils/ManagedObjectWrapper.h>
+ 
+ #if TARGET_OS_OSX

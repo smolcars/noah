@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { View, AppState, AppStateStatus, StyleSheet } from "react-native";
+import { View, AppState, StyleSheet } from "react-native";
 import { Text } from "./ui/text";
 import { NativeNoahButton } from "./ui/NativeNoahButton";
 import { useBiometrics } from "../hooks/useBiometrics";
@@ -20,7 +20,7 @@ const BiometricGate: React.FC<BiometricGateProps> = ({ children }) => {
   const [hasCheckedInitial, setHasCheckedInitial] = useState(false);
   const [hasUnlockedOnce, setHasUnlockedOnce] = useState(false);
   const isAuthenticatingRef = useRef(false);
-  const appState = useRef<AppStateStatus>(AppState.currentState);
+  const appState = useRef(AppState.currentState);
   const iconColor = useIconColor();
 
   const performAuth = useCallback(async () => {

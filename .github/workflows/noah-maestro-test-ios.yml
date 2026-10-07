@@ -62,6 +62,7 @@ jobs:
           fi
 
           echo "Found simulator with DEVICE_ID=$DEVICE_ID"
+          echo "SIMULATOR_ID=$DEVICE_ID" >> "$GITHUB_ENV"
 
           # Check if simulator is already booted
           STATUS=$(xcrun simctl list | grep "$DEVICE_ID" | grep "(Booted)" || echo "")
@@ -98,15 +99,14 @@ jobs:
           done
 
       - name: 🧪 Run Maestro tests
-        run: nix develop .# --command bash -c "xcrun simctl install booted ios-release-build/ios-release.app && bun client maestro:test && scripts/test-send-regtest.sh"
+        run: nix develop .# --command bash -c "xcrun simctl install \"$SIMULATOR_ID\" ios-release-build/ios-release.app && bun client maestro:test --udid \"$SIMULATOR_ID\" && scripts/test-send-regtest.sh"
         env:
           MAESTRO_DRIVER_STARTUP_TIMEOUT: 120000
 
       - name: 🧹 Shutdown and erase simulator
         if: always()
         run: |
-          echo "Getting booted simulator UDID..."
-          DEVICE_UDID=$(xcrun simctl list devices | grep "(Booted)" | awk -F '[()]' '{print $2}' | head -n 1)
+          DEVICE_UDID="${SIMULATOR_ID:-}"
 
           if [ -n "$DEVICE_UDID" ]; then
             echo "Shutting down simulator: $DEVICE_UDID"
@@ -132,7 +132,7 @@ jobs:
               echo "⚠ Warning: Erase command failed"
             fi
           else
-            echo "No booted simulator found"
+            echo "No simulator selected"
           fi
 
       - name: 🧹 Teardown Regtest Environment

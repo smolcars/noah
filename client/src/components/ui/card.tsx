@@ -1,14 +1,9 @@
 import * as React from "react";
-import { Text, type TextProps, View, type ViewProps } from "react-native";
+import { Text, View } from "react-native";
 import { cn } from "~/lib/utils";
 import { TextClassContext } from "~/components/ui/text";
 
-function Card({
-  className,
-  ...props
-}: ViewProps & {
-  ref?: React.RefObject<View>;
-}) {
+function Card({ className, ...props }: React.ComponentProps<typeof View>) {
   return (
     <View
       className={cn(
@@ -20,21 +15,11 @@ function Card({
   );
 }
 
-function CardHeader({
-  className,
-  ...props
-}: ViewProps & {
-  ref?: React.RefObject<View>;
-}) {
+function CardHeader({ className, ...props }: React.ComponentProps<typeof View>) {
   return <View className={cn("flex flex-col space-y-1.5 p-6", className)} {...props} />;
 }
 
-function CardTitle({
-  className,
-  ...props
-}: TextProps & {
-  ref?: React.RefObject<Text>;
-}) {
+function CardTitle({ className, ...props }: React.ComponentProps<typeof Text>) {
   return (
     <Text
       role="heading"
@@ -48,21 +33,11 @@ function CardTitle({
   );
 }
 
-function CardDescription({
-  className,
-  ...props
-}: TextProps & {
-  ref?: React.RefObject<Text>;
-}) {
+function CardDescription({ className, ...props }: React.ComponentProps<typeof Text>) {
   return <Text className={cn("text-sm text-muted-foreground", className)} {...props} />;
 }
 
-function CardContent({
-  className,
-  ...props
-}: ViewProps & {
-  ref?: React.RefObject<View>;
-}) {
+function CardContent({ className, ...props }: React.ComponentProps<typeof View>) {
   return (
     <TextClassContext.Provider value="text-card-foreground">
       <View className={cn("p-6 pt-0", className)} {...props} />
@@ -70,12 +45,7 @@ function CardContent({
   );
 }
 
-function CardFooter({
-  className,
-  ...props
-}: ViewProps & {
-  ref?: React.RefObject<View>;
-}) {
+function CardFooter({ className, ...props }: React.ComponentProps<typeof View>) {
   return <View className={cn("flex flex-row items-center p-6 pt-0", className)} {...props} />;
 }
 

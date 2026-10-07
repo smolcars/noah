@@ -30,7 +30,7 @@ def useCiDebugSigning = System.getenv('CI_DEBUG_SIGNING') == 'true'
 gradle.taskGraph.whenReady { taskGraph ->
     def mainnetReleaseRequested = taskGraph.allTasks.any {
         def taskName = it.name.toLowerCase()
-        taskName.contains('mainnetrelease') && taskName != 'premainnetreleasebuild'
+        taskName.contains('mainnetrelease') && !taskName.contains('clean') && taskName != 'premainnetreleasebuild'
     }
 
     if (mainnetReleaseRequested && !hasReleaseSigningConfig) {
@@ -73,7 +73,7 @@ react {
     //   The list of variants to that are debuggable. For those we're going to
     //   skip the bundling of the JS bundle and the assets. By default is just 'debug'.
     //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
-    debuggableVariants = ["noahMainnetDebug", "noahSignetDebug", "noahRegtestDebug"]
+    debuggableVariants = ["mainnetDebug", "signetDebug", "regtestDebug"]
 
     /* Bundling */
     //   A list containing the node command and its flags. Default is just 'node'.
@@ -195,7 +195,7 @@ android {
 
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableMinifyInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             crunchPngs (findProperty('android.enablePngCrunchInReleaseBuilds')?.toBoolean() ?: true)
         }
     }

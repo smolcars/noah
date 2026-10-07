@@ -34,7 +34,6 @@ function Text({
   style,
   ...props
 }: React.ComponentProps<typeof RNText> & {
-  ref?: React.RefObject<RNText>;
   asChild?: boolean;
 }) {
   const textClass = React.useContext(TextClassContext);

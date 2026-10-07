@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, TextInput, View } from "react-native";
+import { Pressable, ScrollView, type TextInputInstance, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "@react-native-vector-icons/ionicons";
@@ -82,7 +82,7 @@ const ProfileScreen = () => {
   const [draftDisplayName, setDraftDisplayName] = useState(displayName);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [isEditingName, setIsEditingName] = useState(false);
-  const nameInputRef = useRef<TextInput>(null!);
+  const nameInputRef = useRef<TextInputInstance>(null);
 
   useEffect(() => {
     setDraftDisplayName(displayName);

@@ -1,14 +1,9 @@
 import * as React from "react";
-import { TextInput, type TextInputProps } from "react-native";
+import { TextInput } from "react-native";
 import { cn } from "~/lib/utils";
 import { useCSSVariable } from "uniwind";
 
-function Input({
-  className,
-  ...props
-}: TextInputProps & {
-  ref?: React.RefObject<TextInput>;
-}) {
+function Input({ className, ...props }: React.ComponentProps<typeof TextInput>) {
   const mutedForeground = useCSSVariable("--color-muted-foreground");
   const isMultiline = props.multiline ?? false;
 

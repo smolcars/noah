@@ -1,0 +1,17 @@
+diff --git a/ios/RNFSTurboModule.mm b/ios/RNFSTurboModule.mm
+index 116083d..5d15e20 100644
+--- a/ios/RNFSTurboModule.mm
++++ b/ios/RNFSTurboModule.mm
+@@ -30,6 +30,12 @@ - (void)installJSIBindingsWithRuntime:(facebook::jsi::Runtime&)runtime {
+   cmpayc::rnfsturbo::install(runtime, callInvoker);
+ }
+ 
++- (void)installJSIBindingsWithRuntime:(facebook::jsi::Runtime&)runtime
++                        callInvoker:(const std::shared_ptr<facebook::react::CallInvoker>&)callInvoker {
++  _callInvoker = callInvoker;
++  [self installJSIBindingsWithRuntime:runtime];
++}
++
+ - (NSString*)getMainBundlePath {
+   return [[NSBundle mainBundle] bundlePath];
+ }

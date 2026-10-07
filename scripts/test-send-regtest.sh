@@ -17,6 +17,12 @@ fi
 
 cd "$project_root"
 
+copy_to_simulator() {
+  # Automatic pasteboard sync can overwrite the simulator with the Mac clipboard.
+  printf '%s' "$1" | pbcopy
+  printf '%s' "$1" | xcrun simctl pbcopy "$simulator_id"
+}
+
 "$maestro_command" test --udid "$simulator_id" \
   --debug-output "$maestro_debug_output/prepare" \
   client/.maestro/subflows/prepare-funded-send-ios.yml
@@ -37,7 +43,7 @@ if [[ ! "$bark_ark_address" =~ ^tark1 ]]; then
   exit 1
 fi
 
-printf '%s' "$bark_ark_address" | xcrun simctl pbcopy "$simulator_id"
+copy_to_simulator "$bark_ark_address"
 printf 'Verifying an abandoned recipient is not reused for a new amount.\n'
 "$maestro_command" test --udid "$simulator_id" \
   --debug-output "$maestro_debug_output/recipient-reset-on-back" \
@@ -55,7 +61,7 @@ if [[ ! "$fixed_request_address" =~ ^bcrt1 ]]; then
 fi
 
 printf 'Verifying MAX resets before pasting a fixed-amount payment request.\n'
-printf 'bitcoin:%s?amount=0.00005' "$fixed_request_address" | xcrun simctl pbcopy "$simulator_id"
+copy_to_simulator "bitcoin:$fixed_request_address?amount=0.00005"
 "$maestro_command" test --udid "$simulator_id" \
   --debug-output "$maestro_debug_output/max-back-fixed-request" \
   client/.maestro/subflows/send-max-back-fixed-request.yml
@@ -67,7 +73,7 @@ if [[ ! "$amountless_request_address" =~ ^bcrt1 ]]; then
 fi
 
 printf 'Verifying a zero-amount BIP-321 request stays on the amount composer.\n'
-printf 'bitcoin:%s?amount=0' "$amountless_request_address" | xcrun simctl pbcopy "$simulator_id"
+copy_to_simulator "bitcoin:$amountless_request_address?amount=0"
 "$maestro_command" test --udid "$simulator_id" \
   --debug-output "$maestro_debug_output/amountless-request" \
   client/.maestro/subflows/send-amountless-request.yml

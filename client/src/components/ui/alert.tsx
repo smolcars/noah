@@ -2,7 +2,7 @@ import { useTheme } from "@react-navigation/native";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { LucideIcon } from "lucide-react-native";
 import * as React from "react";
-import { View, type ViewProps } from "react-native";
+import { View } from "react-native";
 import { cn } from "~/lib/utils";
 import { Text } from "~/components/ui/text";
 
@@ -29,9 +29,8 @@ function Alert({
   iconSize = 16,
 
   ...props
-}: ViewProps &
+}: React.ComponentProps<typeof View> &
   VariantProps<typeof alertVariants> & {
-    ref?: React.RefObject<View>;
     icon: LucideIcon;
     iconSize?: number;
   }) {
