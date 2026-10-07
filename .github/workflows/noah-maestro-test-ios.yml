@@ -118,6 +118,14 @@ jobs:
         id: docker
         run: |
           brew install colima qemu docker docker-compose
+          # The runner's Homebrew snapshot has Lima 2.1.2, which cannot fall back from HVF.
+          curl -fsSL https://github.com/lima-vm/lima/releases/download/v2.2.1/lima-2.2.1-Darwin-arm64.tar.gz -o "$RUNNER_TEMP/lima.tar.gz"
+          echo "9e9eacce88f37e185c346bad73aa6136f738d8cdf8c3bb23cd42b071824bc66e  $RUNNER_TEMP/lima.tar.gz" | shasum -a 256 -c -
+          mkdir -p "$RUNNER_TEMP/lima"
+          tar -xzf "$RUNNER_TEMP/lima.tar.gz" -C "$RUNNER_TEMP/lima"
+          export PATH="$RUNNER_TEMP/lima/bin:$PATH"
+          echo "$RUNNER_TEMP/lima/bin" >> "$GITHUB_PATH"
+          limactl --version
           colima version
           qemu-system-aarch64 --version
           sysctl kern.hv_support || true
@@ -182,7 +190,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: maestro-debug-output-ios
-          path: client/maestro-debug-output/**/*
+          path: |
+            client/maestro-debug-output/**/*
+            ~/.colima/_lima/colima/*.log
           include-hidden-files: true
           overwrite: true
 

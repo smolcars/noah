@@ -20,6 +20,10 @@ The first hosted run selected Xcode 26.6 and installed Nix in 28 seconds. On its
 
 The corrected hosted build passed on commit `8acc825`: Xcode 26.6/macOS 26.3, 36.48 seconds for the cold Nix environment, approximately six minutes for Pods/native build/bundling, and a 39.8 MB app artifact. The Nix action reported “Saved the new cache.” Maestro subsequently failed during regtest setup on the Mac mini because another local container owned port 18443; this is the reason the rest of the pipeline is now being migrated. [Corrected build and local regtest failure](https://github.com/smolcars/noah/actions/runs/37653074349)
 
+The identical build rerun restored a 445 MiB compressed Nix cache in approximately 24 seconds; the timed environment realization then took **2.87 seconds**. This confirms reuse rather than a full environment rebuild on each runner. [Warm build, attempt 2](https://github.com/smolcars/noah/actions/runs/37653074349/attempts/2)
+
+The first fully hosted run on `aed1c54` passed both the iOS build and native ARM64 server-image build. Docker VM startup failed: the runner's Homebrew snapshot supplied Lima **2.1.2**, whose native-Darwin accelerator always selects HVF, and the guest has no `kern.hv_support`. Lima then panicked after QEMU exited. The workflow now installs the checksum-pinned official Lima **2.2.1** archive ahead of Homebrew's binary; its implementation selects TCG when that sysctl is unavailable. VM logs are retained with failure artifacts. This fix still needs hosted validation. [Hosted run](https://github.com/smolcars/noah/actions/runs/37656195590), [Lima 2.1.2 accelerator](https://github.com/lima-vm/lima/blob/v2.1.2/pkg/driver/qemu/qemu.go), [Lima 2.2.1 accelerator](https://github.com/lima-vm/lima/blob/v2.2.1/pkg/driver/qemu/qemu.go)
+
 ## Hosted macOS is available
 
 Blacksmith's official runner catalog currently lists:
@@ -105,7 +109,7 @@ Blacksmith's macOS workers are M4 Virtualization.framework guests. Its FAQ suppo
 
 Lima **2.2.1** implements an alternative: its QEMU `Accel()` selects `tcg` on Darwin when `kern.hv_support` is unavailable or is not `1`. A non-native architecture also selects TCG. ARM64 TCG uses an emulated CPU and does not need nested virtualization; expect slower execution. The default CPU becomes `max` under TCG. There is no ordinary Colima `--accel` flag. Lima accepts extra arguments in `QEMU_SYSTEM_AARCH64`, but explicitly labels this debugging-only; prefer its automatic fallback. [Lima 2.2.1 QEMU source](https://github.com/lima-vm/lima/blob/v2.2.1/pkg/driver/qemu/qemu.go), [QEMU emulation and accelerators](https://www.qemu.org/docs/master/system/introduction.html)
 
-Current Homebrew bottles support macOS Tahoe ARM64: Colima **0.10.3**, Lima **2.2.1**, QEMU **11.1.2**, and Compose **5.6.0**. Install QEMU explicitly: Colima's formula depends on Lima, not QEMU. A minimal setup to try in the existing Maestro job is:
+Current Homebrew bottles support macOS Tahoe ARM64: Colima **0.10.3**, Lima **2.2.1**, QEMU **11.1.2**, and Compose **5.6.0**. The hosted runner used an older formula snapshot, so the workflow installs Lima 2.2.1's official archive explicitly. Install QEMU explicitly: Colima's formula depends on Lima, not QEMU. The VM start command is:
 
 ```sh
 brew install colima qemu docker docker-compose
