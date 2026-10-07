@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { AppState, View } from "react-native";
+import { AppState, ScrollView, View } from "react-native";
 import { BatteryCharging, RefreshCcw, Zap } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -18,12 +18,14 @@ import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryBu
 const highlights = [
   {
     title: "Push notifications keep arriving",
-    description: "Without optimization, notifications can drop off completely, not just be delayed.",
+    description:
+      "Without optimization, notifications can drop off completely, not just be delayed.",
     icon: Zap,
   },
   {
     title: "Background activity keeps working",
-    description: "VTXOs keep refreshing in the background so they don't expire while the app is closed.",
+    description:
+      "VTXOs keep refreshing in the background so they don't expire while the app is closed.",
     icon: RefreshCcw,
   },
 ];
@@ -88,15 +90,13 @@ const BatteryOptimizationScreen = ({ onContinue }: BatteryOptimizationScreenProp
   }
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 px-6 py-10">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
+      <ScrollView contentContainerClassName="grow px-6 py-10">
         <View className="items-center">
           <View className="h-24 w-24 items-center justify-center rounded-3xl bg-card border border-border shadow-lg shadow-black/30">
             <BatteryCharging size={48} color="#f97316" />
           </View>
-          <Text className="mt-6 text-3xl font-bold text-center">
-            Disable battery optimization
-          </Text>
+          <Text className="mt-6 text-3xl font-bold text-center">Disable battery optimization</Text>
           <Text className="mt-3 text-center text-muted-foreground">
             Android can put Noah to sleep in the background to save energy. This has a negligible
             effect on battery life, but can cause push notifications to stop arriving entirely.
@@ -137,7 +137,7 @@ const BatteryOptimizationScreen = ({ onContinue }: BatteryOptimizationScreenProp
             />
           </View>
         </View>
-      </View>
+      </ScrollView>
     </NoahSafeAreaView>
   );
 };

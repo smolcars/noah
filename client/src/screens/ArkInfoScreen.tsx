@@ -263,7 +263,7 @@ const ArkInfoScreen = () => {
     : configurationSections;
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}

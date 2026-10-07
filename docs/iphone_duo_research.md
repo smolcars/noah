@@ -1,5 +1,7 @@
 # iPhone Duo readiness and implementation plan
 
+Latest implementation and real-regtest verification: [whole-app coverage plan and results](iphone-duo/coverage-plan.md). The readiness audit and initial sample-data results below are historical.
+
 Checked October 6, 2026. This note distinguishes published platform behavior, inspected local source, and work that still needs runtime verification. The initial audit below preceded application changes; the execution report at the end records the subsequent implementation.
 
 ## Conclusion

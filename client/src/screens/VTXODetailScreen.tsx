@@ -58,7 +58,7 @@ const VTXODetailRow = ({
 
   return (
     <View className="flex-row justify-between items-center py-3 border-b border-border/10 last:border-b-0">
-      <Text className="text-muted-foreground text-sm">{label}</Text>
+      <Text className="flex-1 mr-3 text-muted-foreground text-sm">{label}</Text>
       {copyable || explorerUrl ? (
         <View className="flex-row items-center gap-x-3 flex-shrink-0">
           {copyable ? (
@@ -102,15 +102,18 @@ const VTXODetailRow = ({
   );
 };
 
-const VTXODetailScreen = () => {
-  const route = useRoute();
-  const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
+export const VTXODetailContent = ({
+  vtxo: routeVtxo,
+  onClose,
+}: {
+  vtxo: VTXOWithStatus;
+  onClose: () => void;
+}) => {
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const { showAlert } = useAlert();
   const [refreshEstimate, setRefreshEstimate] = useState<BarkFeeEstimate | null>(null);
   const [isRefreshDialogOpen, setIsRefreshDialogOpen] = useState(false);
   const { data: blockHeight } = useGetBlockHeight();
-  const { vtxo: routeVtxo } = route.params as { vtxo: VTXOWithStatus };
   const { data: allVtxos = [], isSuccess: hasLoadedVtxos } = useGetVtxos();
   const { data: expiringVtxos } = useGetExpiringVtxos();
   const estimateRefreshFee = useEstimateRefreshFee();
@@ -129,8 +132,7 @@ const VTXODetailScreen = () => {
     vtxo.state !== "Locked" &&
     (blockHeight !== undefined ? vtxo.expiry_height <= blockHeight : vtxo.isExpired);
   const needsRefresh = vtxo.state !== "Locked" && (vtxo.isExpiring || isExpired);
-  const canRefresh =
-    hasLoadedVtxos && latestVtxo !== undefined && latestVtxo.state !== "Locked";
+  const canRefresh = hasLoadedVtxos && latestVtxo !== undefined && latestVtxo.state !== "Locked";
   const isRefreshBusy =
     estimateRefreshFee.isPending || refreshSelectedVtxos.isPending || walletSync.isPending;
   const statusLabel =
@@ -196,11 +198,12 @@ const VTXODetailScreen = () => {
   };
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
+    <View className="flex-1 bg-background">
       <View className="p-4 flex-1">
         <View className="flex-row items-center mb-8">
           <NativeNoahBackButton
-            onPress={() => navigation.goBack()}
+            onPress={onClose}
+            disabled={isRefreshBusy}
             className="mr-3"
             testID="vtxo-detail-back-button"
           />
@@ -314,6 +317,17 @@ const VTXODetailScreen = () => {
         }}
         vtxoCount={1}
       />
+    </View>
+  );
+};
+
+const VTXODetailScreen = () => {
+  const route = useRoute();
+  const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
+  const { vtxo } = route.params as { vtxo: VTXOWithStatus };
+  return (
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
+      <VTXODetailContent vtxo={vtxo} onClose={() => navigation.goBack()} />
     </NoahSafeAreaView>
   );
 };

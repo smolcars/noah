@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
 import { Text } from "./ui/text";
 import { NativeNoahButton } from "./ui/NativeNoahButton";
@@ -41,12 +41,12 @@ export const ReceiveSuccess: React.FC<ReceiveSuccessProps> = ({
   }, []);
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
-      <View
-        className="flex-1 px-6 pt-3"
-        style={{ paddingBottom: Math.max(bottomTabBarHeight, 20) + 12 }}
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
+      <ScrollView
+        contentContainerClassName="grow px-6 pt-3"
+        contentContainerStyle={{ paddingBottom: Math.max(bottomTabBarHeight, 20) + 12 }}
       >
-        <View className="flex-1 items-center justify-start pt-10">
+        <View className="grow items-center justify-start pt-10">
           <Animated.View entering={ZoomIn.duration(520).delay(120)} className="items-center">
             <ReceiveAnimation />
           </Animated.View>
@@ -95,7 +95,7 @@ export const ReceiveSuccess: React.FC<ReceiveSuccessProps> = ({
         <Animated.View entering={FadeInUp.duration(520).delay(320)} className="mt-6">
           <NativeNoahButton label="Done" onPress={handleDone} fullWidth />
         </Animated.View>
-      </View>
+      </ScrollView>
     </NoahSafeAreaView>
   );
 };

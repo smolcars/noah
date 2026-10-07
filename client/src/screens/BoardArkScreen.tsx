@@ -7,6 +7,7 @@ import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 
 import { FeeEstimateSummary } from "~/components/FeeEstimateSummary";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
+import { AdaptiveColumns } from "~/components/AdaptiveColumns";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
@@ -171,6 +172,7 @@ const BoardArkScreen = () => {
           contentContainerStyle={{ paddingBottom: tabBarHeight + 32 }}
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
         >
           {boardResult ? (
             <View className="pb-4 pt-6">
@@ -244,116 +246,121 @@ const BoardArkScreen = () => {
             </View>
           ) : (
             <View className="pb-4">
-              <Text className="mt-5 text-base leading-6 text-muted-foreground">
-                Move onchain bitcoin into Ark for fast, low-cost payments.
-              </Text>
-
-              <View className="mt-6 rounded-2xl border border-border bg-card px-4 py-4">
-                <Text className="text-xs font-semibold uppercase tracking-[2px] text-muted-foreground">
-                  Confirmed onchain balance
-                </Text>
-                <Text className="mt-2 text-2xl font-bold text-foreground">
-                  {isBalanceLoading ? "Loading…" : formatBitcoinAmount(onchainBalance)}
-                </Text>
-              </View>
-
-              <View className="mt-5">
-                <Text className="mb-2 text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
-                  Amount
-                </Text>
-                <View className="flex-row items-center gap-3">
-                  <Input
-                    value={amount}
-                    onChangeText={(value) => {
-                      setAmount(value);
-                      setIsMaxAmount(false);
-                    }}
-                    placeholder="Amount in sats"
-                    keyboardType="number-pad"
-                    editable={!isSubmitting}
-                    className="flex-1 rounded-2xl border-border bg-card px-4 py-4 text-foreground"
-                    testID="board-ark-amount-input"
-                  />
-                  <NativeNoahSecondaryButton
-                    label="MAX"
-                    onPress={() => {
-                      setAmount(String(onchainBalance));
-                      setIsMaxAmount(true);
-                    }}
-                    disabled={onchainBalance <= 0 || isSubmitting}
-                    width={88}
-                  />
-                </View>
-              </View>
-
-              {isBelowMinimum ? (
-                <View className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-                  <Text className="text-sm leading-5 text-amber-700 dark:text-amber-200">
-                    The minimum board amount is {formatBitcoinAmount(minimumBoardAmountSat)}.
+              <AdaptiveColumns>
+                <View>
+                  <Text className="mt-5 text-base leading-6 text-muted-foreground">
+                    Move onchain bitcoin into Ark for fast, low-cost payments.
                   </Text>
+
+                  <View className="mt-6 rounded-2xl border border-border bg-card px-4 py-4">
+                    <Text className="text-xs font-semibold uppercase tracking-[2px] text-muted-foreground">
+                      Confirmed onchain balance
+                    </Text>
+                    <Text className="mt-2 text-2xl font-bold text-foreground">
+                      {isBalanceLoading ? "Loading…" : formatBitcoinAmount(onchainBalance)}
+                    </Text>
+                  </View>
+
+                  <View className="mt-5">
+                    <Text className="mb-2 text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
+                      Amount
+                    </Text>
+                    <View className="flex-row items-center gap-3">
+                      <Input
+                        value={amount}
+                        onChangeText={(value) => {
+                          setAmount(value);
+                          setIsMaxAmount(false);
+                        }}
+                        placeholder="Amount in sats"
+                        keyboardType="number-pad"
+                        editable={!isSubmitting}
+                        className="flex-1 rounded-2xl border-border bg-card px-4 py-4 text-foreground"
+                        testID="board-ark-amount-input"
+                      />
+                      <NativeNoahSecondaryButton
+                        label="MAX"
+                        onPress={() => {
+                          setAmount(String(onchainBalance));
+                          setIsMaxAmount(true);
+                        }}
+                        disabled={onchainBalance <= 0 || isSubmitting}
+                        width={88}
+                      />
+                    </View>
+                  </View>
+
+                  {isBelowMinimum ? (
+                    <View className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                      <Text className="text-sm leading-5 text-amber-700 dark:text-amber-200">
+                        The minimum board amount is {formatBitcoinAmount(minimumBoardAmountSat)}.
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
-              ) : null}
-
-              <FeeEstimateSummary
-                estimate={feeEstimate}
-                isLoading={feeEstimateQuery.isFetching || isWaitingForEstimate}
-                error={feeEstimateQuery.error}
-                netLabel="Ark balance receives"
-                feeLabel="Ark boarding fee"
-                grossLabel="Amount boarded"
-                note={
-                  feeEstimate
-                    ? `Estimated onchain fee: ${formatBitcoinAmount(feeEstimate.estimated_onchain_fee_sat)}.`
-                    : null
-                }
-                compact
-              />
-
-              {unavailableEstimate ? (
-                <View className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-                  <Text className="text-sm font-semibold text-amber-700 dark:text-amber-200">
-                    Not enough onchain balance to board MAX
-                  </Text>
-                  <Text className="mt-1 text-sm leading-5 text-amber-700 dark:text-amber-200">
-                    After the estimated onchain fee,{" "}
-                    {formatBitcoinAmount(unavailableEstimate.boardable_amount_sat)} would be
-                    available to board, below the{" "}
-                    {formatBitcoinAmount(unavailableEstimate.minimum_board_amount_sat)} minimum. You
-                    need at least{" "}
-                    {formatBitcoinAmount(unavailableEstimate.minimum_required_balance_sat)}{
-                      " "
+                <View className="pt-5">
+                  <FeeEstimateSummary
+                    estimate={feeEstimate}
+                    isLoading={feeEstimateQuery.isFetching || isWaitingForEstimate}
+                    error={feeEstimateQuery.error}
+                    netLabel="Ark balance receives"
+                    feeLabel="Ark boarding fee"
+                    grossLabel="Amount boarded"
+                    note={
+                      feeEstimate
+                        ? `Estimated onchain fee: ${formatBitcoinAmount(feeEstimate.estimated_onchain_fee_sat)}.`
+                        : null
                     }
-                    confirmed onchain.
-                  </Text>
-                </View>
-              ) : null}
+                    compact
+                  />
 
-              {error ? (
-                <View className="mt-4 rounded-2xl border border-destructive/35 bg-destructive/10 px-4 py-3">
-                  <Text className="text-sm font-semibold text-destructive">Boarding failed</Text>
-                  <Text className="mt-1 text-sm text-destructive/90">{error.message}</Text>
-                </View>
-              ) : null}
+                  {unavailableEstimate ? (
+                    <View className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                      <Text className="text-sm font-semibold text-amber-700 dark:text-amber-200">
+                        Not enough onchain balance to board MAX
+                      </Text>
+                      <Text className="mt-1 text-sm leading-5 text-amber-700 dark:text-amber-200">
+                        After the estimated onchain fee,{" "}
+                        {formatBitcoinAmount(unavailableEstimate.boardable_amount_sat)} would be
+                        available to board, below the{" "}
+                        {formatBitcoinAmount(unavailableEstimate.minimum_board_amount_sat)} minimum.
+                        You need at least{" "}
+                        {formatBitcoinAmount(unavailableEstimate.minimum_required_balance_sat)}{" "}
+                        confirmed onchain.
+                      </Text>
+                    </View>
+                  ) : null}
 
-              <NativeNoahButton
-                label="Board"
-                loadingLabel="Boarding…"
-                onPress={submit}
-                isLoading={isSubmitting}
-                disabled={
-                  isSubmitting ||
-                  isArkInfoLoading ||
-                  !arkInfo ||
-                  amountSat <= 0 ||
-                  amountSat > onchainBalance ||
-                  isBelowMinimum ||
-                  !!unavailableEstimate ||
-                  isMaxEstimatePending
-                }
-                className="mt-6"
-                fullWidth
-                testID="board-ark-submit-button"
-              />
+                  {error ? (
+                    <View className="mt-4 rounded-2xl border border-destructive/35 bg-destructive/10 px-4 py-3">
+                      <Text className="text-sm font-semibold text-destructive">
+                        Boarding failed
+                      </Text>
+                      <Text className="mt-1 text-sm text-destructive/90">{error.message}</Text>
+                    </View>
+                  ) : null}
+
+                  <NativeNoahButton
+                    label="Board"
+                    loadingLabel="Boarding…"
+                    onPress={submit}
+                    isLoading={isSubmitting}
+                    disabled={
+                      isSubmitting ||
+                      isArkInfoLoading ||
+                      !arkInfo ||
+                      amountSat <= 0 ||
+                      amountSat > onchainBalance ||
+                      isBelowMinimum ||
+                      !!unavailableEstimate ||
+                      isMaxEstimatePending
+                    }
+                    className="mt-6"
+                    fullWidth
+                    testID="board-ark-submit-button"
+                  />
+                </View>
+              </AdaptiveColumns>
             </View>
           )}
         </ScrollView>

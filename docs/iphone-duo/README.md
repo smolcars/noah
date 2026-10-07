@@ -1,4 +1,8 @@
-# Native simulator preview
+# Native simulator previews
+
+The [expanded screen pass](expanded-pass/README.md) contains the latest real-regtest screenshots and unedited dark-mode recording. See the [screen coverage plan and results](coverage-plan.md).
+
+## Initial core-tab preview
 
 Captured October 7, 2026. These are real native UI captures using temporary in-memory sample wallet data. The QR is not payable; no live payment success is implied. The harness is not included in the app source.
 

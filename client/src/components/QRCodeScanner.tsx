@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Pressable, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet, useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera, CodeScanner, useCameraDevice } from "react-native-vision-camera";
 import { useIsFocused } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
@@ -17,6 +18,16 @@ type QRCodeScannerProps = {
 export const QRCodeScanner = ({ codeScanner, onClose, onPaste }: QRCodeScannerProps) => {
   const device = useCameraDevice("back");
   const isFocused = useIsFocused();
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const frameSize = Math.max(
+    1,
+    Math.min(
+      250,
+      width - insets.left - insets.right - 32,
+      height - insets.top - insets.bottom - 160,
+    ),
+  );
 
   const handlePaste = async () => {
     const text = await Clipboard.getStringAsync();
@@ -44,11 +55,22 @@ export const QRCodeScanner = ({ codeScanner, onClose, onPaste }: QRCodeScannerPr
         isActive={isFocused}
         codeScanner={codeScanner}
       />
-      <View className="flex-1 bg-transparent">
+      <View
+        className="flex-1 bg-transparent"
+        style={{
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        }}
+      >
         <View className="flex-1 bg-black/60" />
-        <View className="flex-row h-[250px]">
+        <View className="flex-row" style={{ height: frameSize }}>
           <View className="flex-1 bg-black/60" />
-          <View className="w-[250px] h-[250px] border-2 border-white rounded-lg" />
+          <View
+            className="border-2 border-white rounded-lg"
+            style={{ width: frameSize, height: frameSize }}
+          />
           <View className="flex-1 bg-black/60" />
         </View>
         <View className="flex-1 bg-black/60 justify-center items-center">

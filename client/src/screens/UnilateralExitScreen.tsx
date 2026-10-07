@@ -22,6 +22,7 @@ import { NativeNoahPicker, type NativeNoahPickerOption } from "~/components/ui/N
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
+import { AdaptiveColumns } from "~/components/AdaptiveColumns";
 import { ConfirmationDialog } from "~/components/ConfirmationDialog";
 import { ExitDepositBottomSheet } from "~/components/ExitDepositBottomSheet";
 import {
@@ -219,65 +220,69 @@ const ExitPhaseRail = ({
   }, {});
 
   return (
-    <View className="mt-3 flex-row items-start">
-      {EXIT_STATE_ORDER.map((state, index) => {
-        const count = countByState[state] ?? 0;
-        const isActive = state === currentState;
-        const isComplete = count > 0 && index < activeIndex;
-        const tone = stateTone(state);
-        return (
-          <View key={state} className="flex-1 items-center">
-            <View className="mb-1 h-5 w-full flex-row items-center">
-              {index > 0 ? (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3">
+      <View className="flex-row items-start" style={{ minWidth: 400 }}>
+        {EXIT_STATE_ORDER.map((state, index) => {
+          const count = countByState[state] ?? 0;
+          const isActive = state === currentState;
+          const isComplete = count > 0 && index < activeIndex;
+          const tone = stateTone(state);
+          return (
+            <View key={state} className="flex-1 items-center">
+              <View className="mb-1 h-5 w-full flex-row items-center">
+                {index > 0 ? (
+                  <View
+                    className={cn(
+                      "h-px flex-1",
+                      isComplete || isActive ? "bg-primary/50" : "bg-border",
+                    )}
+                  />
+                ) : (
+                  <View className="flex-1" />
+                )}
                 <View
                   className={cn(
-                    "h-px flex-1",
-                    isComplete || isActive ? "bg-primary/50" : "bg-border",
+                    "h-5 w-5 items-center justify-center rounded-full border",
+                    isActive
+                      ? tone.bgClassName
+                      : isComplete
+                        ? "border-green-500/40 bg-green-500/10"
+                        : count > 0
+                          ? "border-primary/40 bg-primary/10"
+                          : "border-border bg-background",
                   )}
-                />
-              ) : (
-                <View className="flex-1" />
-              )}
-              <View
-                className={cn(
-                  "h-5 w-5 items-center justify-center rounded-full border",
-                  isActive
-                    ? tone.bgClassName
-                    : isComplete
-                      ? "border-green-500/40 bg-green-500/10"
-                      : count > 0
-                        ? "border-primary/40 bg-primary/10"
-                        : "border-border bg-background",
+                >
+                  {count > 0 ? (
+                    <Icon
+                      name={isComplete || state === "Claimed" ? "checkmark" : "ellipse"}
+                      size={11}
+                      color={isActive ? tone.color : isComplete ? "#22c55e" : "#c98a3c"}
+                    />
+                  ) : null}
+                </View>
+                {index < EXIT_STATE_ORDER.length - 1 ? (
+                  <View className={cn("h-px flex-1", isComplete ? "bg-primary/50" : "bg-border")} />
+                ) : (
+                  <View className="flex-1" />
                 )}
-              >
-                {count > 0 ? (
-                  <Icon
-                    name={isComplete || state === "Claimed" ? "checkmark" : "ellipse"}
-                    size={11}
-                    color={isActive ? tone.color : isComplete ? "#22c55e" : "#c98a3c"}
-                  />
-                ) : null}
               </View>
-              {index < EXIT_STATE_ORDER.length - 1 ? (
-                <View className={cn("h-px flex-1", isComplete ? "bg-primary/50" : "bg-border")} />
-              ) : (
-                <View className="flex-1" />
-              )}
+              <Text
+                className={cn(
+                  "text-center text-[10px]",
+                  count > 0 ? "text-foreground" : "text-muted-foreground",
+                )}
+                numberOfLines={1}
+              >
+                {PHASE_LABELS[state]}
+              </Text>
+              {count > 1 ? (
+                <Text className="text-[10px] text-muted-foreground">x{count}</Text>
+              ) : null}
             </View>
-            <Text
-              className={cn(
-                "text-center text-[10px]",
-                count > 0 ? "text-foreground" : "text-muted-foreground",
-              )}
-              numberOfLines={1}
-            >
-              {PHASE_LABELS[state]}
-            </Text>
-            {count > 1 ? <Text className="text-[10px] text-muted-foreground">x{count}</Text> : null}
-          </View>
-        );
-      })}
-    </View>
+          );
+        })}
+      </View>
+    </ScrollView>
   );
 };
 
@@ -797,7 +802,7 @@ const StartAnotherExitCard = ({
 };
 
 const EmptyExitState = ({ children }: { children: React.ReactNode }) => (
-  <View className="gap-5">
+  <AdaptiveColumns>
     <View className="items-center rounded-lg border border-border bg-card px-4 py-8">
       <Icon name="shield-outline" size={40} color="#8e8e93" />
       <Text className="mt-4 text-center text-lg font-semibold text-foreground">
@@ -807,8 +812,8 @@ const EmptyExitState = ({ children }: { children: React.ReactNode }) => (
         Start only if the Ark server is unavailable and normal offboarding cannot be used.
       </Text>
     </View>
-    {children}
-  </View>
+    <View className="mt-5">{children}</View>
+  </AdaptiveColumns>
 );
 
 const UnilateralExitScreen = () => {
@@ -1053,13 +1058,13 @@ const UnilateralExitScreen = () => {
             keyboardShouldPersistTaps="handled"
           >
             <View className="mb-6 flex-row items-center justify-between">
-              <View className="flex-row items-center">
+              <View className="mr-3 flex-1 flex-row items-center">
                 <NativeNoahBackButton
                   onPress={() => navigation.goBack()}
                   className="mr-3"
                   testID="emergency-exit-back-button"
                 />
-                <Text className="text-2xl font-bold text-foreground">Emergency Exit</Text>
+                <Text className="flex-1 text-2xl font-bold text-foreground">Emergency Exit</Text>
               </View>
               <NativeNoahIconButton
                 icon="refresh"
@@ -1112,215 +1117,221 @@ const UnilateralExitScreen = () => {
                 ) : null}
               </EmptyExitState>
             ) : (
-              <>
-                <View className="mb-5 rounded-lg border border-border bg-card p-4">
-                  <View className="flex-row gap-x-4">
-                    <ExitSummaryItem label="Tracked" value={`${exits.length}`} />
-                    <ExitSummaryItem
-                      label="Pending"
-                      value={formatBitcoinAmount(overview?.pendingTotal ?? 0)}
-                    />
-                  </View>
-                  <View className="mt-4 flex-row gap-x-4">
-                    <ExitSummaryItem
-                      label="Claimable"
-                      value={formatBitcoinAmount(claimableTotal)}
-                    />
-                    <ExitSummaryItem label="All Claimable" value={claimableBlockLabel} />
-                  </View>
-                  <View className="mt-4 flex-row gap-x-4">
-                    <ExitSummaryItem label="Claiming" value={`${claimInProgressCount}`} />
-                    <ExitSummaryItem label="Claimed" value={`${claimedCount}`} />
-                  </View>
-                  <View className="mt-4 flex-row gap-x-4">
-                    <ExitSummaryItem
-                      label="Available"
-                      value={`${overview?.spendableVtxoCount ?? 0} ${
-                        overview?.spendableVtxoCount === 1 ? "VTXO" : "VTXOs"
-                      }`}
-                    />
-                    <ExitSummaryItem
-                      label="Available Value"
-                      value={formatBitcoinAmount(overview?.spendableVtxoTotal ?? 0)}
-                    />
-                  </View>
-                </View>
-
-                <View className="mb-5 rounded-lg border border-border bg-card p-4">
-                  <Text className="mb-3 text-lg font-semibold text-foreground">Block Status</Text>
-                  <View className="flex-row gap-x-4">
-                    <ExitSummaryItem
-                      label="Current Height"
-                      value={
-                        overview?.blockHeight !== undefined ? `${overview.blockHeight}` : "Unknown"
-                      }
-                    />
-                    <ExitSummaryItem
-                      label="Exit Synced Tip"
-                      value={
-                        latestExitTipHeight !== undefined ? `${latestExitTipHeight}` : "Unknown"
-                      }
-                    />
-                  </View>
-                  <View className="mt-4 flex-row gap-x-4">
-                    <ExitSummaryItem label="All Claimable" value={claimableBlockLabel} />
-                    <ExitSummaryItem
-                      label="Remaining"
-                      value={allClaimableRemainingLabel ?? "Unknown"}
-                    />
-                  </View>
-                  {staleExitCount > 0 ? (
-                    <Text className="mt-3 text-sm leading-5 text-muted-foreground">
-                      {staleExitCount} {staleExitCount === 1 ? "exit is" : "exits are"} behind the
-                      current chain height. Use Progress to check the chain; this can also broadcast
-                      exit transactions.
-                    </Text>
-                  ) : null}
-                </View>
-
-                {claimable.length === 0 && claimInProgressCount > 0 ? (
-                  <View className="mb-5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
-                    <Text className="text-base font-semibold text-amber-700 dark:text-amber-300">
-                      Claim broadcasted
-                    </Text>
-                    <Text className="mt-1 text-sm leading-5 text-amber-700/90 dark:text-amber-200/90">
-                      No further claim action is available for VTXOs in Claiming. Wait for the claim
-                      transaction to confirm, then use Progress to update tracked state.
-                    </Text>
-                  </View>
-                ) : null}
-
-                <View className="mb-5 rounded-lg border border-border bg-card p-4">
-                  <Text className="mb-2 text-lg font-semibold text-foreground">Timeline</Text>
-                  {EXIT_STATE_ORDER.map((state) => (
-                    <ExitStep
-                      key={state}
-                      state={state}
-                      count={stateCounts[state]}
-                      isActive={stateCounts[state] > 0}
-                    />
-                  ))}
-                </View>
-
-                <View className="mb-5">
-                  <View className="mb-3 flex-row items-center justify-between">
-                    <Text className="text-lg font-semibold text-foreground">VTXOs</Text>
-                    <Text className="text-sm text-muted-foreground">
-                      {claimable.length} claimable
-                    </Text>
-                  </View>
-                  {exits.map((exit) => (
-                    <ExitVtxoRow
-                      key={exit.vtxo_id}
-                      exit={exit}
-                      status={statuses[exit.vtxo_id]}
-                      history={statuses[exit.vtxo_id]?.history}
-                      currentBlockHeight={overview?.blockHeight}
-                      onPress={() =>
-                        navigation.navigate("ExitVtxoDetail", { vtxoId: exit.vtxo_id })
-                      }
-                      onCancel={() => setCancelExitVtxoId(exit.vtxo_id)}
-                      isBusy={isBusy}
-                      isCanceling={cancelExit.isPending && cancelExit.variables === exit.vtxo_id}
-                    />
-                  ))}
-                </View>
-
-                <View className="mb-5 flex-row gap-x-3">
-                  <NativeNoahSecondaryButton
-                    label={overviewQuery.isFetching ? "Refreshing..." : "Refresh Status"}
-                    className="flex-1"
-                    onPress={() => void overviewQuery.refetch()}
-                    disabled={isBusy}
-                    fullWidth
-                  />
-                  {overview?.hasPending || claimable.length > 0 || claimInProgressCount > 0 ? (
-                    <NativeNoahButton
-                      label="Progress"
-                      className="flex-1"
-                      onPress={() => setShowProgressConfirm(true)}
-                      disabled={isBusy}
-                      isLoading={progressExits.isPending}
-                      loadingLabel="Progressing..."
-                      fullWidth
-                    />
-                  ) : null}
-                </View>
-
-                <Text className="mb-5 text-sm leading-5 text-muted-foreground">
-                  Refresh Status reloads saved wallet state. Progress checks the chain and can
-                  broadcast or fee-bump exit transactions.
-                </Text>
-
-                {claimable.length > 0 ? (
+              <AdaptiveColumns>
+                <View>
                   <View className="mb-5 rounded-lg border border-border bg-card p-4">
-                    <Text className="text-lg font-semibold text-foreground">Claim Exits</Text>
-                    <Text className="mt-1 text-sm leading-5 text-muted-foreground">
-                      Sweep claimable exit outputs to an on-chain Bitcoin address.
-                    </Text>
-                    <View className="mt-4 rounded-lg border border-border bg-background px-3 py-2">
-                      <Input
-                        value={destinationAddress}
-                        onChangeText={setDestinationAddress}
-                        placeholder="Bitcoin address"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        className="border-0 bg-transparent p-0 text-foreground"
+                    <View className="flex-row gap-x-4">
+                      <ExitSummaryItem label="Tracked" value={`${exits.length}`} />
+                      <ExitSummaryItem
+                        label="Pending"
+                        value={formatBitcoinAmount(overview?.pendingTotal ?? 0)}
                       />
                     </View>
-                    {trimmedDestination && !isValidDestination ? (
-                      <Text className="mt-2 text-sm text-destructive">
-                        Enter a valid {APP_VARIANT} on-chain address.
+                    <View className="mt-4 flex-row gap-x-4">
+                      <ExitSummaryItem
+                        label="Claimable"
+                        value={formatBitcoinAmount(claimableTotal)}
+                      />
+                      <ExitSummaryItem label="All Claimable" value={claimableBlockLabel} />
+                    </View>
+                    <View className="mt-4 flex-row gap-x-4">
+                      <ExitSummaryItem label="Claiming" value={`${claimInProgressCount}`} />
+                      <ExitSummaryItem label="Claimed" value={`${claimedCount}`} />
+                    </View>
+                    <View className="mt-4 flex-row gap-x-4">
+                      <ExitSummaryItem
+                        label="Available"
+                        value={`${overview?.spendableVtxoCount ?? 0} ${
+                          overview?.spendableVtxoCount === 1 ? "VTXO" : "VTXOs"
+                        }`}
+                      />
+                      <ExitSummaryItem
+                        label="Available Value"
+                        value={formatBitcoinAmount(overview?.spendableVtxoTotal ?? 0)}
+                      />
+                    </View>
+                  </View>
+
+                  <View className="mb-5 rounded-lg border border-border bg-card p-4">
+                    <Text className="mb-3 text-lg font-semibold text-foreground">Block Status</Text>
+                    <View className="flex-row gap-x-4">
+                      <ExitSummaryItem
+                        label="Current Height"
+                        value={
+                          overview?.blockHeight !== undefined
+                            ? `${overview.blockHeight}`
+                            : "Unknown"
+                        }
+                      />
+                      <ExitSummaryItem
+                        label="Exit Synced Tip"
+                        value={
+                          latestExitTipHeight !== undefined ? `${latestExitTipHeight}` : "Unknown"
+                        }
+                      />
+                    </View>
+                    <View className="mt-4 flex-row gap-x-4">
+                      <ExitSummaryItem label="All Claimable" value={claimableBlockLabel} />
+                      <ExitSummaryItem
+                        label="Remaining"
+                        value={allClaimableRemainingLabel ?? "Unknown"}
+                      />
+                    </View>
+                    {staleExitCount > 0 ? (
+                      <Text className="mt-3 text-sm leading-5 text-muted-foreground">
+                        {staleExitCount} {staleExitCount === 1 ? "exit is" : "exits are"} behind the
+                        current chain height. Use Progress to check the chain; this can also
+                        broadcast exit transactions.
                       </Text>
                     ) : null}
-                    {isValidDestination ? (
-                      <ExitFeePreview quote={claimQuote} amountSat={claimableTotal} claimOnly />
-                    ) : null}
-                    <NativeNoahButton
-                      label={claimQuote.isError ? "Continue without estimate" : "Review Claim"}
-                      className="mt-4"
-                      disabled={!isValidDestination || isBusy || claimQuote.isLoading}
-                      isLoading={claimExits.isPending || claimQuote.isReviewing}
-                      loadingLabel={
-                        claimQuote.isReviewing ? "Refreshing estimate..." : "Claiming..."
-                      }
-                      onPress={reviewClaim}
+                  </View>
+
+                  {claimable.length === 0 && claimInProgressCount > 0 ? (
+                    <View className="mb-5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+                      <Text className="text-base font-semibold text-amber-700 dark:text-amber-300">
+                        Claim broadcasted
+                      </Text>
+                      <Text className="mt-1 text-sm leading-5 text-amber-700/90 dark:text-amber-200/90">
+                        No further claim action is available for VTXOs in Claiming. Wait for the
+                        claim transaction to confirm, then use Progress to update tracked state.
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  <View className="mb-5 rounded-lg border border-border bg-card p-4">
+                    <Text className="mb-2 text-lg font-semibold text-foreground">Timeline</Text>
+                    {EXIT_STATE_ORDER.map((state) => (
+                      <ExitStep
+                        key={state}
+                        state={state}
+                        count={stateCounts[state]}
+                        isActive={stateCounts[state] > 0}
+                      />
+                    ))}
+                  </View>
+                </View>
+                <View>
+                  <View className="mb-5">
+                    <View className="mb-3 flex-row items-center justify-between">
+                      <Text className="text-lg font-semibold text-foreground">VTXOs</Text>
+                      <Text className="text-sm text-muted-foreground">
+                        {claimable.length} claimable
+                      </Text>
+                    </View>
+                    {exits.map((exit) => (
+                      <ExitVtxoRow
+                        key={exit.vtxo_id}
+                        exit={exit}
+                        status={statuses[exit.vtxo_id]}
+                        history={statuses[exit.vtxo_id]?.history}
+                        currentBlockHeight={overview?.blockHeight}
+                        onPress={() =>
+                          navigation.navigate("ExitVtxoDetail", { vtxoId: exit.vtxo_id })
+                        }
+                        onCancel={() => setCancelExitVtxoId(exit.vtxo_id)}
+                        isBusy={isBusy}
+                        isCanceling={cancelExit.isPending && cancelExit.variables === exit.vtxo_id}
+                      />
+                    ))}
+                  </View>
+
+                  <View className="mb-5 flex-row gap-x-3">
+                    <NativeNoahSecondaryButton
+                      label={overviewQuery.isFetching ? "Refreshing..." : "Refresh Status"}
+                      className="flex-1"
+                      onPress={() => void overviewQuery.refetch()}
+                      disabled={isBusy}
                       fullWidth
                     />
+                    {overview?.hasPending || claimable.length > 0 || claimInProgressCount > 0 ? (
+                      <NativeNoahButton
+                        label="Progress"
+                        className="flex-1"
+                        onPress={() => setShowProgressConfirm(true)}
+                        disabled={isBusy}
+                        isLoading={progressExits.isPending}
+                        loadingLabel="Progressing..."
+                        fullWidth
+                      />
+                    ) : null}
                   </View>
-                ) : null}
 
-                {canStartNewExit ? (
-                  <View>
-                    {isNewExitExpanded ? (
-                      <StartExitPanel
-                        title="New Exit"
-                        description="You already have an exit in progress. Start another one only for remaining VTXOs."
-                        mode={exitStartMode}
-                        onModeChange={handleExitModeChange}
-                        spendableVtxos={spendableVtxos}
-                        selectedVtxoIds={selectedExitVtxoIds}
-                        selectedCount={selectedExitVtxoIdList.length}
-                        selectedAmount={selectedExitAmount}
-                        isBusy={isBusy}
-                        onToggleVtxo={toggleExitVtxoSelection}
-                        onSelectAll={selectAllExitVtxos}
-                        onClear={clearExitVtxoSelection}
-                        onStart={reviewStart}
-                        quote={startQuote}
-                        onDeposit={depositOnchain}
-                        onCollapse={() => setIsNewExitExpanded(false)}
+                  <Text className="mb-5 text-sm leading-5 text-muted-foreground">
+                    Refresh Status reloads saved wallet state. Progress checks the chain and can
+                    broadcast or fee-bump exit transactions.
+                  </Text>
+
+                  {claimable.length > 0 ? (
+                    <View className="mb-5 rounded-lg border border-border bg-card p-4">
+                      <Text className="text-lg font-semibold text-foreground">Claim Exits</Text>
+                      <Text className="mt-1 text-sm leading-5 text-muted-foreground">
+                        Sweep claimable exit outputs to an on-chain Bitcoin address.
+                      </Text>
+                      <View className="mt-4 rounded-lg border border-border bg-background px-3 py-2">
+                        <Input
+                          value={destinationAddress}
+                          onChangeText={setDestinationAddress}
+                          placeholder="Bitcoin address"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          testID="exit-claim-address"
+                          className="border-0 bg-transparent p-0 text-foreground"
+                        />
+                      </View>
+                      {trimmedDestination && !isValidDestination ? (
+                        <Text className="mt-2 text-sm text-destructive">
+                          Enter a valid {APP_VARIANT} on-chain address.
+                        </Text>
+                      ) : null}
+                      {isValidDestination ? (
+                        <ExitFeePreview quote={claimQuote} amountSat={claimableTotal} claimOnly />
+                      ) : null}
+                      <NativeNoahButton
+                        label={claimQuote.isError ? "Continue without estimate" : "Review Claim"}
+                        className="mt-4"
+                        disabled={!isValidDestination || isBusy || claimQuote.isLoading}
+                        isLoading={claimExits.isPending || claimQuote.isReviewing}
+                        loadingLabel={
+                          claimQuote.isReviewing ? "Refreshing estimate..." : "Claiming..."
+                        }
+                        onPress={reviewClaim}
+                        fullWidth
                       />
-                    ) : (
-                      <StartAnotherExitCard
-                        spendableVtxos={spendableVtxos}
-                        isBusy={isBusy}
-                        onPress={() => setIsNewExitExpanded(true)}
-                      />
-                    )}
-                  </View>
-                ) : null}
-              </>
+                    </View>
+                  ) : null}
+
+                  {canStartNewExit ? (
+                    <View>
+                      {isNewExitExpanded ? (
+                        <StartExitPanel
+                          title="New Exit"
+                          description="You already have an exit in progress. Start another one only for remaining VTXOs."
+                          mode={exitStartMode}
+                          onModeChange={handleExitModeChange}
+                          spendableVtxos={spendableVtxos}
+                          selectedVtxoIds={selectedExitVtxoIds}
+                          selectedCount={selectedExitVtxoIdList.length}
+                          selectedAmount={selectedExitAmount}
+                          isBusy={isBusy}
+                          onToggleVtxo={toggleExitVtxoSelection}
+                          onSelectAll={selectAllExitVtxos}
+                          onClear={clearExitVtxoSelection}
+                          onStart={reviewStart}
+                          quote={startQuote}
+                          onDeposit={depositOnchain}
+                          onCollapse={() => setIsNewExitExpanded(false)}
+                        />
+                      ) : (
+                        <StartAnotherExitCard
+                          spendableVtxos={spendableVtxos}
+                          isBusy={isBusy}
+                          onPress={() => setIsNewExitExpanded(true)}
+                        />
+                      )}
+                    </View>
+                  ) : null}
+                </View>
+              </AdaptiveColumns>
             )}
 
             <ConfirmationDialog

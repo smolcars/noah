@@ -8,6 +8,7 @@ import * as Haptics from "expo-haptics";
 
 import type { SettingsStackParamList } from "~/Navigators";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
+import { AdaptiveColumns } from "~/components/AdaptiveColumns";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 import {
@@ -202,7 +203,7 @@ const RecurringPaymentEditorScreen = () => {
             className="mr-3"
             testID="recurring-editor-back-button"
           />
-          <Text className="text-2xl font-bold text-foreground">Recurring payments</Text>
+          <Text className="flex-1 text-2xl font-bold text-foreground">Recurring payments</Text>
         </View>
         <Text className="px-4 text-muted-foreground" testID="recurring-editor-unsupported">
           {UNSUPPORTED_MESSAGE}
@@ -216,6 +217,7 @@ const RecurringPaymentEditorScreen = () => {
       <ScrollView
         className="flex-1 px-4"
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         contentContainerStyle={{ paddingBottom: safeBottomInset + tabBarHeight + 24 }}
       >
         <View className="flex-row items-center mb-4 mt-4">
@@ -224,7 +226,7 @@ const RecurringPaymentEditorScreen = () => {
             className="mr-3"
             testID="recurring-editor-back-button"
           />
-          <Text className="text-2xl font-bold text-foreground">New recurring payment</Text>
+          <Text className="flex-1 text-2xl font-bold text-foreground">New recurring payment</Text>
         </View>
 
         <Text className="text-muted-foreground">
@@ -232,161 +234,166 @@ const RecurringPaymentEditorScreen = () => {
           amount are ever allowed, and you can pause or cancel at any time.
         </Text>
 
-        <SectionLabel>Name</SectionLabel>
-        <Input
-          value={label}
-          onChangeText={setLabel}
-          placeholder="e.g. Rent, Donation, VPN"
-          maxLength={64}
-          className={inputClassName}
-          testID="recurring-label-input"
-        />
-
-        <SectionLabel>Recipient</SectionLabel>
-        <Input
-          value={recipient}
-          onChangeText={setRecipient}
-          placeholder="name@domain.com, ark1… or lno1…"
-          autoCapitalize="none"
-          autoCorrect={false}
-          className={inputClassName}
-          testID="recurring-recipient-input"
-        />
-        <Text
-          className={`mt-2 text-sm ${
-            recipient.trim() && resolvedDestination.isErr()
-              ? "text-destructive"
-              : "text-muted-foreground"
-          }`}
-        >
-          {destinationHint}
-        </Text>
-
-        <SectionLabel>Amount (sats)</SectionLabel>
-        <Input
-          value={amount}
-          onChangeText={setAmount}
-          placeholder="Amount in sats"
-          keyboardType="number-pad"
-          className={inputClassName}
-          testID="recurring-amount-input"
-        />
-        {Number.isFinite(amountSat) && amountSat > 0 ? (
-          <Text className="mt-2 text-sm text-muted-foreground">
-            {formatBitcoinAmount(amountSat)} per payment, plus network fees
-          </Text>
-        ) : null}
-
-        {resolvedDestination.isOk() && resolvedDestination.value.destinationType === "lnurl" ? (
-          <>
-            <SectionLabel>Note (optional)</SectionLabel>
+        <AdaptiveColumns>
+          <View>
+            <SectionLabel>Name</SectionLabel>
             <Input
-              value={comment}
-              onChangeText={setComment}
-              placeholder="Shared with the recipient"
-              maxLength={140}
+              value={label}
+              onChangeText={setLabel}
+              placeholder="e.g. Rent, Donation, VPN"
+              maxLength={64}
               className={inputClassName}
-              testID="recurring-comment-input"
+              testID="recurring-label-input"
             />
-          </>
-        ) : null}
 
-        <SectionLabel>Repeat</SectionLabel>
-        <NativeNoahSegmentedControl
-          value={frequency}
-          options={FREQUENCY_OPTIONS}
-          onValueChange={setFrequency}
-          testID="recurring-frequency"
-        />
-        {frequency === "custom" ? (
-          <View className="mt-3 flex-row items-center gap-3">
-            <Text className="text-foreground">Every</Text>
+            <SectionLabel>Recipient</SectionLabel>
             <Input
-              value={customDays}
-              onChangeText={setCustomDays}
-              keyboardType="number-pad"
-              className={`${inputClassName} w-24`}
-              testID="recurring-custom-days-input"
+              value={recipient}
+              onChangeText={setRecipient}
+              placeholder="name@domain.com, ark1… or lno1…"
+              autoCapitalize="none"
+              autoCorrect={false}
+              className={inputClassName}
+              testID="recurring-recipient-input"
             />
-            <Text className="text-foreground">days</Text>
-          </View>
-        ) : null}
-
-        <SectionLabel>First payment</SectionLabel>
-        <View className="flex-row gap-3">
-          <Input
-            value={startDate}
-            onChangeText={setStartDate}
-            placeholder="YYYY-MM-DD"
-            autoCorrect={false}
-            className={`${inputClassName} flex-1`}
-            testID="recurring-start-date-input"
-          />
-          <Input
-            value={startTime}
-            onChangeText={setStartTime}
-            placeholder="HH:MM"
-            autoCorrect={false}
-            className={`${inputClassName} w-28`}
-            testID="recurring-start-time-input"
-          />
-        </View>
-
-        <SectionLabel>Ends</SectionLabel>
-        <NativeNoahSegmentedControl
-          value={endMode}
-          options={END_OPTIONS}
-          onValueChange={setEndMode}
-          testID="recurring-end-mode"
-        />
-        {endMode === "date" ? (
-          <Input
-            value={endDate}
-            onChangeText={setEndDate}
-            placeholder="YYYY-MM-DD"
-            autoCorrect={false}
-            className={`${inputClassName} mt-3`}
-            testID="recurring-end-date-input"
-          />
-        ) : endMode === "count" ? (
-          <View className="mt-3 flex-row items-center gap-3">
-            <Input
-              value={endCount}
-              onChangeText={setEndCount}
-              keyboardType="number-pad"
-              className={`${inputClassName} w-24`}
-              testID="recurring-end-count-input"
-            />
-            <Text className="text-foreground">payments</Text>
-          </View>
-        ) : null}
-
-        {preview.length > 0 ? (
-          <View className="mt-6 rounded-2xl border border-border bg-card p-4">
-            <Text className="font-semibold text-foreground">{describeInterval(interval)}</Text>
-            {preview.map((date) => (
-              <Text key={date.getTime()} className="mt-1 text-muted-foreground">
-                {date.toLocaleString()}
-              </Text>
-            ))}
-            <Text className="mt-3 text-sm text-muted-foreground">
-              You'll get a reminder the day before and a notification after each payment. If a
-              payment is missed while your phone is off, Noah skips it instead of paying twice.
+            <Text
+              className={`mt-2 text-sm ${
+                recipient.trim() && resolvedDestination.isErr()
+                  ? "text-destructive"
+                  : "text-muted-foreground"
+              }`}
+            >
+              {destinationHint}
             </Text>
+
+            <SectionLabel>Amount (sats)</SectionLabel>
+            <Input
+              value={amount}
+              onChangeText={setAmount}
+              placeholder="Amount in sats"
+              keyboardType="number-pad"
+              className={inputClassName}
+              testID="recurring-amount-input"
+            />
+            {Number.isFinite(amountSat) && amountSat > 0 ? (
+              <Text className="mt-2 text-sm text-muted-foreground">
+                {formatBitcoinAmount(amountSat)} per payment, plus network fees
+              </Text>
+            ) : null}
+
+            {resolvedDestination.isOk() && resolvedDestination.value.destinationType === "lnurl" ? (
+              <>
+                <SectionLabel>Note (optional)</SectionLabel>
+                <Input
+                  value={comment}
+                  onChangeText={setComment}
+                  placeholder="Shared with the recipient"
+                  maxLength={140}
+                  className={inputClassName}
+                  testID="recurring-comment-input"
+                />
+              </>
+            ) : null}
+
+            <SectionLabel>Repeat</SectionLabel>
+            <NativeNoahSegmentedControl
+              value={frequency}
+              options={FREQUENCY_OPTIONS}
+              onValueChange={setFrequency}
+              testID="recurring-frequency"
+            />
+            {frequency === "custom" ? (
+              <View className="mt-3 flex-row items-center gap-3">
+                <Text className="text-foreground">Every</Text>
+                <Input
+                  value={customDays}
+                  onChangeText={setCustomDays}
+                  keyboardType="number-pad"
+                  className={`${inputClassName} w-24`}
+                  testID="recurring-custom-days-input"
+                />
+                <Text className="text-foreground">days</Text>
+              </View>
+            ) : null}
+
+            <SectionLabel>First payment</SectionLabel>
+            <View className="flex-row gap-3">
+              <Input
+                value={startDate}
+                onChangeText={setStartDate}
+                placeholder="YYYY-MM-DD"
+                autoCorrect={false}
+                className={`${inputClassName} flex-1`}
+                testID="recurring-start-date-input"
+              />
+              <Input
+                value={startTime}
+                onChangeText={setStartTime}
+                placeholder="HH:MM"
+                autoCorrect={false}
+                className={`${inputClassName} w-28`}
+                testID="recurring-start-time-input"
+              />
+            </View>
+
+            <SectionLabel>Ends</SectionLabel>
+            <NativeNoahSegmentedControl
+              value={endMode}
+              options={END_OPTIONS}
+              onValueChange={setEndMode}
+              testID="recurring-end-mode"
+            />
+            {endMode === "date" ? (
+              <Input
+                value={endDate}
+                onChangeText={setEndDate}
+                placeholder="YYYY-MM-DD"
+                autoCorrect={false}
+                className={`${inputClassName} mt-3`}
+                testID="recurring-end-date-input"
+              />
+            ) : endMode === "count" ? (
+              <View className="mt-3 flex-row items-center gap-3">
+                <Input
+                  value={endCount}
+                  onChangeText={setEndCount}
+                  keyboardType="number-pad"
+                  className={`${inputClassName} w-24`}
+                  testID="recurring-end-count-input"
+                />
+                <Text className="text-foreground">payments</Text>
+              </View>
+            ) : null}
           </View>
-        ) : null}
+          <View>
+            {preview.length > 0 ? (
+              <View className="mt-6 rounded-2xl border border-border bg-card p-4">
+                <Text className="font-semibold text-foreground">{describeInterval(interval)}</Text>
+                {preview.map((date) => (
+                  <Text key={date.getTime()} className="mt-1 text-muted-foreground">
+                    {date.toLocaleString()}
+                  </Text>
+                ))}
+                <Text className="mt-3 text-sm text-muted-foreground">
+                  You'll get a reminder the day before and a notification after each payment. If a
+                  payment is missed while your phone is off, Noah skips it instead of paying twice.
+                </Text>
+              </View>
+            ) : null}
 
-        {error ? <Text className="mt-4 text-destructive">{error}</Text> : null}
+            {error ? <Text className="mt-4 text-destructive">{error}</Text> : null}
 
-        <NativeNoahButton
-          label="Schedule payment"
-          onPress={handleSave}
-          isLoading={isSaving}
-          disabled={isSaving}
-          className="mt-6"
-          fullWidth
-          testID="recurring-save-button"
-        />
+            <NativeNoahButton
+              label="Schedule payment"
+              onPress={handleSave}
+              isLoading={isSaving}
+              disabled={isSaving}
+              className="mt-6"
+              fullWidth
+              testID="recurring-save-button"
+            />
+          </View>
+        </AdaptiveColumns>
       </ScrollView>
     </NoahSafeAreaView>
   );

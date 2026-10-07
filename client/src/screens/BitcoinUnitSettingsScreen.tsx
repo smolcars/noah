@@ -35,7 +35,7 @@ const BitcoinUnitSettingsScreen = () => {
   };
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
       <View className="flex-row items-center px-5 pt-4">
         <NativeNoahBackButton
           onPress={() => navigation.goBack()}

@@ -23,6 +23,8 @@ import { isRecurringBackgroundTaskSupported } from "~/lib/recurringBackgroundTas
 import { describeInterval } from "~/lib/recurringSchedule";
 import { useRecurringPaymentStore } from "~/store/recurringPaymentStore";
 import type { RecurringPayment, RecurringPaymentStatus } from "~/types/recurringPayment";
+import { useAdaptiveLayout } from "~/hooks/useAdaptiveLayout";
+import { PANE_GAP } from "~/lib/adaptiveLayout";
 
 const STATUS_LABELS: Record<RecurringPaymentStatus, string> = {
   active: "Active",
@@ -152,6 +154,7 @@ const RecurringPaymentsScreen = () => {
   const { bottom: safeBottomInset } = useSafeAreaInsets();
   const [isRunning, setIsRunning] = useState(false);
   const [runMessage, setRunMessage] = useState<string | null>(null);
+  const { width, isExpanded, onLayout } = useAdaptiveLayout();
 
   const list = Object.values(schedules).sort(
     (a, b) => (a.nextRunAt ?? Number.MAX_SAFE_INTEGER) - (b.nextRunAt ?? Number.MAX_SAFE_INTEGER),
@@ -225,7 +228,20 @@ const RecurringPaymentsScreen = () => {
             </Text>
           </View>
         ) : (
-          list.map((schedule) => <RecurringPaymentCard key={schedule.id} schedule={schedule} />)
+          <View
+            onLayout={onLayout}
+            className="flex-row flex-wrap"
+            style={{ columnGap: isExpanded ? PANE_GAP : 0 }}
+          >
+            {list.map((schedule) => (
+              <View
+                key={schedule.id}
+                style={{ width: isExpanded ? (width - PANE_GAP) / 2 : "100%" }}
+              >
+                <RecurringPaymentCard schedule={schedule} />
+              </View>
+            ))}
+          </View>
         )}
 
         {list.some((s) => s.status === "active") ? (

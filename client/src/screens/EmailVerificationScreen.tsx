@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { View, Pressable, Keyboard, type TextInputInstance } from "react-native";
+import { View, Pressable, Keyboard, ScrollView, type TextInputInstance } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
@@ -201,8 +201,12 @@ const EmailVerificationScreen = () => {
   }
 
   return (
-    <NoahSafeAreaView className="flex-1 bg-background">
-      <View className="p-4">
+    <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
+      <ScrollView
+        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
         <View className="flex-row items-center mb-8">
           <NativeNoahBackButton
             onPress={() => navigation.goBack()}
@@ -282,10 +286,11 @@ const EmailVerificationScreen = () => {
                 testID="verification-code-input"
                 accessibilityLabel="verification-code-input"
                 autoFocus={true}
+                rootStyle={{ width: "100%", maxWidth: 360, alignSelf: "center" }}
                 renderCell={({ index, symbol, isFocused }) => (
                   <View
                     key={index}
-                    className={`w-12 h-14 border-2 rounded-xl justify-center items-center mx-1 ${
+                    className={`flex-1 min-w-0 h-14 border-2 rounded-xl justify-center items-center mx-1 ${
                       isFocused ? "border-primary" : "border-border"
                     }`}
                     onLayout={getCellOnLayoutHandler(index)}
@@ -335,7 +340,7 @@ const EmailVerificationScreen = () => {
             The verification code will expire in 10 minutes.
           </Text>
         )}
-      </View>
+      </ScrollView>
     </NoahSafeAreaView>
   );
 };
