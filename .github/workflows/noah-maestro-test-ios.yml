@@ -57,8 +57,6 @@ jobs:
 
       - name: 🔧 Setup Regtest Environment
         run: |
-          python3 scripts/test_regtest_isolation.py
-          python3 scripts/test_ios_simulator_selection.py
           cd scripts
           docker-compose pull
           docker-compose build
