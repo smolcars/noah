@@ -28,7 +28,10 @@ copy_to_simulator() {
   client/.maestro/subflows/prepare-funded-send-ios.yml
 
 # iOS 27's simulator can deny clipboard reads without showing the Allow Paste prompt.
-xcrun simctl privacy "$simulator_id" grant pasteboard com.noahwallet.regtest
+simulator_runtime_version="$(xcrun simctl getenv "$simulator_id" SIMULATOR_RUNTIME_VERSION)"
+if [[ "${simulator_runtime_version%%.*}" -ge 27 ]]; then
+  xcrun simctl privacy "$simulator_id" grant pasteboard com.noahwallet.regtest
+fi
 
 simulator_ark_address="$(xcrun simctl pbpaste "$simulator_id" | tr -d '\r\n')"
 if [[ ! "$simulator_ark_address" =~ ^tark1 ]]; then

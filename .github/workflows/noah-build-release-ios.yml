@@ -39,10 +39,10 @@ jobs:
           echo "xcode=$(xcodebuild -version | awk '/Build version/ {print $3}')" >> "$GITHUB_OUTPUT"
 
       - name: Install Nix
-        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
 
       - name: Restore Nix store
-        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
         with:
           primary-key: nix-ios-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.macos }}-${{ steps.toolchain.outputs.xcode }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-ios-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.macos }}-${{ steps.toolchain.outputs.xcode }}-

@@ -1,7 +1,7 @@
 name: Maestro Test iOS
 
 env:
-  # Self-hosted runners persist /nix/store; avoid stale Magic Nix Cache hooks/proxies.
+  # Restore the Nix store explicitly; use the public binary cache on cache misses.
   NIX_CONFIG: |
     post-build-hook =
     extra-substituters =
@@ -16,6 +16,8 @@ on:
       - "package.json"
       - "bun.lock"
       - "patches/**"
+      - "flake.nix"
+      - "flake.lock"
       - ".github/workflows/**"
       - "!**/*.md"
 
@@ -25,23 +27,74 @@ jobs:
     uses: ./.github/workflows/noah-build-release-ios.yml
     secrets: inherit
 
+  build-regtest-server:
+    name: Build ARM64 Regtest Server
+    runs-on: blacksmith-4vcpu-ubuntu-2404-arm
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: 🏗 Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup cached Blacksmith Docker builder
+        uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2.2.0
+        with:
+          cache-key: noah/maestro-server-arm64
+
+      - name: Build server image for hosted regtest
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/arm64
+          tags: noah-regtest-server:ci
+          outputs: type=docker,dest=${{ runner.temp }}/noah-regtest-server.tar
+
+      - name: Upload server image
+        uses: actions/upload-artifact@v7
+        with:
+          name: regtest-server-image
+          path: ${{ runner.temp }}/noah-regtest-server.tar
+          compression-level: 0
+          if-no-files-found: error
+          overwrite: true
+
   maestro-test-ios:
     name: Maestro Test iOS
-    needs: build-release-ios
-    runs-on: macOS
-    timeout-minutes: 25
+    needs: [build-release-ios, build-regtest-server]
+    runs-on: blacksmith-6vcpu-macos-latest
+    timeout-minutes: 60
     env:
       COMPOSE_PROJECT_NAME: noah-maestro-${{ github.run_id }}-${{ github.run_attempt }}
     permissions:
       checks: read
       contents: read
-    concurrency:
-      # The native app uses fixed localhost ports shared by the macOS runners.
-      group: noah-regtest-macos
-      cancel-in-progress: false
     steps:
       - name: 🏗 Checkout repository
         uses: actions/checkout@v6
+
+      - name: Check runner default Xcode
+        id: toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+          echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
+          echo "macos=$(sw_vers -buildVersion)" >> "$GITHUB_OUTPUT"
+          echo "xcode=$(xcodebuild -version | awk '/Build version/ {print $3}')" >> "$GITHUB_OUTPUT"
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Restore Nix test environment
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-ios-test-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.macos }}-${{ steps.toolchain.outputs.xcode }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-ios-test-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.macos }}-${{ steps.toolchain.outputs.xcode }}-
+
+      - name: Prepare Maestro environment and dependencies
+        run: |
+          /usr/bin/time -p nix build .#devShells.aarch64-darwin.ios-test --no-link
+          nix develop .#ios-test --command bun install --frozen-lockfile
 
       - name: 📥 Download iOS app artifact
         uses: actions/download-artifact@v8
@@ -55,11 +108,31 @@ jobs:
           unzip ios-release.zip
           rm ios-release.zip
 
+      - name: Download server image
+        uses: actions/download-artifact@v8
+        with:
+          name: regtest-server-image
+          path: ${{ runner.temp }}/regtest-server
+
+      - name: Start Docker with software emulation
+        id: docker
+        run: |
+          brew install colima qemu docker docker-compose
+          colima version
+          qemu-system-aarch64 --version
+          sysctl kern.hv_support || true
+          # Hosted macOS has no nested virtualization; Lima falls back to TCG.
+          colima start --vm-type qemu --arch aarch64 --cpu-type max --cpus 4 --memory 8 --disk 60 --mount-type 9p
+          docker info
+          docker-compose version
+          docker load --input "$RUNNER_TEMP/regtest-server/noah-regtest-server.tar"
+          # Match Compose's default image name so setup never builds Rust under TCG.
+          docker tag noah-regtest-server:ci "$COMPOSE_PROJECT_NAME-noah-server"
+
       - name: 🔧 Setup Regtest Environment
         run: |
           cd scripts
-          docker-compose pull
-          docker-compose build
+          docker-compose pull --ignore-buildable
           ./ark-dev.sh setup-everything
 
       - name: 📱 Create isolated iOS simulator
@@ -84,7 +157,7 @@ jobs:
           PYTHON
 
       - name: 🧪 Run Maestro tests
-        run: nix develop .# --command bash -c "xcrun simctl install \"$SIMULATOR_ID\" ios-release-build/ios-release.app && bun client maestro:test --udid \"$SIMULATOR_ID\" && maestro --udid \"$SIMULATOR_ID\" test --debug-output client/maestro-debug-output/adaptive client/tests/maestro/adaptive-layout-smoke.yml && scripts/test-send-regtest.sh"
+        run: nix develop .#ios-test --command bash -c "xcrun simctl install \"$SIMULATOR_ID\" ios-release-build/ios-release.app && bun client maestro:test --udid \"$SIMULATOR_ID\" && maestro --udid \"$SIMULATOR_ID\" test --debug-output client/maestro-debug-output/adaptive client/tests/maestro/adaptive-layout-smoke.yml && scripts/test-send-regtest.sh"
         env:
           MAESTRO_DRIVER_STARTUP_TIMEOUT: 120000
 
@@ -97,8 +170,12 @@ jobs:
           fi
 
       - name: 🧹 Teardown Regtest Environment
-        if: always()
+        if: always() && steps.docker.outcome == 'success'
         run: ./scripts/ark-dev.sh down
+
+      - name: Stop Docker VM
+        if: always()
+        run: colima stop || true
 
       - name: 📤 Store debug output if failed
         if: failure()
@@ -117,8 +194,8 @@ jobs:
     steps:
       - name: ✅ Gate
         run: |
-          if [[ "${{ needs.maestro-test-ios.result }}" == "success" || "${{ needs.maestro-test-ios.result }}" == "skipped" ]]; then
-            echo "Maestro tests passed or skipped"
+          if [[ "${{ needs.maestro-test-ios.result }}" == "success" ]]; then
+            echo "Maestro tests passed"
             exit 0
           else
             echo "Maestro tests failed"

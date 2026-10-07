@@ -222,6 +222,25 @@
           server = mkServerShellFor system;
         }
         // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
+          ios-test =
+            let
+              pkgs = pkgsFor system;
+            in
+            pkgs.mkShellNoCC {
+              buildInputs = with pkgs; [
+                bun
+                nodejs_22
+                just
+                jq
+                maestro
+              ];
+              shellHook = ''
+                export LC_ALL=en_US.UTF-8
+                export LANG=en_US.UTF-8
+                # Maestro's package wrapper supplies its Java runtime.
+                unset JAVA_HOME SDKROOT
+              '';
+            };
           ios-ci =
             let
               pkgs = pkgsFor system;
