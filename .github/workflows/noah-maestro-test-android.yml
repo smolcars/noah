@@ -111,6 +111,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: maestro-android-debug
+          include-hidden-files: true
           path: |
             client/maestro-debug-output
             regtest.log

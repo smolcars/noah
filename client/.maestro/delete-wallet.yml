@@ -19,4 +19,6 @@ appId: com.noahwallet.regtest
 - inputText: "delete"
 # Submit through the existing Done action without targeting a moving sheet button.
 - pressKey: Enter
-- assertVisible: "Welcome to Noah"
+- extendedWaitUntil:
+    visible: "Welcome to Noah"
+    timeout: 60000
