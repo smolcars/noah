@@ -239,7 +239,7 @@ PODS:
     - ReactNativeDependencies
     - Yoga
   - MMKVCore (2.4.0)
-  - NitroArk (0.0.143):
+  - NitroArk (0.0.144):
     - hermes-engine
     - NitroModules
     - RCTRequired
@@ -3153,7 +3153,7 @@ SPEC CHECKSUMS:
   ExpoLocalAuthentication: 5af371833d4778cbf80264156cf3e6613ee66fb6
   ExpoLocation: 7213a754302fa02576a5311c9453baa2532cedea
   ExpoLogBox: 8dba3b5b49faceb012941639ccd41d9695db30c3
-  ExpoModulesCore: 23c4cf4a56d84aee607eb667575f11cf5bf75c28
+  ExpoModulesCore: 5d9db1ead7282f52bac148f2ccae045b219b168a
   ExpoModulesJSI: 7e8aea057d6f64ddca78cdf3e6e58e3d02d5c5fc
   ExpoModulesWorklets: 0415b08160e0aef26df181a7dda6eba107fcc18d
   ExpoModulesWorkletsAdapter: bbf5fd0716ce4f6dd460bd64656296213b304fef
@@ -3170,7 +3170,7 @@ SPEC CHECKSUMS:
   hermes-engine: 6a00d96909f1648698fe5419972fe3c9e628755e
   MapLibreReactNative: 5fb138b5b962a0f7ed6cfd7d79d1034a5f7bbc70
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
-  NitroArk: 8a06923633de3c786582d0f0da32e278791d0c00
+  NitroArk: d69320b8a7bc294a764145e953597cdb329fde5b
   NitroMmkv: c1b930cce2770988cba50a7debc522f0fe11de18
   NitroModules: 57c6bdff1e712bc8bab07077f25c27c3e3e7fe04
   NoahTools: 9cfb1c93693a0b4479d03444fe8eb1922fa29aaf
