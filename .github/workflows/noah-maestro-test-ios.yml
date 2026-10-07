@@ -36,12 +36,15 @@ jobs:
     needs: build-release-ios
     runs-on: macOS
     timeout-minutes: 25
+    env:
+      COMPOSE_PROJECT_NAME: noah-maestro-${{ github.run_id }}-${{ github.run_attempt }}
     permissions:
       checks: read
       contents: read
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
+      # The native app uses fixed localhost ports shared by the macOS runners.
+      group: noah-regtest-macos
+      cancel-in-progress: false
     steps:
       - name: 🏗 Checkout repository
         uses: actions/checkout@v6
@@ -59,7 +62,12 @@ jobs:
           rm ios-release.zip
 
       - name: 🔧 Setup Regtest Environment
-        run: cd scripts && docker-compose pull && docker-compose build && ./ark-dev.sh setup-everything
+        run: |
+          python3 scripts/test_regtest_isolation.py
+          cd scripts
+          docker-compose pull
+          docker-compose build
+          ./ark-dev.sh setup-everything
 
       - name: 📱 Create isolated iOS simulator
         env:

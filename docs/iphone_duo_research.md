@@ -134,14 +134,19 @@ On Duo, the entered Send amount survived switching between inner and outer displ
 
 The device CLI dispatched fold transitions, but its hinge-angle verification uses a CoreDevice command unavailable in this Xcode build. Display dimensions (951 × 669 inner, 466 × 678 outer), screenshots, and retained UI state independently verified the transitions. No passing hinge-angle telemetry check is claimed. Maestro also encountered stale tap coordinates after rotation and a native-tab hierarchy exposing only the selected tab on one run; the full Duo automated flow is not yet a confirmed pass.
 
-OrbStack was restarted with permission. Read-only Docker inspection recovered after stopping the services, but another startup stalled at Bitcoin/Postgres health readiness. A data-preserving stop completed once; the stop after the final retry stalled on Bitcoin/Postgres and its client was canceled. No volumes were deleted. Live payment verification remains outstanding.
+Regtest recovered on October 7 after enabling OrbStack access to Documents. Reading the Postgres init directory through its bind mount had stalled a VM CPU; the same files outside Documents worked, and the original mount read completed in 0.26 seconds after permission was enabled. Empty Bitcoin `settings.json` and `blocks/xor.dat` files were backed up and repaired. `just setup-everything` then completed.
 
-[Actual simulator screenshots](iphone-duo/README.md) document open/closed layouts and the Android smoke run.
+A concurrent self-hosted Maestro run also reused the local `scripts` Compose project. Its teardown removed the shared regtest volumes before a preservation guard took effect; the replacement stack was initialized and funded again. CI now uses a project per run, serializes Maestro jobs sharing fixed localhost ports, and recreates Bark wallets through the selected Compose service instead of hard-coding `scripts_bark`. Local regtest must be stopped with `just stop` before a Maestro CI job can bind those same ports.
+
+Final local checks from the original checkout passed: `just up`, Bitcoin/CLN/LND synchronization, an active funded Lightning channel, funded Bark, initialized Barkd, Electrs, and Noah HTTP health on port 3000. A 1,000-sat Bark → Ark/CLN → LND payment settled; the receiver reported `SETTLED` and 1,000 sats paid (payment hash `64b205b8adab87a1e029c239335e7193f4d31916a4ee0c370ffbed4cbfba919c`). This verifies the local payment stack; funded simulator payment flows remain a separate release check.
+
+[Actual simulator screenshots](iphone-duo/README.md) document open/closed layouts and the Android smoke run. The [unedited dark-mode video](iphone-duo/noah-iphone-duo-dark-open-raw.mp4) is one continuous native Simulator recording of the inner display, copied without post-processing; it uses the same sample wallet data.
 
 ### Completed local checks
 
 - `nix develop --command just check`: lint, 128 unit tests (348 assertions), and TypeScript checking passed after removing the temporary probes.
 - `python3 scripts/test_expo_swift_interface.py`: passed against the installed patched build script.
+- `python3 scripts/test_regtest_isolation.py`: the previous cleanup deleted the simulated local wallet; the corrected cleanup preserves it and recreates only the selected CI wallet. Compose configuration also resolves every named volume under the CI project prefix.
 - Android `adaptive-layout-checks.yml`: passed on Pixel 9 Pro / Android 16, covering Home, Send amount 500, Receive note/keyboard and amount 500, sheet dismissal, and History. This used the sample-data harness described above. The test exposed a missing Android `testID` forwarding path in the shared native button; it now uses the same Compose modifier as the secondary button.
 - iOS regtest simulator build and Android regtest debug build: passed. Build success does not establish funded-wallet behavior.
 - `bun install --frozen-lockfile` passed with all patches applied; installed tab-library source matched the native fix used in the successful build.
