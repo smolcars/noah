@@ -232,7 +232,14 @@
                 nodejs_22
                 just
                 jq
-                maestro
+                # Includes the iOS launch-state fix from Maestro 2.7 (#3398).
+                (maestro.overrideAttrs {
+                  version = "2.11.0";
+                  src = fetchurl {
+                    url = "https://github.com/mobile-dev-inc/maestro/releases/download/cli-2.11.0/maestro.zip";
+                    hash = "sha256-U4RZPLTnoQZInnWoIdFX3UP05Djfa8MIty6CxoXhKDo=";
+                  };
+                })
               ];
               shellHook = ''
                 export LC_ALL=en_US.UTF-8
