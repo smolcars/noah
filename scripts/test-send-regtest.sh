@@ -81,4 +81,9 @@ copy_to_simulator "bitcoin:$amountless_request_address?amount=0"
   --debug-output "$maestro_debug_output/amountless-request" \
   client/.maestro/subflows/send-amountless-request.yml
 
+printf 'Verifying the exit deposit address stays reachable in landscape.\n'
+"$maestro_command" test --udid "$simulator_id" \
+  --debug-output "$maestro_debug_output/exit-deposit-landscape" \
+  client/.maestro/subflows/exit-deposit-landscape.yml
+
 just bark balance

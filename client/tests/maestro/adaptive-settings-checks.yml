@@ -111,6 +111,7 @@ appId: com.noahwallet.regtest
       - tapOn:
           id: "recurring-label-input"
       - inputText: "Layout schedule"
+      - pressKey: Enter
       - scrollUntilVisible:
           element:
             id: "recurring-save-button"

@@ -44,7 +44,7 @@ export function ExitDepositBottomSheet({
     address && address.length > 42 ? `${address.slice(0, 18)}…${address.slice(-12)}` : address;
 
   return (
-    <AppBottomSheet isOpen={isOpen} onClose={onClose} detents={[0, "content"]}>
+    <AppBottomSheet isOpen={isOpen} onClose={onClose} scrollable>
       <View className="gap-6 px-2 pb-2">
         <View className="flex-row items-center justify-between gap-3">
           <Text accessibilityRole="header" className="flex-1 text-xl font-semibold text-foreground">

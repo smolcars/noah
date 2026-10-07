@@ -16,6 +16,6 @@ appId: com.noahwallet.regtest
 - tapOn:
     text: 'Type "delete" to confirm'
 - inputText: "delete"
-- tapOn:
-    id: "confirm-delete-wallet"
+# Submit through the existing Done action without targeting a moving sheet button.
+- pressKey: Enter
 - assertVisible: "Welcome to Noah"

@@ -36,6 +36,8 @@ appId: com.noahwallet.regtest
 - eraseText: 40
 - inputText: ${output.lightningUsername}
 - assertVisible: ${output.lightningUsername}
+# Maestro can report Save as visible while the iOS keyboard covers it.
+- pressKey: Enter
 - scrollUntilVisible:
     element:
       text: "Save"
