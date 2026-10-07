@@ -31,6 +31,15 @@ jobs:
       - name: 📦 Install dependencies
         run: nix develop .# --command bash -c "bun install --frozen-lockfile"
 
+      - name: Check Xcode and Expo Swift interface compatibility
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          version = subprocess.check_output(["xcrun", "--sdk", "iphonesimulator", "--show-sdk-version"], text=True).strip()
+          assert tuple(map(int, version.split("."))) >= (27, 1), f"Duo requires iOS SDK 27.1 or later; selected {version}"
+          PY
+          python3 scripts/test_expo_swift_interface.py
+
       - name: 🛠️ Build
         run: nix develop .# --command bash -c "bun client ios:prebuild && bun client build:ios:ci"
 

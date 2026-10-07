@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Noah · iPhone Duo concepts</title>
+<style>
+*{box-sizing:border-box}body{margin:0;color:var(--foreground,#f5f5f5);font:14px/1.5 var(--font-sans,system-ui,sans-serif);background:var(--background,#111)}
+p{margin:0}button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #f7931a;outline-offset:3px}
+.intro{color:var(--muted-foreground,#999);font-size:13px;margin-bottom:12px}.controls{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.controls button{min-height:44px;border:1px solid var(--border,#38383b);border-radius:12px;padding:8px 15px;background:transparent;color:inherit}.controls button[aria-pressed=true]{background:var(--primary,#f5f5f5);color:var(--primary-foreground,#151515)}
+.compare{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px}.label{display:flex;justify-content:space-between;gap:6px;font-size:12px;margin:0 0 8px}.label span{color:var(--muted-foreground,#999)}
+.device{height:400px;border:2px solid #454548;border-radius:24px;padding:9px;background:#0a0a0b;color:#fafafa;position:relative;overflow:hidden}
+.status{font-size:9px;color:#a1a1aa;display:flex;justify-content:space-between;padding:0 7px 8px}
+.shell{display:grid;grid-template-columns:minmax(0,1fr) 32px;gap:6px;height:354px}.open .shell{grid-template-columns:minmax(0,1fr) 40px}
+.rail{border-radius:20px;background:#242426;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;margin:40px 0 26px;font-size:8px;color:#aaa}
+.rail div{display:grid;justify-items:center;gap:2px}.rail b{font-size:15px;line-height:1}.rail .active{color:#ff9d2b}
+.content{min-width:0;display:flex;flex-direction:column;padding:7px 5px}.wordmark{font-size:19px;font-weight:750;letter-spacing:-.8px;display:flex;align-items:center;gap:7px;margin-bottom:15px}.mark{font-size:16px;color:#f7931a}
+.eyebrow{color:#a1a1aa;font-size:10px}.balance{font-size:28px;letter-spacing:-1px;font-weight:600;white-space:nowrap;line-height:1.25}.unit{font-size:11px;color:#a1a1aa;margin-left:4px;letter-spacing:0}.small{color:#a1a1aa;font-size:10px}.actions{display:flex;gap:6px;margin-top:14px}.pill{border:1px solid #454548;border-radius:20px;padding:7px 10px;font-size:10px;text-align:center;color:#fafafa}.pill.light{background:#fafafa;color:#18181b;border-color:#fafafa}
+.box{border:1px solid #27272a;border-radius:14px;padding:12px;min-width:0}.boxtitle{font-size:11px;font-weight:600;margin-bottom:8px}
+.row{display:flex;gap:6px;justify-content:space-between;padding:10px 0;border-top:1px solid #27272a;font-size:10px}.row:first-of-type{border-top:0}.row span{min-width:0}.row strong{white-space:nowrap;font-weight:500}.green{color:#6ee7a2}.orange{color:#ff9d2b}
+.mainbody{display:grid;gap:12px;align-content:start;flex:1;min-height:0}.widebody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;flex:1;align-items:start;min-height:0}.widebody .balance{font-size:25px}
+.widebody .primary{padding-top:17px}.quiet{font-size:10px;color:#a1a1aa;line-height:1.6;margin-top:13px}.footnote{color:#71717a;font-size:8px;text-align:center;margin-top:auto;padding-top:8px}
+.field{border:1px solid #39393d;border-radius:10px;padding:9px;font-size:10px;margin:8px 0}.keypad{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;gap:9px;font-size:16px;margin:12px 0}
+.summary{display:grid;gap:9px;font-size:10px;margin:8px 0 14px}.summary div{display:flex;gap:4px;justify-content:space-between}.summary span{color:#a1a1aa}.selected{background:#202022;margin:0 -5px;padding-left:5px;padding-right:5px;border-radius:8px}
+.qr{height:112px;max-width:132px;width:100%;background:#fafafa;border-radius:10px;margin:10px auto;position:relative;color:#18181b;display:grid;place-items:center;text-align:center;font-size:11px}.qr i{position:absolute;width:23px;height:23px;border:5px solid #18181b;left:10px;top:10px}.qr i:nth-child(2){left:auto;right:10px}.qr i:nth-child(3){top:auto;bottom:10px}.qr span{margin-top:15px;font-size:9px;max-width:55px;line-height:1.3}
+.title{font-size:19px;font-weight:650;line-height:1.2;margin-bottom:15px}.center{text-align:center}.caption{margin-top:12px;font-size:12px;color:var(--muted-foreground,#999)}.caption strong{color:var(--foreground,#fafafa);font-weight:600}.principle{margin-top:16px;padding:12px 0;border-top:1px solid var(--border,#38383b);font-size:13px}.principle strong{color:#f7931a}.assumption{margin-top:5px;color:var(--muted-foreground,#999);font-size:11px}
+@media(max-width:600px){.compare{grid-template-columns:1fr}.closed{max-width:250px;margin:auto;width:100%}.open{width:100%}.open .widebody{gap:8px}.controls button{flex:1;padding:8px}.label{font-size:12px}.widebody .balance{font-size:23px}.widebody .box{padding:9px}}
+</style></head><body>
+<p class="intro">Exploratory concepts · Noah’s current colors and flows · Illustrative proportions and sample data</p>
+<div class="controls" aria-label="Choose a screen concept"><button data-screen="home" aria-pressed="true">Home</button><button data-screen="history" aria-pressed="false">History</button><button data-screen="send" aria-pressed="false">Send</button><button data-screen="receive" aria-pressed="false">Receive</button></div>
+<div class="compare">
+<section class="closed"><p class="label"><b>Closed</b><span>One focused task</span></p><div class="device"><div class="status"><span>9:41</span><span>● ● ▰</span></div><div class="shell"><div id="compact" class="content"></div><div class="rail" aria-hidden="true"></div></div></div></section>
+<section class="open"><p class="label"><b>Open</b><span>Space for useful context</span></p><div class="device"><div class="status"><span>9:41</span><span>● ● ▰</span></div><div class="shell"><div id="expanded" class="content"></div><div class="rail" aria-hidden="true"></div></div></div></section>
+</div>
+<p id="caption" class="caption" aria-live="polite"></p>
+<p class="principle"><strong>Unfolding changes the layout.</strong> The payment draft, receive request, and selected transaction stay with you.</p>
+<p class="assumption">Native navigation placement is schematic; iOS controls it. Two columns appear only when the available content area fits them. Narrow windows and large text keep a single column.</p>
+<script>
+const brand='<div class="wordmark"><span class="mark">₿</span> noah</div>';
+const balance='<div class="eyebrow">TOTAL BALANCE</div><div class="balance">248,500<span class="unit">sats</span></div><div class="small">Balance visible · tap to hide</div>';
+const actions='<div class="actions"><div class="pill light">↗ Send</div><div class="pill">↙ Receive</div></div>';
+const activity='<div class="boxtitle">Recent activity</div><div class="row"><span>Lightning received<br><small class="small">Today, 10:42</small></span><strong class="green">+25,000</strong></div><div class="row"><span>Coffee<br><small class="small">Today, 09:18</small></span><strong>−5,000</strong></div><div class="row"><span>Ark received<br><small class="small">Yesterday</small></span><strong class="green">+80,000</strong></div>';
+const keys='<div class="keypad">1<span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>·</span><span>0</span><span>⌫</span></div>';
+const qr='<div class="qr"><i></i><i></i><i></i><span>QR placement<br>concept only</span></div>';
+const payment='<div class="summary"><div><span>To</span><b>Alex</b></div><div><span>Method</span><b>Lightning</b></div><div><span>Amount</span><b>12,000 sats</b></div><div><span>Fee</span><b>Calculating…</b></div></div>';
+const receipt='<div class="boxtitle">Lightning received</div><div class="balance green" style="font-size:24px">+25,000</div><div class="small">sats · Complete</div><div class="summary" style="margin-top:24px"><div><span>Date</span><b>Today</b></div><div><span>Time</span><b>10:42</b></div><div><span>Network</span><b>Lightning</b></div></div><div class="pill">Technical details</div>';
+const concepts={
+home:{
+compact:brand+'<div class="mainbody"><div>'+balance+actions+'</div><div class="box">'+activity+'</div></div>',
+expanded:brand+'<div class="widebody"><div class="primary">'+balance+actions+'<div class="quiet">Ark · 218,500 sats<br>On-chain · 30,000 sats</div></div><div class="box">'+activity+'<div class="small orange" style="margin-top:10px">View all activity →</div></div></div><div class="footnote">Sample wallet · no real funds</div>',
+caption:'<strong>Home:</strong> keep the balance and primary actions in focus; use the open display to show recent activity alongside them.'
+},
+history:{
+compact:'<div class="title">History</div><div class="mainbody"><div class="small">All · Lightning · Ark · On-chain</div><div class="box">'+activity+'</div><div class="quiet">Tap a transaction to open its details in a sheet.</div></div>',
+expanded:'<div class="title">History</div><div class="widebody"><div><div class="small" style="margin-bottom:10px">All · Lightning · Ark</div><div class="box">'+activity+'</div></div><div class="box">'+receipt+'</div></div>',
+caption:'<strong>History:</strong> a transaction list beside its receipt. Folding returns the selected receipt to the compact detail presentation, keeping filters and scroll position.'
+},
+send:{
+compact:'<div class="title">Send bitcoin</div><div class="mainbody"><div class="center"><div class="eyebrow">AMOUNT</div><div class="balance">12,000<span class="unit">sats</span></div>'+keys+'<div class="pill light">Continue</div></div></div>',
+expanded:'<div class="title">Send bitcoin</div><div class="widebody"><div class="center"><div class="eyebrow">AMOUNT</div><div class="balance">12,000<span class="unit">sats</span></div>'+keys+'<div class="pill light">Continue</div></div><div class="box"><div class="boxtitle">Payment summary</div>'+payment+'<div class="quiet">Existing draft shown here. Confirm only after fees are ready and the review step is complete.</div></div></div>',
+caption:'<strong>Send:</strong> preserve the current staged flow and add a read-only summary beside it. The recipient, amount, rail, fees, and final confirmation remain one payment flow.'
+},
+receive:{
+compact:'<div class="title">Receive bitcoin</div><div class="center"><div class="eyebrow">REQUEST AMOUNT</div><div class="balance" style="font-size:24px">25,000<span class="unit">sats</span></div>'+qr+'<div class="small">Waiting for payment</div><div class="actions" style="justify-content:center"><div class="pill">Copy</div><div class="pill light">Share</div></div></div>',
+expanded:'<div class="title">Receive bitcoin</div><div class="widebody"><div class="center">'+qr+'<div class="small">Waiting for payment</div></div><div class="box"><div class="eyebrow">REQUEST AMOUNT</div><div class="balance" style="font-size:24px">25,000<span class="unit">sats</span></div><div class="quiet">Same request across both displays.</div><div class="field">Amount & description →</div><div class="actions"><div class="pill">Copy</div><div class="pill light">Share</div></div></div></div>',
+caption:'<strong>Receive:</strong> place the QR beside amount, description, and share controls. Keep the same request through every resize; opening the phone must not generate a new invoice.'
+}
+};
+function show(screen){
+const entry=concepts[screen];
+document.getElementById('compact').innerHTML=entry.compact;
+document.getElementById('expanded').innerHTML=entry.expanded;
+document.getElementById('caption').innerHTML=entry.caption;
+for(const button of document.querySelectorAll('[data-screen]'))button.setAttribute('aria-pressed',String(button.dataset.screen===screen));
+for(const rail of document.querySelectorAll('.rail'))rail.innerHTML=[['home','⌂','Home'],['receive','↓','Receive'],['send','↑','Send'],['history','◷','History']].map(([key,icon,label])=>'<div class="'+(key===screen?'active':'')+'"><b>'+icon+'</b><span>'+label+'</span></div>').join('');
+}
+for(const button of document.querySelectorAll('[data-screen]'))button.addEventListener('click',()=>show(button.dataset.screen));
+for(const screen of Object.keys(concepts)){show(screen);if(!document.getElementById('compact').textContent||!document.getElementById('expanded').textContent||document.querySelectorAll('[aria-pressed="true"]').length!==1)throw new Error('Concept switch failed: '+screen);}
+show('home');
+</script></body></html>

@@ -1,6 +1,11 @@
 import { useIsFocused, useNavigation, type NavigationProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { useEffect } from "react";
+import { ScrollView, View } from "react-native";
+import { Text } from "~/components/ui/text";
+import { FeeEstimateSummary } from "~/components/FeeEstimateSummary";
+import { useAdaptiveLayout } from "~/hooks/useAdaptiveLayout";
+import { PANE_GAP } from "~/lib/adaptiveLayout";
 
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { QRCodeScanner } from "~/components/QRCodeScanner";
@@ -26,6 +31,7 @@ import {
 
 const SendScreen = () => {
   const isFocused = useIsFocused();
+  const { isExpanded, onLayout } = useAdaptiveLayout();
   const navigation = useNavigation<NavigationProp<TabParamList>>();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const {
@@ -191,82 +197,133 @@ const SendScreen = () => {
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
-      <SendStageTransition direction={stageDirection} stage={stage}>
-        {stage === "method" ? (
-          <SendChoiceStage
-            title="How should Noah pay?"
-            description="Noah recommends the first available method. You can choose another method supplied by this request."
-            options={railChoices}
-            value={selectedRail}
-            onBack={handleStageBack}
-            onChange={setSelectedRail}
-            onContinue={handleRailContinue}
-            testIDPrefix="send-method"
-          />
-        ) : stage === "source" ? (
-          <SendChoiceStage
-            title={
-              isMaxSend ? "Which balance should Noah empty?" : "Which balance should Noah use?"
-            }
-            description={
-              isMaxSend
-                ? "MAX sends one balance in full. The miner fee is deducted from the final amount."
-                : "Choose the balance that will fund this on-chain payment."
-            }
-            options={sourceChoices}
-            value={selectedOnchainSource}
-            onBack={handleStageBack}
-            onChange={setSelectedOnchainSource}
-            onContinue={handleSourceContinue}
-            testIDPrefix="send-source"
-          />
-        ) : stage === "recipient" ? (
-          <SendRecipientStage
-            amountSat={isMaxSend ? maxSendAmountSat : amountSat}
-            destination={destination}
-            destinationType={destinationType}
-            bip321Data={bip321Data}
-            suggestions={lightningAddressSuggestions}
-            error={recipientError}
-            comment={comment}
-            commentAllowed={commentAllowed}
-            noteUsesLightning={noteUsesLightning}
-            isResolving={isResolvingRecipient}
-            onBack={handleStageBack}
-            onDestinationChange={setDestination}
-            onSelectSuggestion={handleSelectLightningAddressSuggestion}
-            onCommentChange={setComment}
-            onPaste={pasteDestination}
-            onScan={handleScanPress}
-            onContinue={handleRecipientContinue}
-          />
-        ) : (
-          <SendAmountStage
-            amount={amount}
-            amountSat={amountSat}
-            currency={currency}
-            fiatCurrency={fiatCurrency}
-            btcPrice={btcPrice}
-            arkBalanceSat={offchainWalletBalance}
-            onchainBalanceSat={onchainWalletBalance}
-            error={amountError}
-            isAmountEditable={isAmountEditable}
-            canSendMax={canSendMax}
-            canClear={canClear}
-            recipient={recipientLabel ? destination : null}
-            recipientLabel={recipientLabel}
-            onBack={canGoBack ? handleStageBack : undefined}
-            onAmountChange={setAmount}
-            onToggleCurrency={toggleCurrency}
-            onContinue={handleAmountContinue}
-            onClear={handleClear}
-            onEditRecipient={handleEditRecipient}
-            onMax={handleMaxSend}
-            onPaste={pasteDestination}
-            onScan={handleScanPress}
-          />
-        )}
-      </SendStageTransition>
+      <View
+        className="flex-1"
+        onLayout={onLayout}
+        style={{ flexDirection: isExpanded ? "row" : "column", gap: isExpanded ? PANE_GAP : 0 }}
+      >
+        <View className="min-w-0 flex-1">
+          <SendStageTransition direction={stageDirection} stage={stage}>
+            {stage === "method" ? (
+              <SendChoiceStage
+                title="How should Noah pay?"
+                description="Noah recommends the first available method. You can choose another method supplied by this request."
+                options={railChoices}
+                value={selectedRail}
+                onBack={handleStageBack}
+                onChange={setSelectedRail}
+                onContinue={handleRailContinue}
+                testIDPrefix="send-method"
+              />
+            ) : stage === "source" ? (
+              <SendChoiceStage
+                title={
+                  isMaxSend ? "Which balance should Noah empty?" : "Which balance should Noah use?"
+                }
+                description={
+                  isMaxSend
+                    ? "MAX sends one balance in full. The miner fee is deducted from the final amount."
+                    : "Choose the balance that will fund this on-chain payment."
+                }
+                options={sourceChoices}
+                value={selectedOnchainSource}
+                onBack={handleStageBack}
+                onChange={setSelectedOnchainSource}
+                onContinue={handleSourceContinue}
+                testIDPrefix="send-source"
+              />
+            ) : stage === "recipient" ? (
+              <SendRecipientStage
+                amountSat={isMaxSend ? maxSendAmountSat : amountSat}
+                destination={destination}
+                destinationType={destinationType}
+                bip321Data={bip321Data}
+                suggestions={lightningAddressSuggestions}
+                error={recipientError}
+                comment={comment}
+                commentAllowed={commentAllowed}
+                noteUsesLightning={noteUsesLightning}
+                isResolving={isResolvingRecipient}
+                onBack={handleStageBack}
+                onDestinationChange={setDestination}
+                onSelectSuggestion={handleSelectLightningAddressSuggestion}
+                onCommentChange={setComment}
+                onPaste={pasteDestination}
+                onScan={handleScanPress}
+                onContinue={handleRecipientContinue}
+              />
+            ) : (
+              <SendAmountStage
+                amount={amount}
+                amountSat={amountSat}
+                currency={currency}
+                fiatCurrency={fiatCurrency}
+                btcPrice={btcPrice}
+                arkBalanceSat={offchainWalletBalance}
+                onchainBalanceSat={onchainWalletBalance}
+                error={amountError}
+                isAmountEditable={isAmountEditable}
+                canSendMax={canSendMax}
+                canClear={canClear}
+                recipient={recipientLabel ? destination : null}
+                recipientLabel={recipientLabel}
+                onBack={canGoBack ? handleStageBack : undefined}
+                onAmountChange={setAmount}
+                onToggleCurrency={toggleCurrency}
+                onContinue={handleAmountContinue}
+                onClear={handleClear}
+                onEditRecipient={handleEditRecipient}
+                onMax={handleMaxSend}
+                onPaste={pasteDestination}
+                onScan={handleScanPress}
+              />
+            )}
+          </SendStageTransition>
+        </View>
+        {isExpanded ? (
+          <ScrollView
+            className="min-w-0 flex-1"
+            contentContainerStyle={{ paddingVertical: 24 }}
+            testID="send-summary-pane"
+          >
+            <View className="gap-4 rounded-2xl border border-border bg-card p-5">
+              <Text accessibilityRole="header" className="text-xl font-bold text-foreground">
+                Payment summary
+              </Text>
+              <View>
+                <Text className="text-sm text-muted-foreground">Amount</Text>
+                <Text
+                  className="text-2xl font-semibold text-foreground"
+                  testID="send-summary-amount"
+                >
+                  {isMaxSend ? "Maximum available" : formatBitcoinAmount(amountSat)}
+                </Text>
+              </View>
+              <View>
+                <Text className="text-sm text-muted-foreground">Recipient</Text>
+                <Text selectable className="text-base text-foreground">
+                  {destination || "Choose a recipient"}
+                </Text>
+              </View>
+              {destinationType ? (
+                <Text className="text-sm text-muted-foreground">{recipientLabel}</Text>
+              ) : null}
+              {comment ? <Text className="text-base text-foreground">{comment}</Text> : null}
+              <FeeEstimateSummary
+                estimate={feeEstimate}
+                isLoading={isEstimatingFee}
+                error={feeEstimateError}
+                unavailableText={feeEstimateUnavailableText ?? undefined}
+                note={feeEstimateNote}
+                compact
+              />
+              <Text className="text-sm leading-5 text-muted-foreground">
+                Review the recipient, payment method and final amount before confirming.
+              </Text>
+            </View>
+          </ScrollView>
+        ) : null}
+      </View>
 
       <AppBottomSheet
         isOpen={showConfirmation}

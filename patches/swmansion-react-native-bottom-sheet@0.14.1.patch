@@ -1,0 +1,21 @@
+diff --git a/ios/BottomSheetSurfaceComponentView.mm b/ios/BottomSheetSurfaceComponentView.mm
+--- a/ios/BottomSheetSurfaceComponentView.mm
++++ b/ios/BottomSheetSurfaceComponentView.mm
+@@ -7,6 +7,15 @@
+ using namespace facebook::react;
+-
++
+ @implementation BottomSheetSurfaceComponentView
++
++- (instancetype)initWithFrame:(CGRect)frame
++{
++  if (self = [super initWithFrame:frame]) {
++    static const auto defaultProps = std::make_shared<const BottomSheetSurfaceViewProps>();
++    _props = defaultProps;
++  }
++  return self;
++}
+-
++
+ + (ComponentDescriptorProvider)componentDescriptorProvider
+ {

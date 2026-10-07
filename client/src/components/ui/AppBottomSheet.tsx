@@ -66,14 +66,22 @@ export const AppBottomSheet = ({
   liquidGlass = false,
   dismissible = true,
 }: AppBottomSheetProps) => {
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [keyboardOffset, setKeyboardOffset] = useState(0);
-  const sheetHeight = Math.max(windowHeight - Math.max(insets.top, 16) - 12, 320);
+  const sheetHeight = Math.max(0, windowHeight - Math.max(insets.top, 16) - 12 - keyboardOffset);
+  const contentWidth = Math.min(560, Math.max(0, windowWidth - insets.left - insets.right));
   const requestedDetents: Detent[] = detents ?? [0, "content"];
+  const clampedDetents = requestedDetents.map((detent) => {
+    if (typeof detent === "number") return Math.min(detent, sheetHeight);
+    if (typeof detent === "object" && typeof detent.value === "number") {
+      return { ...detent, value: Math.min(detent.value, sheetHeight) };
+    }
+    return detent;
+  });
   const resolvedDetents: Detent[] = dismissible
-    ? requestedDetents
-    : [programmatic(0), ...requestedDetents.slice(1)];
+    ? clampedDetents
+    : [programmatic(0), ...clampedDetents.slice(1)];
   const openIndex = resolvedDetents.length - 1;
   const [sheetIndex, setSheetIndex] = useState(isOpen ? openIndex : 0);
   const openDetent = resolvedDetents[openIndex];
@@ -150,6 +158,10 @@ export const AppBottomSheet = ({
       <View
         className="px-4 pt-3"
         style={[
+          {
+            width: contentWidth,
+            marginLeft: insets.left + (windowWidth - insets.left - insets.right - contentWidth) / 2,
+          },
           contentHeight === undefined ? undefined : { height: contentHeight },
           scrollable ? undefined : { paddingBottom: Math.max(insets.bottom, 12) },
         ]}

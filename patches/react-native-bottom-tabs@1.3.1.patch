@@ -1,4 +1,5 @@
 diff --git a/ios/RCTTabViewComponentView.mm b/ios/RCTTabViewComponentView.mm
+index bd8edce..18d1b1e 100644
 --- a/ios/RCTTabViewComponentView.mm
 +++ b/ios/RCTTabViewComponentView.mm
 @@ -18,7 +18,7 @@
@@ -8,5 +9,66 @@ diff --git a/ios/RCTTabViewComponentView.mm b/ios/RCTTabViewComponentView.mm
 -#import "RCTConversions.h"
 +#import <React/RCTConversions.h>
  #import <react/utils/ManagedObjectWrapper.h>
- 
+-
++
  #if TARGET_OS_OSX
+diff --git a/ios/TabViewImpl.swift b/ios/TabViewImpl.swift
+index 14732fd..0db7abe 100644
+--- a/ios/TabViewImpl.swift
++++ b/ios/TabViewImpl.swift
+@@ -17,7 +17,7 @@ struct TabViewImpl: View {
+     if #available(iOS 18, macOS 15, visionOS 2, tvOS 18, *) {
+       NewTabView(
+         props: props,
+-        onLayout: onLayout,
++        onLayout: reportLayout,
+         onSelect: onSelect
+       ) {
+         #if !os(macOS)
+@@ -27,7 +27,7 @@ struct TabViewImpl: View {
+     } else {
+       LegacyTabView(
+         props: props,
+-        onLayout: onLayout,
++        onLayout: reportLayout,
+         onSelect: onSelect
+       ) {
+         #if !os(macOS)
+@@ -72,11 +72,7 @@ struct TabViewImpl: View {
+           tabBar = tabController.tabBar
+           updateTabBarAppearance(props: props, tabBar: tabController.tabBar)
+           updateExperimentalBakedTintColors(props: props, tabBar: tabController.tabBar)
+-          if !props.tabBarHidden {
+-            onTabBarMeasured(
+-              Int(tabController.tabBar.frame.size.height)
+-            )
+-          }
++          reportTabBarHeight()
+         #endif
+       }
+       #if !os(macOS)
+@@ -99,6 +95,23 @@ struct TabViewImpl: View {
+       }
+   }
+-
++
++  private func reportLayout(_ size: CGSize) {
++    onLayout(size)
++    // Read after UIKit has positioned the bar for the new window geometry.
++    DispatchQueue.main.async { reportTabBarHeight() }
++  }
++
++  private func reportTabBarHeight() {
++    #if !os(macOS)
++      guard let tabBar else { return }
++      let frame = tabBar.frame
++      // A side bar consumes no bottom space beyond the window's safe area.
++      let bottomInset = tabBar.window?.safeAreaInsets.bottom ?? tabBar.safeAreaInsets.bottom
++      let height = frame.height > frame.width ? bottomInset : frame.height
++      onTabBarMeasured(props.tabBarHidden ? 0 : Int(height))
++    #endif
++  }
++
+   func emitHapticFeedback(longPress: Bool = false) {
+     #if os(iOS)
+       if !props.hapticFeedbackEnabled {

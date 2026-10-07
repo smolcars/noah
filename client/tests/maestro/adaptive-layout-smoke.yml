@@ -1,0 +1,10 @@
+appId: com.noahwallet.regtest
+---
+# CI runs this on an isolated simulator, against the release regtest build.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- setOrientation: PORTRAIT
+- runFlow: ../../.maestro/subflows/start-wallet-onboarding.yml
+- runFlow: ../../.maestro/subflows/complete-wallet-onboarding-without-email.yml
+- runFlow: adaptive-layout-checks.yml
