@@ -234,26 +234,6 @@ impl<'a> UserRepository<'a> {
         }
     }
 
-    /// Updates a user's lightning address.
-    pub async fn update_lightning_address(&self, pubkey: &str, ln_address: &str) -> Result<()> {
-        match sqlx::query(
-            "UPDATE users SET lightning_address = $1, updated_at = now() WHERE pubkey = $2",
-        )
-        .bind(ln_address)
-        .bind(pubkey)
-        .execute(self.pool)
-        .await
-        {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                if is_lightning_address_conflict(&e) {
-                    return Err(LightningAddressTakenError.into());
-                }
-                Err(e.into())
-            }
-        }
-    }
-
     /// Atomically updates the hosted Lightning address and its NIP-05 public key.
     pub async fn update_lightning_identity(
         &self,

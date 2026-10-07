@@ -23,7 +23,7 @@ use crate::routes::gated_api_v0::{
     list_backup_objects, list_backups, ln_address_suggestions, register_push_token,
     report_job_status, report_last_login, revoke_mailbox_authorization, submit_invoice,
     submit_support_ticket, sync_recurring_payments, update_backup_settings,
-    update_lightning_identity, update_ln_address, update_profile,
+    update_lightning_identity, update_profile,
 };
 use crate::routes::public_api_v0::{
     auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price, nip05_request,
@@ -196,7 +196,6 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
         .route("/lnurlp/submit_invoice", post(submit_invoice))
         .route("/ln_address_suggestions", post(ln_address_suggestions))
         .route("/user_info", post(get_user_info))
-        .route("/update_ln_address", post(update_ln_address))
         .route(
             "/update_lightning_identity",
             post(update_lightning_identity),

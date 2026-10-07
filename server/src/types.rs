@@ -243,15 +243,6 @@ pub struct SubmitInvoicePayload {
     pub transaction_id: String,
 }
 
-/// Defines the payload for updating a user's lightning address.
-#[derive(Serialize, Deserialize, TS, Validate)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
-pub struct UpdateLnAddressPayload {
-    /// The new lightning address for the user.
-    #[validate(custom(function = "validate_lightning_address"))]
-    pub ln_address: String,
-}
-
 /// Defines the payload for atomically configuring a hosted Lightning identity.
 #[derive(Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
