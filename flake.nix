@@ -220,9 +220,7 @@
         {
           default = mkShellFor system;
           server = mkServerShellFor system;
-        }
-        // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
-          ios-test =
+          android-ci =
             let
               pkgs = pkgsFor system;
             in
@@ -232,7 +230,8 @@
                 nodejs_22
                 just
                 jq
-                # Includes the iOS launch-state fix from Maestro 2.7 (#3398).
+                grpcurl
+                jdk17
                 (maestro.overrideAttrs {
                   version = "2.11.0";
                   src = fetchurl {
@@ -244,10 +243,11 @@
               shellHook = ''
                 export LC_ALL=en_US.UTF-8
                 export LANG=en_US.UTF-8
-                # Maestro's package wrapper supplies its Java runtime.
-                unset JAVA_HOME SDKROOT
+                export JAVA_HOME="${pkgs.jdk17.home}"
               '';
             };
+        }
+        // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
           ios-ci =
             let
               pkgs = pkgsFor system;

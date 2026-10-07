@@ -27,6 +27,13 @@ appId: com.noahwallet.regtest
 - inputText: "000000"
 - tapOn: "Verify Email"
 
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible: "Disable battery optimization"
+      - tapOn: "Skip"
+
 # Lightning Address screen
 - extendedWaitUntil:
     visible: "Choose your Lightning Address"

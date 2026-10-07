@@ -31,7 +31,7 @@ BITCOIN_CLI_OPTS="-regtest -rpcuser=second -rpcpassword=ark -rpcwallet=$WALLET_N
 
 # Helper function to avoid repeating the long docker-compose command
 dcr() {
-    docker-compose -f "$COMPOSE_FILE" "$@"
+    docker compose -f "$COMPOSE_FILE" "$@"
 }
 
 # --- Functions ---

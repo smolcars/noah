@@ -21,6 +21,11 @@ appId: com.noahwallet.regtest
 - tapOn:
     text: "Allow Paste"
     optional: true
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 - tapOn:
     id: "send-recipient-next"
 - extendedWaitUntil:
