@@ -80,14 +80,4 @@ appId: com.noahwallet.regtest
       id: "send-success-sheet"
     timeout: 30000
 - assertVisible: "Payment sent"
-- tapOn:
-    id: "send-success-copy-destination"
-- assertVisible: "To copied"
 - assertVisible: "Completed"
-- tapOn:
-    id: "send-success-done"
-
-- assertVisible:
-    id: "send-amount-stage"
-- assertVisible:
-    id: "send-amount-value"

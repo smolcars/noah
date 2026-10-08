@@ -84,6 +84,9 @@ jobs:
       - name: ✨ Lint code
         run: nix develop .# --command bash -c "bun client lint"
 
+      - name: Check React Compiler warnings
+        run: nix develop .# --command bun client lint:react-compiler
+
       - name: 🧪 Run unit tests
         run: nix develop .# --command bash -c "bun client test:unit"
 

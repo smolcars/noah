@@ -20,7 +20,7 @@ export const useExportDatabase = () => {
     const timestamp = now.toISOString().replace(/[:.]/g, "-");
     const filename = `noah_backup_${timestamp}.noahbackup`;
     const outputPath = `${CACHES_DIRECTORY_PATH}/${filename}`;
-    try {
+    await (async () => {
       const backupResult = await new BackupService().createEncryptedBackupFile(outputPath);
       if (backupResult.isErr()) {
         log.e("Error creating backup:", [backupResult.error]);
@@ -50,7 +50,7 @@ export const useExportDatabase = () => {
         setShowExportSuccess(true);
         setTimeout(() => setShowExportSuccess(false), 3000);
       }
-    } finally {
+    })().finally(async () => {
       try {
         if (RNFSTurbo.exists(outputPath)) {
           await RNFSTurbo.unlink(outputPath);
@@ -59,7 +59,7 @@ export const useExportDatabase = () => {
         log.w("Failed to clean up exported backup file", [error]);
       }
       setIsExporting(false);
-    }
+    });
   };
 
   return {

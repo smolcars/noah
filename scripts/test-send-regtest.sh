@@ -58,7 +58,7 @@ read_from_simulator() {
   fi
 }
 
-"$maestro_command" test --udid "$simulator_id" \
+"$maestro_command" test --udid "$simulator_id" --no-reinstall-driver \
   --debug-output "$maestro_debug_output/prepare" \
   client/.maestro/subflows/prepare-funded-send.yml
 
@@ -87,14 +87,24 @@ fi
 
 copy_to_simulator "$bark_ark_address"
 printf 'Verifying an abandoned recipient is not reused for a new amount.\n'
-"$maestro_command" test --udid "$simulator_id" \
+"$maestro_command" test --udid "$simulator_id" --no-reinstall-driver \
   --debug-output "$maestro_debug_output/recipient-reset-on-back" \
   client/.maestro/subflows/send-recipient-reset-on-back.yml
 
 printf 'Sending 5000 sats from the simulator to Bark address %s.\n' "$bark_ark_address"
-"$maestro_command" test --udid "$simulator_id" \
+"$maestro_command" test --udid "$simulator_id" --no-reinstall-driver \
   --debug-output "$maestro_debug_output/payment" \
   client/.maestro/subflows/send-funded-ark.yml
+
+copy_to_simulator ""
+"$maestro_command" test --udid "$simulator_id" --no-reinstall-driver \
+  --debug-output "$maestro_debug_output/copy-destination" \
+  client/.maestro/subflows/send-copy-destination.yml
+copied_destination="$(read_from_simulator)"
+if [[ "$copied_destination" != "$bark_ark_address" ]]; then
+  printf 'Copied payment destination does not match the Bark address.\n' >&2
+  exit 1
+fi
 
 fixed_request_address="$(just bcli getnewaddress 2>&1 | sed -n '/^bcrt1/p' | tail -n 1)"
 if [[ ! "$fixed_request_address" =~ ^bcrt1 ]]; then
@@ -104,7 +114,7 @@ fi
 
 printf 'Verifying MAX resets before pasting a fixed-amount payment request.\n'
 copy_to_simulator "bitcoin:$fixed_request_address?amount=0.00005"
-"$maestro_command" test --udid "$simulator_id" \
+"$maestro_command" test --udid "$simulator_id" --no-reinstall-driver \
   --debug-output "$maestro_debug_output/max-back-fixed-request" \
   client/.maestro/subflows/send-max-back-fixed-request.yml
 
@@ -116,7 +126,7 @@ fi
 
 printf 'Verifying a zero-amount BIP-321 request stays on the amount composer.\n'
 copy_to_simulator "bitcoin:$amountless_request_address?amount=0"
-"$maestro_command" test --udid "$simulator_id" \
+"$maestro_command" test --udid "$simulator_id" --no-reinstall-driver \
   --debug-output "$maestro_debug_output/amountless-request" \
   client/.maestro/subflows/send-amountless-request.yml
 
@@ -124,7 +134,7 @@ printf 'Verifying the exit deposit address is reachable and copyable.\n'
 if [[ -n "${ANDROID_SERIAL:-}" ]]; then
   copy_to_simulator ""
 fi
-"$maestro_command" test --udid "$simulator_id" \
+"$maestro_command" test --udid "$simulator_id" --no-reinstall-driver \
   --debug-output "$maestro_debug_output/exit-deposit-landscape" \
   client/.maestro/subflows/exit-deposit-landscape.yml
 

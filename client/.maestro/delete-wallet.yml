@@ -16,7 +16,13 @@ appId: com.noahwallet.regtest
 - tapOn: "Delete Wallet"
 - tapOn:
     text: 'Type "delete" to confirm'
-- inputText: "delete"
+# Retry only text entry if automation drops a character.
+- retry:
+    maxRetries: 2
+    commands:
+      - eraseText: 6
+      - inputText: "delete"
+      - assertVisible: "^delete$"
 # Submit through the existing Done action without targeting a moving sheet button.
 - pressKey: Enter
 - extendedWaitUntil:

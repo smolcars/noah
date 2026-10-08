@@ -87,6 +87,10 @@ ios-mainnet-release:
 ios-prebuild:
     bun run ios:prebuild
 
+# Install iOS Pods and force a spec repository update
+ios-prebuild-repo-update:
+    bun run ios:prebuild --repo-update
+
 # Clean commands
 android-clean:
     bun run android:clean
