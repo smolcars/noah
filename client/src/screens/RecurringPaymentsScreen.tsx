@@ -56,11 +56,9 @@ const RecurringPaymentCard = ({ schedule }: { schedule: RecurringPayment }) => {
 
   const run = async (action: () => Promise<void>) => {
     setIsBusy(true);
-    try {
-      await action();
-    } finally {
-      setIsBusy(false);
-    }
+    await Promise.resolve()
+      .then(action)
+      .finally(() => setIsBusy(false));
   };
 
   return (

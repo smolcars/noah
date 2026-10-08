@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Keyboard, ScrollView, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -93,12 +93,12 @@ const RecurringPaymentEditorScreen = () => {
   const tabBarHeight = useBottomTabBarHeight();
   const { bottom: safeBottomInset } = useSafeAreaInsets();
 
-  const defaultStart = useMemo(() => {
+  const [defaultStart] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() + 1);
     date.setHours(9, 0, 0, 0);
     return date;
-  }, []);
+  });
 
   const [label, setLabel] = useState("");
   const [recipient, setRecipient] = useState(route.params?.destination ?? "");

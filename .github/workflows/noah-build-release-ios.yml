@@ -53,10 +53,37 @@ jobs:
       - name: 📦 Install dependencies
         run: nix develop .#ios-ci --command bash -c "bun install --frozen-lockfile"
 
+      - name: Restore Pods and native dependency downloads
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: |
+            client/ios/Pods
+            ~/.cocoapods/repos
+            ~/Library/Caches/CocoaPods
+            ~/Library/Caches/ReactNative
+          key: ios-pods-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.macos }}-${{ steps.toolchain.outputs.xcode }}-${{ hashFiles('flake.nix', 'flake.lock', 'bun.lock', 'package.json', 'client/package.json', 'client/ios/Podfile', 'client/ios/Podfile.lock', 'client/ios/Podfile.properties.json', 'patches/**') }}
+
+      - name: Install iOS Pods
+        run: /usr/bin/time -p nix develop .#ios-ci --command bun client ios:prebuild
+
+      - name: Restore Xcode compilation cache
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: client/ios/build/CompilationCache.noindex
+          # Each successful run saves a new snapshot so the compiler cache keeps warming.
+          key: ios-compilation-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.macos }}-${{ steps.toolchain.outputs.xcode }}-regtest-release-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ios-compilation-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.macos }}-${{ steps.toolchain.outputs.xcode }}-regtest-release-
+
       - name: 🛠️ Build
         env:
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
-        run: nix develop .#ios-ci --command bash -c "bun client ios:prebuild && bun client build:ios:ci"
+        run: |
+          /usr/bin/time -p nix develop .#ios-ci --command bun client build:ios:ci \
+            COMPILATION_CACHE_ENABLE_CACHING=YES \
+            COMPILATION_CACHE_ENABLE_DIAGNOSTIC_REMARKS=YES \
+            "COMPILATION_CACHE_CAS_PATH=$GITHUB_WORKSPACE/client/ios/build/CompilationCache.noindex" \
+            -showBuildTimingSummary
 
       - name: 📁 Prepare build output
         id: set_outputs
