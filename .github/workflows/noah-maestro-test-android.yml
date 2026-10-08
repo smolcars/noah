@@ -93,10 +93,20 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_7_pro
+          cores: 2
+          ram-size: 2048M
+          pre-emulator-launch-script: |
+            mkdir -p client/maestro-debug-output
+            echo no | avdmanager create avd --force --name noah-ui --package 'system-images;android-36;google_apis;x86_64' --device pixel_7_pro
+            "$ANDROID_HOME/emulator/emulator" -avd noah-ui -port 5556 -cores 2 -memory 2048 -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -grpc 8558 -grpc-use-token > client/maestro-debug-output/emulator-ui.log 2>&1 &
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -grpc 8556 -grpc-use-token
           # Disabling system animations leaves Send's stage transition blank.
           disable-animations: false
-          script: nix develop .#android-ci --command scripts/test-maestro-android.sh android-release-build/noah.apk
+          script: nix develop .#android-ci --command scripts/test-maestro-android.sh android-release-build/noah.apk emulator-5556
+
+      - name: Stop UI emulator
+        if: always()
+        run: adb -s emulator-5556 emu kill || true
 
       - name: Collect regtest logs
         if: failure()

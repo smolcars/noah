@@ -1,0 +1,16 @@
+appId: com.noahwallet.regtest
+---
+# Continue the funded payment with a clipboard cleared by the harness.
+- tapOn:
+    id: "send-success-copy-destination"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible: "To copied"
+- tapOn:
+    id: "send-success-done"
+- assertVisible:
+    id: "send-amount-stage"
+- assertVisible:
+    id: "send-amount-value"
