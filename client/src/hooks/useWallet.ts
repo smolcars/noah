@@ -365,6 +365,13 @@ export function useDeleteWallet() {
         return error;
       });
 
+      // Also reset all MMKV stores
+      useTransactionStore.getState().reset();
+      useWalletStore.getState().reset();
+      useServerStore.getState().resetRegistration();
+      useBackupStore.getState().reset();
+      useEsploraStore.getState().reset();
+
       // Clear local recurring payment schedules and their reminders, then drop
       // the background task, so they can never spend from a new or restored
       // wallet created without restarting the app.
@@ -379,13 +386,6 @@ export function useDeleteWallet() {
       if (result.isErr()) {
         throw result.error;
       }
-
-      // Reset after deletion so WalletLoader cannot rediscover the old mnemonic.
-      useTransactionStore.getState().reset();
-      useWalletStore.getState().reset();
-      useServerStore.getState().resetRegistration();
-      useBackupStore.getState().reset();
-      useEsploraStore.getState().reset();
     },
     onError: (error: Error) => {
       showAlert({ title: "Deletion Failed", description: error.message });

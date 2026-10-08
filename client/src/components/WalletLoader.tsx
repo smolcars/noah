@@ -4,7 +4,6 @@ import { Text } from "./ui/text";
 import { useWalletStore } from "../store/walletStore";
 import { useLoadWallet, useCloseWallet } from "../hooks/useWallet";
 import { isWalletLoaded as isWalletLoadedNitro } from "react-native-nitro-ark";
-import { getMnemonic } from "../lib/crypto";
 import { NoahActivityIndicator } from "./ui/NoahActivityIndicator";
 import { useBackgroundJobCoordination } from "~/hooks/useBackgroundJobCoordination";
 import BiometricGate from "./BiometricGate";
@@ -59,23 +58,6 @@ const WalletLoader: React.FC<WalletLoaderProps> = ({ children }) => {
 
     checkAndLoadWallet();
   }, [isInitialized, isWalletLoaded, isWalletSuspended, loadWallet, safelyExecuteWhenReady]);
-
-  // Additional effect to handle app initialization and wallet existence check
-  useEffect(() => {
-    const checkWalletExistence = async () => {
-      const mnemonicResult = await getMnemonic();
-
-      // If we have a mnemonic but isInitialized is false, fix the state
-      if (mnemonicResult.isOk() && mnemonicResult.value && !isInitialized) {
-        useWalletStore.getState().finishOnboarding();
-      }
-    };
-
-    // Only run this check if not initialized
-    if (!isInitialized) {
-      checkWalletExistence();
-    }
-  }, [isInitialized]);
 
   // tidy up by closing the wallet when the component unmounts
   useEffect(() => {

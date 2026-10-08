@@ -501,6 +501,7 @@ const AppNavigation = () => {
   const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   const [preloadedIcons, setPreloadedIcons] = useState<PreloadedIcons | null>(null);
   const iconsPreloadedRef = useRef(false);
+  const walletCheckStartedRef = useRef(false);
   const log = logger("AppNavigation");
   const themedColors = useThemeColors();
   const { theme } = useUniwind();
@@ -517,13 +518,15 @@ const AppNavigation = () => {
 
   // Check for existing wallet on app start
   useEffect(() => {
+    if (walletCheckStartedRef.current) return;
+    walletCheckStartedRef.current = true;
+
     const checkExistingWallet = async () => {
       if (isInitialized) {
         setIsCheckingWallet(false);
         return; // Already initialized, no need to check
       }
 
-      let shouldCheckWallet = true;
       const mnemonicResult = await getMnemonic();
 
       if (mnemonicResult.isOk() && mnemonicResult.value) {
@@ -540,13 +543,10 @@ const AppNavigation = () => {
           // Don't call finishOnboarding, let user go through onboarding
         } else {
           useWalletStore.getState().finishOnboarding();
-          shouldCheckWallet = false;
         }
       }
 
-      if (shouldCheckWallet) {
-        setIsCheckingWallet(false);
-      }
+      setIsCheckingWallet(false);
     };
 
     checkExistingWallet();
