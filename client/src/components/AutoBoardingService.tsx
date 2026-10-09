@@ -43,6 +43,12 @@ const AutoBoardPlanRow = ({
 
 export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) => {
   const gt = useGT();
+  // Depend on stable copy rather than the SDK's changing development callback.
+  const autoBoardFailedTitle = gt("Auto-Boarding Failed");
+  const arkInfoFailedDescription = gt("Unable to load Ark server info. Please try again later.");
+  const feeEstimateFailedDescription = gt(
+    "Unable to estimate boarding fees. Please try again later.",
+  );
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const [hasReportedAutoBoardPlanError, setHasReportedAutoBoardPlanError] = useState(false);
   const [autoBoardPlan, setAutoBoardPlan] = useState<AutoBoardPlan | null>(null);
@@ -130,8 +136,8 @@ export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) 
         setHasReportedAutoBoardPlanError(true);
         log.e("Auto-boarding failed to load Ark info", [arkInfoError]);
         showAlert({
-          title: gt("Auto-Boarding Failed"),
-          description: gt("Unable to load Ark server info. Please try again later."),
+          title: autoBoardFailedTitle,
+          description: arkInfoFailedDescription,
         });
       }
       return;
@@ -163,8 +169,8 @@ export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) 
             setHasReportedAutoBoardPlanError(true);
             log.e("Auto-boarding failed to estimate fees", [planResult.error]);
             showAlert({
-              title: gt("Auto-Boarding Failed"),
-              description: gt("Unable to estimate boarding fees. Please try again later."),
+              title: autoBoardFailedTitle,
+              description: feeEstimateFailedDescription,
             });
           }
           return;
@@ -213,7 +219,9 @@ export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) 
     isAutoBoardDialogOpen,
     isBoarding,
     showAlert,
-    gt,
+    autoBoardFailedTitle,
+    arkInfoFailedDescription,
+    feeEstimateFailedDescription,
   ]);
 
   const handleConfirmAutoBoard = () => {

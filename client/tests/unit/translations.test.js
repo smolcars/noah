@@ -59,6 +59,7 @@ test("bundled translations cover every GT source entry", async () => {
 for (const [name, file] of [
   ["background notifications resolve the persisted locale without React", "backgroundTranslations"],
   ["locale resolution does not restart receive effects", "localizedReceive"],
+  ["locale resolution does not restart auto-boarding estimates", "localizedAutoBoarding"],
 ]) {
 test(name, async () => {
   const proc = Bun.spawn(
