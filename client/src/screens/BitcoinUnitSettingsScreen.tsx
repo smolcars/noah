@@ -1,3 +1,4 @@
+import { T, useGT, useLocale } from "gt-react-native";
 import { View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -8,6 +9,7 @@ import { NativeNoahSelectionList } from "~/components/ui/NativeNoahSelectionList
 import type { SettingsStackParamList } from "~/Navigators";
 import {
   BITCOIN_AMOUNT_UNITS,
+  formatBitcoinAmount,
   getBitcoinAmountUnitInfo,
   type BitcoinAmountUnit,
 } from "~/lib/bitcoinAmount";
@@ -15,16 +17,20 @@ import { useProfileStore } from "~/store/profileStore";
 
 type BitcoinUnitNavigationProp = NativeStackNavigationProp<SettingsStackParamList, "BitcoinUnit">;
 
-const BITCOIN_UNIT_OPTIONS = BITCOIN_AMOUNT_UNITS.map((unit) => {
-  const info = getBitcoinAmountUnitInfo(unit);
-  return {
-    value: unit,
-    title: `${info.title} · ${info.value}`,
-    subtitle: info.description,
-  };
-});
-
 const BitcoinUnitSettingsScreen = () => {
+  const gt = useGT();
+  const locale = useLocale();
+  const BITCOIN_UNIT_OPTIONS = BITCOIN_AMOUNT_UNITS.map((unit) => {
+    const info = getBitcoinAmountUnitInfo(unit);
+    return {
+      value: unit,
+      title: `${info.title} · ${formatBitcoinAmount(1234, unit, locale)}`,
+      subtitle:
+        unit === "bip177"
+          ? gt("Show bitcoin amounts with the Bitcoin symbol.")
+          : gt("Show bitcoin amounts in satoshis."),
+    };
+  });
   const navigation = useNavigation<BitcoinUnitNavigationProp>();
   const bitcoinAmountUnit = useProfileStore((state) => state.bitcoinAmountUnit);
   const setBitcoinAmountUnit = useProfileStore((state) => state.setBitcoinAmountUnit);
@@ -42,7 +48,9 @@ const BitcoinUnitSettingsScreen = () => {
           className="mr-3"
           testID="bitcoin-unit-back-button"
         />
-        <Text className="text-2xl font-bold text-foreground">Bitcoin Unit</Text>
+        <T>
+          <Text className="text-2xl font-bold text-foreground">Bitcoin Unit</Text>
+        </T>
       </View>
       <View className="mt-4 flex-1">
         <NativeNoahSelectionList

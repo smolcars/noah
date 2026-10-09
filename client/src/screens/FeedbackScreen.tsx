@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { TextInput as ExpoTextInput, type TextInputRef } from "@expo/ui";
@@ -49,6 +50,7 @@ type SelectedScreenshot = {
 };
 
 const FeedbackScreen = () => {
+  const gt = useGT();
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList, "Feedback">>();
   const { colors, isDark } = useTheme();
   const tabBarHeight = useBottomTabBarHeight();
@@ -89,19 +91,19 @@ const FeedbackScreen = () => {
 
     const asset = result.assets[0];
     if (asset.fileSize !== undefined && asset.fileSize > MAX_SCREENSHOT_BYTES) {
-      setErrorMessage("Screenshot must be 5 MB or smaller.");
+      setErrorMessage(gt("Screenshot must be 5 MB or smaller."));
       return;
     }
 
     const base64Data = asset.base64 ?? (await readBase64FromFile(asset.uri));
     if (!base64Data) {
-      setErrorMessage("Could not read the selected screenshot.");
+      setErrorMessage(gt("Could not read the selected screenshot."));
       return;
     }
 
     const contentType = normalizeImageContentType(asset.mimeType);
     if (!contentType) {
-      setErrorMessage("Screenshot must be a JPEG or PNG image.");
+      setErrorMessage(gt("Screenshot must be a JPEG or PNG image."));
       return;
     }
 
@@ -145,7 +147,7 @@ const FeedbackScreen = () => {
     if (result.isErr()) {
       log.e("Failed to submit feedback", [result.error]);
       setSubmitState("idle");
-      setErrorMessage("Failed to submit feedback. Please try again.");
+      setErrorMessage(gt("Failed to submit feedback. Please try again."));
       return;
     }
 
@@ -185,22 +187,32 @@ const FeedbackScreen = () => {
               testID="feedback-back-button"
             />
             <View className="flex-1">
-              <Text className="text-2xl font-bold text-foreground">Send Feedback</Text>
-              <Text className="mt-1 text-sm text-muted-foreground">
-                Report a bug or share what would make Noah better.
-              </Text>
+              <T>
+                <Text className="text-2xl font-bold text-foreground">Send Feedback</Text>
+              </T>
+              <T>
+                <Text className="mt-1 text-sm text-muted-foreground">
+                  Report a bug or share what would make Noah better.
+                </Text>
+              </T>
             </View>
           </View>
 
           {submitState === "success" ? (
             <View className="flex-1 items-center justify-center px-3 py-10">
               <CheckCircle size={56} color={COLORS.SUCCESS} />
-              <Text className="mt-5 text-center text-2xl font-bold text-foreground">Thank You</Text>
-              <Text className="mt-2 text-center text-base text-muted-foreground">
-                Your feedback was sent to the Noah team.
-              </Text>
+              <T>
+                <Text className="mt-5 text-center text-2xl font-bold text-foreground">
+                  Thank You
+                </Text>
+              </T>
+              <T>
+                <Text className="mt-2 text-center text-base text-muted-foreground">
+                  Your feedback was sent to the Noah team.
+                </Text>
+              </T>
               <NativeNoahButton
-                label="Done"
+                label={gt("Done")}
                 className="mt-8"
                 fullWidth
                 onPress={() => navigation.goBack()}
@@ -210,9 +222,11 @@ const FeedbackScreen = () => {
             <View className="gap-5 pb-2">
               <Pressable onPress={handleTelegramPress} className="flex-row items-center gap-3">
                 <TelegramBrandIcon size={32} />
-                <Text className="flex-1 text-sm text-muted-foreground">
-                  You can also join our Telegram chat for support and feedback.
-                </Text>
+                <T>
+                  <Text className="flex-1 text-sm text-muted-foreground">
+                    You can also join our Telegram chat for support and feedback.
+                  </Text>
+                </T>
               </Pressable>
 
               {errorMessage ? (
@@ -222,13 +236,13 @@ const FeedbackScreen = () => {
                 </View>
               ) : null}
 
-              <InputGroup label="Name">
+              <InputGroup label={gt("Name")}>
                 <ExpoInputHost height={48}>
                   <ExpoTextInput
                     ref={nameInputRef}
                     defaultValue={name}
                     onChangeText={setName}
-                    placeholder="Your name"
+                    placeholder={gt("Your name")}
                     placeholderTextColor={colors.mutedForeground}
                     autoCorrect={false}
                     editable={submitState === "idle"}
@@ -248,13 +262,13 @@ const FeedbackScreen = () => {
                 </ExpoInputHost>
               </InputGroup>
 
-              <InputGroup label="Email (Optional)">
+              <InputGroup label={gt("Email (Optional)")}>
                 <ExpoInputHost height={48}>
                   <ExpoTextInput
                     ref={emailInputRef}
                     defaultValue={email}
                     onChangeText={setEmail}
-                    placeholder="you@example.com"
+                    placeholder={gt("you@example.com")}
                     placeholderTextColor={colors.mutedForeground}
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -276,13 +290,13 @@ const FeedbackScreen = () => {
                 </ExpoInputHost>
               </InputGroup>
 
-              <InputGroup label="Subject">
+              <InputGroup label={gt("Subject")}>
                 <ExpoInputHost height={48}>
                   <ExpoTextInput
                     ref={subjectInputRef}
                     defaultValue={subject}
                     onChangeText={setSubject}
-                    placeholder="Short summary"
+                    placeholder={gt("Short summary")}
                     placeholderTextColor={colors.mutedForeground}
                     maxLength={150}
                     editable={submitState === "idle"}
@@ -302,13 +316,13 @@ const FeedbackScreen = () => {
                 </ExpoInputHost>
               </InputGroup>
 
-              <InputGroup label="Body">
+              <InputGroup label={gt("Body")}>
                 <ExpoInputHost height={150}>
                   <ExpoTextInput
                     ref={bodyInputRef}
                     defaultValue={body}
                     onChangeText={setBody}
-                    placeholder="Describe the bug or share your feedback..."
+                    placeholder={gt("Describe the bug or share your feedback...")}
                     placeholderTextColor={colors.mutedForeground}
                     multiline
                     numberOfLines={6}
@@ -334,9 +348,11 @@ const FeedbackScreen = () => {
               {screenshot ? (
                 <View className="gap-1.5">
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-xs font-semibold uppercase text-muted-foreground">
-                      Screenshot
-                    </Text>
+                    <T>
+                      <Text className="text-xs font-semibold uppercase text-muted-foreground">
+                        Screenshot
+                      </Text>
+                    </T>
                     {screenshot.size ? (
                       <Text className="text-xs text-muted-foreground">
                         {formatBytes(screenshot.size)}
@@ -365,18 +381,20 @@ const FeedbackScreen = () => {
                   disabled={submitState !== "idle"}
                 >
                   <ImagePlus size={20} color={COLORS.BITCOIN_ORANGE} />
-                  <Text
-                    className="text-base font-semibold"
-                    style={{ color: COLORS.BITCOIN_ORANGE }}
-                  >
-                    Add Screenshot
-                  </Text>
+                  <T>
+                    <Text
+                      className="text-base font-semibold"
+                      style={{ color: COLORS.BITCOIN_ORANGE }}
+                    >
+                      Add Screenshot
+                    </Text>
+                  </T>
                 </Pressable>
               )}
 
               <NativeNoahButton
-                label="Send Feedback"
-                loadingLabel="Sending..."
+                label={gt("Send Feedback")}
+                loadingLabel={gt("Sending...")}
                 isLoading={submitState === "submitting"}
                 disabled={isSubmitDisabled}
                 fullWidth

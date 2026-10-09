@@ -30,18 +30,22 @@ export const isBitcoinAmountUnit = (value: unknown): value is BitcoinAmountUnit 
 export const getBitcoinAmountUnitInfo = (unit: BitcoinAmountUnit): BitcoinAmountUnitInfo =>
   BITCOIN_AMOUNT_UNIT_INFO[unit];
 
-export const formatBip177 = (sats: number): string => {
-  return `₿\u00A0${sats.toLocaleString()}`;
+export const formatBip177 = (sats: number, locale?: string): string => {
+  return `₿\u00A0${sats.toLocaleString(locale)}`;
 };
 
-export const formatSatsAmount = (sats: number): string => {
-  return `${sats.toLocaleString()} sats`;
+export const formatSatsAmount = (sats: number, locale?: string): string => {
+  return `${sats.toLocaleString(locale)} sats`;
 };
 
-export const formatBitcoinAmount = (sats: number, unit: BitcoinAmountUnit): string => {
+export const formatBitcoinAmount = (
+  sats: number,
+  unit: BitcoinAmountUnit,
+  locale?: string,
+): string => {
   if (unit === "sats") {
-    return formatSatsAmount(sats);
+    return formatSatsAmount(sats, locale);
   }
 
-  return formatBip177(sats);
+  return formatBip177(sats, locale);
 };

@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { AlertCircle, CheckCircle, Download } from "lucide-react-native";
@@ -11,6 +12,7 @@ import { useExportDatabase } from "~/hooks/useExportDatabase";
 import { COLORS } from "~/lib/styleConstants";
 
 const ExportDatabaseScreen = () => {
+  const gt = useGT();
   const navigation = useNavigation();
   const { isExporting, showExportSuccess, showExportError, exportError, exportDatabase } =
     useExportDatabase();
@@ -24,19 +26,27 @@ const ExportDatabaseScreen = () => {
             className="mr-3"
             testID="export-database-back-button"
           />
-          <Text className="text-2xl font-bold text-foreground">Export Database</Text>
+          <T>
+            <Text className="text-2xl font-bold text-foreground">Export Database</Text>
+          </T>
         </View>
 
         {showExportSuccess && (
           <Alert icon={CheckCircle} className="mb-4">
-            <AlertTitle>Export Complete</AlertTitle>
-            <AlertDescription>Your encrypted database backup was exported.</AlertDescription>
+            <T>
+              <AlertTitle>Export Complete</AlertTitle>
+            </T>
+            <T>
+              <AlertDescription>Your encrypted database backup was exported.</AlertDescription>
+            </T>
           </Alert>
         )}
 
         {showExportError && (
           <Alert icon={AlertCircle} variant="destructive" className="mb-4">
-            <AlertTitle>Export Failed</AlertTitle>
+            <T>
+              <AlertTitle>Export Failed</AlertTitle>
+            </T>
             <AlertDescription>{exportError}</AlertDescription>
           </Alert>
         )}
@@ -45,20 +55,24 @@ const ExportDatabaseScreen = () => {
           <View className="h-16 w-16 items-center justify-center rounded-2xl bg-orange-500/15">
             <Download size={32} color={COLORS.BITCOIN_ORANGE} />
           </View>
-          <Text className="mt-5 text-center text-xl font-bold text-foreground">
-            Export encrypted backup
-          </Text>
-          <Text className="mt-3 text-center text-base leading-6 text-muted-foreground">
-            This creates an encrypted backup file containing a safe wallet snapshot. Keep this file
-            secure, as it can be used to restore your wallet.
-          </Text>
+          <T>
+            <Text className="mt-5 text-center text-xl font-bold text-foreground">
+              Export encrypted backup
+            </Text>
+          </T>
+          <T>
+            <Text className="mt-3 text-center text-base leading-6 text-muted-foreground">
+              This creates an encrypted backup file containing a safe wallet snapshot. Keep this
+              file secure, as it can be used to restore your wallet.
+            </Text>
+          </T>
         </View>
 
         <NativeNoahButton
-          label="Export Database"
+          label={gt("Export Database")}
           onPress={exportDatabase}
           isLoading={isExporting}
-          loadingLabel="Exporting..."
+          loadingLabel={gt("Exporting...")}
           className="mt-8"
           fullWidth
         />

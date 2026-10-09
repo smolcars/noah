@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import { useState } from "react";
 import { Keyboard, ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -19,6 +20,7 @@ import { useEsploraStore } from "~/store/esploraStore";
 type NavigationProp = NativeStackNavigationProp<SettingsStackParamList, "Esplora">;
 
 const EsploraSettingsScreen = () => {
+  const gt = useGT();
   const navigation = useNavigation<NavigationProp>();
   const endpointOverride = useEsploraStore((state) => state.endpointOverride);
   const defaultEndpoint = getDefaultEsploraEndpoint() ?? "";
@@ -43,8 +45,8 @@ const EsploraSettingsScreen = () => {
         setEndpointInput(endpoint);
         setSuccessMessage(
           isDefault
-            ? "The wallet is using Noah's default Esplora endpoint."
-            : "The wallet is now using the new Esplora endpoint.",
+            ? gt("The wallet is using Noah's default Esplora endpoint.")
+            : gt("The wallet is now using the new Esplora endpoint."),
         );
       },
     });
@@ -59,7 +61,7 @@ const EsploraSettingsScreen = () => {
     switchEndpoint.mutate(null, {
       onSuccess: ({ endpoint }) => {
         setEndpointInput(endpoint);
-        setSuccessMessage("The wallet is now using Noah's default Esplora endpoint.");
+        setSuccessMessage(gt("The wallet is now using Noah's default Esplora endpoint."));
       },
     });
   };
@@ -72,7 +74,9 @@ const EsploraSettingsScreen = () => {
           className="mr-3"
           testID="esplora-settings-back-button"
         />
-        <Text className="text-2xl font-bold text-foreground">Edit Esplora API</Text>
+        <T>
+          <Text className="text-2xl font-bold text-foreground">Edit Esplora API</Text>
+        </T>
       </View>
 
       <ScrollView
@@ -82,29 +86,35 @@ const EsploraSettingsScreen = () => {
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
-        <Text className="mt-5 text-base leading-6 text-muted-foreground">
-          Used for Bitcoin network data throughout the wallet.
-        </Text>
+        <T>
+          <Text className="mt-5 text-base leading-6 text-muted-foreground">
+            Used for Bitcoin network data throughout the wallet.
+          </Text>
+        </T>
 
         <View className="mt-5 rounded-2xl border border-border bg-card p-4">
-          <Text className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
-            Active endpoint
-          </Text>
+          <T>
+            <Text className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
+              Active endpoint
+            </Text>
+          </T>
           <Text className="mt-2 text-base font-semibold text-foreground">{effectiveEndpoint}</Text>
           <Text className="mt-1 text-sm text-muted-foreground">
-            {endpointOverride ? "Custom endpoint" : "Noah default"}
+            {endpointOverride ? gt("Custom endpoint") : gt("Noah default")}
           </Text>
         </View>
 
         <View className="mt-6 gap-2">
-          <Label className="text-base text-foreground">Esplora API base URL</Label>
+          <T>
+            <Label className="text-base text-foreground">Esplora API base URL</Label>
+          </T>
           <Input
             value={endpointInput}
             onChangeText={(value) => {
               setEndpointInput(value);
               clearStatus();
             }}
-            placeholder="https://mempool.space/api"
+            placeholder={gt("https://mempool.space/api")}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
@@ -114,30 +124,36 @@ const EsploraSettingsScreen = () => {
             onSubmitEditing={handleApply}
             testID="esplora-endpoint-input"
           />
-          <Text className="text-sm leading-5 text-muted-foreground">
-            Noah will test /block-height/0 and verify the Bitcoin network before changing the wallet
-            configuration. You may also paste the full test or tip URL.
-          </Text>
+          <T>
+            <Text className="text-sm leading-5 text-muted-foreground">
+              Noah will test /block-height/0 and verify the Bitcoin network before changing the
+              wallet configuration. You may also paste the full test or tip URL.
+            </Text>
+          </T>
         </View>
 
         {successMessage ? (
           <Alert icon={CheckCircle} className="mt-5">
-            <AlertTitle>Endpoint updated</AlertTitle>
+            <T>
+              <AlertTitle>Endpoint updated</AlertTitle>
+            </T>
             <AlertDescription>{successMessage}</AlertDescription>
           </Alert>
         ) : null}
 
         {switchEndpoint.error ? (
           <Alert icon={AlertTriangle} variant="destructive" className="mt-5">
-            <AlertTitle>Endpoint not changed</AlertTitle>
+            <T>
+              <AlertTitle>Endpoint not changed</AlertTitle>
+            </T>
             <AlertDescription>{switchEndpoint.error.message}</AlertDescription>
           </Alert>
         ) : null}
 
         <View className="mt-6 gap-3">
           <NativeNoahButton
-            label="Test & Save Endpoint"
-            loadingLabel="Testing Endpoint..."
+            label={gt("Test & Save Endpoint")}
+            loadingLabel={gt("Testing Endpoint...")}
             isLoading={switchEndpoint.isPending}
             disabled={!endpointInput.trim()}
             onPress={handleApply}
@@ -145,7 +161,7 @@ const EsploraSettingsScreen = () => {
             testID="apply-esplora-endpoint"
           />
           <NativeNoahSecondaryButton
-            label="Reset to Noah Default"
+            label={gt("Reset to Noah Default")}
             disabled={!endpointOverride || switchEndpoint.isPending}
             onPress={handleReset}
             fullWidth
@@ -154,12 +170,16 @@ const EsploraSettingsScreen = () => {
         </View>
 
         <View className="mt-8 border-t border-border pt-6">
-          <Text className="font-semibold text-foreground">Default endpoint</Text>
+          <T>
+            <Text className="font-semibold text-foreground">Default endpoint</Text>
+          </T>
           <Text className="mt-2 text-sm text-muted-foreground">{defaultEndpoint}</Text>
-          <Text className="mt-3 text-sm leading-5 text-muted-foreground">
-            A custom Esplora server can observe the Bitcoin addresses and transactions requested by
-            this wallet. Only use a server you trust.
-          </Text>
+          <T>
+            <Text className="mt-3 text-sm leading-5 text-muted-foreground">
+              A custom Esplora server can observe the Bitcoin addresses and transactions requested
+              by this wallet. Only use a server you trust.
+            </Text>
+          </T>
         </View>
       </ScrollView>
     </NoahSafeAreaView>

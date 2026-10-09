@@ -1,6 +1,6 @@
 import { Image, Keyboard, Linking, Pressable, ScrollView, View } from "react-native";
 import Constants from "expo-constants";
-import { useGT } from "gt-react-native";
+import { useGT, T, Var, useLocale } from "gt-react-native";
 import { LanguagePicker } from "~/components/LanguagePicker";
 import * as Haptics from "expo-haptics";
 import { useWalletStore } from "../store/walletStore";
@@ -32,8 +32,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { revokeMailboxAuthorization } from "~/lib/api";
 import { AUTO_BOARD_ONCHAIN_BUFFER_AMOUNT, formatAutoBoardThreshold } from "~/lib/autoBoarding";
 import { useProfileStore } from "~/store/profileStore";
-import { getFiatCurrencyInfo } from "~/lib/fiatCurrency";
-import { getBitcoinAmountUnitInfo } from "~/lib/bitcoinAmount";
+import { useCurrencyNames } from "~/hooks/useCurrencyNames";
+import { formatBitcoinAmount, getBitcoinAmountUnitInfo } from "~/lib/bitcoinAmount";
 import { NativeSwitch } from "~/components/ui/native-switch";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
@@ -74,6 +74,7 @@ type Setting = {
 
 const SettingsScreen = () => {
   const gt = useGT();
+  const locale = useLocale();
   const iconColor = useIconColor();
   const { isDark } = useTheme();
   const logoImage = isDark ? logoImageDark : logoImageLight;
@@ -96,7 +97,7 @@ const SettingsScreen = () => {
   } = useServerStore();
   const { isAutoBoardingEnabled, setAutoBoardingEnabled } = useTransactionStore();
   const preferredCurrency = useProfileStore((state) => state.preferredCurrency);
-  const preferredCurrencyInfo = getFiatCurrencyInfo(preferredCurrency);
+  const currencyNames = useCurrencyNames();
   const bitcoinAmountUnit = useProfileStore((state) => state.bitcoinAmountUnit);
   const bitcoinAmountUnitInfo = getBitcoinAmountUnitInfo(bitcoinAmountUnit);
   const {
@@ -118,10 +119,17 @@ const SettingsScreen = () => {
     useNavigation<NativeStackNavigationProp<SettingsStackParamList & OnboardingStackParamList>>();
 
   const autoBoardDescription = isAutoBoardThresholdError
-    ? "Auto-board threshold unavailable"
+    ? gt("Auto-board threshold unavailable")
     : isAutoBoardThresholdLoading || autoBoardThreshold === undefined
-      ? "Loading auto-board threshold..."
-      : `Ask to board to Ark when onchain balance can cover ${formatAutoBoardThreshold(autoBoardThreshold)}, estimated fees, and a ${formatAutoBoardThreshold(AUTO_BOARD_ONCHAIN_BUFFER_AMOUNT)} reserve.`;
+      ? gt("Loading auto-board threshold...")
+      : gt(
+          "Ask to board to Ark when onchain balance can cover {threshold}, estimated fees, and a {reserve} reserve.",
+          {
+            threshold: formatAutoBoardThreshold(autoBoardThreshold, locale),
+            reserve: formatAutoBoardThreshold(AUTO_BOARD_ONCHAIN_BUFFER_AMOUNT, locale),
+            $context: "Boarding transfers Bitcoin funds from the Bitcoin blockchain to Ark.",
+          },
+        );
 
   useEffect(() => {
     const check = async () => {
@@ -184,8 +192,8 @@ const SettingsScreen = () => {
 
   const handleBiometricsToggle = async (value: boolean) => {
     const promptMessage = value
-      ? "Authenticate to enable biometrics"
-      : "Authenticate to disable biometrics";
+      ? gt("Authenticate to enable biometrics")
+      : gt("Authenticate to disable biometrics");
     const result = await authenticate(promptMessage);
     if (result.isOk()) {
       setBiometricsEnabled(value);
@@ -204,7 +212,7 @@ const SettingsScreen = () => {
     if (!value) {
       const result = await revokeMailboxAuthorization();
       if (result.isErr()) {
-        setMailboxError(result.error.message || "Failed to revoke mailbox authorization");
+        setMailboxError(result.error.message || gt("Failed to revoke mailbox authorization"));
         setTimeout(() => {
           setMailboxError(null);
         }, 3000);
@@ -269,8 +277,8 @@ const SettingsScreen = () => {
   if (isInitialized) {
     profileData.push({
       id: "profile",
-      title: "Profile",
-      description: "Manage your name, Lightning address, emergency email, and public key.",
+      title: gt("Profile"),
+      description: gt("Manage your name, Lightning address, emergency email, and public key."),
       isPressable: true,
     });
     profileData.push({
@@ -281,23 +289,23 @@ const SettingsScreen = () => {
     });
     profileData.push({
       id: "currency",
-      title: "Currency",
-      value: `${preferredCurrencyInfo.code} · ${preferredCurrencyInfo.name}`,
-      description: "Choose the fiat currency used for balances and payment amounts.",
+      title: gt("Currency"),
+      value: `${preferredCurrency} · ${currencyNames[preferredCurrency]}`,
+      description: gt("Choose the fiat currency used for balances and payment amounts."),
       isPressable: true,
     });
     profileData.push({
       id: "bitcoinUnit",
-      title: "Bitcoin Unit",
-      value: `${bitcoinAmountUnitInfo.title} · ${bitcoinAmountUnitInfo.value}`,
-      description: "Choose how bitcoin amounts are displayed.",
+      title: gt("Bitcoin Unit"),
+      value: `${bitcoinAmountUnitInfo.title} · ${formatBitcoinAmount(1234, bitcoinAmountUnit, locale)}`,
+      description: gt("Choose how bitcoin amounts are displayed."),
       isPressable: true,
     });
 
     infoData.push({
       id: "arkInfo",
-      title: "Ark Info",
-      description: "View Ark server, wallet, and explorer configuration.",
+      title: gt("Ark Info"),
+      description: gt("View Ark server, wallet, and explorer configuration."),
       isPressable: true,
     });
   }
@@ -305,21 +313,22 @@ const SettingsScreen = () => {
   if (isInitialized) {
     walletData.push({
       id: "showMnemonic",
-      title: "Show Seed Phrase",
-      description:
+      title: gt("Show Seed Phrase"),
+      description: gt(
         "Never share your seed phrase with anyone. It is important to keep it safe and secure.",
+      ),
       isPressable: true,
     });
     walletData.push({
       id: "vtxos",
-      title: "Show VTXOs",
-      description: "VTXOs are to Ark like UTXOs are to Bitcoin",
+      title: gt("Show VTXOs"),
+      description: gt("VTXOs are to Ark like UTXOs are to Bitcoin"),
       isPressable: true,
     });
     walletData.push({
       id: "emergencyExit",
-      title: "Emergency Exit",
-      description: "Recover funds if the Ark server is unavailable.",
+      title: gt("Emergency Exit"),
+      description: gt("Recover funds if the Ark server is unavailable."),
       isPressable: true,
     });
     // Hidden for UnifiedPush users: their push handler can't wake Noah for
@@ -327,59 +336,59 @@ const SettingsScreen = () => {
     if (isRecurringPaymentsSupported()) {
       walletData.push({
         id: "recurringPayments",
-        title: "Recurring Payments",
-        description: "Schedule automatic weekly or monthly payments, and pause or cancel them.",
+        title: gt("Recurring Payments"),
+        description: gt("Schedule automatic weekly or monthly payments, and pause or cancel them."),
         isPressable: true,
         testID: "settings-recurring-payments",
       });
     }
     walletData.push({
       id: "backup",
-      title: "Backup & Restore",
-      description: "Automatically or manually backup your wallet after encrypting it.",
+      title: gt("Backup & Restore"),
+      description: gt("Automatically or manually backup your wallet after encrypting it."),
       isPressable: true,
     });
 
     if (shouldUseUnifiedPush()) {
       walletData.push({
         id: "unifiedPush",
-        title: "UnifiedPush Setup",
-        description: "Configure push notifications using UnifiedPush",
+        title: gt("UnifiedPush Setup"),
+        description: gt("Configure push notifications using UnifiedPush"),
         isPressable: true,
       });
     }
 
     walletData.push({
       id: "boardArk",
-      title: "Board to Ark",
-      description: "Manually move onchain bitcoin into Ark.",
+      title: gt("Board to Ark"),
+      description: gt("Manually move onchain bitcoin into Ark."),
       isPressable: true,
       testID: "settings-board-ark",
     });
 
     debugData.push({
       id: "showLogs",
-      title: "Show Logs",
-      description: "View application logs for debugging purposes",
+      title: gt("Show Logs"),
+      description: gt("View application logs for debugging purposes"),
       isPressable: true,
     });
     debugData.push({
       id: "resetRegistration",
-      title: "Reset Server Registration",
-      description: "Clear your registration with the server. You will need to register again.",
+      title: gt("Reset Server Registration"),
+      description: gt("Clear your registration with the server. You will need to register again."),
       isPressable: true,
     });
     debugData.push({
       id: "feedback",
-      title: "Send Feedback",
-      description: "Report bugs or share feedback with the Noah team",
+      title: gt("Send Feedback"),
+      description: gt("Report bugs or share feedback with the Noah team"),
       isPressable: true,
     });
     if (isDebugModeEnabled) {
       debugData.push({
         id: "debug",
-        title: "Debug Screen",
-        description: "Advanced debug actions for developers",
+        title: gt("Debug Screen"),
+        description: gt("Advanced debug actions for developers"),
         isPressable: true,
       });
     }
@@ -404,13 +413,17 @@ const SettingsScreen = () => {
           trigger={
             <DangerZoneRow
               title={item.title}
-              description="Attempt to reset the connection with our server if you're experiencing issues."
+              description={gt(
+                "Attempt to reset the connection with our server if you're experiencing issues.",
+              )}
               isPressable={item.isPressable}
               onPress={() => {}}
             />
           }
-          title="Reset Server Registration"
-          description="Are you sure you want to reset your server registration? This will not delete your wallet, but you will need to register with the server again."
+          title={gt("Reset Server Registration")}
+          description={gt(
+            "Are you sure you want to reset your server registration? This will not delete your wallet, but you will need to register with the server again.",
+          )}
           onConfirm={async () => {
             setResetError(null);
             setShowResetSuccess(false);
@@ -421,7 +434,7 @@ const SettingsScreen = () => {
                 setShowResetSuccess(false);
               }, 3000);
             } else {
-              setResetError(result.error.message || "Failed to reset registration");
+              setResetError(result.error.message || gt("Failed to reset registration"));
               setTimeout(() => {
                 setResetError(null);
               }, 3000);
@@ -459,34 +472,46 @@ const SettingsScreen = () => {
             className="mr-3"
             testID="settings-back-button"
           />
-          <Text className="text-2xl font-bold text-foreground">Settings</Text>
+          <T>
+            <Text className="text-2xl font-bold text-foreground">Settings</Text>
+          </T>
         </View>
 
         {showResetSuccess && (
           <Alert icon={CheckCircle} className="mb-4">
-            <AlertTitle>Success!</AlertTitle>
-            <AlertDescription>Server registration has been reset.</AlertDescription>
+            <T>
+              <AlertTitle>Success!</AlertTitle>
+            </T>
+            <T>
+              <AlertDescription>Server registration has been reset.</AlertDescription>
+            </T>
           </Alert>
         )}
         {resetError && (
           <Alert icon={AlertTriangle} variant="destructive" className="mb-4">
-            <AlertTitle>Reset Failed!</AlertTitle>
+            <T>
+              <AlertTitle>Reset Failed!</AlertTitle>
+            </T>
             <AlertDescription>{resetError}</AlertDescription>
           </Alert>
         )}
         {showMailboxSuccess && (
           <Alert icon={CheckCircle} className="mb-4">
-            <AlertTitle>Mailbox Access Updated!</AlertTitle>
+            <T>
+              <AlertTitle>Mailbox Access Updated!</AlertTitle>
+            </T>
             <AlertDescription>
               {isMailboxAuthorizationEnabled
-                ? "Mailbox authorization will be granted again shortly."
-                : "Mailbox authorization has been revoked."}
+                ? gt("Mailbox authorization will be granted again shortly.")
+                : gt("Mailbox authorization has been revoked.")}
             </AlertDescription>
           </Alert>
         )}
         {mailboxError && (
           <Alert icon={AlertTriangle} variant="destructive" className="mb-4">
-            <AlertTitle>Mailbox Update Failed!</AlertTitle>
+            <T>
+              <AlertTitle>Mailbox Update Failed!</AlertTitle>
+            </T>
             <AlertDescription>{mailboxError}</AlertDescription>
           </Alert>
         )}
@@ -512,24 +537,28 @@ const SettingsScreen = () => {
 
             {profileData.length > 0 && (
               <View className="mb-6">
-                <Text
-                  className="text-lg font-bold text-foreground mb-2"
-                  style={{ color: COLORS.BITCOIN_ORANGE }}
-                >
-                  Account
-                </Text>
+                <T>
+                  <Text
+                    className="text-lg font-bold text-foreground mb-2"
+                    style={{ color: COLORS.BITCOIN_ORANGE }}
+                  >
+                    Account
+                  </Text>
+                </T>
                 {profileData.map(renderSettingItem)}
               </View>
             )}
 
             {infoData.length > 0 && (
               <View className="mb-6">
-                <Text
-                  className="text-lg font-bold text-foreground mb-2"
-                  style={{ color: COLORS.BITCOIN_ORANGE }}
-                >
-                  Info
-                </Text>
+                <T>
+                  <Text
+                    className="text-lg font-bold text-foreground mb-2"
+                    style={{ color: COLORS.BITCOIN_ORANGE }}
+                  >
+                    Info
+                  </Text>
+                </T>
                 {infoData.map(renderSettingItem)}
               </View>
             )}
@@ -537,16 +566,20 @@ const SettingsScreen = () => {
           <View>
             {walletData.length > 0 && (
               <View className="mb-6">
-                <Text
-                  className="text-lg font-bold text-foreground mb-2"
-                  style={{ color: COLORS.BITCOIN_ORANGE }}
-                >
-                  Wallet
-                </Text>
+                <T>
+                  <Text
+                    className="text-lg font-bold text-foreground mb-2"
+                    style={{ color: COLORS.BITCOIN_ORANGE }}
+                  >
+                    Wallet
+                  </Text>
+                </T>
                 {walletData.map(renderSettingItem)}
                 <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
                   <View className="flex-1">
-                    <Label className="text-foreground text-lg">Auto-Board to Ark</Label>
+                    <T>
+                      <Label className="text-foreground text-lg">Auto-Board to Ark</Label>
+                    </T>
                     <Text className="text-base mt-1 text-muted-foreground">
                       {autoBoardDescription}
                     </Text>
@@ -559,10 +592,14 @@ const SettingsScreen = () => {
                 {isBiometricsAvailable && (
                   <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
                     <View className="flex-1">
-                      <Label className="text-foreground text-lg">Biometric Authentication</Label>
-                      <Text className="text-base mt-1 text-muted-foreground">
-                        Require biometric authentication to unlock your wallet
-                      </Text>
+                      <T>
+                        <Label className="text-foreground text-lg">Biometric Authentication</Label>
+                      </T>
+                      <T>
+                        <Text className="text-base mt-1 text-muted-foreground">
+                          Require biometric authentication to unlock your wallet
+                        </Text>
+                      </T>
                     </View>
                     <NativeSwitch
                       value={isBiometricsEnabled}
@@ -572,11 +609,15 @@ const SettingsScreen = () => {
                 )}
                 <View className="p-4 border-b border-border bg-card rounded-lg mb-2 flex-row justify-between items-center">
                   <View className="flex-1">
-                    <Label className="text-foreground text-lg">Mailbox Notifications</Label>
-                    <Text className="text-base mt-1 text-muted-foreground">
-                      Allow Noah to monitor your Ark mailbox so it can wake this app to claim
-                      Lightning payments in the background.
-                    </Text>
+                    <T>
+                      <Label className="text-foreground text-lg">Mailbox Notifications</Label>
+                    </T>
+                    <T>
+                      <Text className="text-base mt-1 text-muted-foreground">
+                        Allow Noah to monitor your Ark mailbox so it can wake this app to claim
+                        Lightning payments in the background.
+                      </Text>
+                    </T>
                   </View>
                   <NativeSwitch
                     value={isMailboxAuthorizationEnabled}
@@ -589,27 +630,35 @@ const SettingsScreen = () => {
 
             {debugData.length > 0 && (
               <View className="mb-6">
-                <Text
-                  className="text-lg font-bold text-foreground mb-2"
-                  style={{ color: COLORS.BITCOIN_ORANGE }}
-                >
-                  Debug
-                </Text>
+                <T>
+                  <Text
+                    className="text-lg font-bold text-foreground mb-2"
+                    style={{ color: COLORS.BITCOIN_ORANGE }}
+                  >
+                    Debug
+                  </Text>
+                </T>
                 {debugData.map(renderSettingItem)}
               </View>
             )}
 
             {isInitialized && (
               <View className="mb-6">
-                <Text className="text-lg font-bold text-destructive mb-2">Danger Zone</Text>
+                <T>
+                  <Text className="text-lg font-bold text-destructive mb-2">Danger Zone</Text>
+                </T>
 
                 <View className="p-4 border-b border-border bg-card rounded-lg mb-4 flex-row justify-between items-center">
                   <View className="flex-1">
-                    <Label className="text-foreground text-lg">Suspend Wallet</Label>
-                    <Text className="text-base mt-1 text-muted-foreground">
-                      Disable all wallet operations. The wallet will be closed and won't load until
-                      re-enabled.
-                    </Text>
+                    <T>
+                      <Label className="text-foreground text-lg">Suspend Wallet</Label>
+                    </T>
+                    <T>
+                      <Text className="text-base mt-1 text-muted-foreground">
+                        Disable all wallet operations. The wallet will be closed and won't load
+                        until re-enabled.
+                      </Text>
+                    </T>
                   </View>
                   <NativeSwitch
                     value={isWalletSuspended}
@@ -620,14 +669,16 @@ const SettingsScreen = () => {
                 </View>
 
                 <DangerZoneRow
-                  title="Export Database"
-                  description="Create an encrypted backup file containing your wallet database."
+                  title={gt("Export Database")}
+                  description={gt(
+                    "Create an encrypted backup file containing your wallet database.",
+                  )}
                   isPressable
                   onPress={() => navigation.navigate("ExportDatabase")}
                 />
 
                 <NativeNoahButton
-                  label="Delete Wallet"
+                  label={gt("Delete Wallet")}
                   variant="destructive"
                   onPress={() => setIsDeleteWalletDialogOpen(true)}
                   fullWidth
@@ -638,21 +689,27 @@ const SettingsScreen = () => {
         </AdaptiveColumns>
         <View className="items-center py-8 px-4">
           <Pressable onPress={handleVersionTap}>
-            <Text className="text-muted-foreground text-sm mb-1">
-              v{Constants.expoConfig?.version || "0.0.1"}
-              {versionTapCount > 0 &&
-                versionTapCount < 5 &&
-                ` (${5 - versionTapCount} taps to unlock debug)`}
-              {isDebugModeEnabled && " 🔧"}
-            </Text>
+            <T>
+              <Text className="text-muted-foreground text-sm mb-1">
+                v<Var>{Constants.expoConfig?.version || "0.0.1"}</Var>
+                <Var>
+                  {versionTapCount > 0 &&
+                    versionTapCount < 5 &&
+                    gt(" ({count} taps to unlock debug)", { count: 5 - versionTapCount })}
+                </Var>
+                <Var>{isDebugModeEnabled && " 🔧"}</Var>
+              </Text>
+            </T>
           </Pressable>
-          <Text className="text-muted-foreground text-sm">Made with ❤️ from Noah team</Text>
+          <T>
+            <Text className="text-muted-foreground text-sm">Made with ❤️ from Noah team</Text>
+          </T>
           <View className="mt-3 flex-row items-center justify-center gap-4">
             <Pressable
               onPress={handleTelegramPress}
               className="h-10 w-10 items-center justify-center rounded-full bg-card"
               accessibilityRole="link"
-              accessibilityLabel="Open Telegram support chat"
+              accessibilityLabel={gt("Open Telegram support chat")}
             >
               <TelegramBrandIcon size={28} />
             </Pressable>
@@ -660,7 +717,7 @@ const SettingsScreen = () => {
               onPress={handleGithubPress}
               className="h-10 w-10 items-center justify-center rounded-full bg-card"
               accessibilityRole="link"
-              accessibilityLabel="Open Noah GitHub repository"
+              accessibilityLabel={gt("Open Noah GitHub repository")}
             >
               <GitHubBrandIcon size={28} color={iconColor} />
             </Pressable>
@@ -675,16 +732,21 @@ const SettingsScreen = () => {
       >
         <View className="gap-4 pt-2" style={{ paddingBottom: Math.max(safeBottomInset, 16) + 12 }}>
           <View className="gap-2">
-            <Text className="text-xl font-bold text-foreground">Delete Wallet</Text>
-            <Text className="text-base text-muted-foreground">
-              This action is irreversible. To confirm, please type "delete" in the box below.
-            </Text>
+            <T>
+              <Text className="text-xl font-bold text-foreground">Delete Wallet</Text>
+            </T>
+            <T>
+              <Text className="text-base text-muted-foreground">
+                This action is irreversible. To confirm, please type "<Var>delete</Var>" in the box
+                below.
+              </Text>
+            </T>
           </View>
 
           <Input
             value={confirmText}
             onChangeText={setConfirmText}
-            placeholder='Type "delete" to confirm'
+            placeholder={gt('Type "{word}" to confirm', { word: "delete" })}
             className="h-12"
             autoCapitalize="none"
             autoCorrect={false}
@@ -696,7 +758,7 @@ const SettingsScreen = () => {
 
           <View className="flex-row gap-3">
             <NativeNoahSecondaryButton
-              label="Cancel"
+              label={gt("Cancel")}
               onPress={() => {
                 void handleCancelDeleteWallet();
               }}
@@ -705,7 +767,7 @@ const SettingsScreen = () => {
               fullWidth
             />
             <NativeNoahButton
-              label="Delete Wallet"
+              label={gt("Delete Wallet")}
               variant="destructive"
               testID="confirm-delete-wallet"
               onPress={() => {
@@ -715,7 +777,7 @@ const SettingsScreen = () => {
                 confirmText.trim().toLowerCase() !== "delete" || deleteWalletMutation.isPending
               }
               isLoading={deleteWalletMutation.isPending}
-              loadingLabel="Deleting..."
+              loadingLabel={gt("Deleting...")}
               className="flex-1"
               fullWidth
             />

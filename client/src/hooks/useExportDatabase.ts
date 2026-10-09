@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import { useState } from "react";
 import Share from "react-native-share";
 import RNFSTurbo from "react-native-fs-turbo";
@@ -9,6 +10,7 @@ import logger from "~/lib/log";
 const log = logger("useExportDatabase");
 
 export const useExportDatabase = () => {
+  const gt = useGT();
   const [isExporting, setIsExporting] = useState(false);
   const [showExportSuccess, setShowExportSuccess] = useState(false);
   const [showExportError, setShowExportError] = useState(false);
@@ -31,7 +33,7 @@ export const useExportDatabase = () => {
 
       const shareResult = await ResultAsync.fromPromise(
         Share.open({
-          title: "Export Encrypted Backup",
+          title: gt("Export Encrypted Backup"),
           url: `file://${outputPath}`,
           type: "application/octet-stream",
           filename,
