@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import { useIsFocused, useNavigation, type NavigationProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { useEffect } from "react";
@@ -30,6 +31,7 @@ import {
 } from "~/lib/sendFlow";
 
 const SendScreen = () => {
+  const gt = useGT();
   const isFocused = useIsFocused();
   const { isExpanded, onLayout } = useAdaptiveLayout();
   const navigation = useNavigation<NavigationProp<TabParamList>>();
@@ -135,50 +137,52 @@ const SendScreen = () => {
 
   const railChoices: SendChoiceOption<SendRail>[] = paymentRailOptions.map((rail) => ({
     value: rail,
-    title: getSendRailLabel(rail),
+    title: getSendRailLabel(rail, gt),
     subtitle:
       rail === "ark"
-        ? "Direct Ark payment with the lowest latency"
+        ? gt("Direct Ark payment with the lowest latency")
         : rail === "lightning"
-          ? "Pay through the Lightning Network"
-          : "Broadcast a Bitcoin transaction",
+          ? gt("Pay through the Lightning Network")
+          : gt("Broadcast a Bitcoin transaction"),
     unavailableReason: railAvailability[rail]
       ? undefined
       : rail === "onchain"
-        ? "Neither balance can cover this amount"
-        : "Insufficient Ark balance",
+        ? gt("Neither balance can cover this amount")
+        : gt("Insufficient Ark balance"),
   }));
   const sourceChoices: SendChoiceOption<OnchainSendSource>[] = [
     {
       value: "offchain",
-      title: getOnchainSourceLabel("offchain"),
-      subtitle: "Send on-chain by offboarding from Ark",
+      title: getOnchainSourceLabel("offchain", gt),
+      subtitle: gt("Send on-chain by offboarding from Ark"),
       detail: formatBitcoinAmount(offchainWalletBalance),
       unavailableReason: onchainSourceOptions.includes("offchain")
         ? undefined
         : isMaxSend
-          ? "No Ark balance available"
-          : "Insufficient Ark balance",
+          ? gt("No Ark balance available")
+          : gt("Insufficient Ark balance"),
     },
     {
       value: "onchain",
-      title: getOnchainSourceLabel("onchain"),
-      subtitle: "Spend confirmed on-chain funds",
+      title: getOnchainSourceLabel("onchain", gt),
+      subtitle: gt("Spend confirmed on-chain funds"),
       detail: formatBitcoinAmount(onchainWalletBalance),
       unavailableReason: onchainSourceOptions.includes("onchain")
         ? undefined
         : isMaxSend
-          ? "No confirmed on-chain balance available"
-          : "Insufficient confirmed balance",
+          ? gt("No confirmed on-chain balance available")
+          : gt("Insufficient confirmed balance"),
     },
   ];
   const recipientLabel =
     destinationType === "bip321"
-      ? paymentRailOptions.map(getSendRailLabel).join(" · ")
-      : getDestinationLabel(destinationType);
+      ? paymentRailOptions.map((rail) => getSendRailLabel(rail, gt)).join(" · ")
+      : getDestinationLabel(destinationType, gt);
 
   const recurringDestination =
-    isMaxSend || !isRecurringPaymentsSupported() ? null : resolveRecurringDestination(destination);
+    isMaxSend || !isRecurringPaymentsSupported()
+      ? null
+      : resolveRecurringDestination(destination, gt);
   const handleMakeRecurring =
     recurringDestination?.isOk() && confirmationAmountSat > 0
       ? () => {
@@ -206,8 +210,10 @@ const SendScreen = () => {
           <SendStageTransition direction={stageDirection} stage={stage}>
             {stage === "method" ? (
               <SendChoiceStage
-                title="How should Noah pay?"
-                description="Noah recommends the first available method. You can choose another method supplied by this request."
+                title={gt("How should Noah pay?")}
+                description={gt(
+                  "Noah recommends the first available method. You can choose another method supplied by this request.",
+                )}
                 options={railChoices}
                 value={selectedRail}
                 onBack={handleStageBack}
@@ -218,12 +224,16 @@ const SendScreen = () => {
             ) : stage === "source" ? (
               <SendChoiceStage
                 title={
-                  isMaxSend ? "Which balance should Noah empty?" : "Which balance should Noah use?"
+                  isMaxSend
+                    ? gt("Which balance should Noah empty?")
+                    : gt("Which balance should Noah use?")
                 }
                 description={
                   isMaxSend
-                    ? "MAX sends one balance in full. The miner fee is deducted from the final amount."
-                    : "Choose the balance that will fund this on-chain payment."
+                    ? gt(
+                        "MAX sends one balance in full. The miner fee is deducted from the final amount.",
+                      )
+                    : gt("Choose the balance that will fund this on-chain payment.")
                 }
                 options={sourceChoices}
                 value={selectedOnchainSource}
@@ -287,22 +297,28 @@ const SendScreen = () => {
             testID="send-summary-pane"
           >
             <View className="gap-4 rounded-2xl border border-border bg-card p-5">
-              <Text accessibilityRole="header" className="text-xl font-bold text-foreground">
-                Payment summary
-              </Text>
+              <T>
+                <Text accessibilityRole="header" className="text-xl font-bold text-foreground">
+                  Payment summary
+                </Text>
+              </T>
               <View>
-                <Text className="text-sm text-muted-foreground">Amount</Text>
+                <T>
+                  <Text className="text-sm text-muted-foreground">Amount</Text>
+                </T>
                 <Text
                   className="text-2xl font-semibold text-foreground"
                   testID="send-summary-amount"
                 >
-                  {isMaxSend ? "Maximum available" : formatBitcoinAmount(amountSat)}
+                  {isMaxSend ? gt("Maximum available") : formatBitcoinAmount(amountSat)}
                 </Text>
               </View>
               <View>
-                <Text className="text-sm text-muted-foreground">Recipient</Text>
+                <T>
+                  <Text className="text-sm text-muted-foreground">Recipient</Text>
+                </T>
                 <Text selectable className="text-base text-foreground">
-                  {destination || "Choose a recipient"}
+                  {destination || gt("Choose a recipient")}
                 </Text>
               </View>
               {destinationType ? (
@@ -317,9 +333,11 @@ const SendScreen = () => {
                 note={feeEstimateNote}
                 compact
               />
-              <Text className="text-sm leading-5 text-muted-foreground">
-                Review the recipient, payment method and final amount before confirming.
-              </Text>
+              <T>
+                <Text className="text-sm leading-5 text-muted-foreground">
+                  Review the recipient, payment method and final amount before confirming.
+                </Text>
+              </T>
             </View>
           </ScrollView>
         ) : null}
@@ -338,11 +356,11 @@ const SendScreen = () => {
             isMaxSend
               ? selectedOnchainSource === "offchain"
                 ? feeEstimate
-                  ? "Estimated amount after offboarding fees"
-                  : "The final offboarding fee is deducted from the amount"
+                  ? gt("Estimated amount after offboarding fees")
+                  : gt("The final offboarding fee is deducted from the amount")
                 : selectedOnchainSource === "onchain"
-                  ? "The final miner fee is calculated when the transaction is built"
-                  : "Choose the balance to sweep"
+                  ? gt("The final miner fee is calculated when the transaction is built")
+                  : gt("Choose the balance to sweep")
               : null
           }
           isMaxAmount={isMaxSend}

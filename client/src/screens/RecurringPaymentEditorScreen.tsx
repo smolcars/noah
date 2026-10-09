@@ -1,3 +1,4 @@
+import { T, useGT, useLocale, Var } from "gt-react-native";
 import { useState } from "react";
 import { Keyboard, ScrollView, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
@@ -33,18 +34,6 @@ import { isRecurringPaymentsSupported } from "~/constants";
 type Frequency = "weekly" | "monthly" | "custom";
 type EndMode = "never" | "date" | "count";
 
-const FREQUENCY_OPTIONS: readonly NativeNoahSegmentedControlOption<Frequency>[] = [
-  { label: "Weekly", value: "weekly" },
-  { label: "Monthly", value: "monthly" },
-  { label: "Custom", value: "custom" },
-];
-
-const END_OPTIONS: readonly NativeNoahSegmentedControlOption<EndMode>[] = [
-  { label: "Never", value: "never" },
-  { label: "On date", value: "date" },
-  { label: "After", value: "count" },
-];
-
 const pad = (value: number) => String(value).padStart(2, "0");
 const formatDateInput = (date: Date) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -65,19 +54,6 @@ const parseLocalDateTime = (dateValue: string, timeValue: string): number | null
   return date.getTime();
 };
 
-const FIELD_ERRORS: Record<string, string> = {
-  label: "Give this payment a short name (max 64 characters).",
-  amount: "Enter a whole amount in sats.",
-  destination: "Enter an Ark address, Lightning address or BOLT12 offer.",
-  interval: `Custom intervals must be between 1 and ${MAX_CUSTOM_INTERVAL_DAYS} days.`,
-  start: "The first payment can't be in the past.",
-  end: "The end date must be after the first payment.",
-  occurrences: "Enter how many payments should be made.",
-};
-
-const UNSUPPORTED_MESSAGE =
-  "Recurring payments aren't available on devices that use UnifiedPush yet.";
-
 const SectionLabel = ({ children }: { children: string }) => (
   <Text className="mb-2 mt-5 text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
     {children}
@@ -87,6 +63,32 @@ const SectionLabel = ({ children }: { children: string }) => (
 const inputClassName = "rounded-2xl border-border bg-card px-4 py-4 text-foreground";
 
 const RecurringPaymentEditorScreen = () => {
+  const gt = useGT();
+  const locale = useLocale();
+  const FREQUENCY_OPTIONS: readonly NativeNoahSegmentedControlOption<Frequency>[] = [
+    { label: gt("Weekly"), value: "weekly" },
+    { label: gt("Monthly"), value: "monthly" },
+    { label: gt("Custom"), value: "custom" },
+  ];
+  const END_OPTIONS: readonly NativeNoahSegmentedControlOption<EndMode>[] = [
+    { label: gt("Never"), value: "never" },
+    { label: gt("On date"), value: "date" },
+    { label: gt("After"), value: "count" },
+  ];
+  const FIELD_ERRORS: Record<string, string> = {
+    label: gt("Give this payment a short name (max 64 characters)."),
+    amount: gt("Enter a whole amount in sats."),
+    destination: gt("Enter an Ark address, Lightning address or BOLT12 offer."),
+    interval: gt("Custom intervals must be between 1 and {count} days.", {
+      count: MAX_CUSTOM_INTERVAL_DAYS,
+    }),
+    start: gt("The first payment can't be in the past."),
+    end: gt("The end date must be after the first payment."),
+    occurrences: gt("Enter how many payments should be made."),
+  };
+  const UNSUPPORTED_MESSAGE = gt(
+    "Recurring payments aren't available on devices that use UnifiedPush yet.",
+  );
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const route = useRoute<RouteProp<SettingsStackParamList, "RecurringPaymentEditor">>();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
@@ -116,7 +118,7 @@ const RecurringPaymentEditorScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const resolvedDestination = resolveRecurringDestination(recipient);
+  const resolvedDestination = resolveRecurringDestination(recipient, gt);
   const amountSat = /^\d+$/.test(amount.trim()) ? Number(amount.trim()) : Number.NaN;
   const interval: RecurringInterval =
     frequency === "weekly"
@@ -145,12 +147,12 @@ const RecurringPaymentEditorScreen = () => {
       return;
     }
     if (startAt === null) {
-      setError("Enter the first payment date as YYYY-MM-DD and time as HH:MM.");
+      setError(gt("Enter the first payment date as YYYY-MM-DD and time as HH:MM."));
       return;
     }
 
     if (endMode === "date" && endAt === null) {
-      setError("Enter the end date as YYYY-MM-DD.");
+      setError(gt("Enter the end date as YYYY-MM-DD."));
       return;
     }
 
@@ -172,10 +174,10 @@ const RecurringPaymentEditorScreen = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(
         result.error.kind === "limit"
-          ? "You've reached the maximum number of recurring payments."
+          ? gt("You've reached the maximum number of recurring payments.")
           : result.error.kind === "unsupported"
             ? UNSUPPORTED_MESSAGE
-            : (FIELD_ERRORS[result.error.field] ?? "Invalid recurring payment"),
+            : (FIELD_ERRORS[result.error.field] ?? gt("Invalid recurring payment")),
       );
       return;
     }
@@ -186,13 +188,13 @@ const RecurringPaymentEditorScreen = () => {
 
   const destinationHint = resolvedDestination.isOk()
     ? resolvedDestination.value.destinationType === "ark"
-      ? "Ark address"
+      ? gt("Ark address")
       : resolvedDestination.value.destinationType === "lnurl"
-        ? "Lightning address"
-        : "BOLT12 offer"
+        ? gt("Lightning address")
+        : gt("BOLT12 offer")
     : recipient.trim()
       ? resolvedDestination.error
-      : "Ark address, Lightning address or BOLT12 offer";
+      : gt("Ark address, Lightning address or BOLT12 offer");
 
   if (!isRecurringPaymentsSupported()) {
     return (
@@ -203,7 +205,9 @@ const RecurringPaymentEditorScreen = () => {
             className="mr-3"
             testID="recurring-editor-back-button"
           />
-          <Text className="flex-1 text-2xl font-bold text-foreground">Recurring payments</Text>
+          <T>
+            <Text className="flex-1 text-2xl font-bold text-foreground">Recurring payments</Text>
+          </T>
         </View>
         <Text className="px-4 text-muted-foreground" testID="recurring-editor-unsupported">
           {UNSUPPORTED_MESSAGE}
@@ -226,31 +230,35 @@ const RecurringPaymentEditorScreen = () => {
             className="mr-3"
             testID="recurring-editor-back-button"
           />
-          <Text className="flex-1 text-2xl font-bold text-foreground">New recurring payment</Text>
+          <T>
+            <Text className="flex-1 text-2xl font-bold text-foreground">New recurring payment</Text>
+          </T>
         </View>
 
-        <Text className="text-muted-foreground">
-          Noah sends this payment automatically from your Ark balance. Only this recipient and
-          amount are ever allowed, and you can pause or cancel at any time.
-        </Text>
+        <T>
+          <Text className="text-muted-foreground">
+            Noah sends this payment automatically from your Ark balance. Only this recipient and
+            amount are ever allowed, and you can pause or cancel at any time.
+          </Text>
+        </T>
 
         <AdaptiveColumns>
           <View>
-            <SectionLabel>Name</SectionLabel>
+            <SectionLabel>{gt("Name")}</SectionLabel>
             <Input
               value={label}
               onChangeText={setLabel}
-              placeholder="e.g. Rent, Donation, VPN"
+              placeholder={gt("e.g. Rent, Donation, VPN")}
               maxLength={64}
               className={inputClassName}
               testID="recurring-label-input"
             />
 
-            <SectionLabel>Recipient</SectionLabel>
+            <SectionLabel>{gt("Recipient")}</SectionLabel>
             <Input
               value={recipient}
               onChangeText={setRecipient}
-              placeholder="name@domain.com, ark1… or lno1…"
+              placeholder={gt("name@domain.com, ark1… or lno1…")}
               autoCapitalize="none"
               autoCorrect={false}
               className={inputClassName}
@@ -266,28 +274,30 @@ const RecurringPaymentEditorScreen = () => {
               {destinationHint}
             </Text>
 
-            <SectionLabel>Amount (sats)</SectionLabel>
+            <SectionLabel>{gt("Amount (sats)")}</SectionLabel>
             <Input
               value={amount}
               onChangeText={setAmount}
-              placeholder="Amount in sats"
+              placeholder={gt("Amount in sats")}
               keyboardType="number-pad"
               className={inputClassName}
               testID="recurring-amount-input"
             />
             {Number.isFinite(amountSat) && amountSat > 0 ? (
-              <Text className="mt-2 text-sm text-muted-foreground">
-                {formatBitcoinAmount(amountSat)} per payment, plus network fees
-              </Text>
+              <T>
+                <Text className="mt-2 text-sm text-muted-foreground">
+                  <Var>{formatBitcoinAmount(amountSat)}</Var> per payment, plus network fees
+                </Text>
+              </T>
             ) : null}
 
             {resolvedDestination.isOk() && resolvedDestination.value.destinationType === "lnurl" ? (
               <>
-                <SectionLabel>Note (optional)</SectionLabel>
+                <SectionLabel>{gt("Note (optional)")}</SectionLabel>
                 <Input
                   value={comment}
                   onChangeText={setComment}
-                  placeholder="Shared with the recipient"
+                  placeholder={gt("Shared with the recipient")}
                   maxLength={140}
                   className={inputClassName}
                   testID="recurring-comment-input"
@@ -295,7 +305,7 @@ const RecurringPaymentEditorScreen = () => {
               </>
             ) : null}
 
-            <SectionLabel>Repeat</SectionLabel>
+            <SectionLabel>{gt("Repeat")}</SectionLabel>
             <NativeNoahSegmentedControl
               value={frequency}
               options={FREQUENCY_OPTIONS}
@@ -304,7 +314,9 @@ const RecurringPaymentEditorScreen = () => {
             />
             {frequency === "custom" ? (
               <View className="mt-3 flex-row items-center gap-3">
-                <Text className="text-foreground">Every</Text>
+                <T>
+                  <Text className="text-foreground">Every</Text>
+                </T>
                 <Input
                   value={customDays}
                   onChangeText={setCustomDays}
@@ -312,16 +324,18 @@ const RecurringPaymentEditorScreen = () => {
                   className={`${inputClassName} w-24`}
                   testID="recurring-custom-days-input"
                 />
-                <Text className="text-foreground">days</Text>
+                <T>
+                  <Text className="text-foreground">days</Text>
+                </T>
               </View>
             ) : null}
 
-            <SectionLabel>First payment</SectionLabel>
+            <SectionLabel>{gt("First payment")}</SectionLabel>
             <View className="flex-row gap-3">
               <Input
                 value={startDate}
                 onChangeText={setStartDate}
-                placeholder="YYYY-MM-DD"
+                placeholder={gt("YYYY-MM-DD")}
                 autoCorrect={false}
                 className={`${inputClassName} flex-1`}
                 testID="recurring-start-date-input"
@@ -329,14 +343,14 @@ const RecurringPaymentEditorScreen = () => {
               <Input
                 value={startTime}
                 onChangeText={setStartTime}
-                placeholder="HH:MM"
+                placeholder={gt("HH:MM")}
                 autoCorrect={false}
                 className={`${inputClassName} w-28`}
                 testID="recurring-start-time-input"
               />
             </View>
 
-            <SectionLabel>Ends</SectionLabel>
+            <SectionLabel>{gt("Ends")}</SectionLabel>
             <NativeNoahSegmentedControl
               value={endMode}
               options={END_OPTIONS}
@@ -347,7 +361,7 @@ const RecurringPaymentEditorScreen = () => {
               <Input
                 value={endDate}
                 onChangeText={setEndDate}
-                placeholder="YYYY-MM-DD"
+                placeholder={gt("YYYY-MM-DD")}
                 autoCorrect={false}
                 className={`${inputClassName} mt-3`}
                 testID="recurring-end-date-input"
@@ -361,30 +375,37 @@ const RecurringPaymentEditorScreen = () => {
                   className={`${inputClassName} w-24`}
                   testID="recurring-end-count-input"
                 />
-                <Text className="text-foreground">payments</Text>
+                <T>
+                  <Text className="text-foreground">payments</Text>
+                </T>
               </View>
             ) : null}
           </View>
           <View>
             {preview.length > 0 ? (
               <View className="mt-6 rounded-2xl border border-border bg-card p-4">
-                <Text className="font-semibold text-foreground">{describeInterval(interval)}</Text>
+                <Text className="font-semibold text-foreground">
+                  {describeInterval(interval, gt)}
+                </Text>
                 {preview.map((date) => (
                   <Text key={date.getTime()} className="mt-1 text-muted-foreground">
-                    {date.toLocaleString()}
+                    {date.toLocaleString(locale)}
                   </Text>
                 ))}
-                <Text className="mt-3 text-sm text-muted-foreground">
-                  You'll get a reminder the day before and a notification after each payment. If a
-                  payment is missed while your phone is off, Noah skips it instead of paying twice.
-                </Text>
+                <T>
+                  <Text className="mt-3 text-sm text-muted-foreground">
+                    You'll get a reminder the day before and a notification after each payment. If a
+                    payment is missed while your phone is off, Noah skips it instead of paying
+                    twice.
+                  </Text>
+                </T>
               </View>
             ) : null}
 
             {error ? <Text className="mt-4 text-destructive">{error}</Text> : null}
 
             <NativeNoahButton
-              label="Schedule payment"
+              label={gt("Schedule payment")}
               onPress={handleSave}
               isLoading={isSaving}
               disabled={isSaving}

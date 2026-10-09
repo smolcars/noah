@@ -1,3 +1,4 @@
+import { T, useGT, useLocale, Var } from "gt-react-native";
 import { useState } from "react";
 import { Linking, ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -26,13 +27,6 @@ import type { RecurringPayment, RecurringPaymentStatus } from "~/types/recurring
 import { useAdaptiveLayout } from "~/hooks/useAdaptiveLayout";
 import { PANE_GAP } from "~/lib/adaptiveLayout";
 
-const STATUS_LABELS: Record<RecurringPaymentStatus, string> = {
-  active: "Active",
-  paused: "Paused",
-  needs_attention: "Needs attention",
-  completed: "Completed",
-};
-
 const STATUS_CLASSES: Record<RecurringPaymentStatus, string> = {
   active: "text-green-500",
   paused: "text-muted-foreground",
@@ -40,16 +34,23 @@ const STATUS_CLASSES: Record<RecurringPaymentStatus, string> = {
   completed: "text-muted-foreground",
 };
 
-const DESTINATION_LABELS: Record<RecurringPayment["destinationType"], string> = {
-  ark: "Ark",
-  lnurl: "Lightning address",
-  offer: "BOLT12 offer",
-};
-
 const truncate = (value: string) =>
   value.length > 28 ? `${value.slice(0, 14)}…${value.slice(-10)}` : value;
 
 const RecurringPaymentCard = ({ schedule }: { schedule: RecurringPayment }) => {
+  const gt = useGT();
+  const locale = useLocale();
+  const STATUS_LABELS: Record<RecurringPaymentStatus, string> = {
+    active: gt("Active"),
+    paused: gt("Paused"),
+    needs_attention: gt("Needs attention"),
+    completed: gt("Completed"),
+  };
+  const DESTINATION_LABELS: Record<RecurringPayment["destinationType"], string> = {
+    ark: "Ark",
+    lnurl: gt("Lightning address"),
+    offer: gt("BOLT12 offer"),
+  };
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const [isBusy, setIsBusy] = useState(false);
   const lastRun = schedule.runs[0];
@@ -82,28 +83,45 @@ const RecurringPaymentCard = ({ schedule }: { schedule: RecurringPayment }) => {
         {formatBitcoinAmount(schedule.amountSat)}
       </Text>
       <Text className="text-muted-foreground">
-        {describeInterval(schedule.interval)}
+        {describeInterval(schedule.interval, gt)}
         {schedule.maxOccurrences !== null
-          ? ` · ${schedule.occurrencesPaid} paid of ${schedule.maxOccurrences}`
+          ? gt(" · {value1} paid of {value2}", {
+              value1: schedule.occurrencesPaid,
+              value2: schedule.maxOccurrences,
+            })
           : schedule.occurrencesPaid > 0
-            ? ` · ${schedule.occurrencesPaid} paid`
+            ? gt(" · {value1} paid", { value1: schedule.occurrencesPaid })
             : ""}
       </Text>
 
       {schedule.status === "active" && schedule.nextRunAt !== null ? (
-        <Text className="mt-2 text-foreground">
-          Next payment: {new Date(schedule.nextRunAt).toLocaleString()}
-        </Text>
+        <T>
+          <Text className="mt-2 text-foreground">
+            Next payment: <Var>{new Date(schedule.nextRunAt).toLocaleString(locale)}</Var>
+          </Text>
+        </T>
       ) : null}
       {schedule.endAt !== null ? (
-        <Text className="mt-1 text-muted-foreground">
-          Ends: {new Date(schedule.endAt).toLocaleDateString()}
-        </Text>
+        <T>
+          <Text className="mt-1 text-muted-foreground">
+            Ends: <Var>{new Date(schedule.endAt).toLocaleDateString(locale)}</Var>
+          </Text>
+        </T>
       ) : null}
       {lastRun ? (
-        <Text className="mt-1 text-muted-foreground">
-          Last attempt: {new Date(lastRun.attemptedAt).toLocaleString()} ({lastRun.status})
-        </Text>
+        <T>
+          <Text className="mt-1 text-muted-foreground">
+            Last attempt: <Var>{new Date(lastRun.attemptedAt).toLocaleString(locale)}</Var> (
+            <Var>
+              {
+                { success: gt("Successful"), failed: gt("Failed"), skipped: gt("Skipped") }[
+                  lastRun.status
+                ]
+              }
+            </Var>
+            )
+          </Text>
+        </T>
       ) : null}
       {schedule.lastError ? (
         <Text className="mt-2 text-destructive">{schedule.lastError}</Text>
@@ -112,14 +130,14 @@ const RecurringPaymentCard = ({ schedule }: { schedule: RecurringPayment }) => {
       <View className="mt-4 flex-row gap-3">
         {schedule.status === "active" ? (
           <NativeNoahSecondaryButton
-            label="Pause"
+            label={gt("Pause")}
             disabled={isBusy}
             onPress={() => run(() => pauseRecurringPayment(schedule.id))}
             testID={`recurring-pause-${schedule.id}`}
           />
         ) : schedule.status !== "completed" ? (
           <NativeNoahButton
-            label="Resume"
+            label={gt("Resume")}
             disabled={isBusy}
             onPress={() => run(() => resumeRecurringPaymentById(schedule.id))}
             testID={`recurring-resume-${schedule.id}`}
@@ -128,16 +146,19 @@ const RecurringPaymentCard = ({ schedule }: { schedule: RecurringPayment }) => {
         <ConfirmationDialog
           trigger={
             <NativeNoahButton
-              label={schedule.status === "completed" ? "Remove" : "Cancel"}
+              label={schedule.status === "completed" ? gt("Remove") : gt("Cancel")}
               variant="destructive"
               disabled={isBusy}
               testID={`recurring-cancel-${schedule.id}`}
             />
           }
-          title="Cancel recurring payment?"
-          description={`No further payments will be sent to ${schedule.label}. Payments already sent are not affected.`}
-          confirmText="Cancel payment"
-          cancelText="Keep"
+          title={gt("Cancel recurring payment?")}
+          description={gt(
+            "No further payments will be sent to {value1}. Payments already sent are not affected.",
+            { value1: schedule.label },
+          )}
+          confirmText={gt("Cancel payment")}
+          cancelText={gt("Keep")}
           onConfirm={() => run(() => cancelRecurringPayment(schedule.id))}
         />
       </View>
@@ -146,6 +167,7 @@ const RecurringPaymentCard = ({ schedule }: { schedule: RecurringPayment }) => {
 };
 
 const RecurringPaymentsScreen = () => {
+  const gt = useGT();
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const schedules = useRecurringPaymentStore((state) => state.schedules);
   const tabBarHeight = useBottomTabBarHeight();
@@ -165,8 +187,12 @@ const RecurringPaymentsScreen = () => {
     setIsRunning(false);
     setRunMessage(
       summary.paid + summary.failed + summary.needsAttention === 0
-        ? "No payments are due right now."
-        : `Sent ${summary.paid}, failed ${summary.failed}, needs attention ${summary.needsAttention}.`,
+        ? gt("No payments are due right now.")
+        : gt("Sent {value1}, failed {value2}, needs attention {value3}.", {
+            value1: summary.paid,
+            value2: summary.failed,
+            value3: summary.needsAttention,
+          }),
     );
   };
 
@@ -182,17 +208,21 @@ const RecurringPaymentsScreen = () => {
             className="mr-3"
             testID="recurring-payments-back-button"
           />
-          <Text className="text-2xl font-bold text-foreground">Recurring Payments</Text>
+          <T>
+            <Text className="text-2xl font-bold text-foreground">Recurring Payments</Text>
+          </T>
         </View>
 
-        <Text className="mb-4 text-muted-foreground">
-          Scheduled payments are signed by this device only. Noah's server just wakes your phone
-          when a payment is due and never sees amounts or recipients. Keep notifications enabled so
-          payments can go through while the app is closed.
-        </Text>
+        <T>
+          <Text className="mb-4 text-muted-foreground">
+            Scheduled payments are signed by this device only. Noah's server just wakes your phone
+            when a payment is due and never sees amounts or recipients. Keep notifications enabled
+            so payments can go through while the app is closed.
+          </Text>
+        </T>
 
         <NativeNoahButton
-          label="New recurring payment"
+          label={gt("New recurring payment")}
           onPress={() => navigation.navigate("RecurringPaymentEditor")}
           fullWidth
           className="mb-4"
@@ -201,15 +231,19 @@ const RecurringPaymentsScreen = () => {
 
         {isRecurringBackgroundTaskSupported && list.some((s) => s.status === "active") ? (
           <View className="mb-4 rounded-2xl border border-border bg-card p-4">
-            <Text className="font-semibold text-foreground">Runs in the background</Text>
-            <Text className="mt-1 text-sm text-muted-foreground">
-              Android checks for due payments about once a day, even when Noah is closed. Opening
-              Noah sends a due payment right away. For reliable timing, set Noah's battery usage to
-              "Unrestricted" in the app settings.
-            </Text>
+            <T>
+              <Text className="font-semibold text-foreground">Runs in the background</Text>
+            </T>
+            <T>
+              <Text className="mt-1 text-sm text-muted-foreground">
+                Android checks for due payments about once a day, even when Noah is closed. Opening
+                Noah sends a due payment right away. For reliable timing, set Noah's battery usage
+                to "Unrestricted" in the app settings.
+              </Text>
+            </T>
             <View className="mt-3">
               <NativeNoahSecondaryButton
-                label="Open app settings"
+                label={gt("Open app settings")}
                 onPress={() => void Linking.openSettings()}
                 fullWidth
                 testID="recurring-open-app-settings"
@@ -220,10 +254,12 @@ const RecurringPaymentsScreen = () => {
 
         {list.length === 0 ? (
           <View className="items-center rounded-2xl border border-border bg-card p-6">
-            <Text className="text-center text-muted-foreground">
-              No recurring payments yet. Schedule rent, subscriptions, allowances or donations to an
-              Ark address, Lightning address or BOLT12 offer.
-            </Text>
+            <T>
+              <Text className="text-center text-muted-foreground">
+                No recurring payments yet. Schedule rent, subscriptions, allowances or donations to
+                an Ark address, Lightning address or BOLT12 offer.
+              </Text>
+            </T>
           </View>
         ) : (
           <View
@@ -245,7 +281,7 @@ const RecurringPaymentsScreen = () => {
         {list.some((s) => s.status === "active") ? (
           <View className="mt-2">
             <NativeNoahSecondaryButton
-              label="Run due payments now"
+              label={gt("Run due payments now")}
               onPress={handleRunNow}
               disabled={isRunning}
               fullWidth

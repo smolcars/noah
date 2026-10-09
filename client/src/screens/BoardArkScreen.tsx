@@ -1,3 +1,4 @@
+import { T, useGT, Var } from "gt-react-native";
 import { useEffect, useState } from "react";
 import { Keyboard, Linking, Pressable, ScrollView, View } from "react-native";
 import { useNavigation, usePreventRemove } from "@react-navigation/native";
@@ -24,6 +25,7 @@ import type { SettingsStackParamList } from "~/Navigators";
 type NavigationProp = NativeStackNavigationProp<SettingsStackParamList, "BoardArk">;
 
 const BoardArkScreen = () => {
+  const gt = useGT();
   const navigation = useNavigation<NavigationProp>();
   const tabBarHeight = useBottomTabBarHeight();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
@@ -164,7 +166,9 @@ const BoardArkScreen = () => {
             className="mr-3"
             testID="board-ark-back-button"
           />
-          <Text className="text-2xl font-bold text-foreground">Board to Ark</Text>
+          <T>
+            <Text className="text-2xl font-bold text-foreground">Board to Ark</Text>
+          </T>
         </View>
 
         <ScrollView
@@ -180,19 +184,25 @@ const BoardArkScreen = () => {
                 <View className="h-16 w-16 items-center justify-center rounded-full bg-green-500/15">
                   <Icon name="checkmark" size={34} color={COLORS.SUCCESS} />
                 </View>
-                <Text className="mt-4 text-center text-2xl font-bold text-foreground">
-                  Boarding started
-                </Text>
-                <Text className="mt-2 max-w-[300px] text-center text-sm leading-5 text-muted-foreground">
-                  Your onchain bitcoin is moving into Ark. It will become spendable after the board
-                  completes.
-                </Text>
+                <T>
+                  <Text className="mt-4 text-center text-2xl font-bold text-foreground">
+                    Boarding started
+                  </Text>
+                </T>
+                <T>
+                  <Text className="mt-2 max-w-[300px] text-center text-sm leading-5 text-muted-foreground">
+                    Your onchain bitcoin is moving into Ark. It will become spendable after the
+                    board completes.
+                  </Text>
+                </T>
               </View>
 
               <View className="mt-6 rounded-2xl border border-border bg-card px-4 py-4">
-                <Text className="text-xs font-semibold uppercase tracking-[2px] text-muted-foreground">
-                  Funding transaction
-                </Text>
+                <T>
+                  <Text className="text-xs font-semibold uppercase tracking-[2px] text-muted-foreground">
+                    Funding transaction
+                  </Text>
+                </T>
                 <Text
                   className="mt-2 text-sm text-foreground"
                   numberOfLines={1}
@@ -203,7 +213,7 @@ const BoardArkScreen = () => {
                 <View className="mt-3 flex-row items-center gap-5">
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Copy boarding transaction ID"
+                    accessibilityLabel={gt("Copy boarding transaction ID")}
                     onPress={copyFundingTxid}
                     className="flex-row items-center gap-2"
                   >
@@ -218,53 +228,61 @@ const BoardArkScreen = () => {
                         color: isFundingTxCopied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE,
                       }}
                     >
-                      {isFundingTxCopied ? "Copied" : "Copy"}
+                      {isFundingTxCopied ? gt("Copied") : gt("Copy")}
                     </Text>
                   </Pressable>
                   {fundingTxExplorerUrl ? (
                     <Pressable
                       accessibilityRole="link"
-                      accessibilityLabel="Open boarding transaction in block explorer"
+                      accessibilityLabel={gt("Open boarding transaction in block explorer")}
                       onPress={() => {
                         void Linking.openURL(fundingTxExplorerUrl);
                       }}
                       className="flex-row items-center gap-2"
                     >
                       <Icon name="open-outline" size={17} color={COLORS.BITCOIN_ORANGE} />
-                      <Text
-                        className="text-xs font-semibold"
-                        style={{ color: COLORS.BITCOIN_ORANGE }}
-                      >
-                        View in explorer
-                      </Text>
+                      <T>
+                        <Text
+                          className="text-xs font-semibold"
+                          style={{ color: COLORS.BITCOIN_ORANGE }}
+                        >
+                          View in explorer
+                        </Text>
+                      </T>
                     </Pressable>
                   ) : null}
                 </View>
               </View>
 
-              <NativeNoahButton label="Done" onPress={close} className="mt-6" fullWidth />
+              <NativeNoahButton label={gt("Done")} onPress={close} className="mt-6" fullWidth />
             </View>
           ) : (
             <View className="pb-4">
               <AdaptiveColumns>
                 <View>
-                  <Text className="mt-5 text-base leading-6 text-muted-foreground">
-                    Move onchain bitcoin into Ark for fast, low-cost payments.
-                  </Text>
+                  <T>
+                    <Text className="mt-5 text-base leading-6 text-muted-foreground">
+                      Move onchain bitcoin into Ark for fast, low-cost payments.
+                    </Text>
+                  </T>
 
                   <View className="mt-6 rounded-2xl border border-border bg-card px-4 py-4">
-                    <Text className="text-xs font-semibold uppercase tracking-[2px] text-muted-foreground">
-                      Confirmed onchain balance
-                    </Text>
+                    <T>
+                      <Text className="text-xs font-semibold uppercase tracking-[2px] text-muted-foreground">
+                        Confirmed onchain balance
+                      </Text>
+                    </T>
                     <Text className="mt-2 text-2xl font-bold text-foreground">
-                      {isBalanceLoading ? "Loading…" : formatBitcoinAmount(onchainBalance)}
+                      {isBalanceLoading ? gt("Loading…") : formatBitcoinAmount(onchainBalance)}
                     </Text>
                   </View>
 
                   <View className="mt-5">
-                    <Text className="mb-2 text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
-                      Amount
-                    </Text>
+                    <T>
+                      <Text className="mb-2 text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
+                        Amount
+                      </Text>
+                    </T>
                     <View className="flex-row items-center gap-3">
                       <Input
                         value={amount}
@@ -272,14 +290,14 @@ const BoardArkScreen = () => {
                           setAmount(value);
                           setIsMaxAmount(false);
                         }}
-                        placeholder="Amount in sats"
+                        placeholder={gt("Amount in sats")}
                         keyboardType="number-pad"
                         editable={!isSubmitting}
                         className="flex-1 rounded-2xl border-border bg-card px-4 py-4 text-foreground"
                         testID="board-ark-amount-input"
                       />
                       <NativeNoahSecondaryButton
-                        label="MAX"
+                        label={gt("MAX")}
                         onPress={() => {
                           setAmount(String(onchainBalance));
                           setIsMaxAmount(true);
@@ -292,9 +310,12 @@ const BoardArkScreen = () => {
 
                   {isBelowMinimum ? (
                     <View className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-                      <Text className="text-sm leading-5 text-amber-700 dark:text-amber-200">
-                        The minimum board amount is {formatBitcoinAmount(minimumBoardAmountSat)}.
-                      </Text>
+                      <T>
+                        <Text className="text-sm leading-5 text-amber-700 dark:text-amber-200">
+                          The minimum board amount is{" "}
+                          <Var>{formatBitcoinAmount(minimumBoardAmountSat)}</Var>.
+                        </Text>
+                      </T>
                     </View>
                   ) : null}
                 </View>
@@ -303,12 +324,14 @@ const BoardArkScreen = () => {
                     estimate={feeEstimate}
                     isLoading={feeEstimateQuery.isFetching || isWaitingForEstimate}
                     error={feeEstimateQuery.error}
-                    netLabel="Ark balance receives"
-                    feeLabel="Ark boarding fee"
-                    grossLabel="Amount boarded"
+                    netLabel={gt("Ark balance receives")}
+                    feeLabel={gt("Ark boarding fee")}
+                    grossLabel={gt("Amount boarded")}
                     note={
                       feeEstimate
-                        ? `Estimated onchain fee: ${formatBitcoinAmount(feeEstimate.estimated_onchain_fee_sat)}.`
+                        ? gt("Estimated onchain fee: {value1}.", {
+                            value1: formatBitcoinAmount(feeEstimate.estimated_onchain_fee_sat),
+                          })
                         : null
                     }
                     compact
@@ -316,33 +339,43 @@ const BoardArkScreen = () => {
 
                   {unavailableEstimate ? (
                     <View className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-                      <Text className="text-sm font-semibold text-amber-700 dark:text-amber-200">
-                        Not enough onchain balance to board MAX
-                      </Text>
-                      <Text className="mt-1 text-sm leading-5 text-amber-700 dark:text-amber-200">
-                        After the estimated onchain fee,{" "}
-                        {formatBitcoinAmount(unavailableEstimate.boardable_amount_sat)} would be
-                        available to board, below the{" "}
-                        {formatBitcoinAmount(unavailableEstimate.minimum_board_amount_sat)} minimum.
-                        You need at least{" "}
-                        {formatBitcoinAmount(unavailableEstimate.minimum_required_balance_sat)}{" "}
-                        confirmed onchain.
-                      </Text>
+                      <T>
+                        <Text className="text-sm font-semibold text-amber-700 dark:text-amber-200">
+                          Not enough onchain balance to board MAX
+                        </Text>
+                      </T>
+                      <T>
+                        <Text className="mt-1 text-sm leading-5 text-amber-700 dark:text-amber-200">
+                          After the estimated onchain fee,{" "}
+                          <Var>{formatBitcoinAmount(unavailableEstimate.boardable_amount_sat)}</Var>{" "}
+                          would be available to board, below the{" "}
+                          <Var>
+                            {formatBitcoinAmount(unavailableEstimate.minimum_board_amount_sat)}
+                          </Var>{" "}
+                          minimum. You need at least{" "}
+                          <Var>
+                            {formatBitcoinAmount(unavailableEstimate.minimum_required_balance_sat)}
+                          </Var>{" "}
+                          confirmed onchain.
+                        </Text>
+                      </T>
                     </View>
                   ) : null}
 
                   {error ? (
                     <View className="mt-4 rounded-2xl border border-destructive/35 bg-destructive/10 px-4 py-3">
-                      <Text className="text-sm font-semibold text-destructive">
-                        Boarding failed
-                      </Text>
+                      <T>
+                        <Text className="text-sm font-semibold text-destructive">
+                          Boarding failed
+                        </Text>
+                      </T>
                       <Text className="mt-1 text-sm text-destructive/90">{error.message}</Text>
                     </View>
                   ) : null}
 
                   <NativeNoahButton
-                    label="Board"
-                    loadingLabel="Boarding…"
+                    label={gt("Board")}
+                    loadingLabel={gt("Boarding…")}
                     onPress={submit}
                     isLoading={isSubmitting}
                     disabled={

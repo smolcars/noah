@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useState } from "react";
 import {
@@ -63,14 +64,17 @@ export function SendRecipientStage({
   onScan,
   onContinue,
 }: SendRecipientStageProps) {
+  const gt = useGT();
   const colors = useThemeColors();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const bottomTabBarHeight = useBottomTabBarHeight();
   const [isEditingNote, setIsEditingNote] = useState(comment.length > 0);
-  const destinationLabel = getDestinationLabel(destinationType);
+  const destinationLabel = getDestinationLabel(destinationType, gt);
   const railSummary =
     destinationType === "bip321" && bip321Data
-      ? getBip321Rails(bip321Data).map(getSendRailLabel).join(" · ")
+      ? getBip321Rails(bip321Data)
+          .map((rail) => getSendRailLabel(rail, gt))
+          .join(" · ")
       : destinationLabel;
   const canAddNote = canAddRecipientNote(destinationType, commentAllowed);
   const canContinue = destinationType !== null && !error && !isResolving;
@@ -85,7 +89,9 @@ export function SendRecipientStage({
       <View className="flex-row items-center justify-between px-5 pt-4">
         <NativeNoahBackButton onPress={onBack} testID="send-recipient-back" />
         <View className="items-center">
-          <Text className="text-xl font-bold text-foreground">Recipient</Text>
+          <T>
+            <Text className="text-xl font-bold text-foreground">Recipient</Text>
+          </T>
           {amountSat > 0 ? (
             <Text className="mt-1 text-sm text-muted-foreground">
               {formatBitcoinAmount(amountSat)}
@@ -94,7 +100,7 @@ export function SendRecipientStage({
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Scan payment request"
+          accessibilityLabel={gt("Scan payment request")}
           onPress={onScan}
           className="h-11 w-11 items-center justify-center rounded-full border border-border bg-card"
           testID="send-recipient-scan"
@@ -108,12 +114,16 @@ export function SendRecipientStage({
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 36, paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text accessibilityRole="header" className="text-3xl font-bold text-foreground">
-          Who are you paying?
-        </Text>
-        <Text className="mt-2 text-base leading-6 text-muted-foreground">
-          Enter a Bitcoin, Lightning, or Ark destination.
-        </Text>
+        <T>
+          <Text accessibilityRole="header" className="text-3xl font-bold text-foreground">
+            Who are you paying?
+          </Text>
+        </T>
+        <T>
+          <Text className="mt-2 text-base leading-6 text-muted-foreground">
+            Enter a Bitcoin, Lightning, or Ark destination.
+          </Text>
+        </T>
 
         <View
           className="mt-8 rounded-[22px] border px-4 py-3"
@@ -124,27 +134,29 @@ export function SendRecipientStage({
         >
           <View className="flex-row items-center gap-3">
             <TextInput
-              accessibilityLabel="Payment recipient"
+              accessibilityLabel={gt("Payment recipient")}
               autoCapitalize="none"
               autoCorrect={false}
               autoFocus
               className="min-h-11 flex-1 text-base text-foreground"
               keyboardType="email-address"
               onChangeText={onDestinationChange}
-              placeholder="Address, invoice, offer, or name@domain"
+              placeholder={gt("Address, invoice, offer, or name@domain")}
               placeholderTextColor={colors.mutedForeground}
               testID="send-recipient-input"
               value={destination}
             />
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Paste payment request"
+              accessibilityLabel={gt("Paste payment request")}
               onPress={onPaste}
               className="rounded-full px-3 py-2"
               style={{ backgroundColor: `${colors.foreground}0D` }}
               testID="send-recipient-paste"
             >
-              <Text className="text-sm font-semibold text-foreground">Paste</Text>
+              <T>
+                <Text className="text-sm font-semibold text-foreground">Paste</Text>
+              </T>
             </Pressable>
           </View>
         </View>
@@ -209,11 +221,11 @@ export function SendRecipientStage({
             {isEditingNote ? (
               <>
                 <TextInput
-                  accessibilityLabel="Payment note"
+                  accessibilityLabel={gt("Payment note")}
                   className="rounded-2xl border border-border bg-card px-4 py-4 text-base text-foreground"
                   maxLength={commentAllowed}
                   onChangeText={onCommentChange}
-                  placeholder="Add a note"
+                  placeholder={gt("Add a note")}
                   placeholderTextColor={colors.mutedForeground}
                   testID="send-note-input"
                   value={comment}
@@ -229,16 +241,20 @@ export function SendRecipientStage({
                 className="self-start px-1 py-2"
                 testID="send-add-note"
               >
-                <Text className="font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
-                  Add a note
-                </Text>
+                <T>
+                  <Text className="font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
+                    Add a note
+                  </Text>
+                </T>
               </Pressable>
             )}
 
             {noteUsesLightning ? (
-              <Text className="mt-2 text-sm leading-5 text-muted-foreground">
-                Adding a note will send this payment over Lightning.
-              </Text>
+              <T>
+                <Text className="mt-2 text-sm leading-5 text-muted-foreground">
+                  Adding a note will send this payment over Lightning.
+                </Text>
+              </T>
             ) : null}
           </View>
         ) : null}
@@ -249,8 +265,8 @@ export function SendRecipientStage({
         style={{ paddingBottom: Math.max(bottomTabBarHeight, 20) + 8 }}
       >
         <NativeNoahButton
-          label="Continue"
-          loadingLabel="Checking recipient…"
+          label={gt("Continue")}
+          loadingLabel={gt("Checking recipient…")}
           onPress={onContinue}
           disabled={!canContinue}
           isLoading={isResolving}

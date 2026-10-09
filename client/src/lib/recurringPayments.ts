@@ -1,3 +1,4 @@
+import { sourceText, type Translate } from "~/lib/i18n";
 /**
  * Recurring payment executor.
  *
@@ -253,11 +254,14 @@ export type RecurringDestination = {
  * BOLT12 offers (the pull/subscription-style rail). BOLT11 invoices are single
  * use and on-chain sends carry variable miner fees, so they are rejected.
  */
-export const resolveRecurringDestination = (raw: string): Result<RecurringDestination, string> => {
+export const resolveRecurringDestination = (
+  raw: string,
+  gt: Translate = sourceText,
+): Result<RecurringDestination, string> => {
   const trimmed = raw.trim();
-  if (!trimmed) return err("Enter a recipient");
+  if (!trimmed) return err(gt("Enter a recipient"));
 
-  const parsed = parseDestination(trimmed);
+  const parsed = parseDestination(trimmed, gt);
   if (parsed.error) return err(parsed.error);
 
   switch (parsed.destinationType) {
@@ -277,13 +281,13 @@ export const resolveRecurringDestination = (raw: string): Result<RecurringDestin
       if (parsed.bip321?.offer) {
         return ok({ destination: parsed.bip321.offer, destinationType: "offer" });
       }
-      return err("This payment request has no reusable Ark address or Lightning offer");
+      return err(gt("This payment request has no reusable Ark address or Lightning offer"));
     case "lightning":
-      return err("Lightning invoices can only be paid once. Use a Lightning address or offer");
+      return err(gt("Lightning invoices can only be paid once. Use a Lightning address or offer"));
     case "onchain":
-      return err("On-chain addresses are not supported for recurring payments yet");
+      return err(gt("On-chain addresses are not supported for recurring payments yet"));
     default:
-      return err("Unsupported recipient");
+      return err(gt("Unsupported recipient"));
   }
 };
 

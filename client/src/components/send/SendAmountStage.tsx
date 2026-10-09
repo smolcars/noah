@@ -1,3 +1,4 @@
+import { T, useGT, Var, useLocale } from "gt-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 import * as Haptics from "expo-haptics";
 import { useState } from "react";
@@ -66,6 +67,8 @@ export function SendAmountStage({
   onPaste,
   onScan,
 }: SendAmountStageProps) {
+  const locale = useLocale();
+  const gt = useGT();
   const colors = useThemeColors();
   const shouldReduceMotion = useReducedMotion();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
@@ -73,9 +76,9 @@ export function SendAmountStage({
   const bottomTabBarHeight = useBottomTabBarHeight();
   const fiatCurrencyInfo = getFiatCurrencyInfo(fiatCurrency);
   const [showBalances, setShowBalances] = useState(false);
-  const displayAmount = amount.length === 0 ? "0" : formatNumber(amount);
+  const displayAmount = amount.length === 0 ? "0" : formatNumber(amount, locale);
   const amountPrefix =
-    currency === "FIAT" ? fiatCurrencyInfo.symbol : bitcoinAmountUnit === "bip177" ? "₿" : null;
+    currency === "FIAT" ? fiatCurrencyInfo.symbol : bitcoinAmountUnit === "bip177" ? gt("₿") : null;
   const primaryAmount = amountPrefix ? `${amountPrefix}${displayAmount}` : displayAmount;
   const primaryAmountFontSize =
     primaryAmount.length <= 7 ? 64 : primaryAmount.length <= 10 ? 50 : 38;
@@ -83,7 +86,7 @@ export function SendAmountStage({
   const convertedAmount =
     currency === "SATS"
       ? btcPrice
-        ? formatFiatAmount(satsToFiat(amountSat, btcPrice, fiatCurrency), fiatCurrency)
+        ? formatFiatAmount(satsToFiat(amountSat, btcPrice, fiatCurrency), fiatCurrency, locale)
         : `${fiatCurrencyInfo.code} rate unavailable`
       : formatBitcoinAmount(amountSat);
   const canContinue = Number.isInteger(amountSat) && amountSat > 0;
@@ -106,24 +109,30 @@ export function SendAmountStage({
           <View className="w-12" />
         )}
         <View className="items-center">
-          <Text accessibilityRole="header" className="text-xl font-bold text-foreground">
-            Send bitcoin
-          </Text>
+          <T>
+            <Text accessibilityRole="header" className="text-xl font-bold text-foreground">
+              Send bitcoin
+            </Text>
+          </T>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Show wallet balances, ${formatBitcoinAmount(arkBalanceSat)} available`}
+            accessibilityLabel={gt("Show wallet balances, {value1} available", {
+              value1: formatBitcoinAmount(arkBalanceSat),
+            })}
             onPress={() => setShowBalances((visible) => !visible)}
             className="mt-1 px-3 py-1"
             testID="send-balance-details"
           >
-            <Text className="text-sm text-muted-foreground">
-              {formatBitcoinAmount(arkBalanceSat)} available
-            </Text>
+            <T>
+              <Text className="text-sm text-muted-foreground">
+                <Var>{formatBitcoinAmount(arkBalanceSat)}</Var> available
+              </Text>
+            </T>
           </Pressable>
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Scan payment request"
+          accessibilityLabel={gt("Scan payment request")}
           onPress={onScan}
           className="h-12 w-12 items-center justify-center rounded-full border border-border bg-card"
           testID="send-scan"
@@ -135,13 +144,17 @@ export function SendAmountStage({
       {showBalances ? (
         <View className="mt-4 border-y border-border/60 py-3" testID="send-balance-breakdown">
           <View className="flex-row items-center justify-between">
-            <Text className="text-sm text-muted-foreground">Ark balance</Text>
+            <T>
+              <Text className="text-sm text-muted-foreground">Ark balance</Text>
+            </T>
             <Text className="text-sm font-semibold text-foreground">
               {formatBitcoinAmount(arkBalanceSat)}
             </Text>
           </View>
           <View className="mt-2 flex-row items-center justify-between">
-            <Text className="text-sm text-muted-foreground">On-chain wallet</Text>
+            <T>
+              <Text className="text-sm text-muted-foreground">On-chain wallet</Text>
+            </T>
             <Text className="text-sm font-semibold text-foreground">
               {formatBitcoinAmount(onchainBalanceSat)}
             </Text>
@@ -178,7 +191,9 @@ export function SendAmountStage({
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Switch to ${currency === "SATS" ? fiatCurrency : "sats"}`}
+          accessibilityLabel={gt("Switch to {value1}", {
+            value1: currency === "SATS" ? fiatCurrency : "sats",
+          })}
           accessibilityState={{ disabled: !btcPrice }}
           disabled={!btcPrice}
           onPress={onToggleCurrency}
@@ -206,9 +221,11 @@ export function SendAmountStage({
             testID="send-amount-recipient"
           >
             <View className="min-w-0 flex-1">
-              <Text className="text-xs font-medium uppercase tracking-[1.2px] text-muted-foreground">
-                To · {recipientLabel}
-              </Text>
+              <T>
+                <Text className="text-xs font-medium uppercase tracking-[1.2px] text-muted-foreground">
+                  To · <Var>{recipientLabel}</Var>
+                </Text>
+              </T>
               <Text
                 className="mt-1 text-sm font-semibold text-foreground"
                 ellipsizeMode="middle"
@@ -222,25 +239,29 @@ export function SendAmountStage({
               {canSendMax ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Send maximum amount"
+                  accessibilityLabel={gt("Send maximum amount")}
                   onPress={onMax}
                   className="h-10 items-center justify-center rounded-full px-3"
                   testID="send-max"
                   style={{ backgroundColor: `${COLORS.BITCOIN_ORANGE}14` }}
                 >
-                  <Text className="text-xs font-bold tracking-[1.2px] text-foreground">MAX</Text>
+                  <T>
+                    <Text className="text-xs font-bold tracking-[1.2px] text-foreground">MAX</Text>
+                  </T>
                 </Pressable>
               ) : null}
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Change recipient"
+                accessibilityLabel={gt("Change recipient")}
                 onPress={onEditRecipient}
                 className="h-10 items-center justify-center rounded-full px-3"
                 testID="send-amount-change-recipient"
               >
-                <Text className="text-sm font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
-                  Change
-                </Text>
+                <T>
+                  <Text className="text-sm font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
+                    Change
+                  </Text>
+                </T>
               </Pressable>
             </View>
           </Animated.View>
@@ -252,7 +273,7 @@ export function SendAmountStage({
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Send maximum amount"
+              accessibilityLabel={gt("Send maximum amount")}
               onPress={onMax}
               disabled={!canSendMax}
               accessibilityState={{ disabled: !canSendMax }}
@@ -263,16 +284,20 @@ export function SendAmountStage({
                 opacity: canSendMax ? 1 : 0.45,
               }}
             >
-              <Text className="text-sm font-bold tracking-[1.5px] text-foreground">MAX</Text>
+              <T>
+                <Text className="text-sm font-bold tracking-[1.5px] text-foreground">MAX</Text>
+              </T>
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Paste payment request"
+              accessibilityLabel={gt("Paste payment request")}
               onPress={onPaste}
               className="h-12 min-w-[88px] items-center justify-center rounded-full border border-border px-6"
               testID="send-paste-from-amount"
             >
-              <Text className="text-sm font-semibold text-foreground">Paste</Text>
+              <T>
+                <Text className="text-sm font-semibold text-foreground">Paste</Text>
+              </T>
             </Pressable>
           </Animated.View>
         )}
@@ -294,10 +319,16 @@ export function SendAmountStage({
         />
       ) : (
         <View className="mb-6 items-center border-y border-border/60 py-5">
-          <Text className="text-sm font-semibold text-foreground">
-            Amount set by payment request
-          </Text>
-          <Text className="mt-1 text-sm text-muted-foreground">This amount cannot be edited.</Text>
+          <T>
+            <Text className="text-sm font-semibold text-foreground">
+              Amount set by payment request
+            </Text>
+          </T>
+          <T>
+            <Text className="mt-1 text-sm text-muted-foreground">
+              This amount cannot be edited.
+            </Text>
+          </T>
         </View>
       )}
 
@@ -305,7 +336,7 @@ export function SendAmountStage({
         <View className="flex-row gap-3">
           <View className="flex-1">
             <NativeNoahSecondaryButton
-              label="Clear"
+              label={gt("Clear")}
               onPress={handleClear}
               disabled={!canClear}
               size="lg"
@@ -316,7 +347,7 @@ export function SendAmountStage({
           </View>
           <View className="flex-[2]">
             <NativeNoahButton
-              label="Next"
+              label={gt("Next")}
               onPress={onContinue}
               disabled={!canContinue}
               size="lg"

@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAlert } from "~/contexts/AlertProvider";
 import {
@@ -158,6 +159,7 @@ export function useLightningAddressPaymentRoute(destination: string | null) {
 }
 
 export function useGenerateOffchainAddress() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -169,12 +171,13 @@ export function useGenerateOffchainAddress() {
       return result.value.address;
     },
     onError: (error: Error) => {
-      showAlert({ title: "Vtxo Pubkey Generation Failed", description: error.message });
+      showAlert({ title: gt("Vtxo Pubkey Generation Failed"), description: error.message });
     },
   });
 }
 
 export function useGenerateOnchainAddress() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -186,12 +189,13 @@ export function useGenerateOnchainAddress() {
       return result.value;
     },
     onError: (error: Error) => {
-      showAlert({ title: "On-chain Address Generation Failed", description: error.message });
+      showAlert({ title: gt("On-chain Address Generation Failed"), description: error.message });
     },
   });
 }
 
 export function useGenerateReceiveAddresses() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -214,12 +218,13 @@ export function useGenerateReceiveAddresses() {
       };
     },
     onError: (error: Error) => {
-      showAlert({ title: "Receive Request Failed", description: error.message });
+      showAlert({ title: gt("Receive Request Failed"), description: error.message });
     },
   });
 }
 
 export function useGenerateLightningInvoice() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -231,12 +236,13 @@ export function useGenerateLightningInvoice() {
       return result.value;
     },
     onError: (error: Error) => {
-      showAlert({ title: "Lightning Invoice Generation Failed", description: error.message });
+      showAlert({ title: gt("Lightning Invoice Generation Failed"), description: error.message });
     },
   });
 }
 
 export function useBoardArk() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -252,12 +258,13 @@ export function useBoardArk() {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
     onError: (error: Error) => {
-      showAlert({ title: "Boarding Failed", description: error.message });
+      showAlert({ title: gt("Boarding Failed"), description: error.message });
     },
   });
 }
 
 export function useBoardAllAmountArk() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -273,7 +280,7 @@ export function useBoardAllAmountArk() {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
     onError: (error: Error) => {
-      showAlert({ title: "Boarding Failed", description: error.message });
+      showAlert({ title: gt("Boarding Failed"), description: error.message });
     },
   });
 }

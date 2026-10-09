@@ -1,3 +1,4 @@
+import { useLocale } from "gt-react-native";
 import React, { useEffect, useState } from "react";
 import {
   Keyboard,
@@ -632,6 +633,7 @@ const StartExitPanel = ({
   quote: ExitQuote;
   onDeposit: () => void;
 }) => {
+  const locale = useLocale();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const hasSelection = selectedCount > 0;
   const startDisabled =
@@ -661,7 +663,7 @@ const StartExitPanel = ({
           <View className="flex-row items-center justify-between py-2">
             <Text className="text-sm text-muted-foreground">Available VTXOs</Text>
             <Text className="text-sm font-semibold text-foreground">
-              {spendableVtxos.length.toLocaleString()}
+              {spendableVtxos.length.toLocaleString(locale)}
             </Text>
           </View>
           <View className="h-px bg-border/70" />

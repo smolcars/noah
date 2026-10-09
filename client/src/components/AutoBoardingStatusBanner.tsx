@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import { useEffect } from "react";
 import { CheckCircle } from "lucide-react-native";
 import { StatusBannerStrip } from "~/components/StatusBannerStrip";
@@ -7,6 +8,7 @@ import { useTransactionStore } from "~/store/transactionStore";
 const AUTO_BOARD_SUCCESS_BANNER_MS = 5_000;
 
 export const AutoBoardingStatusBanner = () => {
+  const gt = useGT();
   const { autoBoardSuccessBanner, clearAutoBoardSuccessBanner } = useTransactionStore();
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export const AutoBoardingStatusBanner = () => {
   return (
     <StatusBannerStrip
       className="mx-4 mt-3 mb-1"
-      title="Boarding completed"
+      title={gt("Boarding completed")}
       message={`${formatAutoBoardThreshold(autoBoardSuccessBanner.netBoardAmountSat)} available in Ark`}
       icon={<CheckCircle size={16} color="#22c55e" />}
       tone="success"

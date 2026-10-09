@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   NavigationContainer,
@@ -362,6 +363,7 @@ const preloadAndroidIcons = async (): Promise<PreloadedIcons> => {
 };
 
 const AppTabs = ({ preloadedIcons }: { preloadedIcons: PreloadedIcons }) => {
+  const gt = useGT();
   const isIos = Platform.OS === "ios";
   const themedColors = useThemeColors();
   // Disable page animations on Android unconditionally, and on iOS < 26 only.
@@ -388,6 +390,7 @@ const AppTabs = ({ preloadedIcons }: { preloadedIcons: PreloadedIcons }) => {
         name="Home"
         component={HomeStackScreen}
         options={{
+          title: gt("Home"),
           tabBarIcon: ({ focused }) => {
             if (isIos) {
               return { sfSymbol: "house.fill" };
@@ -423,6 +426,7 @@ const AppTabs = ({ preloadedIcons }: { preloadedIcons: PreloadedIcons }) => {
         name="Receive"
         component={ReceiveScreen}
         options={{
+          title: gt("Receive"),
           lazy: true,
           tabBarIcon: ({ focused }) => {
             if (isIos) {
@@ -436,6 +440,7 @@ const AppTabs = ({ preloadedIcons }: { preloadedIcons: PreloadedIcons }) => {
         name="Send"
         component={SendScreen}
         options={{
+          title: gt("Send"),
           lazy: true,
           tabBarIcon: ({ focused }) => {
             if (isIos) {
@@ -449,6 +454,7 @@ const AppTabs = ({ preloadedIcons }: { preloadedIcons: PreloadedIcons }) => {
         name="History"
         component={TransactionsStackScreen}
         options={{
+          title: gt("History"),
           lazy: true,
           tabBarIcon: ({ focused }) => {
             if (isIos) {
@@ -632,9 +638,7 @@ const AppNavigation = () => {
     pushPermissionStatus === PermissionStatus.DENIED;
 
   const shouldShowBatteryOptimizationScreen =
-    isInitialized &&
-    !hasSeenBatteryOptimizationPrompt &&
-    shouldPromptForBatteryOptimization();
+    isInitialized && !hasSeenBatteryOptimizationPrompt && shouldPromptForBatteryOptimization();
 
   const isLoadingIcons = Platform.OS !== "ios" && preloadedIcons === null;
 
@@ -644,7 +648,9 @@ const AppNavigation = () => {
         <StatusBar style={statusBarStyle} />
         <View className="flex-1 items-center justify-center bg-background">
           <NoahActivityIndicator size="large" />
-          <Text style={{ marginTop: 10, color: themedColors.foreground }}>Loading...</Text>
+          <T>
+            <Text style={{ marginTop: 10, color: themedColors.foreground }}>Loading...</Text>
+          </T>
         </View>
         <PortalHost />
       </NavigationContainer>

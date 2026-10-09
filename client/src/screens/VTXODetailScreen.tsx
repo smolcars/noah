@@ -1,3 +1,4 @@
+import { useLocale } from "gt-react-native";
 import { View, Pressable, ScrollView, Linking } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -109,6 +110,7 @@ export const VTXODetailContent = ({
   vtxo: VTXOWithStatus;
   onClose: () => void;
 }) => {
+  const locale = useLocale();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const { showAlert } = useAlert();
   const [refreshEstimate, setRefreshEstimate] = useState<BarkFeeEstimate | null>(null);
@@ -252,15 +254,18 @@ export const VTXODetailContent = ({
             <VTXODetailRow label="Status" value={statusLabel} />
             <VTXODetailRow
               label="Current Block Height"
-              value={blockHeight ? blockHeight.toLocaleString() : "Loading..."}
+              value={blockHeight ? blockHeight.toLocaleString(locale) : "Loading..."}
             />
-            <VTXODetailRow label="Expiry Height" value={vtxo.expiry_height.toLocaleString()} />
+            <VTXODetailRow
+              label="Expiry Height"
+              value={vtxo.expiry_height.toLocaleString(locale)}
+            />
             <VTXODetailRow
               label="Blocks Until Expiry"
               value={
                 blockHeight
                   ? vtxo.expiry_height > blockHeight
-                    ? `${(vtxo.expiry_height - blockHeight).toLocaleString()}`
+                    ? `${(vtxo.expiry_height - blockHeight).toLocaleString(locale)}`
                     : "Expired"
                   : "Loading..."
               }

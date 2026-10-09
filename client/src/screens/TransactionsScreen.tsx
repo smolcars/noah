@@ -1,3 +1,4 @@
+import { useLocale } from "gt-react-native";
 import { View, Pressable, ActivityIndicator } from "react-native";
 import { type NavigationProp, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -45,6 +46,7 @@ const TRANSACTION_FILTER_OPTIONS = [
 ] as const;
 
 const TransactionsScreen = () => {
+  const locale = useLocale();
   const navigation = useNavigation<NativeStackNavigationProp<TransactionsStackParamList>>();
   const tabNavigation = navigation.getParent<NavigationProp<TabParamList>>();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
@@ -251,7 +253,7 @@ const TransactionsScreen = () => {
                                 {getTransactionDisplayLabel(item)}
                               </Text>
                               <Text className="text-muted-foreground text-sm mt-1">
-                                {item.dateLabel ?? new Date(item.date).toLocaleString()}
+                                {item.dateLabel ?? new Date(item.date).toLocaleString(locale)}
                               </Text>
                             </View>
                             <View className="shrink-0 items-end">

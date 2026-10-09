@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useQuery } from "@tanstack/react-query";
 import { AccessibilityInfo, Pressable, useWindowDimensions, View } from "react-native";
@@ -23,6 +24,7 @@ export function ExitDepositBottomSheet({
   walletId: string | null;
   broadcastFeeSat: number;
 }) {
+  const gt = useGT();
   const colors = useThemeColors();
   const formatAmount = useBitcoinAmountFormatter();
   const { width } = useWindowDimensions();
@@ -47,12 +49,17 @@ export function ExitDepositBottomSheet({
     <AppBottomSheet isOpen={isOpen} onClose={onClose} scrollable>
       <View className="gap-6 px-2 pb-2">
         <View className="flex-row items-center justify-between gap-3">
-          <Text accessibilityRole="header" className="flex-1 text-xl font-semibold text-foreground">
-            Deposit Onchain Funds
-          </Text>
+          <T>
+            <Text
+              accessibilityRole="header"
+              className="flex-1 text-xl font-semibold text-foreground"
+            >
+              Deposit Onchain Funds
+            </Text>
+          </T>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close deposit details"
+            accessibilityLabel={gt("Close deposit details")}
             onPress={onClose}
             className="h-11 w-11 items-center justify-center rounded-full bg-muted/60"
           >
@@ -60,39 +67,45 @@ export function ExitDepositBottomSheet({
           </Pressable>
         </View>
         <View className="items-center gap-2">
-          <Text className="text-sm text-muted-foreground">Suggested deposit</Text>
+          <T>
+            <Text className="text-sm text-muted-foreground">Suggested deposit</Text>
+          </T>
           <Text className="text-4xl font-semibold tracking-tight text-foreground">
             {formatAmount(broadcastFeeSat)}
           </Text>
-          <Text className="text-center text-xs text-muted-foreground">
-            Estimated broadcast fees · amount may vary
-          </Text>
+          <T>
+            <Text className="text-center text-xs text-muted-foreground">
+              Estimated broadcast fees · amount may vary
+            </Text>
+          </T>
         </View>
         {address ? (
           <>
             <View
               accessible
-              accessibilityLabel="Bitcoin deposit address QR code"
+              accessibilityLabel={gt("Bitcoin deposit address QR code")}
               className="self-center rounded-[24px] bg-white p-5"
             >
               <QRCode value={address} size={Math.min(width - 96, 220)} />
             </View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={copied ? "Address copied" : "Copy Bitcoin address"}
+              accessibilityLabel={copied ? gt("Address copied") : gt("Copy Bitcoin address")}
               accessibilityHint="Copies the full Bitcoin address"
               className="flex-row items-center gap-4 rounded-2xl bg-card px-4 py-3"
               style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
               onPress={() =>
                 void copyWithState(address, address, {
                   onCopy: () =>
-                    AccessibilityInfo.announceForAccessibility("Bitcoin address copied"),
+                    AccessibilityInfo.announceForAccessibility(gt("Bitcoin address copied")),
                 })
               }
               testID="exit-deposit-copy-button"
             >
               <View className="min-w-0 flex-1 gap-1">
-                <Text className="text-xs text-muted-foreground">Bitcoin address</Text>
+                <T>
+                  <Text className="text-xs text-muted-foreground">Bitcoin address</Text>
+                </T>
                 <Text
                   className="text-sm font-medium text-foreground"
                   numberOfLines={1}
@@ -112,18 +125,20 @@ export function ExitDepositBottomSheet({
                   className="text-sm font-semibold"
                   style={{ color: copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE }}
                 >
-                  {copied ? "Copied" : "Copy"}
+                  {copied ? gt("Copied") : gt("Copy")}
                 </Text>
               </View>
             </Pressable>
           </>
         ) : addressQuery.isError ? (
           <View className="gap-3">
-            <Text className="text-center text-sm text-muted-foreground">
-              Couldn’t generate a Bitcoin address.
-            </Text>
+            <T>
+              <Text className="text-center text-sm text-muted-foreground">
+                Couldn’t generate a Bitcoin address.
+              </Text>
+            </T>
             <NativeNoahSecondaryButton
-              label="Retry"
+              label={gt("Retry")}
               onPress={() => void addressQuery.refetch()}
               fullWidth
             />
@@ -131,12 +146,16 @@ export function ExitDepositBottomSheet({
         ) : (
           <View className="items-center gap-3 py-8">
             <NoahActivityIndicator />
-            <Text className="text-sm text-muted-foreground">Generating Bitcoin address…</Text>
+            <T>
+              <Text className="text-sm text-muted-foreground">Generating Bitcoin address…</Text>
+            </T>
           </View>
         )}
-        <Text className="px-4 text-center text-xs leading-5 text-muted-foreground">
-          Wait for confirmation before progressing your exit.
-        </Text>
+        <T>
+          <Text className="px-4 text-center text-xs leading-5 text-muted-foreground">
+            Wait for confirmation before progressing your exit.
+          </Text>
+        </T>
       </View>
     </AppBottomSheet>
   );

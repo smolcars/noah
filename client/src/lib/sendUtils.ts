@@ -1,3 +1,4 @@
+import { sourceText, type Translate } from "~/lib/i18n";
 import { decodeBolt11, isValidLightningAddress } from "../constants";
 import {
   parseBIP321,
@@ -128,7 +129,7 @@ const btcToSats = (btc: number) => {
   return Math.round(btc * 100_000_000);
 };
 
-export const parseBip321Uri = (uri: string): ParsedDestination => {
+export const parseBip321Uri = (uri: string, gt: Translate = sourceText): ParsedDestination => {
   try {
     const expectedNetwork = APP_VARIANT;
     const result: BIP321ParseResult = parseBIP321(uri, expectedNetwork);
@@ -139,7 +140,7 @@ export const parseBip321Uri = (uri: string): ParsedDestination => {
       return {
         destinationType: null,
         isAmountEditable: true,
-        error: errorMsg || "Invalid BIP-321 URI",
+        error: errorMsg || gt("Invalid BIP-321 URI"),
       };
     }
 
@@ -147,7 +148,7 @@ export const parseBip321Uri = (uri: string): ParsedDestination => {
       return {
         destinationType: null,
         isAmountEditable: true,
-        error: "No valid payment methods found",
+        error: gt("No valid payment methods found"),
       };
     }
 
@@ -179,7 +180,7 @@ export const parseBip321Uri = (uri: string): ParsedDestination => {
       return {
         destinationType: null,
         isAmountEditable: true,
-        error: result.errors.join(", ") || "No valid payment methods found",
+        error: result.errors.join(", ") || gt("No valid payment methods found"),
       };
     }
 
@@ -201,14 +202,17 @@ export const parseBip321Uri = (uri: string): ParsedDestination => {
     return {
       destinationType: null,
       isAmountEditable: true,
-      error: "Invalid BIP-321 URI",
+      error: gt("Invalid BIP-321 URI"),
     };
   }
 };
 
-export const parseDestination = (destination: string): ParsedDestination => {
+export const parseDestination = (
+  destination: string,
+  gt: Translate = sourceText,
+): ParsedDestination => {
   if (destination.toLowerCase().startsWith("bitcoin:")) {
-    return parseBip321Uri(destination);
+    return parseBip321Uri(destination, gt);
   }
 
   const cleanedDestination = destination.trim().replace(LIGHTNING_PREFIX_REGEX, "");
@@ -226,7 +230,10 @@ export const parseDestination = (destination: string): ParsedDestination => {
       return {
         destinationType: null,
         isAmountEditable: true,
-        error: `Network mismatch: expected ${APP_VARIANT}, got ${lnResult.network}`,
+        error: gt("Network mismatch: expected {expected}, got {actual}", {
+          expected: APP_VARIANT,
+          actual: lnResult.network,
+        }),
       };
     }
     const decoded = decodeBolt11(cleanedDestination);
@@ -234,7 +241,7 @@ export const parseDestination = (destination: string): ParsedDestination => {
       return {
         destinationType: null,
         isAmountEditable: true,
-        error: "Failed to decode bolt11 invoice",
+        error: gt("Failed to decode bolt11 invoice"),
       };
     }
 
@@ -251,7 +258,7 @@ export const parseDestination = (destination: string): ParsedDestination => {
       return {
         destinationType: "lightning",
         isAmountEditable: true,
-        error: "Invoice amount is less than 1 satoshi.",
+        error: gt("Invoice amount is less than 1 satoshi."),
       };
     }
 
@@ -284,7 +291,10 @@ export const parseDestination = (destination: string): ParsedDestination => {
       return {
         destinationType: null,
         isAmountEditable: true,
-        error: `Network mismatch: expected ${APP_VARIANT}, got ${btcResult.network}`,
+        error: gt("Network mismatch: expected {expected}, got {actual}", {
+          expected: APP_VARIANT,
+          actual: btcResult.network,
+        }),
       };
     }
     return {
@@ -299,7 +309,10 @@ export const parseDestination = (destination: string): ParsedDestination => {
       return {
         destinationType: null,
         isAmountEditable: true,
-        error: `Network mismatch: expected ${APP_VARIANT}, got ${arkResult.network}`,
+        error: gt("Network mismatch: expected {expected}, got {actual}", {
+          expected: APP_VARIANT,
+          actual: arkResult.network,
+        }),
       };
     }
     return {

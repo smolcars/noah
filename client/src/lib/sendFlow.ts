@@ -1,3 +1,4 @@
+import { sourceText, type Translate } from "~/lib/i18n";
 import type { DestinationTypes, ParsedBip321 } from "~/lib/sendUtils";
 import type { OnchainSendSource } from "~/lib/paymentsApi";
 
@@ -5,36 +6,39 @@ export type SendRail = "ark" | "lightning" | "onchain";
 export type SendStage = "amount" | "recipient" | "method" | "source" | "review";
 export type SendEntry = "amount-first" | "recipient-first" | "max";
 
-const SEND_RAIL_LABELS: Record<SendRail, string> = {
-  ark: "Ark",
-  lightning: "Lightning",
-  onchain: "On-chain",
+export const getSendRailLabel = (rail: SendRail, gt: Translate = sourceText): string => {
+  switch (rail) {
+    case "ark":
+      return gt("Ark");
+    case "lightning":
+      return gt("Lightning");
+    case "onchain":
+      return gt("On-chain");
+  }
 };
 
-const ONCHAIN_SOURCE_LABELS: Record<OnchainSendSource, string> = {
-  offchain: "Ark balance",
-  onchain: "On-chain wallet",
-};
+export const getOnchainSourceLabel = (
+  source: OnchainSendSource,
+  gt: Translate = sourceText,
+): string => (source === "offchain" ? gt("Ark balance") : gt("On-chain wallet"));
 
-export const getSendRailLabel = (rail: SendRail): string => SEND_RAIL_LABELS[rail];
-
-export const getOnchainSourceLabel = (source: OnchainSendSource): string =>
-  ONCHAIN_SOURCE_LABELS[source];
-
-export const getDestinationLabel = (destinationType: DestinationTypes): string | null => {
+export const getDestinationLabel = (
+  destinationType: DestinationTypes,
+  gt: Translate = sourceText,
+): string | null => {
   switch (destinationType) {
     case "ark":
-      return "Ark address";
+      return gt("Ark address");
     case "lightning":
-      return "Lightning invoice";
+      return gt("Lightning invoice");
     case "offer":
-      return "Lightning offer";
+      return gt("Lightning offer");
     case "lnurl":
-      return "Lightning address";
+      return gt("Lightning address");
     case "onchain":
-      return "On-chain address";
+      return gt("On-chain address");
     case "bip321":
-      return "Bitcoin payment request";
+      return gt("Bitcoin payment request");
     default:
       return null;
   }

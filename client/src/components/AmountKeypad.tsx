@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 import * as Haptics from "expo-haptics";
 import { Pressable, View } from "react-native";
@@ -34,6 +35,7 @@ export function AmountKeypad({
   disabled = false,
   testIDPrefix,
 }: AmountKeypadProps) {
+  const gt = useGT();
   const colors = useThemeColors();
 
   const confirmKeyPress = (nextAmount: string) => {
@@ -75,7 +77,7 @@ export function AmountKeypad({
   };
 
   return (
-    <View accessibilityLabel="Amount keypad">
+    <View accessibilityLabel={gt("Amount keypad")}>
       {KEYPAD_ROWS.map((row, rowIndex) => (
         <View key={rowIndex} className="flex-row">
           {row.map((key) => {
@@ -85,7 +87,7 @@ export function AmountKeypad({
               <Pressable
                 key={key}
                 accessibilityRole="button"
-                accessibilityLabel={key === "backspace" ? "Delete digit" : key}
+                accessibilityLabel={key === "backspace" ? gt("Delete digit") : key}
                 accessibilityState={{ disabled: isDecimalDisabled || disabled }}
                 disabled={isDecimalDisabled || disabled}
                 onPress={() => enterKey(key)}

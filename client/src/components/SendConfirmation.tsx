@@ -1,3 +1,4 @@
+import { T, useGT, useLocale } from "gt-react-native";
 import { View } from "react-native";
 
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
@@ -80,6 +81,8 @@ export function SendConfirmation({
   feeEstimateWarning = null,
   sendError = null,
 }: SendConfirmationProps) {
+  const locale = useLocale();
+  const gt = useGT();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
 
   const resolvedDestination = (() => {
@@ -97,36 +100,40 @@ export function SendConfirmation({
     }
     return bip321Data.onchainAddress ?? destination;
   })();
-  const railLabel = getSendRailLabel(selectedRail);
+  const railLabel = getSendRailLabel(selectedRail, gt);
   const sourceLabel = selectedOnchainSource
-    ? getOnchainSourceLabel(selectedOnchainSource)
-    : getOnchainSourceLabel("offchain");
+    ? getOnchainSourceLabel(selectedOnchainSource, gt)
+    : getOnchainSourceLabel("offchain", gt);
   const fiatAmount = btcPrice ? satsToFiat(amount, btcPrice, fiatCurrency) : null;
   const unavailableFeeText =
     feeEstimateUnavailableText ??
     (feeEstimateError
-      ? "Fee estimate unavailable. The final fee will be calculated when sending."
+      ? gt("Fee estimate unavailable. The final fee will be calculated when sending.")
       : null);
-  const amountPrefix = isMaxAmount ? (feeEstimate ? "Pay ≈ " : "Pay up to ") : "Pay ";
-  const fiatPrefix = isMaxAmount ? (feeEstimate ? "Estimated ≈ " : "Up to ≈ ") : "≈ ";
+  const amountPrefix = isMaxAmount ? (feeEstimate ? gt("Pay ≈ ") : gt("Pay up to ")) : gt("Pay ");
+  const fiatPrefix = isMaxAmount ? (feeEstimate ? gt("Estimated ≈ ") : gt("Up to ≈ ")) : gt("≈ ");
   const feeValue = feeEstimate
     ? formatBitcoinAmount(feeEstimate.fee_sat)
     : isEstimatingFee
-      ? "Estimating…"
+      ? gt("Estimating…")
       : isMaxAmount
-        ? "Deducted from amount"
-        : "Calculated when sent";
+        ? gt("Deducted from amount")
+        : gt("Calculated when sent");
   const totalValue = feeEstimate
     ? formatBitcoinAmount(feeEstimate.gross_amount_sat)
     : isMaxAmount
       ? formatBitcoinAmount(amount)
-      : `${formatBitcoinAmount(amount)} + fee`;
+      : gt("{value1} + fee", { value1: formatBitcoinAmount(amount) });
 
   return (
     <View className="pb-2" testID="send-review-sheet">
       <View className="items-center">
         <Text className="text-center text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
-          {isLoading ? "Sending payment" : sendError ? "Payment failed" : "Review payment"}
+          {isLoading
+            ? gt("Sending payment")
+            : sendError
+              ? gt("Payment failed")
+              : gt("Review payment")}
         </Text>
         <Text className="mt-3 text-center text-4xl font-bold text-foreground">
           {amountPrefix}
@@ -135,7 +142,7 @@ export function SendConfirmation({
         {fiatAmount ? (
           <Text className="mt-2 text-base font-medium text-muted-foreground">
             {fiatPrefix}
-            {formatFiatAmount(fiatAmount, fiatCurrency)}
+            {formatFiatAmount(fiatAmount, fiatCurrency, locale)}
           </Text>
         ) : null}
         {amountNote ? (
@@ -146,27 +153,29 @@ export function SendConfirmation({
       </View>
 
       <View className="mt-6 border-y border-border/70 py-1">
-        <ReviewRow label="To" value={truncateValue(resolvedDestination)} />
+        <ReviewRow label={gt("To")} value={truncateValue(resolvedDestination)} />
         <View className="h-px bg-border/60" />
-        <ReviewRow label="Pay via" value={railLabel} />
+        <ReviewRow label={gt("Pay via")} value={railLabel} />
         <View className="h-px bg-border/60" />
-        <ReviewRow label="Pay from" value={sourceLabel} />
+        <ReviewRow label={gt("Pay from")} value={sourceLabel} />
         <View className="h-px bg-border/60" />
         <ReviewRow
-          label="Settlement"
-          value={selectedRail === "onchain" ? "Requires network confirmation" : "Usually instant"}
+          label={gt("Settlement")}
+          value={
+            selectedRail === "onchain" ? gt("Requires network confirmation") : gt("Usually instant")
+          }
         />
         {comment ? (
           <>
             <View className="h-px bg-border/60" />
-            <ReviewRow label="Note" value={comment} />
+            <ReviewRow label={gt("Note")} value={comment} />
           </>
         ) : null}
       </View>
 
       <View className="mt-4">
-        <ReviewRow label={feeEstimate ? "Estimated fee" : "Fee"} value={feeValue} />
-        <ReviewRow label="Total deducted" value={totalValue} />
+        <ReviewRow label={feeEstimate ? gt("Estimated fee") : gt("Fee")} value={feeValue} />
+        <ReviewRow label={gt("Total deducted")} value={totalValue} />
         {unavailableFeeText ? (
           <Text className="text-sm leading-5 text-muted-foreground">{unavailableFeeText}</Text>
         ) : null}
@@ -185,14 +194,16 @@ export function SendConfirmation({
 
       {sendError ? (
         <View className="mt-4 rounded-2xl border border-destructive/35 bg-destructive/10 px-4 py-3">
-          <Text className="text-sm font-semibold text-destructive">Payment did not send</Text>
+          <T>
+            <Text className="text-sm font-semibold text-destructive">Payment did not send</Text>
+          </T>
           <Text className="mt-1 text-sm leading-5 text-destructive/90">{sendError}</Text>
         </View>
       ) : null}
 
       <View className="mt-6 gap-3">
         <NativeNoahSecondaryButton
-          label="Back"
+          label={gt("Back")}
           onPress={onCancel}
           disabled={isLoading}
           size="lg"
@@ -200,8 +211,8 @@ export function SendConfirmation({
           testID="send-review-back"
         />
         <NativeNoahButton
-          label={sendError ? "Retry payment" : "Confirm payment"}
-          loadingLabel="Sending…"
+          label={sendError ? gt("Retry payment") : gt("Confirm payment")}
+          loadingLabel={gt("Sending…")}
           onPress={onConfirm}
           disabled={isConfirmDisabled}
           isLoading={isLoading}
@@ -211,7 +222,7 @@ export function SendConfirmation({
         />
         {onMakeRecurring ? (
           <NativeNoahSecondaryButton
-            label="Make this a recurring payment"
+            label={gt("Make this a recurring payment")}
             onPress={onMakeRecurring}
             disabled={isLoading}
             size="lg"

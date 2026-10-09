@@ -14,9 +14,24 @@ export function isValidEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
-export const formatNumber = (num: number | string) => {
+export const formatNumber = (num: number | string, locale?: string) => {
   const numStr = num.toString();
   const parts = numStr.split(".");
+
+  if (locale && Number.isFinite(Number(numStr))) {
+    const fractionDigits = parts[1]?.length ?? 0;
+    const formatted = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: Math.max(fractionDigits, 0),
+    }).format(Number(numStr));
+    if (numStr.endsWith(".")) {
+      const decimal =
+        new Intl.NumberFormat(locale).formatToParts(1.1).find((part) => part.type === "decimal")
+          ?.value ?? ".";
+      return formatted + decimal;
+    }
+    return formatted;
+  }
 
   // Add commas to the integer part only
   parts[0] = parts[0].replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");

@@ -5,7 +5,7 @@
     "es"
   ],
   "src": [
-    "src"
+    "src/**/*.{ts,tsx}"
   ],
   "files": {
     "gt": {

@@ -1,3 +1,4 @@
+import { useLocale } from "gt-react-native";
 import { View } from "react-native";
 import type { BarkFeeEstimate } from "react-native-nitro-ark";
 
@@ -58,6 +59,7 @@ export function VtxoRefreshDialog({
   open,
   vtxoCount,
 }: VtxoRefreshDialogProps) {
+  const locale = useLocale();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
   const { data: btcToFiatRate } = useBtcToFiatRate();
@@ -71,6 +73,7 @@ export function VtxoRefreshDialog({
     const fiatValue = formatFiatAmount(
       satsToFiat(valueSat, btcToFiatRate, fiatCurrency),
       fiatCurrency,
+      locale,
     );
     return `${formatBitcoinAmount(valueSat)} (${fiatValue})`;
   };
@@ -114,7 +117,7 @@ export function VtxoRefreshDialog({
           </View>
 
           <View className="rounded-xl border border-border/70 bg-card/60 px-3 py-1">
-            <RefreshPlanRow label="VTXOs selected" value={vtxoCount.toLocaleString()} />
+            <RefreshPlanRow label="VTXOs selected" value={vtxoCount.toLocaleString(locale)} />
             <View className="h-px bg-border/70" />
             <RefreshPlanRow
               label="Refresh fee"

@@ -1,3 +1,4 @@
+import { T, Var, useGT } from "gt-react-native";
 import { memo, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { ConfirmationDialog } from "~/components/ConfirmationDialog";
@@ -41,6 +42,7 @@ const AutoBoardPlanRow = ({
 );
 
 export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) => {
+  const gt = useGT();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const [hasReportedAutoBoardPlanError, setHasReportedAutoBoardPlanError] = useState(false);
   const [autoBoardPlan, setAutoBoardPlan] = useState<AutoBoardPlan | null>(null);
@@ -128,8 +130,8 @@ export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) 
         setHasReportedAutoBoardPlanError(true);
         log.e("Auto-boarding failed to load Ark info", [arkInfoError]);
         showAlert({
-          title: "Auto-Boarding Failed",
-          description: "Unable to load Ark server info. Please try again later.",
+          title: gt("Auto-Boarding Failed"),
+          description: gt("Unable to load Ark server info. Please try again later."),
         });
       }
       return;
@@ -161,8 +163,8 @@ export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) 
             setHasReportedAutoBoardPlanError(true);
             log.e("Auto-boarding failed to estimate fees", [planResult.error]);
             showAlert({
-              title: "Auto-Boarding Failed",
-              description: "Unable to estimate boarding fees. Please try again later.",
+              title: gt("Auto-Boarding Failed"),
+              description: gt("Unable to estimate boarding fees. Please try again later."),
             });
           }
           return;
@@ -211,6 +213,7 @@ export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) 
     isAutoBoardDialogOpen,
     isBoarding,
     showAlert,
+    gt,
   ]);
 
   const handleConfirmAutoBoard = () => {
@@ -249,10 +252,12 @@ export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) 
 
   return (
     <ConfirmationDialog
-      title="Board to Ark?"
-      description="Move available onchain funds into Ark while leaving a fee reserve in your onchain wallet."
-      confirmText="Yes, board"
-      cancelText="No, turn off"
+      title={gt("Board to Ark?")}
+      description={gt(
+        "Move available onchain funds into Ark while leaving a fee reserve in your onchain wallet.",
+      )}
+      confirmText={gt("Yes, board")}
+      cancelText={gt("No, turn off")}
       confirmVariant="default"
       open={isAutoBoardDialogOpen}
       onOpenChange={(open) => {
@@ -278,50 +283,56 @@ export const AutoBoardingService = memo(({ isReady }: AutoBoardingServiceProps) 
       {autoBoardPlan ? (
         <View className="gap-3">
           <View className="rounded-xl border border-border/70 bg-card/80 p-4">
-            <Text className="text-sm font-medium text-muted-foreground">Amount to board</Text>
+            <T>
+              <Text className="text-sm font-medium text-muted-foreground">Amount to board</Text>
+            </T>
             <Text className="mt-1 text-3xl font-bold text-foreground">
               {formatBitcoinAmount(autoBoardPlan.grossBoardAmountSat)}
             </Text>
-            <Text className="mt-1 text-xs leading-5 text-muted-foreground">
-              {formatBitcoinAmount(autoBoardPlan.netBoardAmountSat)} becomes available in Ark after
-              the boarding fee.
-            </Text>
+            <T>
+              <Text className="mt-1 text-xs leading-5 text-muted-foreground">
+                <Var>{formatBitcoinAmount(autoBoardPlan.netBoardAmountSat)}</Var> becomes available
+                in Ark after the boarding fee.
+              </Text>
+            </T>
           </View>
 
           <View className="rounded-xl border border-border/70 bg-card/60 px-3 py-1">
             <AutoBoardPlanRow
-              label="Onchain balance"
+              label={gt("Onchain balance")}
               value={formatBitcoinAmount(autoBoardPlan.confirmedOnchainBalanceSat)}
             />
             <View className="h-px bg-border/70" />
             <AutoBoardPlanRow
-              label="Ark boarding fee"
+              label={gt("Ark boarding fee")}
               value={formatBitcoinAmount(autoBoardPlan.arkFeeSat)}
               valueClassName="text-red-500"
             />
             <View className="h-px bg-border/70" />
             <AutoBoardPlanRow
-              label="Estimated onchain fee"
+              label={gt("Estimated onchain fee")}
               value={formatBitcoinAmount(autoBoardPlan.estimatedOnchainFeeSat)}
               valueClassName="text-red-500"
             />
             <View className="h-px bg-border/70" />
             <AutoBoardPlanRow
-              label="Stays in onchain wallet"
+              label={gt("Stays in onchain wallet")}
               value={formatBitcoinAmount(autoBoardPlan.estimatedRemainingOnchainSat)}
             />
             <View className="h-px bg-border/70" />
             <AutoBoardPlanRow
-              label="Ark amount after fee"
+              label={gt("Ark amount after fee")}
               value={formatBitcoinAmount(autoBoardPlan.netBoardAmountSat)}
               valueClassName="text-green-500"
             />
           </View>
 
-          <Text className="text-xs leading-5 text-muted-foreground">
-            Onchain fee uses the regular fee rate and a {autoBoardPlan.estimatedVbytes} vB
-            2-in/2-out SegWit estimate.
-          </Text>
+          <T>
+            <Text className="text-xs leading-5 text-muted-foreground">
+              Onchain fee uses the regular fee rate and a <Var>{autoBoardPlan.estimatedVbytes}</Var>{" "}
+              vB 2-in/2-out SegWit estimate.
+            </Text>
+          </T>
         </View>
       ) : null}
     </ConfirmationDialog>

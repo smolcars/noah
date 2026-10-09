@@ -1,3 +1,4 @@
+import { useLocale } from "gt-react-native";
 import { View, Pressable, ScrollView, Linking } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { Text } from "../components/ui/text";
@@ -205,6 +206,7 @@ export const TransactionDetailContent = ({
   onRepeatPayment?: (details: RepeatPaymentDetails) => void;
   closeIconName?: ComponentProps<typeof Icon>["name"];
 }) => {
+  const locale = useLocale();
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
   const iconColor = useIconColor();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
@@ -213,8 +215,9 @@ export const TransactionDetailContent = ({
     ? satsToFiat(transaction.amount, transaction.btcPrice, fiatCurrency)
     : "N/A";
   const formattedFiatAmount =
-    fiatAmount === "N/A" ? fiatAmount : formatFiatAmount(fiatAmount, fiatCurrency);
-  const transactionDateLabel = transaction.dateLabel ?? new Date(transaction.date).toLocaleString();
+    fiatAmount === "N/A" ? fiatAmount : formatFiatAmount(fiatAmount, fiatCurrency, locale);
+  const transactionDateLabel =
+    transaction.dateLabel ?? new Date(transaction.date).toLocaleString(locale);
   const movementStatusLabel = formatMovementStatusLabel(transaction.movementStatus);
   const movementKindLabel = formatMovementKindLabel(transaction.movementKind);
   const hasMovementDetails = Boolean(
@@ -266,7 +269,11 @@ export const TransactionDetailContent = ({
     transaction.type === "Lnurl" ? "Lightning address" : getTransactionDisplayLabel(transaction);
   const enteredAmount =
     repeatPaymentDetails?.amountMode === "FIAT" && repeatPaymentDetails.fiatCurrency
-      ? formatFiatAmount(repeatPaymentDetails.amountInput, repeatPaymentDetails.fiatCurrency)
+      ? formatFiatAmount(
+          repeatPaymentDetails.amountInput,
+          repeatPaymentDetails.fiatCurrency,
+          locale,
+        )
       : null;
   const offchainFeeSat =
     typeof transaction.offchainFeeSat === "number" ? transaction.offchainFeeSat : undefined;

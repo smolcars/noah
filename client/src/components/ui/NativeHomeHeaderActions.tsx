@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import {
   Button as SwiftButton,
   Divider as SwiftDivider,
@@ -34,6 +35,7 @@ export function NativeHomeHeaderActions({
   onOpenQr,
   onOpenSettings,
 }: NativeHomeHeaderActionsProps) {
+  const gt = useGT();
   const { colors } = useTheme();
   const supportsLiquidGlass = Platform.OS === "ios" && Number(Platform.Version) >= 26;
 
@@ -53,7 +55,7 @@ export function NativeHomeHeaderActions({
             ]}
           >
             <SwiftButton
-              label="Open settings"
+              label={gt("Open settings")}
               systemImage="gearshape"
               onPress={onOpenSettings}
               modifiers={[
@@ -66,7 +68,7 @@ export function NativeHomeHeaderActions({
             />
             <SwiftDivider modifiers={[frame({ height: 22 })]} />
             <SwiftButton
-              label="Find places that accept bitcoin"
+              label={gt("Find places that accept bitcoin")}
               systemImage="map"
               onPress={onOpenPlaces}
               modifiers={[
@@ -84,7 +86,7 @@ export function NativeHomeHeaderActions({
             modifiers={[frame({ width: BUTTON_SIZE, height: BUTTON_SIZE })]}
           >
             <SwiftButton
-              label="Open QR code"
+              label={gt("Open QR code")}
               systemImage="qrcode"
               onPress={onOpenQr}
               modifiers={[
@@ -116,7 +118,7 @@ export function NativeHomeHeaderActions({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Open settings"
+          accessibilityLabel={gt("Open settings")}
           android_ripple={{ color: `${COLORS.BITCOIN_ORANGE}33` }}
           onPress={onOpenSettings}
           testID="home-settings-button"
@@ -133,7 +135,7 @@ export function NativeHomeHeaderActions({
         <View className="my-3 w-px bg-border" />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Find places that accept bitcoin"
+          accessibilityLabel={gt("Find places that accept bitcoin")}
           android_ripple={{ color: `${COLORS.BITCOIN_ORANGE}33` }}
           onPress={onOpenPlaces}
           testID="home-btc-map-button"
@@ -157,7 +159,7 @@ export function NativeHomeHeaderActions({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Open QR code"
+          accessibilityLabel={gt("Open QR code")}
           android_ripple={{ color: `${COLORS.BITCOIN_ORANGE}33`, borderless: true }}
           onPress={onOpenQr}
           testID="home-qr-button"

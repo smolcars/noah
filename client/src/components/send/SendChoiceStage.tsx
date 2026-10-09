@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 import { Pressable, ScrollView, View } from "react-native";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
@@ -37,6 +38,7 @@ export function SendChoiceStage<T extends string>({
   onContinue,
   testIDPrefix,
 }: SendChoiceStageProps<T>) {
+  const gt = useGT();
   const colors = useThemeColors();
   const bottomTabBarHeight = useBottomTabBarHeight();
   const selectedOption = options.find((option) => option.value === value);
@@ -89,12 +91,14 @@ export function SendChoiceStage<T extends string>({
                       className="rounded-full px-2 py-0.5"
                       style={{ backgroundColor: `${COLORS.BITCOIN_ORANGE}1F` }}
                     >
-                      <Text
-                        className="text-[10px] font-bold uppercase tracking-[1.4px]"
-                        style={{ color: COLORS.BITCOIN_ORANGE }}
-                      >
-                        Selected
-                      </Text>
+                      <T>
+                        <Text
+                          className="text-[10px] font-bold uppercase tracking-[1.4px]"
+                          style={{ color: COLORS.BITCOIN_ORANGE }}
+                        >
+                          Selected
+                        </Text>
+                      </T>
                     </View>
                   ) : null}
                 </View>
@@ -122,7 +126,7 @@ export function SendChoiceStage<T extends string>({
 
       <View style={{ paddingBottom: Math.max(bottomTabBarHeight, 20) + 8 }}>
         <NativeNoahButton
-          label="Continue"
+          label={gt("Continue")}
           onPress={onContinue}
           disabled={!canContinue}
           size="lg"
