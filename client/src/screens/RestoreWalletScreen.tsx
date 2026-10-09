@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import React, { useState } from "react";
 import {
   View,
@@ -19,6 +20,14 @@ import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 type Props = NativeStackScreenProps<OnboardingStackParamList, "RestoreWallet">;
 
 const RestoreWalletScreen = ({ navigation }: Props) => {
+  const gt = useGT();
+  const restoreStepLabels: Record<string, string> = {
+    "Starting restore...": gt("Starting restore..."),
+    "Fetching and validating backup...": gt("Fetching and validating backup..."),
+    "Loading wallet...": gt("Loading wallet..."),
+    "Finalizing...": gt("Finalizing..."),
+    Complete: gt("Complete"),
+  };
   const [mnemonic, setMnemonic] = useState("");
   const { mutate: restoreWallet, isPending } = useRestoreWallet();
   const restoreProgress = useWalletStore((state) => state.restoreProgress);
@@ -49,15 +58,19 @@ const RestoreWalletScreen = ({ navigation }: Props) => {
                 className="mr-3"
                 testID="restore-wallet-back-button"
               />
-              <Text className="text-2xl font-bold text-foreground">Restore Wallet</Text>
+              <T>
+                <Text className="text-2xl font-bold text-foreground">Restore Wallet</Text>
+              </T>
             </View>
             <View className="pt-8 items-center w-full">
-              <Text className="text-lg text-muted-foreground mb-10 text-center">
-                Enter your 12-word seed phrase to restore your wallet.
-              </Text>
+              <T>
+                <Text className="text-lg text-muted-foreground mb-10 text-center">
+                  Enter your 12-word seed phrase to restore your wallet.
+                </Text>
+              </T>
               <TextInput
                 className="w-full h-24 bg-input rounded-lg p-4 text-foreground text-lg text-left"
-                placeholder="Enter your seed phrase"
+                placeholder={gt("Enter your seed phrase")}
                 placeholderTextColor="#666"
                 value={mnemonic}
                 onChangeText={setMnemonic}
@@ -73,7 +86,9 @@ const RestoreWalletScreen = ({ navigation }: Props) => {
               {restoreProgress && (
                 <View className="w-full mb-4">
                   <View className="flex-row items-center justify-between mb-2">
-                    <Text className="text-sm text-muted-foreground">{restoreProgress.step}</Text>
+                    <Text className="text-sm text-muted-foreground">
+                      {restoreStepLabels[restoreProgress.step] ?? restoreProgress.step}
+                    </Text>
                     <Text className="text-sm text-muted-foreground">
                       {restoreProgress.progress}%
                     </Text>
@@ -88,11 +103,11 @@ const RestoreWalletScreen = ({ navigation }: Props) => {
               )}
 
               <NativeNoahButton
-                label="Restore"
+                label={gt("Restore")}
                 onPress={handleRestore}
                 disabled={isPending}
                 isLoading={isPending}
-                loadingLabel="Restoring..."
+                loadingLabel={gt("Restoring...")}
                 width={168}
               />
             </View>

@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import { AppState, ScrollView, View } from "react-native";
 import { BatteryCharging, RefreshCcw, Zap } from "lucide-react-native";
@@ -15,26 +16,28 @@ import {
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 
-const highlights = [
-  {
-    title: "Push notifications keep arriving",
-    description:
-      "Without optimization, notifications can drop off completely, not just be delayed.",
-    icon: Zap,
-  },
-  {
-    title: "Background activity keeps working",
-    description:
-      "VTXOs keep refreshing in the background so they don't expire while the app is closed.",
-    icon: RefreshCcw,
-  },
-];
-
 type BatteryOptimizationScreenProps = {
   onContinue?: () => void;
 };
 
 const BatteryOptimizationScreen = ({ onContinue }: BatteryOptimizationScreenProps) => {
+  const gt = useGT();
+  const highlights = [
+    {
+      title: gt("Push notifications keep arriving"),
+      description: gt(
+        "Without optimization, notifications can drop off completely, not just be delayed.",
+      ),
+      icon: Zap,
+    },
+    {
+      title: gt("Background activity keeps working"),
+      description: gt(
+        "VTXOs keep refreshing in the background so they don't expire while the app is closed.",
+      ),
+      icon: RefreshCcw,
+    },
+  ];
   const navigation = useNavigation<NativeStackNavigationProp<OnboardingStackParamList>>();
   const markBatteryOptimizationPromptShown = useWalletStore(
     (state) => state.markBatteryOptimizationPromptShown,
@@ -74,9 +77,10 @@ const BatteryOptimizationScreen = ({ onContinue }: BatteryOptimizationScreenProp
     const opened = openBatteryOptimizationSettings();
     if (!opened) {
       showAlert({
-        title: "Couldn't open battery settings",
-        description:
+        title: gt("Couldn't open battery settings"),
+        description: gt(
           "Please open your device settings and allow Noah to run in the background, then continue.",
+        ),
       });
     }
   };
@@ -96,12 +100,18 @@ const BatteryOptimizationScreen = ({ onContinue }: BatteryOptimizationScreenProp
           <View className="h-24 w-24 items-center justify-center rounded-3xl bg-card border border-border shadow-lg shadow-black/30">
             <BatteryCharging size={48} color="#f97316" />
           </View>
-          <Text className="mt-6 text-3xl font-bold text-center">Disable battery optimization</Text>
-          <Text className="mt-3 text-center text-muted-foreground">
-            Android can put Noah to sleep in the background to save energy. This has a negligible
-            effect on battery life, but can cause push notifications to stop arriving entirely.
-            Disabling battery optimization for Noah keeps the wallet operating correctly.
-          </Text>
+          <T>
+            <Text className="mt-6 text-3xl font-bold text-center">
+              Disable battery optimization
+            </Text>
+          </T>
+          <T>
+            <Text className="mt-3 text-center text-muted-foreground">
+              Android can put Noah to sleep in the background to save energy. This has a negligible
+              effect on battery life, but can cause push notifications to stop arriving entirely.
+              Disabling battery optimization for Noah keeps the wallet operating correctly.
+            </Text>
+          </T>
         </View>
 
         <View className="mt-10 space-y-4">
@@ -123,14 +133,14 @@ const BatteryOptimizationScreen = ({ onContinue }: BatteryOptimizationScreenProp
 
         <View className="mt-10 space-y-4">
           <NativeNoahButton
-            label="Open battery settings"
+            label={gt("Open battery settings")}
             onPress={handleOpenSettings}
             size="lg"
             fullWidth
           />
           <View className="space-y-3 mt-3">
             <NativeNoahSecondaryButton
-              label="Skip"
+              label={gt("Skip")}
               emphasis="ghost"
               onPress={handleSkip}
               fullWidth

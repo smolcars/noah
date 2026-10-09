@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { View, Pressable, Keyboard, ScrollView, type TextInputInstance } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -33,6 +34,7 @@ const log = logger("EmailVerificationScreen");
 const CELL_COUNT = 6;
 
 const EmailVerificationScreen = () => {
+  const gt = useGT();
   const navigation =
     useNavigation<NativeStackNavigationProp<OnboardingStackParamList & SettingsStackParamList>>();
   const route = useRoute<EmailVerificationScreenRouteProp>();
@@ -97,8 +99,8 @@ const EmailVerificationScreen = () => {
     const trimmedEmail = email.trim();
     if (!isValidEmail(trimmedEmail)) {
       showAlert({
-        title: "Invalid Email",
-        description: "Please enter a valid email address.",
+        title: gt("Invalid Email"),
+        description: gt("Please enter a valid email address."),
       });
       return;
     }
@@ -116,8 +118,8 @@ const EmailVerificationScreen = () => {
         setEmailVerified(true);
         if (fromSettings) {
           showAlert({
-            title: "Already Verified",
-            description: "This email is already verified.",
+            title: gt("Already Verified"),
+            description: gt("This email is already verified."),
           });
           navigation.goBack();
         } else {
@@ -131,8 +133,9 @@ const EmailVerificationScreen = () => {
     } else {
       log.e("Failed to send verification code", [result.error]);
       showAlert({
-        title: "Error",
-        description: result.error.message || "Failed to send verification code. Please try again.",
+        title: gt("Error"),
+        description:
+          result.error.message || gt("Failed to send verification code. Please try again."),
       });
     }
 
@@ -142,8 +145,8 @@ const EmailVerificationScreen = () => {
   const handleVerifyCode = async () => {
     if (code.length !== CELL_COUNT) {
       showAlert({
-        title: "Invalid Code",
-        description: "Please enter the complete 6-digit code.",
+        title: gt("Invalid Code"),
+        description: gt("Please enter the complete 6-digit code."),
       });
       return;
     }
@@ -160,10 +163,10 @@ const EmailVerificationScreen = () => {
 
       if (fromSettings) {
         showAlert({
-          title: isChangingEmail ? "Email Updated" : "Email Verified",
+          title: isChangingEmail ? gt("Email Updated") : gt("Email Verified"),
           description: isChangingEmail
-            ? "Your emergency email has been updated."
-            : "Your email has been verified successfully.",
+            ? gt("Your emergency email has been updated.")
+            : gt("Your email has been verified successfully."),
         });
         navigation.goBack();
       } else {
@@ -172,10 +175,10 @@ const EmailVerificationScreen = () => {
     } else {
       const errorMessage = result.isErr()
         ? result.error.message
-        : "Invalid or expired verification code.";
+        : gt("Invalid or expired verification code.");
       log.e("Failed to verify email", [errorMessage]);
       showAlert({
-        title: "Verification Failed",
+        title: gt("Verification Failed"),
         description: errorMessage,
       });
       setCode("");
@@ -194,7 +197,9 @@ const EmailVerificationScreen = () => {
       <NoahSafeAreaView className="flex-1 bg-background">
         <View className="flex-1 justify-center items-center p-4">
           <NoahActivityIndicator size="large" />
-          <Text className="text-muted-foreground mt-4">Setting up your account...</Text>
+          <T>
+            <Text className="text-muted-foreground mt-4">Setting up your account...</Text>
+          </T>
         </View>
       </NoahSafeAreaView>
     );
@@ -214,7 +219,7 @@ const EmailVerificationScreen = () => {
             testID="email-verification-back-button"
           />
           <Text className="text-2xl font-bold text-foreground">
-            {isChangingEmail ? "Change Emergency Email" : "Emergency Email"}
+            {isChangingEmail ? gt("Change Emergency Email") : gt("Emergency Email")}
           </Text>
         </View>
 
@@ -222,22 +227,29 @@ const EmailVerificationScreen = () => {
           <>
             <Text className="text-muted-foreground mb-6">
               {isChangingEmail
-                ? `Your current email${
-                    currentEmailAddress ? `, ${currentEmailAddress},` : ""
-                  } will stay active until the new email is verified.`
-                : "Email is optional. Noah uses it only for urgent wallet safety messages, such as when your VTXOs are close to expiring and you need to come online to refresh them."}
+                ? currentEmailAddress
+                  ? gt(
+                      "Your current email, {email}, will stay active until the new email is verified.",
+                      { email: currentEmailAddress },
+                    )
+                  : gt("Your current email will stay active until the new email is verified.")
+                : gt(
+                    "Email is optional. Noah uses it only for urgent wallet safety messages, such as when your VTXOs are close to expiring and you need to come online to refresh them.",
+                  )}
             </Text>
 
             <View className="bg-card rounded-2xl border border-border p-5 space-y-5">
               <View>
-                <Text className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
-                  Email Address
-                </Text>
+                <T>
+                  <Text className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
+                    Email Address
+                  </Text>
+                </T>
                 <Input
                   value={email}
                   onChangeText={setEmail}
                   className="h-16 rounded-2xl border border-border bg-background/90 px-4 text-lg leading-6 text-foreground"
-                  placeholder={isChangingEmail ? "new@email.com" : "your@email.com"}
+                  placeholder={isChangingEmail ? gt("new@email.com") : gt("your@email.com")}
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardType="email-address"
@@ -247,17 +259,21 @@ const EmailVerificationScreen = () => {
             </View>
 
             <NativeNoahButton
-              label={isChangingEmail ? "Send Code to New Email" : "Send Verification Code"}
+              label={isChangingEmail ? gt("Send Code to New Email") : gt("Send Verification Code")}
               onPress={handleSendCode}
               className="mt-8"
               isLoading={isSendingCode}
-              loadingLabel="Sending..."
+              loadingLabel={gt("Sending...")}
               disabled={!email || isSendingCode}
               fullWidth
             />
             {!fromSettings && (
               <Pressable onPress={handleSkip} className="mt-5 items-center">
-                <Text className="text-muted-foreground font-semibold">Continue without email</Text>
+                <T>
+                  <Text className="text-muted-foreground font-semibold">
+                    Continue without email
+                  </Text>
+                </T>
               </Pressable>
             )}
           </>
@@ -265,15 +281,17 @@ const EmailVerificationScreen = () => {
           <>
             <Text className="text-muted-foreground mb-2">
               {isChangingEmail
-                ? "We sent a 6-digit verification code to your new email:"
-                : "We sent a 6-digit verification code to:"}
+                ? gt("We sent a 6-digit verification code to your new email:")
+                : gt("We sent a 6-digit verification code to:")}
             </Text>
             <Text className="text-foreground font-semibold mb-6">{email}</Text>
 
             <View className="bg-card rounded-2xl border border-border p-5">
-              <Text className="text-xs uppercase tracking-widest text-muted-foreground mb-4 text-center">
-                Enter Verification Code
-              </Text>
+              <T>
+                <Text className="text-xs uppercase tracking-widest text-muted-foreground mb-4 text-center">
+                  Enter Verification Code
+                </Text>
+              </T>
               <CodeField
                 ref={ref}
                 {...props}
@@ -284,7 +302,7 @@ const EmailVerificationScreen = () => {
                 textContentType="oneTimeCode"
                 autoComplete="one-time-code"
                 testID="verification-code-input"
-                accessibilityLabel="verification-code-input"
+                accessibilityLabel={gt("verification-code-input")}
                 autoFocus={true}
                 rootStyle={{ width: "100%", maxWidth: 360, alignSelf: "center" }}
                 renderCell={({ index, symbol, isFocused }) => (
@@ -304,20 +322,22 @@ const EmailVerificationScreen = () => {
             </View>
 
             <NativeNoahButton
-              label={isChangingEmail ? "Update Email" : "Verify Email"}
+              label={isChangingEmail ? gt("Update Email") : gt("Verify Email")}
               onPress={handleVerifyCode}
               className="mt-8"
               isLoading={isVerifying}
-              loadingLabel="Verifying..."
+              loadingLabel={gt("Verifying...")}
               disabled={code.length !== CELL_COUNT || isVerifying}
               fullWidth
             />
 
             <View className="mt-6 items-center">
-              <Text className="text-muted-foreground mb-2">Didn't receive the code?</Text>
+              <T>
+                <Text className="text-muted-foreground mb-2">Didn't receive the code?</Text>
+              </T>
               <Pressable onPress={handleResendCode} disabled={isSendingCode}>
                 <Text className="text-primary font-semibold">
-                  {isSendingCode ? "Sending..." : "Resend Code"}
+                  {isSendingCode ? gt("Sending...") : gt("Resend Code")}
                 </Text>
               </Pressable>
             </View>
@@ -329,16 +349,20 @@ const EmailVerificationScreen = () => {
                   setCode("");
                 }}
               >
-                <Text className="text-muted-foreground">Change email address</Text>
+                <T>
+                  <Text className="text-muted-foreground">Change email address</Text>
+                </T>
               </Pressable>
             </View>
           </>
         )}
 
         {codeSent && (
-          <Text className="text-xs text-muted-foreground text-center mt-8">
-            The verification code will expire in 10 minutes.
-          </Text>
+          <T>
+            <Text className="text-xs text-muted-foreground text-center mt-8">
+              The verification code will expire in 10 minutes.
+            </Text>
+          </T>
         )}
       </ScrollView>
     </NoahSafeAreaView>

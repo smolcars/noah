@@ -5,9 +5,7 @@
     "es"
   ],
   "src": [
-    "src/screens/OnboardingScreen.tsx",
-    "src/screens/SettingsScreen.tsx",
-    "src/components/LanguagePicker.tsx"
+    "src"
   ],
   "files": {
     "gt": {

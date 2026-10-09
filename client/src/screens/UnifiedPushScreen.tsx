@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import React, { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { Text } from "~/components/ui/text";
@@ -22,6 +23,7 @@ import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 const log = logger("UnifiedPushScreen");
 
 const UnifiedPushScreen = () => {
+  const gt = useGT();
   const [endpoint, setEndpoint] = useState<string>("");
   const [status, setStatus] = useState<"idle" | "registering" | "registered" | "error">("idle");
   const route = useRoute<RouteProp<OnboardingStackParamList, "UnifiedPush">>();
@@ -123,22 +125,28 @@ const UnifiedPushScreen = () => {
             />
           )}
           <Text className="text-2xl font-bold text-foreground">
-            {fromOnboarding ? "UnifiedPush Setup" : "UnifiedPush"}
+            {fromOnboarding ? gt("UnifiedPush Setup") : gt("UnifiedPush")}
           </Text>
         </View>
 
         <View className="bg-card p-4 rounded-lg mb-6">
-          <Text className="text-muted-foreground mb-4">
-            Google Play Services is not available. To receive notifications, please use a
-            UnifiedPush distributor (like ntfy).
-          </Text>
+          <T>
+            <Text className="text-muted-foreground mb-4">
+              Google Play Services is not available. To receive notifications, please use a
+              UnifiedPush distributor (like ntfy).
+            </Text>
+          </T>
 
           <View className="mb-4">
-            <Text className="font-bold mb-2">Select Distributor</Text>
+            <T>
+              <Text className="font-bold mb-2">Select Distributor</Text>
+            </T>
             {distributors.length === 0 ? (
-              <Text className="text-sm text-muted-foreground">
-                No distributors detected. Install ntfy or another UnifiedPush distributor.
-              </Text>
+              <T>
+                <Text className="text-sm text-muted-foreground">
+                  No distributors detected. Install ntfy or another UnifiedPush distributor.
+                </Text>
+              </T>
             ) : (
               distributors.map((d) => (
                 <View key={d.id} className="mb-3">
@@ -162,13 +170,15 @@ const UnifiedPushScreen = () => {
           </View>
 
           <View className="mb-4">
-            <Text className="font-bold mb-2">Current Endpoint:</Text>
+            <T>
+              <Text className="font-bold mb-2">Current Endpoint:</Text>
+            </T>
             <Text className="text-xs bg-secondary p-2 rounded text-secondary-foreground font-mono">
-              {endpoint || "Not registered"}
+              {endpoint || gt("Not registered")}
             </Text>
             {endpoint ? (
               <NativeNoahButton
-                label="Copy Endpoint"
+                label={gt("Copy Endpoint")}
                 onPress={copyToClipboard}
                 className="mt-2"
                 fullWidth
@@ -179,15 +189,15 @@ const UnifiedPushScreen = () => {
           {fromOnboarding ? (
             <View className="flex-row items-center gap-4">
               <View className="flex-1">
-                <NativeNoahSecondaryButton label="Skip" onPress={handleSkip} fullWidth />
+                <NativeNoahSecondaryButton label={gt("Skip")} onPress={handleSkip} fullWidth />
               </View>
               <View className="flex-1">
                 {status === "idle" || status === "error" ? (
-                  <NativeNoahButton label="Register" onPress={handleRegister} fullWidth />
+                  <NativeNoahButton label={gt("Register")} onPress={handleRegister} fullWidth />
                 ) : status === "registering" ? (
-                  <NativeNoahButton label="Registering..." disabled fullWidth />
+                  <NativeNoahButton label={gt("Registering...")} disabled fullWidth />
                 ) : (
-                  <NativeNoahButton label="Continue" onPress={handleContinue} fullWidth />
+                  <NativeNoahButton label={gt("Continue")} onPress={handleContinue} fullWidth />
                 )}
               </View>
             </View>
@@ -195,22 +205,24 @@ const UnifiedPushScreen = () => {
             <>
               {status === "idle" || status === "error" ? (
                 <NativeNoahButton
-                  label="Register with UnifiedPush"
+                  label={gt("Register with UnifiedPush")}
                   onPress={handleRegister}
                   fullWidth
                 />
               ) : status === "registering" ? (
-                <NativeNoahButton label="Registering..." disabled fullWidth />
+                <NativeNoahButton label={gt("Registering...")} disabled fullWidth />
               ) : (
-                <NativeNoahButton label="Done" onPress={handleContinue} fullWidth />
+                <NativeNoahButton label={gt("Done")} onPress={handleContinue} fullWidth />
               )}
             </>
           )}
         </View>
 
-        <Text className="text-sm text-muted-foreground text-center">
-          Install a distributor app like "ntfy" from F-Droid to enable push notifications.
-        </Text>
+        <T>
+          <Text className="text-sm text-muted-foreground text-center">
+            Install a distributor app like "ntfy" from F-Droid to enable push notifications.
+          </Text>
+        </T>
       </ScrollView>
     </NoahSafeAreaView>
   );

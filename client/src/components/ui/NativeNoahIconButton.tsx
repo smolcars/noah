@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import { Button as SwiftButton, Host as SwiftHost } from "@expo/ui/swift-ui";
 import {
   accessibilityIdentifier,
@@ -75,7 +76,8 @@ type NativeNoahBackButtonProps = Pick<
 >;
 
 export function NativeNoahBackButton(props: NativeNoahBackButtonProps) {
-  return <NativeNoahIconButton icon="back" accessibilityLabel="Go back" {...props} />;
+  const gt = useGT();
+  return <NativeNoahIconButton icon="back" accessibilityLabel={gt("Go back")} {...props} />;
 }
 
 export function NativeNoahIconButton({

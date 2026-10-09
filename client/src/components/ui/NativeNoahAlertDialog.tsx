@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import { Host } from "@expo/ui";
 import { Alert as SwiftAlert, Button as SwiftButton, Text as SwiftText } from "@expo/ui/swift-ui";
 import { disabled as swiftDisabled, frame, opacity } from "@expo/ui/swift-ui/modifiers";
@@ -38,7 +39,7 @@ export function NativeNoahAlertDialog({
   open,
   title,
   description,
-  confirmText = "OK",
+  confirmText,
   cancelText,
   confirmVariant = "default",
   isConfirmDisabled = false,
@@ -46,6 +47,8 @@ export function NativeNoahAlertDialog({
   onCancel,
   onOpenChange,
 }: NativeNoahAlertDialogProps) {
+  const gt = useGT();
+  const displayedConfirmText = confirmText ?? gt("OK");
   const { colors, colorScheme } = useTheme();
   const confirmColor = confirmVariant === "destructive" ? "#dc2626" : COLORS.BITCOIN_ORANGE;
   const hostSeedColor = Platform.OS === "ios" ? colors.foreground : confirmColor;
@@ -108,7 +111,7 @@ export function NativeNoahAlertDialog({
                   color={isConfirmDisabled ? colors.mutedForeground : confirmColor}
                   style={{ fontSize: 14, fontWeight: "700", typography: "labelLarge" }}
                 >
-                  {confirmText}
+                  {displayedConfirmText}
                 </ComposeText>
               </ComposeTextButton>
             </ComposeAlertDialog.ConfirmButton>
@@ -149,7 +152,7 @@ export function NativeNoahAlertDialog({
                 <SwiftButton label={cancelText} role="cancel" onPress={handleCancel} />
               ) : null}
               <SwiftButton
-                label={confirmText}
+                label={displayedConfirmText}
                 role={confirmVariant === "destructive" ? "destructive" : "default"}
                 onPress={handleConfirm}
                 modifiers={isConfirmDisabled ? [swiftDisabled(true)] : undefined}

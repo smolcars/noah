@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAlert } from "~/contexts/AlertProvider";
 import { useServerStore } from "../store/serverStore";
@@ -35,6 +36,7 @@ import logger from "~/lib/log";
 const log = logger("useWallet");
 
 export function useCreateWallet() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -46,7 +48,7 @@ export function useCreateWallet() {
     },
     onError: async (error: Error) => {
       await deleteWalletAction();
-      showAlert({ title: "Creation Failed", description: error.message });
+      showAlert({ title: gt("Creation Failed"), description: error.message });
     },
   });
 }
@@ -197,6 +199,7 @@ export function useGetExpiringVtxos() {
 }
 
 export function useRefreshExpiringVtxos() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -214,18 +217,19 @@ export function useRefreshExpiringVtxos() {
         queryClient.invalidateQueries({ queryKey: ["pending-rounds"] }),
       ]);
       showAlert({
-        title: "Refresh scheduled",
-        description: "A delegated refresh has been scheduled for eligible VTXOs.",
+        title: gt("Refresh scheduled"),
+        description: gt("A delegated refresh has been scheduled for eligible VTXOs."),
       });
     },
     onError: (error: Error) => {
       log.e("Failed to refresh expiring VTXOs", [error]);
-      showAlert({ title: "Failed to refresh VTXO", description: error.message });
+      showAlert({ title: gt("Failed to refresh VTXO"), description: error.message });
     },
   });
 }
 
 export function useEstimateRefreshFee() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -242,12 +246,13 @@ export function useEstimateRefreshFee() {
     },
     onError: (error: Error) => {
       log.e("Failed to estimate refresh fee", [error]);
-      showAlert({ title: "Failed to estimate refresh fee", description: error.message });
+      showAlert({ title: gt("Failed to estimate refresh fee"), description: error.message });
     },
   });
 }
 
 export function useRefreshSelectedVtxos() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -271,32 +276,33 @@ export function useRefreshSelectedVtxos() {
       ]);
       if (!roundState) {
         showAlert({
-          title: "No refresh needed",
-          description: "The selected VTXOs do not need to be refreshed yet.",
+          title: gt("No refresh needed"),
+          description: gt("The selected VTXOs do not need to be refreshed yet."),
         });
         return;
       }
 
       showAlert({
-        title: "Refresh scheduled",
-        description: "The selected VTXOs have been scheduled for refresh.",
+        title: gt("Refresh scheduled"),
+        description: gt("The selected VTXOs have been scheduled for refresh."),
       });
     },
     onError: (error: Error) => {
       log.e("Failed to refresh selected VTXOs", [error]);
-      showAlert({ title: "Failed to refresh VTXOs", description: error.message });
+      showAlert({ title: gt("Failed to refresh VTXOs"), description: error.message });
     },
   });
 }
 
 export function useCloseWallet() {
+  const gt = useGT();
   const { setWalletUnloaded } = useWalletStore();
   const { showAlert } = useAlert();
 
   return useMutation({
     mutationFn: closeWalletIfLoaded,
     onError: (error: Error) => {
-      showAlert({ title: "Failed to close wallet", description: error.message });
+      showAlert({ title: gt("Failed to close wallet"), description: error.message });
     },
     onSuccess: () => {
       setWalletUnloaded();
@@ -305,6 +311,7 @@ export function useCloseWallet() {
 }
 
 export const useBalanceSync = () => {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -317,12 +324,13 @@ export const useBalanceSync = () => {
       });
     },
     onError: (error: Error) => {
-      showAlert({ title: "Failed to sync wallet balance", description: error.message });
+      showAlert({ title: gt("Failed to sync wallet balance"), description: error.message });
     },
   });
 };
 
 export function useOffchainSync() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -333,12 +341,13 @@ export function useOffchainSync() {
       }
     },
     onError: (error: Error) => {
-      showAlert({ title: "Failed to sync wallet", description: error.message });
+      showAlert({ title: gt("Failed to sync wallet"), description: error.message });
     },
   });
 }
 
 export function useOnchainSync() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -349,12 +358,13 @@ export function useOnchainSync() {
       }
     },
     onError: (error: Error) => {
-      showAlert({ title: "Failed to sync wallet", description: error.message });
+      showAlert({ title: gt("Failed to sync wallet"), description: error.message });
     },
   });
 }
 
 export function useDeleteWallet() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -388,12 +398,13 @@ export function useDeleteWallet() {
       }
     },
     onError: (error: Error) => {
-      showAlert({ title: "Deletion Failed", description: error.message });
+      showAlert({ title: gt("Deletion Failed"), description: error.message });
     },
   });
 }
 
 export function useRestoreWallet() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -404,12 +415,13 @@ export function useRestoreWallet() {
       }
     },
     onError: (error: Error) => {
-      showAlert({ title: "Restore Failed", description: error.message });
+      showAlert({ title: gt("Restore Failed"), description: error.message });
     },
   });
 }
 
 export function useSuspendWallet() {
+  const gt = useGT();
   const { showAlert } = useAlert();
   const { setWalletSuspended, setWalletLoaded } = useWalletStore();
 
@@ -437,7 +449,7 @@ export function useSuspendWallet() {
         setWalletSuspended(false);
       }
       showAlert({
-        title: suspend ? "Failed to suspend wallet" : "Failed to resume wallet",
+        title: suspend ? gt("Failed to suspend wallet") : gt("Failed to resume wallet"),
         description: error.message,
       });
     },

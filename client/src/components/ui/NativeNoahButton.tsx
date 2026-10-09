@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import { Host } from "@expo/ui";
 import { useState } from "react";
 import { Button as ComposeButton, Shape, Text as ComposeText } from "@expo/ui/jetpack-compose";
@@ -85,10 +86,11 @@ export function NativeNoahButton({
   style,
   testID,
 }: NativeNoahButtonProps) {
+  const gt = useGT();
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const { isDark } = useTheme();
   const isDisabled = disabled || isLoading;
-  const displayedLabel = isLoading ? (loadingLabel ?? "Loading...") : label;
+  const displayedLabel = isLoading ? (loadingLabel ?? gt("Loading...")) : label;
   const height = BUTTON_HEIGHT[size];
   const activeColor = variant === "destructive" ? BUTTON_COLORS.destructive : BUTTON_COLORS.primary;
   const contentColor =
