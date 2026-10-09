@@ -1,0 +1,17 @@
+{
+  "$schema": "https://assets.gtx.dev/config-schema.json",
+  "defaultLocale": "en",
+  "locales": [
+    "es"
+  ],
+  "src": [
+    "src/screens/OnboardingScreen.tsx"
+  ],
+  "files": {
+    "gt": {
+      "output": "src/_gt/[locale].json"
+    }
+  },
+  "projectId": "prj_rqmymh8xftristtvxx5exf7h",
+  "_versionId": "2eaeaa6749c55d3049486482bfa4ac02950a3c792cc3d268f9c29810a519e1a8"
+}

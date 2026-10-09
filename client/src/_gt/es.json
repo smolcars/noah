@@ -1,0 +1,19 @@
+{
+  "20bc06bf56cdd6d8": {
+    "c": "Bienvenido a Noah",
+    "i": 1,
+    "t": "Text"
+  },
+  "5e000ac108f326ac": "Crear billetera",
+  "a086af17457c43e6": {
+    "c": "Idioma",
+    "i": 1,
+    "t": "Text"
+  },
+  "ccefc54c4f6b0f2b": "Restaurar billetera",
+  "d7abdc6ae4152022": {
+    "c": "Crea una billetera nueva o restaura una que ya tengas.",
+    "i": 1,
+    "t": "Text"
+  }
+}
