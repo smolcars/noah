@@ -286,7 +286,7 @@ just test               # Run server tests
 
 ### Translations
 
-The welcome screen uses [General Translation's React Native SDK](https://generaltranslation.com/docs/react/react-native-quickstart) with English (`en`) source copy and Spanish (`es`) translations. Choose a language on that screen; GT saves the selection in native storage.
+Noah uses [General Translation's React Native SDK](https://generaltranslation.com/docs/react/react-native-quickstart) with English (`en`) source copy and Spanish (`es`) translations. Choose a language with the native picker at the top right of onboarding or in **Settings → Account**, directly below Profile. GT saves the selection in native storage; it survives navigation and app restarts. Screens, validation, alerts, local notifications, and amount/date formatting follow the selected language. Product names, recovery phrases, addresses, and user-entered content stay unchanged. The existing Noah Story recording is in English.
 
 Run translation commands from `client/` inside the development shell:
 
@@ -297,9 +297,9 @@ bunx gt translate --dry-run   # Check the configured scope
 bunx gt translate            # Refresh translations after changing source copy
 ```
 
-`client/gt.config.json` selects the existing `noah` project and limits scanning to the welcome screen. Commit `client/src/_gt/*.json`, `client/gt-lock.json`, and `client/gt.config.json` together after translating. Metro bundles these local files, so existing release/CI build commands need no GT credentials or network access to GT. The native module requires a rebuilt development client; Expo Go is unsupported.
+`client/gt.config.json` selects the existing `noah` project (`prj_rqmymh8xftristtvxx5exf7h`) and scans `client/src/**/*.{ts,tsx}`. Commit `client/src/_gt/*.json`, `client/gt-lock.json`, and `client/gt.config.json` together after translating. Metro bundles these local files, so existing release/CI build commands need no GT credentials or network access to GT. The native module requires a rebuilt development client; Expo Go is unsupported.
 
-To translate another screen, add it to `src` in the config and mark its copy with `<T>` or `useGT()`. When adding a locale, update both the config and the static imports in `client/loadTranslations.ts`, then translate and rebuild. Manage translations in the [GT Dashboard](https://dash.generaltranslation.com).
+Mark new screen copy with `<T>` or `useGT()` and keep dynamic values in `<Var>` or ICU placeholders. Add context for ambiguous copy. Use `msg()` and the persisted-locale resolver in `backgroundTranslations.ts` for headless notifications; it uses the SDK’s pinned shared resolver and bundled files. Never submit recovery phrases or runtime user data as translation source. `just check` extracts the source offline and fails when the bundled catalog is missing an entry. When adding a locale, update both the config and the static imports in `client/loadTranslations.ts`, then translate and rebuild. Manage translations in the [GT Dashboard](https://dash.generaltranslation.com).
 
 If CI later generates translations, store `GT_API_KEY` and `GT_PROJECT_ID` in CI secrets and run `bunx gt translate` from `client/` before the existing build. The key needs `project:files:read`, `project:files:write`, and `project:translations:enqueue`; keep it out of app bundles. Local OAuth sign-in does not authenticate CI.
 

@@ -97,6 +97,7 @@
     "expo-status-bar": "~58.0.3",
     "expo-system-ui": "~58.0.5",
     "expo-task-manager": "~58.0.11",
+    "gt-i18n": "1.0.36",
     "gt-react-native": "11.4.10",
     "ky": "2.0.2",
     "light-bolt11-decoder": "3.2.0",
