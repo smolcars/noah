@@ -9,8 +9,8 @@ const AUTO_BOARD_MAX_GROSS_ESTIMATE_ITERATIONS = 5;
 export const getAutoBoardThreshold = (arkInfo: Pick<BarkArkInfo, "min_board_amount">): number =>
   Math.max(arkInfo.min_board_amount, AUTO_BOARD_FLOOR_AMOUNT);
 
-export const formatAutoBoardThreshold = (amountSat: number): string =>
-  `${amountSat.toLocaleString()} sats`;
+export const formatAutoBoardThreshold = (amountSat: number, locale?: string): string =>
+  `${amountSat.toLocaleString(locale)} sats`;
 
 export type AutoBoardPlan = {
   confirmedOnchainBalanceSat: number;

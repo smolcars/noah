@@ -60,9 +60,16 @@ export const fiatToSats = (amount: number, btcPrice: number): number => {
   return Math.round((amount / btcPrice) * 100_000_000);
 };
 
-export const formatFiatAmount = (amount: number | string, currency: FiatCurrencyCode): string => {
+export const formatFiatAmount = (
+  amount: number | string,
+  currency: FiatCurrencyCode,
+  locale?: string,
+): string => {
   const { decimals, symbol } = getFiatCurrencyInfo(currency);
   const numericAmount = typeof amount === "number" ? amount : Number(amount);
+  if (locale && Number.isFinite(numericAmount)) {
+    return new Intl.NumberFormat(locale, { style: "currency", currency }).format(numericAmount);
+  }
   const formattedAmount = Number.isFinite(numericAmount)
     ? numericAmount.toFixed(decimals)
     : amount.toString();

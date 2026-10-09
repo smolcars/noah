@@ -1,3 +1,4 @@
+import { T } from "gt-react-native";
 import React, { useState, useEffect, useRef } from "react";
 import { View, Pressable, Image, Platform, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -179,7 +180,9 @@ const NoahStoryScreen = () => {
             className="mr-3"
             testID="noah-story-back-button"
           />
-          <Text className="text-2xl font-bold text-foreground">Noah's Ark Story</Text>
+          <T>
+            <Text className="text-2xl font-bold text-foreground">Noah's Ark Story</Text>
+          </T>
         </View>
 
         <ScrollView contentContainerClassName="grow items-center justify-center px-4 pb-6">
@@ -192,12 +195,16 @@ const NoahStoryScreen = () => {
           </View>
 
           <View className="w-full mb-8">
-            <Text className="text-center text-foreground text-lg mb-4">
-              The Story of Noah's Ark
-            </Text>
-            <Text className="text-center text-muted-foreground text-sm">
-              Listen to the biblical story that inspired our wallet's name
-            </Text>
+            <T>
+              <Text className="text-center text-foreground text-lg mb-4">
+                The Story of Noah's Ark
+              </Text>
+            </T>
+            <T>
+              <Text className="text-center text-muted-foreground text-sm">
+                Listen to the biblical story that inspired our wallet's name
+              </Text>
+            </T>
           </View>
 
           <View className="w-full px-4">

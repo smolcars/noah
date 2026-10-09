@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import { useState } from "react";
 import { View, ScrollView, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -51,82 +52,82 @@ interface ActionOption {
   inputPlaceholder?: string;
 }
 
-const DEBUG_ACTIONS: ActionOption[] = [
-  {
-    id: "getArkInfo",
-    title: "Get Ark Info",
-    description: "Fetch the current Ark server info as JSON",
-  },
-  {
-    id: "getPushToken",
-    title: "Get Push Token",
-    description: "Fetch the current Expo push token or UnifiedPush endpoint",
-  },
-  {
-    id: "refreshServer",
-    title: "Refresh Server",
-    description: "Refresh server registration and sync the latest server state",
-  },
-  {
-    id: "maintenance",
-    title: "Maintenance",
-    description: "Run wallet maintenance, including on-chain sync and exit progression",
-  },
-  {
-    id: "maintenanceRefresh",
-    title: "Maintenance Refresh",
-    description: "Run maintenance refresh operation",
-  },
-  {
-    id: "maintenanceDelegated",
-    title: "Maintenance Delegated",
-    description: "Run delegated wallet maintenance, including on-chain sync",
-  },
-  {
-    id: "offboardAll",
-    title: "Offboard All",
-    description: "Offboard all funds to an on-chain address",
-    requiresInput: true,
-    inputPlaceholder: "Enter Bitcoin address",
-  },
-  {
-    id: "decodeVtxoHex",
-    title: "Decode VTXO Hex",
-    description: "Decode a serialized VTXO hex string without importing it",
-    requiresInput: true,
-    inputPlaceholder: "Enter VTXO hex",
-  },
-  {
-    id: "importVtxo",
-    title: "Import VTXO",
-    description: "Import a serialized VTXO hex string into the local wallet",
-    requiresInput: true,
-    inputPlaceholder: "Enter VTXO hex",
-  },
-  {
-    id: "dropVtxo",
-    title: "Drop VTXO",
-    description: "Dangerously remove a VTXO from the local wallet database",
-    requiresInput: true,
-    inputPlaceholder: "Enter VTXO ID",
-  },
-  {
-    id: "unlockVtxo",
-    title: "Unlock VTXO",
-    description: "Return a locked VTXO to the spendable state",
-    requiresInput: true,
-    inputPlaceholder: "Enter VTXO ID",
-  },
-];
-
-type DebugActionSelection = DebugAction | "none";
-
-const DEBUG_ACTION_OPTIONS: readonly NativeNoahPickerOption<DebugActionSelection>[] = [
-  { value: "none", label: "Choose an action..." },
-  ...DEBUG_ACTIONS.map((action) => ({ value: action.id, label: action.title })),
-];
-
 const DebugScreen = () => {
+  const gt = useGT();
+  const DEBUG_ACTIONS: ActionOption[] = [
+    {
+      id: "getArkInfo",
+      title: gt("Get Ark Info"),
+      description: gt("Fetch the current Ark server info as JSON"),
+    },
+    {
+      id: "getPushToken",
+      title: gt("Get Push Token"),
+      description: gt("Fetch the current Expo push token or UnifiedPush endpoint"),
+    },
+    {
+      id: "refreshServer",
+      title: gt("Refresh Server"),
+      description: gt("Refresh server registration and sync the latest server state"),
+    },
+    {
+      id: "maintenance",
+      title: gt("Maintenance"),
+      description: gt("Run wallet maintenance, including on-chain sync and exit progression"),
+    },
+    {
+      id: "maintenanceRefresh",
+      title: gt("Maintenance Refresh"),
+      description: gt("Run maintenance refresh operation"),
+    },
+    {
+      id: "maintenanceDelegated",
+      title: gt("Maintenance Delegated"),
+      description: gt("Run delegated wallet maintenance, including on-chain sync"),
+    },
+    {
+      id: "offboardAll",
+      title: gt("Offboard All"),
+      description: gt("Offboard all funds to an on-chain address"),
+      requiresInput: true,
+      inputPlaceholder: gt("Enter Bitcoin address"),
+    },
+    {
+      id: "decodeVtxoHex",
+      title: gt("Decode VTXO Hex"),
+      description: gt("Decode a serialized VTXO hex string without importing it"),
+      requiresInput: true,
+      inputPlaceholder: gt("Enter VTXO hex"),
+    },
+    {
+      id: "importVtxo",
+      title: gt("Import VTXO"),
+      description: gt("Import a serialized VTXO hex string into the local wallet"),
+      requiresInput: true,
+      inputPlaceholder: gt("Enter VTXO hex"),
+    },
+    {
+      id: "dropVtxo",
+      title: gt("Drop VTXO"),
+      description: gt("Dangerously remove a VTXO from the local wallet database"),
+      requiresInput: true,
+      inputPlaceholder: gt("Enter VTXO ID"),
+    },
+    {
+      id: "unlockVtxo",
+      title: gt("Unlock VTXO"),
+      description: gt("Return a locked VTXO to the spendable state"),
+      requiresInput: true,
+      inputPlaceholder: gt("Enter VTXO ID"),
+    },
+  ];
+
+  type DebugActionSelection = DebugAction | "none";
+
+  const DEBUG_ACTION_OPTIONS: readonly NativeNoahPickerOption<DebugActionSelection>[] = [
+    { value: "none", label: gt("Choose an action...") },
+    ...DEBUG_ACTIONS.map((action) => ({ value: action.id, label: action.title })),
+  ];
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const { showAlert } = useAlert();
   const [selectedAction, setSelectedAction] = useState<DebugAction | null>(null);
@@ -166,17 +167,22 @@ const DebugScreen = () => {
           case "success":
             return {
               success: true,
-              message: `Push type: ${payload.pushType}\n\n${payload.pushToken}`,
+              message: gt("Push type: {value1}\n\n{value2}", {
+                value1: payload.pushType,
+                value2: payload.pushToken,
+              }),
             };
           case "permission_denied":
             return {
               success: false,
-              error: `Push permission not granted (${payload.permissionStatus})`,
+              error: gt("Push permission not granted ({value1})", {
+                value1: payload.permissionStatus,
+              }),
             };
           case "device_not_supported":
             return {
               success: false,
-              error: "Push tokens are only available on a physical device",
+              error: gt("Push tokens are only available on a physical device"),
             };
         }
 
@@ -189,7 +195,7 @@ const DebugScreen = () => {
         if (result.isErr()) {
           return { success: false, error: result.error.message };
         }
-        return { success: true, message: "Server refresh completed successfully" };
+        return { success: true, message: gt("Server refresh completed successfully") };
       }
       case "maintenance": {
         log.d("Executing maintenance");
@@ -197,7 +203,7 @@ const DebugScreen = () => {
         if (result.isErr()) {
           return { success: false, error: result.error.message };
         }
-        return { success: true, message: "Maintenance completed successfully" };
+        return { success: true, message: gt("Maintenance completed successfully") };
       }
       case "maintenanceRefresh": {
         log.d("Executing maintenance refresh");
@@ -205,7 +211,7 @@ const DebugScreen = () => {
         if (result.isErr()) {
           return { success: false, error: result.error.message };
         }
-        return { success: true, message: "Maintenance refresh completed successfully" };
+        return { success: true, message: gt("Maintenance refresh completed successfully") };
       }
       case "maintenanceDelegated": {
         log.d("Executing maintenance delegated");
@@ -213,7 +219,7 @@ const DebugScreen = () => {
         if (result.isErr()) {
           return { success: false, error: result.error.message };
         }
-        return { success: true, message: "Maintenance delegated completed successfully" };
+        return { success: true, message: gt("Maintenance delegated completed successfully") };
       }
       case "offboardAll": {
         log.d("Executing offboard all to address:", [input]);
@@ -225,7 +231,10 @@ const DebugScreen = () => {
           typeof result.value === "object"
             ? JSON.stringify(result.value, null, 2)
             : String(result.value);
-        return { success: true, message: `Offboard completed.\n\nRound status:\n${statusStr}` };
+        return {
+          success: true,
+          message: gt("Offboard completed.\n\nRound status:\n{value1}", { value1: statusStr }),
+        };
       }
       case "decodeVtxoHex": {
         const vtxoHex = input.trim();
@@ -252,7 +261,7 @@ const DebugScreen = () => {
         if (result.isErr()) {
           return { success: false, error: result.error.message };
         }
-        return { success: true, message: `Dropped VTXO ${vtxoId}` };
+        return { success: true, message: gt("Dropped VTXO {value1}", { value1: vtxoId }) };
       }
       case "unlockVtxo": {
         const vtxoId = input.trim();
@@ -261,19 +270,19 @@ const DebugScreen = () => {
         if (result.isErr()) {
           return { success: false, error: result.error.message };
         }
-        return { success: true, message: `Unlocked VTXO ${vtxoId}` };
+        return { success: true, message: gt("Unlocked VTXO {value1}", { value1: vtxoId }) };
       }
     }
   };
 
   const handleExecute = async () => {
     if (!selectedAction) {
-      showAlert({ title: "Error", description: "Please select an action" });
+      showAlert({ title: gt("Error"), description: gt("Please select an action") });
       return;
     }
 
     if (selectedActionConfig?.requiresInput && !inputValue.trim()) {
-      showAlert({ title: "Error", description: "Please enter the required input" });
+      showAlert({ title: gt("Error"), description: gt("Please enter the required input") });
       return;
     }
 
@@ -298,7 +307,7 @@ const DebugScreen = () => {
     } else {
       log.e("Debug action failed:", [result.error]);
       setResultState({ kind: "error", message: result.error });
-      showAlert({ title: "Action Failed", description: result.error });
+      showAlert({ title: gt("Action Failed"), description: result.error });
     }
   };
 
@@ -322,7 +331,7 @@ const DebugScreen = () => {
     } else {
       log.e("Debug action failed:", [result.error]);
       setResultState({ kind: "error", message: result.error });
-      showAlert({ title: "Action Failed", description: result.error });
+      showAlert({ title: gt("Action Failed"), description: result.error });
     }
   };
 
@@ -353,7 +362,9 @@ const DebugScreen = () => {
           className="mr-3"
           testID="debug-back-button"
         />
-        <Text className="text-2xl font-bold text-foreground">Debug</Text>
+        <T>
+          <Text className="text-2xl font-bold text-foreground">Debug</Text>
+        </T>
       </View>
 
       <ScrollView
@@ -364,7 +375,9 @@ const DebugScreen = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View className="mb-6 mt-6">
-          <Label className="text-foreground text-2xl mb-2">Select Action</Label>
+          <T>
+            <Label className="text-foreground text-2xl mb-2">Select Action</Label>
+          </T>
           <NativeNoahPicker
             value={selectedAction ?? "none"}
             options={DEBUG_ACTION_OPTIONS}
@@ -419,17 +432,17 @@ const DebugScreen = () => {
               {resultState.message}
             </Text>
             <Text className="text-muted-foreground text-md mt-2">
-              {copied ? "Copied!" : "Long press to copy"}
+              {copied ? gt("Copied!") : gt("Long press to copy")}
             </Text>
           </Pressable>
         )}
 
         <NativeNoahButton
-          label="Execute Action"
+          label={gt("Execute Action")}
           onPress={handleExecute}
           disabled={!selectedAction || isLoading}
           isLoading={isLoading}
-          loadingLabel="Executing..."
+          loadingLabel={gt("Executing...")}
           className="mb-6"
           fullWidth
         />
@@ -437,8 +450,11 @@ const DebugScreen = () => {
         <ConfirmationDialog
           open={isDropDialogOpen}
           onOpenChange={setIsDropDialogOpen}
-          title="Drop VTXO"
-          description={`This action is irreversible and can cause loss of funds. To confirm, please type "delete" in the box below.`}
+          title={gt("Drop VTXO")}
+          description={gt(
+            'This action is irreversible and can cause loss of funds. To confirm, please type "{word}" in the box below.',
+            { word: "delete" },
+          )}
           onConfirm={() => {
             void handleConfirmedDropVtxo();
           }}
@@ -448,7 +464,7 @@ const DebugScreen = () => {
           <Input
             value={dropConfirmText}
             onChangeText={setDropConfirmText}
-            placeholder='Type "delete" to confirm'
+            placeholder={gt('Type "{word}" to confirm', { word: "delete" })}
             className="h-12"
             autoCapitalize="none"
             autoCorrect={false}

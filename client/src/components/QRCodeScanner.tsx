@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import React from "react";
 import { View, Pressable, StyleSheet, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,6 +17,7 @@ type QRCodeScannerProps = {
 };
 
 export const QRCodeScanner = ({ codeScanner, onClose, onPaste }: QRCodeScannerProps) => {
+  const gt = useGT();
   const device = useCameraDevice("back");
   const isFocused = useIsFocused();
   const { width, height } = useWindowDimensions();
@@ -41,8 +43,10 @@ export const QRCodeScanner = ({ codeScanner, onClose, onPaste }: QRCodeScannerPr
   if (!device) {
     return (
       <NoahSafeAreaView className="flex-1 bg-background justify-center items-center p-4">
-        <Text className="text-lg text-center">No camera device found.</Text>
-        <NativeNoahButton label="Back" onPress={onClose} className="mt-4" />
+        <T>
+          <Text className="text-lg text-center">No camera device found.</Text>
+        </T>
+        <NativeNoahButton label={gt("Back")} onPress={onClose} className="mt-4" />
       </NoahSafeAreaView>
     );
   }
@@ -77,7 +81,7 @@ export const QRCodeScanner = ({ codeScanner, onClose, onPaste }: QRCodeScannerPr
           <View className="flex-row items-center gap-3">
             {onPaste ? (
               <Pressable
-                accessibilityLabel="Paste payment request"
+                accessibilityLabel={gt("Paste payment request")}
                 accessibilityRole="button"
                 onPress={handlePaste}
                 className="bg-white/20 rounded-full p-4 border border-white/30"
@@ -85,12 +89,14 @@ export const QRCodeScanner = ({ codeScanner, onClose, onPaste }: QRCodeScannerPr
               >
                 <View className="flex-row items-center justify-center space-x-2">
                   <Icon name="clipboard" size={28} color="white" />
-                  <Text className="text-white text-lg font-semibold ml-2">Paste</Text>
+                  <T>
+                    <Text className="text-white text-lg font-semibold ml-2">Paste</Text>
+                  </T>
                 </View>
               </Pressable>
             ) : null}
             <Pressable
-              accessibilityLabel="Close scanner"
+              accessibilityLabel={gt("Close scanner")}
               accessibilityRole="button"
               onPress={onClose}
               className="bg-white/20 rounded-full p-4 border border-white/30"
@@ -98,7 +104,9 @@ export const QRCodeScanner = ({ codeScanner, onClose, onPaste }: QRCodeScannerPr
             >
               <View className="flex-row items-center justify-center space-x-2">
                 <Icon name="close-circle" size={28} color="white" />
-                <Text className="text-white text-lg font-semibold ml-2">Close</Text>
+                <T>
+                  <Text className="text-white text-lg font-semibold ml-2">Close</Text>
+                </T>
               </View>
             </Pressable>
           </View>

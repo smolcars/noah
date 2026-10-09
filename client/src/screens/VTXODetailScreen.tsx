@@ -1,3 +1,4 @@
+import { useLocale, T, useGT } from "gt-react-native";
 import { View, Pressable, ScrollView, Linking } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -109,6 +110,8 @@ export const VTXODetailContent = ({
   vtxo: VTXOWithStatus;
   onClose: () => void;
 }) => {
+  const gt = useGT();
+  const locale = useLocale();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const { showAlert } = useAlert();
   const [refreshEstimate, setRefreshEstimate] = useState<BarkFeeEstimate | null>(null);
@@ -137,12 +140,12 @@ export const VTXODetailContent = ({
     estimateRefreshFee.isPending || refreshSelectedVtxos.isPending || walletSync.isPending;
   const statusLabel =
     vtxo.state === "Locked"
-      ? "Locked"
+      ? gt("Locked")
       : isExpired
-        ? "Expired"
+        ? gt("Expired")
         : vtxo.isExpiring
-          ? "Expiring"
-          : "Active";
+          ? gt("Expiring")
+          : gt("Active");
 
   const getStatusColor = (vtxo: VTXOWithStatus) => {
     if (vtxo.state === "Locked") return "text-gray-500";
@@ -190,7 +193,7 @@ export const VTXODetailContent = ({
       },
       onError: (error) => {
         showAlert({
-          title: "Sync failed",
+          title: gt("Sync failed"),
           description: error instanceof Error ? error.message : String(error),
         });
       },
@@ -207,7 +210,9 @@ export const VTXODetailContent = ({
             className="mr-3"
             testID="vtxo-detail-back-button"
           />
-          <Text className="text-2xl font-bold text-foreground">VTXO Details</Text>
+          <T>
+            <Text className="text-2xl font-bold text-foreground">VTXO Details</Text>
+          </T>
         </View>
 
         <ScrollView
@@ -218,7 +223,7 @@ export const VTXODetailContent = ({
           {needsRefresh ? (
             <StatusBannerStrip
               className="mb-4"
-              title={isExpired ? "VTXO expired" : "VTXO expiring soon"}
+              title={isExpired ? gt("VTXO expired") : gt("VTXO expiring soon")}
               message="Refresh this VTXO to keep it available."
               icon={
                 <Icon
@@ -247,43 +252,59 @@ export const VTXODetailContent = ({
           </View>
 
           <View className="bg-card p-4 rounded-lg mb-4">
-            <VTXODetailRow label="Amount" value={formatBitcoinAmount(vtxo.amount)} />
-            <VTXODetailRow label="State" value={vtxo.state} />
-            <VTXODetailRow label="Status" value={statusLabel} />
+            <VTXODetailRow label={gt("Amount")} value={formatBitcoinAmount(vtxo.amount)} />
             <VTXODetailRow
-              label="Current Block Height"
-              value={blockHeight ? blockHeight.toLocaleString() : "Loading..."}
+              label={gt("State")}
+              value={
+                {
+                  Spendable: gt("Spendable"),
+                  Spent: gt("Spent"),
+                  Locked: gt("Locked"),
+                  Exited: gt("Exited"),
+                  unknown: gt("Unknown"),
+                }[vtxo.state]
+              }
             />
-            <VTXODetailRow label="Expiry Height" value={vtxo.expiry_height.toLocaleString()} />
+            <VTXODetailRow label={gt("Status")} value={statusLabel} />
             <VTXODetailRow
-              label="Blocks Until Expiry"
+              label={gt("Current Block Height")}
+              value={blockHeight ? blockHeight.toLocaleString(locale) : gt("Loading...")}
+            />
+            <VTXODetailRow
+              label={gt("Expiry Height")}
+              value={vtxo.expiry_height.toLocaleString(locale)}
+            />
+            <VTXODetailRow
+              label={gt("Blocks Until Expiry")}
               value={
                 blockHeight
                   ? vtxo.expiry_height > blockHeight
-                    ? `${(vtxo.expiry_height - blockHeight).toLocaleString()}`
-                    : "Expired"
-                  : "Loading..."
+                    ? `${(vtxo.expiry_height - blockHeight).toLocaleString(locale)}`
+                    : gt("Expired")
+                  : gt("Loading...")
               }
             />
-            <VTXODetailRow label="Exit Delta" value={vtxo.exit_delta.toString()} />
+            <VTXODetailRow label={gt("Exit Delta")} value={vtxo.exit_delta.toString()} />
           </View>
 
           <View className="bg-card p-4 rounded-lg mb-4">
-            <Text className="text-foreground text-lg font-semibold mb-3">Vtxo Details</Text>
-            <VTXODetailRow label="ID" value={vtxo.id} copyable />
+            <T>
+              <Text className="text-foreground text-lg font-semibold mb-3">Vtxo Details</Text>
+            </T>
+            <VTXODetailRow label={gt("ID")} value={vtxo.id} copyable />
             <VTXODetailRow
-              label="Anchor Point"
+              label={gt("Anchor Point")}
               value={vtxo.anchor_point}
               copyable
               explorerUrl={anchorExplorerUrl}
             />
-            <VTXODetailRow label="Server Public Key" value={vtxo.server_pubkey} copyable />
+            <VTXODetailRow label={gt("Server Public Key")} value={vtxo.server_pubkey} copyable />
           </View>
 
           {canRefresh ? (
             <NativeNoahButton
-              label="Refresh VTXO"
-              loadingLabel="Estimating fee..."
+              label={gt("Refresh VTXO")}
+              loadingLabel={gt("Estimating fee...")}
               onPress={handleRefreshPress}
               disabled={refreshSelectedVtxos.isPending || walletSync.isPending}
               isLoading={estimateRefreshFee.isPending}

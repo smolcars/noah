@@ -1,3 +1,5 @@
+import { getLocale, msg } from "gt-react-native";
+import { getBackgroundMessages } from "~/lib/backgroundTranslations";
 import { Platform } from "react-native";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
@@ -49,8 +51,9 @@ async function ensureDefaultNotificationChannel() {
     return;
   }
 
+  const m = await getBackgroundMessages();
   await Notifications.setNotificationChannelAsync(DEFAULT_NOTIFICATION_CHANNEL_ID, {
-    name: "default",
+    name: m(msg("Default", { $context: "Default Android notification channel name." })),
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: "#FF231F7C",
@@ -60,11 +63,17 @@ async function ensureDefaultNotificationChannel() {
 async function scheduleLightningPaymentNotification(amountSat: number): Promise<string> {
   await ensureDefaultNotificationChannel();
   const { bitcoinAmountUnit } = useProfileStore.getState();
+  const m = await getBackgroundMessages();
+  const locale = getLocale();
 
   return Notifications.scheduleNotificationAsync({
     content: {
-      title: "Lightning Payment Received! ⚡",
-      body: `You received ${formatBitcoinAmount(amountSat, bitcoinAmountUnit)}`,
+      title: m(msg("Lightning Payment Received! ⚡")),
+      body: m(
+        msg("You received {amount}", {
+          amount: formatBitcoinAmount(amountSat, bitcoinAmountUnit, locale),
+        }),
+      ),
       sound: "default",
       priority: Notifications.AndroidNotificationPriority.MAX,
       data: {

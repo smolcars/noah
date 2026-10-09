@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, type TextInputInstance, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -31,6 +32,7 @@ const truncateValue = (value: string) => {
 };
 
 const CopyRow = ({ label, value }: { label: string; value: string }) => {
+  const gt = useGT();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -51,20 +53,21 @@ const CopyRow = ({ label, value }: { label: string; value: string }) => {
           numberOfLines={1}
           ellipsizeMode="middle"
         >
-          {copied ? "Copied" : truncateValue(value)}
+          {copied ? gt("Copied") : truncateValue(value)}
         </Text>
       </View>
       <Text
         className="text-xs font-semibold uppercase tracking-[2px]"
         style={{ color: copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE }}
       >
-        {copied ? "Copied" : "Copy"}
+        {copied ? gt("Copied") : gt("Copy")}
       </Text>
     </Pressable>
   );
 };
 
 const ProfileScreen = () => {
+  const gt = useGT();
   const navigation = useNavigation<ProfileNavigationProp>();
   const iconColor = useIconColor();
   const colors = useThemeColors();
@@ -157,7 +160,7 @@ const ProfileScreen = () => {
   };
 
   const isNameInputEditable = isEditingName && saveStatus !== "saving";
-  const nameActionLabel = isEditingName ? "Save" : "Edit";
+  const nameActionLabel = isEditingName ? gt("Save") : gt("Edit");
   const nameActionColor =
     saveStatus === "error"
       ? "#ef4444"
@@ -181,13 +184,17 @@ const ProfileScreen = () => {
               className="mr-3"
               testID="profile-back-button"
             />
-            <Text className="text-2xl font-bold text-foreground">Profile</Text>
+            <T>
+              <Text className="text-2xl font-bold text-foreground">Profile</Text>
+            </T>
           </View>
 
           <View className="mt-8">
-            <Label className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
-              Name
-            </Label>
+            <T>
+              <Label className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
+                Name
+              </Label>
+            </T>
             <View className="mt-3">
               <Input
                 ref={nameInputRef}
@@ -197,7 +204,7 @@ const ProfileScreen = () => {
                   setDraftDisplayName(value);
                   setSaveStatus("idle");
                 }}
-                placeholder="Add a display name"
+                placeholder={gt("Add a display name")}
                 editable={isNameInputEditable}
                 className="h-14 rounded-2xl py-0 pl-4 pr-24"
                 style={{
@@ -226,7 +233,7 @@ const ProfileScreen = () => {
               <Pressable
                 onPress={handleNameAction}
                 disabled={saveStatus === "saving"}
-                accessibilityLabel={isEditingName ? "Save name" : "Edit name"}
+                accessibilityLabel={isEditingName ? gt("Save name") : gt("Edit name")}
                 className="absolute right-2 top-2 h-10 min-w-16 items-center justify-center rounded-full px-3"
                 style={{ backgroundColor: `${nameActionColor}18` }}
               >
@@ -238,9 +245,11 @@ const ProfileScreen = () => {
           </View>
 
           <View className="mt-8">
-            <Text className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
-              Lightning Address
-            </Text>
+            <T>
+              <Text className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
+                Lightning Address
+              </Text>
+            </T>
             <View
               className="mt-3 overflow-hidden rounded-[18px] border"
               style={{
@@ -249,21 +258,25 @@ const ProfileScreen = () => {
               }}
             >
               {lightningAddress ? (
-                <CopyRow label="Address" value={lightningAddress} />
+                <CopyRow label={gt("Address")} value={lightningAddress} />
               ) : (
                 <View className="px-4 py-4">
-                  <Text className="text-base font-semibold text-foreground">
-                    No Lightning address set
-                  </Text>
-                  <Text className="mt-1 text-sm text-muted-foreground">
-                    Create one to receive payments with your QR code.
-                  </Text>
+                  <T>
+                    <Text className="text-base font-semibold text-foreground">
+                      No Lightning address set
+                    </Text>
+                  </T>
+                  <T>
+                    <Text className="mt-1 text-sm text-muted-foreground">
+                      Create one to receive payments with your QR code.
+                    </Text>
+                  </T>
                 </View>
               )}
               {nostrNpub ? (
                 <>
                   <View className="h-px bg-border" />
-                  <CopyRow label="NIP-05 Nostr public key" value={nostrNpub} />
+                  <CopyRow label={gt("NIP-05 Nostr public key")} value={nostrNpub} />
                 </>
               ) : null}
               <View className="h-px bg-border" />
@@ -272,7 +285,7 @@ const ProfileScreen = () => {
                 className="flex-row items-center justify-between px-4 py-4"
               >
                 <Text className="text-base font-semibold text-foreground">
-                  {nostrNpub ? "Change Lightning & NIP-05" : "Configure Lightning & NIP-05"}
+                  {nostrNpub ? gt("Change Lightning & NIP-05") : gt("Configure Lightning & NIP-05")}
                 </Text>
                 <Icon name="chevron-forward-outline" size={22} color={iconColor} />
               </Pressable>
@@ -280,9 +293,11 @@ const ProfileScreen = () => {
           </View>
 
           <View className="mt-8">
-            <Text className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
-              Emergency Email
-            </Text>
+            <T>
+              <Text className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
+                Emergency Email
+              </Text>
+            </T>
             <View
               className="mt-3 overflow-hidden rounded-[18px] border"
               style={{
@@ -291,16 +306,16 @@ const ProfileScreen = () => {
               }}
             >
               {isEmailVerified && emailAddress ? (
-                <CopyRow label="Address" value={emailAddress} />
+                <CopyRow label={gt("Address")} value={emailAddress} />
               ) : (
                 <View className="px-4 py-4">
                   <Text className="text-base font-semibold text-foreground">
-                    {isEmailVerified ? "Email alerts enabled" : "No emergency email set"}
+                    {isEmailVerified ? gt("Email alerts enabled") : gt("No emergency email set")}
                   </Text>
                   <Text className="mt-1 text-sm text-muted-foreground">
                     {isEmailVerified
-                      ? "Your address will appear after the next server sync."
-                      : "Optional alerts for urgent wallet communication."}
+                      ? gt("Your address will appear after the next server sync.")
+                      : gt("Optional alerts for urgent wallet communication.")}
                   </Text>
                 </View>
               )}
@@ -310,7 +325,7 @@ const ProfileScreen = () => {
                 className="flex-row items-center justify-between px-4 py-4"
               >
                 <Text className="text-base font-semibold text-foreground">
-                  {isEmailVerified ? "Change Emergency Email" : "Add Emergency Email"}
+                  {isEmailVerified ? gt("Change Emergency Email") : gt("Add Emergency Email")}
                 </Text>
                 <Icon name="chevron-forward-outline" size={22} color={iconColor} />
               </Pressable>
@@ -319,9 +334,11 @@ const ProfileScreen = () => {
 
           {derivedKeyPair?.public_key ? (
             <View className="mt-8">
-              <Text className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
-                Public Key
-              </Text>
+              <T>
+                <Text className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
+                  Public Key
+                </Text>
+              </T>
               <View
                 className="mt-3 overflow-hidden rounded-[18px] border"
                 style={{
@@ -329,7 +346,7 @@ const ProfileScreen = () => {
                   backgroundColor: `${colors.card}CC`,
                 }}
               >
-                <CopyRow label="Wallet public key" value={derivedKeyPair.public_key} />
+                <CopyRow label={gt("Wallet public key")} value={derivedKeyPair.public_key} />
               </View>
             </View>
           ) : null}

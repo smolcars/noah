@@ -1,3 +1,5 @@
+import { sourceText, type Translate } from "~/lib/i18n";
+import { useGT } from "gt-react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAlert } from "~/contexts/AlertProvider";
 import {
@@ -87,10 +89,13 @@ const parseLightningAddress = (destination: string) => {
   return { username: parts[0], domain: parts[1] };
 };
 
-const fetchLnurlpResponse = async (url: URL): Promise<LnurlpDefaultResponse> => {
+const fetchLnurlpResponse = async (
+  url: URL,
+  gt: Translate = sourceText,
+): Promise<LnurlpDefaultResponse> => {
   const response = await ky.get(url.toString()).json<LnurlpDefaultResponse>();
   if (response.tag !== "payRequest" || !response.callback) {
-    throw new Error("Invalid LNURL response for lightning address payment");
+    throw new Error(gt("Invalid LNURL response for lightning address payment"));
   }
 
   return response;
@@ -120,36 +125,38 @@ const paymentRouteFromLnurlpResponse = async (
 
 export const resolveLightningAddressPaymentRoute = async (
   destination: string,
+  gt: Translate = sourceText,
 ): Promise<LightningAddressPaymentRoute> => {
   const parsed = parseLightningAddress(destination);
   if (!parsed) {
-    throw new Error("Destination is not a lightning address");
+    throw new Error(gt("Destination is not a lightning address"));
   }
 
   const lnurlEndpoint = new URL(`https://${parsed.domain}/.well-known/lnurlp/${parsed.username}`);
   const arkInfoResult = await getArkInfo();
   if (arkInfoResult.isErr()) {
     log.w("Unable to load Ark server info, using standard LNURL discovery", [arkInfoResult.error]);
-    const response = await fetchLnurlpResponse(lnurlEndpoint);
+    const response = await fetchLnurlpResponse(lnurlEndpoint, gt);
     return paymentRouteFromLnurlpResponse(response, false);
   }
 
   const arkLnurlEndpoint = new URL(lnurlEndpoint);
   arkLnurlEndpoint.searchParams.set("ark", arkInfoResult.value.server_pubkey);
 
-  const response = await fetchLnurlpResponse(arkLnurlEndpoint);
+  const response = await fetchLnurlpResponse(arkLnurlEndpoint, gt);
   return paymentRouteFromLnurlpResponse(response, true);
 };
 
 export function useLightningAddressPaymentRoute(destination: string | null) {
+  const gt = useGT();
   return useQuery({
     queryKey: ["payment-route", "lightning-address", destination],
     queryFn: () => {
       if (!destination) {
-        throw new Error("Lightning address payment destination is required");
+        throw new Error(gt("Lightning address payment destination is required"));
       }
 
-      return resolveLightningAddressPaymentRoute(destination);
+      return resolveLightningAddressPaymentRoute(destination, gt);
     },
     enabled: destination !== null,
     staleTime: 0,
@@ -158,6 +165,7 @@ export function useLightningAddressPaymentRoute(destination: string | null) {
 }
 
 export function useGenerateOffchainAddress() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -169,12 +177,13 @@ export function useGenerateOffchainAddress() {
       return result.value.address;
     },
     onError: (error: Error) => {
-      showAlert({ title: "Vtxo Pubkey Generation Failed", description: error.message });
+      showAlert({ title: gt("Vtxo Pubkey Generation Failed"), description: error.message });
     },
   });
 }
 
 export function useGenerateOnchainAddress() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -186,12 +195,13 @@ export function useGenerateOnchainAddress() {
       return result.value;
     },
     onError: (error: Error) => {
-      showAlert({ title: "On-chain Address Generation Failed", description: error.message });
+      showAlert({ title: gt("On-chain Address Generation Failed"), description: error.message });
     },
   });
 }
 
 export function useGenerateReceiveAddresses() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -214,12 +224,13 @@ export function useGenerateReceiveAddresses() {
       };
     },
     onError: (error: Error) => {
-      showAlert({ title: "Receive Request Failed", description: error.message });
+      showAlert({ title: gt("Receive Request Failed"), description: error.message });
     },
   });
 }
 
 export function useGenerateLightningInvoice() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -231,12 +242,13 @@ export function useGenerateLightningInvoice() {
       return result.value;
     },
     onError: (error: Error) => {
-      showAlert({ title: "Lightning Invoice Generation Failed", description: error.message });
+      showAlert({ title: gt("Lightning Invoice Generation Failed"), description: error.message });
     },
   });
 }
 
 export function useBoardArk() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -252,12 +264,13 @@ export function useBoardArk() {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
     onError: (error: Error) => {
-      showAlert({ title: "Boarding Failed", description: error.message });
+      showAlert({ title: gt("Boarding Failed"), description: error.message });
     },
   });
 }
 
 export function useBoardAllAmountArk() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -273,7 +286,7 @@ export function useBoardAllAmountArk() {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
     onError: (error: Error) => {
-      showAlert({ title: "Boarding Failed", description: error.message });
+      showAlert({ title: gt("Boarding Failed"), description: error.message });
     },
   });
 }
@@ -318,11 +331,12 @@ const readEstimateResult = async <T>(estimatePromise: Promise<Result<T, Error>>)
 };
 
 export function useSendFeeEstimate(params: SendFeeEstimateParams | null) {
+  const gt = useGT();
   return useQuery({
     queryKey: ["fee-estimate", "send", params],
     queryFn: async () => {
       if (!params) {
-        throw new Error("Fee estimate parameters are required");
+        throw new Error(gt("Fee estimate parameters are required"));
       }
 
       switch (params.method) {
@@ -385,11 +399,12 @@ type BoardArkFeeEstimateParams = {
 };
 
 export function useBoardArkFeeEstimate(params: BoardArkFeeEstimateParams | null) {
+  const gt = useGT();
   return useQuery({
     queryKey: ["fee-estimate", "board-ark", params],
     queryFn: async (): Promise<BoardArkFeeEstimateResult> => {
       if (!params) {
-        throw new Error("Boarding fee estimate parameters are required");
+        throw new Error(gt("Boarding fee estimate parameters are required"));
       }
 
       const onchainEstimate = await readEstimateResult(estimateStandardOnchainTxFee("regular"));
@@ -449,11 +464,12 @@ export function useBoardArkFeeEstimate(params: BoardArkFeeEstimateParams | null)
 }
 
 export function useIsOnchainAddressMine(address: string | null) {
+  const gt = useGT();
   return useQuery({
     queryKey: ["is-onchain-address-mine", address],
     queryFn: async () => {
       if (!address) {
-        throw new Error("Address is required");
+        throw new Error(gt("Address is required"));
       }
 
       const result = await onchainIsMine(address);
@@ -470,6 +486,7 @@ export function useIsOnchainAddressMine(address: string | null) {
 
 export const readLightningPayment = async (
   paymentPromise: Promise<Result<LightningPayment, Error>>,
+  gt: Translate = sourceText,
 ): Promise<LightningPayment> => {
   const result = await paymentPromise;
 
@@ -480,7 +497,7 @@ export const readLightningPayment = async (
 
   if (result.value.state !== "paid") {
     log.w("Lightning payment did not complete", [result.value]);
-    throw new Error("Lightning payment did not complete.");
+    throw new Error(gt("Lightning payment did not complete."));
   }
 
   return result.value;
@@ -492,10 +509,11 @@ export const sendLightningAddressPayment = async (
   amountSat: number,
   comment: string | null,
   beforeSubmit?: BeforeSubmitPayment,
+  gt: Translate = sourceText,
 ): Promise<ArkoorPaymentWithMovement | LightningPayment> => {
   const amountMsat = amountSat * 1000;
   if (amountMsat < route.minSendableMsat || amountMsat > route.maxSendableMsat) {
-    throw new Error("Payment amount is outside the supported range for this lightning address");
+    throw new Error(gt("Payment amount is outside the supported range for this lightning address"));
   }
 
   if (route.method === "ark" && shouldUseArkDirectLightningAddressRoute(route.method, comment)) {
@@ -539,10 +557,11 @@ export const sendLightningAddressPayment = async (
 
   log.d("Paying via standard Lightning Address flow");
   beforeSubmit?.();
-  return readLightningPayment(payLightningAddress(destination, amountSat, comment || ""));
+  return readLightningPayment(payLightningAddress(destination, amountSat, comment || ""), gt);
 };
 
 export function useSend(destinationType: DestinationTypes) {
+  const gt = useGT();
   return useMutation<SendResult, Error, SendVariables>({
     mutationFn: async (variables) => {
       const {
@@ -556,7 +575,7 @@ export function useSend(destinationType: DestinationTypes) {
         repeatPayment,
       } = variables;
       if (!isMaxAmount && amountSat === undefined && destinationType !== "lightning") {
-        throw new Error("Amount is required");
+        throw new Error(gt("Amount is required"));
       }
 
       let result;
@@ -564,7 +583,7 @@ export function useSend(destinationType: DestinationTypes) {
         case "onchain":
           if (isMaxAmount) {
             if (!onchainSource) {
-              throw new Error("A balance source is required to send the maximum amount");
+              throw new Error(gt("A balance source is required to send the maximum amount"));
             }
 
             if (onchainSource === "offchain") {
@@ -589,7 +608,7 @@ export function useSend(destinationType: DestinationTypes) {
           }
 
           if (amountSat === undefined) {
-            throw new Error("Amount is required for onchain payments");
+            throw new Error(gt("Amount is required for onchain payments"));
           }
           result =
             onchainSource === "offchain"
@@ -598,15 +617,15 @@ export function useSend(destinationType: DestinationTypes) {
           break;
         case "ark":
           if (amountSat === undefined) {
-            throw new Error("Amount is required for Ark payments");
+            throw new Error(gt("Amount is required for Ark payments"));
           }
           result = await sendArkoorPayment(destination, amountSat);
           break;
         case "lightning":
-          return readLightningPayment(payLightningInvoice(destination, amountSat));
+          return readLightningPayment(payLightningInvoice(destination, amountSat), gt);
         case "lnurl": {
           if (amountSat === undefined) {
-            throw new Error("Amount is required for LNURL payments");
+            throw new Error(gt("Amount is required for LNURL payments"));
           }
 
           let paymentResult: ArkoorPaymentWithMovement | LightningPayment;
@@ -616,11 +635,13 @@ export function useSend(destinationType: DestinationTypes) {
               destination,
               amountSat,
               comment,
+              undefined,
+              gt,
             );
           } else {
             let route: LightningAddressPaymentRoute | undefined;
             try {
-              route = await resolveLightningAddressPaymentRoute(destination);
+              route = await resolveLightningAddressPaymentRoute(destination, gt);
             } catch (routeError) {
               log.w("Failed to resolve lightning address payment route, using standard LNURL", [
                 routeError,
@@ -628,9 +649,17 @@ export function useSend(destinationType: DestinationTypes) {
             }
 
             paymentResult = route
-              ? await sendLightningAddressPayment(route, destination, amountSat, comment)
+              ? await sendLightningAddressPayment(
+                  route,
+                  destination,
+                  amountSat,
+                  comment,
+                  undefined,
+                  gt,
+                )
               : await readLightningPayment(
                   payLightningAddress(destination, amountSat, comment || ""),
+                  gt,
                 );
           }
 
@@ -652,9 +681,9 @@ export function useSend(destinationType: DestinationTypes) {
           return paymentResult;
         }
         case "offer":
-          return readLightningPayment(payLightningOffer(destination, amountSat));
+          return readLightningPayment(payLightningOffer(destination, amountSat), gt);
         default:
-          throw new Error("Invalid destination type");
+          throw new Error(gt("Invalid destination type"));
       }
 
       if (result.isErr()) {

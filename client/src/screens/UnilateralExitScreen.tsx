@@ -1,3 +1,6 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
+import { type Translate } from "~/lib/i18n";
+import { useLocale, T, useGT, Var, Plural } from "gt-react-native";
 import React, { useEffect, useState } from "react";
 import {
   Keyboard,
@@ -41,7 +44,7 @@ import { APP_VARIANT } from "~/config";
 import { getMempoolTxUrl } from "~/constants";
 import {
   buildExitTimelineItems,
-  EXIT_STATE_LABELS,
+  getExitStateLabels,
   EXIT_STATE_ORDER,
   formatBlocksRemaining,
   getExitBlockRows,
@@ -150,6 +153,7 @@ const ExitStep = ({
   isActive: boolean;
   count: number;
 }) => {
+  const gt = useGT();
   const tone = stateTone(state);
   return (
     <View className="flex-row items-center">
@@ -164,11 +168,11 @@ const ExitStep = ({
       <View className="ml-3 flex-1 border-b border-border/40 py-3">
         <View className="flex-row items-center justify-between">
           <Text className={cn("font-semibold", isActive ? tone.className : "text-foreground")}>
-            {EXIT_STATE_LABELS[state]}
+            {getExitStateLabels(gt)[state]}
           </Text>
           {count > 0 ? (
             <Text className="text-xs text-muted-foreground">
-              {count} {count === 1 ? "VTXO" : "VTXOs"}
+              {count} {count === 1 ? gt("VTXO") : gt("VTXOs")}
             </Text>
           ) : null}
         </View>
@@ -176,22 +180,6 @@ const ExitStep = ({
     </View>
   );
 };
-
-const PHASE_LABELS: Record<ExitProgressState, string> = {
-  Start: "Start",
-  Processing: "Process",
-  AwaitingDelta: "Wait",
-  Claimable: "Ready",
-  ClaimInProgress: "Claim",
-  Claimed: "Done",
-  VtxoAlreadySpent: "Spent",
-  Canceled: "Canceled",
-};
-
-const EXIT_MODE_OPTIONS = [
-  { label: "Entire wallet", value: "wallet" },
-  { label: "Selected VTXOs", value: "selected" },
-] as const satisfies readonly NativeNoahPickerOption<ExitStartMode>[];
 
 const ExitPhaseRail = ({
   currentState,
@@ -206,13 +194,27 @@ const ExitPhaseRail = ({
   currentDetails?: ExitStateDetails;
   currentBlockHeight?: number;
 }) => {
-  const items = buildExitTimelineItems({
-    history,
-    historyDetails,
-    currentState,
-    currentDetails,
-    currentBlockHeight,
-  });
+  const gt = useGT();
+  const PHASE_LABELS: Record<ExitProgressState, string> = {
+    Start: gt("Start"),
+    Processing: gt("Process"),
+    AwaitingDelta: gt("Wait"),
+    Claimable: gt("Ready"),
+    ClaimInProgress: gt("Claim"),
+    Claimed: gt("Done"),
+    VtxoAlreadySpent: gt("Spent"),
+    Canceled: gt("Canceled"),
+  };
+  const items = buildExitTimelineItems(
+    {
+      history,
+      historyDetails,
+      currentState,
+      currentDetails,
+      currentBlockHeight,
+    },
+    gt,
+  );
   const activeIndex = EXIT_STATE_ORDER.indexOf(currentState);
   const countByState = items.reduce<Partial<Record<ExitProgressState, number>>>((acc, item) => {
     acc[item.state] = (acc[item.state] ?? 0) + item.count;
@@ -276,7 +278,11 @@ const ExitPhaseRail = ({
                 {PHASE_LABELS[state]}
               </Text>
               {count > 1 ? (
-                <Text className="text-[10px] text-muted-foreground">x{count}</Text>
+                <T>
+                  <Text className="text-[10px] text-muted-foreground">
+                    x<Var>{count}</Var>
+                  </Text>
+                </T>
               ) : null}
             </View>
           );
@@ -305,6 +311,7 @@ const ExitVtxoRow = ({
   isBusy: boolean;
   isCanceling: boolean;
 }) => {
+  const gt = useGT();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const state = status?.state ?? exit.state;
   const details = status?.state_details ?? exit.state_details;
@@ -315,8 +322,8 @@ const ExitVtxoRow = ({
   const tone = stateTone(state);
   const latestTxid = exit.txids.at(-1);
   const latestTxExplorerUrl = latestTxid ? getMempoolTxUrl(latestTxid) : null;
-  const blockRows = getExitBlockRows({ state, details, currentBlockHeight });
-  const statusText = getExitStatusText({ state, details, currentBlockHeight });
+  const blockRows = getExitBlockRows({ state, details, currentBlockHeight }, gt);
+  const statusText = getExitStatusText({ state, details, currentBlockHeight }, gt);
   const canCancel = isCancelableExit(state, details);
 
   return (
@@ -328,7 +335,7 @@ const ExitVtxoRow = ({
           </Text>
           <View className={cn("rounded-full border px-3 py-1.5", tone.bgClassName)}>
             <Text className={cn("text-sm font-semibold", tone.className)}>
-              {EXIT_STATE_LABELS[state]}
+              {getExitStateLabels(gt)[state]}
             </Text>
           </View>
         </View>
@@ -347,9 +354,11 @@ const ExitVtxoRow = ({
             hitSlop={8}
             className="mt-1 flex-row items-center gap-x-1"
           >
-            <Text className="text-sm text-muted-foreground">
-              Latest tx: {truncateMiddle(latestTxid, 10, 10)}
-            </Text>
+            <T>
+              <Text className="text-sm text-muted-foreground">
+                Latest tx: <Var>{truncateMiddle(latestTxid, 10, 10)}</Var>
+              </Text>
+            </T>
             {latestTxExplorerUrl ? (
               <Icon name="open-outline" size={15} color={COLORS.BITCOIN_ORANGE} />
             ) : null}
@@ -376,7 +385,7 @@ const ExitVtxoRow = ({
       {canCancel ? (
         <View className="border-t border-border px-4 py-3">
           <NativeNoahSecondaryButton
-            label={isCanceling ? "Canceling..." : "Cancel Exit"}
+            label={isCanceling ? gt("Canceling...") : gt("Cancel Exit")}
             onPress={onCancel}
             disabled={isBusy}
             tone="destructive"
@@ -419,9 +428,11 @@ const ExitCandidateVtxoRow = ({
         <Text className="text-base font-semibold text-foreground">
           {formatBitcoinAmount(vtxo.amount)}
         </Text>
-        <Text className="mt-1 text-sm text-muted-foreground" numberOfLines={1}>
-          Expires at block {vtxo.expiry_height}
-        </Text>
+        <T>
+          <Text className="mt-1 text-sm text-muted-foreground" numberOfLines={1}>
+            Expires at block <Var>{vtxo.expiry_height}</Var>
+          </Text>
+        </T>
         <Text className="mt-1 text-xs text-muted-foreground" numberOfLines={1}>
           {truncateMiddle(vtxo.id, 12, 10)}
         </Text>
@@ -443,64 +454,92 @@ const ExitModePicker = ({
   value: ExitStartMode;
   onChange: (value: ExitStartMode) => void;
   disabled: boolean;
-}) => (
-  <NativeNoahPicker
-    value={value}
-    options={EXIT_MODE_OPTIONS}
-    onValueChange={onChange}
-    disabled={disabled}
-  />
-);
+}) => {
+  const gt = useGT();
+  const EXIT_MODE_OPTIONS = [
+    { label: gt("Entire wallet"), value: "wallet" },
+    { label: gt("Selected VTXOs"), value: "selected" },
+  ] as const satisfies readonly NativeNoahPickerOption<ExitStartMode>[];
+  return (
+    <NativeNoahPicker
+      value={value}
+      options={EXIT_MODE_OPTIONS}
+      onValueChange={onChange}
+      disabled={disabled}
+    />
+  );
+};
 
 type ExitQuote = ReturnType<typeof useExitFeeEstimate>;
 
-function exitReviewDescription(review: ExitFeeReview, formatAmount: (amount: number) => string) {
+function exitReviewDescription(
+  review: ExitFeeReview,
+  formatAmount: (amount: number) => string,
+  gt: Translate,
+) {
   const { inputs, estimate } = review;
   const claimOnly = inputs.scope === "claim";
   const scope =
     inputs.scope === "wallet"
-      ? "Entire wallet (available VTXOs)"
+      ? gt("Entire wallet (available VTXOs)")
       : claimOnly
-        ? "Claimable exits"
-        : "Selected VTXOs";
+        ? gt("Claimable exits")
+        : gt("Selected VTXOs");
   const count = inputs.vtxoIds.length;
   const lines = [
     `${scope}: ${count} ${count === 1 ? "VTXO" : "VTXOs"} · ${formatAmount(inputs.amountSat)}`,
   ];
-  if (inputs.destinationAddress) lines.push(`Destination: ${inputs.destinationAddress}`);
+  if (inputs.destinationAddress)
+    lines.push(gt("Destination: {value1}", { value1: inputs.destinationAddress }));
   if (estimate) {
     if (!claimOnly) {
-      lines.push(`Estimated total fees: ${formatAmount(estimate.total_fee_sat)}`);
       lines.push(
-        `Broadcast: ${formatAmount(estimate.exit_broadcast_fee_sat)} (paid separately from confirmed onchain funds)`,
+        gt("Estimated total fees: {value1}", { value1: formatAmount(estimate.total_fee_sat) }),
+      );
+      lines.push(
+        gt("Broadcast: {value1} (paid separately from confirmed onchain funds)", {
+          value1: formatAmount(estimate.exit_broadcast_fee_sat),
+        }),
       );
     }
     lines.push(
-      `Claim fee: ${formatAmount(estimate.claim_fee_sat)} (deducted from recovered funds)`,
+      gt("Claim fee: {value1} (deducted from recovered funds)", {
+        value1: formatAmount(estimate.claim_fee_sat),
+      }),
     );
     lines.push(
-      `Estimated amount to receive: ${formatAmount(exitReceiveAmount(inputs.amountSat, estimate.claim_fee_sat))}`,
+      gt("Estimated amount to receive: {value1}", {
+        value1: formatAmount(exitReceiveAmount(inputs.amountSat, estimate.claim_fee_sat)),
+      }),
     );
     if (!claimOnly) {
       lines.push(
         estimate.fundable
-          ? "Broadcast funding: sufficient confirmed onchain funds at this estimate."
-          : "Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing.",
+          ? gt("Broadcast funding: sufficient confirmed onchain funds at this estimate.")
+          : gt(
+              "Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing.",
+            ),
       );
     }
-    const warning = exitFeeWarning(inputs.amountSat, estimate, claimOnly);
+    const warning = exitFeeWarning(inputs.amountSat, estimate, claimOnly, gt);
     if (warning) lines.push(warning);
   } else {
     lines.push(
-      "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.",
+      gt(
+        "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.",
+      ),
     );
     if (!claimOnly)
-      lines.push("Broadcast funding status is unknown; confirmed onchain funds are required.");
+      lines.push(gt("Broadcast funding status is unknown; confirmed onchain funds are required."));
   }
   lines.push(
     claimOnly
-      ? "This broadcasts the claim transaction. Earlier broadcast fees are not deducted again. Fees may change."
-      : "This starts tracking. Use Progress to broadcast exit transactions. Fees may change; the claim estimate updates when you enter a destination.",
+      ? gt(
+          "This broadcasts the claim transaction. Earlier broadcast fees are not deducted again. Fees may change.",
+        )
+      : gt(
+          "This starts tracking. Use Progress to broadcast exit transactions. Fees may change; the claim estimate updates when you enter a destination.",
+        ),
   );
   return lines.join("\n\n");
 }
@@ -514,25 +553,32 @@ const ExitFeePreview = ({
   amountSat: number;
   claimOnly?: boolean;
 }) => {
+  const gt = useGT();
   const formatAmount = useBitcoinAmountFormatter();
   const estimate = quote.estimate;
   if (quote.isLoading) {
     return (
       <View className="mt-4 flex-row items-center gap-3">
         <NoahActivityIndicator />
-        <Text className="text-sm text-muted-foreground">Estimating fees…</Text>
+        <T>
+          <Text className="text-sm text-muted-foreground">Estimating fees…</Text>
+        </T>
       </View>
     );
   }
   if (quote.isError) {
     return (
       <View className="mt-4 gap-2">
-        <Text className="font-semibold text-foreground">Fee estimate unavailable</Text>
-        <Text className="text-sm text-muted-foreground">
-          Fees and amount to receive are unknown. You can retry or continue without an estimate.
-        </Text>
+        <T>
+          <Text className="font-semibold text-foreground">Fee estimate unavailable</Text>
+        </T>
+        <T>
+          <Text className="text-sm text-muted-foreground">
+            Fees and amount to receive are unknown. You can retry or continue without an estimate.
+          </Text>
+        </T>
         <NativeNoahSecondaryButton
-          label="Retry estimate"
+          label={gt("Retry estimate")}
           onPress={() => void quote.retry()}
           fullWidth
         />
@@ -540,12 +586,12 @@ const ExitFeePreview = ({
     );
   }
   if (!estimate) return null;
-  const warning = exitFeeWarning(amountSat, estimate, claimOnly);
+  const warning = exitFeeWarning(amountSat, estimate, claimOnly, gt);
   return (
     <View className="mt-4 gap-3 rounded-lg border border-border bg-background p-3">
       <View>
         <Text className="text-sm text-muted-foreground">
-          {claimOnly ? "Estimated claim fee" : "Estimated total fees"}
+          {claimOnly ? gt("Estimated claim fee") : gt("Estimated total fees")}
         </Text>
         <Text className="mt-1 text-xl font-semibold text-foreground">
           {formatAmount(claimOnly ? estimate.claim_fee_sat : estimate.total_fee_sat)}
@@ -553,19 +599,23 @@ const ExitFeePreview = ({
       </View>
       {!claimOnly ? (
         <>
-          <ExitFeeRow label="Broadcast fees" amount={estimate.exit_broadcast_fee_sat} />
-          <Text className="text-xs leading-4 text-muted-foreground">
-            Paid separately from confirmed onchain funds.
-          </Text>
-          <ExitFeeRow label="Claim fee" amount={estimate.claim_fee_sat} />
+          <ExitFeeRow label={gt("Broadcast fees")} amount={estimate.exit_broadcast_fee_sat} />
+          <T>
+            <Text className="text-xs leading-4 text-muted-foreground">
+              Paid separately from confirmed onchain funds.
+            </Text>
+          </T>
+          <ExitFeeRow label={gt("Claim fee")} amount={estimate.claim_fee_sat} />
         </>
       ) : null}
-      <Text className="text-xs leading-4 text-muted-foreground">
-        Claim fee is deducted from recovered funds.
-        {claimOnly ? " Earlier broadcast fees are not deducted again." : ""}
-      </Text>
+      <T>
+        <Text className="text-xs leading-4 text-muted-foreground">
+          Claim fee is deducted from recovered funds.
+          <Var>{claimOnly ? gt(" Earlier broadcast fees are not deducted again.") : ""}</Var>
+        </Text>
+      </T>
       <ExitFeeRow
-        label="Estimated amount to receive"
+        label={gt("Estimated amount to receive")}
         amount={exitReceiveAmount(amountSat, estimate.claim_fee_sat)}
       />
       {warning ? (
@@ -574,15 +624,23 @@ const ExitFeePreview = ({
         </Text>
       ) : null}
       {!claimOnly && !estimate.fundable ? (
-        <Text className="text-sm font-semibold text-amber-700 dark:text-amber-300">
-          Additional confirmed onchain funds required. Deposit funds and wait for confirmation
-          before progressing.
-        </Text>
+        <T>
+          <Text className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+            Additional confirmed onchain funds required. Deposit funds and wait for confirmation
+            before progressing.
+          </Text>
+        </T>
       ) : null}
-      <Text className="text-xs leading-4 text-muted-foreground">
-        Fees may change.
-        {!claimOnly ? " Claim fee updates when you enter a destination at the claim stage." : ""}
-      </Text>
+      <T>
+        <Text className="text-xs leading-4 text-muted-foreground">
+          Fees may change.
+          <Var>
+            {!claimOnly
+              ? gt(" Claim fee updates when you enter a destination at the claim stage.")
+              : ""}
+          </Var>
+        </Text>
+      </T>
     </View>
   );
 };
@@ -598,8 +656,8 @@ const ExitFeeRow = ({ label, amount }: { label: string; amount: number }) => {
 };
 
 const StartExitPanel = ({
-  title = "Start Emergency Exit",
-  description = "Choose whether to exit all available VTXOs or only specific ones.",
+  title: titleProp,
+  description: descriptionProp,
   mode,
   onModeChange,
   spendableVtxos,
@@ -632,6 +690,11 @@ const StartExitPanel = ({
   quote: ExitQuote;
   onDeposit: () => void;
 }) => {
+  const gt = useGT();
+  const title = titleProp ?? gt("Start Emergency Exit");
+  const description =
+    descriptionProp ?? gt("Choose whether to exit all available VTXOs or only specific ones.");
+  const locale = useLocale();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const hasSelection = selectedCount > 0;
   const startDisabled =
@@ -649,7 +712,9 @@ const StartExitPanel = ({
         </View>
         {onCollapse ? (
           <Pressable onPress={onCollapse} hitSlop={10} disabled={isBusy}>
-            <Text className="text-sm font-semibold text-primary">Hide</Text>
+            <T>
+              <Text className="text-sm font-semibold text-primary">Hide</Text>
+            </T>
           </Pressable>
         ) : null}
       </View>
@@ -659,14 +724,18 @@ const StartExitPanel = ({
       {mode === "wallet" ? (
         <View className="mt-4 rounded-lg border border-border bg-background px-3 py-2">
           <View className="flex-row items-center justify-between py-2">
-            <Text className="text-sm text-muted-foreground">Available VTXOs</Text>
+            <T>
+              <Text className="text-sm text-muted-foreground">Available VTXOs</Text>
+            </T>
             <Text className="text-sm font-semibold text-foreground">
-              {spendableVtxos.length.toLocaleString()}
+              {spendableVtxos.length.toLocaleString(locale)}
             </Text>
           </View>
           <View className="h-px bg-border/70" />
           <View className="flex-row items-center justify-between py-2">
-            <Text className="text-sm text-muted-foreground">Available value</Text>
+            <T>
+              <Text className="text-sm text-muted-foreground">Available value</Text>
+            </T>
             <Text className="text-sm font-semibold text-foreground">
               {formatBitcoinAmount(spendableVtxos.reduce((total, vtxo) => total + vtxo.amount, 0))}
             </Text>
@@ -676,9 +745,11 @@ const StartExitPanel = ({
         <View className="mt-4">
           <View className="mb-3 flex-row items-center justify-between">
             <View>
-              <Text className="text-sm text-muted-foreground">Selected</Text>
+              <T>
+                <Text className="text-sm text-muted-foreground">Selected</Text>
+              </T>
               <Text className="mt-1 text-base font-semibold text-foreground">
-                {selectedCount} {selectedCount === 1 ? "VTXO" : "VTXOs"}
+                {selectedCount} {selectedCount === 1 ? gt("VTXO") : gt("VTXOs")}
               </Text>
             </View>
             <Text className="text-base font-semibold text-foreground">
@@ -691,14 +762,18 @@ const StartExitPanel = ({
               disabled={isBusy || spendableVtxos.length === 0}
               className="h-9 flex-1 items-center justify-center rounded-full bg-background px-3"
             >
-              <Text className="text-sm font-medium text-foreground">Select all</Text>
+              <T>
+                <Text className="text-sm font-medium text-foreground">Select all</Text>
+              </T>
             </Pressable>
             <Pressable
               onPress={onClear}
               disabled={isBusy || !hasSelection}
               className="h-9 flex-1 items-center justify-center rounded-full bg-background px-3"
             >
-              <Text className="text-sm font-medium text-muted-foreground">Clear</Text>
+              <T>
+                <Text className="text-sm font-medium text-muted-foreground">Clear</Text>
+              </T>
             </Pressable>
           </View>
           {spendableVtxos.map((vtxo) => (
@@ -713,9 +788,11 @@ const StartExitPanel = ({
       )}
 
       {mode === "selected" && !hasSelection ? (
-        <Text className="mt-4 text-sm text-muted-foreground">
-          Select VTXOs to estimate exit fees.
-        </Text>
+        <T>
+          <Text className="mt-4 text-sm text-muted-foreground">
+            Select VTXOs to estimate exit fees.
+          </Text>
+        </T>
       ) : (
         <ExitFeePreview
           quote={quote}
@@ -729,14 +806,14 @@ const StartExitPanel = ({
       {quote.estimate && !quote.estimate.fundable ? (
         <>
           <NativeNoahButton
-            label="Deposit Onchain Funds"
+            label={gt("Deposit Onchain Funds")}
             className="mt-4"
             onPress={onDeposit}
             disabled={isBusy}
             fullWidth
           />
           <NativeNoahSecondaryButton
-            label={quote.isReviewing ? "Refreshing estimate..." : "Start tracking anyway"}
+            label={quote.isReviewing ? gt("Refreshing estimate...") : gt("Start tracking anyway")}
             className="mt-3"
             onPress={onStart}
             disabled={startDisabled}
@@ -745,12 +822,12 @@ const StartExitPanel = ({
         </>
       ) : (
         <NativeNoahButton
-          label={quote.isError ? "Continue without estimate" : "Review Exit"}
+          label={quote.isError ? gt("Continue without estimate") : gt("Review Exit")}
           className="mt-4"
           onPress={onStart}
           disabled={startDisabled}
           isLoading={isBusy}
-          loadingLabel={quote.isReviewing ? "Refreshing estimate..." : "Starting..."}
+          loadingLabel={quote.isReviewing ? gt("Refreshing estimate...") : gt("Starting...")}
           fullWidth
         />
       )}
@@ -767,32 +844,41 @@ const StartAnotherExitCard = ({
   isBusy: boolean;
   onPress: () => void;
 }) => {
+  const gt = useGT();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const spendableTotal = spendableVtxos.reduce((total, vtxo) => total + vtxo.amount, 0);
 
   return (
     <View className="rounded-lg border border-border bg-card p-4">
-      <Text className="text-lg font-semibold text-foreground">Start another emergency exit</Text>
-      <Text className="mt-1 text-sm leading-5 text-muted-foreground">
-        Exit remaining available VTXOs only if you need another emergency exit.
-      </Text>
+      <T>
+        <Text className="text-lg font-semibold text-foreground">Start another emergency exit</Text>
+      </T>
+      <T>
+        <Text className="mt-1 text-sm leading-5 text-muted-foreground">
+          Exit remaining available VTXOs only if you need another emergency exit.
+        </Text>
+      </T>
       <View className="my-4 rounded-lg border border-border bg-background px-3 py-2">
         <View className="flex-row items-center justify-between py-2">
-          <Text className="text-sm text-muted-foreground">Remaining available</Text>
+          <T>
+            <Text className="text-sm text-muted-foreground">Remaining available</Text>
+          </T>
           <Text className="text-sm font-semibold text-foreground">
-            {spendableVtxos.length} {spendableVtxos.length === 1 ? "VTXO" : "VTXOs"}
+            {spendableVtxos.length} {spendableVtxos.length === 1 ? gt("VTXO") : gt("VTXOs")}
           </Text>
         </View>
         <View className="h-px bg-border/70" />
         <View className="flex-row items-center justify-between py-2">
-          <Text className="text-sm text-muted-foreground">Value</Text>
+          <T>
+            <Text className="text-sm text-muted-foreground">Value</Text>
+          </T>
           <Text className="text-sm font-semibold text-foreground">
             {formatBitcoinAmount(spendableTotal)}
           </Text>
         </View>
       </View>
       <NativeNoahSecondaryButton
-        label="Choose VTXOs"
+        label={gt("Choose VTXOs")}
         onPress={onPress}
         disabled={isBusy}
         fullWidth
@@ -805,18 +891,24 @@ const EmptyExitState = ({ children }: { children: React.ReactNode }) => (
   <AdaptiveColumns>
     <View className="items-center rounded-lg border border-border bg-card px-4 py-8">
       <Icon name="shield-outline" size={40} color="#8e8e93" />
-      <Text className="mt-4 text-center text-lg font-semibold text-foreground">
-        No emergency exits
-      </Text>
-      <Text className="mt-2 text-center text-sm leading-5 text-muted-foreground">
-        Start only if the Ark server is unavailable and normal offboarding cannot be used.
-      </Text>
+      <T>
+        <Text className="mt-4 text-center text-lg font-semibold text-foreground">
+          No emergency exits
+        </Text>
+      </T>
+      <T>
+        <Text className="mt-2 text-center text-sm leading-5 text-muted-foreground">
+          Start only if the Ark server is unavailable and normal offboarding cannot be used.
+        </Text>
+      </T>
     </View>
     <View className="mt-5">{children}</View>
   </AdaptiveColumns>
 );
 
 const UnilateralExitScreen = () => {
+  const translateError = useErrorTranslation();
+  const gt = useGT();
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const route = useRoute<UnilateralExitRouteProp>();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
@@ -951,18 +1043,26 @@ const UnilateralExitScreen = () => {
   const claimableBlockLabel =
     allClaimableHeight !== undefined && currentBlockHeight !== undefined
       ? allClaimableHeight <= currentBlockHeight
-        ? "Now"
-        : `${allClaimableHeight} (${allClaimableHeight - currentBlockHeight} blocks)`
+        ? gt("Now")
+        : gt("{value1} ({value2} blocks)", {
+            value1: allClaimableHeight,
+            value2: allClaimableHeight - currentBlockHeight,
+          })
       : allClaimableHeight !== undefined
         ? `${allClaimableHeight}`
-        : "Unknown";
-  const allClaimableRemainingLabel = formatBlocksRemaining(currentBlockHeight, allClaimableHeight);
+        : gt("Unknown");
+  const allClaimableRemainingLabel = formatBlocksRemaining(
+    currentBlockHeight,
+    allClaimableHeight,
+    gt,
+  );
 
   const staleReview = () =>
     showAlert({
-      title: "Review Exit Again",
-      description:
+      title: gt("Review Exit Again"),
+      description: gt(
         "The estimate expired or your wallet changed. Review the current details before continuing.",
+      ),
     });
 
   const handleStart = () => {
@@ -1064,11 +1164,13 @@ const UnilateralExitScreen = () => {
                   className="mr-3"
                   testID="emergency-exit-back-button"
                 />
-                <Text className="flex-1 text-2xl font-bold text-foreground">Emergency Exit</Text>
+                <T>
+                  <Text className="flex-1 text-2xl font-bold text-foreground">Emergency Exit</Text>
+                </T>
               </View>
               <NativeNoahIconButton
                 icon="refresh"
-                accessibilityLabel="Refresh emergency exits"
+                accessibilityLabel={gt("Refresh emergency exits")}
                 onPress={() => void overviewQuery.refetch()}
                 disabled={isBusy}
                 isLoading={overviewQuery.isFetching}
@@ -1077,24 +1179,34 @@ const UnilateralExitScreen = () => {
             </View>
 
             <Alert icon={AlertTriangle} className="mb-5 border-amber-500/40 bg-amber-500/10">
-              <AlertTitle className="text-amber-700 dark:text-amber-300">
-                Emergency use only
-              </AlertTitle>
-              <AlertDescription className="text-amber-700/90 dark:text-amber-200/90">
-                Use this only if the Ark server is unresponsive or uncooperative. In normal
-                circumstances, send to an onchain address from your Ark balance.
-              </AlertDescription>
+              <T>
+                <AlertTitle className="text-amber-700 dark:text-amber-300">
+                  Emergency use only
+                </AlertTitle>
+              </T>
+              <T>
+                <AlertDescription className="text-amber-700/90 dark:text-amber-200/90">
+                  Use this only if the Ark server is unresponsive or uncooperative. In normal
+                  circumstances, send to an onchain address from your Ark balance.
+                </AlertDescription>
+              </T>
             </Alert>
 
             {overviewQuery.isLoading ? (
               <View className="items-center py-12">
                 <NoahActivityIndicator />
-                <Text className="mt-3 text-muted-foreground">Loading exit status...</Text>
+                <T>
+                  <Text className="mt-3 text-muted-foreground">Loading exit status...</Text>
+                </T>
               </View>
             ) : overviewQuery.error ? (
               <View className="rounded-lg border border-destructive bg-destructive/10 p-4">
-                <Text className="font-semibold text-destructive">Unable to load exits</Text>
-                <Text className="mt-2 text-sm text-destructive">{overviewQuery.error.message}</Text>
+                <T>
+                  <Text className="font-semibold text-destructive">Unable to load exits</Text>
+                </T>
+                <Text className="mt-2 text-sm text-destructive">
+                  {translateError(overviewQuery.error.message ?? "")}
+                </Text>
               </View>
             ) : exits.length === 0 ? (
               <EmptyExitState>
@@ -1121,85 +1233,108 @@ const UnilateralExitScreen = () => {
                 <View>
                   <View className="mb-5 rounded-lg border border-border bg-card p-4">
                     <View className="flex-row gap-x-4">
-                      <ExitSummaryItem label="Tracked" value={`${exits.length}`} />
+                      <ExitSummaryItem label={gt("Tracked")} value={`${exits.length}`} />
                       <ExitSummaryItem
-                        label="Pending"
+                        label={gt("Pending")}
                         value={formatBitcoinAmount(overview?.pendingTotal ?? 0)}
                       />
                     </View>
                     <View className="mt-4 flex-row gap-x-4">
                       <ExitSummaryItem
-                        label="Claimable"
+                        label={gt("Claimable")}
                         value={formatBitcoinAmount(claimableTotal)}
                       />
-                      <ExitSummaryItem label="All Claimable" value={claimableBlockLabel} />
+                      <ExitSummaryItem label={gt("All Claimable")} value={claimableBlockLabel} />
                     </View>
                     <View className="mt-4 flex-row gap-x-4">
-                      <ExitSummaryItem label="Claiming" value={`${claimInProgressCount}`} />
-                      <ExitSummaryItem label="Claimed" value={`${claimedCount}`} />
+                      <ExitSummaryItem label={gt("Claiming")} value={`${claimInProgressCount}`} />
+                      <ExitSummaryItem label={gt("Claimed")} value={`${claimedCount}`} />
                     </View>
                     <View className="mt-4 flex-row gap-x-4">
                       <ExitSummaryItem
-                        label="Available"
+                        label={gt("Available")}
                         value={`${overview?.spendableVtxoCount ?? 0} ${
                           overview?.spendableVtxoCount === 1 ? "VTXO" : "VTXOs"
                         }`}
                       />
                       <ExitSummaryItem
-                        label="Available Value"
+                        label={gt("Available Value")}
                         value={formatBitcoinAmount(overview?.spendableVtxoTotal ?? 0)}
                       />
                     </View>
                   </View>
 
                   <View className="mb-5 rounded-lg border border-border bg-card p-4">
-                    <Text className="mb-3 text-lg font-semibold text-foreground">Block Status</Text>
+                    <T>
+                      <Text className="mb-3 text-lg font-semibold text-foreground">
+                        Block Status
+                      </Text>
+                    </T>
                     <View className="flex-row gap-x-4">
                       <ExitSummaryItem
-                        label="Current Height"
+                        label={gt("Current Height")}
                         value={
                           overview?.blockHeight !== undefined
                             ? `${overview.blockHeight}`
-                            : "Unknown"
+                            : gt("Unknown")
                         }
                       />
                       <ExitSummaryItem
-                        label="Exit Synced Tip"
+                        label={gt("Exit Synced Tip")}
                         value={
-                          latestExitTipHeight !== undefined ? `${latestExitTipHeight}` : "Unknown"
+                          latestExitTipHeight !== undefined
+                            ? `${latestExitTipHeight}`
+                            : gt("Unknown")
                         }
                       />
                     </View>
                     <View className="mt-4 flex-row gap-x-4">
-                      <ExitSummaryItem label="All Claimable" value={claimableBlockLabel} />
+                      <ExitSummaryItem label={gt("All Claimable")} value={claimableBlockLabel} />
                       <ExitSummaryItem
-                        label="Remaining"
-                        value={allClaimableRemainingLabel ?? "Unknown"}
+                        label={gt("Remaining")}
+                        value={allClaimableRemainingLabel ?? gt("Unknown")}
                       />
                     </View>
                     {staleExitCount > 0 ? (
-                      <Text className="mt-3 text-sm leading-5 text-muted-foreground">
-                        {staleExitCount} {staleExitCount === 1 ? "exit is" : "exits are"} behind the
-                        current chain height. Use Progress to check the chain; this can also
-                        broadcast exit transactions.
-                      </Text>
+                      <T>
+                        <Text className="mt-3 text-sm leading-5 text-muted-foreground">
+                          <Plural
+                            n={staleExitCount}
+                            one={<>One exit is behind the current chain height.</>}
+                            other={
+                              <>
+                                <Var>{staleExitCount}</Var> exits are behind the current chain
+                                height.
+                              </>
+                            }
+                          />{" "}
+                          Use Progress to check the chain; this can also broadcast exit
+                          transactions.
+                        </Text>
+                      </T>
                     ) : null}
                   </View>
 
                   {claimable.length === 0 && claimInProgressCount > 0 ? (
                     <View className="mb-5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
-                      <Text className="text-base font-semibold text-amber-700 dark:text-amber-300">
-                        Claim broadcasted
-                      </Text>
-                      <Text className="mt-1 text-sm leading-5 text-amber-700/90 dark:text-amber-200/90">
-                        No further claim action is available for VTXOs in Claiming. Wait for the
-                        claim transaction to confirm, then use Progress to update tracked state.
-                      </Text>
+                      <T>
+                        <Text className="text-base font-semibold text-amber-700 dark:text-amber-300">
+                          Claim broadcasted
+                        </Text>
+                      </T>
+                      <T>
+                        <Text className="mt-1 text-sm leading-5 text-amber-700/90 dark:text-amber-200/90">
+                          No further claim action is available for VTXOs in Claiming. Wait for the
+                          claim transaction to confirm, then use Progress to update tracked state.
+                        </Text>
+                      </T>
                     </View>
                   ) : null}
 
                   <View className="mb-5 rounded-lg border border-border bg-card p-4">
-                    <Text className="mb-2 text-lg font-semibold text-foreground">Timeline</Text>
+                    <T>
+                      <Text className="mb-2 text-lg font-semibold text-foreground">Timeline</Text>
+                    </T>
                     {EXIT_STATE_ORDER.map((state) => (
                       <ExitStep
                         key={state}
@@ -1213,10 +1348,14 @@ const UnilateralExitScreen = () => {
                 <View>
                   <View className="mb-5">
                     <View className="mb-3 flex-row items-center justify-between">
-                      <Text className="text-lg font-semibold text-foreground">VTXOs</Text>
-                      <Text className="text-sm text-muted-foreground">
-                        {claimable.length} claimable
-                      </Text>
+                      <T>
+                        <Text className="text-lg font-semibold text-foreground">VTXOs</Text>
+                      </T>
+                      <T>
+                        <Text className="text-sm text-muted-foreground">
+                          <Var>{claimable.length}</Var> claimable
+                        </Text>
+                      </T>
                     </View>
                     {exits.map((exit) => (
                       <ExitVtxoRow
@@ -1237,7 +1376,7 @@ const UnilateralExitScreen = () => {
 
                   <View className="mb-5 flex-row gap-x-3">
                     <NativeNoahSecondaryButton
-                      label={overviewQuery.isFetching ? "Refreshing..." : "Refresh Status"}
+                      label={overviewQuery.isFetching ? gt("Refreshing...") : gt("Refresh Status")}
                       className="flex-1"
                       onPress={() => void overviewQuery.refetch()}
                       disabled={isBusy}
@@ -1245,33 +1384,39 @@ const UnilateralExitScreen = () => {
                     />
                     {overview?.hasPending || claimable.length > 0 || claimInProgressCount > 0 ? (
                       <NativeNoahButton
-                        label="Progress"
+                        label={gt("Progress")}
                         className="flex-1"
                         onPress={() => setShowProgressConfirm(true)}
                         disabled={isBusy}
                         isLoading={progressExits.isPending}
-                        loadingLabel="Progressing..."
+                        loadingLabel={gt("Progressing...")}
                         fullWidth
                       />
                     ) : null}
                   </View>
 
-                  <Text className="mb-5 text-sm leading-5 text-muted-foreground">
-                    Refresh Status reloads saved wallet state. Progress checks the chain and can
-                    broadcast or fee-bump exit transactions.
-                  </Text>
+                  <T>
+                    <Text className="mb-5 text-sm leading-5 text-muted-foreground">
+                      Refresh Status reloads saved wallet state. Progress checks the chain and can
+                      broadcast or fee-bump exit transactions.
+                    </Text>
+                  </T>
 
                   {claimable.length > 0 ? (
                     <View className="mb-5 rounded-lg border border-border bg-card p-4">
-                      <Text className="text-lg font-semibold text-foreground">Claim Exits</Text>
-                      <Text className="mt-1 text-sm leading-5 text-muted-foreground">
-                        Sweep claimable exit outputs to an on-chain Bitcoin address.
-                      </Text>
+                      <T>
+                        <Text className="text-lg font-semibold text-foreground">Claim Exits</Text>
+                      </T>
+                      <T>
+                        <Text className="mt-1 text-sm leading-5 text-muted-foreground">
+                          Sweep claimable exit outputs to an on-chain Bitcoin address.
+                        </Text>
+                      </T>
                       <View className="mt-4 rounded-lg border border-border bg-background px-3 py-2">
                         <Input
                           value={destinationAddress}
                           onChangeText={setDestinationAddress}
-                          placeholder="Bitcoin address"
+                          placeholder={gt("Bitcoin address")}
                           autoCapitalize="none"
                           autoCorrect={false}
                           testID="exit-claim-address"
@@ -1279,20 +1424,24 @@ const UnilateralExitScreen = () => {
                         />
                       </View>
                       {trimmedDestination && !isValidDestination ? (
-                        <Text className="mt-2 text-sm text-destructive">
-                          Enter a valid {APP_VARIANT} on-chain address.
-                        </Text>
+                        <T>
+                          <Text className="mt-2 text-sm text-destructive">
+                            Enter a valid <Var>{APP_VARIANT}</Var> on-chain address.
+                          </Text>
+                        </T>
                       ) : null}
                       {isValidDestination ? (
                         <ExitFeePreview quote={claimQuote} amountSat={claimableTotal} claimOnly />
                       ) : null}
                       <NativeNoahButton
-                        label={claimQuote.isError ? "Continue without estimate" : "Review Claim"}
+                        label={
+                          claimQuote.isError ? gt("Continue without estimate") : gt("Review Claim")
+                        }
                         className="mt-4"
                         disabled={!isValidDestination || isBusy || claimQuote.isLoading}
                         isLoading={claimExits.isPending || claimQuote.isReviewing}
                         loadingLabel={
-                          claimQuote.isReviewing ? "Refreshing estimate..." : "Claiming..."
+                          claimQuote.isReviewing ? gt("Refreshing estimate...") : gt("Claiming...")
                         }
                         onPress={reviewClaim}
                         fullWidth
@@ -1304,8 +1453,10 @@ const UnilateralExitScreen = () => {
                     <View>
                       {isNewExitExpanded ? (
                         <StartExitPanel
-                          title="New Exit"
-                          description="You already have an exit in progress. Start another one only for remaining VTXOs."
+                          title={gt("New Exit")}
+                          description={gt(
+                            "You already have an exit in progress. Start another one only for remaining VTXOs.",
+                          )}
                           mode={exitStartMode}
                           onModeChange={handleExitModeChange}
                           spendableVtxos={spendableVtxos}
@@ -1339,12 +1490,18 @@ const UnilateralExitScreen = () => {
               onOpenChange={(open) => {
                 if (!open) setStartReview(undefined);
               }}
-              title={startReview?.estimate ? "Start Emergency Exit" : "Continue without estimate?"}
+              title={
+                startReview?.estimate
+                  ? gt("Start Emergency Exit")
+                  : gt("Continue without estimate?")
+              }
               description={
-                startReview ? exitReviewDescription(startReview, formatBitcoinAmount) : ""
+                startReview ? exitReviewDescription(startReview, formatBitcoinAmount, gt) : ""
               }
               confirmText={
-                startReview?.inputs.scope === "wallet" ? "Start Wallet Exit" : "Start Selected Exit"
+                startReview?.inputs.scope === "wallet"
+                  ? gt("Start Wallet Exit")
+                  : gt("Start Selected Exit")
               }
               onConfirm={handleStart}
               isConfirmDisabled={isBusy}
@@ -1356,17 +1513,21 @@ const UnilateralExitScreen = () => {
                   setCancelExitVtxoId(null);
                 }
               }}
-              title="Cancel Emergency Exit"
-              description="Stop the emergency exit for this VTXO. Already-broadcast shared transactions are not reversed. The VTXO remains spendable and can be exited again. Cancellation only succeeds before the final exit transaction is broadcast."
-              confirmText="Cancel Exit"
+              title={gt("Cancel Emergency Exit")}
+              description={gt(
+                "Stop the emergency exit for this VTXO. Already-broadcast shared transactions are not reversed. The VTXO remains spendable and can be exited again. Cancellation only succeeds before the final exit transaction is broadcast.",
+              )}
+              confirmText={gt("Cancel Exit")}
               onConfirm={handleCancelExit}
             />
             <ConfirmationDialog
               open={showProgressConfirm}
               onOpenChange={setShowProgressConfirm}
-              title="Progress Exits"
-              description="This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process."
-              confirmText="Progress Exits"
+              title={gt("Progress Exits")}
+              description={gt(
+                "This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process.",
+              )}
+              confirmText={gt("Progress Exits")}
               onConfirm={() => {
                 progressExits.mutate(undefined);
                 setShowProgressConfirm(false);
@@ -1377,11 +1538,13 @@ const UnilateralExitScreen = () => {
               onOpenChange={(open) => {
                 if (!open) setClaimReview(undefined);
               }}
-              title={claimReview?.estimate ? "Claim Exits" : "Continue without estimate?"}
+              title={claimReview?.estimate ? gt("Claim Exits") : gt("Continue without estimate?")}
               description={
-                claimReview ? exitReviewDescription(claimReview, formatBitcoinAmount) : ""
+                claimReview ? exitReviewDescription(claimReview, formatBitcoinAmount, gt) : ""
               }
-              confirmText={claimReview?.estimate ? "Broadcast Claim" : "Broadcast without estimate"}
+              confirmText={
+                claimReview?.estimate ? gt("Broadcast Claim") : gt("Broadcast without estimate")
+              }
               onConfirm={handleClaim}
               isConfirmDisabled={isBusy}
             />

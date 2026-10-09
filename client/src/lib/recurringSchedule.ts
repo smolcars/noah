@@ -1,3 +1,4 @@
+import { sourceText, type Translate } from "~/lib/i18n";
 /**
  * Pure scheduling and policy logic for recurring payments.
  *
@@ -403,12 +404,19 @@ export const resumeRecurringPayment = (
   );
 };
 
-export const describeInterval = (interval: RecurringInterval): string => {
+export const describeInterval = (
+  interval: RecurringInterval,
+  gt: Translate = sourceText,
+): string => {
   const { unit, every } = interval;
   if (every === 1) {
-    return unit === "day" ? "Daily" : unit === "week" ? "Weekly" : "Monthly";
+    return unit === "day" ? gt("Daily") : unit === "week" ? gt("Weekly") : gt("Monthly");
   }
-  return `Every ${every} ${unit}s`;
+  return unit === "day"
+    ? gt("Every {count} days", { count: every })
+    : unit === "week"
+      ? gt("Every {count} weeks", { count: every })
+      : gt("Every {count} months", { count: every });
 };
 
 /** Schedules the server should wake the device for. */

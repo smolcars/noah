@@ -1,3 +1,5 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
+import { useMessages, T, useGT, Var, useLocale } from "gt-react-native";
 import { View, ScrollView, RefreshControl, Pressable } from "react-native";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -49,6 +51,7 @@ import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { NativeHomeHeaderActions } from "~/components/ui/NativeHomeHeaderActions";
 import {
   getTransactionDisplayLabel,
+  getTransactionConfirmationLabel,
   isCanceledTransaction,
   isInternalBoardingTransfer,
 } from "~/lib/transactionHistory";
@@ -77,6 +80,10 @@ const getTransactionIcon = (transaction: Transaction) => {
 };
 
 const HomeScreen = () => {
+  const translateError = useErrorTranslation();
+  const locale = useLocale();
+  const gt = useGT();
+  const m = useMessages();
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const { foreground: iconColor, mutedForeground } = useThemeColors();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
@@ -176,22 +183,30 @@ const HomeScreen = () => {
             <View className="w-20 h-20 rounded-full bg-destructive/10 items-center justify-center mb-6">
               <PauseCircle size={48} color="#dc2626" />
             </View>
-            <Text className="text-2xl font-bold text-foreground mb-3 text-center">
-              Wallet Suspended
-            </Text>
-            <Text className="text-base text-muted-foreground text-center leading-6">
-              Your wallet is currently suspended. All wallet operations are disabled.
-            </Text>
-            <Text className="text-sm text-muted-foreground text-center mt-4">
-              Go to Settings → Danger Zone to resume your wallet.
-            </Text>
+            <T>
+              <Text className="text-2xl font-bold text-foreground mb-3 text-center">
+                Wallet Suspended
+              </Text>
+            </T>
+            <T>
+              <Text className="text-base text-muted-foreground text-center leading-6">
+                Your wallet is currently suspended. All wallet operations are disabled.
+              </Text>
+            </T>
+            <T>
+              <Text className="text-sm text-muted-foreground text-center mt-4">
+                Go to Settings → Danger Zone to resume your wallet.
+              </Text>
+            </T>
             <Pressable
               onPress={() => navigation.navigate("Settings")}
               accessibilityRole="button"
-              accessibilityLabel="Open settings"
+              accessibilityLabel={gt("Open settings")}
               className="mt-6 rounded-2xl bg-primary px-5 py-3"
             >
-              <Text className="font-semibold text-primary-foreground">Open Settings</Text>
+              <T>
+                <Text className="font-semibold text-primary-foreground">Open Settings</Text>
+              </T>
             </Pressable>
           </View>
         </View>
@@ -230,7 +245,7 @@ const HomeScreen = () => {
             onRefresh={onRefresh}
             tintColor={COLORS.BITCOIN_ORANGE}
             colors={[COLORS.BITCOIN_ORANGE]}
-            title="Refreshing..."
+            title={gt("Refreshing...")}
             titleColor={COLORS.BITCOIN_ORANGE}
             progressViewOffset={-10}
           />
@@ -255,7 +270,9 @@ const HomeScreen = () => {
           <View className="px-4 py-2 bg-blue-500/20 border-b border-blue-500/40">
             <View className="flex-row items-center justify-center space-x-2">
               <NoahActivityIndicator size="small" />
-              <Text className="text-blue-400 text-sm">Background task in progress...</Text>
+              <T>
+                <Text className="text-blue-400 text-sm">Background task in progress...</Text>
+              </T>
             </View>
           </View>
         )}
@@ -266,11 +283,15 @@ const HomeScreen = () => {
             </View>
           ) : (error || walletError) && !balance ? (
             <Alert variant="destructive" icon={AlertCircle}>
-              <AlertTitle>Error</AlertTitle>
+              <T>
+                <AlertTitle>Error</AlertTitle>
+              </T>
               <AlertDescription>
-                {walletError
-                  ? "Failed to connect to wallet. Pull down to try again."
-                  : errorMessage}
+                {translateError(
+                  (walletError
+                    ? gt("Failed to connect to wallet. Pull down to try again.")
+                    : errorMessage) ?? "",
+                )}
               </AlertDescription>
             </Alert>
           ) : (
@@ -286,7 +307,7 @@ const HomeScreen = () => {
                     </Text>
                   ) : totalBalanceInFiat ? (
                     <Text className="mb-2 text-2xl text-muted-foreground">
-                      {formatFiatAmount(totalBalanceInFiat, fiatCurrency)}
+                      {formatFiatAmount(totalBalanceInFiat, fiatCurrency, locale)}
                     </Text>
                   ) : (
                     <View className="h-[32px] mb-2 justify-center">
@@ -296,7 +317,7 @@ const HomeScreen = () => {
                   <View className="flex-row items-center justify-center gap-2">
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel="Toggle balance details"
+                      accessibilityLabel={gt("Toggle balance details")}
                       accessibilityState={{ expanded: isOpen }}
                       onPress={() => setIsOpen((current) => !current)}
                     >
@@ -317,7 +338,7 @@ const HomeScreen = () => {
                       onPress={toggleHomeBalanceHidden}
                       accessibilityRole="button"
                       accessibilityLabel={
-                        isHomeBalanceHidden ? "Show wallet balance" : "Hide wallet balance"
+                        isHomeBalanceHidden ? gt("Show wallet balance") : gt("Hide wallet balance")
                       }
                       hitSlop={12}
                       className="h-8 w-8 items-center justify-center"
@@ -331,9 +352,11 @@ const HomeScreen = () => {
                   </View>
                   {totalPendingBalance > 0 && (
                     <View className="mt-2 px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-500/40">
-                      <Text className="text-yellow-500 text-sm">
-                        Pending balance: {formatHomeBalance(totalPendingBalance)}
-                      </Text>
+                      <T>
+                        <Text className="text-yellow-500 text-sm">
+                          Pending balance: <Var>{formatHomeBalance(totalPendingBalance)}</Var>
+                        </Text>
+                      </T>
                     </View>
                   )}
                 </View>
@@ -344,32 +367,44 @@ const HomeScreen = () => {
                     className="w-full max-w-[380px]"
                   >
                     <View className="p-4 rounded-lg bg-card mt-4">
-                      <Text className="text-lg font-bold mb-4 text-center">Balance Details</Text>
+                      <T>
+                        <Text className="text-lg font-bold mb-4 text-center">Balance Details</Text>
+                      </T>
 
                       <View className="mb-4">
                         <View className="flex-row justify-between items-center mb-2">
-                          <Text className="text-md font-bold">Onchain</Text>
+                          <T>
+                            <Text className="text-md font-bold">Onchain</Text>
+                          </T>
                           <Text className="text-md font-bold">
                             {formatHomeBalance(onchainBalance)}
                           </Text>
                         </View>
                         <View className="pl-4 space-y-1">
                           <View className="flex-row justify-between">
-                            <Text className="text-muted-foreground">Confirmed</Text>
+                            <T>
+                              <Text className="text-muted-foreground">Confirmed</Text>
+                            </T>
                             <Text>{formatHomeBalance(balance?.onchain.confirmed ?? 0)}</Text>
                           </View>
                           <View className="flex-row justify-between">
-                            <Text className="text-muted-foreground">Trusted Pending</Text>
+                            <T>
+                              <Text className="text-muted-foreground">Trusted Pending</Text>
+                            </T>
                             <Text>{formatHomeBalance(balance?.onchain.trusted_pending ?? 0)}</Text>
                           </View>
                           <View className="flex-row justify-between">
-                            <Text className="text-muted-foreground">Untrusted Pending</Text>
+                            <T>
+                              <Text className="text-muted-foreground">Untrusted Pending</Text>
+                            </T>
                             <Text>
                               {formatHomeBalance(balance?.onchain.untrusted_pending ?? 0)}
                             </Text>
                           </View>
                           <View className="flex-row justify-between">
-                            <Text className="text-muted-foreground">Immature</Text>
+                            <T>
+                              <Text className="text-muted-foreground">Immature</Text>
+                            </T>
                             <Text>{formatHomeBalance(balance?.onchain.immature ?? 0)}</Text>
                           </View>
                         </View>
@@ -377,34 +412,46 @@ const HomeScreen = () => {
 
                       <View>
                         <View className="flex-row justify-between items-center mb-2">
-                          <Text className="text-md font-bold">Offchain</Text>
+                          <T>
+                            <Text className="text-md font-bold">Offchain</Text>
+                          </T>
                           <Text className="text-md font-bold">
                             {formatHomeBalance(offchainBalance)}
                           </Text>
                         </View>
                         <View className="pl-4 space-y-1">
                           <View className="flex-row justify-between">
-                            <Text className="text-muted-foreground">Spendable</Text>
+                            <T>
+                              <Text className="text-muted-foreground">Spendable</Text>
+                            </T>
                             <Text>{formatHomeBalance(balance?.offchain.spendable ?? 0)}</Text>
                           </View>
                           <View className="flex-row justify-between">
-                            <Text className="text-muted-foreground">Pending Send</Text>
+                            <T>
+                              <Text className="text-muted-foreground">Pending Send</Text>
+                            </T>
                             <Text>
                               {formatHomeBalance(balance?.offchain.pending_lightning_send ?? 0)}
                             </Text>
                           </View>
                           <View className="flex-row justify-between mb-2">
-                            <Text className="text-muted-foreground">Pending In Round</Text>
+                            <T>
+                              <Text className="text-muted-foreground">Pending In Round</Text>
+                            </T>
                             <Text>
                               {formatHomeBalance(balance?.offchain.pending_in_round ?? 0)}
                             </Text>
                           </View>
                           <View className="flex-row justify-between">
-                            <Text className="text-muted-foreground">Pending Exit</Text>
+                            <T>
+                              <Text className="text-muted-foreground">Pending Exit</Text>
+                            </T>
                             <Text>{formatHomeBalance(balance?.offchain.pending_exit ?? 0)}</Text>
                           </View>
                           <View className="flex-row justify-between">
-                            <Text className="text-muted-foreground">Pending Board</Text>
+                            <T>
+                              <Text className="text-muted-foreground">Pending Board</Text>
+                            </T>
                             <Text>{formatHomeBalance(balance?.offchain.pending_board ?? 0)}</Text>
                           </View>
                         </View>
@@ -421,9 +468,13 @@ const HomeScreen = () => {
               >
                 <View className="rounded-[18px] border border-border/60 bg-card/70 px-4 py-4">
                   <View className="mb-3 flex-row items-center justify-between">
-                    <Text className="text-base font-bold text-foreground">Recent Activity</Text>
+                    <T>
+                      <Text className="text-base font-bold text-foreground">Recent Activity</Text>
+                    </T>
                     <Pressable onPress={openHistory}>
-                      <Text className="text-sm font-semibold text-primary">View all</Text>
+                      <T>
+                        <Text className="text-sm font-semibold text-primary">View all</Text>
+                      </T>
                     </Pressable>
                   </View>
 
@@ -433,10 +484,16 @@ const HomeScreen = () => {
                     </View>
                   ) : recentTransactions.length === 0 ? (
                     <View className="py-5">
-                      <Text className="text-sm font-semibold text-foreground">No activity yet</Text>
-                      <Text className="mt-1 text-sm text-muted-foreground">
-                        Receive or send bitcoin to start your history.
-                      </Text>
+                      <T>
+                        <Text className="text-sm font-semibold text-foreground">
+                          No activity yet
+                        </Text>
+                      </T>
+                      <T>
+                        <Text className="mt-1 text-sm text-muted-foreground">
+                          Receive or send bitcoin to start your history.
+                        </Text>
+                      </T>
                     </View>
                   ) : (
                     recentTransactions.map((transaction, index) => {
@@ -468,11 +525,11 @@ const HomeScreen = () => {
                           </View>
                           <View className="min-w-0 flex-1">
                             <Text className="text-sm font-semibold text-foreground">
-                              {getTransactionDisplayLabel(transaction)}
+                              {getTransactionDisplayLabel(transaction, gt)}
                             </Text>
                             <Text className="mt-1 text-xs text-muted-foreground">
-                              {transaction.dateLabel ??
-                                new Date(transaction.date).toLocaleDateString(undefined, {
+                              {getTransactionConfirmationLabel(transaction, gt) ??
+                                new Date(transaction.date).toLocaleDateString(locale, {
                                   month: "short",
                                   day: "numeric",
                                 })}
@@ -501,7 +558,7 @@ const HomeScreen = () => {
           )}
         </View>
         <View className="p-4 items-center justify-center mb-16" style={{ marginTop: "auto" }}>
-          <Text className="text-center text-xs text-muted-foreground">{fact}</Text>
+          <Text className="text-center text-xs text-muted-foreground">{m(fact)}</Text>
         </View>
       </ScrollView>
       {selectedTransaction ? (

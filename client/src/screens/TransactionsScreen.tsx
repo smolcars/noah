@@ -1,3 +1,4 @@
+import { useLocale, T, useGT } from "gt-react-native";
 import { View, Pressable, ActivityIndicator } from "react-native";
 import { type NavigationProp, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -25,6 +26,7 @@ import { NativeNoahSegmentedControl } from "~/components/ui/NativeNoahSegmentedC
 import {
   getTransactionAccountingValues,
   getTransactionDisplayLabel,
+  getTransactionConfirmationLabel,
   isCanceledTransaction,
   isInternalBoardingTransfer,
 } from "~/lib/transactionHistory";
@@ -37,14 +39,15 @@ const log = logger("TransactionsScreen");
 
 type TransactionFilter = PaymentTypes | "all" | "Lightning";
 
-const TRANSACTION_FILTER_OPTIONS = [
-  { label: "All", value: "all" },
-  { label: "Lightning", value: "Lightning" },
-  { label: "Ark", value: "Arkoor" },
-  { label: "Onchain", value: "Onchain" },
-] as const;
-
 const TransactionsScreen = () => {
+  const gt = useGT();
+  const TRANSACTION_FILTER_OPTIONS = [
+    { label: gt("All"), value: "all" },
+    { label: "Lightning", value: "Lightning" },
+    { label: "Ark", value: "Arkoor" },
+    { label: gt("Onchain"), value: "Onchain" },
+  ] as const;
+  const locale = useLocale();
   const navigation = useNavigation<NativeStackNavigationProp<TransactionsStackParamList>>();
   const tabNavigation = navigation.getParent<NavigationProp<TabParamList>>();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
@@ -78,20 +81,38 @@ const TransactionsScreen = () => {
   };
 
   const exportToCSV = async () => {
-    const csvHeader = `Payment ID,Date,Type,Status,Direction,Amount (₿),BTC Price (${fiatCurrency}),Transaction ID,Destination\n`;
+    const csvHeader =
+      [
+        gt("Payment ID"),
+        gt("Date"),
+        gt("Type"),
+        gt("Status"),
+        gt("Direction"),
+        gt("Amount (₿)"),
+        gt("BTC Price ({currency})", { currency: fiatCurrency }),
+        gt("Transaction ID"),
+        gt("Destination"),
+      ].join(",") + "\n";
+    const directionLabels = {
+      Incoming: gt("Incoming"),
+      Outgoing: gt("Outgoing"),
+      Transfer: gt("Transfer"),
+      None: gt("None"),
+    };
     const csvRows = filteredTransactions
       .map((transaction) => {
         const date =
-          transaction.dateLabel ?? new Date(transaction.date).toISOString().split("T")[0];
-        const type = getTransactionDisplayLabel(transaction);
-        const status = formatMovementStatusLabel(transaction.movementStatus) ?? "";
+          getTransactionConfirmationLabel(transaction, gt) ??
+          new Date(transaction.date).toISOString().split("T")[0];
+        const type = getTransactionDisplayLabel(transaction, gt);
+        const status = formatMovementStatusLabel(transaction.movementStatus, gt) ?? "";
         const { direction, amount } = getTransactionAccountingValues(transaction);
         const id = transaction.id;
         const btcPrice = transaction.btcPrice;
         const txid = transaction.txid || "";
         const destination = transaction.destination;
 
-        return `${id},${date},${type},${status},${direction},${amount},${btcPrice},${txid},${destination}`;
+        return `${id},${date},${type},${status},${directionLabels[direction]},${amount},${btcPrice},${txid},${destination}`;
       })
       .join("\n");
 
@@ -113,11 +134,11 @@ const TransactionsScreen = () => {
 
     const shareResult = await ResultAsync.fromPromise(
       Share.open({
-        title: "Export Transactions",
+        title: gt("Export Transactions"),
         url: `file://${filePath}`,
         type: "text/csv",
         filename: filename,
-        subject: "Noah Wallet Transaction Export",
+        subject: gt("Noah Wallet Transaction Export"),
       }),
       (e) => e as Error,
     );
@@ -163,11 +184,13 @@ const TransactionsScreen = () => {
       <NoahSafeAreaView className="flex-1 bg-background">
         <View className="py-4 flex-1" onLayout={onLayout}>
           <View className="flex-row items-center justify-between mb-8">
-            <Text className="text-2xl font-bold text-foreground">Transactions</Text>
+            <T>
+              <Text className="text-2xl font-bold text-foreground">Transactions</Text>
+            </T>
             <View className="flex-row items-center gap-4">
               <NativeNoahIconButton
                 icon="refresh"
-                accessibilityLabel="Refresh transaction history"
+                accessibilityLabel={gt("Refresh transaction history")}
                 onPress={() => {
                   void handleRefresh();
                 }}
@@ -176,7 +199,7 @@ const TransactionsScreen = () => {
               />
               <NativeNoahIconButton
                 icon="share"
-                accessibilityLabel="Export transactions"
+                accessibilityLabel={gt("Export transactions")}
                 onPress={exportToCSV}
                 testID="transactions-share-button"
               />
@@ -201,14 +224,20 @@ const TransactionsScreen = () => {
                 </View>
               ) : isError ? (
                 <View className="flex-1 items-center justify-center">
-                  <Text className="text-muted-foreground mb-4">Failed to load transactions</Text>
+                  <T>
+                    <Text className="text-muted-foreground mb-4">Failed to load transactions</Text>
+                  </T>
                   <Pressable onPress={() => refetch()} className="px-4 py-2 bg-primary rounded-lg">
-                    <Text className="text-primary-foreground">Retry</Text>
+                    <T>
+                      <Text className="text-primary-foreground">Retry</Text>
+                    </T>
                   </Pressable>
                 </View>
               ) : filteredTransactions.length === 0 ? (
                 <View className="flex-1 items-center justify-center">
-                  <Text className="text-muted-foreground">No transactions yet</Text>
+                  <T>
+                    <Text className="text-muted-foreground">No transactions yet</Text>
+                  </T>
                 </View>
               ) : (
                 <FlashList
@@ -216,7 +245,7 @@ const TransactionsScreen = () => {
                   renderItem={({ item }: { item: Transaction }) => {
                     const isTransfer = isInternalBoardingTransfer(item);
                     const isCanceled = isCanceledTransaction(item);
-                    const movementStatus = formatMovementStatusLabel(item.movementStatus);
+                    const movementStatus = formatMovementStatusLabel(item.movementStatus, gt);
 
                     return (
                       <View style={{ marginBottom: 8 }}>
@@ -248,10 +277,11 @@ const TransactionsScreen = () => {
                           >
                             <View className="min-w-0 flex-1">
                               <Text className="text-foreground text-base font-medium">
-                                {getTransactionDisplayLabel(item)}
+                                {getTransactionDisplayLabel(item, gt)}
                               </Text>
                               <Text className="text-muted-foreground text-sm mt-1">
-                                {item.dateLabel ?? new Date(item.date).toLocaleString()}
+                                {getTransactionConfirmationLabel(item, gt) ??
+                                  new Date(item.date).toLocaleString(locale)}
                               </Text>
                             </View>
                             <View className="shrink-0 items-end">
@@ -300,9 +330,11 @@ const TransactionsScreen = () => {
                   />
                 ) : (
                   <View className="flex-1 items-center justify-center p-6">
-                    <Text className="text-center text-muted-foreground">
-                      Select a transaction to see its details
-                    </Text>
+                    <T>
+                      <Text className="text-center text-muted-foreground">
+                        Select a transaction to see its details
+                      </Text>
+                    </T>
                   </View>
                 )}
               </View>

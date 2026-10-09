@@ -1,3 +1,4 @@
+import { T } from "gt-react-native";
 import React, { useEffect, useRef } from "react";
 import { View } from "react-native";
 import { Text } from "./ui/text";
@@ -82,7 +83,9 @@ const WalletLoader: React.FC<WalletLoaderProps> = ({ children }) => {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <NoahActivityIndicator size="large" />
-        <Text className="mt-2.5 text-foreground">Loading Wallet...</Text>
+        <T>
+          <Text className="mt-2.5 text-foreground">Loading Wallet...</Text>
+        </T>
       </View>
     );
   }

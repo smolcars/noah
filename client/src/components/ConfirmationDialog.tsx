@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import React from "react";
 import * as Haptics from "expo-haptics";
 import {
@@ -93,8 +94,8 @@ export const ConfirmationDialog = ({
   onConfirm,
   onCancel,
   children,
-  confirmText = "Confirm",
-  cancelText = "Cancel",
+  confirmText,
+  cancelText,
   confirmVariant = "destructive",
   isConfirmDisabled,
   open,
@@ -110,6 +111,9 @@ export const ConfirmationDialog = ({
   cancelHapticType = Haptics.ImpactFeedbackStyle.Light,
   enableHaptics = true,
 }: ConfirmationDialogProps) => {
+  const gt = useGT();
+  const displayedConfirmText = confirmText ?? gt("Confirm");
+  const displayedCancelText = cancelText ?? gt("Cancel");
   // Set default haptic type based on variant
   const defaultConfirmHapticType =
     confirmVariant === "destructive"
@@ -149,8 +153,8 @@ export const ConfirmationDialog = ({
         open={actualOpen}
         title={title}
         description={description}
-        confirmText={confirmText}
-        cancelText={cancelText}
+        confirmText={displayedConfirmText}
+        cancelText={displayedCancelText}
         confirmVariant={confirmVariant}
         isConfirmDisabled={isConfirmDisabled}
         onConfirm={handleConfirm}
@@ -197,7 +201,7 @@ export const ConfirmationDialog = ({
       {children}
       <AlertDialogFooter className={cn("flex-row space-x-2", footerClassName)}>
         <AlertDialogCancel onPress={handleCancel} className={cn("flex-1", cancelClassName)}>
-          <Text>{cancelText}</Text>
+          <Text>{displayedCancelText}</Text>
         </AlertDialogCancel>
         <AlertDialogAction
           variant={confirmVariant}
@@ -205,7 +209,7 @@ export const ConfirmationDialog = ({
           className={cn("flex-1", actionClassName)}
           disabled={isConfirmDisabled}
         >
-          <Text>{confirmText}</Text>
+          <Text>{displayedConfirmText}</Text>
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

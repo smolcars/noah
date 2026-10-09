@@ -11,10 +11,12 @@ import {
 import {
   fillMaxWidth,
   menuAnchor,
+  semantics,
   testID as composeTestID,
 } from "@expo/ui/jetpack-compose/modifiers";
 import { Picker as SwiftPicker, Text as SwiftText } from "@expo/ui/swift-ui";
 import {
+  accessibilityLabel as swiftAccessibilityLabel,
   disabled as swiftDisabled,
   foregroundStyle,
   frame,
@@ -49,6 +51,7 @@ type NativeNoahPickerProps<T extends string> = {
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
+  accessibilityLabel?: string;
 };
 
 export function NativeNoahPicker<T extends string>({
@@ -58,6 +61,7 @@ export function NativeNoahPicker<T extends string>({
   disabled = false,
   style,
   testID,
+  accessibilityLabel,
 }: NativeNoahPickerProps<T>) {
   const { colors, colorScheme } = useTheme();
   const [measuredWidth, setMeasuredWidth] = useState<number>();
@@ -96,6 +100,7 @@ export function NativeNoahPicker<T extends string>({
             disabled={disabled}
             colors={colors}
             testID={testID}
+            accessibilityLabel={accessibilityLabel}
           />
         ) : (
           <SwiftNoahPicker
@@ -106,6 +111,7 @@ export function NativeNoahPicker<T extends string>({
             colors={colors}
             width={measuredWidth === undefined ? undefined : Math.max(measuredWidth - 2, 0)}
             testID={testID}
+            accessibilityLabel={accessibilityLabel}
           />
         )}
       </Host>
@@ -120,6 +126,7 @@ function AndroidNoahPicker<T extends string>({
   disabled,
   colors,
   testID,
+  accessibilityLabel,
 }: Omit<NativeNoahPickerProps<T>, "style"> & { colors: ThemeColors }) {
   const [expanded, setExpanded] = useState(false);
   const selectedLabel = options.find((option) => option.value === value)?.label ?? "";
@@ -144,6 +151,7 @@ function AndroidNoahPicker<T extends string>({
           menuAnchor("primaryNotEditable", !disabled),
           fillMaxWidth(),
           ...(testID ? [composeTestID(testID)] : []),
+          ...(accessibilityLabel ? [semantics({ contentDescription: accessibilityLabel })] : []),
         ]}
         shape={Shape.RoundedCorner({
           cornerRadii: { topStart: 8, topEnd: 8, bottomStart: 8, bottomEnd: 8 },
@@ -202,6 +210,7 @@ function SwiftNoahPicker<T extends string>({
   colors,
   width,
   testID,
+  accessibilityLabel,
 }: Omit<NativeNoahPickerProps<T>, "style"> & {
   colors: ThemeColors;
   width?: number;
@@ -217,6 +226,7 @@ function SwiftNoahPicker<T extends string>({
         tint(colors.foreground),
         foregroundStyle(colors.foreground),
         ...(disabled ? [swiftDisabled(true)] : []),
+        ...(accessibilityLabel ? [swiftAccessibilityLabel(accessibilityLabel)] : []),
       ]}
     >
       {options.map((option) => (

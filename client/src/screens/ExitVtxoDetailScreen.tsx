@@ -1,3 +1,5 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
+import { T, useGT, Var } from "gt-react-native";
 import React from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
@@ -11,7 +13,7 @@ import { Text } from "~/components/ui/text";
 import { useExitOverview, useSyncExits } from "~/hooks/useUnilateralExit";
 import {
   buildExitTimelineItems,
-  EXIT_STATE_LABELS,
+  getExitStateLabels,
   formatBlocksRemaining,
   getExitBlockRows,
   getExitStatusText,
@@ -134,12 +136,18 @@ const TimelineRow = ({ item, isLast }: { item: ExitTimelineItem; isLast: boolean
                 {item.count > 1 ? ` x${item.count}` : ""}
               </Text>
               {heightLabel ? (
-                <Text className="mt-1 text-xs text-muted-foreground">Block/tip {heightLabel}</Text>
+                <T>
+                  <Text className="mt-1 text-xs text-muted-foreground">
+                    Block/tip <Var>{heightLabel}</Var>
+                  </Text>
+                </T>
               ) : null}
             </View>
             {item.isCurrent ? (
               <View className={cn("rounded-full border px-2 py-1", tone.bgClassName)}>
-                <Text className={cn("text-xs font-semibold", tone.className)}>Current</Text>
+                <T>
+                  <Text className={cn("text-xs font-semibold", tone.className)}>Current</Text>
+                </T>
               </View>
             ) : null}
           </View>
@@ -158,6 +166,8 @@ const TimelineRow = ({ item, isLast }: { item: ExitTimelineItem; isLast: boolean
 };
 
 const ExitVtxoDetailScreen = () => {
+  const translateError = useErrorTranslation();
+  const gt = useGT();
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const route = useRoute<ExitVtxoDetailRouteProp>();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
@@ -171,23 +181,26 @@ const ExitVtxoDetailScreen = () => {
   const tone = state ? stateTone(state) : stateTone("Start");
   const timelineItems =
     exit && state
-      ? buildExitTimelineItems({
-          history: status?.history ?? exit.history,
-          historyDetails:
-            status?.history_details && status.history_details.length > 0
-              ? status.history_details
-              : exit.history_details,
-          currentState: state,
-          currentDetails: details,
-          currentBlockHeight: overview?.blockHeight,
-        })
+      ? buildExitTimelineItems(
+          {
+            history: status?.history ?? exit.history,
+            historyDetails:
+              status?.history_details && status.history_details.length > 0
+                ? status.history_details
+                : exit.history_details,
+            currentState: state,
+            currentDetails: details,
+            currentBlockHeight: overview?.blockHeight,
+          },
+          gt,
+        )
       : [];
   const blockRows =
     state && details
-      ? getExitBlockRows({ state, details, currentBlockHeight: overview?.blockHeight })
+      ? getExitBlockRows({ state, details, currentBlockHeight: overview?.blockHeight }, gt)
       : [];
   const claimableHeight = details?.claimable_height ?? details?.claimable_since?.height;
-  const remaining = formatBlocksRemaining(overview?.blockHeight, claimableHeight);
+  const remaining = formatBlocksRemaining(overview?.blockHeight, claimableHeight, gt);
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
@@ -203,11 +216,13 @@ const ExitVtxoDetailScreen = () => {
               className="mr-3"
               testID="exit-timeline-back-button"
             />
-            <Text className="flex-1 text-2xl font-bold text-foreground">Exit Timeline</Text>
+            <T>
+              <Text className="flex-1 text-2xl font-bold text-foreground">Exit Timeline</Text>
+            </T>
           </View>
           <NativeNoahIconButton
             icon="refresh"
-            accessibilityLabel="Refresh exit timeline"
+            accessibilityLabel={gt("Refresh exit timeline")}
             onPress={() => syncExits.mutate()}
             isLoading={syncExits.isPending}
             testID="exit-timeline-refresh-button"
@@ -217,19 +232,29 @@ const ExitVtxoDetailScreen = () => {
         {overviewQuery.isLoading ? (
           <View className="items-center py-12">
             <NoahActivityIndicator />
-            <Text className="mt-3 text-muted-foreground">Loading exit timeline...</Text>
+            <T>
+              <Text className="mt-3 text-muted-foreground">Loading exit timeline...</Text>
+            </T>
           </View>
         ) : overviewQuery.error ? (
           <View className="rounded-lg border border-destructive bg-destructive/10 p-4">
-            <Text className="font-semibold text-destructive">Unable to load exit</Text>
-            <Text className="mt-2 text-sm text-destructive">{overviewQuery.error.message}</Text>
+            <T>
+              <Text className="font-semibold text-destructive">Unable to load exit</Text>
+            </T>
+            <Text className="mt-2 text-sm text-destructive">
+              {translateError(overviewQuery.error.message ?? "")}
+            </Text>
           </View>
         ) : !exit || !state || !details ? (
           <View className="rounded-lg border border-border bg-card p-4">
-            <Text className="text-base font-semibold text-foreground">Exit not found</Text>
-            <Text className="mt-2 text-sm leading-5 text-muted-foreground">
-              This VTXO is not currently tracked as an emergency exit.
-            </Text>
+            <T>
+              <Text className="text-base font-semibold text-foreground">Exit not found</Text>
+            </T>
+            <T>
+              <Text className="mt-2 text-sm leading-5 text-muted-foreground">
+                This VTXO is not currently tracked as an emergency exit.
+              </Text>
+            </T>
           </View>
         ) : (
           <AdaptiveColumns>
@@ -241,11 +266,14 @@ const ExitVtxoDetailScreen = () => {
                       {formatBitcoinAmount(exit.amount_sat)}
                     </Text>
                     <Text className="mt-2 text-base font-medium text-foreground">
-                      {getExitStatusText({
-                        state,
-                        details,
-                        currentBlockHeight: overview?.blockHeight,
-                      })}
+                      {getExitStatusText(
+                        {
+                          state,
+                          details,
+                          currentBlockHeight: overview?.blockHeight,
+                        },
+                        gt,
+                      )}
                     </Text>
                     <Text className="mt-2 text-sm text-muted-foreground">
                       {truncateMiddle(exit.vtxo_id, 14, 12)}
@@ -253,23 +281,31 @@ const ExitVtxoDetailScreen = () => {
                   </View>
                   <View className={cn("rounded-full border px-3 py-2", tone.bgClassName)}>
                     <Text className={cn("text-sm font-semibold", tone.className)}>
-                      {EXIT_STATE_LABELS[state]}
+                      {getExitStateLabels(gt)[state]}
                     </Text>
                   </View>
                 </View>
               </View>
 
               <View className="mb-5 rounded-lg border border-border bg-card p-4">
-                <Text className="mb-3 text-lg font-semibold text-foreground">Block Status</Text>
+                <T>
+                  <Text className="mb-3 text-lg font-semibold text-foreground">Block Status</Text>
+                </T>
                 <View className="flex-row gap-x-4">
                   <View className="flex-1">
-                    <Text className="text-xs uppercase text-muted-foreground">Current Height</Text>
+                    <T>
+                      <Text className="text-xs uppercase text-muted-foreground">
+                        Current Height
+                      </Text>
+                    </T>
                     <Text className="mt-1 text-base font-semibold text-foreground">
-                      {overview?.blockHeight !== undefined ? overview.blockHeight : "Unknown"}
+                      {overview?.blockHeight !== undefined ? overview.blockHeight : gt("Unknown")}
                     </Text>
                   </View>
                   <View className="flex-1">
-                    <Text className="text-xs uppercase text-muted-foreground">Exit Tip</Text>
+                    <T>
+                      <Text className="text-xs uppercase text-muted-foreground">Exit Tip</Text>
+                    </T>
                     <Text className="mt-1 text-base font-semibold text-foreground">
                       {details.tip_height}
                     </Text>
@@ -277,17 +313,21 @@ const ExitVtxoDetailScreen = () => {
                 </View>
                 <View className="mt-4 flex-row gap-x-4">
                   <View className="flex-1">
-                    <Text className="text-xs uppercase text-muted-foreground">
-                      Claimable Height
-                    </Text>
+                    <T>
+                      <Text className="text-xs uppercase text-muted-foreground">
+                        Claimable Height
+                      </Text>
+                    </T>
                     <Text className="mt-1 text-base font-semibold text-foreground">
-                      {claimableHeight ?? "Unknown"}
+                      {claimableHeight ?? gt("Unknown")}
                     </Text>
                   </View>
                   <View className="flex-1">
-                    <Text className="text-xs uppercase text-muted-foreground">Remaining</Text>
+                    <T>
+                      <Text className="text-xs uppercase text-muted-foreground">Remaining</Text>
+                    </T>
                     <Text className="mt-1 text-base font-semibold text-foreground">
-                      {remaining ?? "Unknown"}
+                      {remaining ?? gt("Unknown")}
                     </Text>
                   </View>
                 </View>
@@ -295,7 +335,11 @@ const ExitVtxoDetailScreen = () => {
 
               {blockRows.length > 0 ? (
                 <View className="mb-5 rounded-lg border border-border bg-card p-4">
-                  <Text className="mb-1 text-lg font-semibold text-foreground">Current State</Text>
+                  <T>
+                    <Text className="mb-1 text-lg font-semibold text-foreground">
+                      Current State
+                    </Text>
+                  </T>
                   <View className="mt-2 rounded-md border border-border/60 bg-background/60 px-3">
                     {blockRows.map((row) => (
                       <DetailRow key={`${row.label}-${row.value}`} row={row} />
@@ -305,7 +349,9 @@ const ExitVtxoDetailScreen = () => {
               ) : null}
             </View>
             <View className="mb-2">
-              <Text className="mb-4 text-lg font-semibold text-foreground">Timeline</Text>
+              <T>
+                <Text className="mb-4 text-lg font-semibold text-foreground">Timeline</Text>
+              </T>
               {timelineItems.map((item, index) => (
                 <TimelineRow
                   key={`${item.state}-${index}`}

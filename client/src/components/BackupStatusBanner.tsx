@@ -1,3 +1,4 @@
+import { useGT, useLocale } from "gt-react-native";
 import React, { useEffect, useState } from "react";
 import { AlertCircle, CheckCircle } from "lucide-react-native";
 import { NoahActivityIndicator } from "~/components/ui/NoahActivityIndicator";
@@ -10,13 +11,15 @@ import { redactSensitiveErrorMessage } from "~/lib/errorUtils";
 
 const log = logger("BackupStatusBanner");
 
-const formatBackupTime = (timestamp: number) =>
-  new Date(timestamp).toLocaleTimeString([], {
+const formatBackupTime = (timestamp: number, locale: string) =>
+  new Date(timestamp).toLocaleTimeString(locale, {
     hour: "numeric",
     minute: "2-digit",
   });
 
 export const BackupStatusBanner: React.FC = () => {
+  const gt = useGT();
+  const locale = useLocale();
   const { backupPending, lastBackupAt, lastBackupStatus, lastBackupError } = useBackupStore();
   const [isRetrying, setIsRetrying] = useState(false);
   const [tick, setTick] = useState(0);
@@ -52,8 +55,8 @@ export const BackupStatusBanner: React.FC = () => {
   const banner = (() => {
     if (showInProgress) {
       return {
-        title: "Backing up wallet",
-        message: "Running in background",
+        title: gt("Backing up wallet"),
+        message: gt("Running in background"),
         icon: <NoahActivityIndicator size="small" />,
         tone: "info" as StatusBannerTone,
         actionLabel: null,
@@ -62,18 +65,20 @@ export const BackupStatusBanner: React.FC = () => {
 
     if (showFailed) {
       return {
-        title: "Backup failed",
-        message: lastBackupError ?? "An unknown error occurred while backing up.",
+        title: gt("Backup failed"),
+        message: lastBackupError ?? gt("An unknown error occurred while backing up."),
         icon: <AlertCircle size={16} color="#ef4444" />,
         tone: "failed" as StatusBannerTone,
-        actionLabel: "Retry",
+        actionLabel: gt("Retry"),
       };
     }
 
     if (showSuccess) {
       return {
-        title: "Backup completed",
-        message: lastBackupAt ? `Last backup ${formatBackupTime(lastBackupAt)}` : "Saved",
+        title: gt("Backup completed"),
+        message: lastBackupAt
+          ? gt("Last backup {time}", { time: formatBackupTime(lastBackupAt, locale) })
+          : gt("Saved"),
         icon: <CheckCircle size={16} color="#22c55e" />,
         tone: "success" as StatusBannerTone,
         actionLabel: null,

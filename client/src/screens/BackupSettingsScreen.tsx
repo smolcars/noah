@@ -1,3 +1,5 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
+import { T, useGT, useLocale, Var } from "gt-react-native";
 import React, { useState } from "react";
 import { View, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -16,6 +18,9 @@ import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryBu
 import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 
 export const BackupSettingsScreen = () => {
+  const translateError = useErrorTranslation();
+  const gt = useGT();
+  const locale = useLocale();
   const navigation = useNavigation();
   const {
     isBackupEnabled,
@@ -41,15 +46,21 @@ export const BackupSettingsScreen = () => {
             className="mr-3"
             testID="backup-settings-back-button"
           />
-          <Text className="text-2xl font-bold text-foreground">Backup</Text>
+          <T>
+            <Text className="text-2xl font-bold text-foreground">Backup</Text>
+          </T>
         </View>
-        <Text className="text-muted-foreground mb-8">
-          Backups are encrypted with your seed phrase and stored securely on our servers. We can
-          never access your funds or data.
-        </Text>
+        <T>
+          <Text className="text-muted-foreground mb-8">
+            Backups are encrypted with your seed phrase and stored securely on our servers. We can
+            never access your funds or data.
+          </Text>
+        </T>
 
         <View className="flex-row justify-between items-center p-4 border-b border-border bg-card rounded-lg mb-4">
-          <Label className="flex-1 mr-3 text-foreground text-lg">Enable Automatic Backups</Label>
+          <T>
+            <Label className="flex-1 mr-3 text-foreground text-lg">Enable Automatic Backups</Label>
+          </T>
           <NativeSwitch
             value={isBackupEnabled}
             onValueChange={setBackupEnabled}
@@ -59,20 +70,28 @@ export const BackupSettingsScreen = () => {
 
         {showSuccessAlert && (
           <Alert icon={CheckCircle} className="mb-4">
-            <AlertTitle>Backup Complete!</AlertTitle>
-            <AlertDescription>Your wallet has been backed up successfully.</AlertDescription>
+            <T>
+              <AlertTitle>Backup Complete!</AlertTitle>
+            </T>
+            <T>
+              <AlertDescription>Your wallet has been backed up successfully.</AlertDescription>
+            </T>
           </Alert>
         )}
 
         {showErrorAlert && (
           <Alert icon={AlertCircle} variant="destructive" className="mb-4">
-            <AlertTitle>Backup Failed</AlertTitle>
-            <AlertDescription>{errorMessage ?? "An unknown error occurred"}</AlertDescription>
+            <T>
+              <AlertTitle>Backup Failed</AlertTitle>
+            </T>
+            <AlertDescription>
+              {translateError(errorMessage ?? gt("An unknown error occurred") ?? "")}
+            </AlertDescription>
           </Alert>
         )}
 
         <NativeNoahButton
-          label="Backup Now"
+          label={gt("Backup Now")}
           onPress={async () => {
             const result = await triggerBackup();
             if (result.isOk()) {
@@ -93,7 +112,7 @@ export const BackupSettingsScreen = () => {
 
         <View className="mt-8">
           <NativeNoahSecondaryButton
-            label="List Backups"
+            label={gt("List Backups")}
             onPress={async () => {
               const result = await listBackups();
               if (result.isOk()) {
@@ -112,9 +131,13 @@ export const BackupSettingsScreen = () => {
 
           {showBackups && backupsList && (
             <View className="mb-4 p-4 bg-card rounded-lg border border-border">
-              <Text className="text-lg font-semibold mb-2">Available Backups</Text>
+              <T>
+                <Text className="text-lg font-semibold mb-2">Available Backups</Text>
+              </T>
               {backupsList.length === 0 ? (
-                <Text className="text-muted-foreground">No backups found</Text>
+                <T>
+                  <Text className="text-muted-foreground">No backups found</Text>
+                </T>
               ) : (
                 backupsList.map((backup) => (
                   <View
@@ -122,15 +145,19 @@ export const BackupSettingsScreen = () => {
                     className="flex-row justify-between items-center py-2 border-b border-border"
                   >
                     <View className="min-w-0 flex-1 mr-3">
-                      <Text className="font-medium">Encrypted wallet snapshot</Text>
-                      <Text className="text-sm text-muted-foreground">
-                        {new Date(backup.created_at).toLocaleString()} -{" "}
-                        {(backup.encrypted_size / 1024).toFixed(1)} KB
-                      </Text>
+                      <T>
+                        <Text className="font-medium">Encrypted wallet snapshot</Text>
+                      </T>
+                      <T>
+                        <Text className="text-sm text-muted-foreground">
+                          <Var>{new Date(backup.created_at).toLocaleString(locale)}</Var> -{" "}
+                          <Var>{(backup.encrypted_size / 1024).toFixed(1)}</Var> KB
+                        </Text>
+                      </T>
                     </View>
                     <View className="flex-row gap-2">
                       <NativeNoahButton
-                        label="Delete"
+                        label={gt("Delete")}
                         variant="destructive"
                         size="sm"
                         onPress={() => deleteBackup(backup.backup_id)}
@@ -150,7 +177,9 @@ export const BackupSettingsScreen = () => {
         <View className="absolute inset-0 bg-black/50 items-center justify-center">
           <View className="bg-card p-6 rounded-lg items-center">
             <NoahActivityIndicator size="large" />
-            <Text className="text-foreground mt-4">Loading...</Text>
+            <T>
+              <Text className="text-foreground mt-4">Loading...</Text>
+            </T>
           </View>
         </View>
       )}

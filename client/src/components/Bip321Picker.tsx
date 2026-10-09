@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import React from "react";
 import { TouchableOpacity, View } from "react-native";
 import { ParsedBip321 } from "../lib/sendUtils";
@@ -40,13 +41,14 @@ export const Bip321Picker = ({
   showSectionHeader = true,
   showSelectedDestination = true,
 }: Bip321PickerProps) => {
+  const gt = useGT();
   const colors = useThemeColors();
 
   const options = [
     bip321Data.arkAddress
       ? {
           method: "ark" as const,
-          label: "Ark",
+          label: gt("Ark"),
           value: bip321Data.arkAddress,
           icon: <ArkIcon className="h-4 w-4 text-foreground" />,
         }
@@ -54,7 +56,7 @@ export const Bip321Picker = ({
     bip321Data.lightningInvoice
       ? {
           method: "lightning" as const,
-          label: "Lightning",
+          label: gt("Lightning"),
           value: bip321Data.lightningInvoice,
           icon: <LightningIcon className="h-4 w-4 text-foreground" />,
         }
@@ -62,7 +64,7 @@ export const Bip321Picker = ({
     bip321Data.offer
       ? {
           method: "offer" as const,
-          label: "Offer",
+          label: gt("Offer"),
           value: bip321Data.offer,
           icon: <LightningIcon className="h-4 w-4 text-foreground" />,
         }
@@ -70,7 +72,7 @@ export const Bip321Picker = ({
     bip321Data.onchainAddress
       ? {
           method: "onchain" as const,
-          label: "On-chain",
+          label: gt("On-chain"),
           value: bip321Data.onchainAddress,
           icon: <OnchainIcon className="h-4 w-4 text-foreground" />,
         }
@@ -83,12 +85,16 @@ export const Bip321Picker = ({
     <View className={showSectionHeader ? "mt-4 border-t border-border/60 pt-4" : "mt-4"}>
       {showSectionHeader ? (
         <View className="flex-row items-center justify-between">
-          <Text className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
-            Payment route
-          </Text>
-          <Text className="text-xs font-medium uppercase tracking-[2px] text-muted-foreground">
-            Parsed request
-          </Text>
+          <T>
+            <Text className="text-sm font-semibold uppercase tracking-[2px] text-muted-foreground">
+              Payment route
+            </Text>
+          </T>
+          <T>
+            <Text className="text-xs font-medium uppercase tracking-[2px] text-muted-foreground">
+              Parsed request
+            </Text>
+          </T>
         </View>
       ) : null}
 
@@ -130,9 +136,11 @@ export const Bip321Picker = ({
             backgroundColor: `${colors.card}A6`,
           }}
         >
-          <Text className="text-xs font-semibold uppercase tracking-[2px] text-muted-foreground">
-            Selected destination
-          </Text>
+          <T>
+            <Text className="text-xs font-semibold uppercase tracking-[2px] text-muted-foreground">
+              Selected destination
+            </Text>
+          </T>
           <Text className="mt-2 text-base font-semibold text-foreground">
             {selectedOption.label}
           </Text>

@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import { useCallback, useState } from "react";
 import { useCameraPermission, useCodeScanner } from "react-native-vision-camera";
 import { useAlert } from "~/contexts/AlertProvider";
@@ -7,6 +8,7 @@ type QRCodeScannerOptions = {
 };
 
 export const useQRCodeScanner = ({ onScan }: QRCodeScannerOptions) => {
+  const gt = useGT();
   const [showCamera, setShowCamera] = useState(false);
   const { hasPermission, requestPermission } = useCameraPermission();
   const { showAlert } = useAlert();
@@ -32,15 +34,15 @@ export const useQRCodeScanner = ({ onScan }: QRCodeScannerOptions) => {
       const permissionGranted = await requestPermission();
       if (!permissionGranted) {
         showAlert({
-          title: "Permission required",
-          description: "Camera permission is required to scan QR codes.",
+          title: gt("Permission required"),
+          description: gt("Camera permission is required to scan QR codes."),
         });
         return false;
       }
     }
     setShowCamera(true);
     return true;
-  }, [hasPermission, requestPermission, showAlert]);
+  }, [gt, hasPermission, requestPermission, showAlert]);
 
   return {
     showCamera,

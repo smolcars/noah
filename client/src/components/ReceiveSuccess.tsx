@@ -1,3 +1,4 @@
+import { T, useGT, useLocale } from "gt-react-native";
 import React, { useEffect } from "react";
 import { ScrollView, View } from "react-native";
 import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
@@ -28,6 +29,8 @@ export const ReceiveSuccess: React.FC<ReceiveSuccessProps> = ({
   totalWalletBalanceSat,
   handleDone,
 }) => {
+  const locale = useLocale();
+  const gt = useGT();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const fiatAmount = btcPrice ? satsToFiat(amountSat, btcPrice, fiatCurrency) : null;
   const colors = useThemeColors();
@@ -57,12 +60,14 @@ export const ReceiveSuccess: React.FC<ReceiveSuccessProps> = ({
             </Text>
             {btcPrice && (
               <Text className="mt-3 text-base font-medium text-muted-foreground">
-                ≈ {fiatAmount ? formatFiatAmount(fiatAmount, fiatCurrency) : null}
+                ≈ {fiatAmount ? formatFiatAmount(fiatAmount, fiatCurrency, locale) : null}
               </Text>
             )}
-            <Text className="mt-6 text-center text-2xl font-bold text-foreground">
-              Funds received
-            </Text>
+            <T>
+              <Text className="mt-6 text-center text-2xl font-bold text-foreground">
+                Funds received
+              </Text>
+            </T>
           </Animated.View>
 
           <Animated.View
@@ -73,27 +78,33 @@ export const ReceiveSuccess: React.FC<ReceiveSuccessProps> = ({
             }}
           >
             <View className="flex-row items-center justify-between">
-              <Text className="text-sm font-medium uppercase tracking-[2px] text-muted-foreground">
-                Status
-              </Text>
-              <Text className="text-sm font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
-                Settled
-              </Text>
+              <T>
+                <Text className="text-sm font-medium uppercase tracking-[2px] text-muted-foreground">
+                  Status
+                </Text>
+              </T>
+              <T>
+                <Text className="text-sm font-semibold" style={{ color: COLORS.BITCOIN_ORANGE }}>
+                  Settled
+                </Text>
+              </T>
             </View>
             <View className="mt-4 h-px bg-border" />
             <View className="mt-4 flex-row items-center justify-between">
-              <Text className="text-base text-muted-foreground">Wallet balance</Text>
+              <T>
+                <Text className="text-base text-muted-foreground">Wallet balance</Text>
+              </T>
               <Text className="text-base font-semibold text-foreground">
                 {totalWalletBalanceSat !== undefined
                   ? formatBitcoinAmount(totalWalletBalanceSat)
-                  : "…"}
+                  : gt("…")}
               </Text>
             </View>
           </Animated.View>
         </View>
 
         <Animated.View entering={FadeInUp.duration(520).delay(320)} className="mt-6">
-          <NativeNoahButton label="Done" onPress={handleDone} fullWidth />
+          <NativeNoahButton label={gt("Done")} onPress={handleDone} fullWidth />
         </Animated.View>
       </ScrollView>
     </NoahSafeAreaView>

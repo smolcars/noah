@@ -212,6 +212,29 @@ PODS:
     - ReactNativeDependencies
   - glog (0.3.5):
     - ReactNativeDependencies
+  - GtReactNative (11.4.10):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - hermes-engine (260318099.0.4):
     - hermes-engine/Pre-built (= 260318099.0.4)
   - hermes-engine/Pre-built (260318099.0.4)
@@ -2728,6 +2751,7 @@ DEPENDENCIES:
   - FBLazyVector (from `build/rncore-facades/FBLazyVector`)
   - fmt (from `build/rndeps-facades/fmt`)
   - glog (from `build/rndeps-facades/glog`)
+  - GtReactNative (from `../../node_modules/gt-react-native`)
   - hermes-engine (from `../../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - "MapLibreReactNative (from `../../node_modules/@maplibre/maplibre-react-native`)"
   - NitroArk (from `../../node_modules/react-native-nitro-ark`)
@@ -2920,6 +2944,8 @@ EXTERNAL SOURCES:
     :path: build/rndeps-facades/fmt
   glog:
     :path: build/rndeps-facades/glog
+  GtReactNative:
+    :path: "../../node_modules/gt-react-native"
   hermes-engine:
     :podspec: "../../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec"
     :tag: hermes-v260318099.0.2
@@ -3167,6 +3193,7 @@ SPEC CHECKSUMS:
   FBLazyVector: aedd6183a5128a320407cb8ee02ba3dacd1359ea
   fmt: c7776a2a4b1d7ce88b809a1e4d1f7add0f2369df
   glog: b4427c3119645da795ff09985ba9da909c940c96
+  GtReactNative: f94ebd3f833e49e4ab776a8726cb1404d82c038b
   hermes-engine: 6a00d96909f1648698fe5419972fe3c9e628755e
   MapLibreReactNative: 5fb138b5b962a0f7ed6cfd7d79d1034a5f7bbc70
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa

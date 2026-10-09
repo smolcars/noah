@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 import type { ReactNode } from "react";
 import { AccessibilityInfo, Pressable, View } from "react-native";
@@ -43,19 +44,20 @@ export function ReceiveCopyBottomSheet({
   onClose,
   onchainAddress,
 }: ReceiveCopyBottomSheetProps) {
+  const gt = useGT();
   const colors = useThemeColors();
   const { copyWithState, isCopied } = useCopyToClipboard();
   const options: CopyOption[] = [
     {
       id: "request",
       icon: <Icon name="qr-code-outline" size={20} color={colors.foreground} />,
-      label: "Payment request",
+      label: gt("Payment request"),
       value: bip321Uri,
     },
     {
       id: "ark",
       icon: <ArkIcon className="h-5 w-5 text-foreground" />,
-      label: "Ark",
+      label: gt("Ark"),
       value: arkAddress,
     },
     ...(lightningInvoice
@@ -63,7 +65,7 @@ export function ReceiveCopyBottomSheet({
           {
             id: "lightning" as const,
             icon: <LightningIcon className="h-5 w-5 text-foreground" />,
-            label: "Lightning",
+            label: gt("Lightning"),
             value: lightningInvoice,
           },
         ]
@@ -71,7 +73,7 @@ export function ReceiveCopyBottomSheet({
     {
       id: "onchain",
       icon: <OnchainIcon className="h-5 w-5 text-foreground" />,
-      label: "On-chain",
+      label: gt("On-chain"),
       value: onchainAddress,
     },
   ];
@@ -79,7 +81,7 @@ export function ReceiveCopyBottomSheet({
   const copyOption = (option: CopyOption) => {
     void copyWithState(option.value, option.id, {
       onCopy: () => {
-        AccessibilityInfo.announceForAccessibility(`${option.label} copied`);
+        AccessibilityInfo.announceForAccessibility(gt("{value1} copied", { value1: option.label }));
       },
     });
   };
@@ -89,16 +91,20 @@ export function ReceiveCopyBottomSheet({
       <View>
         <View className="flex-row items-start justify-between gap-4">
           <View className="flex-1">
-            <Text accessibilityRole="header" className="text-2xl font-bold text-foreground">
-              Copy payment details
-            </Text>
-            <Text className="mt-2 text-sm leading-5 text-muted-foreground">
-              Copy the unified request or a specific payment method.
-            </Text>
+            <T>
+              <Text accessibilityRole="header" className="text-2xl font-bold text-foreground">
+                Copy payment details
+              </Text>
+            </T>
+            <T>
+              <Text className="mt-2 text-sm leading-5 text-muted-foreground">
+                Copy the unified request or a specific payment method.
+              </Text>
+            </T>
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close payment details"
+            accessibilityLabel={gt("Close payment details")}
             onPress={onClose}
             className="h-11 w-11 items-center justify-center rounded-full border border-border"
           >
@@ -114,7 +120,11 @@ export function ReceiveCopyBottomSheet({
               <Pressable
                 key={option.id}
                 accessibilityRole="button"
-                accessibilityLabel={copied ? `${option.label} copied` : `Copy ${option.label}`}
+                accessibilityLabel={
+                  copied
+                    ? gt("{value1} copied", { value1: option.label })
+                    : gt("Copy {value1}", { value1: option.label })
+                }
                 onPress={() => copyOption(option)}
                 className={`flex-row items-center gap-4 px-4 py-4 ${
                   index < options.length - 1 ? "border-b border-border" : ""
@@ -145,7 +155,7 @@ export function ReceiveCopyBottomSheet({
                     className="text-[11px] font-semibold"
                     style={{ color: copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE }}
                   >
-                    {copied ? "Copied" : "Copy"}
+                    {copied ? gt("Copied") : gt("Copy")}
                   </Text>
                 </View>
               </Pressable>

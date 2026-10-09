@@ -1,3 +1,5 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
+import { T, useGT, useLocale } from "gt-react-native";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -18,6 +20,10 @@ import { FlashList, FlashListRef } from "@shopify/flash-list";
 const log = logger("LogScreen");
 
 const LogScreen = () => {
+  const translateError = useErrorTranslation();
+  const gt = useGT();
+  const fetchFailedMessage = gt("Failed to fetch logs.");
+  const locale = useLocale();
   const navigation = useNavigation();
   const [logs, setLogs] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,11 +55,11 @@ const LogScreen = () => {
           }
         }, 100);
       } else {
-        setError(result.error.message || "Failed to fetch logs.");
+        setError(result.error.message || fetchFailedMessage);
       }
       setIsLoading(false);
     }
-  }, []);
+  }, [fetchFailedMessage]);
 
   useEffect(() => {
     fetchLogs();
@@ -76,8 +82,8 @@ const LogScreen = () => {
     }
 
     const options = {
-      title: "Share your file",
-      message: "Noah App Logs",
+      title: gt("Share your file"),
+      message: gt("Noah App Logs"),
       url,
       type: "text/plain",
     };
@@ -122,19 +128,21 @@ const LogScreen = () => {
               className="mr-3"
               testID="logs-back-button"
             />
-            <Text className="text-2xl font-bold text-foreground">App Logs</Text>
+            <T>
+              <Text className="text-2xl font-bold text-foreground">App Logs</Text>
+            </T>
           </View>
           <View className="flex-row gap-4">
             <NativeNoahIconButton
               icon="refresh"
-              accessibilityLabel="Refresh app logs"
+              accessibilityLabel={gt("Refresh app logs")}
               onPress={fetchLogs}
               isLoading={isLoading}
               testID="logs-refresh-button"
             />
             <NativeNoahIconButton
               icon="share"
-              accessibilityLabel="Share app logs"
+              accessibilityLabel={gt("Share app logs")}
               onPress={handleShare}
               disabled={logs.length === 0}
               testID="logs-share-button"
@@ -147,7 +155,7 @@ const LogScreen = () => {
           </View>
         ) : error ? (
           <View className="flex-1 justify-center items-center">
-            <Text className="text-destructive text-center">{error}</Text>
+            <Text className="text-destructive text-center">{translateError(error ?? "")}</Text>
           </View>
         ) : (
           <View className="flex-1 bg-card rounded-lg p-2">
@@ -155,7 +163,7 @@ const LogScreen = () => {
               <>
                 {lastUpdatedAt ? (
                   <Text className="text-muted-foreground text-xs ml-2 mb-1">
-                    Updated at {lastUpdatedAt.toLocaleTimeString()}
+                    {gt("Updated at {time}", { time: lastUpdatedAt.toLocaleTimeString(locale) })}
                   </Text>
                 ) : null}
                 <FlashList
@@ -169,7 +177,9 @@ const LogScreen = () => {
               </>
             ) : (
               <View className="flex-1 justify-center items-center">
-                <Text className="text-center text-muted-foreground">No logs found.</Text>
+                <T>
+                  <Text className="text-center text-muted-foreground">No logs found.</Text>
+                </T>
               </View>
             )}
           </View>

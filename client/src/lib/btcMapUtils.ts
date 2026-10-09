@@ -61,13 +61,13 @@ export const distanceKm = (
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-export const formatDistance = (kilometers: number) =>
+export const formatDistance = (kilometers: number, locale?: string) =>
   kilometers < 1
     ? `${Math.max(1, Math.round(kilometers * 1000))} m (${Math.max(
         1,
         Math.round(kilometers * 1000 * 1.09361),
       )} yd)`
-    : `${kilometers.toFixed(1)} km (${(kilometers * 0.621371).toFixed(1)} mi)`;
+    : `${kilometers.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false })} km (${(kilometers * 0.621371).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false })} mi)`;
 
 export const parseBtcMapViewport = (value: unknown): BtcMapViewport | undefined => {
   if (typeof value !== "object" || value === null || !("center" in value) || !("zoom" in value)) {

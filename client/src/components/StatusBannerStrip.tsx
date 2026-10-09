@@ -1,3 +1,5 @@
+import { useGT } from "gt-react-native";
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import type React from "react";
 import { Pressable, View, type TextStyle } from "react-native";
 import { Text } from "~/components/ui/text";
@@ -20,17 +22,21 @@ type StatusBannerStripProps = {
 
 export const StatusBannerStrip = ({
   title,
-  message,
+  message: messageProp,
   icon,
   tone,
   actionLabel,
-  actionBusyLabel = "Working",
+  actionBusyLabel: actionBusyLabelProp,
   actionTextStyle,
   isActionLoading = false,
   onPress,
   onActionPress,
   className = "",
 }: StatusBannerStripProps) => {
+  const gt = useGT();
+  const translateError = useErrorTranslation();
+  const message = translateError(messageProp);
+  const actionBusyLabel = actionBusyLabelProp ?? gt("Working");
   const containerClassName =
     tone === "failed"
       ? "border-red-500/30 bg-red-500/5"

@@ -23,6 +23,7 @@ useWalletStore.getState = () => wallet;
 // Capture the actual hook options; exercise their lifecycle with a real QueryObserver.
 mock.module("@tanstack/react-query", () => ({ ...ReactQuery, useQuery: (options) => options }));
 mock.module("react-native", () => ({ AppState: {} }));
+mock.module("gt-react-native", () => ({ useGT: () => (text) => text }));
 mock.module("@react-navigation/native", () => ({ useIsFocused: () => true }));
 mock.module("../../src/store/walletStore", () => ({ useWalletStore }));
 mock.module("../../src/contexts/AlertProvider", () => ({ useAlert: () => ({}) }));

@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import { useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerStore } from "~/store/serverStore";
@@ -9,6 +10,7 @@ import logger from "~/lib/log";
 const log = logger("useServerRegistration");
 
 export const useServerRegistrationMutation = () => {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation({
@@ -22,8 +24,8 @@ export const useServerRegistrationMutation = () => {
     onError: (error: Error) => {
       log.e("Failed to register with server", [error]);
       showAlert({
-        title: "Registration Error",
-        description: "Failed to register with server. Please try again.",
+        title: gt("Registration Error"),
+        description: gt("Failed to register with server. Please try again."),
       });
     },
   });

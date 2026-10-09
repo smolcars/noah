@@ -1,3 +1,4 @@
+import { Plural, T, useGT, Var } from "gt-react-native";
 import { Fragment } from "react";
 import type { BarkFeeEstimate } from "~/lib/paymentsApi";
 import { Text } from "~/components/ui/text";
@@ -27,15 +28,23 @@ export const FeeEstimateSummary = ({
   isLoading = false,
   error = null,
   compact = false,
-  title = "Fee estimate",
-  netLabel = "Recipient gets",
-  feeLabel = "Estimated fee",
-  grossLabel = "Total deducted",
-  unavailableText = "Fee estimate unavailable. The final fee will be calculated when you send.",
+  title: titleProp,
+  netLabel: netLabelProp,
+  feeLabel: feeLabelProp,
+  grossLabel: grossLabelProp,
+  unavailableText: unavailableTextProp,
   note = null,
   feeValueClassName,
   rowOrder = ["net", "fee", "gross"],
 }: FeeEstimateSummaryProps) => {
+  const gt = useGT();
+  const unavailableText =
+    unavailableTextProp ??
+    gt("Fee estimate unavailable. The final fee will be calculated when you send.");
+  const grossLabel = grossLabelProp ?? gt("Total deducted");
+  const feeLabel = feeLabelProp ?? gt("Estimated fee");
+  const netLabel = netLabelProp ?? gt("Recipient gets");
+  const title = titleProp ?? gt("Fee estimate");
   const formatBitcoinAmount = useBitcoinAmountFormatter();
 
   if (!estimate && !isLoading && !error) {
@@ -79,10 +88,19 @@ export const FeeEstimateSummary = ({
             );
           })}
           {estimate.vtxos_spent.length > 0 ? (
-            <Text className="mt-2 text-xs text-muted-foreground">
-              Spending {estimate.vtxos_spent.length} VTXO
-              {estimate.vtxos_spent.length === 1 ? "" : "s"}
-            </Text>
+            <T>
+              <Text className="mt-2 text-xs text-muted-foreground">
+                <Plural
+                  n={estimate.vtxos_spent.length}
+                  one={<>Spending one VTXO</>}
+                  other={
+                    <>
+                      Spending <Var>{estimate.vtxos_spent.length}</Var> VTXOs
+                    </>
+                  }
+                />
+              </Text>
+            </T>
           ) : null}
           {note ? <Text className="mt-2 text-xs text-muted-foreground">{note}</Text> : null}
         </>
@@ -91,7 +109,9 @@ export const FeeEstimateSummary = ({
           {unavailableText}
         </Text>
       ) : (
-        <Text className="text-sm text-muted-foreground">Estimating fee...</Text>
+        <T>
+          <Text className="text-sm text-muted-foreground">Estimating fee...</Text>
+        </T>
       )}
     </FeeEstimateBox>
   );

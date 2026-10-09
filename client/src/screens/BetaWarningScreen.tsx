@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import React, { useEffect } from "react";
 import { ScrollView, View } from "react-native";
 import { AlertTriangle } from "lucide-react-native";
@@ -12,6 +13,7 @@ import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 
 const BetaWarningScreen = () => {
+  const gt = useGT();
   const navigation = useNavigation<NativeStackNavigationProp<OnboardingStackParamList>>();
   const { mutate: createWallet, isPending, isSuccess } = useCreateWallet();
 
@@ -32,32 +34,38 @@ const BetaWarningScreen = () => {
           <View className="h-20 w-20 items-center justify-center rounded-3xl border border-border bg-card">
             <AlertTriangle size={40} color="#f97316" />
           </View>
-          <Text className="mt-6 text-center text-3xl font-bold text-foreground">
-            Noah is in beta
-          </Text>
-          <Text className="mt-4 text-center text-lg leading-7 text-muted-foreground">
-            Noah is still in beta. There is a possibility you could lose money. Only deposit funds
-            you are willing to lose.
-          </Text>
+          <T>
+            <Text className="mt-6 text-center text-3xl font-bold text-foreground">
+              Noah is in beta
+            </Text>
+          </T>
+          <T>
+            <Text className="mt-4 text-center text-lg leading-7 text-muted-foreground">
+              Noah is still in beta. There is a possibility you could lose money. Only deposit funds
+              you are willing to lose.
+            </Text>
+          </T>
         </View>
 
         <View className="mt-10">
           {isPending ? (
             <View className="items-center">
               <NoahActivityIndicator size="large" />
-              <Text className="mt-4 text-muted-foreground">Creating your wallet...</Text>
+              <T>
+                <Text className="mt-4 text-muted-foreground">Creating your wallet...</Text>
+              </T>
             </View>
           ) : (
             <View className="space-y-3">
               <NativeNoahButton
-                label="I accept"
+                label={gt("I accept")}
                 onPress={() => createWallet()}
                 size="lg"
                 fullWidth
               />
               <View className="mt-3">
                 <NativeNoahSecondaryButton
-                  label="I decline"
+                  label={gt("I decline")}
                   onPress={handleDecline}
                   size="lg"
                   fullWidth

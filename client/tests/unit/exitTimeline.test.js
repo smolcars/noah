@@ -26,7 +26,7 @@ mock.module("expo-device", () => ({
 
 const {
   buildExitTimelineItems,
-  EXIT_STATE_LABELS,
+  getExitStateLabels,
   EXIT_STATE_ORDER,
   getExitStatusText,
   isCancelableExit,
@@ -93,7 +93,7 @@ describe("exit cancellation eligibility", () => {
 describe("canceled exit timelines", () => {
   test("exposes canceled as a terminal exit state", () => {
     expect(EXIT_STATE_ORDER.at(-1)).toBe("Canceled");
-    expect(EXIT_STATE_LABELS.Canceled).toBe("Canceled");
+    expect(getExitStateLabels().Canceled).toBe("Canceled");
     expect(getExitStatusText({ state: "Canceled" })).toBe("Exit processing was canceled");
   });
 

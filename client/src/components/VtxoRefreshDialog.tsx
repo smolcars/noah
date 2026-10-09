@@ -1,3 +1,4 @@
+import { useLocale, T, useGT } from "gt-react-native";
 import { View } from "react-native";
 import type { BarkFeeEstimate } from "react-native-nitro-ark";
 
@@ -58,6 +59,8 @@ export function VtxoRefreshDialog({
   open,
   vtxoCount,
 }: VtxoRefreshDialogProps) {
+  const gt = useGT();
+  const locale = useLocale();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
   const { data: btcToFiatRate } = useBtcToFiatRate();
@@ -71,20 +74,21 @@ export function VtxoRefreshDialog({
     const fiatValue = formatFiatAmount(
       satsToFiat(valueSat, btcToFiatRate, fiatCurrency),
       fiatCurrency,
+      locale,
     );
     return `${formatBitcoinAmount(valueSat)} (${fiatValue})`;
   };
 
   return (
     <ConfirmationDialog
-      title={vtxoCount === 1 ? "Refresh VTXO?" : "Refresh VTXOs?"}
+      title={vtxoCount === 1 ? gt("Refresh VTXO?") : gt("Refresh VTXOs?")}
       description={
         vtxoCount === 1
-          ? "This refreshes this VTXO in a delegated Ark round."
-          : "This refreshes the selected VTXOs in a delegated Ark round."
+          ? gt("This refreshes this VTXO in a delegated Ark round.")
+          : gt("This refreshes the selected VTXOs in a delegated Ark round.")
       }
-      confirmText="Refresh"
-      cancelText="Cancel"
+      confirmText={gt("Refresh")}
+      cancelText={gt("Cancel")}
       confirmVariant="default"
       open={open}
       onOpenChange={onOpenChange}
@@ -102,7 +106,9 @@ export function VtxoRefreshDialog({
       {estimate ? (
         <View className="gap-3">
           <View className="rounded-xl border border-border/70 bg-card/80 p-4">
-            <Text className="text-sm font-medium text-muted-foreground">Amount selected</Text>
+            <T>
+              <Text className="text-sm font-medium text-muted-foreground">Amount selected</Text>
+            </T>
             <Text
               className="mt-1 text-3xl font-bold text-foreground"
               numberOfLines={1}
@@ -114,16 +120,16 @@ export function VtxoRefreshDialog({
           </View>
 
           <View className="rounded-xl border border-border/70 bg-card/60 px-3 py-1">
-            <RefreshPlanRow label="VTXOs selected" value={vtxoCount.toLocaleString()} />
+            <RefreshPlanRow label={gt("VTXOs selected")} value={vtxoCount.toLocaleString(locale)} />
             <View className="h-px bg-border/70" />
             <RefreshPlanRow
-              label="Refresh fee"
+              label={gt("Refresh fee")}
               value={formatBitcoinWithFiat(estimate.fee_sat)}
               valueClassName="text-red-500"
             />
             <View className="h-px bg-border/70" />
             <RefreshPlanRow
-              label="Amount after fee"
+              label={gt("Amount after fee")}
               value={formatBitcoinWithFiat(amountAfterFeeSat)}
               valueClassName="text-green-500"
             />

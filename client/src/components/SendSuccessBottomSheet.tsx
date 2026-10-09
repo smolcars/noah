@@ -1,3 +1,4 @@
+import { T, useGT, useLocale } from "gt-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
@@ -35,13 +36,13 @@ const truncateValue = (value: string) => {
   return `${value.slice(0, 14)}…${value.slice(-10)}`;
 };
 
-const formatCompletedAt = (date: Date) => {
-  const day = date.toLocaleDateString(undefined, {
+const formatCompletedAt = (date: Date, locale: string) => {
+  const day = date.toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
-  const time = date.toLocaleTimeString(undefined, {
+  const time = date.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -69,14 +70,19 @@ const CopyDetailRow = ({
   copyId: string;
   testID: string;
 }) => {
+  const gt = useGT();
   const { copyWithState, isCopied } = useCopyToClipboard(3000);
   const copied = isCopied(copyId);
   const displayedValue = truncateValue(value);
 
   return (
     <Pressable
-      accessibilityHint="Copies the full payment detail to the clipboard"
-      accessibilityLabel={copied ? `${label} copied` : `Copy ${label}: ${displayedValue}`}
+      accessibilityHint={gt("Copies the full payment detail to the clipboard")}
+      accessibilityLabel={
+        copied
+          ? gt("{value1} copied", { value1: label })
+          : gt("Copy {value1}: {value2}", { value1: label, value2: displayedValue })
+      }
       accessibilityRole="button"
       className="flex-row items-start justify-between gap-5 border-b border-border/60 py-4"
       onPress={() => copyWithState(value, copyId)}
@@ -89,7 +95,7 @@ const CopyDetailRow = ({
           className="mt-1 text-xs font-semibold uppercase tracking-[1.4px]"
           style={{ color: copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE }}
         >
-          {copied ? "Copied" : "Copy"}
+          {copied ? gt("Copied") : gt("Copy")}
         </Text>
       </View>
     </Pressable>
@@ -102,10 +108,12 @@ export const SendSuccessBottomSheet: React.FC<SendSuccessBottomSheetProps> = ({
   btcPrice,
   fiatCurrency,
 }) => {
+  const locale = useLocale();
+  const gt = useGT();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
   const [completedAt] = useState(() => new Date());
   const fiatAmount = btcPrice ? satsToFiat(parsedResult.amount_sat, btcPrice, fiatCurrency) : null;
-  const proofLabel = parsedResult.txid ? "Transaction ID" : "Payment preimage";
+  const proofLabel = parsedResult.txid ? gt("Transaction ID") : gt("Payment preimage");
   const proofValue = parsedResult.txid ?? parsedResult.preimage;
 
   useEffect(() => {
@@ -118,20 +126,22 @@ export const SendSuccessBottomSheet: React.FC<SendSuccessBottomSheetProps> = ({
         <View className="size-20 items-center justify-center rounded-full bg-success/15">
           <Icon name="checkmark" size={48} color={COLORS.SUCCESS} />
         </View>
-        <Text className="mt-7 text-center text-4xl font-bold text-foreground">Payment sent</Text>
+        <T>
+          <Text className="mt-7 text-center text-4xl font-bold text-foreground">Payment sent</Text>
+        </T>
         <Text className="mt-3 text-center text-3xl font-semibold text-foreground">
           {formatBitcoinAmount(parsedResult.amount_sat)}
         </Text>
         {fiatAmount ? (
           <Text className="mt-2 text-base text-muted-foreground">
-            ≈ {formatFiatAmount(fiatAmount, fiatCurrency)}
+            ≈ {formatFiatAmount(fiatAmount, fiatCurrency, locale)}
           </Text>
         ) : null}
 
         <View className="mt-8 w-full border-t border-border/60">
-          <DetailRow label="Paid via" value={parsedResult.type} />
+          <DetailRow label={gt("Paid via")} value={parsedResult.type} />
           <CopyDetailRow
-            label="To"
+            label={gt("To")}
             value={parsedResult.destination}
             copyId="success-destination"
             testID="send-success-copy-destination"
@@ -144,13 +154,13 @@ export const SendSuccessBottomSheet: React.FC<SendSuccessBottomSheetProps> = ({
               testID="send-success-copy-proof"
             />
           ) : null}
-          <DetailRow label="Completed" value={formatCompletedAt(completedAt)} />
+          <DetailRow label={gt("Completed")} value={formatCompletedAt(completedAt, locale)} />
         </View>
       </View>
 
       <View className="mt-8 px-1">
         <NativeNoahButton
-          label="Done"
+          label={gt("Done")}
           onPress={handleDone}
           size="lg"
           fullWidth

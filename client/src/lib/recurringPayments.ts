@@ -1,3 +1,6 @@
+import { getLocale, msg } from "gt-react-native";
+import { getBackgroundMessages } from "~/lib/backgroundTranslations";
+import { sourceText, type Translate } from "~/lib/i18n";
 /**
  * Recurring payment executor.
  *
@@ -99,7 +102,7 @@ const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
 const formatAmount = (sats: number): string =>
-  formatBitcoinAmount(sats, useProfileStore.getState().bitcoinAmountUnit);
+  formatBitcoinAmount(sats, useProfileStore.getState().bitcoinAmountUnit, getLocale());
 
 // ---------------------------------------------------------------------------
 // Local notifications
@@ -107,8 +110,9 @@ const formatAmount = (sats: number): string =>
 
 async function ensureRecurringChannel() {
   if (Platform.OS !== "android") return;
+  const m = await getBackgroundMessages();
   await Notifications.setNotificationChannelAsync(RECURRING_CHANNEL_ID, {
-    name: "Recurring payments",
+    name: m(msg("Recurring payments")),
     importance: Notifications.AndroidImportance.HIGH,
   });
 }
@@ -149,19 +153,25 @@ async function refreshScheduledNotifications(schedule: RecurringPayment) {
       if (schedule.status !== "active" || schedule.nextRunAt === null) return;
 
       await ensureRecurringChannel();
+      const m = await getBackgroundMessages();
       const amount = formatAmount(schedule.amountSat);
       await scheduleAt(
         reminderId(schedule.id),
         schedule.nextRunAt - REMINDER_LEAD_MS,
-        "Upcoming recurring payment",
-        `${amount} to ${schedule.label} will be sent tomorrow.`,
+        m(msg("Upcoming recurring payment")),
+        m(
+          msg("{amount} to {recipient} will be sent tomorrow.", {
+            amount,
+            recipient: schedule.label,
+          }),
+        ),
       );
       // Fires only if the payment hasn't executed (execution re-schedules it).
       await scheduleAt(
         overdueId(schedule.id),
         schedule.nextRunAt + OVERDUE_NAG_DELAY_MS,
-        "Recurring payment waiting",
-        `Open Noah to send ${amount} to ${schedule.label}.`,
+        m(msg("Recurring payment waiting")),
+        m(msg("Open Noah to send {amount} to {recipient}.", { amount, recipient: schedule.label })),
       );
     })(),
     (e) => new Error(`Failed to schedule recurring payment notifications: ${errorMessage(e)}`),
@@ -253,11 +263,14 @@ export type RecurringDestination = {
  * BOLT12 offers (the pull/subscription-style rail). BOLT11 invoices are single
  * use and on-chain sends carry variable miner fees, so they are rejected.
  */
-export const resolveRecurringDestination = (raw: string): Result<RecurringDestination, string> => {
+export const resolveRecurringDestination = (
+  raw: string,
+  gt: Translate = sourceText,
+): Result<RecurringDestination, string> => {
   const trimmed = raw.trim();
-  if (!trimmed) return err("Enter a recipient");
+  if (!trimmed) return err(gt("Enter a recipient"));
 
-  const parsed = parseDestination(trimmed);
+  const parsed = parseDestination(trimmed, gt);
   if (parsed.error) return err(parsed.error);
 
   switch (parsed.destinationType) {
@@ -277,13 +290,13 @@ export const resolveRecurringDestination = (raw: string): Result<RecurringDestin
       if (parsed.bip321?.offer) {
         return ok({ destination: parsed.bip321.offer, destinationType: "offer" });
       }
-      return err("This payment request has no reusable Ark address or Lightning offer");
+      return err(gt("This payment request has no reusable Ark address or Lightning offer"));
     case "lightning":
-      return err("Lightning invoices can only be paid once. Use a Lightning address or offer");
+      return err(gt("Lightning invoices can only be paid once. Use a Lightning address or offer"));
     case "onchain":
-      return err("On-chain addresses are not supported for recurring payments yet");
+      return err(gt("On-chain addresses are not supported for recurring payments yet"));
     default:
-      return err("Unsupported recipient");
+      return err(gt("Unsupported recipient"));
   }
 };
 
@@ -534,6 +547,8 @@ async function runDueRecurringPayments(
   const summary: RecurringExecutionSummary = { paid: 0, failed: 0, needsAttention: 0 };
   if (!isRecurringPaymentsSupported()) return summary;
 
+  const m = await getBackgroundMessages();
+
   const scheduleIds = getRecurringPayments().map((s) => s.id);
   let changed = false;
 
@@ -561,8 +576,12 @@ async function runDueRecurringPayments(
       changed = true;
       summary.needsAttention += 1;
       await notifyNow(
-        "Recurring payment needs your attention",
-        `A payment to ${schedule.label} was interrupted. Check your history, then resume it.`,
+        m(msg("Recurring payment needs your attention")),
+        m(
+          msg("A payment to {recipient} was interrupted. Check your history, then resume it.", {
+            recipient: schedule.label,
+          }),
+        ),
       );
       continue;
     }
@@ -579,12 +598,21 @@ async function runDueRecurringPayments(
     if (lastRun?.status === "success" && lastRun.occurrenceIndex === plan.occurrenceIndex) {
       // Always report money that moved, even if the schedule was stopped meanwhile.
       summary.paid += 1;
-      await notifyNow("Recurring payment sent", `${amount} sent to ${schedule.label}.`);
+      await notifyNow(
+        m(msg("Recurring payment sent")),
+        m(msg("{amount} sent to {recipient}.", { amount, recipient: schedule.label })),
+      );
     } else if (result.status === "needs_attention") {
       summary.needsAttention += 1;
       await notifyNow(
-        "Recurring payment needs your attention",
-        `Sending ${amount} to ${schedule.label} failed: ${result.lastError ?? "unknown error"}. It has been paused.`,
+        m(msg("Recurring payment needs your attention")),
+        m(
+          msg("Sending {amount} to {recipient} failed: {error}. It has been paused.", {
+            amount,
+            recipient: schedule.label,
+            error: result.lastError ?? m(msg("unknown error")),
+          }),
+        ),
       );
     } else {
       summary.failed += 1;
@@ -594,8 +622,14 @@ async function runDueRecurringPayments(
       if (updated?.status !== "active") continue;
       if (result.consecutiveFailures > 1 && trigger !== "manual") continue;
       await notifyNow(
-        "Recurring payment will retry",
-        `${amount} to ${schedule.label} could not be sent yet: ${result.lastError ?? "unknown error"}`,
+        m(msg("Recurring payment will retry")),
+        m(
+          msg("{amount} to {recipient} could not be sent yet: {error}", {
+            amount,
+            recipient: schedule.label,
+            error: result.lastError ?? m(msg("unknown error")),
+          }),
+        ),
       );
     }
   }

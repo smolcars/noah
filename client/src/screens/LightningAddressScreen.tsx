@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -23,6 +24,7 @@ type LightningAddressScreenRouteProp = RouteProp<
 >;
 
 const LightningAddressScreen = () => {
+  const gt = useGT();
   const navigation = useNavigation();
   const route = useRoute<LightningAddressScreenRouteProp>();
   const { fromOnboarding } = route.params || {};
@@ -97,34 +99,40 @@ const LightningAddressScreen = () => {
             />
           )}
           <Text className="text-2xl font-bold text-foreground">
-            {fromOnboarding ? "Choose your Lightning Address" : "Lightning & NIP-05"}
+            {fromOnboarding ? gt("Choose your Lightning Address") : gt("Lightning & NIP-05")}
           </Text>
         </View>
         {showUpdateSuccess && (
           <Alert icon={CheckCircle} className="mb-4">
-            <AlertTitle>Success!</AlertTitle>
+            <T>
+              <AlertTitle>Success!</AlertTitle>
+            </T>
             <AlertDescription>
               {normalizedNostrKey
-                ? "Your Lightning address and NIP-05 identity have been updated."
-                : "Your Lightning address has been updated without NIP-05."}
+                ? gt("Your Lightning address and NIP-05 identity have been updated.")
+                : gt("Your Lightning address has been updated without NIP-05.")}
             </AlertDescription>
           </Alert>
         )}
         <View className="mt-6">
-          <Text className="mb-3 text-muted-foreground">
-            Choose a Lightning username. You can optionally link a Nostr public key so the same
-            address also works as a NIP-05 identifier.
-          </Text>
+          <T>
+            <Text className="mb-3 text-muted-foreground">
+              Choose a Lightning username. You can optionally link a Nostr public key so the same
+              address also works as a NIP-05 identifier.
+            </Text>
+          </T>
           <View className="space-y-5 rounded-2xl border border-border bg-card p-5">
             <View>
-              <Text className="mb-2 text-xs uppercase tracking-widest text-muted-foreground">
-                Username
-              </Text>
+              <T>
+                <Text className="mb-2 text-xs uppercase tracking-widest text-muted-foreground">
+                  Username
+                </Text>
+              </T>
               <Input
                 value={username}
                 onChangeText={(value) => setUsername(value.trim().toLowerCase())}
                 className="h-16 rounded-2xl border border-border bg-background/90 px-4 text-lg leading-6 text-foreground"
-                placeholder="fiatjaf"
+                placeholder={gt("fiatjaf")}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -133,31 +141,35 @@ const LightningAddressScreen = () => {
             <View className="rounded-xl border border-border/60 bg-background/70 p-3">
               <Text className="text-xs text-muted-foreground">
                 {normalizedNostrKey
-                  ? "Your Lightning address and NIP-05 identifier will be"
-                  : "Your Lightning address will be"}
+                  ? gt("Your Lightning address and NIP-05 identifier will be")
+                  : gt("Your Lightning address will be")}
               </Text>
               <Text className="mt-1 text-md font-semibold text-foreground">
                 {normalizedUsername}@{domain}
               </Text>
             </View>
             <View>
-              <Text className="mb-2 text-xs uppercase tracking-widest text-muted-foreground">
-                Nostr public key (optional)
-              </Text>
+              <T>
+                <Text className="mb-2 text-xs uppercase tracking-widest text-muted-foreground">
+                  Nostr public key (optional)
+                </Text>
+              </T>
               <Input
                 value={nostrKey}
                 onChangeText={setNostrKey}
                 className="min-h-16 rounded-2xl border border-border bg-background/90 px-4 py-4 font-mono text-base leading-5 text-foreground"
-                placeholder="npub1..."
+                placeholder={gt("npub1...")}
                 autoCapitalize="none"
                 autoCorrect={false}
                 multiline={false}
                 scrollEnabled
               />
-              <Text className="mt-2 text-sm text-muted-foreground">
-                Leave this blank to use Lightning without NIP-05. Only npub public keys are
-                accepted; never paste an nsec private key.
-              </Text>
+              <T>
+                <Text className="mt-2 text-sm text-muted-foreground">
+                  Leave this blank to use Lightning without NIP-05. Only npub public keys are
+                  accepted; never paste an nsec private key.
+                </Text>
+              </T>
             </View>
           </View>
         </View>
@@ -165,7 +177,7 @@ const LightningAddressScreen = () => {
           <View className="mt-8 flex-row items-center gap-4">
             <View className="flex-1">
               <NativeNoahSecondaryButton
-                label="Skip"
+                label={gt("Skip")}
                 onPress={handleSkip}
                 disabled={updateIdentityMutation.isPending}
                 fullWidth
@@ -176,12 +188,12 @@ const LightningAddressScreen = () => {
                 label={
                   `${normalizedUsername}@${domain}` === lightningAddress &&
                   normalizedNostrKey === currentNpub
-                    ? "Continue"
-                    : "Save"
+                    ? gt("Continue")
+                    : gt("Save")
                 }
                 onPress={handleSave}
                 isLoading={updateIdentityMutation.isPending}
-                loadingLabel="Saving..."
+                loadingLabel={gt("Saving...")}
                 disabled={!normalizedUsername}
                 fullWidth
               />
@@ -189,11 +201,11 @@ const LightningAddressScreen = () => {
           </View>
         ) : (
           <NativeNoahButton
-            label="Save"
+            label={gt("Save")}
             onPress={handleSave}
             className="mt-8"
             isLoading={updateIdentityMutation.isPending}
-            loadingLabel="Saving..."
+            loadingLabel={gt("Saving...")}
             disabled={!normalizedUsername}
             fullWidth
           />

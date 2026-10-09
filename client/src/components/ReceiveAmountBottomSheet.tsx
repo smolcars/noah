@@ -1,3 +1,4 @@
+import { T, useGT, useLocale } from "gt-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useEffect, useState } from "react";
 import { Keyboard, Pressable, ScrollView, TextInput, View } from "react-native";
@@ -38,6 +39,8 @@ export function ReceiveAmountBottomSheet({
   onRemove,
   onSubmit,
 }: ReceiveAmountBottomSheetProps) {
+  const locale = useLocale();
+  const gt = useGT();
   const colors = useThemeColors();
   const bitcoinAmountUnit = useBitcoinAmountUnit();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
@@ -74,7 +77,7 @@ export function ReceiveAmountBottomSheet({
   const canSaveNote =
     isNoteDraftValid && (noteDraft.trim().length > 0 || description.trim().length > 0);
   const canSubmit = Number.isInteger(amountSat) && amountSat > 0 && isDescriptionValid;
-  const displayAmount = amount.length === 0 ? "0" : formatNumber(amount);
+  const displayAmount = amount.length === 0 ? "0" : formatNumber(amount, locale);
   const amountPrefix =
     currency === "FIAT" ? fiatCurrencyInfo.symbol : bitcoinAmountUnit === "bip177" ? "₿" : null;
   const primaryAmount = amountPrefix ? `${amountPrefix}${displayAmount}` : displayAmount;
@@ -84,8 +87,8 @@ export function ReceiveAmountBottomSheet({
   const convertedAmount =
     currency === "SATS"
       ? btcPrice
-        ? formatFiatAmount(satsToFiat(amountSat, btcPrice, fiatCurrency), fiatCurrency)
-        : `${fiatCurrencyInfo.code} rate unavailable`
+        ? formatFiatAmount(satsToFiat(amountSat, btcPrice, fiatCurrency), fiatCurrency, locale)
+        : gt("{currency} rate unavailable", { currency: fiatCurrencyInfo.code })
       : formatBitcoinAmount(amountSat);
 
   const close = () => {
@@ -135,7 +138,7 @@ export function ReceiveAmountBottomSheet({
           <View className="flex-row items-center justify-between">
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Close note editor"
+              accessibilityLabel={gt("Close note editor")}
               onPress={closeNoteEditor}
               className="h-12 w-12 items-center justify-center rounded-full border border-border"
             >
@@ -144,22 +147,24 @@ export function ReceiveAmountBottomSheet({
             <View className="h-12 w-12" />
           </View>
 
-          <Text
-            accessibilityRole="header"
-            className="mt-8 text-2xl font-bold leading-8 text-foreground"
-          >
-            What is the payment for?
-          </Text>
+          <T>
+            <Text
+              accessibilityRole="header"
+              className="mt-8 text-2xl font-bold leading-8 text-foreground"
+            >
+              What is the payment for?
+            </Text>
+          </T>
 
           <TextInput
-            accessibilityLabel="Lightning note"
+            accessibilityLabel={gt("Lightning note")}
             autoFocus
             className="mt-8 rounded-2xl border border-foreground bg-background px-5 py-4 text-lg text-foreground"
             editable={!isSubmitting}
             maxLength={MAX_INVOICE_DESCRIPTION_LENGTH}
             onChangeText={setNoteDraft}
             onSubmitEditing={saveNote}
-            placeholder="Your note"
+            placeholder={gt("Your note")}
             placeholderTextColor={colors.mutedForeground}
             returnKeyType="done"
             testID="receive-note-input"
@@ -177,7 +182,7 @@ export function ReceiveAmountBottomSheet({
 
           <View className="mt-6 px-1">
             <NativeNoahButton
-              label="Done"
+              label={gt("Done")}
               onPress={saveNote}
               disabled={!canSaveNote}
               size="lg"
@@ -195,7 +200,7 @@ export function ReceiveAmountBottomSheet({
           <View className="flex-row items-center justify-between">
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Close amount entry"
+              accessibilityLabel={gt("Close amount entry")}
               accessibilityState={{ disabled: isSubmitting }}
               disabled={isSubmitting}
               onPress={close}
@@ -206,7 +211,9 @@ export function ReceiveAmountBottomSheet({
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={description ? "Edit Lightning note" : "Add a Lightning note"}
+              accessibilityLabel={
+                description ? gt("Edit Lightning note") : gt("Add a Lightning note")
+              }
               accessibilityState={{ disabled: isSubmitting }}
               disabled={isSubmitting}
               onPress={openNoteEditor}
@@ -214,7 +221,7 @@ export function ReceiveAmountBottomSheet({
               testID="receive-note-button"
             >
               <Text className="font-semibold text-foreground">
-                {description ? "Edit note" : "Add a note"}
+                {description ? gt("Edit note") : gt("Add a note")}
               </Text>
             </Pressable>
 
@@ -224,9 +231,7 @@ export function ReceiveAmountBottomSheet({
           <View className="flex-1 items-center justify-center py-5">
             <View
               accessibilityRole="text"
-              accessibilityLabel={`${amount.length === 0 ? "0" : amount} ${
-                currency === "SATS" ? "sats" : fiatCurrency
-              }`}
+              accessibilityLabel={`${displayAmount} ${currency === "SATS" ? "sats" : fiatCurrency}`}
               className="flex-row items-baseline justify-center px-4"
             >
               <Text
@@ -251,7 +256,9 @@ export function ReceiveAmountBottomSheet({
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Switch to ${currency === "SATS" ? fiatCurrency : "sats"}`}
+              accessibilityLabel={gt("Switch to {value1}", {
+                value1: currency === "SATS" ? fiatCurrency : "sats",
+              })}
               accessibilityState={{ disabled: !btcPrice || isSubmitting }}
               disabled={!btcPrice || isSubmitting}
               onPress={toggleCurrency}
@@ -284,8 +291,8 @@ export function ReceiveAmountBottomSheet({
 
           <View className="px-1">
             <NativeNoahButton
-              label={initialAmountSat === null ? "Next" : "Update request"}
-              loadingLabel="Generating…"
+              label={initialAmountSat === null ? gt("Next") : gt("Update request")}
+              loadingLabel={gt("Generating…")}
               onPress={submit}
               disabled={!canSubmit}
               isLoading={isSubmitting}
@@ -297,7 +304,7 @@ export function ReceiveAmountBottomSheet({
 
           {initialAmountSat !== null ? (
             <NativeNoahSecondaryButton
-              label="Remove amount"
+              label={gt("Remove amount")}
               onPress={onRemove}
               disabled={isSubmitting}
               emphasis="ghost"

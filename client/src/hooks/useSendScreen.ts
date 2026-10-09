@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useGT, useLocale } from "gt-react-native";
+import { useState, useEffect, useEffectEvent, useMemo } from "react";
 import { Keyboard } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
@@ -50,8 +51,6 @@ import logger from "~/lib/log";
 import type { TabParamList } from "~/Navigators";
 
 const log = logger("useSendScreen");
-const INVALID_DESTINATION_MESSAGE =
-  "Enter a valid Bitcoin address, Lightning invoice, Lightning offer, Lightning address, or Ark address.";
 
 type DisplayResult = {
   amount_sat: number;
@@ -85,6 +84,11 @@ const isOnchainWalletFeeEstimate = (estimate: unknown): estimate is OnchainWalle
 };
 
 export const useSendScreen = () => {
+  const gt = useGT();
+  const INVALID_DESTINATION_MESSAGE = gt(
+    "Enter a valid Bitcoin address, Lightning invoice, Lightning offer, Lightning address, or Ark address.",
+  );
+  const locale = useLocale();
   const route = useRoute<SendScreenRouteProp>();
   const { showAlert } = useAlert();
   const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
@@ -212,6 +216,8 @@ export const useSendScreen = () => {
     );
   };
 
+  const parseDestinationForEffect = useEffectEvent((value: string) => parseDestination(value, gt));
+
   useEffect(() => {
     if (destination) {
       const {
@@ -220,7 +226,7 @@ export const useSendScreen = () => {
         isAmountEditable: newIsAmountEditable,
         error: parseError,
         bip321,
-      } = parseDestination(destination);
+      } = parseDestinationForEffect(destination);
 
       setRecipientError(
         (currentError) => parseError ?? (newDestinationType === null ? currentError : null),
@@ -281,7 +287,7 @@ export const useSendScreen = () => {
         setSourceConfirmed(false);
       }
     }
-  }, [destination, destinationRequestRevision, isMaxSend]);
+  }, [locale, destination, destinationRequestRevision, isMaxSend]);
 
   const finalDestinationType =
     destinationType === "bip321" ? selectedPaymentMethod : destinationType;
@@ -570,7 +576,9 @@ export const useSendScreen = () => {
 
   const feeEstimateNote = useMemo(() => {
     if (isMaxSend && resolvedOnchainSource === "onchain") {
-      return "The onchain wallet will send its full confirmed balance. The final miner fee is calculated when the transaction is built.";
+      return gt(
+        "The onchain wallet will send its full confirmed balance. The final miner fee is calculated when the transaction is built.",
+      );
     }
 
     if (!isOnchainSend || resolvedOnchainSource !== "onchain") {
@@ -582,12 +590,20 @@ export const useSendScreen = () => {
       return null;
     }
 
-    return `Regular fee rate: ${formatFeeRate(estimate.fee_rate_sat_vb)} sat/vB. Estimated as a ${estimate.estimated_vbytes} vB 2-in/2-out SegWit transaction.`;
-  }, [feeEstimateQuery.data, isMaxSend, isOnchainSend, resolvedOnchainSource]);
+    return gt(
+      "Regular fee rate: {rate} sat/vB. Estimated as a {size} vB 2-in/2-out SegWit transaction.",
+      {
+        rate: formatFeeRate(estimate.fee_rate_sat_vb),
+        size: estimate.estimated_vbytes.toLocaleString(locale),
+      },
+    );
+  }, [locale, feeEstimateQuery.data, isMaxSend, isOnchainSend, resolvedOnchainSource, gt]);
 
   const feeEstimateWarning = useMemo(() => {
     if (ownOnchainAddressQuery.data) {
-      return "Your Ark balance cannot be swept to this wallet's own onchain address. Use an external Bitcoin address.";
+      return gt(
+        "Your Ark balance cannot be swept to this wallet's own onchain address. Use an external Bitcoin address.",
+      );
     }
 
     if (isMaxSend) {
@@ -606,9 +622,17 @@ export const useSendScreen = () => {
       return null;
     }
 
-    const sourceLabel = resolvedOnchainSource === "offchain" ? "Ark" : "onchain";
-    return `Estimated total is ${formatBitcoinAmount(estimatedTotal, bitcoinAmountUnit)}, but your ${sourceLabel} balance is ${formatBitcoinAmount(sourceBalance, bitcoinAmountUnit)}. The send may fail if the final fee is not lower.`;
+    const sourceLabel = resolvedOnchainSource === "offchain" ? "Ark" : gt("onchain");
+    return gt(
+      "Estimated total is {total}, but your {source} balance is {balance}. The send may fail if the final fee is not lower.",
+      {
+        total: formatBitcoinAmount(estimatedTotal, bitcoinAmountUnit, locale),
+        source: sourceLabel,
+        balance: formatBitcoinAmount(sourceBalance, bitcoinAmountUnit, locale),
+      },
+    );
   }, [
+    locale,
     bitcoinAmountUnit,
     feeEstimateQuery.data,
     isMaxSend,
@@ -617,6 +641,7 @@ export const useSendScreen = () => {
     onchainWalletBalance,
     ownOnchainAddressQuery.data,
     resolvedOnchainSource,
+    gt,
   ]);
 
   const confirmationAmountSat = isMaxSend
@@ -736,7 +761,7 @@ export const useSendScreen = () => {
     }
   };
 
-  useEffect(() => {
+  const updateSendResult = useEffectEvent(() => {
     if (!result) {
       return;
     }
@@ -751,7 +776,7 @@ export const useSendScreen = () => {
           amount_sat: res.amount_sat,
           destination: res.destination_address,
           txid: res.txid,
-          type: res.source === "offchain" ? "On-chain from Ark balance" : "On-chain wallet",
+          type: res.source === "offchain" ? gt("On-chain from Ark balance") : gt("On-chain wallet"),
         };
       }
 
@@ -770,8 +795,8 @@ export const useSendScreen = () => {
         if (!res.preimage) {
           log.e("Lightning payment result missing preimage", [res]);
           showAlert({
-            title: "Send Failed",
-            description: "Lightning payment did not complete. No preimage was returned.",
+            title: gt("Send Failed"),
+            description: gt("Lightning payment did not complete. No preimage was returned."),
           });
           return {
             success: false,
@@ -793,8 +818,8 @@ export const useSendScreen = () => {
       // Unknown type
       log.e("Could not process the transaction result. Unknown result type:", [result]);
       showAlert({
-        title: "Error",
-        description: "Could not process the transaction result. Unknown result type.",
+        title: gt("Error"),
+        description: gt("Could not process the transaction result. Unknown result type."),
       });
       return {
         success: false,
@@ -813,7 +838,11 @@ export const useSendScreen = () => {
       }
       setParsedResult(displayResult);
     }
-  }, [result, amountSat, showAlert]);
+  });
+
+  useEffect(() => {
+    updateSendResult();
+  }, [result, amountSat, showAlert, locale]);
 
   const handleSend = () => {
     // Validation
@@ -823,24 +852,24 @@ export const useSendScreen = () => {
       return;
     }
     if (!isMaxSend && (isNaN(amountSat) || amountSat <= 0)) {
-      setAmountError("Enter an amount greater than zero.");
+      setAmountError(gt("Enter an amount greater than zero."));
       showStage("amount");
       return;
     }
     if (isOnchainSend) {
       if (!balance) {
         showAlert({
-          title: "Balance Unavailable",
-          description: "Unable to check wallet balances. Please try again.",
+          title: gt("Balance Unavailable"),
+          description: gt("Unable to check wallet balances. Please try again."),
         });
         return;
       }
       if (onchainSourceOptions.length === 0) {
         showAlert({
-          title: "Insufficient Funds",
+          title: gt("Insufficient Funds"),
           description: isMaxSend
-            ? "Neither your Ark balance nor onchain wallet has confirmed funds to send."
-            : "Neither your Ark balance nor onchain wallet can cover this payment.",
+            ? gt("Neither your Ark balance nor onchain wallet has confirmed funds to send.")
+            : gt("Neither your Ark balance nor onchain wallet can cover this payment."),
         });
         return;
       }
@@ -888,7 +917,7 @@ export const useSendScreen = () => {
       return;
     }
 
-    const parsed = parseDestination(normalizedDestination);
+    const parsed = parseDestination(normalizedDestination, gt);
     const isValidImport = parsed.destinationType !== null && !parsed.error;
     const nextAmountSat = parsed.amount ?? (parsedAmount !== null ? 0 : amountSat);
     const importedRails = getDestinationRails(parsed.destinationType, parsed.bip321 ?? null);
@@ -997,7 +1026,7 @@ export const useSendScreen = () => {
 
   const handleAmountContinue = () => {
     if (isNaN(amountSat) || amountSat <= 0) {
-      setAmountError("Enter an amount greater than zero.");
+      setAmountError(gt("Enter an amount greater than zero."));
       return;
     }
 
@@ -1016,11 +1045,11 @@ export const useSendScreen = () => {
     }
 
     if (isMaxSend && !isMaxCompatibleDestination(destinationType, bip321Data)) {
-      setRecipientError("MAX can only be sent to an on-chain Bitcoin address.");
+      setRecipientError(gt("MAX can only be sent to an on-chain Bitcoin address."));
       return;
     }
     if (isMaxSend && parsedAmount !== null) {
-      setRecipientError("MAX cannot be used with a fixed-amount payment request.");
+      setRecipientError(gt("MAX cannot be used with a fixed-amount payment request."));
       return;
     }
 
@@ -1074,7 +1103,7 @@ export const useSendScreen = () => {
 
   const handleConfirmSend = () => {
     if (!isMaxSend && amountSat <= 0) {
-      showAlert({ title: "Invalid Amount", description: "Please enter a valid amount." });
+      showAlert({ title: gt("Invalid Amount"), description: gt("Please enter a valid amount.") });
       return;
     }
 
@@ -1085,9 +1114,10 @@ export const useSendScreen = () => {
 
       if (ownOnchainAddressQuery.data) {
         showAlert({
-          title: "Cannot Send to Own Wallet",
-          description:
+          title: gt("Cannot Send to Own Wallet"),
+          description: gt(
             "Your Ark balance cannot be swept to this wallet's own onchain address. Use an external Bitcoin address.",
+          ),
         });
         return;
       }
@@ -1117,15 +1147,15 @@ export const useSendScreen = () => {
 
       if (!destinationToSend) {
         showAlert({
-          title: "Invalid Destination",
-          description: "Please select a valid destination method.",
+          title: gt("Invalid Destination"),
+          description: gt("Please select a valid destination method."),
         });
         return;
       }
       if (newDestinationType === "onchain" && resolvedOnchainSource === null) {
         showAlert({
-          title: "Choose Send Source",
-          description: "Choose whether to send from your Ark balance or onchain wallet.",
+          title: gt("Choose Send Source"),
+          description: gt("Choose whether to send from your Ark balance or onchain wallet."),
         });
         return;
       }
@@ -1153,8 +1183,8 @@ export const useSendScreen = () => {
           : cleanedDestination;
       if (finalDestinationType === "onchain" && resolvedOnchainSource === null) {
         showAlert({
-          title: "Choose Send Source",
-          description: "Choose whether to send from your Ark balance or onchain wallet.",
+          title: gt("Choose Send Source"),
+          description: gt("Choose whether to send from your Ark balance or onchain wallet."),
         });
         return;
       }
@@ -1226,9 +1256,9 @@ export const useSendScreen = () => {
   });
 
   const errorMessage = useMemo(() => {
-    if (!error) return "The transaction failed. Please try again.";
+    if (!error) return gt("The transaction failed. Please try again.");
     return error instanceof Error ? error.message : String(error);
-  }, [error]);
+  }, [error, gt]);
 
   return {
     destination,
@@ -1315,7 +1345,7 @@ export const useSendScreen = () => {
       isWaitingForFeeEstimate,
     feeEstimateError: lightningAddressPaymentRouteQuery.error ?? feeEstimateQuery.error,
     feeEstimateUnavailableText: lightningAddressPaymentRouteQuery.error
-      ? "Unable to determine whether this payment will use Ark or Lightning."
+      ? gt("Unable to determine whether this payment will use Ark or Lightning.")
       : null,
     feeEstimateNote,
     feeEstimateWarning,

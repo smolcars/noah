@@ -1,3 +1,4 @@
+import { sourceText, type Translate } from "~/lib/i18n";
 import type { MovementStatus } from "react-native-nitro-ark";
 
 export const MOVEMENT_KIND_VALUES = [
@@ -10,29 +11,24 @@ export const MOVEMENT_KIND_VALUES = [
 ] as const;
 export type MovementKind = (typeof MOVEMENT_KIND_VALUES)[number];
 
-export const MOVEMENT_KIND_LABELS: Record<MovementKind, string> = {
-  "arkoor-receive": "Ark Receive",
-  onboard: "Board",
-  offboard: "Offboard",
-  "send-onchain": "Onchain Send",
-  exit: "Ark Exit",
-  "lightning-receive": "Lightning Receive",
-};
-
 export const INCOMING_MOVEMENT_KINDS: MovementKind[] = [
   "arkoor-receive",
   "onboard",
   "lightning-receive",
 ];
 
-export const MOVEMENT_STATUS_LABELS: Record<MovementStatus, string> = {
-  pending: "Pending",
-  successful: "Successful",
-  failed: "Failed",
-  canceled: "Canceled",
-};
-
-export const formatMovementKindLabel = (kind?: MovementKind): string | undefined => {
+export const formatMovementKindLabel = (
+  kind?: MovementKind,
+  gt: Translate = sourceText,
+): string | undefined => {
+  const MOVEMENT_KIND_LABELS: Record<MovementKind, string> = {
+    "arkoor-receive": gt("Ark Receive"),
+    onboard: gt("Board"),
+    offboard: gt("Offboard"),
+    "send-onchain": gt("Onchain Send"),
+    exit: gt("Ark Exit"),
+    "lightning-receive": gt("Lightning Receive"),
+  };
   if (!kind) {
     return undefined;
   }
@@ -40,7 +36,16 @@ export const formatMovementKindLabel = (kind?: MovementKind): string | undefined
   return MOVEMENT_KIND_LABELS[kind] ?? kind;
 };
 
-export const formatMovementStatusLabel = (status?: MovementStatus): string | undefined => {
+export const formatMovementStatusLabel = (
+  status?: MovementStatus,
+  gt: Translate = sourceText,
+): string | undefined => {
+  const MOVEMENT_STATUS_LABELS: Record<MovementStatus, string> = {
+    pending: gt("Pending"),
+    successful: gt("Successful"),
+    failed: gt("Failed"),
+    canceled: gt("Canceled"),
+  };
   if (!status) {
     return undefined;
   }

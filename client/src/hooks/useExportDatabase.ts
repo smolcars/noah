@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import { useState } from "react";
 import Share from "react-native-share";
 import RNFSTurbo from "react-native-fs-turbo";
@@ -9,6 +10,7 @@ import logger from "~/lib/log";
 const log = logger("useExportDatabase");
 
 export const useExportDatabase = () => {
+  const gt = useGT();
   const [isExporting, setIsExporting] = useState(false);
   const [showExportSuccess, setShowExportSuccess] = useState(false);
   const [showExportError, setShowExportError] = useState(false);
@@ -24,18 +26,18 @@ export const useExportDatabase = () => {
       const backupResult = await new BackupService().createEncryptedBackupFile(outputPath);
       if (backupResult.isErr()) {
         log.e("Error creating backup:", [backupResult.error]);
-        setExportError("Failed to create backup file. Please try again.");
+        setExportError(gt("Failed to create backup file. Please try again."));
         setShowExportError(true);
         return;
       }
 
       const shareResult = await ResultAsync.fromPromise(
         Share.open({
-          title: "Export Encrypted Backup",
+          title: gt("Export Encrypted Backup"),
           url: `file://${outputPath}`,
           type: "application/octet-stream",
           filename,
-          subject: "Noah Wallet Encrypted Backup",
+          subject: gt("Noah Wallet Encrypted Backup"),
         }),
         (e) => e as Error,
       );
@@ -43,7 +45,7 @@ export const useExportDatabase = () => {
       if (shareResult.isErr()) {
         if (!shareResult.error.message.includes("User did not share")) {
           log.e("Error sharing backup file:", [shareResult.error]);
-          setExportError("Failed to share the backup file. Please try again.");
+          setExportError(gt("Failed to share the backup file. Please try again."));
           setShowExportError(true);
         }
       } else {

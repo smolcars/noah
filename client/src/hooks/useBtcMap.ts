@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -24,6 +25,7 @@ const syncSnapshot = async (snapshot: BtcMapSnapshot) => {
 };
 
 export function useBtcMapPlaces() {
+  const gt = useGT();
   const localSnapshot = useQuery({
     queryKey: ["btc-map", "local-snapshot"],
     queryFn: unwrapSnapshot,
@@ -35,7 +37,7 @@ export function useBtcMapPlaces() {
     enabled: localSnapshot.data !== undefined,
     queryFn: () => {
       if (!localSnapshot.data) {
-        throw new Error("BTC Map snapshot is not loaded.");
+        throw new Error(gt("BTC Map snapshot is not loaded."));
       }
       return syncSnapshot(localSnapshot.data);
     },
@@ -51,12 +53,13 @@ export function useBtcMapPlaces() {
 }
 
 export function useBtcMapPlace(id: number | undefined, commentCount: number | undefined) {
+  const gt = useGT();
   return useQuery({
     queryKey: ["btc-map", "place", id],
     enabled: id !== undefined,
     queryFn: async () => {
       if (id === undefined) {
-        throw new Error("BTC Map place ID is missing.");
+        throw new Error(gt("BTC Map place ID is missing."));
       }
       const result = await fetchBtcMapPlace(id, commentCount);
       if (result.isErr()) {

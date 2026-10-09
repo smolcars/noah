@@ -1,3 +1,6 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
+import { type Translate } from "~/lib/i18n";
+import { T, useGT, useLocale } from "gt-react-native";
 import React from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -39,15 +42,22 @@ type OptionalInfoRow = Omit<InfoRow, "value"> & {
   value?: ArkInfoValue | null;
 };
 
-const formatNumber = (value: number) => value.toLocaleString();
+const formatNumber = (value: number, locale: string) => value.toLocaleString(locale);
 
-const formatValue = (value: ArkInfoValue, unit?: string) => {
+const formatValue = (
+  value: ArkInfoValue,
+  unit: string | undefined,
+  gt: Translate,
+  locale: string,
+) => {
   if (typeof value === "boolean") {
-    return value ? "Required" : "Not required";
+    return value ? gt("Required") : gt("Not required");
   }
 
   if (typeof value === "number") {
-    return unit ? `${formatNumber(value)} ${unit}` : formatNumber(value);
+    return unit
+      ? gt("{value1} {value2}", { value1: formatNumber(value, locale), value2: unit })
+      : formatNumber(value, locale);
   }
 
   return value;
@@ -62,6 +72,8 @@ const truncateValue = (value: string) => {
 };
 
 const InfoSection = ({ title, rows }: { title: string; rows: InfoRow[] }) => {
+  const gt = useGT();
+  const locale = useLocale();
   const colors = useThemeColors();
   const [copiedKey, setCopiedKey] = React.useState<string | null>(null);
 
@@ -97,7 +109,7 @@ const InfoSection = ({ title, rows }: { title: string; rows: InfoRow[] }) => {
         }}
       >
         {rows.map((row, index) => {
-          const value = formatValue(row.value, row.unit);
+          const value = formatValue(row.value, row.unit, gt, locale);
           const copied = copiedKey === row.label;
           const isPressable = Boolean(row.onPress || row.copyable);
 
@@ -108,7 +120,8 @@ const InfoSection = ({ title, rows }: { title: string; rows: InfoRow[] }) => {
               disabled={!isPressable}
               accessibilityRole={isPressable ? "button" : undefined}
               accessibilityLabel={
-                row.accessibilityLabel ?? (row.copyable ? `Copy ${row.label}` : undefined)
+                row.accessibilityLabel ??
+                (row.copyable ? gt("Copy {label}", { label: row.label }) : undefined)
               }
               accessibilityHint={row.accessibilityHint}
               android_ripple={{ color: `${COLORS.BITCOIN_ORANGE}14` }}
@@ -143,7 +156,7 @@ const InfoSection = ({ title, rows }: { title: string; rows: InfoRow[] }) => {
                   className="text-xs font-semibold uppercase tracking-[2px]"
                   style={{ color: copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE }}
                 >
-                  {copied ? "Copied" : "Copy"}
+                  {copied ? gt("Copied") : gt("Copy")}
                 </Text>
               ) : null}
             </Pressable>
@@ -169,41 +182,45 @@ const getMempoolExplorerBaseUrl = () => {
   }
 };
 
-const buildSections = (arkInfo: BarkArkInfo) => [
+const buildSections = (arkInfo: BarkArkInfo, gt: Translate) => [
   {
-    title: "Keys",
+    title: gt("Keys"),
     rows: [
-      { label: "Server pubkey", value: arkInfo.server_pubkey, copyable: true },
-      { label: "Mailbox pubkey", value: arkInfo.mailbox_pubkey, copyable: true },
+      { label: gt("Server pubkey"), value: arkInfo.server_pubkey, copyable: true },
+      { label: gt("Mailbox pubkey"), value: arkInfo.mailbox_pubkey, copyable: true },
     ],
   },
   {
-    title: "Boarding limits",
+    title: gt("Boarding limits"),
     rows: [
-      { label: "Minimum board amount", value: arkInfo.min_board_amount, unit: "sats" },
-      { label: "Maximum VTXO amount", value: arkInfo.max_vtxo_amount, unit: "sats" },
+      { label: gt("Minimum board amount"), value: arkInfo.min_board_amount, unit: gt("sats") },
+      { label: gt("Maximum VTXO amount"), value: arkInfo.max_vtxo_amount, unit: gt("sats") },
       {
-        label: "Required board confirmations",
+        label: gt("Required board confirmations"),
         value: arkInfo.required_board_confirmations,
-        unit: "blocks",
+        unit: gt("blocks"),
       },
     ],
   },
   {
-    title: "Timing",
+    title: gt("Timing"),
     rows: [
-      { label: "Round interval", value: arkInfo.round_interval, unit: "seconds" },
-      { label: "Round nonces", value: arkInfo.nb_round_nonces },
-      { label: "VTXO exit delta", value: arkInfo.vtxo_exit_delta, unit: "blocks" },
-      { label: "VTXO lifetime", value: arkInfo.vtxo_lifetime, unit: "blocks" },
-      { label: "HTLC send expiry delta", value: arkInfo.htlc_send_expiry_delta, unit: "blocks" },
+      { label: gt("Round interval"), value: arkInfo.round_interval, unit: gt("seconds") },
+      { label: gt("Round nonces"), value: arkInfo.nb_round_nonces },
+      { label: gt("VTXO exit delta"), value: arkInfo.vtxo_exit_delta, unit: gt("blocks") },
+      { label: gt("VTXO lifetime"), value: arkInfo.vtxo_lifetime, unit: gt("blocks") },
+      {
+        label: gt("HTLC send expiry delta"),
+        value: arkInfo.htlc_send_expiry_delta,
+        unit: gt("blocks"),
+      },
     ],
   },
   {
-    title: "Lightning",
+    title: gt("Lightning"),
     rows: [
       {
-        label: "Receive anti-DoS",
+        label: gt("Receive anti-DoS"),
         value: arkInfo.ln_receive_anti_dos_required,
       },
     ],
@@ -214,39 +231,46 @@ const buildConfigurationSections = (
   esploraEndpoint: string | null,
   hasEsploraOverride: boolean,
   onEditEsplora: () => void,
+  gt: Translate,
 ) => {
   const walletEndpoints = getWalletEndpoints(esploraEndpoint);
 
   return [
     {
-      title: "Wallet endpoints",
+      title: gt("Wallet endpoints"),
       rows: compactRows([
-        { label: "Ark server", value: walletEndpoints.ark, copyable: true },
+        { label: gt("Ark server"), value: walletEndpoints.ark, copyable: true },
         {
-          label: hasEsploraOverride ? "Esplora API · Custom" : "Esplora API · Noah default",
+          label: hasEsploraOverride ? gt("Esplora API · Custom") : gt("Esplora API · Noah default"),
           value: walletEndpoints.esplora,
-          actionLabel: "Edit",
+          actionLabel: gt("Edit"),
           onPress: onEditEsplora,
-          accessibilityLabel: "Edit Esplora API endpoint",
-          accessibilityHint: "Opens the endpoint editor.",
+          accessibilityLabel: gt("Edit Esplora API endpoint"),
+          accessibilityHint: gt("Opens the endpoint editor."),
           testID: "edit-esplora-endpoint",
         },
-        { label: "Bitcoind RPC", value: walletEndpoints.bitcoind, copyable: true },
+        { label: gt("Bitcoind RPC"), value: walletEndpoints.bitcoind, copyable: true },
       ]),
     },
     {
-      title: "Explorer APIs",
+      title: gt("Explorer APIs"),
       rows: compactRows([
-        { label: "Block height API", value: getBlockheightEndpoint(), copyable: true },
-        { label: "Mempool explorer", value: getMempoolExplorerBaseUrl(), copyable: true },
-        { label: "Price API", value: mempoolPriceEndpoint, copyable: true },
-        { label: "Historical price API", value: mempoolHistoricalPriceEndpoint, copyable: true },
+        { label: gt("Block height API"), value: getBlockheightEndpoint(), copyable: true },
+        { label: gt("Mempool explorer"), value: getMempoolExplorerBaseUrl(), copyable: true },
+        { label: gt("Price API"), value: mempoolPriceEndpoint, copyable: true },
+        {
+          label: gt("Historical price API"),
+          value: mempoolHistoricalPriceEndpoint,
+          copyable: true,
+        },
       ]),
     },
   ];
 };
 
 const ArkInfoScreen = () => {
+  const translateError = useErrorTranslation();
+  const gt = useGT();
   const navigation = useNavigation<NavigationProp>();
   const colors = useThemeColors();
   const endpointOverride = useEsploraStore((state) => state.endpointOverride);
@@ -257,9 +281,10 @@ const ArkInfoScreen = () => {
     esploraEndpoint,
     endpointOverride !== null,
     openEsploraEditor,
+    gt,
   );
   const sections = arkInfo
-    ? [...buildSections(arkInfo), ...configurationSections]
+    ? [...buildSections(arkInfo, gt), ...configurationSections]
     : configurationSections;
 
   return (
@@ -276,24 +301,32 @@ const ArkInfoScreen = () => {
               className="mr-3"
               testID="ark-info-back-button"
             />
-            <Text className="text-2xl font-bold text-foreground">Ark Info</Text>
+            <T>
+              <Text className="text-2xl font-bold text-foreground">Ark Info</Text>
+            </T>
           </View>
 
           <View className="mt-8 border-b border-border/60 pb-6">
-            <Text className="text-[11px] font-semibold uppercase tracking-[3px] text-muted-foreground">
-              Ark Server
-            </Text>
+            <T>
+              <Text className="text-[11px] font-semibold uppercase tracking-[3px] text-muted-foreground">
+                Ark Server
+              </Text>
+            </T>
             <Text className="mt-3 text-4xl font-bold capitalize text-foreground">
-              {arkInfo?.network ?? "Network"}
+              {arkInfo?.network ?? gt("Network")}
             </Text>
-            <Text className="mt-3 max-w-[320px] text-base leading-6 text-muted-foreground">
-              Current server parameters reported by the loaded Ark wallet.
-            </Text>
+            <T>
+              <Text className="mt-3 max-w-[320px] text-base leading-6 text-muted-foreground">
+                Current server parameters reported by the loaded Ark wallet.
+              </Text>
+            </T>
           </View>
 
           {isLoading ? (
             <View className="mt-8 rounded-[18px] border border-border/60 bg-card/70 px-4 py-5">
-              <Text className="text-muted-foreground">Loading Ark server info...</Text>
+              <T>
+                <Text className="text-muted-foreground">Loading Ark server info...</Text>
+              </T>
             </View>
           ) : null}
 
@@ -305,15 +338,21 @@ const ArkInfoScreen = () => {
                 backgroundColor: `${colors.card}CC`,
               }}
             >
-              <Text className="text-lg font-semibold text-foreground">Ark info unavailable</Text>
+              <T>
+                <Text className="text-lg font-semibold text-foreground">Ark info unavailable</Text>
+              </T>
               <Text className="mt-2 text-sm leading-6 text-muted-foreground">
-                {error instanceof Error ? error.message : "Failed to load Ark server info."}
+                {translateError(
+                  (error instanceof Error
+                    ? error.message
+                    : gt("Failed to load Ark server info.")) ?? "",
+                )}
               </Text>
               <NativeNoahButton
-                label="Retry"
+                label={gt("Retry")}
                 onPress={() => refetch()}
                 isLoading={isFetching}
-                loadingLabel="Retrying..."
+                loadingLabel={gt("Retrying...")}
                 className="mt-5 rounded-2xl py-4"
                 fullWidth
               />

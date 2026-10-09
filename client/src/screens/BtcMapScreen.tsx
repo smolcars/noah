@@ -1,3 +1,4 @@
+import { Plural, T, useGT, useLocale, Var } from "gt-react-native";
 import {
   Camera,
   GeoJSONSource,
@@ -83,25 +84,33 @@ type PlaceFeatureProperties = {
   category: Exclude<PlaceCategory, "all">;
 };
 
-const categoryLabel = (place: BtcMapPlace) =>
-  PLACE_CATEGORIES.find((category) => category.value === getPlaceCategory(place.icon))?.label ??
-  "Place";
+function useCategoryLabels(): Record<PlaceCategory, string> {
+  const gt = useGT();
+  return {
+    all: gt("All"),
+    food: gt("Food & drink"),
+    shop: gt("Shops"),
+    stay: gt("Stay", { $context: "Places to stay, such as hotels and campsites." }),
+    atm: gt("ATM"),
+    services: gt("Services"),
+  };
+}
 
-const dateLabel = (value: string) => {
+const dateLabel = (value: string, locale: string) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? value
-    : new Intl.DateTimeFormat(undefined, { month: "short", year: "numeric" }).format(date);
+    : new Intl.DateTimeFormat(locale, { month: "short", year: "numeric" }).format(date);
 };
 
 const isCurrentBoost = (place: BtcMapPlace) =>
   place.boosted_until !== undefined && new Date(place.boosted_until).getTime() > Date.now();
 
-const openUrl = async (url: string) => {
+const openUrl = async (url: string, gt: ReturnType<typeof useGT>) => {
   try {
     await Linking.openURL(url);
   } catch (error) {
-    Alert.alert("Cannot open link", "No app is available to open this link.");
+    Alert.alert(gt("Cannot open link"), gt("No app is available to open this link."));
     throw error;
   }
 };
@@ -242,6 +251,9 @@ function PlaceDetailPanel({
   userLocation: Coordinates | undefined;
   onClose: () => void;
 }) {
+  const gt = useGT();
+  const categoryLabels = useCategoryLabels();
+  const locale = useLocale();
   const { colors } = useTheme();
   const { copyWithState, isCopied } = useCopyToClipboard(1200);
   const detailQuery = useBtcMapPlace(place.id, place.comments);
@@ -257,12 +269,15 @@ function PlaceDetailPanel({
       Platform.OS === "ios"
         ? `http://maps.apple.com/?daddr=${place.lat},${place.lon}&q=${label}`
         : `geo:${place.lat},${place.lon}?q=${place.lat},${place.lon}(${label})`;
-    void openUrl(url).catch((error) => log.w("Could not open directions", [error]));
+    void openUrl(url, gt).catch((error) => log.w("Could not open directions", [error]));
   };
 
   const sharePlace = () => {
     void Share.share({
-      message: `${place.name}\nhttps://btcmap.org/merchant/${place.id}`,
+      message: gt("{value1}\nhttps://btcmap.org/merchant/{value2}", {
+        value1: place.name,
+        value2: place.id,
+      }),
     }).catch((error) => log.w("Could not share BTC Map place", [error]));
   };
 
@@ -272,10 +287,12 @@ function PlaceDetailPanel({
         <View className="flex-1">
           <View className="mb-1 flex-row flex-wrap items-center gap-2">
             <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {categoryLabel(place)}
+              {categoryLabels[getPlaceCategory(place.icon)]}
             </Text>
             {isCurrentBoost(place) && (
-              <Text className="text-xs font-bold text-[#f7931a]">Featured</Text>
+              <T>
+                <Text className="text-xs font-bold text-[#f7931a]">Featured</Text>
+              </T>
             )}
           </View>
           <Text className="text-xl font-bold" numberOfLines={2}>
@@ -283,18 +300,20 @@ function PlaceDetailPanel({
           </Text>
           <View className="mt-1 flex-row flex-wrap items-center gap-x-2">
             {distance !== undefined && (
-              <Text className="text-sm text-muted-foreground">{formatDistance(distance)}</Text>
+              <Text className="text-sm text-muted-foreground">
+                {formatDistance(distance, locale)}
+              </Text>
             )}
             {detail.verified_at && (
               <Text className="text-sm text-muted-foreground">
-                Verified {dateLabel(detail.verified_at)}
+                {gt("Verified {date}", { date: dateLabel(detail.verified_at, locale) })}
               </Text>
             )}
           </View>
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close place details"
+          accessibilityLabel={gt("Close place details")}
           onPress={onClose}
           className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
         >
@@ -303,13 +322,13 @@ function PlaceDetailPanel({
       </View>
 
       <View className="mt-4 flex-row gap-2">
-        <DetailAction icon="navigate-outline" label="Directions" onPress={openDirections} />
+        <DetailAction icon="navigate-outline" label={gt("Directions")} onPress={openDirections} />
         {detail.website && (
           <DetailAction
             icon="globe-outline"
-            label="Website"
+            label={gt("Website")}
             onPress={() =>
-              void openUrl(detail.website!).catch((error) =>
+              void openUrl(detail.website!, gt).catch((error) =>
                 log.w("Could not open merchant website", [error]),
               )
             }
@@ -318,35 +337,41 @@ function PlaceDetailPanel({
         {detail.phone && (
           <DetailAction
             icon="call-outline"
-            label="Call"
+            label={gt("Call")}
             onPress={() =>
-              void openUrl(`tel:${detail.phone}`).catch((error) =>
+              void openUrl(`tel:${detail.phone}`, gt).catch((error) =>
                 log.w("Could not open phone app", [error]),
               )
             }
           />
         )}
-        <DetailAction icon="share-outline" label="Share" onPress={sharePlace} />
+        <DetailAction icon="share-outline" label={gt("Share")} onPress={sharePlace} />
       </View>
 
       {detailQuery.isLoading && (
         <View className="mt-4 flex-row items-center gap-2">
           <NoahActivityIndicator size="small" />
-          <Text className="text-sm text-muted-foreground">Loading details…</Text>
+          <T>
+            <Text className="text-sm text-muted-foreground">Loading details…</Text>
+          </T>
         </View>
       )}
 
       {detailQuery.isError && (
-        <Text className="mt-4 text-sm text-muted-foreground">
-          Live details are unavailable. The bundled map still works offline.
-        </Text>
+        <T>
+          <Text className="mt-4 text-sm text-muted-foreground">
+            Live details are unavailable. The bundled map still works offline.
+          </Text>
+        </T>
       )}
 
       {address && (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={addressCopied ? "Address copied" : `Copy address: ${address}`}
-          accessibilityHint="Copies the merchant address to the clipboard"
+          accessibilityLabel={
+            addressCopied ? gt("Address copied") : gt("Copy address: {value1}", { value1: address })
+          }
+          accessibilityHint={gt("Copies the merchant address to the clipboard")}
           onPress={() => void copyWithState(address, addressCopyId)}
           className="-mx-2 mt-2 flex-row items-start gap-3 rounded-xl px-2 py-2"
           style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
@@ -377,7 +402,7 @@ function PlaceDetailPanel({
         <View key={comment.id} className="mt-4 border-l-2 border-[#f7931a] pl-3">
           <Text className="text-sm leading-5">{comment.text}</Text>
           <Text className="mt-1 text-xs text-muted-foreground">
-            {dateLabel(comment.created_at)}
+            {dateLabel(comment.created_at, locale)}
           </Text>
         </View>
       ))}
@@ -386,16 +411,17 @@ function PlaceDetailPanel({
 }
 
 function SocialLinks({ place }: { place: BtcMapPlaceDetail }) {
+  const gt = useGT();
   const { colors } = useTheme();
   const links: Array<{
     label: string;
     icon: "x" | "facebook" | "instagram" | "telegram";
     url: string | undefined;
   }> = [
-    { label: "X", icon: "x", url: place.twitter },
-    { label: "Facebook", icon: "facebook", url: place.facebook },
-    { label: "Instagram", icon: "instagram", url: place.instagram },
-    { label: "Telegram", icon: "telegram", url: place.telegram },
+    { label: gt("X"), icon: "x", url: place.twitter },
+    { label: gt("Facebook"), icon: "facebook", url: place.facebook },
+    { label: gt("Instagram"), icon: "instagram", url: place.instagram },
+    { label: gt("Telegram"), icon: "telegram", url: place.telegram },
   ];
   const availableLinks = links.filter(
     (link): link is typeof link & { url: string } => link.url !== undefined,
@@ -407,17 +433,19 @@ function SocialLinks({ place }: { place: BtcMapPlaceDetail }) {
 
   return (
     <View className="mt-4">
-      <Text className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Follow
-      </Text>
+      <T>
+        <Text className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Follow
+        </Text>
+      </T>
       <View className="flex-row gap-2">
         {availableLinks.map((link) => (
           <Pressable
             key={link.label}
             accessibilityRole="link"
-            accessibilityLabel={`Open ${link.label}`}
+            accessibilityLabel={gt("Open {value1}", { value1: link.label })}
             onPress={() =>
-              void openUrl(link.url).catch((error) =>
+              void openUrl(link.url, gt).catch((error) =>
                 log.w("Could not open merchant social profile", [error]),
               )
             }
@@ -436,10 +464,11 @@ function SocialLinks({ place }: { place: BtcMapPlaceDetail }) {
 }
 
 function PaymentMethods({ place }: { place: BtcMapPlaceDetail }) {
+  const gt = useGT();
   const methods = [
     place["osm:payment:lightning"] === "yes" ? "Lightning" : undefined,
-    place["osm:payment:lightning_contactless"] === "yes" ? "Contactless" : undefined,
-    place["osm:payment:onchain"] === "yes" ? "On-chain" : undefined,
+    place["osm:payment:lightning_contactless"] === "yes" ? gt("Contactless") : undefined,
+    place["osm:payment:onchain"] === "yes" ? gt("On-chain") : undefined,
     place.payment_provider,
   ].filter((method): method is string => Boolean(method));
 
@@ -449,9 +478,11 @@ function PaymentMethods({ place }: { place: BtcMapPlaceDetail }) {
 
   return (
     <View className="mt-4">
-      <Text className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Pay with
-      </Text>
+      <T>
+        <Text className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Pay with
+        </Text>
+      </T>
       <View className="flex-row flex-wrap gap-2">
         {methods.map((method) => (
           <View key={method} className="rounded-full bg-[#f7931a]/15 px-3 py-1.5">
@@ -463,14 +494,16 @@ function PaymentMethods({ place }: { place: BtcMapPlaceDetail }) {
         <Pressable
           accessibilityRole="link"
           onPress={() =>
-            void openUrl(place.required_app_url!).catch((error) =>
+            void openUrl(place.required_app_url!, gt).catch((error) =>
               log.w("Could not open required payment app", [error]),
             )
           }
         >
-          <Text className="mt-3 text-sm font-semibold text-[#d97400]">
-            This place may require another payment app
-          </Text>
+          <T>
+            <Text className="mt-3 text-sm font-semibold text-[#d97400]">
+              This place may require another payment app
+            </Text>
+          </T>
         </Pressable>
       )}
     </View>
@@ -488,6 +521,9 @@ function NearbyPlaces({
   bottom: number;
   onSelect: (place: BtcMapPlace) => void;
 }) {
+  const gt = useGT();
+  const categoryLabels = useCategoryLabels();
+  const locale = useLocale();
   const nearby = places
     .map((place) => ({ place, distance: distanceKm(location, place) }))
     .sort((left, right) => left.distance - right.distance)
@@ -495,9 +531,11 @@ function NearbyPlaces({
 
   return (
     <View className="absolute left-0 right-0" style={{ bottom }}>
-      <Text className="mb-2 ml-4 text-sm font-bold text-white" style={{ textShadowRadius: 4 }}>
-        Nearby
-      </Text>
+      <T>
+        <Text className="mb-2 ml-4 text-sm font-bold text-white" style={{ textShadowRadius: 4 }}>
+          Nearby
+        </Text>
+      </T>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -507,7 +545,7 @@ function NearbyPlaces({
           <Pressable
             key={place.id}
             accessibilityRole="button"
-            accessibilityLabel={`Open ${place.name}`}
+            accessibilityLabel={gt("Open {value1}", { value1: place.name })}
             onPress={() => onSelect(place)}
             className="w-52 rounded-2xl border border-border bg-background px-4 py-3"
             style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
@@ -516,7 +554,7 @@ function NearbyPlaces({
               {place.name}
             </Text>
             <Text className="mt-1 text-xs text-muted-foreground">
-              {categoryLabel(place)} · {formatDistance(distance)}
+              {categoryLabels[getPlaceCategory(place.icon)]} · {formatDistance(distance, locale)}
             </Text>
           </Pressable>
         ))}
@@ -526,6 +564,9 @@ function NearbyPlaces({
 }
 
 export default function BtcMapScreen() {
+  const gt = useGT();
+  const categoryLabels = useCategoryLabels();
+  const locale = useLocale();
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
@@ -703,14 +744,17 @@ export default function BtcMapScreen() {
     setIsLocating(false);
     if (result.status === "denied") {
       Alert.alert(
-        "Location is off",
-        "You can still browse the full map. Enable location to see nearby places.",
+        gt("Location is off"),
+        gt("You can still browse the full map. Enable location to see nearby places."),
       );
       return;
     }
     if (result.status === "error") {
       log.w("Could not get foreground location", [result.error]);
-      Alert.alert("Location unavailable", "Noah could not determine your current location.");
+      Alert.alert(
+        gt("Location unavailable"),
+        gt("Noah could not determine your current location."),
+      );
       return;
     }
     const viewport: BtcMapViewport = {
@@ -744,7 +788,9 @@ export default function BtcMapScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <NoahActivityIndicator />
-        <Text className="mt-3 text-muted-foreground">Opening the bundled BTC Map…</Text>
+        <T>
+          <Text className="mt-3 text-muted-foreground">Opening the bundled BTC Map…</Text>
+        </T>
       </View>
     );
   }
@@ -752,16 +798,22 @@ export default function BtcMapScreen() {
   if (snapshotQuery.isError) {
     return (
       <View className="flex-1 items-center justify-center bg-background px-8">
-        <Text className="text-center text-xl font-bold">Could not open BTC Map</Text>
-        <Text className="mt-2 text-center text-muted-foreground">
-          The bundled places file could not be read.
-        </Text>
+        <T>
+          <Text className="text-center text-xl font-bold">Could not open BTC Map</Text>
+        </T>
+        <T>
+          <Text className="mt-2 text-center text-muted-foreground">
+            The bundled places file could not be read.
+          </Text>
+        </T>
         <Pressable
           accessibilityRole="button"
           onPress={() => void snapshotQuery.refetch()}
           className="mt-5 rounded-full bg-primary px-5 py-3"
         >
-          <Text className="font-semibold text-primary-foreground">Try again</Text>
+          <T>
+            <Text className="font-semibold text-primary-foreground">Try again</Text>
+          </T>
         </Pressable>
       </View>
     );
@@ -881,8 +933,8 @@ export default function BtcMapScreen() {
                     selectCity(city);
                   }
                 }}
-                accessibilityLabel="Search places or cities"
-                placeholder="Search places or cities"
+                accessibilityLabel={gt("Search places or cities")}
+                placeholder={gt("Search places or cities")}
                 placeholderTextColor={colors.mutedForeground}
                 className="ml-2 flex-1 text-base text-foreground"
                 returnKeyType="search"
@@ -891,7 +943,7 @@ export default function BtcMapScreen() {
               {search.length > 0 && (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Clear search"
+                  accessibilityLabel={gt("Clear search")}
                   onPress={() => {
                     setSearch("");
                     setSelectedCity(undefined);
@@ -909,13 +961,17 @@ export default function BtcMapScreen() {
               showsVerticalScrollIndicator={false}
               className="mt-2 max-h-80 rounded-3xl border border-border bg-background"
             >
-              <Text className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                Locations
-              </Text>
+              <T>
+                <Text className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Locations
+                </Text>
+              </T>
               {cityIndexQuery.isLoading && (
                 <View className="flex-row items-center gap-2 px-4 py-3">
                   <NoahActivityIndicator size="small" />
-                  <Text className="text-sm text-muted-foreground">Loading city search…</Text>
+                  <T>
+                    <Text className="text-sm text-muted-foreground">Loading city search…</Text>
+                  </T>
                 </View>
               )}
               {cityResults.map((city) => (
@@ -931,15 +987,17 @@ export default function BtcMapScreen() {
               {merchantResults.length > 0 && (
                 <>
                   <View className="mx-4 h-px bg-border" />
-                  <Text className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Bitcoin places
-                  </Text>
+                  <T>
+                    <Text className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Bitcoin places
+                    </Text>
+                  </T>
                   {merchantResults.map((place) => (
                     <SearchResultRow
                       key={place.id}
                       icon="storefront-outline"
                       label={place.name}
-                      detail={categoryLabel(place)}
+                      detail={categoryLabels[getPlaceCategory(place.icon)]}
                       onPress={() => selectPlace(place)}
                     />
                   ))}
@@ -949,9 +1007,11 @@ export default function BtcMapScreen() {
               {!cityIndexQuery.isLoading &&
                 cityResults.length === 0 &&
                 merchantResults.length === 0 && (
-                  <Text className="px-4 pb-5 pt-2 text-sm text-muted-foreground">
-                    No matching cities or Bitcoin places
-                  </Text>
+                  <T>
+                    <Text className="px-4 pb-5 pt-2 text-sm text-muted-foreground">
+                      No matching cities or Bitcoin places
+                    </Text>
+                  </T>
                 )}
             </ScrollView>
           ) : (
@@ -989,50 +1049,64 @@ export default function BtcMapScreen() {
                 <Pressable
                   accessibilityRole="link"
                   onPress={() =>
-                    void openUrl("https://www.openstreetmap.org/copyright").catch((error) =>
+                    void openUrl("https://www.openstreetmap.org/copyright", gt).catch((error) =>
                       log.w("Could not open map attribution", [error]),
                     )
                   }
                 >
-                  <Text className="text-[10px] text-white">© OpenStreetMap</Text>
+                  <T>
+                    <Text className="text-[10px] text-white">© OpenStreetMap</Text>
+                  </T>
                 </Pressable>
-                <Text className="text-[10px] text-white">·</Text>
+                <T>
+                  <Text className="text-[10px] text-white">·</Text>
+                </T>
                 <Pressable
                   accessibilityRole="link"
                   onPress={() =>
-                    void openUrl("https://openmaptiles.org").catch((error) =>
+                    void openUrl("https://openmaptiles.org", gt).catch((error) =>
                       log.w("Could not open OpenMapTiles attribution", [error]),
                     )
                   }
                 >
-                  <Text className="text-[10px] text-white">© OpenMapTiles</Text>
+                  <T>
+                    <Text className="text-[10px] text-white">© OpenMapTiles</Text>
+                  </T>
                 </Pressable>
-                <Text className="text-[10px] text-white">·</Text>
+                <T>
+                  <Text className="text-[10px] text-white">·</Text>
+                </T>
                 <Pressable
                   accessibilityRole="link"
                   onPress={() =>
-                    void openUrl("https://btcmap.org").catch((error) =>
+                    void openUrl("https://btcmap.org", gt).catch((error) =>
                       log.w("Could not open BTC Map attribution", [error]),
                     )
                   }
                 >
-                  <Text className="text-[10px] text-white">BTC Map</Text>
+                  <T>
+                    <Text className="text-[10px] text-white">BTC Map</Text>
+                  </T>
                 </Pressable>
-                <Text className="text-[10px] text-white">·</Text>
+                <T>
+                  <Text className="text-[10px] text-white">·</Text>
+                </T>
                 <Pressable
                   accessibilityRole="link"
                   onPress={() =>
-                    void openUrl("https://www.geonames.org").catch((error) =>
+                    void openUrl("https://www.geonames.org", gt).catch((error) =>
                       log.w("Could not open GeoNames attribution", [error]),
                     )
                   }
                 >
-                  <Text className="text-[10px] text-white">GeoNames</Text>
+                  <T>
+                    <Text className="text-[10px] text-white">GeoNames</Text>
+                  </T>
                 </Pressable>
               </View>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Find places near me"
+                accessibilityLabel={gt("Find places near me")}
                 disabled={isLocating}
                 onPress={() => void handleLocate()}
                 className="h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-border bg-background"
@@ -1062,10 +1136,20 @@ export default function BtcMapScreen() {
             className="absolute left-3 rounded-full bg-black/65 px-3 py-2"
             style={{ bottom: panelBottom }}
           >
-            <Text className="text-xs font-semibold text-white">
-              {filteredPlaces.length.toLocaleString()} places
-              {snapshotQuery.isSyncing ? " · Updating…" : ""}
-            </Text>
+            <T>
+              <Text className="text-xs font-semibold text-white">
+                <Plural
+                  n={filteredPlaces.length}
+                  one={<>One place</>}
+                  other={
+                    <>
+                      <Var>{filteredPlaces.length.toLocaleString(locale)}</Var> places
+                    </>
+                  }
+                />
+                <Var>{snapshotQuery.isSyncing ? gt(" · Updating…") : ""}</Var>
+              </Text>
+            </T>
           </View>
         )}
       </View>

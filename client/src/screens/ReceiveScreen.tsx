@@ -1,3 +1,4 @@
+import { T, useGT, useLocale } from "gt-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, Share, View } from "react-native";
@@ -29,6 +30,8 @@ const log = logger("ReceiveScreen");
 const DESTRUCTIVE_COLOR = "#dc2626";
 
 const ReceiveScreen = () => {
+  const locale = useLocale();
+  const gt = useGT();
   const navigation = useNavigation<NativeStackNavigationProp<TabParamList>>();
   const { isExpanded, onLayout } = useAdaptiveLayout();
   const [qrPaneWidth, setQrPaneWidth] = useState(0);
@@ -63,7 +66,11 @@ const ReceiveScreen = () => {
   const qrSize = Math.max(1, Math.min(270, qrPaneWidth - 32));
   const formattedFiatAmount =
     request?.amountSat && btcPrice
-      ? formatFiatAmount(satsToFiat(request.amountSat, btcPrice, fiatCurrency), fiatCurrency)
+      ? formatFiatAmount(
+          satsToFiat(request.amountSat, btcPrice, fiatCurrency),
+          fiatCurrency,
+          locale,
+        )
       : null;
 
   const shareRequest = () => {
@@ -105,10 +112,12 @@ const ReceiveScreen = () => {
       >
         <View className="flex-1 pb-8" onLayout={onLayout}>
           <View className="flex-row items-center justify-between pt-1">
-            <Text className="text-2xl font-bold text-foreground">Receive</Text>
+            <T>
+              <Text className="text-2xl font-bold text-foreground">Receive</Text>
+            </T>
             <NativeNoahIconButton
               icon="copy"
-              accessibilityLabel="Show payment details"
+              accessibilityLabel={gt("Show payment details")}
               onPress={() => setIsCopySheetOpen(true)}
               disabled={!request}
               testID="receive-copy-button"
@@ -127,8 +136,10 @@ const ReceiveScreen = () => {
                 <>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Show payment details"
-                    accessibilityHint="Opens options to copy the unified request or an individual payment method"
+                    accessibilityLabel={gt("Show payment details")}
+                    accessibilityHint={gt(
+                      "Opens options to copy the unified request or an individual payment method",
+                    )}
                     onPress={() => setIsCopySheetOpen(true)}
                     className="items-center"
                     testID="receive-qr-button"
@@ -171,15 +182,19 @@ const ReceiveScreen = () => {
                     </View>
                   </Pressable>
 
-                  <Text className="mt-6 text-center text-base font-medium text-foreground">
-                    Scan to receive bitcoin with Noah
-                  </Text>
+                  <T>
+                    <Text className="mt-6 text-center text-base font-medium text-foreground">
+                      Scan to receive bitcoin with Noah
+                    </Text>
+                  </T>
                   {request.amountSat === null ? (
                     <View className="mt-3 flex-row items-center gap-2">
                       <Icon name="flash-outline" size={17} color={COLORS.BITCOIN_ORANGE} />
-                      <Text className="text-center text-sm text-muted-foreground">
-                        Add an amount to receive over Lightning
-                      </Text>
+                      <T>
+                        <Text className="text-center text-sm text-muted-foreground">
+                          Add an amount to receive over Lightning
+                        </Text>
+                      </T>
                     </View>
                   ) : null}
                 </>
@@ -192,23 +207,27 @@ const ReceiveScreen = () => {
                   >
                     <NoahActivityIndicator />
                   </View>
-                  <Text className="mt-6 text-sm text-muted-foreground">
-                    Creating your payment request…
-                  </Text>
+                  <T>
+                    <Text className="mt-6 text-sm text-muted-foreground">
+                      Creating your payment request…
+                    </Text>
+                  </T>
                 </View>
               ) : (
                 <View className="w-full items-center rounded-[24px] border border-destructive/30 bg-destructive/10 px-6 py-8">
                   <Icon name="warning-outline" size={34} color={DESTRUCTIVE_COLOR} />
-                  <Text className="mt-4 text-center text-xl font-bold text-foreground">
-                    Couldn’t create a request
-                  </Text>
+                  <T>
+                    <Text className="mt-4 text-center text-xl font-bold text-foreground">
+                      Couldn’t create a request
+                    </Text>
+                  </T>
                   <Text className="mt-2 max-w-[310px] text-center text-sm leading-5 text-muted-foreground">
                     {baseError?.message ??
-                      "Try again to generate fresh Ark and on-chain addresses."}
+                      gt("Try again to generate fresh Ark and on-chain addresses.")}
                   </Text>
                   <NativeNoahButton
-                    label="Retry"
-                    loadingLabel="Retrying…"
+                    label={gt("Retry")}
+                    loadingLabel={gt("Retrying…")}
                     onPress={() => void generateBaseRequest()}
                     isLoading={isGeneratingBase}
                     className="mt-6"
@@ -226,12 +245,17 @@ const ReceiveScreen = () => {
               >
                 {isExpanded ? (
                   <View className="gap-2 mb-4">
-                    <Text accessibilityRole="header" className="text-xl font-bold text-foreground">
-                      Payment request
-                    </Text>
+                    <T>
+                      <Text
+                        accessibilityRole="header"
+                        className="text-xl font-bold text-foreground"
+                      >
+                        Payment request
+                      </Text>
+                    </T>
                     <Text className="text-base text-muted-foreground">
                       {request.amountSat === null
-                        ? "Choose an amount, or share this request as it is."
+                        ? gt("Choose an amount, or share this request as it is.")
                         : formatBitcoinAmount(request.amountSat)}
                     </Text>
                     {request.description ? (
@@ -240,7 +264,7 @@ const ReceiveScreen = () => {
                   </View>
                 ) : null}
                 <NativeNoahButton
-                  label={request.amountSat === null ? "Add amount" : "Edit amount"}
+                  label={request.amountSat === null ? gt("Add amount") : gt("Edit amount")}
                   onPress={() => setIsAmountSheetOpen(true)}
                   disabled={isGeneratingLightning}
                   size="lg"
@@ -248,7 +272,7 @@ const ReceiveScreen = () => {
                   testID="receive-amount-button"
                 />
                 <NativeNoahSecondaryButton
-                  label="Share"
+                  label={gt("Share")}
                   onPress={shareRequest}
                   size="lg"
                   fullWidth

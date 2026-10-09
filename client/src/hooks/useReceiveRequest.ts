@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import type { Bolt11Invoice } from "react-native-nitro-ark";
@@ -71,6 +72,14 @@ const scheduleIdleTask = (callback: IdleCallbackLike): IdleTaskHandle => {
 const toError = (error: unknown) => (error instanceof Error ? error : new Error(String(error)));
 
 export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void) {
+  const gt = useGT();
+  // Focus effects depend on stable copy, not the SDK's changing development callback.
+  const requestFailedTitle = gt("Receive Request Failed");
+  const lightningCanceledTitle = gt("Lightning Receive Canceled");
+  const lightningFailedTitle = gt("Lightning Receive Failed");
+  const lightningFailedMessage = gt(
+    "The Lightning payment could not be received. Generate a new payment request and try again.",
+  );
   const { showAlert } = useAlert();
   const [request, setRequest] = useState<GeneratedReceiveRequest | null>(null);
   const [baseError, setBaseError] = useState<Error | null>(null);
@@ -232,9 +241,7 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
       }
 
       if (isFailedOrCanceledMovement(movement)) {
-        const error = new Error(
-          "The Lightning payment could not be received. Generate a new payment request and try again.",
-        );
+        const error = new Error(lightningFailedMessage);
         log.e("Lightning receive ended without completing", [
           { movementId: movement.id, status: movement.status },
         ]);
@@ -243,10 +250,7 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
         void queryClient.invalidateQueries({ queryKey: ["balance"] });
         void queryClient.invalidateQueries({ queryKey: ["transactions"] });
         showAlert({
-          title:
-            movement.status === "canceled"
-              ? "Lightning Receive Canceled"
-              : "Lightning Receive Failed",
+          title: movement.status === "canceled" ? lightningCanceledTitle : lightningFailedTitle,
           description: error.message,
         });
         return;
@@ -256,7 +260,14 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
         handleReceiveComplete(activeSession.amountSat);
       }
     },
-    [cancelReceiveSession, handleReceiveComplete, showAlert],
+    [
+      cancelReceiveSession,
+      handleReceiveComplete,
+      showAlert,
+      lightningFailedMessage,
+      lightningCanceledTitle,
+      lightningFailedTitle,
+    ],
   );
 
   const scheduleArkSubscriptionRetry = useCallback((sessionId: number) => {
@@ -396,9 +407,9 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
       const requestError = toError(error);
       activeReceiveSessionRef.current = null;
       setBaseError(requestError);
-      showAlert({ title: "Receive Request Failed", description: requestError.message });
+      showAlert({ title: requestFailedTitle, description: requestError.message });
     }
-  }, [cancelReceiveSession, generateReceiveAddresses, showAlert]);
+  }, [cancelReceiveSession, generateReceiveAddresses, showAlert, requestFailedTitle]);
 
   useFocusEffect(
     useCallback(() => {
@@ -421,7 +432,7 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
     const currentRequest = request;
     const activeSession = activeReceiveSessionRef.current;
     if (!currentRequest || !activeSession) {
-      throw new Error("A receive request must be ready before adding an amount");
+      throw new Error(gt("A receive request must be ready before adding an amount"));
     }
 
     const generationId = lightningGenerationIdRef.current + 1;
@@ -455,7 +466,7 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
       return true;
     } catch (error) {
       const requestError = toError(error);
-      showAlert({ title: "Receive Request Failed", description: requestError.message });
+      showAlert({ title: gt("Receive Request Failed"), description: requestError.message });
       throw requestError;
     }
   };

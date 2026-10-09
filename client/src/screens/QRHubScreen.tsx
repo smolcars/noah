@@ -1,3 +1,4 @@
+import { T, useGT } from "gt-react-native";
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { type NavigationProp, useIsFocused, useNavigation } from "@react-navigation/native";
@@ -24,15 +25,16 @@ import logoImage from "../../assets/All_Files/light_dark_tinted/icon_clear_tinte
 
 type QRMode = "scan" | "my-code";
 
-const QR_MODE_OPTIONS = [
-  { label: "My code", value: "my-code" },
-  { label: "Scan", value: "scan" },
-] as const;
-
 const addAddressBreakOpportunities = (address: string) =>
   address.replace("@", "@\u200B").replace(/\./g, ".\u200B");
 
 const QRHubScreen = () => {
+  const gt = useGT();
+  const QR_MODE_OPTIONS = [
+    { label: gt("My code"), value: "my-code" },
+    { label: gt("Scan"), value: "scan" },
+  ] as const;
+
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const tabNavigation = navigation.getParent<NavigationProp<TabParamList>>();
   const isFocused = useIsFocused();
@@ -130,7 +132,9 @@ const QRHubScreen = () => {
               className="mr-3"
               testID="qr-hub-back-button"
             />
-            <Text className="text-2xl font-bold text-foreground">QR Code</Text>
+            <T>
+              <Text className="text-2xl font-bold text-foreground">QR Code</Text>
+            </T>
           </View>
 
           <View className="mt-7 mb-6">
@@ -178,26 +182,32 @@ const QRHubScreen = () => {
                           ellipsizeMode="tail"
                           style={{ color: copied ? COLORS.SUCCESS : COLORS.BITCOIN_ORANGE }}
                         >
-                          {copied ? "Copied" : displayLightningAddress}
+                          {copied ? gt("Copied") : displayLightningAddress}
                         </Text>
                       </Pressable>
                     </View>
 
-                    <Text className="mt-5 max-w-[300px] text-center text-sm leading-6 text-muted-foreground">
-                      This QR contains only your Lightning address.
-                    </Text>
+                    <T>
+                      <Text className="mt-5 max-w-[300px] text-center text-sm leading-6 text-muted-foreground">
+                        This QR contains only your Lightning address.
+                      </Text>
+                    </T>
                   </View>
                 </AdaptiveColumns>
               ) : (
                 <View className="w-full rounded-[18px] border border-border/60 bg-card/70 px-4 py-5">
-                  <Text className="text-lg font-semibold text-foreground">
-                    Lightning address unavailable
-                  </Text>
-                  <Text className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Finish setting up your Lightning address before sharing your QR.
-                  </Text>
+                  <T>
+                    <Text className="text-lg font-semibold text-foreground">
+                      Lightning address unavailable
+                    </Text>
+                  </T>
+                  <T>
+                    <Text className="mt-2 text-sm leading-6 text-muted-foreground">
+                      Finish setting up your Lightning address before sharing your QR.
+                    </Text>
+                  </T>
                   <NativeNoahButton
-                    label="Open Profile"
+                    label={gt("Open Profile")}
                     onPress={() => navigation.navigate("Settings", { screen: "Profile" })}
                     className="mt-5 h-12 rounded-2xl"
                     fullWidth
@@ -211,10 +221,14 @@ const QRHubScreen = () => {
                 <View className="h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                   <Icon name="scan-outline" size={30} color={COLORS.BITCOIN_ORANGE} />
                 </View>
-                <Text className="mt-5 text-xl font-bold text-foreground">Scan to pay</Text>
-                <Text className="mt-2 max-w-[280px] text-center text-sm leading-6 text-muted-foreground">
-                  Scan a Bitcoin, Lightning, or Ark QR code and send from Noah.
-                </Text>
+                <T>
+                  <Text className="mt-5 text-xl font-bold text-foreground">Scan to pay</Text>
+                </T>
+                <T>
+                  <Text className="mt-2 max-w-[280px] text-center text-sm leading-6 text-muted-foreground">
+                    Scan a Bitcoin, Lightning, or Ark QR code and send from Noah.
+                  </Text>
+                </T>
               </View>
             </Animated.View>
           )}
