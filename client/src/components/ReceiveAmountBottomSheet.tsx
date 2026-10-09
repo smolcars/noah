@@ -79,7 +79,7 @@ export function ReceiveAmountBottomSheet({
   const canSubmit = Number.isInteger(amountSat) && amountSat > 0 && isDescriptionValid;
   const displayAmount = amount.length === 0 ? "0" : formatNumber(amount, locale);
   const amountPrefix =
-    currency === "FIAT" ? fiatCurrencyInfo.symbol : bitcoinAmountUnit === "bip177" ? gt("₿") : null;
+    currency === "FIAT" ? fiatCurrencyInfo.symbol : bitcoinAmountUnit === "bip177" ? "₿" : null;
   const primaryAmount = amountPrefix ? `${amountPrefix}${displayAmount}` : displayAmount;
   const primaryAmountFontSize =
     primaryAmount.length <= 7 ? 56 : primaryAmount.length <= 10 ? 44 : 34;
@@ -88,7 +88,7 @@ export function ReceiveAmountBottomSheet({
     currency === "SATS"
       ? btcPrice
         ? formatFiatAmount(satsToFiat(amountSat, btcPrice, fiatCurrency), fiatCurrency, locale)
-        : `${fiatCurrencyInfo.code} rate unavailable`
+        : gt("{currency} rate unavailable", { currency: fiatCurrencyInfo.code })
       : formatBitcoinAmount(amountSat);
 
   const close = () => {
@@ -231,9 +231,7 @@ export function ReceiveAmountBottomSheet({
           <View className="flex-1 items-center justify-center py-5">
             <View
               accessibilityRole="text"
-              accessibilityLabel={`${amount.length === 0 ? "0" : amount} ${
-                currency === "SATS" ? "sats" : fiatCurrency
-              }`}
+              accessibilityLabel={`${displayAmount} ${currency === "SATS" ? "sats" : fiatCurrency}`}
               className="flex-row items-baseline justify-center px-4"
             >
               <Text

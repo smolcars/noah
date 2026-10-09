@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
@@ -77,6 +78,7 @@ const readResult = <T>(result: Result<T, Error>): T => {
 };
 
 export function useExitOverview() {
+  const gt = useGT();
   const {
     isInitialized,
     isWalletLoaded,
@@ -98,7 +100,7 @@ export function useExitOverview() {
         wallet.isWalletSuspended ||
         wallet.isBackgroundJobRunning
       ) {
-        throw new Error("Wait for the wallet to be ready before refreshing exits.");
+        throw new Error(gt("Wait for the wallet to be ready before refreshing exits."));
       }
       log.d("Loading exit overview");
       // Bark 0.7 syncExit permits progression. Reading this screen must not broadcast.
@@ -254,6 +256,7 @@ export function useExitFeeEstimate(inputs: ExitEstimateInputs, enabled: boolean)
 }
 
 export function useStartVtxoExit() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation<void, Error, string[]>({
@@ -265,25 +268,26 @@ export function useStartVtxoExit() {
           .map((vtxo) => vtxo.id),
       );
       if (vtxoIds.some((id) => !available.has(id))) {
-        throw new Error("Available VTXOs changed. Refresh and review the exit again.");
+        throw new Error(gt("Available VTXOs changed. Refresh and review the exit again."));
       }
       readResult(await startExitForVtxos(vtxoIds));
     },
     onSuccess: async () => {
       await invalidateExitQueries();
       showAlert({
-        title: "Exit Started",
-        description: "The selected VTXOs have been registered for emergency exit.",
+        title: gt("Exit Started"),
+        description: gt("The selected VTXOs have been registered for emergency exit."),
       });
     },
     onError: (error) => {
       log.e("Selected VTXO exit start mutation failed", [error]);
-      showAlert({ title: "Failed to Start Exit", description: error.message });
+      showAlert({ title: gt("Failed to Start Exit"), description: error.message });
     },
   });
 }
 
 export function useCancelExit() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation<void, Error, string>({
@@ -297,19 +301,20 @@ export function useCancelExit() {
         queryClient.invalidateQueries({ queryKey: ["transactions"] }),
       ]);
       showAlert({
-        title: "Exit Canceled",
-        description: "The VTXO remains spendable and can be exited again later.",
+        title: gt("Exit Canceled"),
+        description: gt("The VTXO remains spendable and can be exited again later."),
       });
     },
     onError: async (error) => {
       log.e("Exit cancellation mutation failed", [error]);
-      showAlert({ title: "Failed to Cancel Exit", description: error.message });
+      showAlert({ title: gt("Failed to Cancel Exit"), description: error.message });
       await queryClient.invalidateQueries({ queryKey: ["exit-overview"] });
     },
   });
 }
 
 export function useProgressExits() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation<ExitProgressStatusResult[], Error, number | undefined>({
@@ -320,18 +325,21 @@ export function useProgressExits() {
     onSuccess: async () => {
       await invalidateExitQueries();
       showAlert({
-        title: "Exit Progressed",
-        description: "Exit status has been refreshed. Some transactions may have been broadcast.",
+        title: gt("Exit Progressed"),
+        description: gt(
+          "Exit status has been refreshed. Some transactions may have been broadcast.",
+        ),
       });
     },
     onError: (error) => {
       log.e("Exit progress mutation failed", [error]);
-      showAlert({ title: "Failed to Progress Exit", description: error.message });
+      showAlert({ title: gt("Failed to Progress Exit"), description: error.message });
     },
   });
 }
 
 export function useSyncExits() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation<void, Error>({
@@ -344,12 +352,13 @@ export function useSyncExits() {
     },
     onError: (error) => {
       log.e("Exit sync mutation failed", [error]);
-      showAlert({ title: "Failed to Sync Exits", description: error.message });
+      showAlert({ title: gt("Failed to Sync Exits"), description: error.message });
     },
   });
 }
 
 export function useClaimExits() {
+  const gt = useGT();
   const { showAlert } = useAlert();
 
   return useMutation<ExitClaimResult, Error, ClaimExitsVariables>({
@@ -360,13 +369,13 @@ export function useClaimExits() {
     onSuccess: async (result) => {
       await invalidateExitQueries();
       showAlert({
-        title: "Claim Broadcasted",
-        description: `Claim transaction broadcasted: ${result.txid}`,
+        title: gt("Claim Broadcasted"),
+        description: gt("Claim transaction broadcasted: {value1}", { value1: result.txid }),
       });
     },
     onError: (error) => {
       log.e("Exit claim mutation failed", [error]);
-      showAlert({ title: "Failed to Claim Exits", description: error.message });
+      showAlert({ title: gt("Failed to Claim Exits"), description: error.message });
     },
   });
 }

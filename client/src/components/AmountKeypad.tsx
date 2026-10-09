@@ -1,4 +1,4 @@
-import { useGT } from "gt-react-native";
+import { useGT, useLocale } from "gt-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 import * as Haptics from "expo-haptics";
 import { Pressable, View } from "react-native";
@@ -36,6 +36,10 @@ export function AmountKeypad({
   testIDPrefix,
 }: AmountKeypadProps) {
   const gt = useGT();
+  const locale = useLocale();
+  const decimalSeparator =
+    new Intl.NumberFormat(locale).formatToParts(1.1).find((part) => part.type === "decimal")
+      ?.value ?? ".";
   const colors = useThemeColors();
 
   const confirmKeyPress = (nextAmount: string) => {
@@ -87,7 +91,9 @@ export function AmountKeypad({
               <Pressable
                 key={key}
                 accessibilityRole="button"
-                accessibilityLabel={key === "backspace" ? gt("Delete digit") : key}
+                accessibilityLabel={
+                  key === "backspace" ? gt("Delete digit") : key === "." ? decimalSeparator : key
+                }
                 accessibilityState={{ disabled: isDecimalDisabled || disabled }}
                 disabled={isDecimalDisabled || disabled}
                 onPress={() => enterKey(key)}
@@ -97,7 +103,9 @@ export function AmountKeypad({
                 {key === "backspace" ? (
                   <Icon name="backspace-outline" size={27} color={colors.foreground} />
                 ) : isDecimalDisabled ? null : (
-                  <Text className="text-3xl font-medium text-foreground">{key}</Text>
+                  <Text className="text-3xl font-medium text-foreground">
+                    {key === "." ? decimalSeparator : key}
+                  </Text>
                 )}
               </Pressable>
             );

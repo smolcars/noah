@@ -26,7 +26,7 @@ export const useExportDatabase = () => {
       const backupResult = await new BackupService().createEncryptedBackupFile(outputPath);
       if (backupResult.isErr()) {
         log.e("Error creating backup:", [backupResult.error]);
-        setExportError("Failed to create backup file. Please try again.");
+        setExportError(gt("Failed to create backup file. Please try again."));
         setShowExportError(true);
         return;
       }
@@ -37,7 +37,7 @@ export const useExportDatabase = () => {
           url: `file://${outputPath}`,
           type: "application/octet-stream",
           filename,
-          subject: "Noah Wallet Encrypted Backup",
+          subject: gt("Noah Wallet Encrypted Backup"),
         }),
         (e) => e as Error,
       );
@@ -45,7 +45,7 @@ export const useExportDatabase = () => {
       if (shareResult.isErr()) {
         if (!shareResult.error.message.includes("User did not share")) {
           log.e("Error sharing backup file:", [shareResult.error]);
-          setExportError("Failed to share the backup file. Please try again.");
+          setExportError(gt("Failed to share the backup file. Please try again."));
           setShowExportError(true);
         }
       } else {

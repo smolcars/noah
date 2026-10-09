@@ -235,7 +235,7 @@ export function useEstimateRefreshFee() {
   return useMutation({
     mutationFn: async (vtxoIds: string[]) => {
       if (vtxoIds.length === 0) {
-        throw new Error("Select at least one VTXO.");
+        throw new Error(gt("Select at least one VTXO."));
       }
 
       const result = await estimateRefreshFee(vtxoIds);
@@ -258,7 +258,7 @@ export function useRefreshSelectedVtxos() {
   return useMutation({
     mutationFn: async (vtxoIds: string[]) => {
       if (vtxoIds.length === 0) {
-        throw new Error("Select at least one VTXO.");
+        throw new Error(gt("Select at least one VTXO."));
       }
 
       const result = await refreshVtxosDelegated(vtxoIds);

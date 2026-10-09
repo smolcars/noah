@@ -1,3 +1,4 @@
+import { T, useGT, Var } from "gt-react-native";
 import { useEffect, useState } from "react";
 import { Linking, Pressable, View } from "react-native";
 import { Clock3 } from "lucide-react-native";
@@ -9,6 +10,7 @@ import { Text } from "~/components/ui/text";
 import { usePendingRounds } from "~/hooks/useWallet";
 import { COLORS } from "~/lib/styleConstants";
 import { getMempoolTxUrl } from "~/constants";
+import type { Translate } from "~/lib/i18n";
 import { truncateMiddle } from "~/lib/exitTimeline";
 import { copyToClipboard } from "~/lib/clipboardUtils";
 
@@ -17,8 +19,16 @@ const PENDING_ROUNDS_REFETCH_MS = 30_000;
 const isRoundActive = (round: PendingRoundStatus) =>
   !round.is_final || round.status === "pending" || round.status === "unconfirmed";
 
-const formatRoundStatus = (status: PendingRoundStatus["status"]) =>
-  status.charAt(0).toUpperCase() + status.slice(1);
+const formatRoundStatus = (status: PendingRoundStatus["status"], gt: Translate) => {
+  const labels: Record<string, string> = {
+    pending: gt("Pending"),
+    unconfirmed: gt("Unconfirmed"),
+    confirmed: gt("Confirmed"),
+    failed: gt("Failed"),
+    canceled: gt("Canceled"),
+  };
+  return labels[status] ?? status;
+};
 
 const RoundDetailRow = ({
   label,
@@ -31,6 +41,7 @@ const RoundDetailRow = ({
   copyable?: boolean;
   explorerUrl?: string | null;
 }) => {
+  const gt = useGT();
   const [copied, setCopied] = useState(false);
   const canUseActions = copyable || Boolean(explorerUrl);
 
@@ -57,7 +68,7 @@ const RoundDetailRow = ({
               hitSlop={10}
               className="h-8 w-8 items-center justify-center rounded-full bg-background"
               accessibilityRole="button"
-              accessibilityLabel={`Copy ${label}`}
+              accessibilityLabel={gt("Copy {value1}", { value1: label })}
             >
               <Icon
                 name={copied ? "checkmark-circle-outline" : "copy-outline"}
@@ -72,7 +83,7 @@ const RoundDetailRow = ({
               hitSlop={10}
               className="h-8 w-8 items-center justify-center rounded-full bg-background"
               accessibilityRole="button"
-              accessibilityLabel={`Open ${label} in browser`}
+              accessibilityLabel={gt("Open {value1} in browser", { value1: label })}
             >
               <Icon name="open-outline" size={17} color={COLORS.BITCOIN_ORANGE} />
             </Pressable>
@@ -92,17 +103,22 @@ const RoundDetailRow = ({
 };
 
 const PendingRoundDetail = ({ round }: { round: PendingRoundStatus }) => {
+  const gt = useGT();
   const fundingTxUrl = round.funding_txid ? getMempoolTxUrl(round.funding_txid) : null;
 
   return (
     <View className="mb-4 rounded-lg bg-card p-4">
-      <Text className="mb-3 text-base font-semibold text-foreground">Round #{round.round_id}</Text>
-      <RoundDetailRow label="Status" value={formatRoundStatus(round.status)} />
-      <RoundDetailRow label="Final" value={round.is_final ? "Yes" : "No"} />
-      <RoundDetailRow label="Successful" value={round.is_success ? "Yes" : "No"} />
+      <T>
+        <Text className="mb-3 text-base font-semibold text-foreground">
+          Round #<Var>{round.round_id}</Var>
+        </Text>
+      </T>
+      <RoundDetailRow label={gt("Status")} value={formatRoundStatus(round.status, gt)} />
+      <RoundDetailRow label={gt("Final")} value={round.is_final ? gt("Yes") : gt("No")} />
+      <RoundDetailRow label={gt("Successful")} value={round.is_success ? gt("Yes") : gt("No")} />
       {round.funding_txid ? (
         <RoundDetailRow
-          label="Funding tx"
+          label={gt("Funding tx")}
           value={round.funding_txid}
           copyable
           explorerUrl={fundingTxUrl}
@@ -111,17 +127,18 @@ const PendingRoundDetail = ({ round }: { round: PendingRoundStatus }) => {
       {round.unsigned_funding_txids.map((txid, index) => (
         <RoundDetailRow
           key={`${round.round_id}-${txid}`}
-          label={`Unsigned tx ${index + 1}`}
+          label={gt("Unsigned tx {value1}", { value1: index + 1 })}
           value={txid}
           explorerUrl={getMempoolTxUrl(txid)}
         />
       ))}
-      {round.error ? <RoundDetailRow label="Error" value={round.error} /> : null}
+      {round.error ? <RoundDetailRow label={gt("Error")} value={round.error} /> : null}
     </View>
   );
 };
 
 export const PendingRoundStatusBanner = () => {
+  const gt = useGT();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [shouldPoll, setShouldPoll] = useState(false);
   const { data: rounds = [] } = usePendingRounds(shouldPoll ? PENDING_ROUNDS_REFETCH_MS : false);
@@ -137,11 +154,14 @@ export const PendingRoundStatusBanner = () => {
   }
 
   const primaryRound = activeRounds[0];
-  const title = activeRounds.length === 1 ? "Round in progress" : "Rounds in progress";
+  const title = activeRounds.length === 1 ? gt("Round in progress") : gt("Rounds in progress");
   const message =
     activeRounds.length === 1
-      ? `Round #${primaryRound.round_id} ${primaryRound.status}`
-      : `${activeRounds.length} rounds pending`;
+      ? gt("Round #{id} {status}", {
+          id: primaryRound.round_id,
+          status: formatRoundStatus(primaryRound.status, gt),
+        })
+      : gt("{count} rounds pending", { count: activeRounds.length });
 
   return (
     <>
@@ -152,7 +172,7 @@ export const PendingRoundStatusBanner = () => {
         icon={<Clock3 size={16} color="#60a5fa" />}
         tone="info"
         onPress={() => setIsSheetOpen(true)}
-        actionLabel="View"
+        actionLabel={gt("View")}
         onActionPress={() => setIsSheetOpen(true)}
       />
       <AppBottomSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} scrollable>
@@ -161,7 +181,9 @@ export const PendingRoundStatusBanner = () => {
             <Pressable onPress={() => setIsSheetOpen(false)} className="mr-4">
               <Icon name="close-outline" size={24} color={COLORS.BITCOIN_ORANGE} />
             </Pressable>
-            <Text className="text-2xl font-bold text-foreground">Pending Rounds</Text>
+            <T>
+              <Text className="text-2xl font-bold text-foreground">Pending Rounds</Text>
+            </T>
           </View>
           {activeRounds.map((round) => (
             <PendingRoundDetail key={round.round_id} round={round} />

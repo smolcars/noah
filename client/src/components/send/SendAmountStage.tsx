@@ -78,7 +78,7 @@ export function SendAmountStage({
   const [showBalances, setShowBalances] = useState(false);
   const displayAmount = amount.length === 0 ? "0" : formatNumber(amount, locale);
   const amountPrefix =
-    currency === "FIAT" ? fiatCurrencyInfo.symbol : bitcoinAmountUnit === "bip177" ? gt("₿") : null;
+    currency === "FIAT" ? fiatCurrencyInfo.symbol : bitcoinAmountUnit === "bip177" ? "₿" : null;
   const primaryAmount = amountPrefix ? `${amountPrefix}${displayAmount}` : displayAmount;
   const primaryAmountFontSize =
     primaryAmount.length <= 7 ? 64 : primaryAmount.length <= 10 ? 50 : 38;
@@ -87,7 +87,7 @@ export function SendAmountStage({
     currency === "SATS"
       ? btcPrice
         ? formatFiatAmount(satsToFiat(amountSat, btcPrice, fiatCurrency), fiatCurrency, locale)
-        : `${fiatCurrencyInfo.code} rate unavailable`
+        : gt("{currency} rate unavailable", { currency: fiatCurrencyInfo.code })
       : formatBitcoinAmount(amountSat);
   const canContinue = Number.isInteger(amountSat) && amountSat > 0;
   const handleClear = () => {
@@ -165,9 +165,7 @@ export function SendAmountStage({
       <View className="flex-1 items-center justify-center py-3">
         <View
           accessibilityRole="text"
-          accessibilityLabel={`${amount.length === 0 ? "0" : amount} ${
-            currency === "SATS" ? "sats" : fiatCurrency
-          }`}
+          accessibilityLabel={`${displayAmount} ${currency === "SATS" ? "sats" : fiatCurrency}`}
           className="flex-row items-baseline justify-center px-2"
         >
           <Text

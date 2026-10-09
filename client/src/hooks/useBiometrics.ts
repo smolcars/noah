@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useCallback } from "react";
 import { useWalletStore } from "../store/walletStore";
@@ -6,23 +7,27 @@ import { err, ok, Result } from "neverthrow";
 type BiometricAuthResult = Result<true, { cancelled: boolean; message: string }>;
 
 export const useBiometrics = () => {
+  const gt = useGT();
   const { isBiometricsEnabled } = useWalletStore();
 
-  const authenticate = useCallback(async (promptMessage: string): Promise<BiometricAuthResult> => {
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage,
-      disableDeviceFallback: false,
-    });
+  const authenticate = useCallback(
+    async (promptMessage: string): Promise<BiometricAuthResult> => {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage,
+        disableDeviceFallback: false,
+      });
 
-    if (result.success) {
-      return ok(true);
-    }
+      if (result.success) {
+        return ok(true);
+      }
 
-    return err({
-      cancelled: result.error === "user_cancel",
-      message: result.error ?? "Authentication failed",
-    });
-  }, []);
+      return err({
+        cancelled: result.error === "user_cancel",
+        message: gt("Authentication failed"),
+      });
+    },
+    [gt],
+  );
 
   const authenticateIfEnabled = useCallback(
     async (promptMessage: string): Promise<BiometricAuthResult> => {

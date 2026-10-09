@@ -1,3 +1,4 @@
+import { useGT } from "gt-react-native";
 import type React from "react";
 import { Pressable, View, type TextStyle } from "react-native";
 import { Text } from "~/components/ui/text";
@@ -24,13 +25,15 @@ export const StatusBannerStrip = ({
   icon,
   tone,
   actionLabel,
-  actionBusyLabel = "Working",
+  actionBusyLabel: actionBusyLabelProp,
   actionTextStyle,
   isActionLoading = false,
   onPress,
   onActionPress,
   className = "",
 }: StatusBannerStripProps) => {
+  const gt = useGT();
+  const actionBusyLabel = actionBusyLabelProp ?? gt("Working");
   const containerClassName =
     tone === "failed"
       ? "border-red-500/30 bg-red-500/5"

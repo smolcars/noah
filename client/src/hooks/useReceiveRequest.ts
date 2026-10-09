@@ -425,7 +425,7 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
     const currentRequest = request;
     const activeSession = activeReceiveSessionRef.current;
     if (!currentRequest || !activeSession) {
-      throw new Error("A receive request must be ready before adding an amount");
+      throw new Error(gt("A receive request must be ready before adding an amount"));
     }
 
     const generationId = lightningGenerationIdRef.current + 1;

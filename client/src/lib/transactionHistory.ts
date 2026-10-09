@@ -1,8 +1,19 @@
+import { sourceText, type Translate } from "~/lib/i18n";
 import type { BarkMovement } from "react-native-nitro-ark";
 
 import { parseRepeatPaymentMetadata } from "~/lib/repeatPayment";
 import type { Transaction } from "~/types/transaction";
 import type { RepeatPaymentMetadata } from "~/types/repeatPayment";
+
+export const getTransactionConfirmationLabel = (
+  transaction: Transaction,
+  gt: Translate = sourceText,
+) => {
+  if (!transaction.dateLabel) return undefined;
+  return transaction.hasConfirmation
+    ? gt("Confirmed at block {height}", { height: transaction.confirmationHeight })
+    : gt("Unconfirmed");
+};
 
 export type MovementMetadata = {
   offboardTxid?: string;
@@ -126,33 +137,39 @@ export const mergeBoardingWithOnchainTransactions = (
 export const isCanceledTransaction = (transaction: Transaction): boolean =>
   transaction.movementStatus === "canceled";
 
-const getBaseTransactionDisplayLabel = (transaction: Transaction): string => {
+const getBaseTransactionDisplayLabel = (
+  transaction: Transaction,
+  gt: Translate = sourceText,
+): string => {
   if (transaction.movementKind === "onboard") {
-    return "Board";
+    return gt("Board");
   }
 
   if (transaction.movementKind === "offboard") {
-    return "Offboard";
+    return gt("Offboard");
   }
 
   if (transaction.movementKind === "exit") {
-    return "Ark Exit";
+    return gt("Ark Exit");
   }
 
   if (transaction.type === "Bolt11" || transaction.type === "Lnurl") {
-    return "Lightning";
+    return gt("Lightning");
   }
 
   if (transaction.type === "Arkoor") {
-    return "Ark";
+    return gt("Ark");
   }
 
-  return transaction.type;
+  return transaction.type === "Onchain" ? gt("Onchain") : transaction.type;
 };
 
-export const getTransactionDisplayLabel = (transaction: Transaction): string => {
-  const label = getBaseTransactionDisplayLabel(transaction);
-  return isCanceledTransaction(transaction) ? `Canceled ${label}` : label;
+export const getTransactionDisplayLabel = (
+  transaction: Transaction,
+  gt: Translate = sourceText,
+): string => {
+  const label = getBaseTransactionDisplayLabel(transaction, gt);
+  return isCanceledTransaction(transaction) ? gt("Canceled {value1}", { value1: label }) : label;
 };
 
 export const isInternalBoardingTransfer = (transaction: Transaction): boolean =>

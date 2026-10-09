@@ -50,6 +50,7 @@ import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import { NativeHomeHeaderActions } from "~/components/ui/NativeHomeHeaderActions";
 import {
   getTransactionDisplayLabel,
+  getTransactionConfirmationLabel,
   isCanceledTransaction,
   isInternalBoardingTransfer,
 } from "~/lib/transactionHistory";
@@ -519,11 +520,11 @@ const HomeScreen = () => {
                           </View>
                           <View className="min-w-0 flex-1">
                             <Text className="text-sm font-semibold text-foreground">
-                              {getTransactionDisplayLabel(transaction)}
+                              {getTransactionDisplayLabel(transaction, gt)}
                             </Text>
                             <Text className="mt-1 text-xs text-muted-foreground">
-                              {transaction.dateLabel ??
-                                new Date(transaction.date).toLocaleDateString(undefined, {
+                              {getTransactionConfirmationLabel(transaction, gt) ??
+                                new Date(transaction.date).toLocaleDateString(locale, {
                                   month: "short",
                                   day: "numeric",
                                 })}

@@ -1,4 +1,4 @@
-import { T, useGT, useLocale, Var } from "gt-react-native";
+import { Plural, T, useGT, useLocale, Var } from "gt-react-native";
 import {
   Camera,
   GeoJSONSource,
@@ -1138,7 +1138,15 @@ export default function BtcMapScreen() {
           >
             <T>
               <Text className="text-xs font-semibold text-white">
-                <Var>{filteredPlaces.length.toLocaleString(locale)}</Var> places
+                <Plural
+                  n={filteredPlaces.length}
+                  one={<>One place</>}
+                  other={
+                    <>
+                      <Var>{filteredPlaces.length.toLocaleString(locale)}</Var> places
+                    </>
+                  }
+                />
                 <Var>{snapshotQuery.isSyncing ? gt(" · Updating…") : ""}</Var>
               </Text>
             </T>

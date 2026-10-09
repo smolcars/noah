@@ -1,4 +1,4 @@
-import { useLocale } from "gt-react-native";
+import { useLocale, T, useGT } from "gt-react-native";
 import { View, Pressable, ScrollView, Linking } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { Text } from "../components/ui/text";
@@ -18,6 +18,7 @@ import { useBitcoinAmountFormatter } from "~/hooks/useBitcoinAmountFormatter";
 import {
   getTransactionAccountingValues,
   getTransactionDisplayLabel,
+  getTransactionConfirmationLabel,
 } from "~/lib/transactionHistory";
 import { canRepeatPayment } from "~/lib/repeatPayment";
 import type { RepeatPaymentDetails } from "~/types/repeatPayment";
@@ -55,6 +56,7 @@ const DetailSection = ({ title, children }: { title: string; children: ReactNode
 );
 
 const PaymentDestination = ({ value }: { value: string }) => {
+  const gt = useGT();
   const [copied, setCopied] = useState(false);
   const iconColor = useIconColor();
 
@@ -69,7 +71,7 @@ const PaymentDestination = ({ value }: { value: string }) => {
 
   return (
     <Pressable
-      accessibilityLabel={`Copy destination ${value}`}
+      accessibilityLabel={gt("Copy destination {value1}", { value1: value })}
       accessibilityRole="button"
       className="mt-2 max-w-[320px] flex-row items-center justify-center gap-2 px-4"
       onPress={onCopy}
@@ -101,6 +103,7 @@ const TransactionDetailRow = ({
   copyable?: boolean;
   explorerUrl?: string | null;
 }) => {
+  const gt = useGT();
   const [copied, setCopied] = useState(false);
   const iconColor = useIconColor();
 
@@ -120,7 +123,7 @@ const TransactionDetailRow = ({
         <View className="min-w-0 flex-1 flex-row items-center justify-end gap-x-2">
           {copyable ? (
             <Pressable
-              accessibilityLabel={`Copy ${label}`}
+              accessibilityLabel={gt("Copy {value1}", { value1: label })}
               accessibilityRole="button"
               onPress={onCopy}
               className="min-w-0 flex-1 flex-row items-center justify-end gap-x-2"
@@ -206,6 +209,7 @@ export const TransactionDetailContent = ({
   onRepeatPayment?: (details: RepeatPaymentDetails) => void;
   closeIconName?: ComponentProps<typeof Icon>["name"];
 }) => {
+  const gt = useGT();
   const locale = useLocale();
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
   const iconColor = useIconColor();
@@ -217,9 +221,10 @@ export const TransactionDetailContent = ({
   const formattedFiatAmount =
     fiatAmount === "N/A" ? fiatAmount : formatFiatAmount(fiatAmount, fiatCurrency, locale);
   const transactionDateLabel =
-    transaction.dateLabel ?? new Date(transaction.date).toLocaleString(locale);
-  const movementStatusLabel = formatMovementStatusLabel(transaction.movementStatus);
-  const movementKindLabel = formatMovementKindLabel(transaction.movementKind);
+    getTransactionConfirmationLabel(transaction, gt) ??
+    new Date(transaction.date).toLocaleString(locale);
+  const movementStatusLabel = formatMovementStatusLabel(transaction.movementStatus, gt);
+  const movementKindLabel = formatMovementKindLabel(transaction.movementKind, gt);
   const hasMovementDetails = Boolean(
     movementStatusLabel ||
     movementKindLabel ||
@@ -248,25 +253,27 @@ export const TransactionDetailContent = ({
   const isFailed =
     transaction.movementStatus === "failed" || transaction.movementStatus === "canceled";
   const statusLabel = isCompleted
-    ? "Completed"
+    ? gt("Completed")
     : movementStatusLabel ||
       (hasOnchainWalletDetails
         ? transaction.hasConfirmation
-          ? "Confirmed"
-          : "Unconfirmed"
-        : "Recorded");
+          ? gt("Confirmed")
+          : gt("Unconfirmed")
+        : gt("Recorded"));
   const statusColor = isCompleted ? COLORS.SUCCESS : isFailed ? "#ef4444" : COLORS.BITCOIN_ORANGE;
   const accountingDirection = getTransactionAccountingValues(transaction).direction;
   const receiptActionLabel =
     accountingDirection === "Transfer"
-      ? "Transferred"
+      ? gt("Transferred")
       : accountingDirection === "None"
-        ? "Canceled"
+        ? gt("Canceled")
         : accountingDirection === "Outgoing"
-          ? "Sent"
-          : "Received";
+          ? gt("Sent")
+          : gt("Received");
   const paymentRoute =
-    transaction.type === "Lnurl" ? "Lightning address" : getTransactionDisplayLabel(transaction);
+    transaction.type === "Lnurl"
+      ? gt("Lightning address")
+      : getTransactionDisplayLabel(transaction, gt);
   const enteredAmount =
     repeatPaymentDetails?.amountMode === "FIAT" && repeatPaymentDetails.fiatCurrency
       ? formatFiatAmount(
@@ -291,7 +298,7 @@ export const TransactionDetailContent = ({
       <View className="relative flex-row items-center justify-between">
         {onClose ? (
           <Pressable
-            accessibilityLabel="Close payment details"
+            accessibilityLabel={gt("Close payment details")}
             accessibilityRole="button"
             onPress={onClose}
             className="z-10 h-10 w-10 items-center justify-center rounded-full bg-muted/60"
@@ -301,9 +308,11 @@ export const TransactionDetailContent = ({
         ) : (
           <View className="h-10 w-10" />
         )}
-        <Text className="absolute left-0 right-0 text-center text-base font-semibold text-foreground">
-          Payment details
-        </Text>
+        <T>
+          <Text className="absolute left-0 right-0 text-center text-base font-semibold text-foreground">
+            Payment details
+          </Text>
+        </T>
         <View
           className="z-10 rounded-full px-3 py-1.5"
           style={{ backgroundColor: `${statusColor}18` }}
@@ -333,13 +342,13 @@ export const TransactionDetailContent = ({
         {transaction.destination ? (
           <>
             <Text className="mt-6 text-xs font-medium uppercase tracking-[1.8px] text-muted-foreground">
-              {transaction.direction === "outgoing" ? "Paid to" : "Received on"}
+              {transaction.direction === "outgoing" ? gt("Paid to") : gt("Received on")}
             </Text>
             <PaymentDestination value={transaction.destination} />
             {isRepeatable && repeatPaymentDetails ? (
               <NativeNoahButton
                 className="mt-4"
-                label="Pay again"
+                label={gt("Pay again")}
                 onPress={() => onRepeatPayment?.(repeatPaymentDetails)}
                 size="sm"
                 testID="repeat-payment-button"
@@ -350,30 +359,32 @@ export const TransactionDetailContent = ({
         ) : null}
       </View>
 
-      <DetailSection title="Overview">
+      <DetailSection title={gt("Overview")}>
         <TransactionDetailRow
-          label={transaction.dateLabel ? "Confirmation" : "Date & time"}
+          label={transaction.dateLabel ? gt("Confirmation") : gt("Date & time")}
           value={transactionDateLabel}
         />
-        <TransactionDetailRow label="Route" value={paymentRoute} />
-        {enteredAmount ? <TransactionDetailRow label="Entered as" value={enteredAmount} /> : null}
+        <TransactionDetailRow label={gt("Route")} value={paymentRoute} />
+        {enteredAmount ? (
+          <TransactionDetailRow label={gt("Entered as")} value={enteredAmount} />
+        ) : null}
         {offchainFeeSat !== undefined ? (
           <TransactionDetailRow
-            label={onchainFeeSat !== undefined ? "Offchain fee" : "Fee"}
-            value={offchainFeeSat === 0 ? "No fee" : formatBitcoinAmount(offchainFeeSat)}
+            label={onchainFeeSat !== undefined ? gt("Offchain fee") : gt("Fee")}
+            value={offchainFeeSat === 0 ? gt("No fee") : formatBitcoinAmount(offchainFeeSat)}
           />
         ) : null}
         {onchainFeeSat !== undefined ? (
           <TransactionDetailRow
-            label={offchainFeeSat !== undefined ? "Onchain fee" : "Fee"}
-            value={onchainFeeSat === 0 ? "No fee" : formatBitcoinAmount(onchainFeeSat)}
+            label={offchainFeeSat !== undefined ? gt("Onchain fee") : gt("Fee")}
+            value={onchainFeeSat === 0 ? gt("No fee") : formatBitcoinAmount(onchainFeeSat)}
           />
         ) : null}
         {transaction.description ? (
-          <TransactionDetailRow label="Note" value={transaction.description} />
+          <TransactionDetailRow label={gt("Note")} value={transaction.description} />
         ) : null}
         {repeatPaymentDetails?.comment ? (
-          <TransactionDetailRow label="Message" value={repeatPaymentDetails.comment} />
+          <TransactionDetailRow label={gt("Message")} value={repeatPaymentDetails.comment} />
         ) : null}
       </DetailSection>
 
@@ -385,10 +396,14 @@ export const TransactionDetailContent = ({
         testID="technical-details-toggle"
       >
         <View>
-          <Text className="text-sm font-semibold text-foreground">More details</Text>
-          <Text className="mt-0.5 text-xs text-muted-foreground">
-            IDs, routing, and movement data
-          </Text>
+          <T>
+            <Text className="text-sm font-semibold text-foreground">More details</Text>
+          </T>
+          <T>
+            <Text className="mt-0.5 text-xs text-muted-foreground">
+              IDs, routing, and movement data
+            </Text>
+          </T>
         </View>
         <Icon
           name={showTechnicalDetails ? "chevron-up-outline" : "chevron-down-outline"}
@@ -399,21 +414,21 @@ export const TransactionDetailContent = ({
 
       {showTechnicalDetails ? (
         <View className="border-b border-border/40 pb-4">
-          <TransactionDetailRow label="Payment ID" value={transaction.id} copyable />
+          <TransactionDetailRow label={gt("Payment ID")} value={transaction.id} copyable />
           {transaction.txid ? (
             <TransactionDetailRow
-              label="Transaction ID"
+              label={gt("Transaction ID")}
               value={transaction.txid}
               copyable
               explorerUrl={hasOnchainWalletDetails ? onchainExplorerUrl : arkSendOnchainExplorerUrl}
             />
           ) : null}
           {transaction.preimage ? (
-            <TransactionDetailRow label="Preimage" value={transaction.preimage} copyable />
+            <TransactionDetailRow label={gt("Preimage")} value={transaction.preimage} copyable />
           ) : null}
           {transaction.receivedOn?.length === 1 && transaction.receivedOn[0]?.destination ? (
             <TransactionDetailRow
-              label="Invoice"
+              label={gt("Invoice")}
               value={transaction.receivedOn[0].destination}
               copyable
             />
@@ -422,30 +437,34 @@ export const TransactionDetailContent = ({
           {hasOnchainWalletDetails ? (
             <>
               <TransactionDetailRow
-                label="Chain status"
-                value={transaction.hasConfirmation ? "Confirmed" : "Unconfirmed"}
+                label={gt("Chain status")}
+                value={transaction.hasConfirmation ? gt("Confirmed") : gt("Unconfirmed")}
               />
               {typeof transaction.balanceChangeSat === "number" ? (
                 <TransactionDetailRow
-                  label="Balance change"
+                  label={gt("Balance change")}
                   value={formatBitcoinAmount(transaction.balanceChangeSat)}
                 />
               ) : null}
               {typeof transaction.confirmationHeight === "number" ? (
                 <TransactionDetailRow
-                  label="Block height"
+                  label={gt("Block height")}
                   value={transaction.confirmationHeight.toString()}
                 />
               ) : null}
               {transaction.confirmationHash ? (
                 <TransactionDetailRow
-                  label="Block hash"
+                  label={gt("Block hash")}
                   value={transaction.confirmationHash}
                   copyable
                 />
               ) : null}
               {transaction.txHex ? (
-                <TransactionDetailRow label="Raw transaction" value={transaction.txHex} copyable />
+                <TransactionDetailRow
+                  label={gt("Raw transaction")}
+                  value={transaction.txHex}
+                  copyable
+                />
               ) : null}
             </>
           ) : null}
@@ -453,18 +472,18 @@ export const TransactionDetailContent = ({
           {hasMovementDetails ? (
             <>
               {movementKindLabel ? (
-                <TransactionDetailRow label="Movement type" value={movementKindLabel} />
+                <TransactionDetailRow label={gt("Movement type")} value={movementKindLabel} />
               ) : null}
               {transaction.movementId !== undefined ? (
                 <TransactionDetailRow
-                  label="Movement ID"
+                  label={gt("Movement ID")}
                   value={transaction.movementId.toString()}
                   copyable
                 />
               ) : null}
               {transaction.subsystemName ? (
                 <TransactionDetailRow
-                  label="Subsystem"
+                  label={gt("Subsystem")}
                   value={
                     transaction.subsystemKind
                       ? `${transaction.subsystemName} (${transaction.subsystemKind})`
@@ -474,20 +493,20 @@ export const TransactionDetailContent = ({
               ) : null}
               {transaction.chainAnchor && transaction.chainAnchor !== transaction.txid ? (
                 <TransactionDetailRow
-                  label="Chain anchor"
+                  label={gt("Chain anchor")}
                   value={transaction.chainAnchor}
                   copyable
                 />
               ) : null}
               {typeof transaction.intendedBalanceSat === "number" ? (
                 <TransactionDetailRow
-                  label="Intended change"
+                  label={gt("Intended change")}
                   value={formatBitcoinAmount(transaction.intendedBalanceSat)}
                 />
               ) : null}
               {typeof transaction.effectiveBalanceSat === "number" ? (
                 <TransactionDetailRow
-                  label="Effective change"
+                  label={gt("Effective change")}
                   value={formatBitcoinAmount(transaction.effectiveBalanceSat)}
                 />
               ) : null}
@@ -495,10 +514,13 @@ export const TransactionDetailContent = ({
           ) : null}
 
           {transaction.sentTo && transaction.sentTo.length > 0 ? (
-            <MovementDestinationList title="Sent to" destinations={transaction.sentTo} />
+            <MovementDestinationList title={gt("Sent to")} destinations={transaction.sentTo} />
           ) : null}
           {transaction.receivedOn && transaction.receivedOn.length > 0 ? (
-            <MovementDestinationList title="Received on" destinations={transaction.receivedOn} />
+            <MovementDestinationList
+              title={gt("Received on")}
+              destinations={transaction.receivedOn}
+            />
           ) : null}
         </View>
       ) : null}

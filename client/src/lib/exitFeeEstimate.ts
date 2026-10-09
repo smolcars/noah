@@ -1,3 +1,4 @@
+import { sourceText, type Translate } from "~/lib/i18n";
 import type { ExitFeeEstimate } from "react-native-nitro-ark";
 
 export const EXIT_ESTIMATE_MAX_AGE_MS = 30_000;
@@ -35,12 +36,19 @@ export function exitReceiveAmount(amountSat: number, claimFeeSat: number): numbe
   return Math.max(0, amountSat - claimFeeSat);
 }
 
-export function exitFeeWarning(amountSat: number, estimate: ExitFeeEstimate, claimOnly = false) {
+export function exitFeeWarning(
+  amountSat: number,
+  estimate: ExitFeeEstimate,
+  claimOnly = false,
+  gt: Translate = sourceText,
+) {
   if (estimate.claim_fee_sat >= amountSat) {
-    return "The estimated claim fee consumes the entire recovered value. A claim may not be possible.";
+    return gt(
+      "The estimated claim fee consumes the entire recovered value. A claim may not be possible.",
+    );
   }
   if (!claimOnly && estimate.total_fee_sat >= amountSat) {
-    return "Estimated total fees meet or exceed the value being recovered.";
+    return gt("Estimated total fees meet or exceed the value being recovered.");
   }
   return undefined;
 }

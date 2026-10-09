@@ -1,4 +1,4 @@
-import { T, useGT, Var } from "gt-react-native";
+import { Plural, T, useGT, Var } from "gt-react-native";
 import { Fragment } from "react";
 import type { BarkFeeEstimate } from "~/lib/paymentsApi";
 import { Text } from "~/components/ui/text";
@@ -90,8 +90,15 @@ export const FeeEstimateSummary = ({
           {estimate.vtxos_spent.length > 0 ? (
             <T>
               <Text className="mt-2 text-xs text-muted-foreground">
-                Spending <Var>{estimate.vtxos_spent.length}</Var> VTXO
-                <Var>{estimate.vtxos_spent.length === 1 ? "" : gt("s")}</Var>
+                <Plural
+                  n={estimate.vtxos_spent.length}
+                  one={<>Spending one VTXO</>}
+                  other={
+                    <>
+                      Spending <Var>{estimate.vtxos_spent.length}</Var> VTXOs
+                    </>
+                  }
+                />
               </Text>
             </T>
           ) : null}

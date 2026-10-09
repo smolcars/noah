@@ -1,3 +1,4 @@
+import { T, useGT, Var } from "gt-react-native";
 import { View, Pressable, ScrollView } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useState } from "react";
@@ -45,6 +46,7 @@ type VtxoFilter = "all" | "active" | "expiring" | "expired" | "locked";
 const filters: VtxoFilter[] = ["all", "active", "expiring", "expired", "locked"];
 
 const VTXOsScreen = () => {
+  const gt = useGT();
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const iconColor = useIconColor();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
@@ -125,15 +127,15 @@ const VTXOsScreen = () => {
   const getFilterLabel = (vtxoFilter: VtxoFilter) => {
     switch (vtxoFilter) {
       case "all":
-        return "All";
+        return gt("All");
       case "active":
-        return "Active";
+        return gt("Active");
       case "expiring":
-        return "Expiring";
+        return gt("Expiring");
       case "expired":
-        return "Expired";
+        return gt("Expired");
       case "locked":
-        return "Locked";
+        return gt("Locked");
     }
   };
 
@@ -229,7 +231,7 @@ const VTXOsScreen = () => {
       },
       onError: (error) => {
         showAlert({
-          title: "Sync failed",
+          title: gt("Sync failed"),
           description: error instanceof Error ? error.message : String(error),
         });
       },
@@ -265,7 +267,7 @@ const VTXOsScreen = () => {
                     />
                   )}
                   <Text className="text-2xl font-bold text-foreground">
-                    {isSelecting ? "Select VTXOs" : "VTXOs"}
+                    {isSelecting ? gt("Select VTXOs") : gt("VTXOs")}
                   </Text>
                 </View>
                 <View className="flex-row items-center">
@@ -285,7 +287,7 @@ const VTXOsScreen = () => {
                           isSelecting ? "text-foreground" : "text-primary-foreground",
                         )}
                       >
-                        {isSelecting ? "Cancel" : "Select"}
+                        {isSelecting ? gt("Cancel") : gt("Select")}
                       </Text>
                     </Pressable>
                   ) : null}
@@ -296,9 +298,12 @@ const VTXOsScreen = () => {
                 <View className="mb-4 gap-3 rounded-lg border border-border bg-card p-4">
                   <View className="flex-row items-center justify-between">
                     <View>
-                      <Text className="text-sm text-muted-foreground">Selected</Text>
+                      <T>
+                        <Text className="text-sm text-muted-foreground">Selected</Text>
+                      </T>
                       <Text className="mt-1 text-lg font-semibold text-foreground">
-                        {selectedVtxos.length} {selectedVtxos.length === 1 ? "VTXO" : "VTXOs"}
+                        {selectedVtxos.length}{" "}
+                        {selectedVtxos.length === 1 ? gt("VTXO") : gt("VTXOs")}
                       </Text>
                     </View>
                     <Text className="text-right text-base font-semibold text-foreground">
@@ -311,21 +316,27 @@ const VTXOsScreen = () => {
                       disabled={isBusy}
                       className="h-9 flex-1 items-center justify-center rounded-full bg-background px-3"
                     >
-                      <Text className="text-sm font-medium text-foreground">Select expiring</Text>
+                      <T>
+                        <Text className="text-sm font-medium text-foreground">Select expiring</Text>
+                      </T>
                     </Pressable>
                     <Pressable
                       onPress={selectVisibleVtxos}
                       disabled={isBusy}
                       className="h-9 flex-1 items-center justify-center rounded-full bg-background px-3"
                     >
-                      <Text className="text-sm font-medium text-foreground">Select visible</Text>
+                      <T>
+                        <Text className="text-sm font-medium text-foreground">Select visible</Text>
+                      </T>
                     </Pressable>
                     <Pressable
                       onPress={clearSelection}
                       disabled={isBusy || selectedVtxos.length === 0}
                       className="h-9 items-center justify-center rounded-full bg-background px-3"
                     >
-                      <Text className="text-sm font-medium text-muted-foreground">Clear</Text>
+                      <T>
+                        <Text className="text-sm font-medium text-muted-foreground">Clear</Text>
+                      </T>
                     </Pressable>
                   </View>
                 </View>
@@ -361,25 +372,29 @@ const VTXOsScreen = () => {
 
               {isLoading ? (
                 <View className="flex-1 items-center justify-center">
-                  <Text className="text-muted-foreground">Loading VTXOs...</Text>
+                  <T>
+                    <Text className="text-muted-foreground">Loading VTXOs...</Text>
+                  </T>
                 </View>
               ) : filteredVtxos.length === 0 ? (
                 <View className="flex-1 items-center justify-center">
                   <Icon name="cube-outline" size={48} color="#666" />
                   <Text className="text-muted-foreground mt-4 text-center">
                     {filter === "all"
-                      ? "No VTXOs found"
+                      ? gt("No VTXOs found")
                       : filter === "active"
-                        ? "No active VTXOs found"
+                        ? gt("No active VTXOs found")
                         : filter === "expiring"
-                          ? "No expiring VTXOs found"
+                          ? gt("No expiring VTXOs found")
                           : filter === "expired"
-                            ? "No expired VTXOs found"
-                            : "No locked VTXOs found"}
+                            ? gt("No expired VTXOs found")
+                            : gt("No locked VTXOs found")}
                   </Text>
-                  <Text className="text-muted-foreground text-sm mt-2 text-center">
-                    You have no VTXOs.
-                  </Text>
+                  <T>
+                    <Text className="text-muted-foreground text-sm mt-2 text-center">
+                      You have no VTXOs.
+                    </Text>
+                  </T>
                 </View>
               ) : (
                 <>
@@ -423,12 +438,14 @@ const VTXOsScreen = () => {
                                     {formatBitcoinAmount(item.amount)}
                                   </Label>
                                 </View>
-                                <Text
-                                  className="text-muted-foreground text-sm mt-1"
-                                  numberOfLines={1}
-                                >
-                                  Expiry: Block {item.expiry_height}
-                                </Text>
+                                <T>
+                                  <Text
+                                    className="text-muted-foreground text-sm mt-1"
+                                    numberOfLines={1}
+                                  >
+                                    Expiry: Block <Var>{item.expiry_height}</Var>
+                                  </Text>
+                                </T>
                               </View>
                               {isSelecting ? (
                                 <Icon
@@ -452,16 +469,18 @@ const VTXOsScreen = () => {
                   {isSelecting ? (
                     <View className="absolute bottom-4 left-4 right-4 rounded-2xl border border-border bg-background p-4 shadow-lg">
                       <View className="mb-3 flex-row items-center justify-between">
-                        <Text className="text-sm text-muted-foreground">
-                          {selectedVtxos.length} selected
-                        </Text>
+                        <T>
+                          <Text className="text-sm text-muted-foreground">
+                            <Var>{selectedVtxos.length}</Var> selected
+                          </Text>
+                        </T>
                         <Text className="text-base font-semibold text-foreground">
                           {formatBitcoinAmount(selectedAmountSat)}
                         </Text>
                       </View>
                       <NativeNoahButton
-                        label="Refresh"
-                        loadingLabel="Estimating..."
+                        label={gt("Refresh")}
+                        loadingLabel={gt("Estimating...")}
                         onPress={handleRefreshPress}
                         disabled={selectedVtxos.length === 0 || refreshSelectedVtxos.isPending}
                         isLoading={estimateRefreshFee.isPending}
@@ -485,9 +504,11 @@ const VTXOsScreen = () => {
                 />
               ) : (
                 <View className="flex-1 items-center justify-center p-6">
-                  <Text className="text-center text-muted-foreground">
-                    Select a VTXO to see its details
-                  </Text>
+                  <T>
+                    <Text className="text-center text-muted-foreground">
+                      Select a VTXO to see its details
+                    </Text>
+                  </T>
                 </View>
               )}
             </View>
