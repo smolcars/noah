@@ -371,7 +371,7 @@ function PlaceDetailPanel({
           accessibilityLabel={
             addressCopied ? gt("Address copied") : gt("Copy address: {value1}", { value1: address })
           }
-          accessibilityHint="Copies the merchant address to the clipboard"
+          accessibilityHint={gt("Copies the merchant address to the clipboard")}
           onPress={() => void copyWithState(address, addressCopyId)}
           className="-mx-2 mt-2 flex-row items-start gap-3 rounded-xl px-2 py-2"
           style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}

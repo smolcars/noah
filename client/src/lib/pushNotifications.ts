@@ -51,8 +51,9 @@ async function ensureDefaultNotificationChannel() {
     return;
   }
 
+  const m = await getBackgroundMessages();
   await Notifications.setNotificationChannelAsync(DEFAULT_NOTIFICATION_CHANNEL_ID, {
-    name: "default",
+    name: m(msg("Default", { $context: "Default Android notification channel name." })),
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: "#FF231F7C",

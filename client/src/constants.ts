@@ -1,3 +1,4 @@
+import { msg } from "gt-i18n";
 import RNFSTurbo from "react-native-fs-turbo";
 import { APP_VARIANT } from "./config";
 import { decode } from "light-bolt11-decoder";
@@ -142,7 +143,7 @@ export const bytesToHexString = (bytes: Uint8Array<ArrayBufferLike>): string => 
 export const getDomainFromURL = (url: string) =>
   url.replace("http://", "").replace("https://", "").split(/[/?#]/)[0];
 
-export const BITCOIN_FACTS = [
+export const BITCOIN_FACTS = msg([
   "There can only ever be 21 million bitcoin.",
   "Fix the money, fix the world.",
   "Money for everyone, by everyone.",
@@ -167,4 +168,4 @@ export const BITCOIN_FACTS = [
   "When in doubt, zoom out.",
   "Separate money and state.",
   "Tick tock next block.",
-];
+]);

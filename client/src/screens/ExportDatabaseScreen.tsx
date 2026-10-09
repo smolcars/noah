@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { T, useGT } from "gt-react-native";
 import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -12,6 +13,7 @@ import { useExportDatabase } from "~/hooks/useExportDatabase";
 import { COLORS } from "~/lib/styleConstants";
 
 const ExportDatabaseScreen = () => {
+  const translateError = useErrorTranslation();
   const gt = useGT();
   const navigation = useNavigation();
   const { isExporting, showExportSuccess, showExportError, exportError, exportDatabase } =
@@ -47,7 +49,7 @@ const ExportDatabaseScreen = () => {
             <T>
               <AlertTitle>Export Failed</AlertTitle>
             </T>
-            <AlertDescription>{exportError}</AlertDescription>
+            <AlertDescription>{translateError(exportError ?? "")}</AlertDescription>
           </Alert>
         )}
 

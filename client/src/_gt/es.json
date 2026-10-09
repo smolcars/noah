@@ -1,4 +1,5 @@
 {
+  "00453f1cfa1ef581": "El tamaño de la copia de seguridad cargada no coincide con el de la carga iniciada",
   "00ad8aeed0a6c461": "Cancelar",
   "00d312d19d9c6b57": "No se encontraron VTXOs",
   "00dd8dda7a14ef58": {
@@ -49,6 +50,7 @@
   "03764b8654bac278": "Renovación programada",
   "037ccb27982e3029": "Recibir con la aplicación cerrada",
   "03a4f3e4307a0ffe": "No se pudo reanudar la billetera",
+  "03a9028747523722": "Marca de tiempo en k1 no válida",
   "03b1227ba2508534": {
     "c": [
       "Saldo pendiente: ",
@@ -85,6 +87,7 @@
   "045741aa62df51f8": "Todos",
   "04bf554cc5495b67": "Cerrar editor de notas",
   "0639120d955dfdc7": "Won surcoreano",
+  "0639195a5c40cdad": "El punto de acceso de Esplora corresponde a otra red Bitcoin.",
   "066306b5bf59de73": "Solicitud de pago de Bitcoin",
   "06761ea51e0c9f2c": {
     "c": "¡Error al restablecer!",
@@ -93,9 +96,12 @@
   },
   "068d69f4dad6b412": "Nota (opcional)",
   "069744becccdc32c": "El pago Lightning no se completó.",
+  "06c1c4c42d40b32f": "Copia la dirección del comercio al portapapeles",
   "06c56f6d219d62bf": "https://mempool.space/api",
   "06c70c038c1c8942": "Los pagos de Lightning y Ark siguen llegando, incluso en segundo plano.",
   "06d226bb7fa0d27e": "VTXO vencido",
+  "06e807fd861f22af": "No se pudieron obtener los tipos de cambio de las monedas fiduciarias",
+  "06f427b7ff6d5c42": "Los gobiernos pueden imprimir dinero, pero no Bitcoin.",
   "06f6a28b4263d1ca": "{count} bloques",
   "06fe9bd092efa75a": "Renovar VTXOs próximos a vencer",
   "0715308477485443": {
@@ -120,6 +126,7 @@
     "i": 1,
     "t": "Text"
   },
+  "0777cdd8b7c28e2b": "Para usar los pagos Lightning, las notificaciones del buzón deben estar activadas.",
   "077ca0a8bb1aea28": "Diario",
   "0799af626a0b516f": {
     "c": [
@@ -134,6 +141,7 @@
     "t": "Text"
   },
   "079a6c24f4707905": "Tu correo actual, {email}, seguirá activo hasta que se verifique el nuevo correo.",
+  "079d576614acc655": "La captura de pantalla debe ocupar 5 MB o menos",
   "07a7aa376f63daed": "Clave pública de Nostr NIP-05",
   "07b125247b8ce18f": "Sitio web",
   "07e34e31c6bdff5d": "Transacción sin firmar {value1}",
@@ -142,6 +150,7 @@
     "i": 1,
     "t": "Text"
   },
+  "082b479107acd8fe": "Demasiados intentos de carga de copias de seguridad. Inténtalo de nuevo en unos minutos.",
   "084fbc241b56d0d6": "No se pudo generar la factura Lightning",
   "086fda73c6242e1f": "Importe estimado que recibirás",
   "08a16d25eef829a1": "Introduce un nombre de usuario",
@@ -150,8 +159,11 @@
   "08b8898cc3e1e502": "Estimando...",
   "08f1eb2217fda26d": "Recupera tus fondos si el servidor Ark no está disponible.",
   "093525749e66c3a5": "Iniciar salida seleccionada",
+  "09f8f50373dd1fc2": "Abre las opciones para copiar la solicitud unificada o un método de pago individual",
   "0a1ab3194d17d5de": "Pausado",
+  "0a5ef267b7f39f43": "No hay una segunda mejor opción.",
   "0a63cd55fe7832f0": "Importe que recibirá el saldo de Ark",
+  "0a72ee7f063ef7af": "No se pudo guardar el código de verificación",
   "0a77379773433315": "Factura",
   "0ac6a7a9bd759de2": {
     "c": "Se ha exportado la copia de seguridad cifrada de tu base de datos.",
@@ -161,6 +173,7 @@
   "0b114757353b79aa": "Predeterminado de Noah",
   "0b12196393aecca5": "Tu nota",
   "0b136cbc5b9722ec": "Reclamable desde",
+  "0b893c31eacfa34c": "La fecha de caducidad de la autorización del buzón supera el TTL máximo permitido",
   "0b99c96a0fdf3ef8": "El destinatario recibe",
   "0c0a36763a2f45c8": "Comisión",
   "0c17eed5d7b34d0c": "Transacciones",
@@ -191,6 +204,7 @@
   "0d74986e8234ecde": "Error de eliminación",
   "0d76c7fcef595f01": "Libra esterlina",
   "0d8914e205cb7c5b": "Has recibido {amount}",
+  "0dabdd4cc955110c": "Esta carga de copia de seguridad se sustituyó por un intento más reciente.",
   "0dbff166fa8eac7a": {
     "c": "Noah está en fase beta",
     "i": 1,
@@ -231,6 +245,7 @@
     "i": 1,
     "t": "Text"
   },
+  "109d8cff69321a85": "La dirección Ark ya está en uso",
   "10e1d528cb7f8ba5": {
     "c": "Punto de acceso actualizado",
     "i": 1,
@@ -269,6 +284,7 @@
     "i": 1,
     "t": "Text"
   },
+  "1473a1e715ccc4df": "No se han seleccionado salidas reclamables.",
   "147d90f00f7bd360": {
     "c": "Esto crea un archivo de copia de seguridad cifrado que guarda de forma segura el estado actual de tu billetera. Guarda este archivo en un lugar seguro, ya que permite restaurar tu billetera.",
     "i": 1,
@@ -364,6 +380,7 @@
     "i": 1,
     "t": "AlertTitle"
   },
+  "1bb34a619dcc1975": "Una herramienta poderosa para quienes ahorran.",
   "1c2f96835e3cda1c": "Actualizar estado",
   "1c79d42e902ff431": "Reintentar",
   "1ca340c83ce113b4": {
@@ -375,6 +392,8 @@
   "1d0bcea947ec009d": "Copiar dirección: {value1}",
   "1d259ea35e5be2ac": "Cifra tu billetera y crea una copia de seguridad de forma automática o manual.",
   "1d2a8bd550c8c28b": "Error de restauración",
+  "1d5b60afc2e97f2d": "El punto de acceso devolvió un hash de bloque no válido.",
+  "1d5b8a7f6f8ad14b": "Solicitud LNURLAuth no válida",
   "1d635cb9215613ca": {
     "c": "Salida de emergencia",
     "i": 1,
@@ -382,6 +401,8 @@
   },
   "1d6a39b64a286112": "Noah no pudo determinar tu ubicación actual.",
   "1d84cd454533edf5": "Obtener información de Ark",
+  "1dbf78c0b8cb6cf5": "No se pudo cerrar la billetera al cambiar el punto de acceso de Esplora.",
+  "1e0d04d7f869e14a": "Dirección Lightning no válida",
   "1e6d0810647cf397": "Confirmar pago",
   "1e8272a8f6abbf2a": {
     "c": "Solicitud de pago",
@@ -470,6 +491,7 @@
   "246bab809847bf0d": "Tiempos",
   "24e800479f91fa14": "Iniciar salida de la billetera",
   "24fe3ecefce2574d": "Elige el idioma de Noah.",
+  "2517aeecb2f5c643": "La copia de seguridad pertenece a otra red Bitcoin",
   "255624ca3232b204": "Sí",
   "255d5a2e19437193": "Después de",
   "2578f04b85978c2c": "Transacción de salida confirmada; los fondos podrán reclamarse en el bloque {value1}{value2}.",
@@ -490,6 +512,7 @@
     "t": "Text"
   },
   "27c8c05458a0f47a": "No se pudo obtener tu frase de recuperación. Inténtalo de nuevo desde los ajustes.",
+  "27ee58dfd29c2b1b": "«Si no lo crees o no lo entiendes, no tengo tiempo para intentar convencerte, lo siento.» - Satoshi Nakamoto",
   "28165e02c445e58c": "Se calcula al enviar",
   "282b0511470c0007": "Se ha programado una renovación delegada para los VTXOs que cumplen los requisitos.",
   "28994d740b3961f1": {
@@ -618,8 +641,10 @@
     "i": 1,
     "t": "Text"
   },
+  "2b5f7efd6a017eb4": "No se encontró la notificación de actividad o ya se ha respondido a ella",
   "2b62afe9512c50a5": "{count} rondas pendientes",
   "2b858017f0a194d2": "Mantenimiento delegado",
+  "2b9b4def99e4e171": "El usuario no tiene una dirección Lightning",
   "2c1c93a646bbea6e": "Idioma",
   "2c2a171cec7adfc1": "La ubicación está desactivada",
   "2c5674665579a329": "Eliminar",
@@ -630,6 +655,7 @@
     "t": "Text"
   },
   "2d97217c182ad45c": "Este correo electrónico ya está verificado.",
+  "2dca8d9897070aa7": "No se pudo guardar la factura",
   "2e589421b5c9dfac": "Se requieren los parámetros para estimar la comisión",
   "2eb2241295140ec9": {
     "c": "Valor disponible",
@@ -654,6 +680,7 @@
     "t": "Text"
   },
   "30ee3a9847c1a57e": "Estimación de la comisión",
+  "30f17a63b035d62d": "El punto de acceso de Esplora debe usar HTTP o HTTPS.",
   "3126b5bebbfecb78": "Código de verificación no válido o caducado.",
   "31a22883b53cd9c9": "Tiendas",
   "32009b2dfa469b07": "Gestiona tu nombre, dirección Lightning, correo de emergencia y clave pública.",
@@ -662,10 +689,12 @@
     "i": 1,
     "t": "Text"
   },
+  "3239638c218ee22f": "El importe de la factura debe ser un número entero de satoshis",
   "328e4788aac11972": "Retirar todo",
   "329fb860cb3abb32": "Error de autenticación",
   "33192b4ba27b6536": "Próximo pago recurrente",
   "335fcd56e7818361": "Pagos recurrentes",
+  "338c0c1bc002f8b6": "El tamaño de la copia de seguridad debe ser mayor que cero",
   "338d257065e36a68": "Obtener la información actual del servidor Ark en formato JSON",
   "339cf8ff5ed251e6": {
     "c": "Se necesitan más fondos confirmados en la cadena. Deposita fondos y espera a que se confirmen antes de continuar.",
@@ -679,6 +708,7 @@
   "3476f1d209b18dd3": "Reclamar",
   "34d07de262ec1f48": "UnifiedPush",
   "34edad1f5f0314d9": "Se necesitan más fondos confirmados en la cadena. Vas a iniciar el seguimiento de todos modos; añade fondos a la billetera antes de avanzar.",
+  "351ced71e84d5f6a": "La esperanza de un sistema financiero más justo.",
   "353b08f4363dbb2c": "Pendiente",
   "3586698330b95d68": {
     "c": "Hecho con ❤️ por el equipo de Noah",
@@ -749,6 +779,7 @@
   },
   "3b70f0de936ce446": " La comisión de reclamación se actualiza cuando introduces un destino en la etapa de reclamación.",
   "3bab2569b3d33d59": "Acciones avanzadas de depuración para desarrolladores",
+  "3bb774804d78d928": "No hay ningún punto de acceso de Esplora configurado actualmente.",
   "3bbf0fe7f6551f79": "Estimando la comisión...",
   "3bc34f7b42a7379d": "No se pudo estimar la comisión de renovación",
   "3c0f7b24ac041b05": "Añadir una nota",
@@ -759,8 +790,10 @@
     "i": 1,
     "t": "Text"
   },
+  "3d23bf6812a2168f": "No se pudo enviar la solicitud de soporte",
   "3d513f805c72f59c": "Sin contacto",
   "3d695b6b16620672": "La billetera en cadena enviará todo su saldo confirmado. La comisión final de minería se calcula al crear la transacción.",
+  "3d8d88c6cfd0c4bc": "Consulta demasiado larga",
   "3de745cb369c3444": "Variación efectiva",
   "3e04700e16aea0f7": "En ejecución en segundo plano",
   "3e6b73457b18d3df": {
@@ -786,16 +819,20 @@
     "i": 1,
     "t": "Text"
   },
+  "40c696548311b9f1": "No se pudo verificar el código",
   "40f1addde1101caa": "Pago fallido",
+  "41956d76bf417aff": "K1 caducado",
   "41bc8cbc00462d22": "Error en la copia de seguridad",
   "41cca692a9367b25": "Valor disponible",
   "41f5d8f7b0571d9d": "Verificar correo",
   "422ccc83a287d639": "Nota de Lightning",
+  "42800017e05b1169": "No se pudo validar la identidad de la copia de seguridad",
   "4288c0afc130d76f": {
     "c": "Parámetros actuales del servidor proporcionados por la billetera Ark cargada.",
     "i": 1,
     "t": "Text"
   },
+  "42a39559b17ee9fe": "La suma de comprobación de la copia de seguridad cargada no coincide con la de la carga iniciada",
   "42ad583d95bb6319": {
     "c": "Activa las notificaciones push",
     "i": 1,
@@ -812,6 +849,7 @@
     "t": "Text"
   },
   "43821aa7ab710301": "Vencido",
+  "439cc1a970713073": "Envía dinero a cualquier persona, en cualquier lugar y en cualquier momento.",
   "43e441845ed9bbf0": {
     "c": "¿A quién vas a pagar?",
     "i": 1,
@@ -819,6 +857,7 @@
   },
   "43ec82b41c1cf1ef": "Fecha y hora",
   "43f8d67856aaf122": "¿Qué saldo debe enviar Noah por completo?",
+  "441e7f5bf433dbd4": "No hay ningún punto de acceso predeterminado de Esplora configurado.",
   "44640dfaaffbd5f3": "Todo lo reclamable",
   "44bbcfd33b751bd6": "Dirección",
   "450b1353ffce1e4e": "Decodificar VTXO hexadecimal",
@@ -838,6 +877,7 @@
   "46669bce91e431b3": "Importe en Ark tras descontar la comisión",
   "469aae33a5a5bc74": "Bloqueado",
   "46c9f9ca9548d026": "Comida y bebida",
+  "475071964a78761b": "Los pagos Lightning no están disponibles para este usuario en este momento.",
   "47cd28f6d8b7c7b1": {
     "c": "Pagar con",
     "i": 1,
@@ -849,6 +889,7 @@
     "t": "Text"
   },
   "482f8b42beff7950": "Cerrar escáner",
+  "4843205af893cc14": "El asunto es obligatorio",
   "4883e97b4ddb62e2": {
     "c": "Error al exportar",
     "i": 1,
@@ -861,20 +902,25 @@
   },
   "492718941b04bfa6": "Dirección de Bitcoin copiada",
   "494055ea3e8c7f7f": "Ejecutando...",
+  "49bd2bd5a41067f4": "La captura de pantalla debe ser una imagen JPEG o PNG",
   "49cefab95808bdb0": "Ronda en curso",
   "4a24e2b3fcf0bfa8": "Alertas por correo activadas",
   "4a57df65091afdff": "Preguntar si se desea transferir fondos a Ark cuando el saldo en cadena pueda cubrir {threshold}, las comisiones estimadas y una reserva de {reserve}.",
   "4a7677f9a5e34f4e": "No se encontraron VTXOs bloqueados",
   "4a82795112110fa2": "Abrir repositorio de Noah en GitHub",
   "4aae50a4c17d906c": "Comisiones totales estimadas",
+  "4acb5573fb336197": "Hora de vencimiento del pago recurrente no válida",
   "4ae72e3c9f26f543": "API de exploradores",
   "4af0b668c839ed34": "¿Continuar sin estimación?",
   "4b1c9e00658a35b3": "Se requiere un importe",
+  "4b7447d297a1baef": "Nunca habrá más de 21 millones de bitcoin.",
   "4b7ca52f647ca572": {
     "c": "Billetera suspendida",
     "i": 1,
     "t": "Text"
   },
+  "4bb867cd321ac679": "La fecha de caducidad de la autorización del buzón no coincide con la indicada en la autorización codificada",
+  "4bc7841a94d1c156": "La billetera no está lista para crear una copia de seguridad",
   "4bceaa323dfb9f5b": "Transferir a Ark",
   "4c0451d999c577e5": "Tipo de destino no válido",
   "4c189be6d761da2d": "Dólar canadiense",
@@ -897,6 +943,8 @@
   "4d9a7f5bf6e64c38": "Copiar",
   "4da66156788ee6e1": "Esto inicia el seguimiento. Usa Avanzar para difundir las transacciones de salida. Las comisiones pueden cambiar; la estimación de la reclamación se actualiza al introducir un destino.",
   "4dd609e5f1ae90a9": "Exportando...",
+  "4e0650005dd05e04": "Identificador de la programación de pagos recurrentes no válido",
+  "4e3d3ae2932cf08d": "Token no válido",
   "4e45f789207fe6ce": "Respuesta LNURL no válida para el pago a una dirección Lightning",
   "4e489641f927eb78": {
     "c": "Liquidado",
@@ -904,9 +952,12 @@
     "t": "Text"
   },
   "4e5f2ede8deea57b": "Los intervalos personalizados deben ser de entre 1 y {count} días.",
+  "4ec6a6af97774024": "El punto de acceso de Esplora no puede incluir una cadena de consulta ni un fragmento.",
   "4f0cf9127ab355fb": "Elige tu dirección Lightning",
   "4f1834543eca4d2c": "La transacción de reclamación está pendiente de confirmación",
   "4f1d3ffa2da32c93": "Mensaje",
+  "4f53aadea442cde3": "El cuerpo de la solicitud es demasiado largo",
+  "4f6a6187c6680feb": "Noah se interrumpió durante el envío de este pago. Revisa tu historial de transacciones antes de reanudarlo.",
   "4fbcad3f3446a91d": {
     "c": "Captura de pantalla",
     "i": 1,
@@ -922,6 +973,7 @@
   },
   "508f3d714356b775": "Rupia india",
   "513e0e91ee2eb60d": "Copiar ID de la transacción de depósito",
+  "5163ced4ac8f6d19": "Token de notificaciones push no válido",
   "51e742ddf2600dfc": "Los VTXOs son para Ark lo que los UTXOs son para Bitcoin",
   "51edf8df7cf981da": "Programar pago",
   "526362e87fe7cd25": "Revisar pago",
@@ -991,7 +1043,10 @@
   "569c16b5c06a9118": "Importe transferido",
   "56e9fabcabc90c46": "Confirmar",
   "570f3a107ab75d15": "…",
+  "57aa788eb8b8dad5": "El hash SHA-256 de la copia de seguridad debe tener 64 caracteres hexadecimales",
+  "57e61261bc11c42e": "El asunto es demasiado largo",
   "58150ade25faf179": "Mantenimiento delegado completado correctamente",
+  "58174ca24f231826": "No se encontró ninguna copia de seguridad de billetera compatible",
   "58299fc13b48cdcf": "Tasa de comisión normal: {rate} sat/vB. Estimada para una transacción SegWit de {size} vB con 2 entradas y 2 salidas.",
   "582d185e8f3d040a": "Punto de anclaje",
   "585b7b1c52d5db29": "No hay ninguna aplicación disponible para abrir este enlace.",
@@ -1014,6 +1069,7 @@
     "t": "Text"
   },
   "59918e4ad8bd27db": "Requiere confirmación de la red",
+  "59b48d26da2b122c": "Copia la dirección completa de Bitcoin",
   "5a1f3b411dfed780": "Comisión estimada en cadena: {value1}.",
   "5a2ff27ea094f528": "La billetera usa el punto de acceso de Esplora predeterminado de Noah.",
   "5af48f08c83c423b": {
@@ -1021,6 +1077,7 @@
     "i": 1,
     "t": "Text"
   },
+  "5afb536716484369": "La autorización del buzón está desactivada",
   "5b5205040c527fbe": "No se pudo enviar {amount} a {recipient}: {error}. El pago se ha pausado.",
   "5b884432c29f5214": "Reintentando...",
   "5b9434e44963edaa": "Introduce el ID del VTXO",
@@ -1041,6 +1098,7 @@
     "i": 1,
     "t": "Text"
   },
+  "5c79e5ae53ee50e2": "ID de copia de seguridad no válido",
   "5cdd5d68a6fd3164": {
     "c": "No se pudieron cargar las salidas",
     "i": 1,
@@ -1067,12 +1125,14 @@
   },
   "604698ed6d753eef": "Introduce la fecha de finalización en formato YYYY-MM-DD.",
   "6085f2fa6b092550": "Importe máximo por VTXO",
+  "60a4bcd2cdef19e6": "Arregla el dinero, arregla el mundo.",
   "60bff78bce6e6f07": "Salida de Ark",
   "60efb48d1aa44ec0": {
     "c": "No se pudo abrir BTC Map",
     "i": 1,
     "t": "Text"
   },
+  "6106e0de668452b8": "Los datos de la captura de pantalla no son válidos",
   "611ecad6d8098b8e": "Nonces de ronda",
   "616ec0e8ddf295fb": "No se pudo completar el registro en el servidor. Inténtalo de nuevo.",
   "617272c35b3f8f1e": {
@@ -1088,6 +1148,7 @@
     "i": 1,
     "t": "Text"
   },
+  "620ff45e6d85a011": "Este dispositivo no admite pagos Lightning en este momento.",
   "624506a403296638": "Procesando",
   "625fc62f59eb9bf6": "Se requieren los parámetros para estimar la comisión de depósito",
   "629238e60994a111": {
@@ -1112,6 +1173,7 @@
     "i": 1,
     "t": "Label"
   },
+  "64033f9be9c7de66": "No se pudo cerrar la billetera restaurada antes de revertir los cambios",
   "6442771211bc2903": "Moneda",
   "64ad6c673d30fa41": {
     "c": "Noah está bloqueado",
@@ -1139,6 +1201,7 @@
     "i": 1,
     "t": "Text"
   },
+  "6635bd37ca87d5fd": "Token caducado",
   "663d7f1bfd1b99ba": "Registrarse en UnifiedPush",
   "67508b5a9a7db096": "Perfil",
   "679e8ee3899b42e0": "Verificado el {date}",
@@ -1156,13 +1219,16 @@
   "6a5a858421fd295a": "Última copia de seguridad: {time}",
   "6ac2fc9d42d6dde3": "Transacción de salida confirmada; esperando a que venza el bloqueo temporal.",
   "6acc50d43c90a3a9": "VTXOs seleccionados",
+  "6b245f54fb909a25": "The Times 03/Jan/2009 El ministro de Hacienda, al borde de un segundo rescate bancario.",
   "6b26e0d70f47917c": "Mensaje",
   "6b571e8616a566c8": "Para",
+  "6bde6e6543064fa0": "La fecha de caducidad de la autorización del buzón debe ser una marca de tiempo Unix futura",
   "6c61149390395538": {
     "c": "Unidad de Bitcoin",
     "i": 1,
     "t": "Text"
   },
+  "6cc2be29e4798612": "No se pudo crear el token de acceso",
   "6ce29d7a6074c86a": "Actualizar el registro del servidor y sincronizar su estado más reciente",
   "6d30aa984cbce430": "Abrir la transacción de depósito en el explorador de bloques",
   "6d3f8f71e13acdbe": {
@@ -1182,11 +1248,13 @@
     "i": 1,
     "t": "Text"
   },
+  "6e5a0be985cc6376": "Los impuestos son un robo.",
   "6e88e677adfd329f": {
     "c": "Gracias",
     "i": 1,
     "t": "Text"
   },
+  "6f0576dc3584dd0a": "Se agotó el tiempo de espera de la solicitud",
   "6f0c8033b5a9d961": "Esto difundirá la transacción de reclamación. Las comisiones de difusión anteriores no se descontarán de nuevo. Las comisiones pueden cambiar.",
   "6f729ee55281131d": "Último bloque sincronizado de la salida",
   "6f83babc565ce32d": {
@@ -1232,6 +1300,8 @@
   "7318f8b5cbcc0ff0": "Cancelado",
   "731f24c50ff1ccb5": "Telegram",
   "7371e41e0852885f": "Disponible",
+  "73c1fd020cf27314": "Las billeteras Regtest usan Bitcoin Core en lugar de Esplora.",
+  "74687277684ab24c": "El nombre es demasiado largo",
   "74930528c9d686f5": "Tx de reclamación",
   "74e2824ef49d7fe4": {
     "c": "Servidor Ark",
@@ -1268,6 +1338,7 @@
     "i": 1,
     "t": "Text"
   },
+  "770ad602a280a375": "k1 no válido",
   "771234b5c36fb145": {
     "c": "Introduce tu frase semilla de 12 palabras para restaurar tu billetera.",
     "i": 1,
@@ -1275,6 +1346,7 @@
   },
   "772971456d463495": "Cerrar detalles del pago",
   "774e4cca6485624d": "Elige una acción...",
+  "77a085486ac0e6b7": "No se pudo validar k1",
   "77b05c15fd2a9877": "Listo para reclamar",
   "77db92f0e5aadbee": "Editar nombre",
   "77effe053116157b": "Finaliza",
@@ -1314,6 +1386,9 @@
   "7b237d1e8a279384": "Programa pagos automáticos semanales o mensuales y páusalos o cancélalos.",
   "7c499f903f872d2d": "Transacción de reclamación difundida: {value1}",
   "7c4c874d5b23304b": "Pagado a",
+  "7c81b2197c6559a3": "Predeterminado",
+  "7cac6ee3ab146051": "No se pudo obtener el tipo de cambio histórico de la moneda fiduciaria",
+  "7cdb2abd97dbc64f": "El punto de acceso de UnifiedPush devolvió un estado que no indica éxito",
   "7d08e69f7d51d9a2": "Importe (sats)",
   "7d7cfd91a2c605b8": {
     "c": "Historia del arca de Noé",
@@ -1321,6 +1396,7 @@
     "t": "Text"
   },
   "7d86f46d61543460": "Pagar mediante",
+  "7d8c8e59899812dc": "No se pudo inicializar el envío de notificaciones mediante UnifiedPush",
   "7e4ae67433f9c41d": {
     "c": [
       {
@@ -1427,6 +1503,7 @@
     "t": "Text"
   },
   "85337adc80e7641b": "Dólar de Singapur",
+  "8588933258fea405": "Pagos recurrentes",
   "860fcded1222edd2": {
     "c": "Instantánea cifrada de la billetera",
     "i": 1,
@@ -1439,6 +1516,7 @@
     "t": "Text"
   },
   "87d78fc358a0eca2": "Cargando billetera...",
+  "87db4a7acd4f36d9": "Se requiere autenticación",
   "882828ee416984ca": {
     "c": "Seleccionados",
     "i": 1,
@@ -1476,6 +1554,7 @@
   },
   "8a3c9dd33f69f239": "Difundir reclamación",
   "8a3ebfe5eefa1f3a": "Servicios",
+  "8a5eb5d1d4748a84": "El envío de solicitudes de soporte no está configurado",
   "8b1e9009a4b319c9": "Actualizar salidas de emergencia",
   "8b4eabdfc58b5fa0": "Editar",
   "8c7025798827411a": {
@@ -1494,6 +1573,7 @@
   "8d03fb5f967783cb": "Servidor Ark",
   "8d29f68e1700a694": "Destinatario del pago",
   "8d5ab86db1a39ea0": "Bloque de confirmación",
+  "8d93fd2ec94c982c": "Disponible para gastar",
   "8daace9f090a5eb8": "No se pudo leer la captura de pantalla seleccionada.",
   "8db7663daebcd333": "Desbloquear",
   "8decb7d6213dadce": "Revisar salida",
@@ -1538,6 +1618,7 @@
   },
   "90d2d202109eff30": "Enviando…",
   "90e19ab2fba5da15": "Restaurar",
+  "91115f4ee8da8890": "Punto de acceso de UnifiedPush no válido",
   "9135cb205265ee9c": {
     "c": "Importe seleccionado",
     "i": 1,
@@ -1573,9 +1654,11 @@
     "i": 1,
     "t": "Text"
   },
+  "93800980cf3f9f21": "El nombre es obligatorio",
   "94d775d3f48d97c3": "Inténtalo de nuevo para generar nuevas direcciones de Ark y en cadena.",
   "94fa7f8b3de16fe1": "Borrar dígito",
   "9541c2239b14cc9b": "Restante",
+  "95b6be8b39a3e30e": "No se encontró ninguna billetera. Primero crea una.",
   "95e1de4058978c39": "Tu dirección Lightning será",
   "95edf87bf1b2e123": "Añadir un nombre visible",
   "95fed35b94ded769": "Comisión estimada",
@@ -1587,8 +1670,10 @@
     "i": 1,
     "t": "Text"
   },
+  "98a9e2be6104a7c1": "El manifiesto de la copia de seguridad no es válido",
   "98ba78715acf2aef": "Detén la salida de emergencia de este VTXO. Las transacciones compartidas ya difundidas no se revierten. El VTXO sigue disponible para gastar y puedes volver a iniciar su salida. Solo se puede cancelar antes de que se difunda la transacción final de salida.",
   "98e95191ecca16d8": "Repetir",
+  "98fb367ac1211f07": "Se produjo un error por nuestra parte. Inténtalo de nuevo.",
   "9944b1d99d139e63": "Transacción de reclamación confirmada",
   "994d9f157f312b4a": "{value1} {value2}",
   "99ab45e473638645": "Liquidación",
@@ -1643,6 +1728,7 @@
     "t": "Text"
   },
   "9bf73cc61a516123": "en cadena",
+  "9c34b2512a366b39": "No se encontró la carga de la copia de seguridad",
   "9c4943f70782050f": "No acepto",
   "9c5ad1a5ef351458": "Puedes seguir explorando todo el mapa. Activa la ubicación para ver lugares cercanos.",
   "9c98dac3bec779b2": {
@@ -1661,12 +1747,14 @@
     "i": 1,
     "t": "Text"
   },
+  "9d21db888dc42555": "Se prepararon y supervisaron las transacciones de salida.",
   "9d6a147d69531b72": "La transacción final de reclamación se difundió y está pendiente de confirmación.",
   "9d9ec53c2f6ea64e": {
     "c": "Intentar de nuevo",
     "i": 1,
     "t": "Text"
   },
+  "9e0d3765fa1f7037": "El cuerpo de la solicitud es obligatorio",
   "9e0f08cd4317f82c": "Elige cómo se muestran los importes en bitcoin.",
   "9e2b80d5721fc87e": "Asunto",
   "9eb04331bdfd094f": "Probando punto de acceso...",
@@ -1677,6 +1765,7 @@
     "i": 1,
     "t": "Text"
   },
+  "9ff78b45c4c6efc6": "Tic tac, llega el próximo bloque.",
   "a020e8a2c986bba9": "No se pudo determinar si este pago usará Ark o Lightning.",
   "a0429e890a353d44": "Seleccionar VTXOs",
   "a06923bf3f3b4b79": "Sin comisión",
@@ -1725,6 +1814,7 @@
   },
   "a2f0aed8b5e1967f": "Historial",
   "a31291074116c6e4": "Añadir correo de emergencia",
+  "a33825f6e5651cb8": "La restauración de la billetera falló y no se pudieron revertir los cambios de forma segura",
   "a39cb3a5ab675af3": "La red no coincide: se esperaba {expected}, pero se obtuvo {actual}",
   "a3b0e3de374c03b2": "No se ha cargado la instantánea de BTC Map.",
   "a3b79090f538c34e": "Reclamado en el bloque {value1}",
@@ -1788,6 +1878,7 @@
     "i": 1,
     "t": "Label"
   },
+  "a856966f1b7469ce": "Dinero para todos, creado por todos.",
   "a8db979e98194e2e": "Enviar código de verificación",
   "a8e941db36f7e854": "Se requiere una fuente de saldo para enviar el importe máximo",
   "a92218d1bb7f25a2": {
@@ -1839,6 +1930,7 @@
   "ac5839f90983d00e": "Ninguno de los saldos puede cubrir este importe",
   "ac5f98bd6ac8c739": "Buscar lugares o ciudades",
   "ac78f724d4d02534": "Restablecer registro en el servidor",
+  "ace5c78871efb230": "No se pudo obtener la factura",
   "ad25a7fd88d567c3": {
     "c": "Calculando comisiones…",
     "i": 1,
@@ -1851,6 +1943,7 @@
   },
   "ad46cb11374f36e7": "Cancelar salida de emergencia",
   "ad77482c18859ed1": "Intenta restablecer la conexión con nuestro servidor si tienes problemas.",
+  "ad7eb83e711deaf8": "Es libertad en tu bolsillo.",
   "ad83f490eca90802": "Clave pública del servidor",
   "ada4cc3bb1e3c783": "No se encontraron métodos de pago válidos",
   "adfcf2801108a897": "No se encontraron VTXOs vencidos",
@@ -1892,6 +1985,7 @@
     "t": "Text"
   },
   "ae61f6617bb5f4c5": "Elegir el origen del envío",
+  "ae9510a325768709": "Retirado",
   "aebd7587e506f955": {
     "c": "Solo para emergencias",
     "i": 1,
@@ -1913,6 +2007,7 @@
   "b1a59b795f34e47b": "Mostrar los importes de bitcoin con el símbolo de Bitcoin.",
   "b1bd4388de976c72": "Mostrar frase semilla",
   "b1cd4c9c3bb540fa": "Consulta la configuración del servidor Ark, la billetera y el explorador.",
+  "b21fc2e4dc8e164d": "Vires in numeris. (La fuerza está en los números)",
   "b26061e1b776a629": "Revisar salida de nuevo",
   "b27476b82dd8d646": "Copia de seguridad completada",
   "b29d7184d035ff18": {
@@ -1922,6 +2017,7 @@
   },
   "b2ae0ea021787bfa": "No se pudieron sincronizar las salidas",
   "b2e9f591c42c88ff": "Elegir un destinatario",
+  "b38723a88931b0e1": "Error de autenticación. Inténtalo de nuevo.",
   "b3af995fe4f431cf": {
     "c": "Este código QR contiene solo tu dirección Lightning.",
     "i": 1,
@@ -1932,10 +2028,14 @@
     "i": 1,
     "t": "Text"
   },
+  "b3dee2ea980b930d": "No se pudo guardar el tipo de cambio de la moneda fiduciaria",
+  "b3e5d6d21672ea74": "Carga de copia de seguridad no válida",
   "b3e60c6ecb03a5c3": "Dólar australiano",
   "b3eb2b9cbf84941f": "Las comisiones totales estimadas igualan o superan el importe que se recuperará.",
   "b3ed6a0c7cf28b72": "Delta de salida",
   "b41769b26bb84aa2": "Se produjo un error desconocido",
+  "b43dcfe1201dd636": "No se pudo enviar la notificación push",
+  "b45b010259bf6be9": "Marca de tiempo no válida",
   "b47c64de09c5703a": {
     "c": "Transferencia automática a Ark",
     "i": 1,
@@ -1959,6 +2059,7 @@
     "t": "Text"
   },
   "b6e5b31255e011c5": "Aceptar",
+  "b6f48f031871f89a": "El identificador de la programación de pagos recurrentes está duplicado",
   "b73364b963ffdda6": {
     "c": "Pagos recurrentes",
     "i": 1,
@@ -1972,7 +2073,9 @@
   },
   "b7b3d505075bb782": "Correo (opcional)",
   "b7b8b7296d32d789": "VTXO próximo a vencer",
+  "b7ecdedd117bcae0": "Firma no válida",
   "b80f965a578b8557": "Copiado",
+  "b81e7bd12a554e4a": "Sé tu propio banco.",
   "b8404b146538f8bf": "Iniciar seguimiento de todos modos",
   "b8ae3c920d8330d6": "Tu correo electrónico se ha verificado correctamente.",
   "b8c5a6b14eabaa29": "Abrir configuración de la batería",
@@ -1991,7 +2094,10 @@
     "i": 1,
     "t": "Text"
   },
+  "ba0ab05a1bc7d617": "No hay ninguna frase mnemónica disponible para volver a cargar la billetera.",
   "ba2ef4e5ab885e3d": "Comisión fuera de la cadena",
+  "ba4b00a2ed536c7c": "El futuro del dinero ya está aquí.",
+  "babb0026400f859c": "El destinatario ya no acepta este importe. Actualiza o cancela el pago recurrente.",
   "bac092ab35ae7618": "Nunca pegues una clave privada de Nostr. Introduce una clave pública npub.",
   "bb081b4501ebd5a7": "Enviar",
   "bb0cfdd7f723fd6b": "Transferencia",
@@ -2002,6 +2108,7 @@
     "i": 1,
     "t": "Text"
   },
+  "bbc81a791db7d63d": "Un «satoshi» es su unidad más pequeña.",
   "bbeb9ebee1631531": "npub1...",
   "bc0f429a2edbc647": "Por vencer",
   "bc29a089cb390008": "La acción falló",
@@ -2038,6 +2145,7 @@
   "be64f9c3aaa9a154": "Sin correo de emergencia configurado",
   "be70b611f92c20dd": "Cambiar correo de emergencia",
   "bee653213ce4c427": "No se pudieron enviar los comentarios. Inténtalo de nuevo.",
+  "bf1bd330e1557ee4": "Copia todos los detalles del pago al portapapeles",
   "bfdd06671c1e4a88": {
     "c": "Escucha la historia bíblica que inspiró el nombre de nuestra billetera",
     "i": 1,
@@ -2068,12 +2176,16 @@
     "t": "Text"
   },
   "c17cd4192acdcf2e": "Enviando pago",
+  "c1a63c8c8d1cf0db": "Introduce un punto de acceso de la API de Esplora.",
   "c25df60ffb9fcaeb": {
     "c": "Elige un nombre de usuario para Lightning. Si quieres, puedes vincular una clave pública de Nostr para que la misma dirección también funcione como identificador NIP-05.",
     "i": 1,
     "t": "Text"
   },
   "c26f793d09268afd": "Ya la guardé, continuar",
+  "c2d8bd98383d6d25": "El pago recurrente se detuvo antes de enviarse",
+  "c2e84470acec321f": "La firma de la autorización del buzón no es válida",
+  "c33850b94b6b6cf7": "El nombre de usuario solo puede contener a-z, 0-9, guion, guion bajo y punto",
   "c33e356130d45da4": "No hace falta renovar",
   "c3df214d33e39b8d": "Ubicación no disponible",
   "c42b3ba809374ce7": {
@@ -2125,6 +2237,7 @@
   },
   "c67f83a73ce7420e": " Las comisiones de difusión anteriores no se descuentan de nuevo.",
   "c6fa2905d56a750c": "Guardado",
+  "c71ba66172028889": "La dirección Lightning ya está en uso",
   "c784db6d6bd037d2": "Iniciar salida de emergencia",
   "c7a54ec0ae772a91": "Los fondos pueden transferirse a una dirección en cadena.",
   "c7d1e9c9bd97d52d": "Mensual",
@@ -2142,6 +2255,7 @@
   "c8cb19a817b12366": "Introduce una dirección Bitcoin, una factura Lightning, una oferta Lightning, una dirección Lightning o una dirección Ark que sea válida.",
   "c8d660336f72b272": "Reintentando…",
   "c9031271802cfba8": "No hay una estimación de comisiones disponible. Se desconocen las comisiones y el importe que recibirás. Continúa sin estimación solo si aceptas esta incertidumbre.",
+  "c90d22f867b1745f": "Introduce una URL válida de la API de Esplora.",
   "c930e6780d614d9c": "Pago recurrente no válido",
   "ca0e1a68723ee9ed": "Rondas en curso",
   "ca270ad4660b26ab": "Reclamando",
@@ -2152,6 +2266,7 @@
   },
   "cb174d129d36d2f0": "Mostrar registros",
   "cb35cd9b294c3d02": "Omitir",
+  "cb72fb5b26565217": "Separa el dinero del Estado.",
   "cb772e9ad4dc2676": "Verificando...",
   "cba16b2557202692": "Añadir una nota de Lightning",
   "cbde049f9f8ca829": "Importe estimado que recibirás: {value1}",
@@ -2215,8 +2330,11 @@
     "t": "Text"
   },
   "cedf30c5f7e02bfe": "Autentícate para activar la biometría",
+  "cefa88a30e35d39a": "Mantén la humildad, acumula sats.",
   "cf446689f3b1586d": "Tu correo de emergencia se ha actualizado.",
   "cfeb05159a2088ae": "Sin registrar",
+  "d02f9888a7f3774c": "No se encontró la copia de seguridad",
+  "d0623a9e155fa7eb": "El poder vuelve al pueblo.",
   "d068f75d81bddfbf": "Copiar frase semilla",
   "d06f3739cc4c7fc1": "No se pudieron renovar los VTXOs",
   "d0ee6e834bff1f90": {
@@ -2227,6 +2345,7 @@
   "d106262c4182bfff": "Saldo no disponible",
   "d15f079ebaf277ae": "Nunca",
   "d16b97d61470fd52": "Transferido",
+  "d17c1cd7d0ba94ee": "Configuración del servidor no válida",
   "d1a7ccb540e3ae20": "En una fecha",
   "d1b19a0669b0a7c7": {
     "c": "Este importe no se puede modificar.",
@@ -2235,6 +2354,7 @@
   },
   "d1b64cc2d9740aeb": "Salida cancelada",
   "d1b9438d6b191a02": "Convertir en pago recurrente",
+  "d2161130500fbfc1": "En el código confiamos.",
   "d22ce064dec695af": "Elige la moneda fiduciaria en la que se muestran los saldos y los importes de los pagos.",
   "d281686172978494": "Se registró el seguimiento de salida de este VTXO.",
   "d286d3b26e756654": "Exportar copia de seguridad cifrada",
@@ -2268,6 +2388,7 @@
     "i": 1,
     "t": "Text"
   },
+  "d546fae6248001bf": "Nadie puede congelar tus fondos.",
   "d54ac9fa75a0f84c": "Abre la configuración de tu dispositivo y permite que Noah se ejecute en segundo plano. Luego, continúa.",
   "d581043cf30e5d99": "No se pudo restablecer el registro",
   "d5a0b40c5f3c99e4": "Ejecutar el mantenimiento de la billetera, incluida la sincronización en cadena y el avance de los procesos de salida",
@@ -2287,6 +2408,7 @@
     "i": 1,
     "t": "Text"
   },
+  "d7cda2e9e04d939d": "El importe que se va a recibir debe ser un número entero positivo de sats",
   "d7f3b5b7ccfe67ee": {
     "c": "No hay salidas de emergencia",
     "i": 1,
@@ -2310,6 +2432,7 @@
   "d8df14f9905f38eb": "Enviado",
   "d920116ace2b9dc2": "Enviar código al nuevo correo",
   "d9accca497de2ba5": "Copiar dirección de Bitcoin",
+  "d9d788b8456f63ba": "No se pudo enviar el correo de verificación",
   "d9eee8f65bf7fa7d": {
     "c": "Copia de seguridad",
     "i": 1,
@@ -2356,6 +2479,7 @@
   "ddc8b4633c1f47f4": "Abrir perfil",
   "ddd84d32743a1119": "Confirmación",
   "de18c48fa4444ac1": "Saliente",
+  "de5f3e3c95e19ffe": "Formato de k1 no válido",
   "de8ee8df6cf594f0": "Sí, depositar",
   "de9281ed9c9f5a6a": "Las claves públicas de Nostr deben usar la codificación npub",
   "deaebe0f347388ef": "P. ej., alquiler, donación, VPN",
@@ -2409,6 +2533,7 @@
     "i": 1,
     "t": "Label"
   },
+  "e23c19d9a4ad536e": "El manifiesto de la copia de seguridad está incompleto",
   "e28e5eb8f878f074": "you@example.com",
   "e2b6a0fa3fa6c224": {
     "c": "Selecciona VTXOs para estimar las comisiones de salida.",
@@ -2453,6 +2578,7 @@
   },
   "e4cd4480c06e944b": "Saldo de Ark insuficiente",
   "e50e7cbbeba65b71": "Depósito completado",
+  "e51d6b88233aca0f": "Si las claves no son tuyas, las monedas tampoco.",
   "e52b44d3042f6b49": "Se ha revocado la autorización del buzón.",
   "e564e70666a2f084": {
     "c": "Creando tu solicitud de pago…",
@@ -2520,6 +2646,7 @@
     "i": 1,
     "t": "Text"
   },
+  "e9c20cf1bd772be5": "La autorización del buzón debe tener un formato hexadecimal válido según el protocolo",
   "e9f3a9337aab62c6": "Semanal",
   "ea53a6f96c792729": {
     "c": "Salida no encontrada",
@@ -2530,6 +2657,7 @@
   "eb25d58ed3c935dc": "Correo de emergencia",
   "eb38af603e88e00b": " · Actualizando…",
   "eb6078bc5653f6b1": "Esta acción es irreversible y puede causar la pérdida de fondos. Para confirmar, escribe \"{word}\" en el campo de abajo.",
+  "eb74324fc2d4274d": "Si tienes dudas, amplía la perspectiva.",
   "ebac2156346a59a2": "Punto de acceso personalizado",
   "ebcfd66ce32a4ebf": "Nunca compartas tu frase semilla con nadie. Es importante guardarla en un lugar seguro.",
   "ec133839a7c4a23e": {
@@ -2556,9 +2684,11 @@
   "ed7b94c494ee1691": "≈ ",
   "edb6a1d2c2364db5": "Recibido en",
   "ee181a9aef7cae88": "Los fondos se recuperaron en la cadena.",
+  "ee26a98e94ff40a3": "La autorización del buzón no coincide con el ID del buzón",
   "ee8d9401cb7ba606": "El total estimado es {total}, pero tu saldo de {source} es {balance}. El envío podría fallar si la comisión final no es menor.",
   "ee95d2a3dfaadc6c": "Consulta los registros de la aplicación para depurar errores",
   "eeb19e5b703cc6ca": "Enviar en cadena retirando fondos de Ark",
+  "eeb65e3e78be9c85": "Correo electrónico no válido",
   "ef11d3e92b0725ee": {
     "c": "Retira los VTXOs que aún están disponibles solo si necesitas otra salida de emergencia.",
     "i": 1,
@@ -2570,6 +2700,7 @@
   "efce441f657ea2dc": "Error de registro",
   "efd9775f35548e44": "¡Copiado!",
   "efdc14e9bfb29dbf": "Altura del bloque",
+  "f02b9094d6d8aeba": "El punto de acceso de Esplora no puede incluir credenciales.",
   "f0957a2fb2326864": "Pagar hasta ",
   "f0bcbbc148e4f0fc": "Enviado a",
   "f0f77eaeda51ae63": {
@@ -2614,9 +2745,11 @@
     "i": 1,
     "t": "Text"
   },
+  "f33288caf5e203c2": "Código de verificación no válido o caducado",
   "f3947a6ff7a1f0e1": "Permiso necesario",
   "f3c81b6fa4f30666": "Reenviar código",
   "f3dd004050774943": "Llamar",
+  "f40c5d39da5f81f6": "No se encontró ningún informe de estado de una tarea pendiente para este k1",
   "f43029da03ee7009": "La salida ha avanzado",
   "f44e09f3d4a95f1a": {
     "c": "Cronología de salida",
@@ -2733,6 +2866,7 @@
   },
   "ffa04098ba97ec93": "Saldo confirmado insuficiente",
   "ffd5c121422eccc4": "new@email.com",
+  "ffd72a2ababdc4da": "Usuario no encontrado",
   "ffd793e096c634b0": {
     "c": "Altura de reclamación",
     "i": 1,

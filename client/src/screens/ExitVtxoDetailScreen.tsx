@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { T, useGT, Var } from "gt-react-native";
 import React from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
@@ -165,6 +166,7 @@ const TimelineRow = ({ item, isLast }: { item: ExitTimelineItem; isLast: boolean
 };
 
 const ExitVtxoDetailScreen = () => {
+  const translateError = useErrorTranslation();
   const gt = useGT();
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const route = useRoute<ExitVtxoDetailRouteProp>();
@@ -239,7 +241,9 @@ const ExitVtxoDetailScreen = () => {
             <T>
               <Text className="font-semibold text-destructive">Unable to load exit</Text>
             </T>
-            <Text className="mt-2 text-sm text-destructive">{overviewQuery.error.message}</Text>
+            <Text className="mt-2 text-sm text-destructive">
+              {translateError(overviewQuery.error.message ?? "")}
+            </Text>
           </View>
         ) : !exit || !state || !details ? (
           <View className="rounded-lg border border-border bg-card p-4">

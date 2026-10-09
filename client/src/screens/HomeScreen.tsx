@@ -1,4 +1,5 @@
-import { T, useGT, Var, useLocale } from "gt-react-native";
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
+import { useMessages, T, useGT, Var, useLocale } from "gt-react-native";
 import { View, ScrollView, RefreshControl, Pressable } from "react-native";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -79,8 +80,10 @@ const getTransactionIcon = (transaction: Transaction) => {
 };
 
 const HomeScreen = () => {
+  const translateError = useErrorTranslation();
   const locale = useLocale();
   const gt = useGT();
+  const m = useMessages();
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const { foreground: iconColor, mutedForeground } = useThemeColors();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
@@ -284,9 +287,11 @@ const HomeScreen = () => {
                 <AlertTitle>Error</AlertTitle>
               </T>
               <AlertDescription>
-                {walletError
-                  ? gt("Failed to connect to wallet. Pull down to try again.")
-                  : errorMessage}
+                {translateError(
+                  (walletError
+                    ? gt("Failed to connect to wallet. Pull down to try again.")
+                    : errorMessage) ?? "",
+                )}
               </AlertDescription>
             </Alert>
           ) : (
@@ -553,7 +558,7 @@ const HomeScreen = () => {
           )}
         </View>
         <View className="p-4 items-center justify-center mb-16" style={{ marginTop: "auto" }}>
-          <Text className="text-center text-xs text-muted-foreground">{fact}</Text>
+          <Text className="text-center text-xs text-muted-foreground">{m(fact)}</Text>
         </View>
       </ScrollView>
       {selectedTransaction ? (

@@ -91,7 +91,7 @@ export function ExitDepositBottomSheet({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={copied ? gt("Address copied") : gt("Copy Bitcoin address")}
-              accessibilityHint="Copies the full Bitcoin address"
+              accessibilityHint={gt("Copies the full Bitcoin address")}
               className="flex-row items-center gap-4 rounded-2xl bg-card px-4 py-3"
               style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
               onPress={() =>

@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { T, useGT } from "gt-react-native";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
@@ -50,6 +51,7 @@ type SelectedScreenshot = {
 };
 
 const FeedbackScreen = () => {
+  const translateError = useErrorTranslation();
   const gt = useGT();
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList, "Feedback">>();
   const { colors, isDark } = useTheme();
@@ -232,7 +234,9 @@ const FeedbackScreen = () => {
               {errorMessage ? (
                 <View className="flex-row items-center gap-3 rounded-md border border-red-900 bg-red-950/40 p-3">
                   <AlertCircle size={20} color="#ef4444" />
-                  <Text className="flex-1 text-sm text-red-300">{errorMessage}</Text>
+                  <Text className="flex-1 text-sm text-red-300">
+                    {translateError(errorMessage ?? "")}
+                  </Text>
                 </View>
               ) : null}
 

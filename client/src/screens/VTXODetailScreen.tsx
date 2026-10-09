@@ -253,7 +253,18 @@ export const VTXODetailContent = ({
 
           <View className="bg-card p-4 rounded-lg mb-4">
             <VTXODetailRow label={gt("Amount")} value={formatBitcoinAmount(vtxo.amount)} />
-            <VTXODetailRow label={gt("State")} value={vtxo.state} />
+            <VTXODetailRow
+              label={gt("State")}
+              value={
+                {
+                  Spendable: gt("Spendable"),
+                  Spent: gt("Spent"),
+                  Locked: gt("Locked"),
+                  Exited: gt("Exited"),
+                  unknown: gt("Unknown"),
+                }[vtxo.state]
+              }
+            />
             <VTXODetailRow label={gt("Status")} value={statusLabel} />
             <VTXODetailRow
               label={gt("Current Block Height")}

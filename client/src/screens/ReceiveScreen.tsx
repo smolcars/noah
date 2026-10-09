@@ -137,7 +137,9 @@ const ReceiveScreen = () => {
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={gt("Show payment details")}
-                    accessibilityHint="Opens options to copy the unified request or an individual payment method"
+                    accessibilityHint={gt(
+                      "Opens options to copy the unified request or an individual payment method",
+                    )}
                     onPress={() => setIsCopySheetOpen(true)}
                     className="items-center"
                     testID="receive-qr-button"

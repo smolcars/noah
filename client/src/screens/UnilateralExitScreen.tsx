@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { type Translate } from "~/lib/i18n";
 import { useLocale, T, useGT, Var, Plural } from "gt-react-native";
 import React, { useEffect, useState } from "react";
@@ -906,6 +907,7 @@ const EmptyExitState = ({ children }: { children: React.ReactNode }) => (
 );
 
 const UnilateralExitScreen = () => {
+  const translateError = useErrorTranslation();
   const gt = useGT();
   const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList>>();
   const route = useRoute<UnilateralExitRouteProp>();
@@ -1202,7 +1204,9 @@ const UnilateralExitScreen = () => {
                 <T>
                   <Text className="font-semibold text-destructive">Unable to load exits</Text>
                 </T>
-                <Text className="mt-2 text-sm text-destructive">{overviewQuery.error.message}</Text>
+                <Text className="mt-2 text-sm text-destructive">
+                  {translateError(overviewQuery.error.message ?? "")}
+                </Text>
               </View>
             ) : exits.length === 0 ? (
               <EmptyExitState>

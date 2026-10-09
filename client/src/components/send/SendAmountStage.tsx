@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { T, useGT, Var, useLocale } from "gt-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 import * as Haptics from "expo-haptics";
@@ -67,6 +68,7 @@ export function SendAmountStage({
   onPaste,
   onScan,
 }: SendAmountStageProps) {
+  const translateError = useErrorTranslation();
   const locale = useLocale();
   const gt = useGT();
   const colors = useThemeColors();
@@ -302,7 +304,7 @@ export function SendAmountStage({
 
         {error ? (
           <Text className="mt-3 text-center text-sm text-destructive" testID="send-amount-error">
-            {error}
+            {translateError(error ?? "")}
           </Text>
         ) : null}
       </View>

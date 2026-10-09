@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { Image, Keyboard, Linking, Pressable, ScrollView, View } from "react-native";
 import Constants from "expo-constants";
 import { useGT, T, Var, useLocale } from "gt-react-native";
@@ -73,6 +74,7 @@ type Setting = {
 };
 
 const SettingsScreen = () => {
+  const translateError = useErrorTranslation();
   const gt = useGT();
   const locale = useLocale();
   const iconColor = useIconColor();
@@ -492,7 +494,7 @@ const SettingsScreen = () => {
             <T>
               <AlertTitle>Reset Failed!</AlertTitle>
             </T>
-            <AlertDescription>{resetError}</AlertDescription>
+            <AlertDescription>{translateError(resetError ?? "")}</AlertDescription>
           </Alert>
         )}
         {showMailboxSuccess && (
@@ -512,7 +514,7 @@ const SettingsScreen = () => {
             <T>
               <AlertTitle>Mailbox Update Failed!</AlertTitle>
             </T>
-            <AlertDescription>{mailboxError}</AlertDescription>
+            <AlertDescription>{translateError(mailboxError ?? "")}</AlertDescription>
           </Alert>
         )}
       </View>

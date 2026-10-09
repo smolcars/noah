@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { T, useGT, Var } from "gt-react-native";
 import { useEffect, useState } from "react";
 import { Keyboard, Linking, Pressable, ScrollView, View } from "react-native";
@@ -25,6 +26,7 @@ import type { SettingsStackParamList } from "~/Navigators";
 type NavigationProp = NativeStackNavigationProp<SettingsStackParamList, "BoardArk">;
 
 const BoardArkScreen = () => {
+  const translateError = useErrorTranslation();
   const gt = useGT();
   const navigation = useNavigation<NavigationProp>();
   const tabBarHeight = useBottomTabBarHeight();
@@ -369,7 +371,9 @@ const BoardArkScreen = () => {
                           Boarding failed
                         </Text>
                       </T>
-                      <Text className="mt-1 text-sm text-destructive/90">{error.message}</Text>
+                      <Text className="mt-1 text-sm text-destructive/90">
+                        {translateError(error.message ?? "")}
+                      </Text>
                     </View>
                   ) : null}
 

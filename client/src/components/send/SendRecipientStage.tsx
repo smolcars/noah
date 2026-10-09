@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { T, useGT } from "gt-react-native";
 import Icon from "@react-native-vector-icons/ionicons";
 import { useState } from "react";
@@ -64,6 +65,7 @@ export function SendRecipientStage({
   onScan,
   onContinue,
 }: SendRecipientStageProps) {
+  const translateError = useErrorTranslation();
   const gt = useGT();
   const colors = useThemeColors();
   const formatBitcoinAmount = useBitcoinAmountFormatter();
@@ -166,7 +168,7 @@ export function SendRecipientStage({
             className="mt-2 px-1 text-sm leading-5 text-destructive"
             testID="send-recipient-error"
           >
-            {error}
+            {translateError(error ?? "")}
           </Text>
         ) : null}
 

@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { T, useGT, useLocale, Var } from "gt-react-native";
 import React, { useState } from "react";
 import { View, ScrollView } from "react-native";
@@ -17,6 +18,7 @@ import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryBu
 import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
 
 export const BackupSettingsScreen = () => {
+  const translateError = useErrorTranslation();
   const gt = useGT();
   const locale = useLocale();
   const navigation = useNavigation();
@@ -82,7 +84,9 @@ export const BackupSettingsScreen = () => {
             <T>
               <AlertTitle>Backup Failed</AlertTitle>
             </T>
-            <AlertDescription>{errorMessage ?? gt("An unknown error occurred")}</AlertDescription>
+            <AlertDescription>
+              {translateError(errorMessage ?? gt("An unknown error occurred") ?? "")}
+            </AlertDescription>
           </Alert>
         )}
 

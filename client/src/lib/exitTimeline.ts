@@ -277,7 +277,7 @@ const getTimelineDescription = (
     case "Processing":
       return (
         getProcessingTransactionSummary(details, gt) ??
-        "Exit transactions were prepared and monitored."
+        gt("Exit transactions were prepared and monitored.")
       );
     case "AwaitingDelta": {
       const claimableHeight = getClaimableHeight(details);

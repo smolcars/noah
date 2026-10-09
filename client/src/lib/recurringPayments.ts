@@ -110,8 +110,9 @@ const formatAmount = (sats: number): string =>
 
 async function ensureRecurringChannel() {
   if (Platform.OS !== "android") return;
+  const m = await getBackgroundMessages();
   await Notifications.setNotificationChannelAsync(RECURRING_CHANNEL_ID, {
-    name: "Recurring payments",
+    name: m(msg("Recurring payments")),
     importance: Notifications.AndroidImportance.HIGH,
   });
 }

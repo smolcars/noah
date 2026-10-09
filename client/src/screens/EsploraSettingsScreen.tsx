@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { T, useGT } from "gt-react-native";
 import { useState } from "react";
 import { Keyboard, ScrollView, View } from "react-native";
@@ -20,6 +21,7 @@ import { useEsploraStore } from "~/store/esploraStore";
 type NavigationProp = NativeStackNavigationProp<SettingsStackParamList, "Esplora">;
 
 const EsploraSettingsScreen = () => {
+  const translateError = useErrorTranslation();
   const gt = useGT();
   const navigation = useNavigation<NavigationProp>();
   const endpointOverride = useEsploraStore((state) => state.endpointOverride);
@@ -146,7 +148,9 @@ const EsploraSettingsScreen = () => {
             <T>
               <AlertTitle>Endpoint not changed</AlertTitle>
             </T>
-            <AlertDescription>{switchEndpoint.error.message}</AlertDescription>
+            <AlertDescription>
+              {translateError(switchEndpoint.error.message ?? "")}
+            </AlertDescription>
           </Alert>
         ) : null}
 

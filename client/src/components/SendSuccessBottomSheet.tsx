@@ -77,7 +77,7 @@ const CopyDetailRow = ({
 
   return (
     <Pressable
-      accessibilityHint="Copies the full payment detail to the clipboard"
+      accessibilityHint={gt("Copies the full payment detail to the clipboard")}
       accessibilityLabel={
         copied
           ? gt("{value1} copied", { value1: label })

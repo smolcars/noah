@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { T, useGT, useLocale, Var } from "gt-react-native";
 import { useState } from "react";
 import { Keyboard, ScrollView, View } from "react-native";
@@ -63,6 +64,7 @@ const SectionLabel = ({ children }: { children: string }) => (
 const inputClassName = "rounded-2xl border-border bg-card px-4 py-4 text-foreground";
 
 const RecurringPaymentEditorScreen = () => {
+  const translateError = useErrorTranslation();
   const gt = useGT();
   const locale = useLocale();
   const FREQUENCY_OPTIONS: readonly NativeNoahSegmentedControlOption<Frequency>[] = [
@@ -402,7 +404,9 @@ const RecurringPaymentEditorScreen = () => {
               </View>
             ) : null}
 
-            {error ? <Text className="mt-4 text-destructive">{error}</Text> : null}
+            {error ? (
+              <Text className="mt-4 text-destructive">{translateError(error ?? "")}</Text>
+            ) : null}
 
             <NativeNoahButton
               label={gt("Schedule payment")}

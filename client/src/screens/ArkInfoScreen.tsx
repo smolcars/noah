@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { type Translate } from "~/lib/i18n";
 import { T, useGT, useLocale } from "gt-react-native";
 import React from "react";
@@ -268,6 +269,7 @@ const buildConfigurationSections = (
 };
 
 const ArkInfoScreen = () => {
+  const translateError = useErrorTranslation();
   const gt = useGT();
   const navigation = useNavigation<NavigationProp>();
   const colors = useThemeColors();
@@ -340,7 +342,11 @@ const ArkInfoScreen = () => {
                 <Text className="text-lg font-semibold text-foreground">Ark info unavailable</Text>
               </T>
               <Text className="mt-2 text-sm leading-6 text-muted-foreground">
-                {error instanceof Error ? error.message : gt("Failed to load Ark server info.")}
+                {translateError(
+                  (error instanceof Error
+                    ? error.message
+                    : gt("Failed to load Ark server info.")) ?? "",
+                )}
               </Text>
               <NativeNoahButton
                 label={gt("Retry")}

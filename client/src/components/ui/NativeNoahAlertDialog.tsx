@@ -1,4 +1,5 @@
 import { useGT } from "gt-react-native";
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { Host } from "@expo/ui";
 import { Alert as SwiftAlert, Button as SwiftButton, Text as SwiftText } from "@expo/ui/swift-ui";
 import { disabled as swiftDisabled, frame, opacity } from "@expo/ui/swift-ui/modifiers";
@@ -38,7 +39,7 @@ const DIALOG_HOST_STYLE = {
 export function NativeNoahAlertDialog({
   open,
   title,
-  description,
+  description: descriptionProp,
   confirmText,
   cancelText,
   confirmVariant = "default",
@@ -48,6 +49,8 @@ export function NativeNoahAlertDialog({
   onOpenChange,
 }: NativeNoahAlertDialogProps) {
   const gt = useGT();
+  const translateError = useErrorTranslation();
+  const description = translateError(descriptionProp);
   const displayedConfirmText = confirmText ?? gt("OK");
   const { colors, colorScheme } = useTheme();
   const confirmColor = confirmVariant === "destructive" ? "#dc2626" : COLORS.BITCOIN_ORANGE;

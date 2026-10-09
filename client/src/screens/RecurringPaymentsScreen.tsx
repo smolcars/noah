@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { T, useGT, useLocale, Var } from "gt-react-native";
 import { useState } from "react";
 import { Linking, ScrollView, View } from "react-native";
@@ -38,6 +39,7 @@ const truncate = (value: string) =>
   value.length > 28 ? `${value.slice(0, 14)}…${value.slice(-10)}` : value;
 
 const RecurringPaymentCard = ({ schedule }: { schedule: RecurringPayment }) => {
+  const translateError = useErrorTranslation();
   const gt = useGT();
   const locale = useLocale();
   const STATUS_LABELS: Record<RecurringPaymentStatus, string> = {
@@ -124,7 +126,7 @@ const RecurringPaymentCard = ({ schedule }: { schedule: RecurringPayment }) => {
         </T>
       ) : null}
       {schedule.lastError ? (
-        <Text className="mt-2 text-destructive">{schedule.lastError}</Text>
+        <Text className="mt-2 text-destructive">{translateError(schedule.lastError ?? "")}</Text>
       ) : null}
 
       <View className="mt-4 flex-row gap-3">
