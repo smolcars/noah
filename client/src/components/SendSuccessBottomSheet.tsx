@@ -36,13 +36,13 @@ const truncateValue = (value: string) => {
   return `${value.slice(0, 14)}…${value.slice(-10)}`;
 };
 
-const formatCompletedAt = (date: Date) => {
-  const day = date.toLocaleDateString(undefined, {
+const formatCompletedAt = (date: Date, locale: string) => {
+  const day = date.toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
-  const time = date.toLocaleTimeString(undefined, {
+  const time = date.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -154,7 +154,7 @@ export const SendSuccessBottomSheet: React.FC<SendSuccessBottomSheetProps> = ({
               testID="send-success-copy-proof"
             />
           ) : null}
-          <DetailRow label={gt("Completed")} value={formatCompletedAt(completedAt)} />
+          <DetailRow label={gt("Completed")} value={formatCompletedAt(completedAt, locale)} />
         </View>
       </View>
 
