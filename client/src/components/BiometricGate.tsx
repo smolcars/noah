@@ -16,6 +16,7 @@ interface BiometricGateProps {
 
 const BiometricGate: React.FC<BiometricGateProps> = ({ children }) => {
   const gt = useGT();
+  const unlockPrompt = gt("Authenticate to unlock Noah");
   const { authenticate, isBiometricsEnabled } = useBiometrics();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -31,7 +32,7 @@ const BiometricGate: React.FC<BiometricGateProps> = ({ children }) => {
     isAuthenticatingRef.current = true;
     setIsAuthenticating(true);
 
-    const result = await authenticate(gt("Authenticate to unlock Noah"));
+    const result = await authenticate(unlockPrompt);
 
     isAuthenticatingRef.current = false;
     setIsAuthenticating(false);
@@ -43,7 +44,7 @@ const BiometricGate: React.FC<BiometricGateProps> = ({ children }) => {
       log.w("Biometric authentication failed", [result.error]);
       setIsAuthenticated(false);
     }
-  }, [authenticate, gt]);
+  }, [authenticate, unlockPrompt]);
 
   // Initial check - either authenticate or mark as authenticated if biometrics disabled
   useEffect(() => {

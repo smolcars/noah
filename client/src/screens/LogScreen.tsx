@@ -1,3 +1,4 @@
+import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { T, useGT, useLocale } from "gt-react-native";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { View } from "react-native";
@@ -19,7 +20,9 @@ import { FlashList, FlashListRef } from "@shopify/flash-list";
 const log = logger("LogScreen");
 
 const LogScreen = () => {
+  const translateError = useErrorTranslation();
   const gt = useGT();
+  const fetchFailedMessage = gt("Failed to fetch logs.");
   const locale = useLocale();
   const navigation = useNavigation();
   const [logs, setLogs] = useState<string[]>([]);
@@ -52,11 +55,11 @@ const LogScreen = () => {
           }
         }, 100);
       } else {
-        setError(result.error.message || gt("Failed to fetch logs."));
+        setError(result.error.message || fetchFailedMessage);
       }
       setIsLoading(false);
     }
-  }, [gt]);
+  }, [fetchFailedMessage]);
 
   useEffect(() => {
     fetchLogs();
@@ -152,7 +155,7 @@ const LogScreen = () => {
           </View>
         ) : error ? (
           <View className="flex-1 justify-center items-center">
-            <Text className="text-destructive text-center">{error}</Text>
+            <Text className="text-destructive text-center">{translateError(error ?? "")}</Text>
           </View>
         ) : (
           <View className="flex-1 bg-card rounded-lg p-2">

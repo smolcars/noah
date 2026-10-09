@@ -1,5 +1,5 @@
 import { useGT, useLocale } from "gt-react-native";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useEffectEvent, useMemo } from "react";
 import { Keyboard } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
@@ -216,6 +216,8 @@ export const useSendScreen = () => {
     );
   };
 
+  const parseDestinationForEffect = useEffectEvent((value: string) => parseDestination(value, gt));
+
   useEffect(() => {
     if (destination) {
       const {
@@ -224,7 +226,7 @@ export const useSendScreen = () => {
         isAmountEditable: newIsAmountEditable,
         error: parseError,
         bip321,
-      } = parseDestination(destination, gt);
+      } = parseDestinationForEffect(destination);
 
       setRecipientError(
         (currentError) => parseError ?? (newDestinationType === null ? currentError : null),
@@ -285,7 +287,7 @@ export const useSendScreen = () => {
         setSourceConfirmed(false);
       }
     }
-  }, [gt, destination, destinationRequestRevision, isMaxSend]);
+  }, [locale, destination, destinationRequestRevision, isMaxSend]);
 
   const finalDestinationType =
     destinationType === "bip321" ? selectedPaymentMethod : destinationType;
@@ -759,7 +761,7 @@ export const useSendScreen = () => {
     }
   };
 
-  useEffect(() => {
+  const updateSendResult = useEffectEvent(() => {
     if (!result) {
       return;
     }
@@ -836,7 +838,11 @@ export const useSendScreen = () => {
       }
       setParsedResult(displayResult);
     }
-  }, [result, amountSat, showAlert, gt]);
+  });
+
+  useEffect(() => {
+    updateSendResult();
+  }, [result, amountSat, showAlert, locale]);
 
   const handleSend = () => {
     // Validation

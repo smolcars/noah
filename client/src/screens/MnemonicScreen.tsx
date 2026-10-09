@@ -25,6 +25,13 @@ type MnemonicScreenRouteProp = RouteProp<
 
 const MnemonicScreen = () => {
   const gt = useGT();
+  const authenticationPrompt = gt("Authenticate to view your seed phrase");
+  const authenticationFailedTitle = gt("Authentication Failed");
+  const authenticationRequiredMessage = gt("You must authenticate to view your seed phrase.");
+  const errorTitle = gt("Error");
+  const retrievalFailedMessage = gt(
+    "Could not retrieve your recovery phrase. Please try again from settings.",
+  );
   const navigation =
     useNavigation<NativeStackNavigationProp<OnboardingStackParamList & SettingsStackParamList>>();
   const route = useRoute<MnemonicScreenRouteProp>();
@@ -38,11 +45,11 @@ const MnemonicScreen = () => {
   useEffect(() => {
     const authenticate = async () => {
       if (!fromOnboarding) {
-        const result = await authenticateIfEnabled(gt("Authenticate to view your seed phrase"));
+        const result = await authenticateIfEnabled(authenticationPrompt);
         if (result.isErr()) {
           showAlert({
-            title: gt("Authentication Failed"),
-            description: gt("You must authenticate to view your seed phrase."),
+            title: authenticationFailedTitle,
+            description: authenticationRequiredMessage,
           });
           navigation.goBack();
           return;
@@ -52,7 +59,15 @@ const MnemonicScreen = () => {
       setIsAuthenticated(true);
     };
     authenticate();
-  }, [showAlert, navigation, fromOnboarding, authenticateIfEnabled, gt]);
+  }, [
+    showAlert,
+    navigation,
+    fromOnboarding,
+    authenticateIfEnabled,
+    authenticationPrompt,
+    authenticationFailedTitle,
+    authenticationRequiredMessage,
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -63,16 +78,14 @@ const MnemonicScreen = () => {
         setMnemonic(mnemonicResult.value);
       } else {
         showAlert({
-          title: gt("Error"),
-          description: gt(
-            "Could not retrieve your recovery phrase. Please try again from settings.",
-          ),
+          title: errorTitle,
+          description: retrievalFailedMessage,
         });
         navigation.goBack();
       }
     };
     fetchMnemonic();
-  }, [isAuthenticated, showAlert, navigation, gt]);
+  }, [isAuthenticated, showAlert, navigation, errorTitle, retrievalFailedMessage]);
 
   const handleCopy = async () => {
     await copyToClipboard(mnemonic, {

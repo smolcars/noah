@@ -56,9 +56,13 @@ test("bundled translations cover every GT source entry", async () => {
   }
 }, 30_000);
 
-test("background notifications resolve the persisted locale without React", async () => {
+for (const [name, file] of [
+  ["background notifications resolve the persisted locale without React", "backgroundTranslations"],
+  ["locale resolution does not restart receive effects", "localizedReceive"],
+]) {
+test(name, async () => {
   const proc = Bun.spawn(
-    [process.execPath, "test", "tests/integration/backgroundTranslations.test.js"],
+    [process.execPath, "test", `tests/integration/${file}.test.js`],
     {
       cwd: new URL("../../", import.meta.url).pathname,
       stdout: "ignore",
@@ -68,6 +72,7 @@ test("background notifications resolve the persisted locale without React", asyn
   const [exitCode, stderr] = await Promise.all([proc.exited, new Response(proc.stderr).text()]);
   if (exitCode !== 0) throw new Error(stderr);
 });
+}
 
 // App language must control display formatting independently of the device language.
 test("Spanish Bitcoin amounts use Spanish number formatting", async () => {

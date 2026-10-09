@@ -73,6 +73,13 @@ const toError = (error: unknown) => (error instanceof Error ? error : new Error(
 
 export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void) {
   const gt = useGT();
+  // Focus effects depend on stable copy, not the SDK's changing development callback.
+  const requestFailedTitle = gt("Receive Request Failed");
+  const lightningCanceledTitle = gt("Lightning Receive Canceled");
+  const lightningFailedTitle = gt("Lightning Receive Failed");
+  const lightningFailedMessage = gt(
+    "The Lightning payment could not be received. Generate a new payment request and try again.",
+  );
   const { showAlert } = useAlert();
   const [request, setRequest] = useState<GeneratedReceiveRequest | null>(null);
   const [baseError, setBaseError] = useState<Error | null>(null);
@@ -234,11 +241,7 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
       }
 
       if (isFailedOrCanceledMovement(movement)) {
-        const error = new Error(
-          gt(
-            "The Lightning payment could not be received. Generate a new payment request and try again.",
-          ),
-        );
+        const error = new Error(lightningFailedMessage);
         log.e("Lightning receive ended without completing", [
           { movementId: movement.id, status: movement.status },
         ]);
@@ -247,10 +250,7 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
         void queryClient.invalidateQueries({ queryKey: ["balance"] });
         void queryClient.invalidateQueries({ queryKey: ["transactions"] });
         showAlert({
-          title:
-            movement.status === "canceled"
-              ? gt("Lightning Receive Canceled")
-              : gt("Lightning Receive Failed"),
+          title: movement.status === "canceled" ? lightningCanceledTitle : lightningFailedTitle,
           description: error.message,
         });
         return;
@@ -260,7 +260,14 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
         handleReceiveComplete(activeSession.amountSat);
       }
     },
-    [cancelReceiveSession, handleReceiveComplete, showAlert, gt],
+    [
+      cancelReceiveSession,
+      handleReceiveComplete,
+      showAlert,
+      lightningFailedMessage,
+      lightningCanceledTitle,
+      lightningFailedTitle,
+    ],
   );
 
   const scheduleArkSubscriptionRetry = useCallback((sessionId: number) => {
@@ -400,9 +407,9 @@ export function useReceiveRequest(onReceiveComplete: (amountSat: number) => void
       const requestError = toError(error);
       activeReceiveSessionRef.current = null;
       setBaseError(requestError);
-      showAlert({ title: gt("Receive Request Failed"), description: requestError.message });
+      showAlert({ title: requestFailedTitle, description: requestError.message });
     }
-  }, [cancelReceiveSession, generateReceiveAddresses, showAlert, gt]);
+  }, [cancelReceiveSession, generateReceiveAddresses, showAlert, requestFailedTitle]);
 
   useFocusEffect(
     useCallback(() => {

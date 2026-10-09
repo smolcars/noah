@@ -8,6 +8,7 @@ type BiometricAuthResult = Result<true, { cancelled: boolean; message: string }>
 
 export const useBiometrics = () => {
   const gt = useGT();
+  const authenticationFailedMessage = gt("Authentication failed");
   const { isBiometricsEnabled } = useWalletStore();
 
   const authenticate = useCallback(
@@ -23,10 +24,10 @@ export const useBiometrics = () => {
 
       return err({
         cancelled: result.error === "user_cancel",
-        message: gt("Authentication failed"),
+        message: authenticationFailedMessage,
       });
     },
-    [gt],
+    [authenticationFailedMessage],
   );
 
   const authenticateIfEnabled = useCallback(
