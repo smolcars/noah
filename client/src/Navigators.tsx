@@ -37,6 +37,7 @@ import DebugScreen from "~/screens/DebugScreen";
 import QRHubScreen from "~/screens/QRHubScreen";
 import BtcMapScreen from "~/screens/BtcMapScreen";
 import ProfileScreen from "~/screens/ProfileScreen";
+import LanguageSettingsScreen from "~/screens/LanguageSettingsScreen";
 import CurrencySettingsScreen from "~/screens/CurrencySettingsScreen";
 import BitcoinUnitSettingsScreen from "~/screens/BitcoinUnitSettingsScreen";
 import EsploraSettingsScreen from "~/screens/EsploraSettingsScreen";
@@ -84,6 +85,7 @@ export type TabParamList = {
 export type SettingsStackParamList = {
   SettingsList: undefined;
   Profile: undefined;
+  Language: undefined;
   Currency: undefined;
   BitcoinUnit: undefined;
   Esplora: undefined;
@@ -148,6 +150,11 @@ const SettingsStackNav = () => (
       options={{ animation: "default" }}
     />
     <Stack.Screen name="Profile" component={ProfileScreen} options={{ animation: "default" }} />
+    <Stack.Screen
+      name="Language"
+      component={LanguageSettingsScreen}
+      options={{ animation: "default" }}
+    />
     <Stack.Screen
       name="Currency"
       component={CurrencySettingsScreen}

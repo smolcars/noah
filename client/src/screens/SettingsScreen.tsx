@@ -1,8 +1,7 @@
 import { useErrorTranslation } from "~/hooks/useErrorTranslation";
 import { Image, Keyboard, Linking, Pressable, ScrollView, View } from "react-native";
 import Constants from "expo-constants";
-import { useGT, T, Var, useLocale } from "gt-react-native";
-import { LanguagePicker } from "~/components/LanguagePicker";
+import { useGT, T, Var, useLocaleSelector } from "gt-react-native";
 import * as Haptics from "expo-haptics";
 import { useWalletStore } from "../store/walletStore";
 import { useBiometrics } from "../hooks/useBiometrics";
@@ -76,7 +75,8 @@ type Setting = {
 const SettingsScreen = () => {
   const translateError = useErrorTranslation();
   const gt = useGT();
-  const locale = useLocale();
+  const { locale, getLocaleProperties } = useLocaleSelector();
+  const languageName = getLocaleProperties(locale).nativeName;
   const iconColor = useIconColor();
   const { isDark } = useTheme();
   const logoImage = isDark ? logoImageDark : logoImageLight;
@@ -238,6 +238,8 @@ const SettingsScreen = () => {
 
     if (item.id === "profile") {
       navigation.navigate("Profile");
+    } else if (item.id === "language") {
+      navigation.navigate("Language");
     } else if (item.id === "currency") {
       navigation.navigate("Currency");
     } else if (item.id === "bitcoinUnit") {
@@ -286,8 +288,9 @@ const SettingsScreen = () => {
     profileData.push({
       id: "language",
       title: gt("Language"),
+      value: languageName.charAt(0).toLocaleUpperCase(locale) + languageName.slice(1),
       description: gt("Choose the language used in Noah."),
-      isPressable: false,
+      isPressable: true,
     });
     profileData.push({
       id: "currency",
@@ -397,17 +400,6 @@ const SettingsScreen = () => {
   }
 
   const renderSettingItem = (item: Setting) => {
-    if (item.id === "language") {
-      return (
-        <View key={item.id} className="p-4 border-b border-border bg-card rounded-lg mb-2">
-          <Text className="text-foreground text-lg font-medium">{item.title}</Text>
-          <Text className="text-muted-foreground text-base mt-1">{item.description}</Text>
-          <View className="mt-3">
-            <LanguagePicker testID="settings-language-picker" />
-          </View>
-        </View>
-      );
-    }
     if (item.id === "resetRegistration") {
       return (
         <ConfirmationDialog

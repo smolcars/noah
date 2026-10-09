@@ -20,9 +20,7 @@ const OnboardingScreen = () => {
   return (
     <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
       <View className="items-end px-5 pt-4">
-        <View className="w-40">
-          <LanguagePicker testID="onboarding-language" />
-        </View>
+        <LanguagePicker testID="onboarding-language" />
       </View>
       <ScrollView contentContainerClassName="grow items-center justify-center p-5">
         <T context="Welcome heading for Noah, a Bitcoin wallet. Keep the product name Noah unchanged.">
