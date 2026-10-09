@@ -1,5 +1,7 @@
 import { Image, Keyboard, Linking, Pressable, ScrollView, View } from "react-native";
 import Constants from "expo-constants";
+import { useGT } from "gt-react-native";
+import { LanguagePicker } from "~/components/LanguagePicker";
 import * as Haptics from "expo-haptics";
 import { useWalletStore } from "../store/walletStore";
 import { useBiometrics } from "../hooks/useBiometrics";
@@ -47,6 +49,7 @@ import {
 type Setting = {
   id:
     | "profile"
+    | "language"
     | "currency"
     | "bitcoinUnit"
     | "showMnemonic"
@@ -70,6 +73,7 @@ type Setting = {
 };
 
 const SettingsScreen = () => {
+  const gt = useGT();
   const iconColor = useIconColor();
   const { isDark } = useTheme();
   const logoImage = isDark ? logoImageDark : logoImageLight;
@@ -270,6 +274,12 @@ const SettingsScreen = () => {
       isPressable: true,
     });
     profileData.push({
+      id: "language",
+      title: gt("Language"),
+      description: gt("Choose the language used in Noah."),
+      isPressable: false,
+    });
+    profileData.push({
       id: "currency",
       title: "Currency",
       value: `${preferredCurrencyInfo.code} · ${preferredCurrencyInfo.name}`,
@@ -376,6 +386,17 @@ const SettingsScreen = () => {
   }
 
   const renderSettingItem = (item: Setting) => {
+    if (item.id === "language") {
+      return (
+        <View key={item.id} className="p-4 border-b border-border bg-card rounded-lg mb-2">
+          <Text className="text-foreground text-lg font-medium">{item.title}</Text>
+          <Text className="text-muted-foreground text-base mt-1">{item.description}</Text>
+          <View className="mt-3">
+            <LanguagePicker testID="settings-language-picker" />
+          </View>
+        </View>
+      );
+    }
     if (item.id === "resetRegistration") {
       return (
         <ConfirmationDialog

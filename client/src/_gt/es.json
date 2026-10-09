@@ -4,16 +4,14 @@
     "i": 1,
     "t": "Text"
   },
+  "24fe3ecefce2574d": "Elige el idioma de Noah.",
+  "2c1c93a646bbea6e": "Idioma",
   "5e000ac108f326ac": "Crear billetera",
-  "a086af17457c43e6": {
-    "c": "Idioma",
-    "i": 1,
-    "t": "Text"
-  },
   "ccefc54c4f6b0f2b": "Restaurar billetera",
   "d7abdc6ae4152022": {
     "c": "Crea una billetera nueva o restaura una que ya tengas.",
     "i": 1,
     "t": "Text"
-  }
+  },
+  "df1be69eb84de3c2": "Idioma"
 }

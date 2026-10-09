@@ -5,7 +5,9 @@
     "es"
   ],
   "src": [
-    "src/screens/OnboardingScreen.tsx"
+    "src/screens/OnboardingScreen.tsx",
+    "src/screens/SettingsScreen.tsx",
+    "src/components/LanguagePicker.tsx"
   ],
   "files": {
     "gt": {
@@ -13,5 +15,5 @@
     }
   },
   "projectId": "prj_rqmymh8xftristtvxx5exf7h",
-  "_versionId": "2eaeaa6749c55d3049486482bfa4ac02950a3c792cc3d268f9c29810a519e1a8"
+  "_versionId": "ee5394b9c8e9bdc513dc561952d0dbceb678ae95f29b625e661f84092b88381f"
 }
