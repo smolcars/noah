@@ -25,5 +25,6 @@ test("Japanese amount entry preserves fractional digits and yen displays whole u
   expect(formatNumber("12345.00", "ja")).toBe("12,345.00");
   expect(formatNumber("0.", "ja")).toBe("0.");
   expect(formatNumber("0.05", "ja")).toBe("0.05");
-  expect(formatFiatAmount("1234.5", "JPY", "ja")).toBe("¥1,235");
+  // Intl uses either yen symbol depending on the platform's locale data.
+  expect(formatFiatAmount("1234.5", "JPY", "ja")).toMatch(/^[¥￥]1,235$/);
 });

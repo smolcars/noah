@@ -1,5 +1,5 @@
 import { T, useGT } from "gt-react-native";
-import React, { useEffect } from "react";
+import React from "react";
 import { ScrollView, View } from "react-native";
 import { AlertTriangle } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -15,13 +15,7 @@ import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryBu
 const BetaWarningScreen = () => {
   const gt = useGT();
   const navigation = useNavigation<NativeStackNavigationProp<OnboardingStackParamList>>();
-  const { mutate: createWallet, isPending, isSuccess } = useCreateWallet();
-
-  useEffect(() => {
-    if (isSuccess) {
-      navigation.navigate("Mnemonic", { fromOnboarding: true });
-    }
-  }, [isSuccess, navigation]);
+  const { mutate: createWallet, isPending } = useCreateWallet();
 
   const handleDecline = () => {
     navigation.goBack();
@@ -59,7 +53,11 @@ const BetaWarningScreen = () => {
             <View className="space-y-3">
               <NativeNoahButton
                 label={gt("I accept")}
-                onPress={() => createWallet()}
+                onPress={() =>
+                  createWallet(undefined, {
+                    onSuccess: () => navigation.navigate("Mnemonic", { fromOnboarding: true }),
+                  })
+                }
                 size="lg"
                 fullWidth
               />

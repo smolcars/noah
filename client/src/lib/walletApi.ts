@@ -47,6 +47,7 @@ import {
   deriveStoreNextKeypair,
   peakKeyPair,
   getMnemonic,
+  getStoredMnemonic,
   resetServerAuthToken,
   setMnemonic,
 } from "./crypto";
@@ -142,13 +143,61 @@ const createWalletFromMnemonic = async (mnemonic: string): Promise<Result<void, 
   return ok(undefined);
 };
 
-export const createWallet = async (): Promise<Result<void, Error>> => {
-  const mnemonicResult = await ResultAsync.fromPromise(createMnemonic(), (e) => e as Error);
+const createOrResumeWallet = async (): Promise<Result<void, Error>> => {
+  const mnemonicResult = await getStoredMnemonic();
   if (mnemonicResult.isErr()) {
-    log.error("Failed to create mnemonic", [mnemonicResult.error]);
     return err(mnemonicResult.error);
   }
-  return createWalletFromMnemonic(mnemonicResult.value);
+
+  const walletDataResult = Result.fromThrowable(
+    () => RNFSTurbo.exists(ARK_DATA_PATH) && RNFSTurbo.readdir(ARK_DATA_PATH).length > 0,
+    (error) => error as Error,
+  )();
+  if (walletDataResult.isErr()) {
+    return err(walletDataResult.error);
+  }
+
+  if (mnemonicResult.value && walletDataResult.value) {
+    const loadResult = await loadWalletIfNeeded();
+    if (loadResult.isErr()) {
+      return err(loadResult.error);
+    }
+    if (!loadResult.value) {
+      return err(new Error("Resume your suspended wallet before continuing."));
+    }
+    return (await peakKeyPair(0)).map(() => undefined);
+  }
+
+  if (mnemonicResult.value || walletDataResult.value) {
+    return err(new Error("Existing wallet data is incomplete. Restore your wallet to continue."));
+  }
+
+  const newMnemonicResult = await ResultAsync.fromPromise(createMnemonic(), (e) => e as Error);
+  if (newMnemonicResult.isErr()) {
+    log.error("Failed to create mnemonic", [newMnemonicResult.error]);
+    return err(newMnemonicResult.error);
+  }
+
+  const result = await createWalletFromMnemonic(newMnemonicResult.value);
+  if (result.isErr()) {
+    // Only this attempt's new wallet may be removed; existing wallets return above.
+    const cleanupResult = await ResultAsync.fromPromise(deleteWallet(), (e) => e as Error).andThen(
+      (cleanup) => cleanup,
+    );
+    if (cleanupResult.isErr()) {
+      log.error("Failed to clean up new wallet after creation failed", [cleanupResult.error]);
+    }
+  }
+  return result;
+};
+
+let walletCreation: Promise<Result<void, Error>> | null = null;
+
+export const createWallet = (): Promise<Result<void, Error>> => {
+  walletCreation ??= createOrResumeWallet().finally(() => {
+    walletCreation = null;
+  });
+  return walletCreation;
 };
 
 export const restoreWallet = async (mnemonic: string): Promise<Result<boolean, Error>> => {
