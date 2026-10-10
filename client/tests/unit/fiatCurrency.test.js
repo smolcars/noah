@@ -20,3 +20,10 @@ test("Spanish amount entry preserves fractional digits while displaying a comma"
   expect(formatFiatAmount("12.50", "EUR", "es")).toBe("12,50\u00a0€");
   expect(fiatToSats(Number.parseFloat("12.50"), 100_000)).toBe(12_500);
 });
+
+test("Japanese amount entry preserves fractional digits and yen displays whole units", () => {
+  expect(formatNumber("12345.00", "ja")).toBe("12,345.00");
+  expect(formatNumber("0.", "ja")).toBe("0.");
+  expect(formatNumber("0.05", "ja")).toBe("0.05");
+  expect(formatFiatAmount("1234.5", "JPY", "ja")).toBe("¥1,235");
+});

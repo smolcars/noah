@@ -286,7 +286,7 @@ just test               # Run server tests
 
 ### Translations
 
-Noah uses [General Translation's React Native SDK](https://generaltranslation.com/docs/react/react-native-quickstart) with English (`en`) source copy and Spanish (`es`) translations. Choose a language with the native menu at the top right of onboarding or in **Settings → Account → Language**, directly below Profile. The dedicated Language screen uses the same native selection list as Currency. GT saves the selection in native storage; it survives navigation and app restarts. Screens, validation, alerts, local notifications, and amount/date formatting follow the selected language. Product names, recovery phrases, addresses, and user-entered content stay unchanged. The existing Noah Story recording is in English.
+Noah uses [General Translation's React Native SDK](https://generaltranslation.com/docs/react/react-native-quickstart) with English (`en`) source copy and Spanish (`es`) and Japanese (`ja`) translations. Choose a language with the native menu at the top right of onboarding or in **Settings → Account → Language**, directly below Profile. The dedicated Language screen uses the same native selection list as Currency. GT saves the selection in native storage; it survives navigation and app restarts. Screens, validation, alerts, local notifications, and amount/date formatting follow the selected language. Product names, recovery phrases, addresses, and user-entered content stay unchanged. The existing Noah Story recording is in English.
 
 Run translation commands from `client/` inside the development shell:
 
