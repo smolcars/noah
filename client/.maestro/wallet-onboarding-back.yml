@@ -1,0 +1,36 @@
+appId: com.noahwallet.regtest
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- tapOn: "Create Wallet"
+- tapOn: "I accept"
+- extendedWaitUntil:
+    visible: "Your Recovery Phrase"
+    timeout: 120000
+
+- repeat:
+    times: 2
+    commands:
+      - pressKey: BACK
+      - assertVisible: "Noah is in beta"
+      - tapOn: "I accept"
+      - assertVisible: "Your Recovery Phrase"
+      - assertNotVisible: "Creation Failed"
+
+# Returning through Welcome remounts the beta screen and must resume the same wallet.
+- pressKey: BACK
+- tapOn: "I decline"
+- assertVisible: "Welcome to Noah"
+- tapOn: "Create Wallet"
+- tapOn: "I accept"
+- assertVisible: "Your Recovery Phrase"
+- assertNotVisible: "Creation Failed"
+
+- tapOn: "I Have Saved It, Continue"
+- assertVisible: "Emergency Email"
+- runFlow: subflows/complete-wallet-onboarding-without-email.yml
+- stopApp
+- launchApp
+- assertVisible: "History"

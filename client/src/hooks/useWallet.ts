@@ -46,8 +46,7 @@ export function useCreateWallet() {
         throw result.error;
       }
     },
-    onError: async (error: Error) => {
-      await deleteWalletAction();
+    onError: (error: Error) => {
       showAlert({ title: gt("Creation Failed"), description: error.message });
     },
   });
