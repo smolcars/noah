@@ -23,6 +23,11 @@ test("background translation keeps dynamic notification data local and intact", 
   const message = msg("You received {amount}", { amount: "₿ 1.234" });
   const spanish = await getBackgroundMessages();
   expect(spanish(message)).toBe("Has recibido ₿ 1.234");
+  locale = "ja";
+  const japanese = await getBackgroundMessages();
+  expect(japanese(msg("You received {amount}", { amount: "₿ 1,234" }))).toBe(
+    "₿ 1,234を受け取りました",
+  );
   locale = "en";
   const english = await getBackgroundMessages();
   expect(english(message)).toBe("You received ₿ 1.234");

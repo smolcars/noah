@@ -1,5 +1,8 @@
 import spanish from "./src/_gt/es.json";
+import japanese from "./src/_gt/ja.json";
 
 export async function loadTranslations(locale: string) {
-  return locale === "es" ? spanish : {};
+  if (locale === "es") return spanish;
+  if (locale === "ja") return japanese;
+  return {};
 }
