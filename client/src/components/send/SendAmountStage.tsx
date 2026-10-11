@@ -100,6 +100,7 @@ export function SendAmountStage({
   return (
     <ScrollView
       className="flex-1"
+      alwaysBounceVertical={false}
       contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20 }}
       keyboardShouldPersistTaps="handled"
       testID="send-amount-stage"

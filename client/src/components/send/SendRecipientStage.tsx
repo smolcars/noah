@@ -112,6 +112,7 @@ export function SendRecipientStage({
       </View>
 
       <ScrollView
+        alwaysBounceVertical={false}
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 36, paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"

@@ -1,11 +1,10 @@
-import { T } from "gt-react-native";
+import { useGT } from "gt-react-native";
 import { useCurrencyNames } from "~/hooks/useCurrencyNames";
 import { View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
-import { Text } from "~/components/ui/text";
-import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
+import { ScreenHeader } from "~/components/ScreenHeader";
 import { NativeNoahSelectionList } from "~/components/ui/NativeNoahSelectionList";
 import type { SettingsStackParamList } from "~/Navigators";
 import {
@@ -18,6 +17,7 @@ import { useProfileStore } from "~/store/profileStore";
 type CurrencyNavigationProp = NativeStackNavigationProp<SettingsStackParamList, "Currency">;
 
 const CurrencySettingsScreen = () => {
+  const gt = useGT();
   const currencyNames = useCurrencyNames();
   const CURRENCY_OPTIONS = SUPPORTED_FIAT_CURRENCIES.map((currency) => {
     const info = getFiatCurrencyInfo(currency);
@@ -38,16 +38,12 @@ const CurrencySettingsScreen = () => {
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
-      <View className="flex-row items-center px-5 pt-4">
-        <NativeNoahBackButton
-          onPress={() => navigation.goBack()}
-          className="mr-3"
-          testID="currency-settings-back-button"
-        />
-        <T>
-          <Text className="text-2xl font-bold text-foreground">Currency</Text>
-        </T>
-      </View>
+      <ScreenHeader
+        title={gt("Currency")}
+        onBack={() => navigation.goBack()}
+        backButtonTestID="currency-settings-back-button"
+        className="px-5"
+      />
       <View className="mt-4 flex-1">
         <NativeNoahSelectionList
           value={preferredCurrency}

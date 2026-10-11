@@ -24,7 +24,7 @@ import { AlertTriangle, CheckCircle } from "lucide-react-native";
 import logoImageDark from "../../assets/1024_no_background.png";
 import logoImageLight from "../../assets/All_Files/light_dark_tinted/icon_clear_tinted_ios.png";
 import { COLORS } from "~/lib/styleConstants";
-import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
+import { ScreenHeader } from "~/components/ScreenHeader";
 import { useIconColor, useTheme } from "~/hooks/useTheme";
 import { resetAndReRegisterWithServer } from "../lib/server";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
@@ -459,17 +459,13 @@ const SettingsScreen = () => {
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background" style={{ paddingBottom: 0 }}>
-      <View className="px-4 pt-4">
-        <View className="flex-row items-center mb-4">
-          <NativeNoahBackButton
-            onPress={() => navigation.goBack()}
-            className="mr-3"
-            testID="settings-back-button"
-          />
-          <T>
-            <Text className="text-2xl font-bold text-foreground">Settings</Text>
-          </T>
-        </View>
+      <View className="px-4">
+        <ScreenHeader
+          title={gt("Settings")}
+          onBack={() => navigation.goBack()}
+          backButtonTestID="settings-back-button"
+          className="mb-4"
+        />
 
         {showResetSuccess && (
           <Alert icon={CheckCircle} className="mb-4">

@@ -164,6 +164,7 @@
   "0a5ef267b7f39f43": "No hay una segunda mejor opción.",
   "0a63cd55fe7832f0": "Importe que recibirá el saldo de Ark",
   "0a72ee7f063ef7af": "No se pudo guardar el código de verificación",
+  "0a75e464d833bca8": "Ajustes",
   "0a77379773433315": "Factura",
   "0ac6a7a9bd759de2": {
     "c": "Se ha exportado la copia de seguridad cifrada de tu base de datos.",
@@ -1058,6 +1059,7 @@
     "i": 1,
     "t": "Text"
   },
+  "58e3b11c63035d76": "Editar la API de Esplora",
   "5941ef394391d4cf": {
     "c": "Tus bitcoins en la cadena se están transfiriendo a Ark. Podrás usarlos cuando se complete la transferencia.",
     "i": 1,

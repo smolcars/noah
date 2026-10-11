@@ -9,6 +9,7 @@ import QRCode from "react-native-qrcode-svg";
 import logoImage from "../../assets/All_Files/light_dark_tinted/icon_clear_tinted_ios.png";
 import type { TabParamList } from "~/Navigators";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
+import { ScreenHeader } from "~/components/ScreenHeader";
 import { ReceiveAmountBottomSheet } from "~/components/ReceiveAmountBottomSheet";
 import { ReceiveCopyBottomSheet } from "~/components/ReceiveCopyBottomSheet";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
@@ -105,25 +106,25 @@ const ReceiveScreen = () => {
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background">
+      <ScreenHeader
+        title={gt("Receive")}
+        actions={
+          <NativeNoahIconButton
+            icon="copy"
+            accessibilityLabel={gt("Show payment details")}
+            onPress={() => setIsCopySheetOpen(true)}
+            disabled={!request}
+            testID="receive-copy-button"
+          />
+        }
+      />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 32 }}
+        alwaysBounceVertical={false}
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-1 pb-8" onLayout={onLayout}>
-          <View className="flex-row items-center justify-between pt-1">
-            <T>
-              <Text className="text-2xl font-bold text-foreground">Receive</Text>
-            </T>
-            <NativeNoahIconButton
-              icon="copy"
-              accessibilityLabel={gt("Show payment details")}
-              onPress={() => setIsCopySheetOpen(true)}
-              disabled={!request}
-              testID="receive-copy-button"
-            />
-          </View>
-
           <View
             className="flex-1"
             style={{ flexDirection: isExpanded ? "row" : "column", gap: PANE_GAP }}
