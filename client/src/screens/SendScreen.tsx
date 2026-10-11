@@ -293,6 +293,7 @@ const SendScreen = () => {
         {isExpanded ? (
           <ScrollView
             className="min-w-0 flex-1"
+            alwaysBounceVertical={false}
             contentContainerStyle={{ paddingVertical: 24 }}
             testID="send-summary-pane"
           >

@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { NativeNoahButton } from "~/components/ui/NativeNoahButton";
-import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
+import { ScreenHeader } from "~/components/ScreenHeader";
 import { NativeNoahSecondaryButton } from "~/components/ui/NativeNoahSecondaryButton";
 import { Text } from "~/components/ui/text";
 import { useSwitchEsploraEndpoint } from "~/hooks/useEsplora";
@@ -70,16 +70,12 @@ const EsploraSettingsScreen = () => {
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
-      <View className="flex-row items-center px-5 pt-4">
-        <NativeNoahBackButton
-          onPress={() => navigation.goBack()}
-          className="mr-3"
-          testID="esplora-settings-back-button"
-        />
-        <T>
-          <Text className="text-2xl font-bold text-foreground">Edit Esplora API</Text>
-        </T>
-      </View>
+      <ScreenHeader
+        title={gt("Edit Esplora API")}
+        onBack={() => navigation.goBack()}
+        backButtonTestID="esplora-settings-back-button"
+        className="px-5"
+      />
 
       <ScrollView
         className="flex-1 px-5"

@@ -47,6 +47,7 @@ export function SendChoiceStage<T extends string>({
   return (
     <ScrollView
       className="flex-1"
+      alwaysBounceVertical={false}
       contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20 }}
       keyboardShouldPersistTaps="handled"
       testID={`${testIDPrefix}-stage`}

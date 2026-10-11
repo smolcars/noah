@@ -8,6 +8,7 @@ import { useState } from "react";
 import { FlashList } from "@shopify/flash-list";
 import { Text } from "../components/ui/text";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
+import { ScreenHeader } from "~/components/ScreenHeader";
 import Icon from "@react-native-vector-icons/ionicons";
 import { type Transaction, type PaymentTypes } from "../types/transaction";
 import { Result, ResultAsync } from "neverthrow";
@@ -182,29 +183,30 @@ const TransactionsScreen = () => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NoahSafeAreaView className="flex-1 bg-background">
-        <View className="py-4 flex-1" onLayout={onLayout}>
-          <View className="flex-row items-center justify-between mb-8">
-            <T>
-              <Text className="text-2xl font-bold text-foreground">Transactions</Text>
-            </T>
-            <View className="flex-row items-center gap-4">
-              <NativeNoahIconButton
-                icon="refresh"
-                accessibilityLabel={gt("Refresh transaction history")}
-                onPress={() => {
-                  void handleRefresh();
-                }}
-                isLoading={isRefetching}
-                testID="transactions-refresh-button"
-              />
-              <NativeNoahIconButton
-                icon="share"
-                accessibilityLabel={gt("Export transactions")}
-                onPress={exportToCSV}
-                testID="transactions-share-button"
-              />
-            </View>
-          </View>
+        <View className="pb-4 flex-1" onLayout={onLayout}>
+          <ScreenHeader
+            title={gt("Transactions")}
+            className="mb-8"
+            actions={
+              <>
+                <NativeNoahIconButton
+                  icon="refresh"
+                  accessibilityLabel={gt("Refresh transaction history")}
+                  onPress={() => {
+                    void handleRefresh();
+                  }}
+                  isLoading={isRefetching}
+                  testID="transactions-refresh-button"
+                />
+                <NativeNoahIconButton
+                  icon="share"
+                  accessibilityLabel={gt("Export transactions")}
+                  onPress={exportToCSV}
+                  testID="transactions-share-button"
+                />
+              </>
+            }
+          />
           <View
             className="flex-1"
             style={{ flexDirection: isExpanded ? "row" : "column", gap: PANE_GAP }}

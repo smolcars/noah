@@ -122,6 +122,7 @@ const QRHubScreen = () => {
     >
       <ScrollView
         className="flex-1"
+        alwaysBounceVertical={false}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
       >

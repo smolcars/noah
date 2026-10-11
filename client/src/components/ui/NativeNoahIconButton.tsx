@@ -103,14 +103,16 @@ export function NativeNoahIconButton({
         className={className}
         style={[
           {
-            width: size,
-            height: size,
+            minWidth: size,
+            minHeight: size,
+            alignItems: "center",
+            justifyContent: "center",
             opacity: isDisabled ? 0.55 : 1,
           },
           style,
         ]}
       >
-        <SwiftHost seedColor={COLORS.BITCOIN_ORANGE} style={{ flex: 1 }}>
+        <SwiftHost seedColor={COLORS.BITCOIN_ORANGE} matchContents>
           <SwiftButton
             label={accessibilityLabel}
             systemImage={iconNames.ios}

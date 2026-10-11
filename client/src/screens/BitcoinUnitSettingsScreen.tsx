@@ -1,10 +1,9 @@
-import { T, useGT, useLocale } from "gt-react-native";
+import { useGT, useLocale } from "gt-react-native";
 import { View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
-import { Text } from "~/components/ui/text";
-import { NativeNoahBackButton } from "~/components/ui/NativeNoahIconButton";
+import { ScreenHeader } from "~/components/ScreenHeader";
 import { NativeNoahSelectionList } from "~/components/ui/NativeNoahSelectionList";
 import type { SettingsStackParamList } from "~/Navigators";
 import {
@@ -42,16 +41,12 @@ const BitcoinUnitSettingsScreen = () => {
 
   return (
     <NoahSafeAreaView className="flex-1 bg-background" maxContentWidth={640}>
-      <View className="flex-row items-center px-5 pt-4">
-        <NativeNoahBackButton
-          onPress={() => navigation.goBack()}
-          className="mr-3"
-          testID="bitcoin-unit-back-button"
-        />
-        <T>
-          <Text className="text-2xl font-bold text-foreground">Bitcoin Unit</Text>
-        </T>
-      </View>
+      <ScreenHeader
+        title={gt("Bitcoin Unit")}
+        onBack={() => navigation.goBack()}
+        backButtonTestID="bitcoin-unit-back-button"
+        className="px-5"
+      />
       <View className="mt-4 flex-1">
         <NativeNoahSelectionList
           value={bitcoinAmountUnit}
