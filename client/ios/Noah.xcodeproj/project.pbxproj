@@ -475,6 +475,7 @@
 				C39DD7082E0C95AF000CB6A9 /* Frameworks */,
 				C39DD70A2E0C95AF000CB6A9 /* Resources */,
 				C39DD70F2E0C95AF000CB6A9 /* Bundle React Native code and images */,
+				D69DD622E44C450AB3B42459 /* Upload Debug Symbols to Sentry */,
 				C3C8E7142EC4DF3C00A7BF32 /* Embed Foundation Extensions */,
 				8E05494DDA98B659FE796968 /* [CP] Embed Pods Frameworks */,
 				3D92B3E53869B522CD1B9110 /* [CP] Copy Pods Resources */,
@@ -771,7 +772,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [[ -f \"$PODS_ROOT/../.xcode.env\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env\"\nfi\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\nif [[ \"$CONFIGURATION\" = *Debug* ]]; then\n  echo \"Skipping Sentry debug files upload for Debug configuration\"\n  exit 0\nfi\n\nif [[ \"$PLATFORM_NAME\" == *simulator* ]]; then\n  echo \"Skipping Sentry debug files upload for simulator builds\"\n  exit 0\nfi\n\nif [[ -z \"$ARCHIVE_PATH\" ]]; then\n  echo \"Skipping Sentry debug files upload outside archive builds\"\n  exit 0\nfi\n\nif [[ -z \"$NODE_BINARY\" ]]; then\n  export NODE_BINARY=$(command -v node)\nfi\n\n/bin/sh `\"$NODE_BINARY\" --print \"require('path').dirname(require.resolve('@sentry/react-native/package.json')) + '/scripts/sentry-xcode-debug-files.sh'\"`\n\n";
+			shellScript = "if [[ -f \"$PODS_ROOT/../.xcode.env\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env\"\nfi\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\nif [[ \"$CONFIGURATION\" = *Debug* ]]; then\n  echo \"Skipping Sentry debug files upload for Debug configuration\"\n  exit 0\nfi\n\nif [[ \"$PLATFORM_NAME\" == *simulator* ]]; then\n  echo \"Skipping Sentry debug files upload for simulator builds\"\n  exit 0\nfi\n\n# Archive build phases use ACTION=install; ARCHIVE_PATH is only set in scheme post-actions.\nif [[ \"$ACTION\" != \"install\" ]]; then\n  echo \"Skipping Sentry debug files upload outside archive builds\"\n  exit 0\nfi\n\nif [[ -z \"$NODE_BINARY\" ]]; then\n  export NODE_BINARY=$(command -v node)\nfi\n\n/bin/sh `\"$NODE_BINARY\" --print \"require('path').dirname(require.resolve('@sentry/react-native/package.json')) + '/scripts/sentry-xcode-debug-files.sh'\"`\n\n";
 		};
 		2951B4B9361944A3900A3C98 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -1078,6 +1079,21 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
+		D69DD622E44C450AB3B42459 /* Upload Debug Symbols to Sentry */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Upload Debug Symbols to Sentry";
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			shellPath = /bin/sh;
+			shellScript = "if [[ -f \"$PODS_ROOT/../.xcode.env\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env\"\nfi\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\nif [[ \"$CONFIGURATION\" = *Debug* ]]; then\n  echo \"Skipping Sentry debug files upload for Debug configuration\"\n  exit 0\nfi\n\nif [[ \"$PLATFORM_NAME\" == *simulator* ]]; then\n  echo \"Skipping Sentry debug files upload for simulator builds\"\n  exit 0\nfi\n\n# Archive build phases use ACTION=install; ARCHIVE_PATH is only set in scheme post-actions.\nif [[ \"$ACTION\" != \"install\" ]]; then\n  echo \"Skipping Sentry debug files upload outside archive builds\"\n  exit 0\nfi\n\nif [[ -z \"$NODE_BINARY\" ]]; then\n  export NODE_BINARY=$(command -v node)\nfi\n\n/bin/sh `\"$NODE_BINARY\" --print \"require('path').dirname(require.resolve('@sentry/react-native/package.json')) + '/scripts/sentry-xcode-debug-files.sh'\"`\n\n";
+		};
+
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */

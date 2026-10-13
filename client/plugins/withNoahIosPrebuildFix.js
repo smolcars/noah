@@ -74,7 +74,8 @@ if [[ "$PLATFORM_NAME" == *simulator* ]]; then
   exit 0
 fi
 
-if [[ -z "$ARCHIVE_PATH" ]]; then
+# Archive build phases use ACTION=install; ARCHIVE_PATH is only set in scheme post-actions.
+if [[ "$ACTION" != "install" ]]; then
   echo "Skipping Sentry debug files upload outside archive builds"
   exit 0
 fi
@@ -212,6 +213,27 @@ function fixSentryBuildPhaseScripts(project) {
     if (name === "Upload Debug Symbols to Sentry") {
       entry.shellScript = JSON.stringify(SENTRY_DEBUG_FILES_SCRIPT);
     }
+  }
+
+  for (const [targetId, target] of Object.entries(project.pbxNativeTargetSection())) {
+    if (!isRecord(target) || !["Noah", "Noah-Signet"].includes(stripQuotes(target.name))) {
+      continue;
+    }
+    if (
+      target.buildPhases.some(
+        (phase) => stripQuotes(section[phase.value]?.name) === "Upload Debug Symbols to Sentry",
+      )
+    ) {
+      continue;
+    }
+    const { buildPhase } = project.addBuildPhase(
+      [],
+      "PBXShellScriptBuildPhase",
+      "Upload Debug Symbols to Sentry",
+      targetId,
+      { shellPath: "/bin/sh", shellScript: "" },
+    );
+    buildPhase.shellScript = JSON.stringify(SENTRY_DEBUG_FILES_SCRIPT);
   }
 }
 
