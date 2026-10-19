@@ -64,5 +64,39 @@ struct BackupIntegrationTests {
             expected: .init(network: "regtest", walletFingerprint: opened.manifest.walletFingerprint))
         #expect(validated.sha256 == opened.manifest.snapshotSha256)
         #expect(Int(validated.schemaVersion) == opened.manifest.barkSchemaVersion)
+
+        // Restore into a different, empty datadir with its own seed item.
+        let original = try #require(try await session.summary())
+        let restoreRoot = root.appending(path: "device-b")
+        try FileManager.default.createDirectory(at: restoreRoot, withIntermediateDirectories: true)
+        let restoredLocation = WalletDataLocation(variant: .regtest, documentsDirectory: restoreRoot)
+        let restoredSession = WalletSession(variant: .regtest, location: restoredLocation)
+        let seedItem = KeychainPassword(service: "com.noah.tests.restore.\(UUID().uuidString)", account: "noah")
+        defer { seedItem.remove() }
+        let restorer = WalletRestorer(
+            variant: .regtest, session: restoredSession, location: restoredLocation, seed: seedItem,
+            makeClient: { phrase in
+                let scratch = Memory()
+                return ServerClient.make(variant: .regtest, tokens: AuthTokenProvider(dependencies: .init(
+                    readToken: { scratch.lock.withLock { scratch.token } },
+                    saveToken: { token in scratch.lock.withLock { scratch.token = token } },
+                    clearToken: { scratch.lock.withLock { scratch.token = nil } },
+                    readMnemonic: { phrase },
+                    login: { try await ServerClient.login(variant: .regtest, mnemonic: $0) },
+                    now: { Date() })))
+            },
+            workDirectory: restoreRoot)
+
+        let outcome = try await restorer.restore(mnemonic: mnemonic)
+        #expect(outcome.backupId == backupId)
+        #expect(outcome.snapshotSha256 == first.snapshotSha256)
+        #expect(seedItem.read() == .found(mnemonic))
+        let restored = try #require(try await restoredSession.summary())
+        #expect(restored.fingerprint == original.fingerprint)
+        #expect(restored.movementCount == original.movementCount)
+        try await restoredSession.close()
+        let leftovers = try FileManager.default.contentsOfDirectory(atPath: restoreRoot.path)
+            .filter { $0.hasPrefix(".wallet-") }
+        #expect(leftovers.isEmpty, "rollback and staging folders are cleaned up")
     }
 }

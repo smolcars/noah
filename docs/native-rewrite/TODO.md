@@ -92,7 +92,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] v2 archive — Android
 - [ ] v1 legacy restore
 - [x] Backup upload: FFI snapshot → seal → initiate → S3 PUT → complete, unchanged snapshot skipped, export file — iOS (live-tested against S3 with the dev `.env` server)
-- [ ] Restore: list (temporary token) → download → open → validate → install/rollback → open wallet; v1 legacy fallback
+- [x] Restore: list (temporary token) → download → open → validate → install/rollback → open wallet → save seed; v1 legacy fallback through the same rollback swap; launch recovers an install interrupted mid-swap — iOS (live round trip + offline rollback test)
+- [ ] Restore UI (RestoreWalletScreen) and `backup-storage` bookkeeping
 - [ ] Backup coordinator: single in-flight, 5 s debounce, generation counter, backoff 15 s → 15 min with jitter, suspension gates
 - [ ] Cross-platform fixtures (iOS ↔ Android ↔ RN-created backups); `scripts/decrypt_backup.js` supports v2
 

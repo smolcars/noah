@@ -38,6 +38,10 @@ final class AppModel {
     }
 
     func start() async {
+        // A restore interrupted mid-swap must not look like a fresh install.
+        if SnapshotInstaller(datadir: WalletDataLocation(variant: variant).directory).recoverInterruptedInstall() {
+            log.w("Recovered the wallet folder from an interrupted restore")
+        }
         let state = LaunchState.current(variant: variant)
         switch state {
         case .existingWallet:
