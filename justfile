@@ -111,6 +111,16 @@ ios-native-build variant="Regtest": ios-native-generate
 ios-native-test variant="Regtest" device="iPhone 17": ios-native-generate
     cd apps/ios && xcodebuild -project Noah.xcodeproj -scheme {{ if variant == "Mainnet" { "Noah" } else { "Noah-" + variant } }} -destination "platform=iOS Simulator,name={{ device }}" -derivedDataPath build/DerivedData test
 
+# Native Android app (apps/android). variant: Regtest | Signet | Mainnet
+android-native-build variant="Regtest":
+    cd apps/android && ./gradlew :app:assemble{{ variant }}Debug
+
+android-native-install variant="Regtest":
+    cd apps/android && ./gradlew :app:install{{ variant }}Debug
+
+android-native-test:
+    cd apps/android && ./gradlew :app:testRegtestDebugUnitTest
+
 # Server commands
 server:
     bacon

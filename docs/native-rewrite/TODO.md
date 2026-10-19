@@ -18,12 +18,12 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] iOS widget extension reused from `client/ios/SharedWidget` (one target, per-variant bundle ID + kind from xcconfig)
 - [ ] iOS App Intents ported from `client/ios/SharedAppIntents` onto `WalletService` (needs 0.3)
 - [ ] iOS `processing` background mode + `BGTaskSchedulerPermittedIdentifiers` (with 0.6 background tasks)
-- [ ] `apps/android`: Gradle KTS, version catalog, flavors `mainnet`/`signet`/`regtest`, same applicationIds, signing config, `google-services.json` per flavor, minSdk 24
-- [ ] Android component names unchanged: launcher `com.noahwallet.MainActivity`, widget receivers `com.noahwallet.widgets.NoahWidget{Mainnet,Signet,Regtest}Provider` (+ same `@xml/noah_widget_*_info`)
-- [ ] Android widgets reused from `client/android/app/src/main/java/com/noahwallet/widgets`
-- [ ] `apps/fixtures/` shared JSON fixtures + XCTest/JUnit loaders
+- [x] `apps/android`: Gradle KTS, version catalog, flavors `mainnet`/`signet`/`regtest`, same applicationIds, signing config, `google-services.json` per flavor, minSdk 24
+- [x] Android component names unchanged: launcher `com.noahwallet.MainActivity`, widget receivers `com.noahwallet.widgets.NoahWidget{Mainnet,Signet,Regtest}Provider` (+ same `@xml/noah_widget_*_info`)
+- [x] Android widgets reused from `client/android/app/src/main/java/com/noahwallet/widgets`
+- [x] `apps/fixtures/` shared JSON fixtures + XCTest/JUnit loaders
 - [x] `justfile` recipes: `ios-native-*`
-- [ ] `justfile` recipes: `android-native-*`
+- [x] `justfile` recipes: `android-native-*`
 - [ ] CI: build + unit tests for both apps (all three variants compile)
 
 ### 0.3 Wallet SDK integration
