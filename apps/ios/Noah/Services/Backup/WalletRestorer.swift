@@ -243,3 +243,26 @@ struct WalletRestorer: Sendable {
         }
     }
 }
+
+/// One launch recovery at a time. The UI's start and push jobs each settle an
+/// interrupted restore first; without this, whichever came second hit the
+/// reservation the first held and failed. A restore actually in flight still
+/// rejects them.
+actor RestoreRecovery {
+    private let recover: @Sendable () async throws -> RestoreTransaction.Recovery
+    private var tail: Task<RestoreTransaction.Recovery, any Error>?
+
+    init(recover: @escaping @Sendable () async throws -> RestoreTransaction.Recovery) {
+        self.recover = recover
+    }
+
+    func settle() async throws -> RestoreTransaction.Recovery {
+        let previous = tail
+        let pass = Task { [recover] in
+            _ = await previous?.result
+            return try await recover()
+        }
+        tail = pass
+        return try await pass.value
+    }
+}

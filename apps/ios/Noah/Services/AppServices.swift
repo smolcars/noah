@@ -13,6 +13,8 @@ final class AppServices: Sendable {
     let seed: KeychainPassword
     /// One backup at a time for UI, push and background work.
     let backupCoordinator: BackupCoordinator
+    /// One interrupted-restore recovery at a time for launch and push work.
+    let restoreRecovery: RestoreRecovery
 
     init(variant: AppVariant, session: WalletSession = .shared) {
         self.variant = variant
@@ -28,6 +30,10 @@ final class AppServices: Sendable {
             return mnemonic
         })
         backupCoordinator = BackupCoordinator(dependencies: .live(service: backups, session: session))
+        let location = WalletDataLocation(variant: variant)
+        restoreRecovery = RestoreRecovery {
+            try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: seed)
+        }
     }
 
     var appVersion: String {
@@ -48,17 +54,13 @@ final class AppServices: Sendable {
     struct RestoreNotSettled: Error {}
 
     func ensureWalletOpen() async throws {
-        let wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
-        guard wallet?.isWalletSuspended != true else { throw WalletSuspended() }
         // A background (push) launch never runs AppModel.start: settle an interrupted
         // restore here too, instead of failing every job until the app is opened.
-        let location = WalletDataLocation(variant: variant)
-        if location.restorePending,
-            try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: seed)
-                == .waitingForKeychain
-        {
-            throw RestoreNotSettled()
-        }
+        // This runs without a journal too (it removes plaintext a restore left
+        // before writing one) and while suspended (nothing gets opened).
+        if try await restoreRecovery.settle() == .waitingForKeychain { throw RestoreNotSettled() }
+        let wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
+        guard wallet?.isWalletSuspended != true else { throw WalletSuspended() }
         try await session.ensureOpen(mnemonic: readMnemonic(), runDaemon: true, appVersion: appVersion)
     }
 

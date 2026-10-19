@@ -78,9 +78,7 @@ final class AppModel {
         // An interrupted restore must be settled before the datadir and seed
         // say anything about which wallet this is.
         do {
-            switch try await WalletRestorer.recoverInterruptedRestore(
-                session: session, location: WalletDataLocation(variant: variant),
-                seed: KeychainPassword.mnemonic(for: variant)) {
+            switch try await AppServices.shared.restoreRecovery.settle() {
             case .nothingPending: break
             case .rolledBack: log.w("Undid an interrupted restore")
             case .completed: log.w("Finished an interrupted restore")
@@ -154,10 +152,7 @@ final class AppModel {
                 loadWalletState: { self.settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init() },
                 saveWalletState: { try self.settings.setPersistedState($0, key: PersistedWalletState.key, version: PersistedWalletState.version) },
                 seedRestored: { await AppServices.shared.backupCoordinator.seedRestored(snapshotSha256: $0, backupId: $1) },
-                recover: {
-                    try await WalletRestorer.recoverInterruptedRestore(
-                        session: self.session, location: location, seed: KeychainPassword.mnemonic(for: variant))
-                },
+                recover: { try await AppServices.shared.restoreRecovery.settle() },
                 openWallet: {
                     await AppServices.shared.tokens.invalidate()
                     self.resumeOnboarding = false

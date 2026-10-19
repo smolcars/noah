@@ -231,6 +231,26 @@ struct WalletRestorerTests {
         _ = try? await pushOpen.value
     }
 
+    /// Review finding: UI start and a push job (or two push jobs) recovering
+    /// at once must both settle, not fail on each other's reservation.
+    @Test func concurrentLaunchRecoveriesWaitForEachOther() async throws {
+        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in throw OpenRefused() }
+        let gate = Gate()
+        let recovery = RestoreRecovery {
+            let hold = try await session.reserve()
+            await gate.enter()
+            await session.release(hold)
+            return .nothingPending
+        }
+        let first = Task { try await recovery.settle() }
+        await gate.waitUntilEntered()
+        let second = Task { try await recovery.settle() }
+        try await Task.sleep(for: .milliseconds(20))
+        await gate.release()
+        #expect(try await first.value == .nothingPending)
+        #expect(try await second.value == .nothingPending)
+    }
+
     @Test func launchRecoveryLeavesAnActiveRestoresFilesAlone() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in throw OpenRefused() }
