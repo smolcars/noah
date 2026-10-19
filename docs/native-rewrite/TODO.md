@@ -80,9 +80,10 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] HTTP clients (URLSession / OkHttp) incl. upload/download
 - [x] Server auth: `/v0/getk1` → sign (offline key `m/350/0`) → `/v0/auth/login` → JWT; refresh near expiry; retry once — iOS (live-tested on regtest)
 - [ ] Server auth — Android
-- [ ] Server registration + last-login + device info
+- [x] Server registration + last-login + device info (shared token provider/client) — iOS
 - [x] Push iOS: permission, APNs token → Expo token (RN installation ID, provisioning aps-environment), `register_push_token`, silent-push handler with 25 s budget, jobs for maintenance / invoice / claim / backup / heartbeat with job-status reports, widget refresh
-- [ ] Push iOS: wire registration after server registration; recurring_payment_due (M7); verify real delivery on a device (simctl push does not run the background handler)
+- [x] Push iOS: register the push token after server registration once onboarding is done (RN `usePushNotifications` gating)
+- [ ] Push iOS: recurring_payment_due (M7); verify real delivery on a device (simctl push does not run the background handler)
 - [ ] Push Android: FirebaseMessagingService + Expo token; all 6 types; job status + heartbeat
 - [ ] UnifiedPush (Android, non-GMS) in pure Kotlin
 - [ ] Background tasks: BGTaskScheduler / WorkManager (maintenance, recurring)
@@ -110,13 +111,13 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Tab shell: Home, Receive, Send, History (Liquid Glass tab bar on iOS 26)
 - [x] OnboardingScreen create/restore — iOS (language picker waits for 0.8 translations)
 - [x] Create-or-resume logic (`WalletCreator`, RN `walletCreation` test cases ported) — iOS
-- [ ] After FFI P0: `deriveStoreNextKeypair` + `peekKeyPair(0)` on creation, as RN does
+- [x] `deriveStoreNextKeypair` + key-0 public key (`staticVtxoPubkey`) on creation, as RN does — iOS
 - [x] BetaWarningScreen (accept before create, no double create) — iOS
 - [x] MnemonicScreen in onboarding (numbered grid, local-only expiring copy) — iOS
 - [ ] MnemonicScreen from Settings with biometric re-auth
 - [ ] RestoreWalletScreen (backup restore with staged progress)
-- [ ] EmailVerificationScreen (send/resend, 6-digit OTP, skip, reconcile verified)
-- [ ] LightningAddressScreen (username/domain, optional npub, skip)
+- [x] EmailVerificationScreen (send/resend, 6-digit OTP, skip, reconcile verified) — iOS
+- [x] LightningAddressScreen (username/domain, optional npub, skip) — iOS
 - [ ] PushNotificationsRequiredScreen
 - [ ] BatteryOptimizationScreen (Android)
 - [ ] UnifiedPushScreen (Android, non-GMS)

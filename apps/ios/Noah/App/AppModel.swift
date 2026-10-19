@@ -31,7 +31,7 @@ final class AppModel {
     @ObservationIgnored private let creator: WalletCreator
 
     init() {
-        server = ServerRegistration(variant: .current)
+        server = ServerRegistration(variant: .current, client: AppServices.shared.client)
         creator = WalletCreator(
             dependencies: .live(session: session, variant: variant, appVersion: appVersion))
         isBalanceHidden = settings.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key)?
@@ -81,6 +81,7 @@ final class AppModel {
         try? settings.setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)
         phase = .wallet
         await refresh()
+        await registerPush()
     }
 
     func refresh() async {
@@ -141,6 +142,23 @@ final class AppModel {
             try await server.reportLastLogin()
         } catch {
             log.w("Server setup failed; it can be retried from onboarding or Home")
+            return
+        }
+        await registerPush()
+    }
+
+    /// Like RN's `usePushNotifications`: only once onboarding is finished and
+    /// the server knows this wallet, so the prompt never interrupts onboarding.
+    private func registerPush() async {
+        guard phase == .wallet, server.state.isRegisteredWithServer == true else { return }
+        do {
+            switch try await PushRegistration.shared.register() {
+            case .registered: break
+            case .permissionDenied: log.i("Push permission denied; skipping push registration")
+            case .deviceNotSupported: log.i("Push registration unavailable on this device")
+            }
+        } catch {
+            log.w("Push registration failed: \(Self.describe(error))")
         }
     }
 
