@@ -96,6 +96,139 @@ struct BackupArchiveTests {
         }
     }
 
+    /// Zip with the given file entries, deflated.
+    private func zip(_ entries: [(String, Data)]) throws -> Data {
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let url = root.appending(path: "\(UUID().uuidString).zip")
+        let archive = try Archive(url: url, accessMode: .create)
+        for (name, data) in entries {
+            try archive.addEntry(
+                with: name, type: .file, uncompressedSize: Int64(data.count), compressionMethod: .deflate
+            ) { position, size in
+                data.subdata(in: Int(position)..<Int(position) + size)
+            }
+        }
+        return try Data(contentsOf: url)
+    }
+
+    /// Overwrites a 32-bit field in every local header, central directory
+    /// record and data descriptor, the way a hostile archive would lie.
+    private func patch(_ zip: Data, crc: UInt32? = nil, uncompressedSize: UInt32? = nil) -> Data {
+        var bytes = [UInt8](zip)
+        func read(_ at: Int) -> UInt32 { bytes[at..<at + 4].reversed().reduce(0) { $0 << 8 | UInt32($1) } }
+        func write(_ value: UInt32, _ at: Int) { for i in 0..<4 { bytes[at + i] = UInt8(value >> (8 * i) & 0xff) } }
+        var offset = 0
+        while offset + 30 < bytes.count {
+            switch read(offset) {
+            case 0x0403_4b50:  // local file header
+                if let crc { write(crc, offset + 14) }
+                if let uncompressedSize { write(uncompressedSize, offset + 22) }
+            case 0x0201_4b50:  // central directory
+                if let crc { write(crc, offset + 16) }
+                if let uncompressedSize { write(uncompressedSize, offset + 24) }
+            case 0x0807_4b50:  // data descriptor
+                if let crc { write(crc, offset + 4) }
+                if let uncompressedSize { write(uncompressedSize, offset + 12) }
+            default: break
+            }
+            offset += 1
+        }
+        return Data(bytes)
+    }
+
+    private func firstEntry(of zip: Data) throws -> (Archive, Entry) {
+        let archive = try Archive(data: zip, accessMode: .read)
+        return (archive, try #require(archive.makeIterator().next()))
+    }
+
+    @Test func extractionStopsWhenAnEntryInflatesPastItsLimit() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let zeros = Data(count: 256 * 1024)
+        // Honest header over the limit: refused before writing anything.
+        let (honest, honestEntry) = try firstEntry(of: zip([("db.sqlite", zeros)]))
+        let refused = root.appending(path: "refused")
+        #expect(throws: BackupArchive.Failure.tooLarge) {
+            try BackupArchive.extract(honestEntry, from: honest, to: refused, limit: 1024)
+        }
+        #expect(!FileManager.default.fileExists(atPath: refused.path))
+
+        // Header claims 16 bytes: the byte count stops it while inflating.
+        let (lying, lyingEntry) = try firstEntry(of: patch(try zip([("db.sqlite", zeros)]), uncompressedSize: 16))
+        #expect(lyingEntry.uncompressedSize == 16)
+        let bomb = root.appending(path: "bomb")
+        #expect(throws: BackupArchive.Failure.tooLarge) {
+            try BackupArchive.extract(lyingEntry, from: lying, to: bomb, limit: 64 * 1024)
+        }
+        let written = (try? FileManager.default.attributesOfItem(atPath: bomb.path)[.size] as? Int) ?? 0
+        #expect(written <= 64 * 1024)
+    }
+
+    @Test func extractionRejectsAChecksumMismatch() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let (archive, entry) = try firstEntry(of: patch(try zip([("db.sqlite", Data("wallet".utf8))]), crc: 0xDEAD_BEEF))
+        #expect(throws: BackupArchive.Failure.checksumMismatch("db.sqlite")) {
+            try BackupArchive.extract(entry, from: archive, to: root.appending(path: "out"), limit: 1024)
+        }
+    }
+
+    @Test func openRejectsACorruptedSnapshot() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manifestJSON = try BackupArchive.encode(manifest)
+        let corrupted = patch(try zip([("manifest.json", manifestJSON), ("db.sqlite", Data("wallet".utf8))]), crc: 0x0BAD_F00D)
+        let encrypted = root.appending(path: "corrupt.noahbackup")
+        try BackupCrypto.encrypt(corrupted, mnemonic: mnemonic, version: .snapshot).write(to: encrypted)
+        let destination = root.appending(path: "restore")
+        #expect(throws: BackupArchive.Failure.self) {
+            try BackupArchive.open(encrypted: encrypted, mnemonic: mnemonic, into: destination)
+        }
+        #expect(!FileManager.default.fileExists(atPath: destination.path))
+    }
+
+    /// RN `createBackup`: base64 of a v1 envelope around the datadir zipped
+    /// with its `backup_staging` parent.
+    private func legacyBackup(_ entries: [(String, Data)]) throws -> Data {
+        let envelope = try BackupCrypto.encrypt(zip(entries), mnemonic: mnemonic, version: .legacyDirectory)
+        return Data(envelope.base64EncodedString().utf8)
+    }
+
+    @Test func legacyBackupUnpacksOnlyThisVariantsFolder() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let base64 = try legacyBackup([
+            ("backup_staging/noah-data-regtest/db.sqlite", Data("db".utf8)),
+            ("backup_staging/noah-data-regtest/db.sqlite-wal", Data("wal".utf8)),
+            ("backup_staging/noah-data-regtest/nested/state.json", Data("{}".utf8)),
+            ("backup_staging/noah-data-signet/db.sqlite", Data("other network".utf8)),
+        ])
+        let destination = root.appending(path: "legacy")
+        try BackupArchive.openLegacy(base64: base64, mnemonic: mnemonic, variant: .regtest, into: destination)
+        #expect(try Data(contentsOf: destination.appending(path: "db.sqlite")) == Data("db".utf8))
+        #expect(try Data(contentsOf: destination.appending(path: "db.sqlite-wal")) == Data("wal".utf8))
+        #expect(try Data(contentsOf: destination.appending(path: "nested/state.json")) == Data("{}".utf8))
+        let names = try FileManager.default.contentsOfDirectory(atPath: destination.path).sorted()
+        #expect(names == ["db.sqlite", "db.sqlite-wal", "nested"])
+    }
+
+    @Test func legacyBackupRejectsUnsafeOrIncompleteArchives() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let prefix = "backup_staging/noah-data-regtest/"
+        let cases: [([(String, Data)], BackupArchive.Failure)] = [
+            ([(prefix + "db.sqlite", Data()), (prefix + "../escape", Data())], .unexpectedEntry(prefix + "../escape")),
+            ([(prefix + "db.sqlite", Data()), (prefix + "a//b", Data())], .unexpectedEntry(prefix + "a//b")),
+            ([(prefix + "other.sqlite", Data())], .snapshotMissing),
+            ([(prefix + "db.sqlite", Data())] + (0..<256).map { (prefix + "f\($0)", Data()) }, .tooLarge),
+        ]
+        for (entries, failure) in cases {
+            let destination = root.appending(path: UUID().uuidString)
+            #expect(throws: failure) {
+                try BackupArchive.openLegacy(base64: legacyBackup(entries), mnemonic: mnemonic, variant: .regtest, into: destination)
+            }
+            #expect(!FileManager.default.fileExists(atPath: destination.path), "partial restore is cleaned up")
+        }
+        #expect(throws: BackupArchive.Failure.notLegacyBackup) {
+            try BackupArchive.openLegacy(base64: Data("not base64!".utf8), mnemonic: mnemonic, variant: .regtest, into: root.appending(path: "x"))
+        }
+    }
+
     /// Expected strings from `new Date(ms).toISOString()` in Node.
     @Test func timestampMatchesJavaScriptToISOString() {
         #expect(BackupArchive.timestamp(Date(timeIntervalSince1970: 1_792_436_137.5)) == "2026-10-19T18:55:37.500Z")

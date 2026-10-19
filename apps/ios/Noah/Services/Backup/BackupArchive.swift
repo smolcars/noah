@@ -33,7 +33,17 @@ enum BackupArchive {
         case snapshotMissing
         case unexpectedEntry(String)
         case invalidManifest
+        /// Inflates past the restore limits (headers can understate sizes).
+        case tooLarge
+        case checksumMismatch(String)
+        case notLegacyBackup
     }
+
+    /// Upper bound on everything a restore unpacks. Wallet databases are a
+    /// few MB; this only stops a hostile archive from filling the disk.
+    static let maxUnpackedBytes: Int64 = 1 << 30
+    private static let maxManifestBytes: Int64 = 64 * 1024
+    private static let maxLegacyEntries = 256
 
     /// Zips `snapshot` with its manifest, encrypts it for `mnemonic` and
     /// writes it to `destination`, which must not exist.
@@ -84,7 +94,8 @@ enum BackupArchive {
                     throw Failure.unexpectedEntry(name)
                 }
                 guard extracted.insert(name).inserted else { throw Failure.unexpectedEntry(name) }
-                _ = try archive.extract(entry, to: directory.appending(path: name))
+                let limit = name == manifestName ? maxManifestBytes : maxUnpackedBytes
+                _ = try extract(entry, from: archive, to: directory.appending(path: name), limit: limit)
             }
             let snapshot = directory.appending(path: snapshotName)
             guard fileManager.fileExists(atPath: snapshot.path) else { throw Failure.snapshotMissing }
@@ -94,6 +105,64 @@ enum BackupArchive {
             try? fileManager.removeItem(at: directory)
             throw error
         }
+    }
+
+    /// v1 (RN `createBackup`): base64 text of a v1 envelope around a zip of
+    /// `backup_staging/noah-data-<variant>/…`. Unpacks that folder's files
+    /// into `directory` (must not exist).
+    static func openLegacy(base64: Data, mnemonic: String, variant: AppVariant, into directory: URL) throws {
+        let fileManager = FileManager.default
+        guard !fileManager.fileExists(atPath: directory.path) else { throw Failure.destinationExists }
+        let text = String(decoding: base64, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let envelope = Data(base64Encoded: text) else { throw Failure.notLegacyBackup }
+        let zip = try BackupCrypto.decrypt(envelope, mnemonic: mnemonic, expecting: .legacyDirectory)
+
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: false)
+        do {
+            let prefix = "backup_staging/noah-data-\(variant.rawValue)/"
+            let archive = try Archive(data: zip, accessMode: .read)
+            var remaining = maxUnpackedBytes
+            var count = 0
+            for entry in archive where entry.type == .file && entry.path.hasPrefix(prefix) {
+                count += 1
+                guard count <= maxLegacyEntries else { throw Failure.tooLarge }
+                let relative = String(entry.path.dropFirst(prefix.count))
+                let parts = relative.split(separator: "/", omittingEmptySubsequences: false)
+                guard !parts.isEmpty, !parts.contains(where: { $0.isEmpty || $0 == "." || $0 == ".." }) else {
+                    throw Failure.unexpectedEntry(entry.path)
+                }
+                let destination = directory.appending(path: relative)
+                try fileManager.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+                remaining -= try extract(entry, from: archive, to: destination, limit: remaining)
+            }
+            guard fileManager.fileExists(atPath: directory.appending(path: snapshotName).path) else {
+                throw Failure.snapshotMissing
+            }
+        } catch {
+            try? fileManager.removeItem(at: directory)
+            throw error
+        }
+    }
+
+    /// Writes one file entry to `destination` (must not exist), stopping as
+    /// soon as more than `limit` bytes come out, and rejects a CRC-32 that
+    /// doesn't match the archive. Returns the bytes written.
+    static func extract(_ entry: Entry, from archive: Archive, to destination: URL, limit: Int64) throws -> Int64 {
+        guard entry.uncompressedSize <= UInt64(max(limit, 0)) else { throw Failure.tooLarge }
+        guard !FileManager.default.fileExists(atPath: destination.path) else { throw Failure.unexpectedEntry(entry.path) }
+        guard FileManager.default.createFile(atPath: destination.path, contents: nil) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        let handle = try FileHandle(forWritingTo: destination)
+        defer { try? handle.close() }
+        var written: Int64 = 0
+        let checksum = try archive.extract(entry, skipCRC32: false) { chunk in
+            written += Int64(chunk.count)
+            guard written <= limit else { throw Failure.tooLarge }
+            try handle.write(contentsOf: chunk)
+        }
+        guard checksum == entry.checksum else { throw Failure.checksumMismatch(entry.path) }
+        return written
     }
 
     /// Strict parse, matching `parseBackupManifest` in backupService.ts:
