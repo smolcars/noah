@@ -16,6 +16,7 @@ final class AppModel {
     private(set) var phase: Phase = .launching
     private(set) var summary: WalletSession.Summary?
     private(set) var walletError: String?
+    private(set) var resumeOnboarding = false
     var isBalanceHidden: Bool {
         didSet { saveIsBalanceHidden() }
     }
@@ -23,12 +24,14 @@ final class AppModel {
 
     let variant = AppVariant.current
     let session = WalletSession.shared
+    let server: ServerRegistration
     private let log = AppLog("app")
     private let settings = SettingsStorage.shared
     private let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
     @ObservationIgnored private let creator: WalletCreator
 
     init() {
+        server = ServerRegistration(variant: .current)
         creator = WalletCreator(
             dependencies: .live(session: session, variant: variant, appVersion: appVersion))
         isBalanceHidden = settings.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key)?
@@ -45,7 +48,8 @@ final class AppModel {
         let state = LaunchState.current(variant: variant)
         switch state {
         case .existingWallet:
-            phase = .wallet
+            resumeOnboarding = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized != true
+            phase = resumeOnboarding ? .onboarding : .wallet
             await openExistingWallet()
         case .onboarding:
             phase = .onboarding
@@ -57,6 +61,12 @@ final class AppModel {
     /// Onboarding "I accept": create (or resume) the wallet.
     func createWallet() async throws {
         try await creator.createOrResume()
+        var wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
+        wallet.isInitialized = false
+        wallet.staticVtxoPubkey = try await session.peekPublicKey(index: 0)
+        try settings.setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)
+        // Registration failure must not hide the newly created recovery phrase.
+        Task { await startServerServices() }
     }
 
     func currentMnemonicWords() -> [String] {
@@ -65,6 +75,10 @@ final class AppModel {
     }
 
     func finishOnboarding() async {
+        var wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
+        wallet.isInitialized = true
+        wallet.isWalletLoaded = true
+        try? settings.setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)
         phase = .wallet
         await refresh()
     }
@@ -116,6 +130,17 @@ final class AppModel {
         } catch {
             log.e("Failed to open wallet: \(Self.describe(error))")
             walletError = String(localized: "Couldn't open your wallet.")
+            return
+        }
+        await startServerServices()
+    }
+
+    private func startServerServices() async {
+        do {
+            try await server.ensureRegistered()
+            try await server.reportLastLogin()
+        } catch {
+            log.w("Server setup failed; it can be retried from onboarding or Home")
         }
     }
 

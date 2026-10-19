@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @Environment(AppModel.self) private var model
+    @State private var showEmail = false
 
     var body: some View {
         @Bindable var model = model
@@ -21,6 +22,29 @@ struct HomeView: View {
                         unit: model.amountUnit,
                         isHidden: $model.isBalanceHidden)
                         .padding(.top, 24)
+
+                    if model.server.state.isEmailVerified != true && model.server.state.isEmailPromptDismissed != true {
+                        NoahCard {
+                            HStack(alignment: .top, spacing: 12) {
+                                Button { showEmail = true } label: {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Label("Add Emergency Email", systemImage: "envelope")
+                                            .font(NoahFont.headline)
+                                        Text("Optional alerts can help us reach you if your VTXOs need attention before they expire.")
+                                            .font(NoahFont.footnote)
+                                            .foregroundStyle(NoahColor.mutedForeground)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.plain)
+                                Button("Dismiss emergency email prompt", systemImage: "xmark") {
+                                    model.server.dismissEmailPrompt()
+                                }
+                                .labelStyle(.iconOnly)
+                                .frame(minWidth: 44, minHeight: 44)
+                            }
+                        }
+                    }
 
                     NoahCard {
                         VStack(alignment: .leading, spacing: 16) {
@@ -68,6 +92,9 @@ struct HomeView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(isPresented: $showEmail) {
+                EmergencyEmailView(fromOnboarding: false, onContinue: { showEmail = false })
+            }
         }
     }
 }

@@ -1,10 +1,9 @@
 import SwiftUI
 
-/// Welcome → beta warning (creates the wallet) → recovery phrase → Home.
-/// Email and Lightning address steps join once server auth lands.
+/// Welcome → beta → recovery phrase → emergency email → Lightning address → Home.
 struct OnboardingFlow: View {
     enum Step: Hashable {
-        case beta, mnemonic, restore
+        case beta, mnemonic, email, lightning, restore
     }
 
     @Environment(AppModel.self) private var model
@@ -18,13 +17,20 @@ struct OnboardingFlow: View {
                     case .beta:
                         BetaWarningView(onCreated: { path.append(.mnemonic) }, onDecline: { path.removeLast() })
                     case .mnemonic:
-                        MnemonicView(onContinue: { Task { await model.finishOnboarding() } })
+                        MnemonicView(onContinue: { path.append(.email) })
+                    case .email:
+                        EmergencyEmailView(fromOnboarding: true, onContinue: { path.append(.lightning) })
+                    case .lightning:
+                        LightningAddressView(onContinue: { Task { await model.finishOnboarding() } })
                     case .restore:
                         PendingFeatureView(title: "Restore Wallet")
                     }
                 }
         }
         .tint(NoahColor.brand)
+        .onAppear {
+            if model.resumeOnboarding && path.isEmpty { path = [.mnemonic] }
+        }
     }
 }
 
