@@ -55,7 +55,7 @@ actor BtcMapRepository {
             try await Self.retry {
                 let data = try await fetch(url)
                 let patches = try JSONDecoder().decode([BtcMapPatch].self, from: data)
-                let merged = current.merging(patches, at: now.ISO8601Format(.iso8601(timeZone: .gmt, includingFractionalSeconds: true)))
+                let merged = current.merging(patches, at: Self.timestamp(now))
                 try JSONEncoder().encode(merged).write(to: cacheURL, options: .atomic)
                 return merged
             }
@@ -93,6 +93,12 @@ actor BtcMapRepository {
         let result = try await task.value
         details[place.id] = (now, result)
         return result
+    }
+
+    static func timestamp(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
     }
 
     static func syncURL(since: String) -> URL {

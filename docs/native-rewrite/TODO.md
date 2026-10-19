@@ -204,9 +204,9 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Server wake sync
 
 ## M8 — BTC Map
-- [ ] MapLibre native map, themed styles, clustering
-- [ ] Bundled snapshot + BTC Map v4 sync, GeoNames city search
-- [ ] Merchant detail sheet / pane, location
+- [x] MapLibre native map, themed styles, clustering — iOS
+- [x] Bundled snapshot + BTC Map v4 sync, GeoNames city search — iOS (RN-generated shared fixtures, persisted viewport)
+- [x] Merchant detail sheet / pane, location — iOS
 
 ## Cutover
 - [ ] Adaptive layouts (iPad / landscape / foldables) parity
