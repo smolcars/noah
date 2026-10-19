@@ -43,6 +43,9 @@ class WalletRestorerTest {
         var reportedSize: Long? = null
         var reportedHash: String? = null
         var network = "regtest"
+        var legacy = false
+        var newestCorrupt = false
+        var listFails = false
         var verifyGate: CompletableDeferred<Unit>? = null
         val entered = CompletableDeferred<Unit>()
         val session = WalletSession("regtest", location, inspect = { WalletDatabase.Properties("regtest", "abcd") },
@@ -58,20 +61,39 @@ class WalletRestorerTest {
             val encrypted = File(root, "backup")
             if (!encrypted.exists()) BackupArchive.seal(source,
                 BackupArchive.Manifest(2, "x", "sha", network, "abcd", null, null, 42), "new seed", encrypted, root)
+            val legacyFile = File(root, "legacy")
+            if (legacy) {
+                val bytes = java.io.ByteArrayOutputStream()
+                java.util.zip.ZipOutputStream(bytes).use { zip ->
+                    zip.putNextEntry(java.util.zip.ZipEntry("backup_staging/noah-data-regtest/db.sqlite"))
+                    zip.write("new wallet".toByteArray()); zip.closeEntry()
+                }
+                legacyFile.writeBytes(java.util.Base64.getEncoder().encode(
+                    BackupCrypto.encrypt(bytes.toByteArray(), "new seed", BackupCrypto.Version.legacyDirectory)))
+            }
             val info = """{"backup_id":"b1","created_at":"x","encrypted_sha256":"${reportedHash ?: BackupArchive.sha256(encrypted)}","encrypted_size":${reportedSize ?: encrypted.length()},"format_version":2}"""
             return WalletRestorer("regtest", session, location, seed,
                 makeClient = { ServerClient.make("http://fake", engine = MockEngine { request ->
                     val body = when (request.url.encodedPath) {
-                        "/v0/backup/v2/list" -> "[$info]"
-                        "/v0/backup/v2/download" -> """{"backup":$info,"download_url":"http://download"}"""
+                        "/v0/backup/v2/list" -> {
+                            if (listFails) return@MockEngine respond("{}", HttpStatusCode.InternalServerError)
+                            if (legacy) "[]" else if (newestCorrupt) "[${info.replace("b1", "bad")},$info]" else "[$info]"
+                        }
+                        "/v0/backup/v2/download" -> {
+                            val bodyText = (request.body as io.ktor.http.content.TextContent).text
+                            val url = if (bodyText.contains("bad")) "http://bad" else "http://download"
+                            """{"backup":$info,"download_url":"$url"}"""
+                        }
+                        "/v0/backup/download_url" -> """{"backup_size":${legacyFile.length()},"download_url":"http://legacy"}"""
                         else -> error("Unexpected request")
                     }
                     respond(body, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
                 }) }, transaction = transaction,
                 validate = { _, _ -> if (validationFails) throw Boom() },
-                download = { _, destination, limit ->
-                    if (encrypted.length() > limit) throw WalletRestorer.Failure(WalletRestorer.Reason.downloadMismatch)
-                    encrypted.copyTo(destination)
+                download = { url, destination, limit ->
+                    val file = if (url == "http://legacy") legacyFile else encrypted
+                    if (file.length() > limit || url == "http://bad") throw WalletRestorer.Failure(WalletRestorer.Reason.downloadMismatch)
+                    file.copyTo(destination)
                 })
         }
         fun previous() {
@@ -83,6 +105,22 @@ class WalletRestorerTest {
         val world = World()
         try { withTimeout(10000) { world.block() } } finally { world.root.deleteRecursively() }
     }
+    @Test fun legacyUsesSameReservedTransactionAndSeedCommit() = runBlocking { world {
+        legacy = true
+        val outcome = restorer().restore("new seed")
+        assertNull(outcome.backupId); assertNull(outcome.snapshotSha256)
+        assertEquals("new wallet", location.database.readText()); assertEquals("new seed", seed.value)
+        assertFalse(location.restorePending)
+    } }
+    @Test fun corruptNewestFallsBackToRetainedBackup() = runBlocking { world {
+        newestCorrupt = true
+        val outcome = restorer().restore("new seed")
+        assertEquals("b1", outcome.backupId); assertEquals("new wallet", location.database.readText())
+    } }
+    @Test fun serverFailureNeverFallsBackToLegacyOrChangesWallet() = runBlocking { world {
+        listFails = true
+        assertTrue(runCatching { restorer().restore("new seed") }.isFailure); previous()
+    } }
     @Test fun failedOpenRollsBack() = runBlocking { world {
         openerFails = true; assertTrue(runCatching { restorer().restore("new seed") }.exceptionOrNull() is Boom); previous()
     } }

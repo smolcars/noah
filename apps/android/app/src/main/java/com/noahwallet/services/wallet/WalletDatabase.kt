@@ -34,10 +34,13 @@ object WalletDatabase {
         throw InspectionError()
     }
 
-    private fun inspectCopy(database: File): Properties = scratch.withFolderBlocking("inspect") { folder ->
-        val copy = File(folder, "wallet.sqlite")
-        database.copyTo(copy)
-        read(copy)
+    private fun inspectCopy(database: File): Properties {
+        scratch.sweepAbandoned()
+        return scratch.withFolderBlocking("inspect") { folder ->
+            val copy = File(folder, "wallet.sqlite")
+            database.copyTo(copy)
+            read(copy)
+        }
     }
 
     private fun read(file: File): Properties =

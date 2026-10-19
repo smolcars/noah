@@ -100,7 +100,7 @@ class WalletDatabaseDeviceTest {
             scratch.mkdirs()
             File(scratch, "wallet.sqlite").writeBytes(ByteArray(16))  // a killed run's copy
             assertEquals("regtest", WalletDatabase.properties(location.database).network)
-            assertFalse(scratch.exists())
+            assertTrue(scratch.listFiles().orEmpty().isEmpty())
         } finally { root.deleteRecursively() }
     }
 

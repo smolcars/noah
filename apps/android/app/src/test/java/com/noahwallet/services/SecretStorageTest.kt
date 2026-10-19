@@ -110,6 +110,15 @@ class SecretStorageTest {
         assertEquals(1, keys.created)
     }
 
+    @Test fun firstWriteThatLandsDespiteFailureStaysReadableForRestoreCommit() {
+        val keys = FakeKeys()
+        val file = FakeFile().apply { failAfterWrite = true }
+        val store = NativeSecretStore("test", keys, file)
+        assertTrue(store.save(secret) is SecretResult.Unavailable)
+        assertFound(store.read())
+        assertNotNull(file.bytes)
+    }
+
     @Test fun migrationVerifiesBeforeUseAndKeepsLegacyOnFailure() = runBlocking {
         val keys = FakeKeys()
         val file = FakeFile()
@@ -185,10 +194,12 @@ class SecretStorageTest {
         var bytes: ByteArray? = null
         var failWrite = false
         var corruptWrite = false
+        var failAfterWrite = false
         override fun read() = bytes?.copyOf()
         override fun writeAtomically(bytes: ByteArray) {
             if (failWrite) error("Write failed")
             this.bytes = if (corruptWrite) byteArrayOf(0) else bytes.copyOf()
+            if (failAfterWrite) error("Write landed but directory sync failed")
         }
         override fun delete() { bytes = null }
     }
