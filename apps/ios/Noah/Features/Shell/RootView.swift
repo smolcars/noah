@@ -15,7 +15,12 @@ struct RootView: View {
             case .wallet:
                 WalletTabs()
             case .blocked(let state):
-                LaunchMessageView(state: state)
+                if state == .seedWithoutWalletData {
+                    NavigationStack { RestoreWalletScreen(useStoredSeed: true) }
+                        .tint(NoahColor.brand)
+                } else {
+                    LaunchMessageView(state: state)
+                }
             case .restoreIncomplete:
                 LaunchMessageView(
                     title: "Restore didn't finish",
@@ -97,9 +102,9 @@ private struct LaunchMessageView: View {
     private static func message(for state: LaunchState) -> LocalizedStringKey {
         switch state {
         case .seedWithoutWalletData:
-            "A recovery phrase from a previous install is stored on this device. Restoring it lands soon."
+            "Use the recovery phrase stored on this device to restore your backup."
         case .walletDataWithoutSeed:
-            "Wallet data exists on this device but its recovery phrase could not be found."
+            "Wallet data exists on this device, but its recovery phrase is missing. Noah won't replace these files. Keep your recovery phrase and contact support for help recovering this wallet."
         case .secureStorageUnavailable:
             "Noah can't read its secure storage yet. Unlock your device to continue."
         case .existingWallet, .onboarding:

@@ -19,6 +19,9 @@ final class AppModel {
     private(set) var summary: WalletSession.Summary?
     private(set) var walletError: String?
     private(set) var resumeOnboarding = false
+    private(set) var isRestoring = false
+    private(set) var restoreStep: WalletRestorer.Step?
+    private(set) var restoreIssue: RestoreIssue?
     var isBalanceHidden: Bool {
         didSet { saveIsBalanceHidden() }
     }
@@ -101,6 +104,54 @@ final class AppModel {
     func currentMnemonicWords() -> [String] {
         guard case .found(let mnemonic) = KeychainPassword.mnemonic(for: variant).read() else { return [] }
         return mnemonic.split(separator: " ").map(String.init)
+    }
+
+    /// Both the Welcome entry and reinstall recovery use this closed-session flow.
+    func restoreWallet(phrase: String? = nil) async {
+        guard !isRestoring, restoreIssue?.requiresRestart != true else { return }
+        guard phase == .onboarding || phase == .blocked(.seedWithoutWalletData) else { return }
+        isRestoring = true
+        restoreIssue = nil
+        defer { isRestoring = false; restoreStep = nil }
+        var committed = false
+        do {
+            let mnemonic = try phrase ?? AppServices.shared.readMnemonic()
+            guard RecoveryPhraseInput.isValid(mnemonic) else {
+                restoreIssue = .invalidPhrase
+                return
+            }
+            let location = WalletDataLocation(variant: variant)
+            // Restoring over data belongs to a separate, explicit recovery flow.
+            guard !location.hasAnyData else { throw WalletSession.OpenError.walletDatabaseExists }
+            let variant = self.variant
+            let restorer = WalletRestorer(
+                variant: variant, session: session, location: location,
+                seed: KeychainPassword.mnemonic(for: variant),
+                makeClient: { ServerClient.makeRestore(variant: variant, mnemonic: $0) })
+            let outcome = try await restorer.restore(mnemonic: mnemonic) { [weak self] step in
+                Task { @MainActor in
+                    if self?.isRestoring == true { self?.restoreStep = step }
+                }
+            }
+            committed = true
+            try await RestoreCompletion(
+                loadWalletState: { self.settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init() },
+                saveWalletState: { try self.settings.setPersistedState($0, key: PersistedWalletState.key, version: PersistedWalletState.version) },
+                seedRestored: { await AppServices.shared.backupCoordinator.seedRestored(snapshotSha256: $0, backupId: $1) },
+                recover: {
+                    try await WalletRestorer.recoverInterruptedRestore(
+                        session: self.session, location: location, seed: KeychainPassword.mnemonic(for: variant))
+                },
+                openWallet: {
+                    await AppServices.shared.tokens.invalidate()
+                    self.resumeOnboarding = false
+                    self.phase = .wallet
+                    await self.openExistingWallet()
+                }).finish(outcome)
+        } catch {
+            log.e("Restore failed: \(SafeErrorDescription.of(error))")
+            restoreIssue = committed ? .committed : .from(error)
+        }
     }
 
     func finishOnboarding() async {
@@ -283,6 +334,7 @@ final class AppModel {
             return
         }
         await registerPush()
+        startBackupTriggers()
     }
 
     /// Like RN's `usePushNotifications`: only once onboarding is finished and

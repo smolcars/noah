@@ -23,7 +23,7 @@ struct OnboardingFlow: View {
                     case .lightning:
                         LightningAddressView(onContinue: { Task { await model.finishOnboarding() } })
                     case .restore:
-                        PendingFeatureView(title: "Restore Wallet")
+                        RestoreWalletScreen()
                     }
                 }
         }
