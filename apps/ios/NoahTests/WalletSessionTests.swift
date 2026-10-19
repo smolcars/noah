@@ -129,6 +129,27 @@ struct WalletSessionTests {
         await session.release(reservation)
     }
 
+    @Test(.timeLimit(.minutes(1))) func closeStopsReceiveObserversAndWaitsForThem() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let session = offlineSession()
+        try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
+        // Offline wallet: no server for real addresses, and none are needed to wait.
+        let request = ReceiveRequest(arkAddress: "unused-ark-address", onchainAddress: "unused-onchain-address")
+        let completions = try await session.receiveCompletions(for: request)
+        let reader = Task {
+            var received: [ReceiveCompletion] = []
+            for try await completion in completions { received.append(completion) }
+            return received
+        }
+        for _ in 0..<50 { await Task.yield() }
+
+        try await session.close()
+        // The observer ended with the session: no completion, stream finished.
+        #expect(try await reader.value.isEmpty)
+        let reservation = try await session.reserve()
+        await session.release(reservation)
+    }
+
     @Test func reservationKeepsEveryoneElseOut() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         try writeBarkProperties(network: "regtest")

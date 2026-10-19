@@ -85,6 +85,14 @@ actor WalletSession {
     private var state = State.closed
     private var runningCalls = 0
     private var drainWaiters: [CheckedContinuation<Void, Never>] = []
+    private var observers: [UUID: Observer] = [:]
+
+    /// Long-lived notification readers (receive completion). Not counted
+    /// calls: `close` stops them first, then waits for them to end.
+    private struct Observer {
+        let task: Task<Void, Never>
+        let holder: NotificationHolder
+    }
 
     init(variant: AppVariant = .current, location: WalletDataLocation? = nil, opener: Opener? = nil) {
         self.variant = variant
@@ -139,6 +147,7 @@ actor WalletSession {
             throw OpenError.busy
         case .open(let handles):
             state = .closing
+            await stopObservers()
             await callsDrained()
             do {
                 try await Task { try await handles.wallet.stopDaemonWait() }.value
@@ -340,6 +349,88 @@ actor WalletSession {
             let tip = Int(try await handles.onchain.tipHeight())
             return vtxos.map { Int($0.expiryHeight) - tip }.min()
         }
+    }
+
+    // MARK: Receive
+
+    /// Fresh Ark and onchain addresses, kept paired while an amount is edited.
+    func receiveRequest() async throws -> ReceiveRequest {
+        try await withOpenWallet { handles in
+            let ark = try await handles.wallet.newAddress()
+            let onchain = try await handles.onchain.newAddress()
+            return ReceiveRequest(arkAddress: ark, onchainAddress: onchain)
+        }
+    }
+
+    func receiveInvoice(for request: ReceiveRequest, amountSat: Int64, description: String) async throws -> ReceiveRequest {
+        let description = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        try ReceiveRequest.validate(amountSat: amountSat, description: description)
+        let invoice = try await withOpenWallet { handles in
+            try await handles.wallet.bolt11Invoice(
+                amountSats: UInt64(amountSat), description: description.isEmpty ? nil : description)
+        }
+        var updated = request
+        updated.amountSat = amountSat
+        updated.description = description
+        updated.lightningInvoice = invoice.invoice
+        updated.paymentHash = invoice.paymentHash
+        return updated
+    }
+
+    /// Finishes with the payment of `request`, like RN's per-address and
+    /// per-hash subscriptions (the FFI has one general stream; it is
+    /// filtered here). Subscribes before reading history, so a payment made
+    /// during setup can't fall in a gap. The observer belongs to the
+    /// session: `close` stops it and waits for it.
+    func receiveCompletions(for request: ReceiveRequest) throws -> AsyncThrowingStream<ReceiveCompletion, Error> {
+        guard case .open(let handles) = state else { throw SessionError.notOpen }
+        let holder = handles.wallet.notifications()
+        let id = UUID()
+        let (stream, continuation) = AsyncThrowingStream<ReceiveCompletion, Error>.makeStream()
+        let task = Task.detached { [weak self] in
+            do {
+                var completion = try await Self.reconcileReceive(handles, request: request)
+                while completion == nil, !Task.isCancelled {
+                    guard let notification = try await holder.nextNotification() else { break }
+                    switch notification {
+                    case .movementCreated(let movement), .movementUpdated(let movement):
+                        completion = ReceiveCompletion.matching(movement, request: request)
+                    case .channelLagging:
+                        completion = try await Self.reconcileReceive(handles, request: request)
+                    }
+                }
+                if let completion { continuation.yield(completion) }
+                continuation.finish()
+            } catch {
+                continuation.finish(throwing: error)
+            }
+            await self?.observerEnded(id)
+        }
+        observers[id] = Observer(task: task, holder: holder)
+        continuation.onTermination = { _ in
+            task.cancel()
+            holder.cancelNextNotificationWait()
+        }
+        return stream
+    }
+
+    /// History read run to completion even if the observer is cancelled.
+    private static func reconcileReceive(_ handles: Handles, request: ReceiveRequest) async throws -> ReceiveCompletion? {
+        let movements = try await Task { try await handles.wallet.history() }.value
+        return movements.lazy.compactMap { ReceiveCompletion.matching($0, request: request) }.first
+    }
+
+    private func observerEnded(_ id: UUID) {
+        observers.removeValue(forKey: id)
+    }
+
+    private func stopObservers() async {
+        let running = Array(observers.values)
+        for observer in running {
+            observer.task.cancel()
+            observer.holder.cancelNextNotificationWait()
+        }
+        for observer in running { await observer.task.value }
     }
 
     /// Syncs onchain then Ark state, like `syncWallet` minus Lightning claims.

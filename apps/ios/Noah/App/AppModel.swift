@@ -23,6 +23,7 @@ final class AppModel {
         didSet { saveIsBalanceHidden() }
     }
     private(set) var amountUnit: BitcoinAmountUnit
+    private(set) var preferredCurrency: String
 
     let variant = AppVariant.current
     let session = WalletSession.shared
@@ -39,6 +40,8 @@ final class AppModel {
             dependencies: .live(session: session, variant: variant, appVersion: appVersion))
         isBalanceHidden = settings.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key)?
             .isHomeBalanceHidden ?? false
+        let currency = settings.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.preferredCurrency ?? "USD"
+        preferredCurrency = FiatCurrency.supported.contains(currency) ? currency : "USD"
         amountUnit = settings.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?
             .amountUnit ?? .bip177
     }

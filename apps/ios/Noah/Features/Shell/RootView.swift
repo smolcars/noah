@@ -39,7 +39,7 @@ struct WalletTabs: View {
                 HomeView()
             }
             SwiftUI.Tab("Receive", systemImage: "arrow.down.left", value: .receive) {
-                NavigationStack { PendingFeatureView(title: "Receive") }
+                NavigationStack { ReceiveView(isActive: selection == .receive) { selection = .home } }
             }
             SwiftUI.Tab("Send", systemImage: "arrow.up.right", value: .send) {
                 NavigationStack { PendingFeatureView(title: "Send") }
