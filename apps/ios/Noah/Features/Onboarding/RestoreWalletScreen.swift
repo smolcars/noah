@@ -55,13 +55,18 @@ struct RestoreWalletScreen: View {
         .background(NoahColor.background.ignoresSafeArea())
         .safeAreaInset(edge: .bottom) {
             if model.restoreIssue?.requiresRestart != true {
-                NoahButton(title: "Restore Wallet", isLoading: model.isRestoring, action: restore)
-                    .disabled(!useStoredSeed && !input.isComplete)
-                    .padding(20)
-                    .frame(maxWidth: 560)
-                    .frame(maxWidth: .infinity)
-                    .background(NoahColor.background)
-                    .accessibilityIdentifier("restore-wallet-submit")
+                VStack(spacing: 8) {
+                    if let focusedWord, !model.isRestoring {
+                        suggestions(at: focusedWord).secretShield()
+                    }
+                    NoahButton(title: "Restore Wallet", isLoading: model.isRestoring, action: restore)
+                        .disabled(!useStoredSeed && !input.isComplete)
+                        .accessibilityIdentifier("restore-wallet-submit")
+                }
+                .padding(20)
+                .frame(maxWidth: 560)
+                .frame(maxWidth: .infinity)
+                .background(NoahColor.background)
             }
         }
         .navigationTitle("Restore Wallet")
@@ -91,24 +96,26 @@ struct RestoreWalletScreen: View {
                     }
                 }
             }
-            if let focusedWord {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 12) {
-                        ForEach(input.suggestions(at: focusedWord), id: \.self) { word in
-                            Button(word) {
-                                input.update(word, at: focusedWord)
-                                self.focusedWord = focusedWord < 11 ? focusedWord + 1 : nil
-                            }
-                            .frame(minHeight: 44)
-                        }
-                    }
-                }
-                .scrollIndicators(.hidden)
-            }
             Text("\(input.wordCount) of 12 words")
                 .font(NoahFont.footnote)
                 .foregroundStyle(NoahColor.mutedForeground)
         }
+    }
+
+    private func suggestions(at index: Int) -> some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 20) {
+                ForEach(input.suggestions(at: index), id: \.self) { word in
+                    Button(word) {
+                        input.update(word, at: index)
+                        focusedWord = index < 11 ? index + 1 : nil
+                    }
+                    .frame(minHeight: 44)
+                }
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .scrollIndicators(.hidden)
     }
 
     private var progressMessage: String {
@@ -150,7 +157,8 @@ private struct RecoveryWordField: UIViewRepresentable {
         field.smartQuotesType = .no
         field.smartDashesType = .no
         field.keyboardType = .asciiCapable
-        field.textContentType = .password
+        field.inlinePredictionType = .no
+        field.textContentType = .none
         field.returnKeyType = index == 11 ? .done : .next
         field.font = UIFont.preferredFont(forTextStyle: .body)
         field.adjustsFontForContentSizeCategory = true
