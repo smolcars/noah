@@ -9,4 +9,12 @@
   <string name="history">History</string>
   <string name="placeholder">Coming soon</string>
   <string name="build_variant">Build: %1$s</string>
+    <string name="launch_welcome">Welcome to Noah</string>
+    <string name="launch_onboarding_message">Onboarding lands in M1.</string>
+    <string name="launch_seed_found">Recovery phrase found</string>
+    <string name="launch_seed_found_message">A recovery phrase from a previous install is stored on this device. Restoring it lands in M1.</string>
+    <string name="launch_seed_needed">Recovery phrase needed</string>
+    <string name="launch_seed_needed_message">Wallet data exists on this device but its recovery phrase could not be found.</string>
+    <string name="launch_unlock">Unlock your device</string>
+    <string name="launch_unlock_message">Noah can\'t read its secure storage yet. Unlock your device to continue.</string>
 </resources>
