@@ -1,0 +1,12 @@
+// Mainnet build variant. Identifiers must match the React Native app so the
+// native app installs as an update and keeps Keychain items, app-group
+// data and placed widgets.
+
+NOAH_VARIANT_NAME = Mainnet
+NOAH_APP_VARIANT = mainnet
+NOAH_BUNDLE_ID = com.noahwallet.mainnet
+NOAH_DISPLAY_NAME = Noah
+NOAH_APP_GROUP = group.com.noahwallet.mainnet
+NOAH_URL_SCHEME = com.noahwallet.mainnet
+NOAH_WIDGET_BUNDLE_ID = com.noahwallet.mainnet.NoahWidgetMainnet
+NOAH_WIDGET_KIND = NoahWidgetMainnet

@@ -14,12 +14,15 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] barkd restart while a forward is pending (not yet tested)
 
 ### 0.2 Project scaffolding
-- [ ] `apps/ios`: XcodeGen spec, SwiftPM deps, schemes `Noah` / `Noah-Signet` / `Noah-Regtest`, xcconfigs, bundle IDs `com.noahwallet.{mainnet,signet,regtest}`, entitlements (aps, app groups), URL schemes, Info.plist background modes
-- [ ] iOS widget extension targets reused from `client/ios/SharedWidget` + per-variant extensions; App Intents reused from `client/ios/SharedAppIntents`
+- [x] `apps/ios`: XcodeGen spec, SwiftPM deps, schemes `Noah` / `Noah-Signet` / `Noah-Regtest`, xcconfigs, bundle IDs `com.noahwallet.{mainnet,signet,regtest}`, entitlements (aps, app groups), URL schemes, Info.plist background modes
+- [x] iOS widget extension reused from `client/ios/SharedWidget` (one target, per-variant bundle ID + kind from xcconfig)
+- [ ] iOS App Intents ported from `client/ios/SharedAppIntents` onto `WalletService` (needs 0.3)
+- [ ] iOS `processing` background mode + `BGTaskSchedulerPermittedIdentifiers` (with 0.6 background tasks)
 - [ ] `apps/android`: Gradle KTS, version catalog, flavors `mainnet`/`signet`/`regtest`, same applicationIds, signing config, `google-services.json` per flavor, minSdk 24
 - [ ] Android widgets reused from `client/android/app/src/main/java/com/noahwallet/widgets`
 - [ ] `apps/fixtures/` shared JSON fixtures + XCTest/JUnit loaders
-- [ ] `justfile` recipes: `ios-native-*`, `android-native-*`, `native-test`
+- [x] `justfile` recipes: `ios-native-*`
+- [ ] `justfile` recipes: `android-native-*`
 - [ ] CI: build + unit tests for both apps (all three variants compile)
 
 ### 0.3 Wallet SDK integration

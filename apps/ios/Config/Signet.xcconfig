@@ -1,0 +1,12 @@
+// Signet build variant. Identifiers must match the React Native app so the
+// native app installs as an update and keeps Keychain items, app-group
+// data and placed widgets.
+
+NOAH_VARIANT_NAME = Signet
+NOAH_APP_VARIANT = signet
+NOAH_BUNDLE_ID = com.noahwallet.signet
+NOAH_DISPLAY_NAME = Noah (Signet)
+NOAH_APP_GROUP = group.com.noahwallet.signet
+NOAH_URL_SCHEME = com.noahwallet.signet
+NOAH_WIDGET_BUNDLE_ID = com.noahwallet.signet.NoahWidgetSignet
+NOAH_WIDGET_KIND = NoahWidgetSignet

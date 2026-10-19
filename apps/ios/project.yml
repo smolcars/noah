@@ -1,0 +1,140 @@
+name: Noah
+
+options:
+  bundleIdPrefix: com.noahwallet
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  defaultConfig: Debug-Regtest
+
+configs:
+  Debug-Mainnet: debug
+  Release-Mainnet: release
+  Debug-Signet: debug
+  Release-Signet: release
+  Debug-Regtest: debug
+  Release-Regtest: release
+
+configFiles:
+  Debug-Mainnet: Config/Mainnet.xcconfig
+  Release-Mainnet: Config/Mainnet.xcconfig
+  Debug-Signet: Config/Signet.xcconfig
+  Release-Signet: Config/Signet.xcconfig
+  Debug-Regtest: Config/Regtest.xcconfig
+  Release-Regtest: Config/Regtest.xcconfig
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: AT26Z24V2Q
+    CODE_SIGN_STYLE: Automatic
+    # Must stay above the React Native app's 0.1.14 (38) so the native app installs as an update.
+    MARKETING_VERSION: 0.2.0
+    CURRENT_PROJECT_VERSION: 100
+    SWIFT_VERSION: "6.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+
+packages:
+  BarkBoltFFI:
+    url: https://github.com/smolcars/bark-bolt-ffi
+    exactVersion: 0.1.0
+
+targets:
+  Noah:
+    type: application
+    platform: iOS
+    sources:
+      - path: Noah
+    settings:
+      base:
+        PRODUCT_NAME: Noah
+        PRODUCT_BUNDLE_IDENTIFIER: $(NOAH_BUNDLE_ID)
+        INFOPLIST_FILE: Noah/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Noah/Resources/Noah.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: noah
+    dependencies:
+      - target: NoahWidget
+      - package: BarkBoltFFI
+        product: BarkBoltFFI
+
+  NoahWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: NoahWidget
+        excludes:
+          - Entitlements
+    settings:
+      base:
+        PRODUCT_NAME: NoahWidget
+        PRODUCT_BUNDLE_IDENTIFIER: $(NOAH_WIDGET_BUNDLE_ID)
+        INFOPLIST_FILE: NoahWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: NoahWidget/Entitlements/$(NOAH_VARIANT_NAME).entitlements
+        ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME: WidgetBackground
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  NoahTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: NoahTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(NOAH_BUNDLE_ID).tests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Noah
+
+schemes:
+  Noah:
+    build:
+      targets:
+        Noah: all
+        NoahTests: [test]
+    run:
+      config: Debug-Mainnet
+    test:
+      config: Debug-Mainnet
+      targets: [NoahTests]
+    profile:
+      config: Release-Mainnet
+    analyze:
+      config: Debug-Mainnet
+    archive:
+      config: Release-Mainnet
+
+  Noah-Signet:
+    build:
+      targets:
+        Noah: all
+        NoahTests: [test]
+    run:
+      config: Debug-Signet
+    test:
+      config: Debug-Signet
+      targets: [NoahTests]
+    profile:
+      config: Release-Signet
+    analyze:
+      config: Debug-Signet
+    archive:
+      config: Release-Signet
+
+  Noah-Regtest:
+    build:
+      targets:
+        Noah: all
+        NoahTests: [test]
+    run:
+      config: Debug-Regtest
+    test:
+      config: Debug-Regtest
+      targets: [NoahTests]
+    profile:
+      config: Release-Regtest
+    analyze:
+      config: Debug-Regtest
+    archive:
+      config: Release-Regtest

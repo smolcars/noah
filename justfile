@@ -101,6 +101,16 @@ ios-clean:
 clean-all:
     bun client clean:all
 
+# Native iOS app (apps/ios). variant: Regtest | Signet | Mainnet
+ios-native-generate:
+    cd apps/ios && xcodegen generate
+
+ios-native-build variant="Regtest": ios-native-generate
+    cd apps/ios && xcodebuild -project Noah.xcodeproj -scheme {{ if variant == "Mainnet" { "Noah" } else { "Noah-" + variant } }} -destination "generic/platform=iOS Simulator" -derivedDataPath build/DerivedData build
+
+ios-native-test variant="Regtest" device="iPhone 17": ios-native-generate
+    cd apps/ios && xcodebuild -project Noah.xcodeproj -scheme {{ if variant == "Mainnet" { "Noah" } else { "Noah-" + variant } }} -destination "platform=iOS Simulator,name={{ device }}" -derivedDataPath build/DerivedData test
+
 # Server commands
 server:
     bacon

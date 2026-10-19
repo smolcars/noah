@@ -1,0 +1,12 @@
+// Regtest build variant. Identifiers must match the React Native app so the
+// native app installs as an update and keeps Keychain items, app-group
+// data and placed widgets.
+
+NOAH_VARIANT_NAME = Regtest
+NOAH_APP_VARIANT = regtest
+NOAH_BUNDLE_ID = com.noahwallet.regtest
+NOAH_DISPLAY_NAME = Noah (Regtest)
+NOAH_APP_GROUP = group.com.noahwallet.regtest
+NOAH_URL_SCHEME = com.noahwallet.regtest
+NOAH_WIDGET_BUNDLE_ID = com.noahwallet.regtest.NoahWidgetRegtest
+NOAH_WIDGET_KIND = NoahWidgetRegtest
