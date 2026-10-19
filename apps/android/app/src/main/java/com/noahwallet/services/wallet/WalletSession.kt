@@ -25,6 +25,7 @@ class WalletSession internal constructor(
     }
 
     internal interface Handles {
+        suspend fun peekAddress(index: UInt): String
         suspend fun summary(): Summary
         suspend fun sync()
         suspend fun createSnapshot(destination: File): WalletSnapshotInfo
@@ -104,6 +105,11 @@ class WalletSession internal constructor(
         Unit
     }
 
+    suspend fun peekAddress(index: UInt): String = operations.withLock {
+        val handles = synchronized(lock) { (state as? State.Open)?.handles } ?: throw SessionError()
+        handles.peekAddress(index)
+    }
+
     suspend fun createSnapshot(destination: File): WalletSnapshotInfo = operations.withLock {
         val handles = synchronized(lock) { (state as? State.Open)?.handles } ?: throw SessionError()
         handles.createSnapshot(destination)
@@ -157,6 +163,7 @@ class WalletSession internal constructor(
     }
 
     private class SdkHandles(val wallet: Wallet, val onchain: OnchainWallet) : Handles {
+        override suspend fun peekAddress(index: UInt): String = wallet.peekAddress(index)
         override suspend fun summary(): Summary {
             val ark = wallet.balance()
             val chain = onchain.balance()

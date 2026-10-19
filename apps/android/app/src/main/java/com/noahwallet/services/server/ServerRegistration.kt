@@ -1,0 +1,88 @@
+package com.noahwallet.services.server
+
+import com.noahwallet.api.generated.client.*
+import com.noahwallet.api.generated.models.*
+import com.noahwallet.services.storage.ServerStateStorage
+import io.ktor.client.HttpClient
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
+class ServerRegistration(
+    private val client: HttpClient,
+    private val storage: ServerStateStorage,
+    private val peekAddress: suspend () -> String,
+    private val device: () -> com.noahwallet.api.generated.models.DeviceInfo = DeviceInfo::current,
+    private val now: () -> Long = System::currentTimeMillis,
+    private val warn: (String) -> Unit,
+) {
+    val state get() = storage.state
+    @Volatile var versionInfo: AppVersionInfo? = null
+        private set
+    private val registration = Mutex()
+    private val reporting = Mutex()
+    private var checkedVersion = false
+
+    suspend fun ensureRegistered() = registration.withLock {
+        if (!checkedVersion) {
+            try {
+                versionInfo = V0AppVersionClient(client).checkAppVersion(AppVersionCheckPayload(device().appVersion ?: "0.0.1")).value()
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { warn("Failed to check app version, allowing app to continue") }
+            checkedVersion = true
+        }
+        if (state.isRegisteredWithServer == true) return@withLock
+        val info = device()
+        val response = V0RegisterClient(client).register(RegisterPayload(
+            arkAddress = peekAddress(), deviceInfo = info.registrationPayload())).value()
+        apply(response, info)
+    }
+
+    internal fun apply(response: RegisterResponse, info: com.noahwallet.api.generated.models.DeviceInfo) {
+        // Write profile first so a failed write leaves registration retryable.
+        storage.setDisplayName(response.displayName ?: "")
+        storage.update { it.copy(isRegisteredWithServer = true, lightningAddress = response.lightningAddress,
+            nostrPubkey = response.nostrPubkey, isBackupEnabled = true, emailAddress = response.email,
+            isEmailVerified = response.isEmailVerified, lastReportedDeviceFingerprint = DeviceInfo.fingerprint(info),
+            lastDeviceReportAt = now().toDouble()) }
+    }
+
+    suspend fun reportLastLogin() = reporting.withLock {
+        val info = device()
+        val previous = state
+        val include = previous.isRegisteredWithServer == true && DeviceInfo.shouldReport(info,
+            previous.lastReportedDeviceFingerprint, previous.lastDeviceReportAt, now())
+        V0ReportLastLoginClient(client).reportLastLogin(ReportLastLoginPayload(if (include) info.loginPayload() else null)).value()
+        if (include) storage.update { it.copy(lastReportedDeviceFingerprint = DeviceInfo.fingerprint(info), lastDeviceReportAt = now().toDouble()) }
+    }
+
+    suspend fun sendEmail(email: String): Boolean {
+        ensureRegistered()
+        val response = V0EmailSendVerificationClient(client).sendVerificationEmail(SendEmailVerificationPayload(email)).value()
+        if (response.message == "Email already verified") {
+            verifiedEmail(response.email ?: email)
+            return true
+        }
+        return false
+    }
+
+    suspend fun verifyEmail(code: String, email: String) {
+        val response = V0EmailVerifyClient(client).verifyEmail(VerifyEmailPayload(code)).value()
+        if (!response.success) throw ServerFailure("Invalid or expired verification code.")
+        verifiedEmail(response.email ?: email.trim())
+    }
+
+    suspend fun saveIdentity(username: String, npub: String) {
+        val payload = LightningIdentity.payload(username, npub)
+        ensureRegistered()
+        val response = V0UpdateLightningIdentityClient(client).updateLightningIdentity(payload).value()
+        storage.update { it.copy(lightningAddress = response.lightningAddress, nostrPubkey = response.nostrPubkey) }
+    }
+
+    fun dismissEmailPrompt() {
+        try { storage.update { it.copy(isEmailPromptDismissed = true) } }
+        catch (_: Exception) { warn("Failed to save email prompt dismissal") }
+    }
+
+    private fun verifiedEmail(email: String) { storage.update { it.copy(emailAddress = email, isEmailVerified = true) } }
+}

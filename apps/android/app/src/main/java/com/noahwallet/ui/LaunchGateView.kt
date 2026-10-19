@@ -27,7 +27,7 @@ import com.noahwallet.services.launch.LaunchState
 import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.storage.SecretResult
 import com.noahwallet.services.storage.SeedStorage
-import com.noahwallet.services.wallet.WalletSession
+import com.noahwallet.services.AppServices
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -50,7 +50,7 @@ fun LaunchGateView() {
                     withContext(Dispatchers.IO) {
                         val seed = SeedStorage(context, BuildConfig.APP_VARIANT).read()
                         check(seed is SecretResult.Found && seed.value.isNotEmpty())
-                        WalletSession.shared(context).ensureOpen(seed.value, true, BuildConfig.VERSION_NAME)
+                        AppServices.shared(context).session.ensureOpen(seed.value, true, BuildConfig.VERSION_NAME)
                     }
                     walletOpen = true
                 } catch (cancelled: CancellationException) {
@@ -60,6 +60,7 @@ fun LaunchGateView() {
                     openFailed = true
                 }
             }
+            if (walletOpen) AppServices.shared(context).startServerServices()
         }
     }
     if (state == LaunchState.existingWallet && walletOpen) {

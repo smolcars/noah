@@ -12,6 +12,7 @@ import org.junit.Test
 class WalletSessionTest {
     private class Boom : Exception()
     private class Handles : WalletSession.Handles {
+        override suspend fun peekAddress(index: UInt) = "ark-test"
         var closed = false
         var stopFails = false
         var stopEntered: CompletableDeferred<Unit>? = null

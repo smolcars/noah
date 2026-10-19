@@ -59,6 +59,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Launch decision — Android
 - [ ] BIP39 validation of the stored seed; conflict handling
 - [x] Server auth token reader (`com.noah.auth-token.<variant>`) — iOS
+- [x] Server auth token reader/writer (RN_KEYCHAIN, existing GCM/CBC alias; excluded from backup) — Android
 - [x] MMKV: open `noah-wallet-storage` + zustand envelope codec, `wallet-storage` decoded — iOS
 - [x] MMKV — Android
 - [ ] Remaining 7 store shapes (decode as their screens land)
@@ -81,8 +82,9 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Sentry (cocoa / android), disabled in debug + regtest like RN
 - [ ] HTTP clients (URLSession / OkHttp) incl. upload/download
 - [x] Server auth: `/v0/getk1` → sign (offline key `m/350/0`) → `/v0/auth/login` → JWT; refresh near expiry; retry once — iOS (live-tested on regtest)
-- [ ] Server auth — Android
+- [x] Server auth — Android (offline index-0 signing, shared login, RN token storage, retry once; live-tested on regtest)
 - [x] Server registration + last-login + device info (shared token provider/client) — iOS
+- [x] Server registration + last-login + device info, app-version check, email and Lightning identity services — Android
 - [x] Push iOS: permission, APNs token → Expo token (RN installation ID, provisioning aps-environment), `register_push_token`, silent-push handler with 25 s budget, jobs for maintenance / invoice / claim / backup / heartbeat with job-status reports, widget refresh
 - [x] Push iOS: register the push token after server registration once onboarding is done (RN `usePushNotifications` gating)
 - [ ] Push iOS: recurring_payment_due (M7); verify real delivery on a device (simctl push does not run the background handler)

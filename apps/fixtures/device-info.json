@@ -1,0 +1,233 @@
+{
+  "description": "RN deviceInfo.test.js cases plus iOS boundary/null/escaping cases. Millisecond timestamps.",
+  "cases": [
+    {
+      "name": "unchanged recent details",
+      "input": {
+        "device": {
+          "app_build": "27",
+          "app_version": "0.1.4",
+          "device_manufacturer": "Apple",
+          "device_model": "iPhone 12 Pro",
+          "os_name": "iOS",
+          "os_version": "26.5"
+        },
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "reportedAt": 1784159999000,
+        "now": 1784160000000
+      },
+      "expected": {
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "shouldReport": false
+      }
+    },
+    {
+      "name": "app_version changed",
+      "input": {
+        "device": {
+          "app_build": "27",
+          "app_version": "0.1.4",
+          "device_manufacturer": "Apple",
+          "device_model": "iPhone 12 Pro",
+          "os_name": "iOS",
+          "os_version": "26.5"
+        },
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.3\",\"27\"]",
+        "reportedAt": 1784159999000,
+        "now": 1784160000000
+      },
+      "expected": {
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "shouldReport": true
+      }
+    },
+    {
+      "name": "app_build changed",
+      "input": {
+        "device": {
+          "app_build": "27",
+          "app_version": "0.1.4",
+          "device_manufacturer": "Apple",
+          "device_model": "iPhone 12 Pro",
+          "os_name": "iOS",
+          "os_version": "26.5"
+        },
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"26\"]",
+        "reportedAt": 1784159999000,
+        "now": 1784160000000
+      },
+      "expected": {
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "shouldReport": true
+      }
+    },
+    {
+      "name": "os_version changed",
+      "input": {
+        "device": {
+          "app_build": "27",
+          "app_version": "0.1.4",
+          "device_manufacturer": "Apple",
+          "device_model": "iPhone 12 Pro",
+          "os_name": "iOS",
+          "os_version": "26.5"
+        },
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.4\",\"0.1.4\",\"27\"]",
+        "reportedAt": 1784159999000,
+        "now": 1784160000000
+      },
+      "expected": {
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "shouldReport": true
+      }
+    },
+    {
+      "name": "failed attempt has no successful state",
+      "input": {
+        "device": {
+          "app_build": "27",
+          "app_version": "0.1.4",
+          "device_manufacturer": "Apple",
+          "device_model": "iPhone 12 Pro",
+          "os_name": "iOS",
+          "os_version": "26.5"
+        },
+        "fingerprint": null,
+        "reportedAt": null,
+        "now": 1784160000000
+      },
+      "expected": {
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "shouldReport": true
+      }
+    },
+    {
+      "name": "failed attempt retries later",
+      "input": {
+        "device": {
+          "app_build": "27",
+          "app_version": "0.1.4",
+          "device_manufacturer": "Apple",
+          "device_model": "iPhone 12 Pro",
+          "os_name": "iOS",
+          "os_version": "26.5"
+        },
+        "fingerprint": null,
+        "reportedAt": null,
+        "now": 1784160001000
+      },
+      "expected": {
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "shouldReport": true
+      }
+    },
+    {
+      "name": "just before thirty days",
+      "input": {
+        "device": {
+          "app_build": "27",
+          "app_version": "0.1.4",
+          "device_manufacturer": "Apple",
+          "device_model": "iPhone 12 Pro",
+          "os_name": "iOS",
+          "os_version": "26.5"
+        },
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "reportedAt": 1781568000001,
+        "now": 1784160000000
+      },
+      "expected": {
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "shouldReport": false
+      }
+    },
+    {
+      "name": "thirty days",
+      "input": {
+        "device": {
+          "app_build": "27",
+          "app_version": "0.1.4",
+          "device_manufacturer": "Apple",
+          "device_model": "iPhone 12 Pro",
+          "os_name": "iOS",
+          "os_version": "26.5"
+        },
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "reportedAt": 1781568000000,
+        "now": 1784160000000
+      },
+      "expected": {
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "shouldReport": true
+      }
+    },
+    {
+      "name": "future timestamp",
+      "input": {
+        "device": {
+          "app_build": "27",
+          "app_version": "0.1.4",
+          "device_manufacturer": "Apple",
+          "device_model": "iPhone 12 Pro",
+          "os_name": "iOS",
+          "os_version": "26.5"
+        },
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "reportedAt": 1784160001000,
+        "now": 1784160000000
+      },
+      "expected": {
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "shouldReport": true
+      }
+    },
+    {
+      "name": "missing timestamp",
+      "input": {
+        "device": {
+          "app_build": "27",
+          "app_version": "0.1.4",
+          "device_manufacturer": "Apple",
+          "device_model": "iPhone 12 Pro",
+          "os_name": "iOS",
+          "os_version": "26.5"
+        },
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "reportedAt": null,
+        "now": 1784160000000
+      },
+      "expected": {
+        "fingerprint": "[\"Apple\",\"iPhone 12 Pro\",\"iOS\",\"26.5\",\"0.1.4\",\"27\"]",
+        "shouldReport": true
+      }
+    },
+    {
+      "name": "null entries",
+      "input": {
+        "device": {},
+        "fingerprint": "[null,null,null,null,null,null]",
+        "reportedAt": 1784160000000,
+        "now": 1784160000000
+      },
+      "expected": {
+        "fingerprint": "[null,null,null,null,null,null]",
+        "shouldReport": false
+      }
+    },
+    {
+      "name": "slashes quotes and unicode",
+      "input": {
+        "device": {
+          "device_model": "a/b \"é\""
+        },
+        "fingerprint": null,
+        "reportedAt": null,
+        "now": 1784160000000
+      },
+      "expected": {
+        "fingerprint": "[null,\"a/b \\\"é\\\"\",null,null,null,null]",
+        "shouldReport": true
+      }
+    }
+  ]
+}
