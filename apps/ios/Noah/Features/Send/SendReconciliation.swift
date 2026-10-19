@@ -11,9 +11,7 @@ struct SendCandidate: Codable, Equatable, Sendable, Identifiable {
 /// FFI item 16 will replace weak history correlation with durable operation identity.
 enum SendReconciliation {
     static func matches(_ movement: Movement, payment: SendPayment, hash: String?) -> Bool {
-        guard payment.source != .onchain,
-            movement.intendedBalanceSats < 0 || movement.effectiveBalanceSats < 0
-        else { return false }
+        guard payment.source != .onchain else { return false }
         let subsystem = movement.subsystemName.lowercased()
         let kind = movement.subsystemKind.lowercased()
         switch payment.method {
@@ -27,6 +25,7 @@ enum SendReconciliation {
         default: return false
         }
         if let hash { return movement.paymentHash == hash }
+        guard movement.intendedBalanceSats < 0 || movement.effectiveBalanceSats < 0 else { return false }
         if payment.method == "lightning" { return false }
         return movement.sentToAddresses.contains {
             $0.paymentMethod.value == payment.destination

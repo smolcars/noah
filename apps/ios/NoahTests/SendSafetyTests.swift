@@ -190,7 +190,12 @@ import Testing
         let unrelated = movement("lightning", status: status, hash: "other-hash")
         #expect(SendReconciliation.ark(saved, movements: [unrelated]) == .uncertain)
         // Same hash is authoritative even for a pre-existing pending movement.
-        let matched = movement("lightning", status: status, id: 1, hash: "invoice-hash")
+        var matchingMovement = movement("lightning", status: status, id: 1, hash: "invoice-hash")
+        if ["failed", "canceled"].contains(status) {
+            matchingMovement.intendedBalanceSats = 0
+            matchingMovement.effectiveBalanceSats = 0
+        }
+        let matched = matchingMovement
         let storage = SendPaymentTests.Storage()
         storage.attempt = saved
         let subject = controller(storage) {
