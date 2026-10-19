@@ -69,7 +69,9 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Upgrade test also checks launcher shortcut + placed widget survive (Android) and widget kind/bundle ID (iOS)
 
 ### 0.6 Platform services
-- [ ] Redacting logger (file-backed, rotating, exportable) — iOS OSLog + file, Android Log + file
+- [x] Redacting logger (file-backed, rotating, exportable) — iOS (`AppLog`, same `Caches/noah_logs` layout as RN)
+- [ ] Redacting logger — Android
+- [ ] Route bark-bolt-ffi `BarkLogger` callbacks into the app log
 - [ ] Sentry (cocoa / android), disabled in debug + regtest like RN
 - [ ] HTTP clients (URLSession / OkHttp) incl. upload/download
 - [ ] Server auth: `/v0/getk1` → sign (offline key `m/350/0`) → `/v0/auth/login` → JWT; refresh near expiry; retry once
