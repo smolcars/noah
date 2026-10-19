@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <string name="widget_regtest_description">View your Bitcoin balance on regtest</string>
+  <string name="widget_signet_description">View your Bitcoin balance on signet</string>
+  <string name="widget_mainnet_description">View your Bitcoin balance</string>
+  <string name="home">Home</string>
+  <string name="receive">Receive</string>
+  <string name="send">Send</string>
+  <string name="history">History</string>
+  <string name="placeholder">Coming soon</string>
+  <string name="build_variant">Build: %1$s</string>
+</resources>

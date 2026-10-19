@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <!-- Remove regtest and signet widgets from mainnet build -->
+        <receiver
+            android:name=".widgets.NoahWidgetRegtestProvider"
+            tools:node="remove" />
+
+        <receiver
+            android:name=".widgets.NoahWidgetSignetProvider"
+            tools:node="remove" />
+    </application>
+
+</manifest>

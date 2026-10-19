@@ -1,0 +1,86 @@
+{
+  "project_info": {
+    "project_number": "798188805132",
+    "project_id": "noah-wallet",
+    "storage_bucket": "noah-wallet.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:798188805132:android:f1f15d689f21f534c5a229",
+        "android_client_info": {
+          "package_name": "com.noahwallet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqUfhVtqS9piBZGjhKfB1x-UeAcVi8FoU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:798188805132:android:4de001844d8ae0c7c5a229",
+        "android_client_info": {
+          "package_name": "com.noahwallet.mainnet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqUfhVtqS9piBZGjhKfB1x-UeAcVi8FoU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:798188805132:android:d9e34e3fa9af010ec5a229",
+        "android_client_info": {
+          "package_name": "com.noahwallet.regtest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqUfhVtqS9piBZGjhKfB1x-UeAcVi8FoU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:798188805132:android:5a0ecd3d3dca8137c5a229",
+        "android_client_info": {
+          "package_name": "com.noahwallet.signet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqUfhVtqS9piBZGjhKfB1x-UeAcVi8FoU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

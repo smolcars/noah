@@ -1,0 +1,9 @@
+{
+  "cases": [
+    {
+      "name": "nested JSON values survive loading",
+      "input": { "variant": "regtest", "count": 100, "enabled": true, "optional": null, "tabs": ["Home", "Receive", "Send", "History"] },
+      "expected": { "variant": "regtest", "count": 100, "enabled": true, "optional": null, "tabs": ["Home", "Receive", "Send", "History"] }
+    }
+  ]
+}

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="8dp"
+    android:background="@drawable/widget_background">
+
+    <!-- Header row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/wallet_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Noah Wallet"
+            android:textColor="@color/widgetTextSecondary"
+            android:textSize="9sp" />
+
+        <TextView
+            android:id="@+id/variant_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="REGTEST"
+            android:textColor="@color/widgetBadgeText"
+            android:textSize="8sp"
+            android:textStyle="bold"
+            android:paddingStart="5dp"
+            android:paddingEnd="5dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:background="@drawable/badge_background"
+            android:visibility="visible" />
+
+    </LinearLayout>
+
+    <!-- Main balance -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="2dp">
+
+        <TextView
+            android:id="@+id/balance_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 sats"
+            android:textColor="@color/widgetTextPrimary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/pending_balance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pending: 0 sats"
+            android:textColor="@color/widgetPendingText"
+            android:textSize="8sp"
+            android:visibility="gone" />
+
+        <!-- Expiry status -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="2dp">
+
+            <ImageView
+                android:id="@+id/expiry_icon"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:src="@android:drawable/checkbox_on_background"
+                android:layout_marginEnd="3dp" />
+
+            <TextView
+                android:id="@+id/expiry_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 blocks"
+                android:textSize="8sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Onchain/Offchain breakdown -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="4dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Onchain: "
+                android:textColor="@color/widgetTextSecondary"
+                android:textSize="9sp" />
+
+            <TextView
+                android:id="@+id/onchain_balance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="@color/widgetTextPrimary"
+                android:textSize="9sp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="1dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Offchain: "
+                android:textColor="@color/widgetTextSecondary"
+                android:textSize="9sp" />
+
+            <TextView
+                android:id="@+id/offchain_balance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="@color/widgetTextPrimary"
+                android:textSize="9sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

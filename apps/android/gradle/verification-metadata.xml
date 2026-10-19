@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<verification-metadata xmlns="https://schema.gradle.org/dependency-verification" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://schema.gradle.org/dependency-verification https://schema.gradle.org/dependency-verification/dependency-verification-1.3.xsd">
+    <configuration>
+        <verify-metadata>false</verify-metadata>
+        <verify-signatures>false</verify-signatures>
+        <trusted-artifacts>
+            <trust group="^(?!io[.]github[.]niteshbalusu11$).*" regex="true" reason="Phase 0.2 verification is scoped to the GitHub release AAR." />
+        </trusted-artifacts>
+    </configuration>
+    <components>
+        <component group="io.github.niteshbalusu11" name="bark-bolt-ffi-android" version="0.1.0">
+            <artifact name="bark-bolt-ffi-android-0.1.0.aar">
+                <sha256 value="87ba0c4946ca417a66787451892de452127b3890b4ce1c6941d07652cc61179c" origin="https://github.com/smolcars/bark-bolt-ffi/releases/download/v0.1.0/SHA256SUMS" />
+            </artifact>
+        </component>
+    </components>
+</verification-metadata>

@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <color name="iconBackground">#000000</color>
+  <color name="widgetTextPrimary">#FFFFFF</color>
+  <color name="widgetTextSecondary">#888888</color>
+  <color name="widgetBadgeText">#000000</color>
+  <color name="widgetPendingText">#FFEB3B</color>
+</resources>
