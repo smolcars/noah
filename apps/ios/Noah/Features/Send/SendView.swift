@@ -81,6 +81,10 @@ struct SendView: View {
                             selected: model.source == source, enabled: model.sources.contains(source)
                         ) { model.source = source }
                     }
+                    if model.onchainTotal != model.onchainBalance {
+                        Text("Wait for pending onchain funds to confirm before using onchain MAX.")
+                            .font(NoahFont.callout)
+                    }
                 }
                 if let error = model.error {
                     Text(error).foregroundStyle(NoahColor.destructive).accessibilityIdentifier("send-error")
@@ -134,7 +138,7 @@ struct SendView: View {
                     !model.parsed.isAmountEditable
                         || (!model.destination.isEmpty
                             && !SendFlow.canMax(type: model.parsed.destinationType, request: model.parsed.bip321))
-                        || (model.arkBalance == 0 && model.onchainBalance == 0))
+                        || (model.arkBalance == 0 && model.onchainTotal == 0))
                 Spacer()
                 Button("Choose recipient first") { model.recipientFirst() }
             }
@@ -290,47 +294,83 @@ struct SendConfirmation: View {
 struct SendOutcomeView: View {
     @Bindable var controller: SendPaymentController
     let done: () -> Void
+    @State private var confirmOverride = false
     var body: some View {
-        VStack(spacing: 24) {
-            switch controller.state {
-            case .submitting:
-                ProgressView()
-                Text("Sending payment…").font(NoahFont.title)
-                Text("Keep Noah open while your payment completes.")
-            case .uncertain:
-                Image(systemName: "clock.badge.exclamationmark").font(.largeTitle)
-                Text("Payment may have been sent").font(NoahFont.title)
-                Text(
-                    "Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."
-                )
-                NoahButton(title: "Check payment status", isLoading: controller.checking) {
-                    Task { await controller.checkStatus() }
+        ScrollView {
+            VStack(spacing: 24) {
+                switch controller.state {
+                case .submitting:
+                    ProgressView()
+                    Text("Sending payment…").font(NoahFont.title)
+                    Text("Keep Noah open while your payment completes.")
+                case .uncertain:
+                    Image(systemName: "clock.badge.exclamationmark").font(.largeTitle)
+                    Text("Payment may have been sent").font(NoahFont.title)
+                    Text(
+                        "Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."
+                    )
+                    NoahButton(title: "Check payment status", isLoading: controller.checking) {
+                        Task { await controller.checkStatus() }
+                    }
+                    if let candidates = controller.attempt?.candidates {
+                        if candidates.isEmpty { Text("No matching payment is visible in History yet.") }
+                        ForEach(candidates) { candidate in
+                            VStack {
+                                Text(candidate.status == "successful"
+                                     ? "Appears to have gone through — check History" : "Possible related payment in History")
+                                Text("#\(candidate.id) · \(candidate.status) · \(candidate.amount) sats")
+                                Text(candidate.createdAt).font(.caption)
+                            }
+                        }
+                    }
+                    if controller.canOverride {
+                        Button("I've checked my history, start a new payment") { confirmOverride = true }
+                            .accessibilityIdentifier("send-override")
+                    }
+                case .succeeded(let receipt):
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 64)).foregroundStyle(NoahColor.success)
+                    Text(receipt.isSubmitted ? "Submitted" : receipt.status == .confirmed ? "Payment confirmed" : "Payment sent")
+                        .font(NoahFont.title).accessibilityIdentifier("send-success")
+                    if receipt.isSubmitted {
+                        Text("It may take a moment to reach the network. Do not send this payment again.")
+                        NoahButton(title: "Refresh payment status", isLoading: controller.checking) {
+                            Task { await controller.checkStatus() }
+                        }
+                    }
+                    Text("\(receipt.amountIsEstimated == true ? "About " : "")\(receipt.amount) sats").font(
+                        NoahFont.largeTitle)
+                    if let txid = receipt.txid { Text(txid).font(.caption).textSelection(.enabled) }
+                    NoahButton(title: "Done") {
+                        controller.acknowledge()
+                        if !controller.locked { done() }
+                    }
+                case .failed:
+                    Text("Payment did not complete").font(NoahFont.title)
+                    Text(controller.attempt?.failureMessage ?? (controller.attempt?.payment.source == .onchain
+                         ? "No outgoing transaction was recorded. The payment could not be constructed. Review the amount and fee before trying again."
+                         : "Wallet history confirms this payment failed or was canceled."))
+                    NoahButton(title: "Start a new payment") {
+                        controller.acknowledge()
+                        if !controller.locked { done() }
+                    }
+                case .storageBlocked:
+                    Text("Payment status unavailable").font(NoahFont.title)
+                    Text(
+                        "Noah could not read the saved payment attempt. Sending is disabled until its status can be recovered."
+                    )
+                case .ready: EmptyView()
                 }
-            case .succeeded(let receipt):
-                Image(systemName: "checkmark.circle.fill").font(.system(size: 64)).foregroundStyle(NoahColor.success)
-                Text("Payment sent").font(NoahFont.title).accessibilityIdentifier("send-success")
-                Text("\(receipt.amountIsEstimated == true ? "About " : "")\(receipt.amount) sats").font(
-                    NoahFont.largeTitle)
-                if let txid = receipt.txid { Text(txid).font(.caption).textSelection(.enabled) }
-                NoahButton(title: "Done") {
-                    controller.acknowledge()
-                    done()
-                }
-            case .failed:
-                Text("Payment did not complete").font(NoahFont.title)
-                Text("Wallet history confirms this payment failed or was canceled.")
-                NoahButton(title: "Start a new payment") {
-                    controller.acknowledge()
-                    done()
-                }
-            case .storageBlocked:
-                Text("Payment status unavailable").font(NoahFont.title)
-                Text(
-                    "Noah could not read the saved payment attempt. Sending is disabled until its status can be recovered."
-                )
-            case .ready: EmptyView()
+                if let message = controller.message { Text(message).font(NoahFont.callout) }
+            }.padding(24).multilineTextAlignment(.center).frame(maxWidth: .infinity)
+        }
+        .alert("You could pay twice", isPresented: $confirmOverride) {
+            Button("Keep waiting", role: .cancel) {}
+            Button("Start a new payment anyway", role: .destructive) {
+                controller.startNewPaymentAfterHistoryCheck(confirmed: true)
+                if !controller.locked { done() }
             }
-            if let message = controller.message { Text(message).font(NoahFont.callout) }
-        }.padding(24).multilineTextAlignment(.center).frame(maxWidth: .infinity, maxHeight: .infinity)
+        } message: {
+            Text("This payment may still complete. Check your full wallet history and confirm with the recipient first. Starting another payment can send the money twice and cannot undo the first payment.")
+        }
     }
 }

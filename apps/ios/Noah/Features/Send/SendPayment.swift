@@ -20,12 +20,13 @@ struct SendPayment: Codable, Equatable, Sendable {
             decoding: try JSONSerialization.data(withJSONObject: ["noah": ["repeat_payment": details]]), as: UTF8.self)
     }
 }
-struct SendQuote: Sendable, Equatable {
+struct SendQuote: Codable, Sendable, Equatable {
     var amount: UInt64
     var fee: UInt64
     var total: UInt64
     var feeRate: UInt64?
     var approximate = false
+    var vtxoIDs: [String]?
 }
 struct SendReceipt: Codable, Equatable, Sendable {
     var amount: UInt64
@@ -33,14 +34,20 @@ struct SendReceipt: Codable, Equatable, Sendable {
     var paymentHash: String?
     var movementID: UInt32?
     var amountIsEstimated: Bool?
+    var status: Status?
+    enum Status: String, Codable, Sendable { case submitted, confirmed }
+    var isSubmitted: Bool { txid != nil && status != .confirmed }
 }
 struct SendSnapshot: Codable, Sendable {
     var movementIDs: Set<UInt32>
+    var bdkTxids: Set<String>?
 }
 enum SendFailure: LocalizedError {
-    case invalid, insufficient, expired, ownAddress, feeChanged, unresolved
+    case invalid, insufficient, expired, ownAddress, feeChanged, unresolved, pendingOnchain, fundsChanged
     var errorDescription: String? {
         switch self {
+        case .pendingOnchain: "Wait for pending onchain funds to confirm."
+        case .fundsChanged: "The available funds changed. Review the payment again."
         case .invalid: "Enter a valid destination and a whole-satoshi amount greater than zero."
         case .insufficient: "The selected balance cannot cover this payment and its fee."
         case .expired: "This Lightning invoice has expired. Request a new invoice."
@@ -52,7 +59,10 @@ enum SendFailure: LocalizedError {
     }
 }
 
-/// Stored before funds can move. An absent history entry is never proof of failure.
+/// Only thrown by checks that run before invoking a payment SDK method.
+struct SendNotSubmitted: Error { let reason: SendFailure }
+
+/// Stored before funds can move. Weak history matches never authorize another attempt.
 @MainActor @Observable final class SendPaymentController {
     enum State: Equatable {
         case ready, submitting, uncertain
@@ -60,10 +70,16 @@ enum SendFailure: LocalizedError {
         case failed, storageBlocked
     }
     struct Attempt: Codable, Sendable {
+        var safetyVersion: Int? = 1
         var payment: SendPayment
         var snapshot: SendSnapshot
         var receipt: SendReceipt?
         var failed = false
+        var startedAt: Date? = Date()
+        var paymentHash: String?
+        var quote: SendQuote?
+        var candidates: [SendCandidate]?
+        var failureMessage: String?
     }
     struct Dependencies {
         var prepare: @Sendable (SendPayment, SendQuote) async throws -> SendSnapshot
@@ -72,9 +88,10 @@ enum SendFailure: LocalizedError {
         var read: () throws -> Attempt?
         var write: (Attempt?) throws -> Void
     }
-    enum Resolution: Sendable {
+    enum Resolution: Sendable, Equatable {
         case uncertain
         case paid(SendReceipt)
+        case candidates([SendCandidate])
         case failed
     }
     static let shared = SendPaymentController(dependencies: .live())
@@ -90,7 +107,17 @@ enum SendFailure: LocalizedError {
         self.dependencies = dependencies
         do {
             attempt = try dependencies.read()
-            if let attempt { state = attempt.receipt.map(State.succeeded) ?? (attempt.failed ? .failed : .uncertain) }
+            if var saved = attempt {
+                // Pre-fix journals could have promoted a weak history match to a terminal outcome.
+                if saved.safetyVersion != 1,
+                   !(saved.payment.method == "lightning" && PaymentEncoding.invoice(saved.payment.destination)?.hash != nil) {
+                    saved.failed = false
+                    if saved.receipt?.txid == nil { saved.receipt = nil }
+                }
+                attempt = saved
+                state = saved.receipt.map(State.succeeded) ?? (saved.failed ? .failed : .uncertain)
+                message = saved.failureMessage
+            }
         } catch { state = .storageBlocked }
     }
     func submit(_ payment: SendPayment, quote: SendQuote) {
@@ -101,7 +128,8 @@ enum SendFailure: LocalizedError {
         task = Task {
             do {
                 let snapshot = try await dependencies.prepare(payment, quote)
-                let pending = Attempt(payment: payment, snapshot: snapshot)
+                let pending = Attempt(payment: payment, snapshot: snapshot,
+                                      paymentHash: payment.method == "lightning" ? PaymentEncoding.invoice(payment.destination)?.hash : nil, quote: quote)
                 try dependencies.write(pending)
                 attempt = pending
             } catch {
@@ -113,6 +141,10 @@ enum SendFailure: LocalizedError {
             do {
                 let receipt = try await dependencies.pay(payment, quote, attempt!.snapshot)
                 finish(.paid(receipt))
+            } catch let error as SendNotSubmitted {
+                attempt?.failureMessage = error.reason.errorDescription
+                message = error.reason.errorDescription
+                finish(.failed)
             } catch {
                 state = .uncertain
                 await checkStatus()
@@ -120,7 +152,8 @@ enum SendFailure: LocalizedError {
         }
     }
     func checkStatus() async {
-        guard state == .uncertain, !checking, let attempt else { return }
+        guard !checking, let attempt else { return }
+        guard state == .uncertain || attempt.receipt?.isSubmitted == true else { return }
         checking = true
         defer { checking = false }
         do { finish(try await dependencies.reconcile(attempt)) } catch {
@@ -130,11 +163,18 @@ enum SendFailure: LocalizedError {
     private func finish(_ resolution: Resolution) {
         guard var attempt else { return }
         switch resolution {
-        case .uncertain: state = .uncertain
+        case .uncertain:
+            // A recorded txid can never be downgraded to an uncertain/retryable attempt.
+            if attempt.receipt == nil { state = .uncertain }
+        case .candidates(let candidates):
+            guard attempt.receipt == nil else { return }
+            attempt.candidates = candidates
+            state = .uncertain
         case .paid(let receipt):
             attempt.receipt = receipt
             state = .succeeded(receipt)
         case .failed:
+            guard attempt.receipt == nil else { return }
             attempt.failed = true
             state = .failed
         }
@@ -143,11 +183,24 @@ enum SendFailure: LocalizedError {
             message = "Payment status could not be saved. Check status again after restarting Noah."
         }
     }
+    var canOverride: Bool {
+        guard state == .uncertain, !checking, let attempt, attempt.receipt == nil else { return false }
+        return attempt.payment.method != "lightning"
+            && !(attempt.payment.method == "onchain" && attempt.payment.source == .onchain)
+    }
+    func startNewPaymentAfterHistoryCheck(confirmed: Bool) {
+        guard confirmed, canOverride else { return }
+        clearAttempt()
+    }
     func acknowledge() {
         switch state {
         case .succeeded, .failed: break
         default: return
         }
+        clearAttempt()
+    }
+    private func clearAttempt() {
+        guard !checking else { return }
         do {
             try dependencies.write(nil)
             attempt = nil

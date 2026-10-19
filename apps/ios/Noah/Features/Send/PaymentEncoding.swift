@@ -42,6 +42,10 @@ enum PaymentEncoding {
            version == 0 ? (!decoded.isM && [20,32].contains(program.count)) : decoded.isM {
             return ["bc":"mainnet", "tb":"testnet", "bcrt":"regtest"][decoded.prefix]
         }
+        guard let decoded = base58Address(address) else { return nil }
+        switch decoded[0] { case 0,5: return "mainnet"; case 111,196: return "testnet"; default: return nil }
+    }
+    private static func base58Address(_ address: String) -> [UInt8]? {
         let alphabet = Array("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
         guard address.count <= 60 else { return nil }
         var bytes = [UInt8](repeating: 0, count: 1)
@@ -54,7 +58,17 @@ enum PaymentEncoding {
         guard decoded.count == 25 else { return nil }
         let checksum = Array(SHA256.hash(data: Data(SHA256.hash(data: Data(decoded.dropLast(4))))).prefix(4))
         guard Array(decoded.suffix(4)) == checksum else { return nil }
-        switch decoded[0] { case 0,5: return "mainnet"; case 111,196: return "testnet"; default: return nil }
+        return Array(decoded.dropLast(4))
+    }
+    static func bitcoinScript(_ address: String) -> [UInt8]? {
+        guard bitcoinNetwork(address) != nil else { return nil }
+        if let decoded = bech32(address), let version = decoded.words.first,
+           let program = bytes(Array(decoded.words.dropFirst())) {
+            return [version == 0 ? 0 : 0x50 + version, UInt8(program.count)] + program
+        }
+        guard let decoded = base58Address(address) else { return nil }
+        let hash = Array(decoded.dropFirst())
+        return [0,111].contains(decoded[0]) ? [0x76,0xa9,0x14] + hash + [0x88,0xac] : [0xa9,0x14] + hash + [0x87]
     }
     struct Invoice { let network: String; let sats: Decimal?; let hash: String?; let expires: Date }
     static func invoice(_ value: String) -> Invoice? {

@@ -32,6 +32,7 @@ extension WalletSession {
             ? try await handles.onchain.balance().confirmedSats : try await handles.wallet.balance().spendableSats
         let quote: SendQuote
         if payment.method == "onchain", payment.source == .onchain {
+            if payment.max { try SendMaxValidation.onchain(try await handles.onchain.balance()) }
             let rate = SendFlow.sdkFeeRate(satsPerKwu: try await handles.onchain.feeRates().regularSatPerKwu)
             let (fee, overflow) = rate.multipliedReportingOverflow(by: 208)  // RN's 2-input, 2-output estimate.
             guard !overflow, fee < available else { throw SendFailure.insufficient }
@@ -40,20 +41,25 @@ extension WalletSession {
             quote = SendQuote(amount: amount, fee: fee, total: amount + fee, feeRate: rate, approximate: true)
         } else {
             let estimate: FeeEstimate
+            var vtxoIDs: [String]?
             switch payment.method {
             case "ark": estimate = try await handles.wallet.estimateArkoorPaymentFee(amountSats: payment.amount)
             case "lightning", "offer", "lnurl":
                 estimate = try await handles.wallet.estimateLightningSendFee(amountSats: payment.amount)
             case "onchain":
                 guard payment.source == .offchain else { throw SendFailure.invalid }
-                estimate =
-                    payment.max
-                    ? try await handles.wallet.estimateOffboardAllFee(address: payment.destination)
-                    : try await handles.wallet.estimateSendOnchainFee(
+                if payment.max {
+                    let ids = try await handles.wallet.spendableVtxos().map(\.id).sorted()
+                    guard !ids.isEmpty else { throw SendFailure.insufficient }
+                    vtxoIDs = ids
+                    estimate = try await handles.wallet.estimateOffboardFee(address: payment.destination, vtxoIds: ids)
+                } else {
+                    estimate = try await handles.wallet.estimateSendOnchainFee(
                         address: payment.destination, amountSats: payment.amount)
+                }
             default: throw SendFailure.invalid
             }
-            quote = SendQuote(amount: estimate.netAmountSats, fee: estimate.feeSats, total: estimate.grossAmountSats)
+            quote = SendQuote(amount: estimate.netAmountSats, fee: estimate.feeSats, total: estimate.grossAmountSats, vtxoIDs: vtxoIDs)
         }
         guard quote.amount > 0, quote.total <= available else { throw SendFailure.insufficient }
         return quote
@@ -62,7 +68,8 @@ extension WalletSession {
         try await withOpenWallet { handles in
             let fresh = try await Self.quote(payment, handles: handles)
             guard fresh == quote else { throw SendFailure.feeChanged }
-            return SendSnapshot(movementIDs: Set(try await handles.wallet.history().map(\.id)))
+            return SendSnapshot(movementIDs: Set(try await handles.wallet.history().map(\.id)),
+                                bdkTxids: Set(try await handles.onchain.transactions().map(\.txid)))
         }
     }
     func submitSend(_ payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot) async throws -> SendReceipt {
@@ -90,6 +97,11 @@ extension WalletSession {
                 }
             case "onchain":
                 if payment.source == .onchain {
+                    if payment.max {
+                        do { try SendMaxValidation.onchain(try await handles.onchain.balance(), reviewedTotal: quote.total) }
+                        catch let error as SendFailure { throw SendNotSubmitted(reason: error) }
+                    }
+                    receipt.status = .submitted
                     receipt.amountIsEstimated = payment.max
                     receipt.txid =
                         payment.max
@@ -104,10 +116,16 @@ extension WalletSession {
                         receipt.amountIsEstimated = false
                     }
                 } else {
-                    receipt.txid =
-                        payment.max
-                        ? try await handles.wallet.offboardAll(bitcoinAddress: payment.destination).txid
-                        : try await handles.wallet.sendOnchain(address: payment.destination, amountSats: payment.amount)
+                    receipt.status = .submitted
+                    if payment.max {
+                        let current = try await handles.wallet.spendableVtxos().map(\.id)
+                        do { try SendMaxValidation.offchain(currentIDs: current, reviewedIDs: quote.vtxoIDs) }
+                        catch let error as SendFailure { throw SendNotSubmitted(reason: error) }
+                        receipt.txid = try await handles.wallet.offboardVtxos(
+                            vtxoIds: quote.vtxoIDs!, bitcoinAddress: payment.destination).txid
+                    } else {
+                        receipt.txid = try await handles.wallet.sendOnchain(address: payment.destination, amountSats: payment.amount)
+                    }
                 }
             default: throw SendFailure.invalid
             }
@@ -121,7 +139,7 @@ extension WalletSession {
             if let patch = payment.repeatMetadata, let history = try? await handles.wallet.history(),
                 let movement = history.first(where: {
                     !snapshot.movementIDs.contains($0.id)
-                        && Self.matches($0, payment: payment, hash: receipt.paymentHash)
+                        && SendReconciliation.matches($0, payment: payment, hash: receipt.paymentHash)
                 })
             {
                 receipt.movementID = movement.id
@@ -132,42 +150,20 @@ extension WalletSession {
             return receipt
         }
     }
-    private static func matches(_ movement: Movement, payment: SendPayment, hash: String?) -> Bool {
-        guard movement.intendedBalanceSats < 0 || movement.effectiveBalanceSats < 0 else { return false }
-        if let hash { return movement.paymentHash == hash }
-        if payment.method == "lightning", let invoiceHash = PaymentEncoding.invoice(payment.destination)?.hash {
-            return movement.paymentHash == invoiceHash
-        }
-        return movement.lightningOffer == payment.destination
-            || movement.sentToAddresses.contains {
-                $0.paymentMethod.value == payment.destination && (payment.max || $0.amountSats == payment.amount)
-            }
-    }
     func reconcileSend(_ attempt: SendPaymentController.Attempt) async throws -> SendPaymentController.Resolution {
         try await withOpenWallet { handles in
-            _ = try await handles.onchain.sync()
+            if attempt.payment.method == "onchain", attempt.payment.source == .onchain || attempt.receipt?.txid != nil {
+                // Read even if sync fails: a persist error can leave the transaction only in BDK memory.
+                _ = try? await handles.onchain.sync()
+                return try SendReconciliation.onchain(attempt, transactions: try await handles.onchain.transactions())
+            }
             try await handles.wallet.sync()
-            let movements = try await handles.wallet.history().filter {
-                !attempt.snapshot.movementIDs.contains($0.id) && Self.matches($0, payment: attempt.payment, hash: nil)
+            let resolution = SendReconciliation.ark(attempt, movements: try await handles.wallet.history())
+            if case .paid(let receipt) = resolution, let id = receipt.movementID, let patch = attempt.payment.repeatMetadata {
+                do { try await handles.wallet.updateHistoryMetadata(movementId: id, patchJson: patch) }
+                catch { AppLog("send").w("Reconciled payment; repeat metadata could not be saved") }
             }
-            guard movements.count == 1, let movement = movements.first else { return .uncertain }
-            if movement.status == "successful" {
-                if let patch = attempt.payment.repeatMetadata {
-                    do {
-                        try await handles.wallet.updateHistoryMetadata(movementId: movement.id, patchJson: patch)
-                    } catch { AppLog("send").w("Reconciled payment; repeat metadata could not be saved") }
-                }
-                let amount =
-                    attempt.payment.max
-                    ? movement.sentToAddresses.filter { $0.paymentMethod.value == attempt.payment.destination }.reduce(
-                        UInt64(0)
-                    ) { $0 + $1.amountSats }
-                    : attempt.payment.amount
-                guard amount > 0 else { return .uncertain }
-                return .paid(SendReceipt(amount: amount, paymentHash: movement.paymentHash, movementID: movement.id))
-            }
-            if ["failed", "canceled"].contains(movement.status) { return .failed }
-            return .uncertain
+            return resolution
         }
     }
     func sendArkServerKey() async throws -> String? {
@@ -175,5 +171,18 @@ extension WalletSession {
     }
     func validateSendArkAddress(_ address: String) async throws -> Bool {
         try await withOpenWallet { try await $0.wallet.validateArkoorAddress(address: address) }
+    }
+}
+
+/// FFI item 14 will replace this conservative MAX gate with a prepared transaction.
+enum SendMaxValidation {
+    static func onchain(_ balance: OnchainBalance, reviewedTotal: UInt64? = nil) throws {
+        guard balance.totalSats == balance.confirmedSats else { throw SendFailure.pendingOnchain }
+        if let reviewedTotal, balance.confirmedSats != reviewedTotal { throw SendFailure.fundsChanged }
+    }
+    static func offchain(currentIDs: [String], reviewedIDs: [String]?) throws {
+        guard let reviewedIDs, !reviewedIDs.isEmpty, Set(currentIDs) == Set(reviewedIDs) else {
+            throw SendFailure.fundsChanged
+        }
     }
 }

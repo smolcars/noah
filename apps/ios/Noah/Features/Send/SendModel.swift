@@ -37,6 +37,7 @@ import Observation
     var source: SendSource?
     var arkBalance: UInt64 = 0
     var onchainBalance: UInt64 = 0
+    var onchainTotal: UInt64 = 0
     var suggestions: [String] = []
     var error: String?
     var busy = false
@@ -82,7 +83,7 @@ import Observation
     var sources: [SendSource] {
         SendSource.allCases.filter {
             let balance = $0 == .offchain ? arkBalance : onchainBalance
-            return isMax ? balance > 0 : sats > 0 && balance >= sats
+            return isMax ? ($0 == .onchain ? onchainTotal : balance) > 0 : sats > 0 && balance >= sats
         }
     }
     func load() async {
@@ -90,12 +91,14 @@ import Observation
             let summary = try await session.summary()
             arkBalance = summary?.balance.ark.spendable ?? 0
             onchainBalance = summary?.balance.onchain.confirmed ?? 0
+            onchainTotal = summary?.balance.onchain.total ?? 0
         } catch { self.error = "Unable to read available balances." }
         await controller.checkStatus()
     }
     func maxSend() {
         guard !controller.locked else { return }
         progress = SendProgress(entry: .max)
+        error = nil
         source = nil
         parsed = SendDestination()
         destination = ""
@@ -212,6 +215,10 @@ import Observation
         case .source:
             guard let source, sources.contains(source) else {
                 error = "Choose a balance with sufficient funds."
+                return
+            }
+            if isMax, source == .onchain, onchainTotal != onchainBalance {
+                error = SendFailure.pendingOnchain.errorDescription
                 return
             }
             progress.sourceConfirmed = true
