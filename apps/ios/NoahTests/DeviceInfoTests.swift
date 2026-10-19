@@ -1,0 +1,57 @@
+import Foundation
+import Testing
+
+@testable import Noah
+
+struct DeviceInfoTests {
+    private let now: Double = 1_784_160_000_000
+    private let info = Components.Schemas.DeviceInfo(
+        appBuild: "27", appVersion: "0.1.4", deviceManufacturer: "Apple",
+        deviceModel: "iPhone 12 Pro", osName: "iOS", osVersion: "26.5")
+
+    @MainActor @Test func collectsAppOSAndHardware() {
+        let current = DeviceInfo.current()
+        #expect(current.deviceManufacturer == "Apple")
+        #expect(current.osName == "iOS")
+        #expect(current.osVersion?.isEmpty == false)
+        #expect(current.appVersion == Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
+        #expect(current.appBuild == Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String)
+        #expect(current.deviceModel == DeviceModel.current)
+        #expect(DeviceModel.name(for: "iPhone13,3") == "iPhone 12 Pro")
+        #expect(DeviceModel.name(for: "arm64") == "Simulator iOS")
+        #expect(DeviceModel.name(for: "future-model") == "future-model")
+    }
+
+    @Test func fingerprintMatchesJSONStringifyIncludingNulls() {
+        #expect(DeviceInfo.fingerprint(info) == #"["Apple","iPhone 12 Pro","iOS","26.5","0.1.4","27"]"#)
+        #expect(DeviceInfo.fingerprint(.init()) == "[null,null,null,null,null,null]")
+        #expect(DeviceInfo.fingerprint(.init(deviceModel: "a/b")) == #"[null,"a/b",null,null,null,null]"#)
+    }
+
+    @Test func unchangedRecentDetailsAreNotReported() {
+        #expect(!DeviceInfo.shouldReport(info, fingerprint: DeviceInfo.fingerprint(info), reportedAt: now - 1_000, now: now))
+    }
+
+    @Test func appBuildAndOSChangesAreReported() {
+        var app = info; app.appVersion = "0.1.3"
+        var build = info; build.appBuild = "26"
+        var os = info; os.osVersion = "26.4"
+        for old in [app, build, os] {
+            #expect(DeviceInfo.shouldReport(info, fingerprint: DeviceInfo.fingerprint(old), reportedAt: now - 1_000, now: now))
+        }
+    }
+
+    @Test func failedReportsRetryAndMissingTimestampIsRepaired() {
+        for time in [now, now + 1_000] {
+            #expect(DeviceInfo.shouldReport(info, fingerprint: nil, reportedAt: nil, now: time))
+        }
+        #expect(DeviceInfo.shouldReport(info, fingerprint: DeviceInfo.fingerprint(info), reportedAt: nil, now: now))
+    }
+
+    @Test func refreshesAtThirtyDaysAndRepairsFutureTimestamp() {
+        let fingerprint = DeviceInfo.fingerprint(info)
+        #expect(!DeviceInfo.shouldReport(info, fingerprint: fingerprint, reportedAt: now - DeviceInfo.refreshIntervalMS + 1, now: now))
+        #expect(DeviceInfo.shouldReport(info, fingerprint: fingerprint, reportedAt: now - DeviceInfo.refreshIntervalMS, now: now))
+        #expect(DeviceInfo.shouldReport(info, fingerprint: fingerprint, reportedAt: now + 1_000, now: now))
+    }
+}

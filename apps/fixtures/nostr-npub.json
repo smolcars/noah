@@ -1,0 +1,44 @@
+{
+  "cases": [
+    {
+      "name": "canonical",
+      "input": "b0635d6a9851d3aed0cd6c495b282167acf761729078d975fc341b22650b07b9",
+      "expected": "npub1kp34665c28f6a5xdd3y4k2ppv7k0wctjjpudja0uxsdjyegtq7us853d4g"
+    },
+    {
+      "name": "uppercase hex",
+      "input": "B0635D6A9851D3AED0CD6C495B282167ACF761729078D975FC341B22650B07B9",
+      "expected": "npub1kp34665c28f6a5xdd3y4k2ppv7k0wctjjpudja0uxsdjyegtq7us853d4g"
+    },
+    {
+      "name": "missing",
+      "input": null,
+      "expected": ""
+    },
+    {
+      "name": "malformed",
+      "input": "not-a-public-key",
+      "expected": ""
+    },
+    {
+      "name": "empty",
+      "input": "",
+      "expected": ""
+    },
+    {
+      "name": "short",
+      "input": "b0635d6a9851d3aed0cd6c495b282167acf761729078d975fc341b22650b07b",
+      "expected": ""
+    },
+    {
+      "name": "non-hex",
+      "input": "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
+      "expected": ""
+    },
+    {
+      "name": "whitespace is not trimmed",
+      "input": " b0635d6a9851d3aed0cd6c495b282167acf761729078d975fc341b22650b07b9",
+      "expected": ""
+    }
+  ]
+}

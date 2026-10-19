@@ -124,6 +124,12 @@ actor WalletSession {
         if case .open = state { true } else { false }
     }
 
+    /// Stable registration address; never advances the wallet's address index.
+    func peekAddress(index: UInt32) async throws -> String {
+        guard case .open(let handles) = state else { throw OpenError.walletDatabaseMissing }
+        return try await handles.wallet.peekAddress(index: index)
+    }
+
     func summary() async throws -> Summary? {
         guard case .open(let handles) = state else { return nil }
         let wallet = handles.wallet

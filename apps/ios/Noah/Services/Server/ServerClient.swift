@@ -21,7 +21,7 @@ enum ServerClient {
         return Client(
             serverURL: ServerEndpoint.baseURL(for: variant),
             transport: URLSessionTransport(configuration: .init(session: URLSession(configuration: configuration))),
-            middlewares: [BearerAuthMiddleware(tokens: tokens)])
+            middlewares: [ServerFailureMiddleware(), BearerAuthMiddleware(tokens: tokens)])
     }
 
     /// Unauthenticated client for the login exchange itself.
