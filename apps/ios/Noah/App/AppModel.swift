@@ -346,7 +346,7 @@ final class AppModel {
             // Registration may have switched backups on.
             await reconcileBackupTriggers()
             try await server.reportLastLogin()
-            try await server.refreshMailboxIfNeeded()
+            try? await server.refreshMailboxIfNeeded()
         } catch {
             log.w("Server setup failed; it can be retried from onboarding or Home")
             return

@@ -127,8 +127,11 @@ private struct BetaWarningView: View {
     }
 }
 
-private struct MnemonicView: View {
-    let onContinue: () -> Void
+struct MnemonicView: View {
+    var onContinue: (() -> Void)? = nil
+    @Environment(WalletLock.self) private var lock
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var authenticated = false
 
     @Environment(AppModel.self) private var model
     @State private var words: [String] = []
@@ -159,9 +162,15 @@ private struct MnemonicView: View {
                 .secretShield()
 
                 VStack(spacing: 12) {
+                    if onContinue == nil && !authenticated {
+                        NoahButton(title: "Authenticate to view seed phrase") { Task { await reveal() } }
+                        if let error = lock.error { Text(error).foregroundStyle(NoahColor.destructive) }
+                    }
                     NoahButton(title: copied ? "Copied" : "Copy Seed Phrase", kind: .secondary, action: copy)
-                    NoahButton(title: "I Have Saved It, Continue", action: onContinue)
                         .disabled(words.isEmpty)
+                    if let onContinue {
+                        NoahButton(title: "I Have Saved It, Continue", action: onContinue).disabled(words.isEmpty)
+                    }
                 }
             }
             .padding(24)
@@ -171,8 +180,22 @@ private struct MnemonicView: View {
         .background(NoahColor.background.ignoresSafeArea())
         .navigationTitle("Your Recovery Phrase")
         .navigationBarTitleDisplayMode(.large)
-        .navigationBarBackButtonHidden()
-        .task { words = model.currentMnemonicWords() }
+        .navigationBarBackButtonHidden(onContinue != nil)
+        .task { await reveal() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { words = []; authenticated = false; copied = false }
+            if phase == .active && onContinue != nil && words.isEmpty { Task { await reveal() } }
+        }
+        .onDisappear { words = []; authenticated = false }
+    }
+
+    private func reveal() async {
+        let allowed = onContinue != nil ? true : await lock.authenticate(String(localized: "Authenticate to view seed phrase"))
+        if allowed {
+            guard scenePhase != .background else { return }
+            authenticated = true
+            words = model.currentMnemonicWords()
+        }
     }
 
     /// Local-only pasteboard item that expires, so the phrase does not sync

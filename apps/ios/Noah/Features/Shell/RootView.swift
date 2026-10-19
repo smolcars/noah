@@ -3,6 +3,7 @@ import SwiftUI
 /// Picks onboarding, the wallet tabs or a blocking message from `AppModel`.
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @State private var lock = WalletLock()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -27,9 +28,22 @@ struct RootView: View {
                     message: "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again.")
             }
         }
-        .task { await model.start() }
+        .accessibilityHidden(model.phase == .wallet && lock.policy.locked)
+        .environment(lock)
+        .environment(\.locale, Locale(identifier: model.localeIdentifier))
+        .background(WalletLockOverlay(lock: lock, visible: model.phase == .wallet && lock.policy.locked))
+        .task {
+            await model.start()
+            if model.phase == .wallet && lock.policy.locked && scenePhase == .active { await lock.unlock() }
+        }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await model.appBecameActive() } }
+            if phase == .background { lock.background() }
+            if phase == .active {
+                Task {
+                    if model.phase == .wallet && lock.policy.locked { await lock.unlock() }
+                    await model.appBecameActive()
+                }
+            }
         }
     }
 }

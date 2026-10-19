@@ -113,7 +113,7 @@ struct HomeView: View {
             .background(NoahColor.background.ignoresSafeArea())
             .toolbar {
                 ToolbarItemGroup(placement: .topBarLeading) {
-                    Button("Settings", systemImage: "gearshape") {}
+                    NavigationLink { SettingsView() } label: { Label("Settings", systemImage: "gearshape") }
                     Button("Bitcoin Map", systemImage: "map") {}
                 }
                 ToolbarItem(placement: .principal) {

@@ -125,13 +125,14 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 ## M1 — Shell, onboarding, Home
 - [ ] Launch gating: wallet check, onboarding vs main, push-permission gate, battery gate (Android), biometric lock overlay, beta warning
+- [x] Biometric lock overlay on launch and foreground (device-passcode fallback) — iOS
 - [ ] Tab shell: Home, Receive, Send, History (Liquid Glass tab bar on iOS 26)
 - [x] OnboardingScreen create/restore — iOS (language picker waits for 0.8 translations)
 - [x] Create-or-resume logic (`WalletCreator`, RN `walletCreation` test cases ported) — iOS
 - [x] `deriveStoreNextKeypair` + key-0 public key (`staticVtxoPubkey`) on creation, as RN does — iOS
 - [x] BetaWarningScreen (accept before create, no double create) — iOS
 - [x] MnemonicScreen in onboarding (numbered grid, local-only expiring copy) — iOS
-- [ ] MnemonicScreen from Settings with biometric re-auth
+- [x] MnemonicScreen from Settings with biometric re-auth — iOS
 - [x] RestoreWalletScreen (backup restore with staged progress) — iOS
 - [x] EmailVerificationScreen (send/resend, 6-digit OTP, skip, reconcile verified) — iOS
 - [x] LightningAddressScreen (username/domain, optional npub, skip) — iOS
@@ -176,18 +177,19 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] TransactionDetail (sheet / split pane, historical fiat, technical details, explorer, repeat callback) — iOS; RN-generated `transactionHistory` / `barkMovement` fixtures; Send hookup remains `TODO(M3)`
 
 ## M5 — Settings & recovery
-- [ ] SettingsScreen (biometrics, auto-board, mailbox, suspend/resume, delete wallet, re-register, version/debug unlock)
-- [x] Suspend/resume, delete wallet (files before seed, under a reservation; refused while a restore is pending), re-register: model layer + suspended Home — iOS (Settings rows wire in with the Settings screen)
-- [ ] ProfileScreen
-- [ ] LanguageSettingsScreen, CurrencySettingsScreen, BitcoinUnitSettingsScreen
+- [x] SettingsScreen (biometrics, auto-board preference, mailbox, version/debug unlock) — iOS
+- [x] Suspend/resume, delete wallet (files before seed, under a reservation; refused while a restore is pending), re-register: model layer + suspended Home — iOS
+- [ ] Settings danger-zone rows wired to suspend/resume, delete wallet, re-register — iOS
+- [x] ProfileScreen — iOS
+- [x] LanguageSettingsScreen, CurrencySettingsScreen, BitcoinUnitSettingsScreen — iOS (language persists; translated copy awaits 0.9 catalogs)
 - [ ] EsploraSettingsScreen (coordinated wallet reload)
-- [ ] BackupSettingsScreen
-- [ ] ArkInfoScreen
-- [ ] ExportDatabaseScreen (encrypted `.noahbackup`)
-- [ ] LogScreen
-- [ ] FeedbackScreen (screenshot ≤5 MiB, device info)
-- [ ] NoahStoryScreen (bundled audio)
-- [ ] DebugScreen
+- [x] BackupSettingsScreen — iOS
+- [x] ArkInfoScreen — iOS
+- [x] ExportDatabaseScreen (encrypted `.noahbackup`) — iOS
+- [x] LogScreen — iOS
+- [x] FeedbackScreen (screenshot ≤5 MiB, device info) — iOS
+- [x] NoahStoryScreen (bundled audio) — iOS
+- [x] DebugScreen — iOS
 
 ## M6 — Onchain & exits
 - [ ] BoardArkScreen (+ auto-boarding service, 5,000-sat reserve)

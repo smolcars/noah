@@ -1,12 +1,12 @@
 import SwiftUI
 
 /// Owns a scratch folder until the activity controller is dismissed.
-final class SharedFile: Identifiable {
-    let id = UUID()
+final class SharedFile {
     let url: URL
     private let folder: URL
     init(url: URL, folder: URL) { self.url = url; self.folder = folder }
-    deinit { ScratchSpace.shared.discard(folder) }
+    func discard() { ScratchSpace.shared.discard(folder) }
+    deinit { discard() }
 }
 
 struct FileShareSheet: UIViewControllerRepresentable {
@@ -19,6 +19,7 @@ struct FileShareSheet: UIViewControllerRepresentable {
 
 struct ExportDatabaseView: View {
     @State private var file: SharedFile?
+    @State private var sharing = false
     @State private var busy = false
     @State private var error: String?
     var body: some View {
@@ -38,6 +39,7 @@ struct ExportDatabaseView: View {
                                 let url = folder.appending(path: "noah-\(AppVariant.current.rawValue).noahbackup")
                                 _ = try await AppServices.shared.backupService.exportEncryptedBackup(to: url)
                                 file = SharedFile(url: url, folder: folder)
+                                sharing = true
                             } catch { ScratchSpace.shared.discard(folder); throw error }
                         } catch { self.error = "Couldn't export your database. Please try again." }
                     }
@@ -45,13 +47,16 @@ struct ExportDatabaseView: View {
             }.padding(24).frame(maxWidth: 640).frame(maxWidth: .infinity)
         }
         .settingsStyle("Export Database")
-        .sheet(item: $file) { FileShareSheet(file: $0) }
+        .sheet(isPresented: $sharing, onDismiss: { file?.discard(); file = nil }) {
+            if let file { FileShareSheet(file: file) }
+        }
     }
 }
 
 struct LogView: View {
     @State private var lines: [String] = []
     @State private var file: SharedFile?
+    @State private var sharing = false
     @State private var error: String?
     var body: some View {
         ScrollView {
@@ -67,7 +72,9 @@ struct LogView: View {
         .task { lines = LogFile.shared.lines() }
         .refreshable { lines = LogFile.shared.lines() }
         .toolbar { Button("Share Logs", systemImage: "square.and.arrow.up", action: share) }
-        .sheet(item: $file) { FileShareSheet(file: $0) }
+        .sheet(isPresented: $sharing, onDismiss: { file?.discard(); file = nil }) {
+            if let file { FileShareSheet(file: file) }
+        }
     }
     private func share() {
         do {
@@ -77,6 +84,7 @@ struct LogView: View {
                 // Snapshot the redacted rotating files, so sharing cannot race rotation.
                 try LogFile.shared.lines().joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
                 file = SharedFile(url: url, folder: folder)
+                sharing = true
             } catch { ScratchSpace.shared.discard(folder); throw error }
         } catch { self.error = "Couldn't share logs. Please try again." }
     }

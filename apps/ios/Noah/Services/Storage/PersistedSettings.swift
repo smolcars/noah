@@ -35,3 +35,19 @@ struct PersistedTransactionState: Codable, Equatable, Sendable {
         if enabled { hasAttemptedAutoBoarding = false }
     }
 }
+
+extension PersistedTransactionState {
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        isAutoBoardingEnabled = (try? values.decode(Bool.self, forKey: .isAutoBoardingEnabled)) ?? true
+        hasAttemptedAutoBoarding = (try? values.decode(Bool.self, forKey: .hasAttemptedAutoBoarding)) ?? false
+    }
+
+    static func load(from storage: SettingsStorage) -> Self {
+        guard let json = storage.string(forKey: key),
+              let envelope = try? JSONDecoder().decode(PersistedEnvelope<Self>.self, from: Data(json.utf8)) else { return .init() }
+        var state = envelope.state
+        if (envelope.version ?? 0) < version { state.hasAttemptedAutoBoarding = false }
+        return state
+    }
+}

@@ -10,7 +10,7 @@ struct NoahStoryView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                Image("ReceiveLogo").resizable().scaledToFit().frame(height: 200).accessibilityHidden(true)
+                Image("SplashScreenLogo").resizable().scaledToFit().frame(height: 200).accessibilityHidden(true)
                 Text("The Story of Noah's Ark").font(NoahFont.title)
                 Text("Listen to the biblical story that inspired our wallet's name")
                     .foregroundStyle(NoahColor.mutedForeground).multilineTextAlignment(.center)

@@ -113,6 +113,7 @@ struct WalletLockOverlay: UIViewRepresentable {
                     let window = UIWindow(windowScene: scene)
                     window.windowLevel = .alert + 1
                     window.rootViewController = UIHostingController(rootView: WalletLockView().environment(lock))
+                    window.rootViewController?.view.accessibilityViewIsModal = true
                     coordinator.window = window
                 }
                 coordinator.window?.isHidden = false

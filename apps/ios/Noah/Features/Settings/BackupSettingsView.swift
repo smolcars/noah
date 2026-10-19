@@ -43,7 +43,7 @@ struct BackupSettingsView: View {
                     ForEach(backups, id: \.backupId) { backup in
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Encrypted wallet snapshot").font(NoahFont.callout)
-                            Text("\(backup.createdAt) · \(ByteCountFormatter.string(fromByteCount: backup.encryptedSize, countStyle: .file))")
+                            Text("\(backupDate(backup.createdAt)) · \(ByteCountFormatter.string(fromByteCount: backup.encryptedSize, countStyle: .file))")
                                 .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
                             Button("Delete", role: .destructive) { deleting = backup }.disabled(busy)
                         }.padding(.vertical, 6)
@@ -69,6 +69,10 @@ struct BackupSettingsView: View {
                 do { try await Task.sleep(for: .seconds(1)) } catch { return }
             }
         }
+    }
+    private func backupDate(_ timestamp: String) -> String {
+        let date = try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(timestamp)
+        return date?.formatted(date: .abbreviated, time: .shortened) ?? timestamp
     }
     private var status: String {
         switch state.lastBackupStatus {

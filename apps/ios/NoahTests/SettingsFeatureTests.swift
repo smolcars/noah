@@ -78,6 +78,10 @@ struct SettingsFeatureTests {
         #expect(roundTrip.state.displayName == "Alice")
         #expect(roundTrip.state.bitcoinAmountUnit == "sats")
         #expect(roundTrip.state.preferredCurrency == "JPY")
+        storage.set(#"{"state":{"isAutoBoardingEnabled":false,"hasAttemptedAutoBoarding":true},"version":0}"#, forKey: PersistedTransactionState.key)
+        let migrated = PersistedTransactionState.load(from: storage)
+        #expect(!migrated.isAutoBoardingEnabled)
+        #expect(!migrated.hasAttemptedAutoBoarding)
         let transactionJSON = #"{"state":{"isAutoBoardingEnabled":false,"hasAttemptedAutoBoarding":true},"version":1}"#
         let transaction = try JSONDecoder().decode(PersistedEnvelope<PersistedTransactionState>.self, from: Data(transactionJSON.utf8))
         var state = transaction.state
