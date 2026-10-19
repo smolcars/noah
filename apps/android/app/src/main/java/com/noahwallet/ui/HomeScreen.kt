@@ -2,6 +2,9 @@ package com.noahwallet.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -32,7 +35,10 @@ fun HomeScreen(model: AppModel) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp)) {
             Text("Noah", style = MaterialTheme.typography.headlineMedium)
-            if (BuildConfig.APP_VARIANT != "mainnet") SuggestionChip(onClick = {}, label = { Text(BuildConfig.APP_VARIANT.uppercase()) })
+            if (BuildConfig.APP_VARIANT != "mainnet") Text(BuildConfig.APP_VARIANT.uppercase(),
+                Modifier.background(if (BuildConfig.APP_VARIANT == "regtest") Color(0xFFFFCC00) else Color(0xFFFF9500), CircleShape)
+                    .padding(horizontal = 10.dp, vertical = 4.dp), color = Color.Black,
+                style = MaterialTheme.typography.labelMedium)
             Text(if (model.hidden) "••••••" else model.summary?.let {
                 BitcoinAmount.format(it.balance.totalSats.toLong(), model.amountUnit)
             } ?: "Loading…", style = MaterialTheme.typography.displaySmall)
@@ -49,7 +55,7 @@ fun HomeScreen(model: AppModel) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Recent Activity", style = MaterialTheme.typography.titleLarge)
                     val count = model.summary?.movementCount ?: 0
-                    Text(if (count > 0) "$count payments" else "No activity yet")
+                    Text(when (count) { 0 -> "No activity yet"; 1 -> "1 payment"; else -> "$count payments" })
                     if (count == 0) Text("Receive or send bitcoin to start your history.")
                 }
             }
