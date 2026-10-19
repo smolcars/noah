@@ -16,14 +16,23 @@ class WalletSessionTest {
         val waiting = CompletableDeferred<Unit>()
         val released = CompletableDeferred<Unit>()
         var holderClosed = false
+        var beforeNativeWait: CompletableDeferred<Unit>? = null
+        var waitRegistered = false
         override fun notifications(): WalletSession.Notifications {
             subscribed.complete(Unit)
             return object : WalletSession.Notifications {
-            override suspend fun next(): io.github.niteshbalusu11.bark.WalletNotification? {
-                waiting.complete(Unit); released.await(); return null
-            }
-            override fun cancelWait() { check(!holderClosed); released.complete(Unit) }
-            override fun close() { holderClosed = true }
+                override suspend fun next(): io.github.niteshbalusu11.bark.WalletNotification? {
+                    waiting.complete(Unit)
+                    beforeNativeWait?.await()
+                    waitRegistered = true
+                    released.await(); return null
+                }
+                override fun cancelWait() {
+                    check(!holderClosed)
+                    // Real SDK cancellation has no effect before nextNotification registers its wait.
+                    if (beforeNativeWait == null || waitRegistered) released.complete(Unit)
+                }
+                override fun close() { holderClosed = true }
             }
         }
         override suspend fun history() = emptyList<io.github.niteshbalusu11.bark.Movement>()
@@ -76,6 +85,24 @@ class WalletSessionTest {
             val observer = launch { session.receiveCompletion(ReceiveRequest("ark-test", "chain-test")) }
             handles.waiting.await()
             withTimeout(2000) { session.close(); observer.join() }
+            assertTrue(handles.holderClosed); assertTrue(handles.closed)
+        }
+    }
+
+    @Test fun closeAlsoCancelsBeforeNativeWaitHasRegistered() = runBlocking {
+        withLocation { location ->
+            val handles = Handles().apply { beforeNativeWait = CompletableDeferred() }
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test")
+            val observer = launch { session.receiveCompletion(ReceiveRequest("ark-test", "chain-test")) }
+            handles.waiting.await()
+            val closing = async { session.close() }
+            try { withTimeout(1000) { closing.await(); observer.join() } }
+            finally {
+                // Release the fake even on a regression so the test itself cannot hang.
+                handles.beforeNativeWait!!.complete(Unit); handles.released.complete(Unit)
+                closing.await(); observer.join()
+            }
             assertTrue(handles.holderClosed); assertTrue(handles.closed)
         }
     }

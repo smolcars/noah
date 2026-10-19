@@ -182,7 +182,9 @@ class WalletSession internal constructor(
                     }
                     var completion = reconcile()
                     while (completion == null && isActive) {
-                        val event = withContext(NonCancellable) { holder.next() } ?: break
+                        // Unlike submitted wallet work, this read-only FFI future must remain cancellable:
+                        // cancelWait is per-wait and can run before Rust installs its cancellation slot.
+                        val event = holder.next() ?: break
                         completion = when (event) {
                             is WalletNotification.MovementCreated -> ReceiveCompletion.matching(event.movement, request)
                             is WalletNotification.MovementUpdated -> ReceiveCompletion.matching(event.movement, request)
@@ -208,8 +210,8 @@ class WalletSession internal constructor(
         // The job closes the holder; synchronized prevents cancelWait racing that close.
         synchronized(observer.holder) {
             if (!observer.holderClosed) {
-                observer.job.cancel()
                 observer.holder.cancelWait()
+                observer.job.cancel()
             }
         }
         observer.job.join()
