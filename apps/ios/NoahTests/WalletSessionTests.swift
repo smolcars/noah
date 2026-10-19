@@ -23,6 +23,17 @@ struct WalletSessionTests {
         #expect(sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK)
     }
 
+    /// Same database in WAL mode, closed cleanly: no -wal or -shm left behind.
+    private func writeClosedWALDatabase(network: String) throws {
+        try writeBarkProperties(network: network)
+        var db: OpaquePointer?
+        #expect(sqlite3_open(location.database.path, &db) == SQLITE_OK)
+        #expect(sqlite3_exec(db, "PRAGMA journal_mode=WAL; INSERT INTO bark_properties VALUES ('2', 'x', 'y'); DELETE FROM bark_properties WHERE id = '2';", nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(db)
+        #expect(!FileManager.default.fileExists(atPath: location.database.path + "-wal"))
+        #expect(!FileManager.default.fileExists(atPath: location.database.path + "-shm"))
+    }
+
     /// Opener that never reaches the SDK; it waits until released, then fails.
     private actor Gate {
         private var waiters: [CheckedContinuation<Void, Never>] = []
@@ -67,6 +78,40 @@ struct WalletSessionTests {
             try await session(gate: gate).openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test")
         }
         #expect(await gate.calls == 0)
+    }
+
+    /// The v0.3.0 SDK opens these; Noah's own preflight must not reject them first.
+    @Test func cleanlyClosedWALDatabaseReachesTheOpener() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        try writeClosedWALDatabase(network: "regtest")
+        #expect(try WalletDatabase.properties(at: location.database) == .init(network: "regtest", fingerprint: "abcd1234"))
+        #expect(!FileManager.default.fileExists(atPath: location.database.path + "-shm"), "the check created no sidecar")
+
+        let gate = Gate()
+        let session = session(gate: gate)
+        let open = Task { try await session.openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+        while await gate.calls == 0 { await Task.yield() }
+        await gate.release()
+        await #expect(throws: OpenerFailed.self) { try await open.value }
+
+        let reservation = try await session.reserve()
+        let verify = Task { try await session.verify(reservation, mnemonic: "unused", appVersion: "test") }
+        while await gate.calls < 2 { await Task.yield() }
+        await gate.release()
+        await #expect(throws: OpenerFailed.self) { try await verify.value }
+        await session.release(reservation)
+    }
+
+    @Test func liveWALDatabaseIsReadWithItsLog() throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        try writeBarkProperties(network: "regtest")
+        var writer: OpaquePointer?
+        #expect(sqlite3_open(location.database.path, &writer) == SQLITE_OK)
+        defer { sqlite3_close(writer) }
+        // Committed only to the WAL while the writer stays open.
+        #expect(sqlite3_exec(writer, "PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0; UPDATE bark_properties SET network = 'signet';", nil, nil, nil) == SQLITE_OK)
+        #expect(FileManager.default.fileExists(atPath: location.database.path + "-wal"))
+        #expect(try WalletDatabase.properties(at: location.database).network == "signet")
     }
 
     @Test func rejectsOverlappingOpenAndCloseThenRecovers() async throws {

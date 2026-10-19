@@ -18,8 +18,17 @@ enum WalletDatabase {
     }
 
     static func properties(at url: URL) throws(InspectionError) -> Properties {
+        // A cleanly closed WAL database has no -wal/-shm, and a read-only
+        // connection can't create the index it needs (SQLITE_CANTOPEN). With
+        // no sidecar nothing is mid-transaction, so read it immutable, as the
+        // SDK's preflight does. With a sidecar, a normal read-only connection
+        // sees the committed WAL frames (and never recovers a hot journal).
+        let hasSidecar = ["-wal", "-journal"].contains { FileManager.default.fileExists(atPath: url.path + $0) }
+        let (name, flags) = hasSidecar
+            ? (url.path, SQLITE_OPEN_READONLY)
+            : (url.absoluteString + "?immutable=1", SQLITE_OPEN_READONLY | SQLITE_OPEN_URI)
         var handle: OpaquePointer?
-        let status = sqlite3_open_v2(url.path, &handle, SQLITE_OPEN_READONLY, nil)
+        let status = sqlite3_open_v2(name, &handle, flags, nil)
         defer { sqlite3_close(handle) }
         guard status == SQLITE_OK else { throw .cannotOpen(status) }
 
