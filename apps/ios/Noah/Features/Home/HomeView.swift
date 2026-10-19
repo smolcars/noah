@@ -32,7 +32,10 @@ struct HomeView: View {
                             .padding(.top, 24)
                     }
 
-                    if model.server.state.isEmailVerified != true && model.server.state.isEmailPromptDismissed != true {
+                    // Like RN, a suspended wallet shows only the suspended card.
+                    if !model.isWalletSuspended && model.server.state.isEmailVerified != true
+                        && model.server.state.isEmailPromptDismissed != true
+                    {
                         NoahCard {
                             HStack(alignment: .top, spacing: 12) {
                                 Button { showEmail = true } label: {
@@ -55,31 +58,33 @@ struct HomeView: View {
                         }
                     }
 
-                    NoahCard {
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack {
-                                Text("Recent Activity").font(NoahFont.headline)
-                                Spacer()
-                                Button("View all", action: onOpenHistory).font(NoahFont.footnote)
-                            }
-                            if history.isLoading {
-                                ProgressView("Loading transactions")
-                            } else if let error = history.error {
-                                Text(error).font(NoahFont.footnote)
-                                Button("Retry") { Task { await history.refresh(currency: model.preferredCurrency) } }
-                            } else if history.transactions.isEmpty {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("No activity yet").font(NoahFont.callout)
-                                    Text("Receive or send bitcoin to start your history.")
-                                        .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+                    if !model.isWalletSuspended {
+                        NoahCard {
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack {
+                                    Text("Recent Activity").font(NoahFont.headline)
+                                    Spacer()
+                                    Button("View all", action: onOpenHistory).font(NoahFont.footnote)
                                 }
-                            } else {
-                                ForEach(Array(history.transactions.prefix(3))) { transaction in
-                                    Button { selectedID = transaction.id } label: {
-                                        TransactionRow(transaction: transaction, unit: model.amountUnit, recent: true)
-                                            .padding(.vertical, 8)
+                                if history.isLoading {
+                                    ProgressView("Loading transactions")
+                                } else if let error = history.error {
+                                    Text(error).font(NoahFont.footnote)
+                                    Button("Retry") { Task { await history.refresh(currency: model.preferredCurrency) } }
+                                } else if history.transactions.isEmpty {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("No activity yet").font(NoahFont.callout)
+                                        Text("Receive or send bitcoin to start your history.")
+                                            .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
                                     }
-                                    .buttonStyle(.plain)
+                                } else {
+                                    ForEach(Array(history.transactions.prefix(3))) { transaction in
+                                        Button { selectedID = transaction.id } label: {
+                                            TransactionRow(transaction: transaction, unit: model.amountUnit, recent: true)
+                                                .padding(.vertical, 8)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
                                 }
                             }
                         }
