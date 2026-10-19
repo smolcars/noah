@@ -1,5 +1,6 @@
 package com.noahwallet.services.wallet
 
+import com.noahwallet.BuildConfig
 import io.github.niteshbalusu11.bark.Config
 import io.github.niteshbalusu11.bark.Network
 
@@ -30,15 +31,15 @@ data class WalletConfiguration(
     )
 
     companion object {
-        fun base(variant: String): WalletConfiguration = when (variant) {
+        fun base(variant: String, regtestHost: String = BuildConfig.REGTEST_HOST): WalletConfiguration = when (variant) {
             "mainnet" -> WalletConfiguration(Network.BITCOIN, "https://ark.second.tech",
                 esplora = "https://mempool.second.tech/api", vtxoRefreshExpiryThreshold = 144u,
                 roundTxRequiredConfirmations = 2u)
             "signet" -> WalletConfiguration(Network.SIGNET, "https://ark.signet.2nd.dev",
                 esplora = "https://esplora.signet.2nd.dev", vtxoRefreshExpiryThreshold = 12u,
                 roundTxRequiredConfirmations = 1u)
-            "regtest" -> WalletConfiguration(Network.REGTEST, "http://10.0.2.2:3535",
-                bitcoind = "http://10.0.2.2:18443", bitcoindUser = "second", bitcoindPass = "ark",
+            "regtest" -> WalletConfiguration(Network.REGTEST, "http://$regtestHost:3535",
+                bitcoind = "http://$regtestHost:18443", bitcoindUser = "second", bitcoindPass = "ark",
                 vtxoRefreshExpiryThreshold = 24u, roundTxRequiredConfirmations = 1u)
             else -> error("Unknown app variant")
         }

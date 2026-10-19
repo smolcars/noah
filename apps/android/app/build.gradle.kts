@@ -46,7 +46,12 @@ android {
         minSdk = 24
         targetSdk = 37
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        val regtestServer = providers.gradleProperty("noahRegtestServerURL").orElse("http://10.0.2.2:3000").get()
+        // Regtest stack host: the emulator's alias for the Mac by default; a
+        // phone uses 127.0.0.1 with `adb reverse` (-PnoahRegtestHost=127.0.0.1).
+        val regtestHost = providers.gradleProperty("noahRegtestHost").orElse("10.0.2.2").get()
+        require(regtestHost.matches(Regex("[a-zA-Z0-9.-]+"))) { "Invalid regtest host" }
+        buildConfigField("String", "REGTEST_HOST", "\"$regtestHost\"")
+        val regtestServer = providers.gradleProperty("noahRegtestServerURL").orElse("http://$regtestHost:3000").get()
         require(regtestServer.matches(Regex("https?://[a-zA-Z0-9.:-]+"))) { "Invalid regtest server URL" }
         buildConfigField("String", "REGTEST_SERVER_URL", "\"$regtestServer\"")
         versionCode = 100
