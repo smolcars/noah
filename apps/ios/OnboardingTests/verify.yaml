@@ -1,0 +1,58 @@
+appId: com.noahwallet.regtest
+---
+- assertVisible: Emergency Email
+- takeScreenshot: ${SHOTS}/email
+- tapOn:
+    id: email-address-input
+- inputText: ${EMAIL}
+- tapOn: Done
+- tapOn: Send Verification Code
+- extendedWaitUntil:
+    visible: Enter Verification Code
+    timeout: 30000
+- takeScreenshot: ${SHOTS}/code-keyboard
+- inputText: '000001'
+- tapOn: Verify Email
+- assertVisible: Verification Failed
+- tapOn: OK
+- assertVisible: 6-digit code
+- scrollUntilVisible:
+    element: Resend Code
+    direction: DOWN
+- tapOn: Resend Code
+- extendedWaitUntil:
+    visible: 6-digit code
+    timeout: 30000
+- inputText: '000000'
+- tapOn: Verify Email
+- extendedWaitUntil:
+    visible: Choose your Lightning Address
+    timeout: 30000
+- takeScreenshot: ${SHOTS}/lightning
+- tapOn:
+    id: lightning-username-input
+- eraseText: 100
+- inputText: ${USERNAME}
+- tapOn: Done
+- scrollUntilVisible:
+    element:
+      id: nostr-public-key-input
+    direction: DOWN
+- tapOn:
+    id: nostr-public-key-input
+- inputText: nsec1test
+- tapOn: Done
+- tapOn: Save
+- assertVisible: Never paste a Nostr private key. Enter an npub public key.
+- tapOn: OK
+- tapOn:
+    id: nostr-public-key-input
+- eraseText: 100
+- inputText: npub1kp34665c28f6a5xdd3y4k2ppv7k0wctjjpudja0uxsdjyegtq7us853d4g
+- tapOn: Done
+- tapOn: Save
+- extendedWaitUntil:
+    visible: Recent Activity
+    timeout: 30000
+- assertNotVisible: Add Emergency Email
+- takeScreenshot: ${SHOTS}/home

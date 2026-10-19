@@ -1,0 +1,54 @@
+appId: com.noahwallet.regtest
+---
+- assertVisible: Emergency Email
+- takeScreenshot: ${SHOTS}/email
+- tapOn:
+    id: email-address-input
+- inputText: se@example.com
+- assertVisible: Done
+- takeScreenshot: ${SHOTS}/email-keyboard
+- tapOn: Done
+- tapOn: Send Verification Code
+- extendedWaitUntil:
+    visible: Enter Verification Code
+    timeout: 30000
+- takeScreenshot: ${SHOTS}/code-keyboard
+- tapOn: Done
+- scrollUntilVisible:
+    element: Change email address
+    direction: DOWN
+- tapOn: Change email address
+- assertVisible:
+    id: email-address-input
+- tapOn: Done
+- tapOn: Continue without email
+- extendedWaitUntil:
+    visible: Choose your Lightning Address
+    timeout: 30000
+- tapOn:
+    id: lightning-username-input
+- takeScreenshot: ${SHOTS}/username-keyboard
+- tapOn: Done
+- scrollUntilVisible:
+    element:
+      id: nostr-public-key-input
+    direction: DOWN
+- tapOn:
+    id: nostr-public-key-input
+- inputText: npub1
+- assertVisible: Done
+- takeScreenshot: ${SHOTS}/npub-keyboard
+- tapOn: Done
+- tapOn: Skip
+- extendedWaitUntil:
+    visible: Add Emergency Email
+    timeout: 30000
+- takeScreenshot: ${SHOTS}/home-banner
+- tapOn: Add Emergency Email
+- assertVisible: Emergency Email
+- tapOn: Back
+- tapOn: Dismiss emergency email prompt
+- assertNotVisible: Add Emergency Email
+- stopApp
+- launchApp
+- assertNotVisible: Add Emergency Email

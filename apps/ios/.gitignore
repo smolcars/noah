@@ -2,3 +2,4 @@ Noah.xcodeproj/
 build/
 DerivedData/
 Tools/OpenAPIGenerator/.build/
+OnboardingTests/screenshots/

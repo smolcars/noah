@@ -1,0 +1,24 @@
+appId: com.noahwallet.regtest
+---
+- launchApp
+- tapOn: Create Wallet
+- tapOn: I accept
+- extendedWaitUntil:
+    visible: Your Recovery Phrase
+    timeout: 60000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: Your Recovery Phrase
+    timeout: 30000
+- scrollUntilVisible:
+    element: I Have Saved It, Continue
+    direction: DOWN
+- tapOn: I Have Saved It, Continue
+- extendedWaitUntil:
+    visible: Emergency Email
+    timeout: 60000
+- extendedWaitUntil:
+    notVisible: Setting up your account...
+    timeout: 60000
+- assertNotVisible: Failed to register with server. Please try again.
