@@ -119,6 +119,24 @@ class SecretStorageTest {
         assertNotNull(file.bytes)
     }
 
+    /**
+     * Review finding: a restore's seed commit whose read-back fails must keep the (possibly durable)
+     * new seed so restore keeps its journal and settles later; migration/creation may discard it.
+     */
+    @Test fun unverifiedFirstWriteIsKeptForRestoreCommitOnly() {
+        for (keep in listOf(true, false)) {
+            val file = FakeFile()
+            val writing = object : SecretFile by file {
+                override fun writeAtomically(bytes: ByteArray) { file.writeAtomically(bytes); file.unreadable = true }
+            }
+            val store = NativeSecretStore("test", FakeKeys(), writing)
+            assertTrue(store.save(secret, keepUnverifiedWrite = keep) is SecretResult.Unavailable)
+            file.unreadable = false
+            if (keep) assertNotNull("restore commit keeps the written seed", file.bytes)
+            else assertNull("migration/creation discards it", file.bytes)
+        }
+    }
+
     @Test fun migrationVerifiesBeforeUseAndKeepsLegacyOnFailure() = runBlocking {
         val keys = FakeKeys()
         val file = FakeFile()
@@ -195,7 +213,9 @@ class SecretStorageTest {
         var failWrite = false
         var corruptWrite = false
         var failAfterWrite = false
-        override fun read() = bytes?.copyOf()
+        /** The write lands, then reads fail for a while (e.g. a Keystore hiccup). */
+        var unreadable = false
+        override fun read() = if (unreadable) error("Read failed") else bytes?.copyOf()
         override fun writeAtomically(bytes: ByteArray) {
             if (failWrite) error("Write failed")
             this.bytes = if (corruptWrite) byteArrayOf(0) else bytes.copyOf()

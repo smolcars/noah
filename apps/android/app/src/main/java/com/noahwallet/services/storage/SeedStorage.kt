@@ -32,7 +32,8 @@ class SeedStorage internal constructor(
         }
     }
 
-    suspend fun save(value: String): SecretResult = migrationLock.withLock { native.save(value) }
+    suspend fun save(value: String, keepUnverifiedWrite: Boolean = false): SecretResult =
+        migrationLock.withLock { native.save(value, keepUnverifiedWrite) }
 
     internal suspend fun delete(onlyIfValueIs: String) = migrationLock.withLock {
         native.delete(onlyIfValueIs)

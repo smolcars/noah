@@ -2,22 +2,30 @@
 <!-- Android 12+. Keystore-encrypted files must never be restored onto another
      device: their keys do not travel with the backup, so the copies would be
      unreadable and could mask the real seed. The native seed lives in
-     noBackupFilesDir, which is never backed up. -->
+     noBackupFilesDir, which is never backed up. The plaintext wallet datadir
+     and the restore workspace stay off too: without their seed they are useless
+     on another device, and wallets move with Noah's own encrypted backups. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="RN_KEYCHAIN.xml" />
         <exclude domain="sharedpref" path="noah_native_secrets.xml" />
         <exclude domain="file" path="datastore/RN_KEYCHAIN.preferences_pb" />
+        <exclude domain="file" path="noah-data-mainnet" />
         <exclude domain="file" path=".noah-data-mainnet-restore" />
+        <exclude domain="file" path="noah-data-signet" />
         <exclude domain="file" path=".noah-data-signet-restore" />
+        <exclude domain="file" path="noah-data-regtest" />
         <exclude domain="file" path=".noah-data-regtest-restore" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="RN_KEYCHAIN.xml" />
         <exclude domain="sharedpref" path="noah_native_secrets.xml" />
         <exclude domain="file" path="datastore/RN_KEYCHAIN.preferences_pb" />
+        <exclude domain="file" path="noah-data-mainnet" />
         <exclude domain="file" path=".noah-data-mainnet-restore" />
+        <exclude domain="file" path="noah-data-signet" />
         <exclude domain="file" path=".noah-data-signet-restore" />
+        <exclude domain="file" path="noah-data-regtest" />
         <exclude domain="file" path=".noah-data-regtest-restore" />
     </device-transfer>
 </data-extraction-rules>

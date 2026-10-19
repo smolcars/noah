@@ -43,8 +43,12 @@ internal class NativeSecretStore(
         SecretResult.Unavailable(SecretFailure.storageUnreadable)
     }
 
-    /** Refuse to overwrite unreadable data. Verify persistence before handing the value to callers. */
-    fun save(value: String): SecretResult = synchronized(lock) {
+    /**
+     * Refuse to overwrite unreadable data. Verify persistence before handing the value to callers.
+     * `keepUnverifiedWrite`: a restore's seed commit must never delete a written-but-unverified
+     * seed (it may be durable); the restore keeps its journal and settles once it can be read.
+     */
+    fun save(value: String, keepUnverifiedWrite: Boolean = false): SecretResult = synchronized(lock) {
         val prior = readUnlocked()
         if (prior is SecretResult.Unavailable) return@synchronized prior
         try {
@@ -58,9 +62,9 @@ internal class NativeSecretStore(
             file.writeAtomically(byteArrayOf(1) + cipher.iv + ciphertext)
             val verified = readUnlocked()
             if (verified is SecretResult.Found && verified.value == value) verified
-            else failedWrite(prior)
+            else failedWrite(prior, keepUnverifiedWrite)
         } catch (_: Exception) {
-            failedWrite(prior)
+            failedWrite(prior, keepUnverifiedWrite)
         }
     }
 
@@ -70,9 +74,14 @@ internal class NativeSecretStore(
         if (current is SecretResult.Found && current.value == onlyIfValueIs) file.delete()
     }
 
-    /** A failed first write must not leave an unreadable file that would mask the legacy seed forever. */
-    private fun failedWrite(prior: SecretResult): SecretResult {
-        if (prior == SecretResult.NotFound && readUnlocked() !is SecretResult.Found) runCatching { file.delete() }
+    /**
+     * Migration and creation: a failed first write must not leave an unreadable file that would
+     * mask the legacy seed forever (the deletion is durable). A restore commit keeps it instead.
+     */
+    private fun failedWrite(prior: SecretResult, keepUnverifiedWrite: Boolean): SecretResult {
+        if (!keepUnverifiedWrite && prior == SecretResult.NotFound && readUnlocked() !is SecretResult.Found) {
+            runCatching { file.delete() }
+        }
         return SecretResult.Unavailable(SecretFailure.migrationFailed)
     }
 

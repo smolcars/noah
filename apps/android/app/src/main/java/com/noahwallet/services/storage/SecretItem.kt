@@ -10,7 +10,8 @@ class SeedItem(private val storage: SeedStorage) : SecretItem {
     class Unavailable : Exception("Secure storage unavailable")
     override suspend fun read() = storage.read()
     override suspend fun save(value: String) {
-        val result = storage.save(value)
+        // The restore commit: an unverified write stays for launch recovery to read later.
+        val result = storage.save(value, keepUnverifiedWrite = true)
         if (result !is SecretResult.Found || result.value != value) throw Unavailable()
     }
 }

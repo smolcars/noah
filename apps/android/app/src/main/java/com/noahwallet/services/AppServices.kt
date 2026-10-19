@@ -91,7 +91,21 @@ class AppServices private constructor(private val context: Context) {
     fun isOnboarded(): Boolean = SettingsStorage(context)
         .persistedState<PersistedWalletState>(PersistedWalletState.key)?.isInitialized == true
 
+    class WalletSuspended : Exception("Wallet suspended")
+    class RestoreNotSettled : Exception("Interrupted restore not settled yet")
+
+    /**
+     * Opens the wallet if needed (RN `loadWalletIfNeeded`): never while the user suspended it, and
+     * only after an interrupted restore is settled, so headless launches (FCM, WorkManager) recover
+     * it too instead of failing until the app is opened.
+     */
     suspend fun ensureWalletOpen() {
+        if (settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
+            throw WalletSuspended()
+        }
+        if (WalletDataLocation(context.filesDir, variant).restorePending &&
+            recoverRestore() == RestoreTransaction.Recovery.waitingForSecret
+        ) throw RestoreNotSettled()
         val mnemonic = seed.read()
         check(mnemonic is SecretResult.Found && mnemonic.value.isNotEmpty()) { "Wallet seed unavailable" }
         session.ensureOpen(mnemonic.value, true, BuildConfig.VERSION_NAME)

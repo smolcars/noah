@@ -47,7 +47,8 @@ class RestoreTransaction(
             seedTag = Base64.encode(tag(mnemonic, salt)))
         File(staged, markerName).writeText(journal.id)
         syncTree(staged); sync(directory); write(journal)
-        if (journal.hadPreviousData) rename(datadir, previous)
+        // Each rename is durable before the next.
+        if (journal.hadPreviousData) { rename(datadir, previous); syncBothSides() }
         rename(staged, datadir); syncBothSides()
     }
     fun markCommitting() = write(readJournal().copy(phase = Phase.committing))

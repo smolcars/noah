@@ -54,7 +54,11 @@ internal class AtomicSecretFile(private val path: File) : SecretFile {
         try { android.system.Os.fsync(descriptor) } finally { android.system.Os.close(descriptor) }
     }
 
-    override fun delete() = file.delete()
+    /** Durable: the unlink is synced, so a deleted seed can't reappear after power loss. */
+    override fun delete() {
+        file.delete()
+        syncPath(path.parentFile!!)
+    }
 
     override fun writeAtomically(bytes: ByteArray) {
         // AtomicFile.finishWrite hides fsync failures. Restore requires real durability errors.
