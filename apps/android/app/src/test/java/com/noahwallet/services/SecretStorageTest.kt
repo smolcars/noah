@@ -117,16 +117,18 @@ class SecretStorageTest {
         var reads = 0
         val legacy = { reads++; SecretResult.Found(secret) }
         val storage = SeedStorage(native, legacy)
+        // A failed or corrupt copy still yields the legacy seed and leaves no file behind.
         file.failWrite = true
-        assertTrue(storage.read() is SecretResult.Unavailable)
+        assertFound(storage.read())
+        assertNull(file.bytes)
         file.failWrite = false
         file.corruptWrite = true
-        assertTrue(storage.read() is SecretResult.Unavailable)
-        // Simulate fixing the failed destination; legacy is still independently readable.
-        assertFound(legacy())
-        file.bytes = null
+        assertFound(storage.read())
+        assertNull(file.bytes)
+        // Once the copy works it is used from then on.
         file.corruptWrite = false
         assertFound(storage.read())
+        assertTrue(file.bytes != null)
         val count = reads
         List(10) { async { assertFound(SeedStorage(native, legacy).read()) } }.awaitAll()
         assertEquals(count, reads)
@@ -173,5 +175,6 @@ class SecretStorageTest {
             if (failWrite) error("Write failed")
             this.bytes = if (corruptWrite) byteArrayOf(0) else bytes.copyOf()
         }
+        override fun delete() { bytes = null }
     }
 }

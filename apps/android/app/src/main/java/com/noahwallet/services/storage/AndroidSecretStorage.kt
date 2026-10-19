@@ -45,6 +45,8 @@ internal class AtomicSecretFile(private val path: File) : SecretFile {
         null
     }
 
+    override fun delete() = file.delete()
+
     override fun writeAtomically(bytes: ByteArray) {
         val stream = file.startWrite()
         try {

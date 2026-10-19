@@ -13,6 +13,7 @@ internal interface SecretKeys {
 internal interface SecretFile {
     fun read(): ByteArray?
     fun writeAtomically(bytes: ByteArray)
+    fun delete()
 }
 
 /** v1: [version:1][random nonce:12][AES-256-GCM ciphertext + tag:16]. */
@@ -57,10 +58,16 @@ internal class NativeSecretStore(
             file.writeAtomically(byteArrayOf(1) + cipher.iv + ciphertext)
             val verified = readUnlocked()
             if (verified is SecretResult.Found && verified.value == value) verified
-            else SecretResult.Unavailable(SecretFailure.migrationFailed)
+            else failedWrite(prior)
         } catch (_: Exception) {
-            SecretResult.Unavailable(SecretFailure.migrationFailed)
+            failedWrite(prior)
         }
+    }
+
+    /** A failed first write must not leave an unreadable file that would mask the legacy seed forever. */
+    private fun failedWrite(prior: SecretResult): SecretResult {
+        if (prior == SecretResult.NotFound) runCatching { file.delete() }
+        return SecretResult.Unavailable(SecretFailure.migrationFailed)
     }
 
     companion object {

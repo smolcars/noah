@@ -13,10 +13,19 @@ class SeedStorage internal constructor(
         { KeychainPassword.mnemonic(context, variant).read() },
     )
 
+    /**
+     * New store first; otherwise the RN app's seed, copied into the new store. A failed copy
+     * still returns the legacy seed (the copy is retried next time) so a storage hiccup can
+     * never lock the user out. An unreadable new store stays fail-closed: it may hold a newer
+     * seed than the legacy record (e.g. after a native restore).
+     */
     suspend fun read(): SecretResult = migrationLock.withLock {
         when (val current = native.read()) {
             SecretResult.NotFound -> when (val old = legacy()) {
-                is SecretResult.Found -> native.save(old.value)
+                is SecretResult.Found -> {
+                    native.save(old.value)
+                    old
+                }
                 else -> old
             }
             else -> current
