@@ -16,7 +16,7 @@ object SharedFixtures {
             "Missing shared fixture: $domain.json"
         }
         return stream.bufferedReader(Charsets.UTF_8).use {
-            Json.decodeFromString<FixtureFile>(it.readText()).cases
+            Json { ignoreUnknownKeys = true }.decodeFromString<FixtureFile>(it.readText()).cases
         }
     }
 }

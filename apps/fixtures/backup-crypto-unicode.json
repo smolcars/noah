@@ -1,0 +1,18 @@
+{
+  "description": "Supplemental Node crypto vector verifying UTF-8 passwords without normalization.",
+  "cases": [
+    {
+      "name": "v2 UTF-8 mnemonic bytes",
+      "input": {
+        "version": 2,
+        "mnemonic": "あいこくしん café 🪙",
+        "saltHex": "00112233445566778899aabbccddeeff",
+        "nonceHex": "102132435465768798a9bacb",
+        "plaintextHex": "000102ff"
+      },
+      "expected": {
+        "envelopeHex": "0200112233445566778899aabbccddeeff102132435465768798a9bacb3030d6a5ecb36c825a2fda366c405574f93da562"
+      }
+    }
+  ]
+}
