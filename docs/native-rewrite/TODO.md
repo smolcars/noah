@@ -114,6 +114,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Backup coordinator: single in-flight, 5 s debounce, generation counter, backoff 15 s → 15 min with jitter, suspension gates; `backup-storage` with RN's actions; triggers from wallet state changes (session-owned), foreground and push — iOS
 - [x] Backup coordinator — Android (generation counter, manual-clock tests, foreground/state-change/push triggers)
 - [x] v1 legacy extraction, bounded streaming download, startup scratch sweep and Auto Backup/device-transfer exclusions — Android
+- [x] One launch recovery at a time for UI start and headless jobs, settled on every wallet open (also clears pre-journal plaintext, even while suspended); exports sealed only into app-owned swept folders — iOS + Android
 - [x] Backup upload and unchanged-snapshot skip; live S3 round trip at port 3100 — Android
 - [x] Shared Node/Info-ZIP v1/v2 archives and a Node-made real wallet snapshot restored/reopened — Android
 - [x] Independently built v2 + v1 backup files (Node crypto + Info-ZIP, `backup-archives.json`) open on iOS
