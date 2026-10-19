@@ -1,0 +1,91 @@
+package com.noahwallet.services.server
+
+import com.noahwallet.api.generated.PublicOperations
+import com.noahwallet.api.generated.client.*
+import com.noahwallet.api.generated.models.*
+import com.noahwallet.services.wallet.WalletConfiguration
+import io.github.niteshbalusu11.bark.derivePublicKeyFromMnemonic
+import io.github.niteshbalusu11.bark.signMessageWithMnemonic
+import io.ktor.client.*
+import io.ktor.client.engine.*
+import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.json.Json
+
+class ServerFailure(message: String, val status: Int? = null, val code: String? = null) : Exception(message)
+
+object ServerEndpoint {
+    fun baseURL(variant: String, regtestOverride: String? = null): String = when (variant) {
+        "mainnet" -> "https://noahwallet.io"
+        "signet" -> "https://signet.noahwallet.io"
+        "regtest" -> regtestOverride ?: "http://10.0.2.2:3000"
+        else -> error("Unknown app variant")
+    }
+}
+
+object ServerClient {
+    val json = Json { ignoreUnknownKeys = true }
+    val retryCodes = setOf("AUTH_REQUIRED", "INVALID_TOKEN", "TOKEN_EXPIRED")
+
+    fun isPublic(method: String, path: String): Boolean = PublicOperations.routes.any { route ->
+        val (verb, template) = route.split(' ', limit = 2)
+        verb == method && template.split('/').let { parts ->
+            val actual = path.split('/')
+            parts.size == actual.size && parts.zip(actual).all { (part, value) ->
+                if (part.startsWith('{')) value.isNotEmpty() else part == value
+            }
+        }
+    }
+
+    fun make(baseURL: String, tokens: AuthTokenProvider? = null,
+             engine: HttpClientEngine = OkHttp.create()): HttpClient {
+        val origin = Url(baseURL)
+        val client = HttpClient(engine) {
+            // Never replay a bearer or signed login body to a redirect target.
+            followRedirects = false
+            install(ContentNegotiation) { json(ServerClient.json) }
+            install(HttpTimeout) { requestTimeoutMillis = 30_000; connectTimeoutMillis = 30_000 }
+            defaultRequest { url(baseURL) }
+        }
+        if (tokens != null) client.plugin(HttpSend).intercept { request ->
+            check(request.url.protocol == origin.protocol && request.url.host == origin.host && request.url.port == origin.port) {
+                "Server client cannot send credentials to another origin"
+            }
+            if (isPublic(request.method.value, request.url.encodedPath)) {
+                request.headers.remove(HttpHeaders.Authorization)
+                return@intercept execute(request)
+            }
+            val token = tokens.token()
+            request.headers[HttpHeaders.Authorization] = "Bearer $token"
+            val call = execute(request)
+            if (call.response.status != HttpStatusCode.Unauthorized) return@intercept call
+            val code = runCatching { json.decodeFromString<ApiErrorResponse>(call.response.bodyAsText()).code }.getOrNull()
+            if (code !in retryCodes) return@intercept call
+            request.headers[HttpHeaders.Authorization] = "Bearer ${tokens.token(forceRefresh = true, rejectedToken = token)}"
+            execute(request)
+        }
+        return client
+    }
+
+    suspend fun login(client: HttpClient, variant: String, mnemonic: String): String {
+        val k1 = V0Getk1Client(client).getK1().value().k1
+        val network = WalletConfiguration.base(variant).network
+        val key = derivePublicKeyFromMnemonic(mnemonic, network, 0u)
+        val sig = signMessageWithMnemonic(k1, mnemonic, network, 0u)
+        return V0AuthLoginClient(client).authLogin(AuthLoginPayload(k1 = k1, key = key, sig = sig)).value().accessToken
+    }
+}
+
+/** Keep generated errors (which can contain headers, bodies and secrets) behind this boundary. */
+fun <T> NetworkResult<T>.value(): T = when (this) {
+    is NetworkResult.Success -> data
+    is NetworkResult.Failure -> {
+        val http = error as? NetworkError.Http
+        val body = http?.body?.let { runCatching { ServerClient.json.decodeFromString<ApiErrorResponse>(it) }.getOrNull() }
+        throw ServerFailure(body?.message ?: "Server request failed", http?.statusCode, body?.code)
+    }
+}

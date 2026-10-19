@@ -3,6 +3,10 @@ package com.noahwallet.services.storage
 import android.content.Context
 import android.util.Base64
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.edit
+import android.security.keystore.KeyInfo
+import javax.crypto.Cipher
+import javax.crypto.SecretKeyFactory
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
@@ -33,6 +37,37 @@ class KeychainPassword private constructor(
         base64 = { Base64.decode(it, Base64.DEFAULT) },
         fallback = { mnemonicVariant?.let { readEncryptedMnemonic(context, it) } ?: SecretResult.NotFound },
     ).read()
+
+    /** Write only renewable server credentials, preserving RN's alias, cipher and :u/:p/:c row. */
+    suspend fun saveAuthToken(token: String) {
+        check(service.startsWith("com.noah.auth-token."))
+        val keys = AndroidSecretKeys()
+        val key = keys.existing(service) ?: keys.create(service)
+        val info = SecretKeyFactory.getInstance(key.algorithm, "AndroidKeyStore")
+            .getKeySpec(key, KeyInfo::class.java) as KeyInfo
+        val gcm = "GCM" in info.blockModes
+        check(gcm || "CBC" in info.blockModes) { "Unsupported auth token cipher" }
+        fun encrypt(value: String): String {
+            val cipher = Cipher.getInstance(if (gcm) "AES/GCM/NoPadding" else "AES/CBC/PKCS7Padding")
+            cipher.init(Cipher.ENCRYPT_MODE, key)
+            return Base64.encodeToString(cipher.iv + cipher.doFinal(value.toByteArray(Charsets.UTF_8)), Base64.DEFAULT)
+        }
+        val username = encrypt("noah")
+        val password = encrypt(token)
+        context.rnKeychain.edit {
+            it[stringPreferencesKey("$service:u")] = username
+            it[stringPreferencesKey("$service:p")] = password
+            it[stringPreferencesKey("$service:c")] = if (gcm) "KeystoreAESGCM_NoAuth" else "KeystoreAESCBC"
+        }
+    }
+
+    suspend fun clearAuthToken() {
+        check(service.startsWith("com.noah.auth-token."))
+        context.rnKeychain.edit { prefs -> fields.forEach { prefs.remove(stringPreferencesKey("$service:$it")) } }
+        val editor = context.getSharedPreferences("RN_KEYCHAIN", Context.MODE_PRIVATE).edit()
+        fields.forEach { editor.remove("$service:$it") }
+        check(editor.commit()) { "Cannot clear server token" }
+    }
 
     companion object {
         private val fields = listOf("u", "p", "c")
