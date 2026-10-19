@@ -130,3 +130,92 @@ delivery, or a changed widget cache.
   temporary test APKs, private scratch data, and worktree build/dependency outputs
   are removed at handoff. The three USB reverse mappings are retained for the
   installed build.
+
+## Follow-up: physical Pixel push acceptance, 2026-10-19
+
+**PASS: background callbacks, killed-process delivery, and a visible widget balance
+refresh.** This follow-up resolves the server-availability block above. The earlier
+run's results remain historical; its pending rows were not reused or rewritten.
+
+### Setup and procedure
+
+- Starting commit `4e64dd52`; reused the installed native regtest APK and upgraded
+  wallet on physical Pixel 6 `26011FDF600649`. No APK build, install, data reset,
+  instrumentation, emulator action, or application-source change was needed.
+- The externally restored server answered `/health` with HTTP 200 on port 3100.
+  Existing USB reverse mappings for 3100, 3535 and 18443 remained intact. The server
+  and Docker stack were never started, stopped or recreated during this follow-up.
+- Loaded the existing server environment file's database and Expo credentials only
+  into host-process memory. Selected the single Pixel 6 row with public-key prefix
+  `029e0e0eb503` and required the exact previously recorded token SHA-256
+  `358f8aafc192e841a3f2083598f568e2083c6e609a66a54af925bdf5b83488ac` before each send.
+  No credentials or full push tokens were printed or stored in test evidence.
+- Inserted fresh pending correlation rows for this test identity only, then sent
+  real Expo pushes using JSON-string `data`, `priority: high` and
+  `_contentAvailable: true`. Every send returned HTTP 200 / ticket status `ok`.
+  Polled the exact identity/correlation row until `responded` or `Success`; server
+  health was checked throughout. Timings below are database row creation-to-callback
+  intervals, including the Expo request, rather than pure FCM transport latency.
+- Backgrounded with HOME. For each killed-process case independently, issued
+  `am kill com.noahwallet.regtest`, verified no app PID and `stopped=false`, then
+  sent the push. Never used force-stop. No foreground launch occurred during these
+  push/widget checks.
+
+### Accepted callbacks
+
+All timestamps below are UTC; maintenance rows had no error message.
+
+- **Background heartbeat: PASS.** Correlation prefix `786db610-7ae`;
+  `pending` → `responded`, 22:30:51.983 → 22:30:52.599, **0.615 s**.
+- **Background maintenance: PASS.** Correlation prefix `830bef50657c`;
+  `Pending` → `Success`, 22:31:00.508 → 22:31:01.139, **0.631 s**.
+- **Killed-process heartbeat: PASS.** Correlation prefix `15ad71e1-a14`;
+  `pending` → `responded`, 22:31:11.658 → 22:31:14.169, **2.512 s**.
+  The push restarted the absent process as PID 16434.
+- **Killed-process maintenance: PASS.** Correlation prefix `0f370fba1cab`;
+  `Pending` → `Success`, 22:31:25.602 → 22:31:28.339, **2.737 s**.
+  After killing PID 16434, this push restarted the process as PID 16567.
+- Native app logs independently recorded `FCM push queued`, `Heartbeat response
+  accepted` / `Maintenance status reported`, and `Push job finished`. Acceptance
+  rests on the server row transitions, not merely worker completion.
+
+### Widget refresh
+
+- **PASS: real home-screen rendering.** Used adb/uiautomator to open the launcher's
+  Widgets picker, search Noah, and add **Noah (Regtest)**. No UI helper APK was
+  installed. `dumpsys appwidget` identified widget **5**, owned by
+  `com.noahwallet.regtest/com.noahwallet.widgets.NoahWidgetRegtestProvider`.
+  The initial home-screen accessibility tree displayed `₿ 95,000` / `95.0K`.
+- Sent **1,234 sats** once with `just bark send --wait` to this wallet's registered
+  regtest Ark address (address SHA-256 prefix `273016dfffd9ded1`). The current wrapper
+  uses `docker compose run --rm --no-deps`; no dependency service was restarted.
+  Bark returned exit code 0. Before the next push the widget cache still held 95,000.
+- Sent a maintenance push, correlation prefix `a0b9ecf9b390`: server row
+  `Pending` → `Success`, 22:33:05.116 → 22:33:10.732, **5.616 s**, no error.
+  Both `totalBalance` and `offchainBalance` changed **95,000 → 96,234**; onchain
+  and pending stayed 0, expiry threshold 24, closest expiry 450. The legacy
+  `lastUpdated` field stayed unchanged; it is not the refresh acceptance criterion.
+- Without opening Noah, the launcher's accessibility tree displayed **`₿ 96,234`**
+  and **`96.2K`**. Widget 5's host `RemoteViews` instance changed, independently
+  proving that the installed provider re-rendered rather than only writing cache.
+  A read-only SQLite check confirmed fingerprint **`19f2afe7`**, **3 movements**,
+  and **96,234 spendable sats**.
+
+### Screen-off check and handoff
+
+- **Screen-off high-priority heartbeat: PASS.** Used `KEYCODE_SLEEP` and waited
+  **185.8 seconds**, verified by Android's `mLastSleepTime` elapsed value, before
+  sending correlation prefix `ad73c4b1-eb9`. Expo returned HTTP 200 / ticket `ok`;
+  the server row became `responded`, 22:36:38.569 → 22:36:39.239 UTC, **0.670 s**.
+  The screen remained off while the callback completed.
+- This is **not a true Doze test**: `mScreenOn=false`, `mCharging=true`, device-idle
+  `mState=ACTIVE` / `mLightState=ACTIVE`. PowerManager's `mWakefulness=Dozing` describes
+  display sleep and does not establish device-idle Doze. No global battery/idle
+  setting was changed. Unplugged deep Doze, reboot, token rotation, long-term FCM
+  behavior, and the previously identified 16 KB native-library compatibility issue
+  remain outside this follow-up's acceptance.
+- No native code bug was found and no fix commit was needed. Only this evidence
+  document and the corresponding rewrite TODO checkbox changed; `git diff --check`
+  passed. No build outputs, dependencies, screenshots, or helper APKs were created.
+  Temporary host scripts/data and the device UI dump were removed. The installed
+  regtest app, funded wallet, home-screen widget and reverse mappings are retained.
