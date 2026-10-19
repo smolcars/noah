@@ -10,6 +10,9 @@ struct SettingsView: View {
     @State private var busy = false
     @State private var error: String?
     @State private var threshold: UInt64?
+    @State private var confirmingReset = false
+    @State private var resetDone = false
+    @State private var showingDelete = false
 
     var body: some View {
         List {
@@ -53,16 +56,27 @@ struct SettingsView: View {
             }
             Section("Debug") {
                 row("Show Logs", "View application logs for debugging purposes") { LogView() }
-                comingSoon("Reset Server Registration", "Attempt to reset the connection with our server if you're experiencing issues.")
+                Button { confirmingReset = true } label: {
+                    SettingsLabel(title: "Reset Server Registration", detail: "Clear your registration with the server. You will need to register again.")
+                }
+                .disabled(busy || model.isWalletSuspended)
                 row("Send Feedback", "Report bugs or share feedback with the Noah team") { FeedbackView() }
                 if wallet.isDebugModeEnabled == true {
                     row("Debug Screen", "Advanced debug actions for developers") { DebugView() }
                 }
             }
             Section("Danger Zone") {
-                comingSoon("Suspend Wallet", "Disable all wallet operations. The wallet will be closed and won't load until re-enabled.")
+                Toggle(isOn: Binding(get: { model.isWalletSuspended }, set: { suspend in
+                    run { suspend ? try await model.suspendWallet() : try await model.resumeWallet() }
+                })) {
+                    SettingsLabel(title: "Suspend Wallet", detail: "Disable all wallet operations. The wallet will be closed and won't load until re-enabled.")
+                }.disabled(busy)
                 row("Export Database", "Create an encrypted backup file containing your wallet database.") { ExportDatabaseView() }
-                comingSoon("Delete Wallet", "Coming soon")
+                Button(role: .destructive) { showingDelete = true } label: {
+                    SettingsLabel(title: "Delete Wallet", detail: "Permanently remove this wallet and its recovery phrase from this device.")
+                        .foregroundStyle(NoahColor.destructive)
+                }
+                .disabled(busy)
             }
             Section {
                 Button {
@@ -86,6 +100,19 @@ struct SettingsView: View {
             if let error { Text(error).foregroundStyle(NoahColor.destructive) }
         }
         .settingsStyle("Settings")
+        .alert("Reset Server Registration", isPresented: $confirmingReset) {
+            Button("Cancel", role: .cancel) {}
+            Button("Reset", role: .destructive) {
+                run {
+                    try await model.reRegisterWithServer()
+                    resetDone = true
+                }
+            }
+        } message: {
+            Text("Are you sure you want to reset your server registration? This will not delete your wallet, but you will need to register with the server again.")
+        }
+        .alert("Registered with the server again", isPresented: $resetDone) { Button("OK") {} }
+        .sheet(isPresented: $showingDelete) { DeleteWalletSheet() }
         .task(id: taps) {
             guard taps > 0 else { return }
             do { try await Task.sleep(for: .seconds(2)); taps = 0 } catch {}
@@ -114,3 +141,59 @@ struct SettingsView: View {
     }
 }
 
+/// RN's delete confirmation: type "delete" to enable the button.
+private struct DeleteWalletSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var confirmation = ""
+    @State private var deleting = false
+    @State private var failure: String?
+
+    private var confirmed: Bool { confirmation.trimmingCharacters(in: .whitespaces).lowercased() == "delete" }
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("This action is irreversible. Your wallet and its recovery phrase will be removed from this device. Make sure you have your recovery phrase or a backup before you continue.")
+                    .font(NoahFont.body)
+                    .foregroundStyle(NoahColor.mutedForeground)
+                Text("To confirm, please type \"delete\" in the box below.")
+                    .font(NoahFont.body)
+                TextField("delete", text: $confirmation)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .textFieldStyle(.roundedBorder)
+                if let failure {
+                    Text(failure).font(NoahFont.footnote).foregroundStyle(NoahColor.destructive)
+                }
+                Button(role: .destructive) {
+                    deleting = true
+                    failure = nil
+                    Task {
+                        do {
+                            try await model.deleteWallet()
+                            dismiss()
+                        } catch {
+                            failure = String(localized: "The wallet couldn't be deleted. Nothing was removed if a restore is still being settled; restart Noah and try again.")
+                            deleting = false
+                        }
+                    }
+                } label: {
+                    Group {
+                        if deleting { ProgressView() } else { Text("Delete Wallet").font(NoahFont.headline) }
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(NoahColor.destructive)
+                .disabled(!confirmed || deleting)
+                Spacer()
+            }
+            .padding(24)
+            .navigationTitle("Delete Wallet")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(deleting) } }
+        }
+        .interactiveDismissDisabled(deleting)
+    }
+}
