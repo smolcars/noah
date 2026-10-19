@@ -42,6 +42,11 @@ struct WalletRestorer: Sendable {
     struct Outcome: Equatable, Sendable {
         let backupId: String?
         let snapshotSha256: String?
+        /// The restore is committed (seed saved), but dropping the previous
+        /// wallet and the journal failed. The wallet won't open until
+        /// `recoverInterruptedRestore` finishes it (it never rolls back a
+        /// committed restore); the next launch does that too.
+        var cleanupPending = false
     }
 
     private var expectedNetwork: String { variant == .mainnet ? "bitcoin" : variant.rawValue }
@@ -69,8 +74,12 @@ struct WalletRestorer: Sendable {
         do {
             reservation = try await session.reserve()
         } catch WalletSession.OpenError.busy where !location.restorePending {
-            // Already opened (e.g. by a silent push before the UI started):
-            // nothing can be pending, since opening refuses while it is.
+            // Opened (e.g. by a silent push before the UI started): nothing
+            // can be pending, since opening refuses while it is. Decrypted
+            // leftovers of a restore that died before its journal still go,
+            // unless a restore holds the session right now.
+            let transaction = RestoreTransaction(location: location)
+            try await session.unlessReserved { try transaction.removeScratch() }
             return .nothingPending
         }
         let result = Result { try RestoreTransaction(location: location).recover(seed: seed) }
@@ -99,9 +108,13 @@ struct WalletRestorer: Sendable {
                 throw error
             }
             try commitSeed(mnemonic, transaction: transaction)
-            // Seed saved: the restore stands. Leftovers are settled at launch.
-            try? transaction.finish()
-            return outcome
+            // Seed saved: the restore stands, whatever happens to the cleanup.
+            var committed = outcome
+            if (try? transaction.finish()) == nil && (try? transaction.finish()) == nil {
+                AppLog("restore").e("Restore committed but its cleanup failed; it will finish on the next attempt")
+                committed.cleanupPending = true
+            }
+            return committed
         } catch {
             try? transaction.removeScratch()
             throw error

@@ -168,6 +168,16 @@ actor WalletSession {
         state = .closed
     }
 
+    /// Runs `body` unless a reservation is held. It runs on the actor without
+    /// suspending, so no reservation can start while it does. Returns
+    /// whether it ran.
+    @discardableResult
+    func unlessReserved(_ body: @Sendable () throws -> Void) rethrows -> Bool {
+        if case .reserved = state { return false }
+        try body()
+        return true
+    }
+
     /// Opens the datadir's wallet with `mnemonic`, without the daemon, and
     /// shuts it again: proof a restored wallet is usable before its seed is
     /// committed. Finishes even if the caller is cancelled, so the files are

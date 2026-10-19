@@ -26,13 +26,15 @@ enum BoundedDownload {
     }
 
     /// Delegate callbacks arrive on the session's serial queue; `lock`
-    /// covers `start`, which runs on the caller's.
+    /// covers `start`, which runs on the caller's. A task cancelled before
+    /// `start` can complete first, so the outcome is kept for `start`.
     private final class Receiver: NSObject, URLSessionDataDelegate, @unchecked Sendable {
         private let handle: FileHandle
         private let limit: Int64
         private let lock = NSLock()
         private var received: Int64 = 0
         private var failure: Error?
+        private var outcome: Result<Void, Error>?
         private var continuation: CheckedContinuation<Void, Error>?
 
         init(handle: FileHandle, limit: Int64) {
@@ -41,8 +43,15 @@ enum BoundedDownload {
         }
 
         func start(_ task: URLSessionDataTask, continuation: CheckedContinuation<Void, Error>) {
-            lock.withLock { self.continuation = continuation }
-            task.resume()
+            let finished: Result<Void, Error>? = lock.withLock {
+                if outcome == nil { self.continuation = continuation }
+                return outcome
+            }
+            if let finished {
+                continuation.resume(with: finished)
+            } else {
+                task.resume()
+            }
         }
 
         func urlSession(
@@ -71,15 +80,13 @@ enum BoundedDownload {
         }
 
         func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-            let (continuation, failure) = lock.withLock {
+            let (continuation, result): (CheckedContinuation<Void, Error>?, Result<Void, Error>) = lock.withLock {
+                let result: Result<Void, Error> = (failure ?? error).map { .failure($0) } ?? .success(())
+                outcome = result
                 defer { self.continuation = nil }
-                return (self.continuation, self.failure)
+                return (self.continuation, result)
             }
-            if let failure = failure ?? error {
-                continuation?.resume(throwing: failure)
-            } else {
-                continuation?.resume()
-            }
+            continuation?.resume(with: result)
         }
 
         private func fail(_ error: Error, _ completionHandler: (URLSession.ResponseDisposition) -> Void) {

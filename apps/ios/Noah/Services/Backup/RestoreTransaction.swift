@@ -12,6 +12,7 @@ import Foundation
 ///     journal.json  id, phase, whether a datadir existed, tag of the new seed
 ///     previous/     the datadir that was there before the restore
 ///     staged/       the restored datadir before it is moved in
+///     discard/      a restored datadir being thrown away by `undo`
 ///     work/         downloads and decrypted files
 ///
 /// Restore order: build `staged/` → `begin` (staged files and the journal
@@ -26,7 +27,8 @@ import Foundation
 /// (`F_FULLFSYNC`), and the journal goes last, so a power loss can't bring
 /// back a journal for a transaction that was already settled. The restored
 /// datadir carries the transaction id until `finish`; undo never removes a
-/// datadir without it.
+/// datadir without it, and first renames it into `discard/` so a crash in the
+/// middle of deleting it can't leave an unmarked datadir behind.
 struct RestoreTransaction: Sendable {
     static let journalName = "journal.json"
     static let markerName = ".noah-restore-id"
@@ -78,6 +80,7 @@ struct RestoreTransaction: Sendable {
     var journalURL: URL { directory.appending(path: Self.journalName) }
     var previous: URL { directory.appending(path: "previous", directoryHint: .isDirectory) }
     var staged: URL { directory.appending(path: "staged", directoryHint: .isDirectory) }
+    var discard: URL { directory.appending(path: "discard", directoryHint: .isDirectory) }
     var work: URL { directory.appending(path: "work", directoryHint: .isDirectory) }
 
     var isPending: Bool { exists(journalURL) }
@@ -141,21 +144,19 @@ struct RestoreTransaction: Sendable {
         let journal = try readJournal()
         let restoredInPlace = (try? String(contentsOf: datadir.appending(path: Self.markerName), encoding: .utf8))
             == journal.id.uuidString
-        if journal.hadPreviousData {
-            // Without previous/, the datadir was never moved (or was already
-            // moved back): it is the original and stays.
-            if exists(previous) {
-                if exists(datadir) {
-                    guard restoredInPlace else { throw Failure.unexpectedDatadir }
-                    try FileManager.default.removeItem(at: datadir)
-                }
-                try FileManager.default.moveItem(at: previous, to: datadir)
-            }
-        } else if exists(datadir) {
+        // Without previous/, a datadir that existed before was never moved (or
+        // was already moved back): it is the original and stays.
+        let restoredMustGo = journal.hadPreviousData ? exists(previous) : true
+        if restoredMustGo && exists(datadir) {
             guard restoredInPlace else { throw Failure.unexpectedDatadir }
-            try FileManager.default.removeItem(at: datadir)
+            try removeIfPresent(discard)
+            try FileManager.default.moveItem(at: datadir, to: discard)
+            try syncBothSides()
         }
-        try syncBothSides()
+        if journal.hadPreviousData && exists(previous) {
+            try FileManager.default.moveItem(at: previous, to: datadir)
+            try syncBothSides()
+        }
         try removeScratch()
         try Self.fullSync(directory)
         try removeJournal()
@@ -187,9 +188,11 @@ struct RestoreTransaction: Sendable {
         }
     }
 
-    /// Removes the decrypted downloads and an unused staged datadir.
+    /// Removes the decrypted downloads, an unused staged datadir and a
+    /// discarded restored one.
     func removeScratch() throws {
         try removeIfPresent(staged)
+        try removeIfPresent(discard)
         try removeIfPresent(work)
     }
 

@@ -167,9 +167,16 @@ struct WalletRestorerTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let seed = FakeSeed("previous seed")
         let gate = Gate()
-        // Like BoltFFI: the Rust work goes on regardless of Swift cancellation.
+        let sawCancellation = FakeSeed(nil)
+        // BoltFFI answers a cancelled Swift caller early while Rust goes on. The
+        // session runs the opener in its own task, so the opener must never see
+        // the caller's cancellation, and the restore must wait for it.
         let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in
-            await gate.enter()
+            await withTaskCancellationHandler {
+                await gate.enter()
+            } onCancel: {
+                try? sawCancellation.save("cancelled")
+            }
             throw OpenRefused()
         }
         let (restorer, mnemonic) = try await setUp(seed: seed, session: session)
@@ -182,6 +189,8 @@ struct WalletRestorerTests {
         #expect(deviceBWallet != "previous wallet")
         #expect(deviceB.restorePending)
         await #expect(throws: WalletSession.OpenError.busy) { try await session.reserve() }
+
+        #expect(sawCancellation.current == nil)
 
         await gate.release()
         await #expect(throws: OpenRefused.self) { try await restore.value }
@@ -208,12 +217,32 @@ struct WalletRestorerTests {
         _ = try await setUp(seed: seed, session: session)
         try makeBarkProperties(at: deviceB)
 
+        // A restore died while unpacking, before its journal: plaintext left.
+        let transaction = RestoreTransaction(location: deviceB)
+        try transaction.prepare()
+        try Data("decrypted".utf8).write(to: transaction.work.appending(path: "db.sqlite"))
+
         // A silent push started opening the wallet before the UI launched.
         let pushOpen = Task { try await session.ensureOpen(mnemonic: "previous seed", runDaemon: false, appVersion: "test") }
         await gate.waitUntilEntered()
         #expect(try await WalletRestorer.recoverInterruptedRestore(session: session, location: deviceB, seed: seed) == .nothingPending)
+        #expect(!FileManager.default.fileExists(atPath: transaction.work.path), "decrypted leftovers are swept anyway")
         await gate.release()
         _ = try? await pushOpen.value
+    }
+
+    @Test func launchRecoveryLeavesAnActiveRestoresFilesAlone() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in throw OpenRefused() }
+        let transaction = RestoreTransaction(location: deviceB)
+        try transaction.prepare()
+        try Data("downloading".utf8).write(to: transaction.work.appending(path: "backup.noahbackup"))
+
+        let restoreHold = try await session.reserve()
+        #expect(try await WalletRestorer.recoverInterruptedRestore(
+            session: session, location: deviceB, seed: FakeSeed("seed")) == .nothingPending)
+        #expect(FileManager.default.fileExists(atPath: transaction.work.path))
+        await session.release(restoreHold)
     }
 
     /// Enough of a bark database to pass the session's read-only preflight.

@@ -136,6 +136,29 @@ struct RestoreTransactionTests {
         try expectSettled(transaction)
     }
 
+    @Test func crashWhileDiscardingTheRestoredDatadirIsFinishedOnTheNextRun() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let transaction = try begun()
+        // Undo moved the restored datadir aside and had started deleting it
+        // (marker already gone) when the app died.
+        try FileManager.default.moveItem(at: location.directory, to: transaction.discard)
+        try FileManager.default.removeItem(at: transaction.discard.appending(path: RestoreTransaction.markerName))
+
+        #expect(try transaction.recover(seed: FakeSeed("old seed")) == .rolledBack)
+        #expect(read(location.directory) == "old")
+        try expectSettled(transaction)
+        #expect(!exists(transaction.discard))
+    }
+
+    @Test func crashAfterDiscardingOntoAnEmptyDeviceIsFinished() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let transaction = try begun(previous: nil)
+        try FileManager.default.moveItem(at: location.directory, to: transaction.discard)
+        #expect(try transaction.recover(seed: FakeSeed(nil)) == .rolledBack)
+        #expect(!exists(location.directory))
+        try expectSettled(transaction)
+    }
+
     @Test func committingWithTheRestoredSeedSavedFinishes() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let transaction = try begun()
