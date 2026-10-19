@@ -12,24 +12,35 @@ object WalletDatabase {
     /** The framework's default handler deletes a database it finds corrupt. Never on a wallet. */
     private val keepDatabase = DatabaseErrorHandler { }
 
+    /** Plaintext copies live only here; every inspection empties it first (crash leftovers). */
+    private val scratch = File(System.getProperty("java.io.tmpdir"), "noah-preflight")
+
+    /** Callers (the session's open path) inspect one database at a time. */
     fun properties(database: File): Properties = try {
+        val wal = File(database.path + "-wal").exists()
+        val shm = File(database.path + "-shm").exists()
+        // A WAL without its index needs recovery by a writer; like the SDK, refuse rather than
+        // let Android's SQLite recreate files next to the wallet.
+        if (wal && !shm) throw InspectionError()
         // Android's SQLite creates -shm next to a WAL database even for a read-only connection.
         // With no -wal/-journal sidecar nothing is mid-transaction, so read a private copy and
-        // leave the wallet's folder exactly as it was. With a sidecar the index already exists
-        // and a read-only connection sees the committed WAL frames.
-        val hasSidecar = listOf("-wal", "-journal").any { File(database.path + it).exists() }
+        // leave the wallet's folder exactly as it was. With both WAL files present a read-only
+        // connection sees the committed frames and creates nothing.
+        val hasSidecar = wal || File(database.path + "-journal").exists()
         if (hasSidecar) read(database) else inspectCopy(database)
     } catch (_: Exception) {
         throw InspectionError()
     }
 
     private fun inspectCopy(database: File): Properties {
-        val copy = File.createTempFile("wallet-preflight-", ".sqlite")
+        scratch.deleteRecursively()
+        check(scratch.mkdirs()) { "Cannot create preflight scratch" }
         try {
-            database.copyTo(copy, overwrite = true)
+            val copy = File(scratch, "wallet.sqlite")
+            database.copyTo(copy)
             return read(copy)
         } finally {
-            listOf("", "-wal", "-shm", "-journal").forEach { File(copy.path + it).delete() }
+            scratch.deleteRecursively()
         }
     }
 

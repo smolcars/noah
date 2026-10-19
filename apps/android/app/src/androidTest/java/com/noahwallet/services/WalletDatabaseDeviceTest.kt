@@ -72,6 +72,38 @@ class WalletDatabaseDeviceTest {
         } finally { root.deleteRecursively() }
     }
 
+    /** A crash can leave -wal without -shm; the check must not recreate the index beside it. */
+    @Test fun walWithoutIndexIsRefusedWithoutTouchingTheFolder() {
+        val root = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "walnoshm-${UUID.randomUUID()}")
+        val location = WalletDataLocation(root, "regtest")
+        try {
+            location.directory.mkdirs()
+            location.database.writeBytes(ByteArray(4096))
+            File(location.database.path + "-wal").writeBytes(ByteArray(32))
+            val before = location.directory.list()?.sorted()
+            assertThrows(WalletDatabase.InspectionError::class.java) { WalletDatabase.properties(location.database) }
+            assertEquals(before, location.directory.list()?.sorted())
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun copiesLeftByAKilledInspectionAreSwept() {
+        val root = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "sweep-${UUID.randomUUID()}")
+        val location = WalletDataLocation(root, "regtest")
+        val scratch = File(System.getProperty("java.io.tmpdir"), "noah-preflight")
+        try {
+            location.directory.mkdirs()
+            SQLiteDatabase.openOrCreateDatabase(location.database, null).use {
+                it.execSQL("CREATE TABLE bark_properties (network TEXT, fingerprint TEXT)")
+                it.execSQL("INSERT INTO bark_properties VALUES ('regtest', 'abcd1234')")
+            }
+            listOf("-wal", "-shm", "-journal").forEach { File(location.database.path + it).delete() }
+            scratch.mkdirs()
+            File(scratch, "wallet.sqlite").writeBytes(ByteArray(16))  // a killed run's copy
+            assertEquals("regtest", WalletDatabase.properties(location.database).network)
+            assertFalse(scratch.exists())
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun corruptDatabaseIsReportedNeverDeleted() {
         val root = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "corrupt-${UUID.randomUUID()}")
         val location = WalletDataLocation(root, "regtest")
