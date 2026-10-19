@@ -4,6 +4,8 @@ import java.io.File
 
 class WalletDataLocation(filesDirectory: File, variant: String) {
     val directory = File(filesDirectory, "noah-data-$variant")
+    val restoreDirectory = File(filesDirectory, ".noah-data-$variant-restore")
+    val restorePending: Boolean get() = File(restoreDirectory, "journal.json").exists()
     val database = File(directory, "db.sqlite")
     // A partial datadir still belongs to the user; unreadable directories fail closed.
     val hasAnyData: Boolean get() = directory.exists() &&

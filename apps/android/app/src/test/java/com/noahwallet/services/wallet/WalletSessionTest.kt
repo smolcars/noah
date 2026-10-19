@@ -198,7 +198,7 @@ class WalletSessionTest {
         withLocation { location ->
             val handles = Handles().apply { initializationFails = true; stopFails = true }
             val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            assertTrue(runCatching { session.createNew("unused", false, "test") }.exceptionOrNull() is Boom)
+            assertFailure(WalletSession.OpenFailure.teardownFailed, runCatching { session.createNew("unused", false, "test") })
             assertFalse(handles.closed)
             assertTrue(session.isOpen)
             handles.stopFails = false
@@ -236,15 +236,43 @@ class WalletSessionTest {
             val session = WalletSession("regtest", location, opener = { _, _, _, _, _ ->
                 calls++; entered.complete(Unit); release.await(); handles
             })
-            val first = launch { session.createNew("unused", false, "test") }; entered.await(); first.cancelAndJoin()
-            val joined = async { session.ensureOpen("unused", false, "test") }
-            release.complete(Unit); joined.await()
+            val first = launch { session.createNew("unused", false, "test") }; entered.await(); first.cancel()
+            assertFailure(WalletSession.OpenFailure.busy, runCatching { session.ensureOpen("unused", false, "test") })
+            assertFalse(first.isCompleted)
+            release.complete(Unit); first.join()
             assertTrue(session.isOpen); assertEquals(1, calls)
             session.ensureOpen("unused", false, "test"); assertEquals(1, calls)
             handles.stopFails = true
             assertTrue(runCatching { session.close() }.exceptionOrNull() is Boom)
             assertTrue(session.isOpen); assertFalse(handles.closed)
             handles.stopFails = false; session.close(); assertTrue(handles.closed); assertFalse(session.isOpen)
+        }
+    }
+    @Test fun reservationAndPendingJournalGuardAllEntryPoints() = runBlocking {
+        withLocation { location ->
+            bark(location)
+            val session = WalletSession("regtest", location, inspect = { WalletDatabase.Properties("regtest", "abcd") },
+                opener = { _, _, _, _, _ -> throw Boom() })
+            val hold = session.reserve()
+            assertFalse(session.unlessReserved { fail("Reserved") })
+            assertFailure(WalletSession.OpenFailure.busy, runCatching { session.close() })
+            assertFailure(WalletSession.OpenFailure.busy, runCatching { session.ensureOpen("unused", false, "test") })
+            assertTrue(runCatching { session.verify(hold, "unused", "test") }.exceptionOrNull() is Boom)
+            session.release(hold)
+            assertTrue(session.unlessReserved { })
+            location.restoreDirectory.mkdirs(); File(location.restoreDirectory, "journal.json").writeText("pending")
+            assertFailure(WalletSession.OpenFailure.restorePending, runCatching { session.openExisting("unused", false, "test") })
+            assertFailure(WalletSession.OpenFailure.restorePending, runCatching { session.createNew("unused", false, "test") })
+        }
+    }
+    @Test fun failedReservedCreationKeepsHoldUntilCleanup() = runBlocking {
+        withLocation { location ->
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> throw Boom() })
+            val hold = session.reserve()
+            assertTrue(runCatching { session.createNew(hold, "unused", false, "test") }.exceptionOrNull() is Boom)
+            assertFailure(WalletSession.OpenFailure.busy, runCatching { session.reserve(); Unit })
+            session.release(hold)
+            session.release(session.reserve())
         }
     }
     @Test fun closeWaitsForActiveOperationAndOpeningDuringCloseIsBusy() = runBlocking {

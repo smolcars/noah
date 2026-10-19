@@ -6,8 +6,6 @@ import com.noahwallet.services.storage.WalletDataLocation
 import io.github.niteshbalusu11.bark.*
 import java.io.File
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /** One owner per process: bark locks the datadir. All wallet operations go through this session. */
 class WalletSession internal constructor(
@@ -16,7 +14,7 @@ class WalletSession internal constructor(
     private val inspect: (File) -> WalletDatabase.Properties = WalletDatabase::properties,
     private val opener: suspend (String, String, Boolean, String, Boolean) -> Handles = sdkOpener(variant),
 ) {
-    enum class OpenFailure { walletDatabaseMissing, notABarkWallet, networkMismatch, busy, walletDatabaseExists }
+    enum class OpenFailure { walletDatabaseMissing, notABarkWallet, networkMismatch, busy, walletDatabaseExists, restorePending, teardownFailed }
     class OpenError(val reason: OpenFailure, val found: String? = null) : Exception(reason.name)
     class SessionError : Exception("Wallet not open")
 
@@ -57,11 +55,14 @@ class WalletSession internal constructor(
         data object Closed : State
         class Opening(val attempt: Deferred<Unit>) : State
         class Open(val handles: Handles) : State
+        class Reserved(val reservation: Reservation) : State
         data object Closing : State
     }
 
     private val lock = Any()
-    private val operations = Mutex()
+    class Reservation internal constructor()
+    private var runningCalls = 0
+    private var drained = CompletableDeferred<Unit>().apply { complete(Unit) }
     // A UI caller's cancellation must not abandon a native open and leak its datadir lock.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var state: State = State.Closed
@@ -75,9 +76,61 @@ class WalletSession internal constructor(
         beginOpen(mnemonic, runDaemon, appVersion, create = false, join = true)?.await()
     }
 
-    suspend fun createNew(mnemonic: String, runDaemon: Boolean, appVersion: String) {
-        beginOpen(mnemonic, runDaemon, appVersion, create = true, join = false)?.await()
+    fun reserve(): Reservation = synchronized(lock) {
+        if (state != State.Closed) throw OpenError(OpenFailure.busy)
+        Reservation().also { state = State.Reserved(it) }
     }
+
+    fun release(reservation: Reservation) = synchronized(lock) {
+        if ((state as? State.Reserved)?.reservation === reservation) state = State.Closed
+    }
+
+    fun unlessReserved(body: () -> Unit): Boolean = synchronized(lock) {
+        if (state is State.Reserved) false else { body(); true }
+    }
+
+    private fun checkHeld(reservation: Reservation) {
+        if ((state as? State.Reserved)?.reservation !== reservation) throw OpenError(OpenFailure.busy)
+    }
+
+    suspend fun verify(reservation: Reservation, mnemonic: String, appVersion: String) =
+        withContext(NonCancellable + Dispatchers.IO) {
+            synchronized(lock) { checkHeld(reservation); checkExistingDatabase() }
+            val handles = opener(mnemonic, location.directory.path, false, appVersion, false)
+            try { handles.stopDaemonWait(); handles.close() }
+            catch (_: Throwable) {
+                // Never allow rollback underneath native work when teardown failed.
+                synchronized(lock) { state = State.Open(handles) }
+                throw OpenError(OpenFailure.teardownFailed)
+            }
+        }
+
+    suspend fun createNew(mnemonic: String, runDaemon: Boolean, appVersion: String) {
+        val reservation = reserve()
+        try { createNew(reservation, mnemonic, runDaemon, appVersion) }
+        finally { release(reservation) }
+    }
+
+    suspend fun createNew(reservation: Reservation, mnemonic: String, runDaemon: Boolean, appVersion: String) =
+        withContext(NonCancellable + Dispatchers.IO) {
+            synchronized(lock) {
+                checkHeld(reservation)
+                if (location.restorePending) throw OpenError(OpenFailure.restorePending)
+                if (location.databaseExists) throw OpenError(OpenFailure.walletDatabaseExists)
+                check(location.directory.isDirectory || location.directory.mkdirs()) { "Cannot create wallet directory" }
+            }
+            val handles = opener(mnemonic, location.directory.path, runDaemon, appVersion, true)
+            try { handles.initializeAddress() }
+            catch (failure: Throwable) {
+                try { handles.stopDaemonWait(); handles.close() }
+                catch (_: Throwable) {
+                    synchronized(lock) { state = State.Open(handles) }
+                    throw OpenError(OpenFailure.teardownFailed)
+                }
+                throw failure
+            }
+            synchronized(lock) { state = State.Open(handles) }
+        }
 
     private suspend fun beginOpen(
         mnemonic: String, runDaemon: Boolean, appVersion: String, create: Boolean, join: Boolean,
@@ -86,40 +139,17 @@ class WalletSession internal constructor(
             when (val current = state) {
                 is State.Open -> if (join) return@synchronized null else throw OpenError(OpenFailure.busy)
                 is State.Opening -> if (join) return@synchronized current.attempt else throw OpenError(OpenFailure.busy)
-                State.Closing -> throw OpenError(OpenFailure.busy)
                 State.Closed -> Unit
+                else -> throw OpenError(OpenFailure.busy)
             }
-            if (create) {
-                if (location.databaseExists) throw OpenError(OpenFailure.walletDatabaseExists)
-                check(location.directory.isDirectory || location.directory.mkdirs()) { "Cannot create wallet directory" }
-            } else {
-                if (!location.databaseExists) throw OpenError(OpenFailure.walletDatabaseMissing)
-                val properties = try { inspect(location.database) } catch (_: Exception) {
-                    throw OpenError(OpenFailure.notABarkWallet)
-                }
-                if (properties.network != WalletConfiguration.base(variant).networkName) {
-                    throw OpenError(OpenFailure.networkMismatch, properties.network)
-                }
-            }
+            if (location.restorePending) throw OpenError(OpenFailure.restorePending)
+            checkExistingDatabase()
             val attempt = scope.async(start = CoroutineStart.LAZY) {
                 try {
                     val handles = opener(mnemonic, location.directory.path, runDaemon, appVersion, create)
-                    if (create) {
-                        try { handles.initializeAddress() }
-                        catch (failure: Throwable) {
-                            // Retain ownership if stop fails; the creator must not remove live files.
-                            try { handles.stopDaemonWait() }
-                            catch (stopFailure: Throwable) {
-                                synchronized(lock) { state = State.Open(handles) }
-                                throw stopFailure
-                            }
-                            handles.close()
-                            throw failure
-                        }
-                    }
                     synchronized(lock) { state = State.Open(handles) }
                 } catch (failure: Throwable) {
-                    synchronized(lock) { if (state !is State.Open) state = State.Closed }
+                    synchronized(lock) { state = State.Closed }
                     throw failure
                 }
             }
@@ -129,18 +159,18 @@ class WalletSession internal constructor(
         }
     }
 
-    suspend fun summary(): Summary? = operations.withLock {
-        withContext(NonCancellable + Dispatchers.IO) {
-            synchronized(lock) { (state as? State.Open)?.handles }?.summary()
+    private fun checkExistingDatabase() {
+        if (!location.databaseExists) throw OpenError(OpenFailure.walletDatabaseMissing)
+        val properties = try { inspect(location.database) } catch (_: Exception) {
+            throw OpenError(OpenFailure.notABarkWallet)
+        }
+        if (properties.network != WalletConfiguration.base(variant).networkName) {
+            throw OpenError(OpenFailure.networkMismatch, properties.network)
         }
     }
 
-    suspend fun sync() = operations.withLock {
-        withContext(NonCancellable + Dispatchers.IO) {
-            synchronized(lock) { (state as? State.Open)?.handles }?.sync()
-            Unit
-        }
-    }
+    suspend fun summary(): Summary? = if (isOpen) withOpen { it.summary() } else null
+    suspend fun sync() { if (isOpen) withOpen { it.sync() } }
 
     suspend fun peekAddress(index: UInt): String = withOpen { it.peekAddress(index) }
 
@@ -151,11 +181,14 @@ class WalletSession internal constructor(
     suspend fun claimLightningReceives() = withOpen { it.claimLightningReceives() }
     suspend fun closestExpiryBlocks(): Long? = withOpen { it.closestExpiryBlocks() }
 
-    private suspend fun <T> withOpen(block: suspend (Handles) -> T): T = operations.withLock {
-        withContext(NonCancellable + Dispatchers.IO) {
-            val handles = synchronized(lock) { (state as? State.Open)?.handles } ?: throw SessionError()
-            block(handles)
+    internal suspend fun <T> withOpen(block: suspend (Handles) -> T): T {
+        val handles = synchronized(lock) {
+            val handles = (state as? State.Open)?.handles ?: throw SessionError()
+            if (runningCalls++ == 0) drained = CompletableDeferred()
+            handles
         }
+        try { return withContext(NonCancellable + Dispatchers.IO) { block(handles) } }
+        finally { synchronized(lock) { if (--runningCalls == 0) drained.complete(Unit) } }
     }
 
     suspend fun createSnapshot(destination: File): WalletSnapshotInfo = withOpen { it.createSnapshot(destination) }
@@ -229,7 +262,8 @@ class WalletSession internal constructor(
             val running = synchronized(lock) { observers.toList() }
             running.forEach { stopObserver(it) }
             synchronized(lock) { observers.removeAll(running.toSet()) }
-            operations.withLock {
+            synchronized(lock) { drained }.await()
+            run {
                 try {
                     handles.stopDaemonWait()
                 } catch (failure: Throwable) {

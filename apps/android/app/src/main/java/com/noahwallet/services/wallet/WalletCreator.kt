@@ -22,8 +22,9 @@ class WalletCreator(private val dependencies: Dependencies) {
         val removeAttemptFiles: (Boolean) -> Boolean,
         val generateMnemonic: () -> String,
         val openExisting: suspend (String) -> Unit,
-        val createNew: suspend (String) -> Unit,
-        val close: suspend () -> Unit,
+        val reserve: () -> WalletSession.Reservation,
+        val release: (WalletSession.Reservation) -> Unit,
+        val createNew: suspend (WalletSession.Reservation, String) -> Unit,
     )
 
     private val lock = Any()
@@ -39,26 +40,35 @@ class WalletCreator(private val dependencies: Dependencies) {
         attempt.await()
     }
 
-    private suspend fun run() {
+    private suspend fun plan(): String? {
         val seed = when (val result = dependencies.readSeed()) {
             is SecretResult.Unavailable -> throw Failure.SecureStorageUnavailable(result.reason)
             is SecretResult.Found -> result.value.takeIf { it.isNotEmpty() }
             SecretResult.NotFound -> null
         }
         val dataExists = dependencies.walletDataExists()
-        if (seed != null && dataExists) {
-            dependencies.openExisting(seed)
-            return
-        }
+        if (seed != null && dataExists) return seed
         if (seed != null || dataExists) throw Failure.IncompleteExistingData()
+        return null
+    }
+
+    private suspend fun run() {
+        plan()?.let { dependencies.openExisting(it); return }
+        val reservation = dependencies.reserve()
+        try {
+            if (plan() != null) throw WalletSession.OpenError(WalletSession.OpenFailure.busy)
+            createFresh(reservation)
+        } finally { dependencies.release(reservation) }
+    }
+
+    private suspend fun createFresh(reservation: WalletSession.Reservation) {
         val datadirExisted = dependencies.datadirExists()
         val mnemonic = dependencies.generateMnemonic()
         dependencies.saveSeed(mnemonic)
         try {
-            dependencies.createNew(mnemonic)
+            dependencies.createNew(reservation, mnemonic)
         } catch (failure: Throwable) {
-            // Keep the seed and files if closing fails: an SDK handle may still own them.
-            try { dependencies.close() } catch (_: Exception) { throw failure }
+            if (failure is WalletSession.OpenError && failure.reason == WalletSession.OpenFailure.teardownFailed) throw failure
             if (dependencies.removeAttemptFiles(datadirExisted)) dependencies.deleteSeed(mnemonic)
             throw failure
         }
@@ -84,8 +94,9 @@ class WalletCreator(private val dependencies: Dependencies) {
                 removeAttemptFiles = location::removeAttemptFiles,
                 generateMnemonic = ::generateMnemonic,
                 openExisting = { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) },
-                createNew = { session.createNew(it, true, BuildConfig.VERSION_NAME) },
-                close = { session.close() },
+                reserve = session::reserve,
+                release = session::release,
+                createNew = { reservation, mnemonic -> session.createNew(reservation, mnemonic, true, BuildConfig.VERSION_NAME) },
             ))
         }
     }

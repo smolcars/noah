@@ -23,6 +23,7 @@ class WalletCreatorTest {
         var cleanupCount = 0
         var holdCreate: CompletableDeferred<Unit>? = null
         val entered = CompletableDeferred<Unit>()
+        val session = WalletSession("regtest", WalletDataLocation(java.io.File("unused-creator-test"), "regtest"))
         fun dependencies() = WalletCreator.Dependencies(
             readSeed = { seed },
             saveSeed = { if (saveFails) throw Boom(); seed = SecretResult.Found(it) },
@@ -35,16 +36,19 @@ class WalletCreatorTest {
             },
             generateMnemonic = { "seed-${generated.size + 1}".also { generated += it } },
             openExisting = { if (openFailure) throw Boom(); opened += it },
-            createNew = {
+            reserve = session::reserve,
+            release = session::release,
+            createNew = { reservation, value ->
                 // A crash from this point must leave a recoverable seed.
-                assertTrue((seed as? SecretResult.Found)?.value == it)
+                assertTrue((seed as? SecretResult.Found)?.value == value)
                 entered.complete(Unit)
                 holdCreate?.await()
                 datadir = true; data = true
+                if (closeFails) throw WalletSession.OpenError(WalletSession.OpenFailure.teardownFailed)
                 if (createFailure) throw Boom()
-                created += it
+                created += value
+                session.release(reservation)
             },
-            close = { if (closeFails) throw Boom() },
         )
         fun seedIs(value: String) = (seed as? SecretResult.Found)?.value == value
     }
@@ -119,8 +123,26 @@ class WalletCreatorTest {
     }
     @Test fun keepsSeedAndFilesWhenCloseFails() = runBlocking {
         val fake = Fake().apply { createFailure = true; closeFails = true }
-        fails<Boom> { WalletCreator(fake.dependencies()).createOrResume() }
+        fails<WalletSession.OpenError> { WalletCreator(fake.dependencies()).createOrResume() }
         assertTrue(fake.seedIs("seed-1") && fake.data); assertEquals(0, fake.cleanupCount)
+    }
+    @Test fun creationCannotTouchStorageDuringReservation() = runBlocking {
+        val fake = Fake()
+        val hold = fake.session.reserve()
+        fails<WalletSession.OpenError> { WalletCreator(fake.dependencies()).createOrResume() }
+        assertTrue(fake.generated.isEmpty())
+        assertEquals(SecretResult.NotFound, fake.seed)
+        fake.session.release(hold)
+    }
+    @Test fun creationHoldsReservationThroughCleanup() = runBlocking {
+        val fake = Fake().apply { holdCreate = CompletableDeferred(); createFailure = true }
+        val attempt = async { runCatching { WalletCreator(fake.dependencies()).createOrResume() } }
+        fake.entered.await()
+        fails<WalletSession.OpenError> { fake.session.reserve() }
+        fake.holdCreate!!.complete(Unit)
+        assertTrue(attempt.await().isFailure)
+        assertEquals(SecretResult.NotFound, fake.seed)
+        fake.session.release(fake.session.reserve())
     }
     @Test fun saveFailureNeverCreatesWalletFiles() = runBlocking {
         val fake = Fake().apply { saveFails = true }
