@@ -14,6 +14,32 @@ class ServerRegistrationTest {
     private val response = """{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK","user_status":"active"}"""
     private val device = DevicePayload(appVersion = "0.2.0", appBuild = "100")
 
+    @Test fun backupPreferenceCommitsAfterServerSuccessAndResetMatchesRN() = runBlocking {
+        val values = mutableMapOf(PersistedServerState.key to ServerStateTest.rnJSON)
+        val storage = ServerStateStorage(values::get, { k, v -> values[k] = v })
+        var failing = true
+        val engine = MockEngine {
+            if (failing) respond("unavailable", HttpStatusCode.ServiceUnavailable)
+            else respond("""{"success":true}""", headers = headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+        ServerClient.make("https://example.test", engine = engine).use { client ->
+            val service = ServerRegistration(client, storage, { "ark-test" }, { device }, { 1000 }, {})
+            val before = service.state
+            assertTrue(runCatching { service.setBackupEnabled(true) }.isFailure)
+            assertEquals(before, service.state)
+            failing = false; service.setBackupEnabled(true); assertEquals(true, service.state.isBackupEnabled)
+            service.setBackupEnabled(false); assertEquals(false, service.state.isBackupEnabled)
+            service.resetRegistration()
+            assertEquals(false, service.state.isRegisteredWithServer)
+            assertNull(service.state.lightningAddress); assertNull(service.state.nostrPubkey)
+            assertNull(service.state.emailAddress); assertEquals(false, service.state.isEmailVerified)
+            assertEquals(false, service.state.isEmailPromptDismissed)
+            assertNull(service.state.mailboxAuthorizationExpiry)
+            assertNull(service.state.lastReportedDeviceFingerprint); assertNull(service.state.lastDeviceReportAt)
+            assertEquals(before.isMailboxAuthorizationEnabled, service.state.isMailboxAuthorizationEnabled)
+        }
+    }
+
     @Test fun registrationReconcilesIdentityPreservesPreferencesAndRunsOnce() = runBlocking {
         val values = mutableMapOf(PersistedServerState.key to ServerStateTest.rnJSON,
             "profile-storage" to """{"state":{"displayName":"Old","preferredCurrency":"EUR","bitcoinAmountUnit":"sats"},"version":0}""")

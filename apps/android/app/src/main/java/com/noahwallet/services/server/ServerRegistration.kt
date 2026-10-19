@@ -84,5 +84,38 @@ class ServerRegistration(
         catch (_: Exception) { warn("Failed to save email prompt dismissal") }
     }
 
+    suspend fun resetRegistration() = registration.withLock {
+        storage.update { it.copy(isRegisteredWithServer = false, lightningAddress = null, nostrPubkey = null,
+            isBackupEnabled = false, emailAddress = null, isEmailVerified = false, isEmailPromptDismissed = false,
+            mailboxAuthorizationExpiry = null, lastReportedDeviceFingerprint = null, lastDeviceReportAt = null) }
+    }
+
+    suspend fun setBackupEnabled(enabled: Boolean) {
+        V0BackupSettingsClient(client).updateBackupSettings(BackupSettingsPayload(enabled)).value()
+        storage.update { it.copy(isBackupEnabled = enabled) }
+    }
+
+    suspend fun setMailboxEnabled(enabled: Boolean, authorization: suspend () -> AuthorizeMailboxPayload) {
+        if (enabled) {
+            val payload = authorization()
+            V0MailboxAuthorizeClient(client).authorizeMailbox(payload).value()
+            storage.update { it.copy(isMailboxAuthorizationEnabled = true, mailboxAuthorizationExpiry = payload.expiry.toDouble()) }
+        } else {
+            V0MailboxRevokeClient(client).revokeMailboxAuthorization().value()
+            storage.update { it.copy(isMailboxAuthorizationEnabled = false, mailboxAuthorizationExpiry = null) }
+        }
+    }
+
+    suspend fun saveDisplayName(name: String) {
+        val trimmed = name.trim()
+        V0UpdateProfileClient(client).updateProfile(UpdateProfilePayload(trimmed.takeIf { it.isNotEmpty() })).value()
+        storage.setDisplayName(trimmed)
+    }
+
+    suspend fun refreshProfile() {
+        val info = V0UserInfoClient(client).getUserInfo().value()
+        storage.update { it.copy(emailAddress = info.email, nostrPubkey = info.nostrPubkey) }
+    }
+
     private fun verifiedEmail(email: String) { storage.update { it.copy(emailAddress = email, isEmailVerified = true) } }
 }
