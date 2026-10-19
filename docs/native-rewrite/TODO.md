@@ -32,7 +32,9 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Android on bark-bolt-ffi 0.3.0 (`openExisting` for existing wallets, full balance; wrappers already closed on teardown)
 - [ ] Android session lifecycle parity with iOS (reservations, calls shielded from cancellation, observers), with the Android restore port
 - [x] Funded RN→native upgrade re-run on 0.3.0 — iOS (fingerprint, 2 movements, 95,000 spendable; opened via `openExisting`)
-- [ ] Funded RN→native upgrade on 0.3.0 — Android (real Pixel 6 run in progress)
+- [x] Funded RN→native upgrade on 0.3.0 — Android, real Pixel 6 (Android 17): fingerprint, 2 movements, 95,000 spendable; Expo UUID and token unchanged (see `apps/android/UpgradeTests/DEVICE.md`)
+- [ ] Pixel 6: background-job callbacks, killed-process delivery and widget refresh (blocked by the port-3100 server stopping mid-run)
+- [ ] bark-bolt-ffi Android libraries 16 KB-aligned (FFI handoff item 13; release blocker)
 - [ ] `WalletService` protocol/interface over bark-bolt-ffi (Swift + Kotlin), with a fake for UI work
 - [x] Config mapping per variant with **fee units: sat/kvB → sat/kwu** — iOS
 - [x] Config mapping — Android (sat/kwu; regtest via `10.0.2.2`)
