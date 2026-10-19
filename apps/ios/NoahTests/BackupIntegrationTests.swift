@@ -36,7 +36,9 @@ struct BackupIntegrationTests {
         let client = ServerClient.make(variant: .regtest, tokens: tokens)
         _ = try await client.register(body: .json(.init())).ok
 
-        let service = BackupService(session: session, client: client, readMnemonic: { mnemonic }, workDirectory: root)
+        let service = BackupService(
+            session: session, client: client, readMnemonic: { mnemonic },
+            scratch: ScratchSpace(root: root.appending(path: "scratch")))
         try await service.registerBackup()
 
         let first = try await service.performBackup(lastUploadedSnapshotSha256: nil)

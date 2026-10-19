@@ -15,7 +15,9 @@ struct BackupService: Sendable {
     let session: WalletSession
     let client: Client
     let readMnemonic: @Sendable () throws -> String
-    var workDirectory: URL = .cachesDirectory
+    /// Snapshots and zip staging are plaintext: each operation gets its own
+    /// folder, removed afterwards and swept at launch if the app died.
+    var scratch: ScratchSpace = .shared
     var uploadSession: URLSession = .shared
 
     func registerBackup() async throws {
@@ -23,14 +25,14 @@ struct BackupService: Sendable {
     }
 
     func performBackup(lastUploadedSnapshotSha256: String?) async throws -> Outcome {
-        let operation = UUID().uuidString
-        let snapshotURL = workDirectory.appending(path: "wallet-snapshot-\(operation).sqlite")
-        let encryptedURL = workDirectory.appending(path: "wallet-backup-\(operation).noahbackup")
-        defer {
-            try? FileManager.default.removeItem(at: snapshotURL)
-            try? FileManager.default.removeItem(at: encryptedURL)
+        try await scratch.withFolder("backup") { folder in
+            try await performBackup(lastUploadedSnapshotSha256: lastUploadedSnapshotSha256, in: folder)
         }
+    }
 
+    private func performBackup(lastUploadedSnapshotSha256: String?, in folder: URL) async throws -> Outcome {
+        let snapshotURL = folder.appending(path: "wallet-snapshot.sqlite")
+        let encryptedURL = folder.appending(path: "wallet-backup.noahbackup")
         let snapshot = try await session.createSnapshot(at: snapshotURL)
         if snapshot.sha256 == lastUploadedSnapshotSha256 {
             return Outcome(backupId: nil, snapshotSha256: snapshot.sha256, uploaded: false)
@@ -38,7 +40,7 @@ struct BackupService: Sendable {
 
         let encrypted = try BackupArchive.seal(
             snapshot: snapshotURL, manifest: Self.manifest(for: snapshot), mnemonic: try readMnemonic(),
-            to: encryptedURL, workDirectory: workDirectory)
+            to: encryptedURL, workDirectory: folder)
 
         let upload = try await client.initiateBackupObjectUpload(
             body: .json(.init(
@@ -54,12 +56,13 @@ struct BackupService: Sendable {
 
     /// `.noahbackup` for the Export screen, written to `destination`.
     func exportEncryptedBackup(to destination: URL) async throws -> BackupArchive.EncryptedFile {
-        let snapshotURL = workDirectory.appending(path: "wallet-export-\(UUID().uuidString).sqlite")
-        defer { try? FileManager.default.removeItem(at: snapshotURL) }
-        let snapshot = try await session.createSnapshot(at: snapshotURL)
-        return try BackupArchive.seal(
-            snapshot: snapshotURL, manifest: Self.manifest(for: snapshot), mnemonic: try readMnemonic(),
-            to: destination, workDirectory: workDirectory)
+        try await scratch.withFolder("export") { folder in
+            let snapshotURL = folder.appending(path: "wallet-snapshot.sqlite")
+            let snapshot = try await session.createSnapshot(at: snapshotURL)
+            return try BackupArchive.seal(
+                snapshot: snapshotURL, manifest: Self.manifest(for: snapshot), mnemonic: try readMnemonic(),
+                to: destination, workDirectory: folder)
+        }
     }
 
     static func manifest(for snapshot: WalletSnapshotInfo, createdAt: Date = Date()) -> BackupArchive.Manifest {

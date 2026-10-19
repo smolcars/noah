@@ -9,6 +9,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         SettingsStorage.bootstrap()
+        // Before any push handler can start a backup: plaintext left by a
+        // backup or export that died with the app.
+        ScratchSpace.shared.sweepAbandoned()
         return true
     }
 

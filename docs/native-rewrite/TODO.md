@@ -31,7 +31,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] FFI items 11 + 12 in v0.3.0: `OnchainWallet.openExisting` (read-only identity check before writes) and all nine balance buckets + Bark's pending/total — iOS pinned to 0.3.0 (Noah's own preflight kept)
 - [x] Android on bark-bolt-ffi 0.3.0 (`openExisting` for existing wallets, full balance; wrappers already closed on teardown)
 - [ ] Android session lifecycle parity with iOS (reservations, calls shielded from cancellation, observers), with the Android restore port
-- [ ] Funded RN→native upgrade re-run on 0.3.0 (iOS, Android)
+- [x] Funded RN→native upgrade re-run on 0.3.0 — iOS (fingerprint, 2 movements, 95,000 spendable; opened via `openExisting`)
+- [ ] Funded RN→native upgrade on 0.3.0 — Android (real Pixel 6 run in progress)
 - [ ] `WalletService` protocol/interface over bark-bolt-ffi (Swift + Kotlin), with a fake for UI work
 - [x] Config mapping per variant with **fee units: sat/kvB → sat/kwu** — iOS
 - [x] Config mapping — Android (sat/kwu; regtest via `10.0.2.2`)

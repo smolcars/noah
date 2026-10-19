@@ -46,10 +46,10 @@ enum BackupArchive {
     private static let maxLegacyEntries = 256
 
     /// Zips `snapshot` with its manifest, encrypts it for `mnemonic` and
-    /// writes it to `destination`, which must not exist.
+    /// writes it to `destination`, which must not exist. The plaintext zip
+    /// staging goes in `workDirectory` (a `ScratchSpace` folder in the app).
     static func seal(
-        snapshot: URL, manifest: Manifest, mnemonic: String, to destination: URL,
-        workDirectory: URL = .cachesDirectory
+        snapshot: URL, manifest: Manifest, mnemonic: String, to destination: URL, workDirectory: URL
     ) throws -> EncryptedFile {
         let fileManager = FileManager.default
         guard fileManager.fileExists(atPath: snapshot.path) else { throw Failure.snapshotMissing }
