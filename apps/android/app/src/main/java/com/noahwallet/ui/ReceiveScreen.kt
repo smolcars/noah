@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,13 +41,19 @@ import com.noahwallet.services.server.value
 import com.noahwallet.services.wallet.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.Json
 import java.text.DecimalFormatSymbols
+
+private val requestSaver = Saver<ReceiveRequest?, String>(
+    save = { it?.let { request -> Json.encodeToString(request) } ?: "" },
+    restore = { it.takeIf(String::isNotEmpty)?.let { value -> Json.decodeFromString<ReceiveRequest>(value) } },
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
-    var request by remember { mutableStateOf<ReceiveRequest?>(null) }
-    var received by remember { mutableStateOf<Long?>(null) }
+    var request by rememberSaveable(stateSaver = requestSaver) { mutableStateOf<ReceiveRequest?>(null) }
+    var received by rememberSaveable { mutableStateOf<Long?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var retry by remember { mutableIntStateOf(0) }
     var sheet by remember { mutableStateOf<String?>(null) }
@@ -56,7 +63,9 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     LaunchedEffect(retry) {
-        request = null; error = null
+        // Keep the displayed address/invoice across activity recreation; history catches any payment during the gap.
+        if (request != null || received != null) return@LaunchedEffect
+        error = null
         try { request = app.session.receiveRequest() }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { error = "Could not generate a receive request. Please try again." }

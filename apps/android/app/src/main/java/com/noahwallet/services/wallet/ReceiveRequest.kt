@@ -1,9 +1,11 @@
 package com.noahwallet.services.wallet
 
+import kotlinx.serialization.Serializable
 import java.net.URLEncoder
 import java.math.BigDecimal
 
 /** BIP-321: the same address pair survives amount edits. */
+@Serializable
 data class ReceiveRequest(
     val arkAddress: String,
     val onchainAddress: String,
