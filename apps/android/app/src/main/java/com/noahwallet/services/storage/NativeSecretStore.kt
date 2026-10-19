@@ -72,7 +72,7 @@ internal class NativeSecretStore(
 
     /** A failed first write must not leave an unreadable file that would mask the legacy seed forever. */
     private fun failedWrite(prior: SecretResult): SecretResult {
-        if (prior == SecretResult.NotFound) runCatching { file.delete() }
+        if (prior == SecretResult.NotFound && readUnlocked() !is SecretResult.Found) runCatching { file.delete() }
         return SecretResult.Unavailable(SecretFailure.migrationFailed)
     }
 

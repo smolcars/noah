@@ -81,6 +81,7 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
         LaunchState.existingWallet -> if (openFailed) {
             R.string.launch_open_failed to R.string.launch_open_failed_message
         } else R.string.launch_loading to R.string.launch_loading_message
+        LaunchState.restoreIncomplete -> R.string.launch_open_failed to R.string.launch_open_failed_message
         LaunchState.onboarding -> R.string.launch_welcome to R.string.launch_onboarding_message
         LaunchState.seedWithoutWalletData -> R.string.launch_seed_found to R.string.launch_seed_found_message
         LaunchState.walletDataWithoutSeed -> R.string.launch_seed_needed to R.string.launch_seed_needed_message

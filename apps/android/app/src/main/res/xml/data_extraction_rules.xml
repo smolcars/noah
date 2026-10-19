@@ -8,10 +8,16 @@
         <exclude domain="sharedpref" path="RN_KEYCHAIN.xml" />
         <exclude domain="sharedpref" path="noah_native_secrets.xml" />
         <exclude domain="file" path="datastore/RN_KEYCHAIN.preferences_pb" />
+        <exclude domain="file" path=".noah-data-mainnet-restore" />
+        <exclude domain="file" path=".noah-data-signet-restore" />
+        <exclude domain="file" path=".noah-data-regtest-restore" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="RN_KEYCHAIN.xml" />
         <exclude domain="sharedpref" path="noah_native_secrets.xml" />
         <exclude domain="file" path="datastore/RN_KEYCHAIN.preferences_pb" />
+        <exclude domain="file" path=".noah-data-mainnet-restore" />
+        <exclude domain="file" path=".noah-data-signet-restore" />
+        <exclude domain="file" path=".noah-data-regtest-restore" />
     </device-transfer>
 </data-extraction-rules>

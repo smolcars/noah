@@ -5,6 +5,7 @@ import java.io.InputStream
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.io.encoding.Base64
 import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -83,7 +84,7 @@ object BackupArchive {
         } catch (failure: Throwable) { directory.deleteRecursively(); throw failure }
     }
     fun openLegacy(base64: ByteArray, mnemonic: String, variant: String, directory: File) {
-        val envelope = try { Base64.getDecoder().decode(base64.toString(Charsets.UTF_8).trim()) }
+        val envelope = try { Base64.decode(base64.toString(Charsets.UTF_8).trim()) }
         catch (_: Exception) { throw Failure(Reason.notLegacyBackup) }
         unpack(BackupCrypto.decrypt(envelope, mnemonic, BackupCrypto.Version.legacyDirectory), directory,
             "backup_staging/noah-data-$variant/")

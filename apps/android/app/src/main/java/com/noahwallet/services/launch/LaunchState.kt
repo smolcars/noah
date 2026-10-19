@@ -7,7 +7,7 @@ import com.noahwallet.services.storage.SeedStorage
 import com.noahwallet.services.storage.WalletDataLocation
 
 enum class LaunchState {
-    existingWallet, onboarding, seedWithoutWalletData, walletDataWithoutSeed, secureStorageUnavailable;
+    existingWallet, onboarding, seedWithoutWalletData, walletDataWithoutSeed, secureStorageUnavailable, restoreIncomplete;
 
     enum class SeedStatus {
         present, absent, unavailable;

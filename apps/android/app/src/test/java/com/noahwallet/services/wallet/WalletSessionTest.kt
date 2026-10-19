@@ -6,6 +6,7 @@ import io.github.niteshbalusu11.bark.WalletSnapshotInfo
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collect
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -18,6 +19,16 @@ class WalletSessionTest {
         var holderClosed = false
         var beforeNativeWait: CompletableDeferred<Unit>? = null
         var waitRegistered = false
+        val changeWaiting = CompletableDeferred<Unit>()
+        val changeReleased = CompletableDeferred<Unit>()
+        var changeClosed = false
+        override fun stateChanges(): WalletSession.Changes = object : WalletSession.Changes {
+            override suspend fun next(): io.github.niteshbalusu11.bark.StateChangeEvent? {
+                changeWaiting.complete(Unit); changeReleased.await(); return null
+            }
+            override fun stop() { changeReleased.complete(Unit) }
+            override fun close() { changeClosed = true }
+        }
         override fun notifications(): WalletSession.Notifications {
             subscribed.complete(Unit)
             return object : WalletSession.Notifications {
@@ -76,6 +87,21 @@ class WalletSessionTest {
     private fun bark(location: WalletDataLocation) { location.directory.mkdirs(); location.database.writeText("fake") }
     private fun assertFailure(expected: WalletSession.OpenFailure, result: Result<Unit>) {
         assertEquals(expected, (result.exceptionOrNull() as? WalletSession.OpenError)?.reason)
+    }
+    @Test fun closeStopsStateObserverBeforeDrainingCalls() = runBlocking {
+        withLocation { location ->
+            val handles = Handles().apply { summaryEntered = CompletableDeferred(); summaryGate = CompletableDeferred() }
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test")
+            val observer = launch { runCatching { session.stateChanges().collect() } }
+            handles.changeWaiting.await()
+            val call = launch { session.summary() }; handles.summaryEntered!!.await()
+            val closing = launch { session.close() }
+            withTimeout(2000) { observer.join() }
+            assertTrue(handles.changeClosed); assertFalse(handles.closed)
+            assertTrue(runCatching { session.reserve() }.isFailure)
+            handles.summaryGate!!.complete(Unit); call.join(); closing.join(); assertTrue(handles.closed)
+        }
     }
     @Test fun closeReleasesWaitingReceiveObserverBeforeClosingHandles() = runBlocking {
         withLocation { location ->

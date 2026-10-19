@@ -3,6 +3,7 @@ package com.noahwallet.services.wallet
 import android.database.DatabaseErrorHandler
 import android.database.sqlite.SQLiteDatabase
 import java.io.File
+import com.noahwallet.services.backup.ScratchSpace
 
 /** Read-only check before opening; OnchainWallet.openExisting repeats it in the SDK (defence in depth). */
 object WalletDatabase {
@@ -13,7 +14,8 @@ object WalletDatabase {
     private val keepDatabase = DatabaseErrorHandler { }
 
     /** Plaintext copies live only here; every inspection empties it first (crash leftovers). */
-    private val scratch = File(System.getProperty("java.io.tmpdir"), "noah-preflight")
+    private val scratch = ScratchSpace(File(System.getProperty("java.io.tmpdir"), "noah-preflight"))
+    fun sweepAbandoned() = scratch.sweepAbandoned()
 
     /** Callers (the session's open path) inspect one database at a time. */
     fun properties(database: File): Properties = try {
@@ -32,16 +34,10 @@ object WalletDatabase {
         throw InspectionError()
     }
 
-    private fun inspectCopy(database: File): Properties {
-        scratch.deleteRecursively()
-        check(scratch.mkdirs()) { "Cannot create preflight scratch" }
-        try {
-            val copy = File(scratch, "wallet.sqlite")
-            database.copyTo(copy)
-            return read(copy)
-        } finally {
-            scratch.deleteRecursively()
-        }
+    private fun inspectCopy(database: File): Properties = scratch.withFolderBlocking("inspect") { folder ->
+        val copy = File(folder, "wallet.sqlite")
+        database.copyTo(copy)
+        read(copy)
     }
 
     private fun read(file: File): Properties =

@@ -40,7 +40,14 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         if (starting || open) return
         starting = true
         viewModelScope.launch {
+            var recovering = true
             try {
+                val recovered = services.recoverRestore()
+                if (recovered == com.noahwallet.services.backup.RestoreTransaction.Recovery.waitingForSecret) {
+                    launchState = LaunchState.secureStorageUnavailable
+                    return@launch
+                }
+                recovering = false
                 launchState = withContext(Dispatchers.IO) { LaunchState.current(getApplication()) }
                 if (launchState == LaunchState.existingWallet) {
                     withContext(Dispatchers.IO) { services.ensureWalletOpen() }
@@ -50,7 +57,11 @@ class AppModel(application: Application) : AndroidViewModel(application) {
                     refresh()
                     services.startServerServices()
                 }
-            } catch (_: Exception) { error = "Couldn't open your wallet. Please try again." }
+            } catch (_: Exception) {
+                if (recovering) launchState = LaunchState.restoreIncomplete
+                error = if (recovering) "Couldn't finish wallet recovery. Your wallet files have been kept. Please try again."
+                    else "Couldn't open your wallet. Please try again."
+            }
             finally { starting = false }
         }
     }

@@ -79,6 +79,46 @@ class BackupArchiveTest {
             BackupArchive.extract(byteArrayOf(1).inputStream(), File(root, "crc"), 10, 123)
         }.exceptionOrNull() as BackupArchive.Failure).reason)
     }
+    @Test fun forgedSizesAndCrcAreRejectedWhileInflatingArchive() = temp { root ->
+        val manifestBytes = BackupArchive.encode(manifest)
+        val original = zip("manifest.json" to manifestBytes, "db.sqlite" to ByteArray(256 * 1024))
+        fun patch(crc: Boolean): ByteArray {
+            val bytes = original.copyOf()
+            fun u32(at: Int): Long = (0..3).fold(0L) { value, i -> value or ((bytes[at + i].toLong() and 255) shl (8 * i)) }
+            fun write(at: Int, value: Int) { repeat(4) { bytes[at + it] = (value ushr (8 * it)).toByte() } }
+            for (offset in 0 until bytes.size - 46) {
+                when (u32(offset)) {
+                    0x04034b50L -> if (crc) write(offset + 14, 123) else write(offset + 22, 16)
+                    0x02014b50L -> if (crc) write(offset + 16, 123) else write(offset + 24, 16)
+                    0x08074b50L -> if (crc) write(offset + 4, 123) else write(offset + 12, 16)
+                }
+            }
+            return bytes
+        }
+        val corrupt = File(root, "corrupt").apply { writeBytes(BackupCrypto.encrypt(patch(true), phrase, BackupCrypto.Version.snapshot)) }
+        assertTrue(runCatching { BackupArchive.open(corrupt, phrase, File(root, "bad")) }.isFailure)
+        assertFalse(File(root, "bad").exists())
+        org.apache.commons.compress.utils.SeekableInMemoryByteChannel(patch(false)).use { channel ->
+            org.apache.commons.compress.archivers.zip.ZipFile.builder().setSeekableByteChannel(channel).get().use { archive ->
+                val entry = archive.getEntry("db.sqlite")
+                assertEquals(16L, entry.size)
+                val target = File(root, "bomb")
+                val failure = runCatching { archive.getInputStream(entry).use { BackupArchive.extract(it, target, 65536, entry.crc) } }.exceptionOrNull()
+                assertEquals(BackupArchive.Reason.tooLarge, (failure as BackupArchive.Failure).reason)
+                assertTrue(target.length() <= 65536)
+            }
+        }
+    }
+    @Test fun unixSymlinkIsRejectedInV2() = temp { root ->
+        val bytes = ByteArrayOutputStream()
+        org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream(bytes).use { zip ->
+            val entry = org.apache.commons.compress.archivers.zip.ZipArchiveEntry("db.sqlite").apply { unixMode = 0xa1ff }
+            zip.putArchiveEntry(entry); zip.write("/other/wallet".toByteArray()); zip.closeArchiveEntry()
+        }
+        val encrypted = File(root, "encrypted").apply { writeBytes(BackupCrypto.encrypt(bytes.toByteArray(), phrase, BackupCrypto.Version.snapshot)) }
+        assertTrue(runCatching { BackupArchive.open(encrypted, phrase, File(root, "out")) }.isFailure)
+        assertFalse(File(root, "out").exists())
+    }
     @Test fun legacyPathsAndEntryLimit() = temp { root ->
         val prefix = "backup_staging/noah-data-regtest/"
         for (entries in listOf(listOf(prefix + "db.sqlite", prefix + "../escape"),

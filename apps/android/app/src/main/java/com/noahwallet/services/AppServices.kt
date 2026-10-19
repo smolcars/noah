@@ -14,6 +14,7 @@ import kotlinx.coroutines.sync.withLock
 
 /** One shared session, token provider and server client for launch and future background work. */
 class AppServices private constructor(private val context: Context) {
+    init { com.noahwallet.services.wallet.WalletDatabase.sweepAbandoned() }
     val session = WalletSession.shared(context)
     private val log = AppLog(context, "server")
     private val variant = BuildConfig.APP_VARIANT
@@ -35,7 +36,7 @@ class AppServices private constructor(private val context: Context) {
     private val settings = SettingsStorage(context)
     val scratch = ScratchSpace(java.io.File(context.cacheDir, "noah-scratch")).also { it.sweepAbandoned() }
     val backupService = BackupService(session, client,
-        { (seed.read() as? SecretResult.Found)?.value ?: throw ServerFailure("Wallet seed unavailable") }, scratch)
+        { (seed.read() as? SecretResult.Found)?.value ?: throw SeedItem.Unavailable() }, scratch)
     val backupCoordinator = BackupCoordinator(BackupCoordinator.Dependencies(
         perform = backupService::performBackup,
         canBackup = { required ->
@@ -71,6 +72,18 @@ class AppServices private constructor(private val context: Context) {
         }
         if (foreground) backupCoordinator.schedule(BackupCoordinator.Reason.appForeground, true)
     }
+
+    suspend fun recoverRestore(): RestoreTransaction.Recovery = WalletRestorer.recoverInterruptedRestore(
+        session, WalletDataLocation(context.filesDir, variant), SeedItem(seed))
+
+    fun restorer() = WalletRestorer(variant, session, WalletDataLocation(context.filesDir, variant), SeedItem(seed),
+        makeClient = { phrase ->
+            var temporaryToken: String? = null
+            val temporaryTokens = AuthTokenProvider(
+                readToken = { temporaryToken }, saveToken = { temporaryToken = it }, clearToken = { temporaryToken = null },
+                readMnemonic = { phrase }, login = { ServerClient.login(publicClient, variant, it) })
+            ServerClient.make(ServerEndpoint.baseURL(variant, BuildConfig.REGTEST_SERVER_URL), temporaryTokens)
+        })
 
     private val startup = Mutex()
     private var started = false

@@ -38,24 +38,32 @@ internal class AtomicSecretFile(private val path: File) : SecretFile {
     private val file = AtomicFile(path)
 
     override fun read(): ByteArray? = try {
-        file.openRead().use { it.readBytes() }
+        file.openRead().use { it.readBytes() }.also {
+            // Read-back after a failed rename/sync is a commit decision: only return durable bytes.
+            syncPath(path)
+            syncPath(path.parentFile!!)
+        }
     } catch (_: FileNotFoundException) {
         // AtomicFile also recovers its old .bak format on read; an unreadable existing file is NOT absent.
         if (path.exists() || File(path.path + ".bak").exists()) error("Secure file unreadable")
         null
     }
 
+    private fun syncPath(target: File) {
+        val descriptor = android.system.Os.open(target.path, android.system.OsConstants.O_RDONLY, 0)
+        try { android.system.Os.fsync(descriptor) } finally { android.system.Os.close(descriptor) }
+    }
+
     override fun delete() = file.delete()
 
     override fun writeAtomically(bytes: ByteArray) {
-        val stream = file.startWrite()
+        // AtomicFile.finishWrite hides fsync failures. Restore requires real durability errors.
+        val temporary = File(path.parentFile, ".seed-${java.util.UUID.randomUUID()}")
         try {
-            stream.write(bytes)
-            file.finishWrite(stream)
-        } catch (failure: Exception) {
-            file.failWrite(stream)
-            throw failure
-        }
+            java.io.FileOutputStream(temporary).use { it.write(bytes); it.fd.sync() }
+            android.system.Os.rename(temporary.path, path.path)
+            syncPath(path.parentFile!!)
+        } finally { temporary.delete() }
     }
 }
 
