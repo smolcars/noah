@@ -159,8 +159,11 @@ class BackupArchiveTest {
             assertTrue(runCatching { BoundedDownload.fetch(request, file, 1000, http) }.exceptionOrNull() is BoundedDownload.TooLarge)
             assertTrue(file.length() <= 1000)
             repeat(20) {
-                val job = launch(start = CoroutineStart.LAZY) { BoundedDownload.fetch(request, File(root, "cancel-$it"), 1000, http) }
-                job.cancel(); job.join()
+                val job = launch {
+                    currentCoroutineContext().cancel()
+                    BoundedDownload.fetch(request, File(root, "cancel-$it"), 1000, http)
+                }
+                withTimeout(2000) { job.join() }
             }
         }
     }

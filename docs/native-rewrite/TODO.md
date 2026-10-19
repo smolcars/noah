@@ -103,17 +103,21 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Envelope crypto v1/v2 (salt16 | nonce12 | AES-256-GCM; PBKDF2-SHA256 600k) with Node-generated vectors (`apps/fixtures/backup-crypto.json`) — iOS
 - [x] Envelope crypto — Android (same vectors + unicode vectors)
 - [x] v2 archive: manifest.json + db.sqlite zip (strict manifest, only those two entries extracted, no-overwrite writes) — iOS
-- [ ] v2 archive — Android
+- [x] v2 archive (strict manifest, CRC checks, streaming cap) — Android
 - [x] v1 legacy restore (variant folder only, path checks, entry/size caps) — iOS
 - [x] Backup upload: FFI snapshot → seal → initiate → S3 PUT → complete, unchanged snapshot skipped, export file — iOS (live-tested against S3 with the dev `.env` server)
 - [x] Restore: list (temporary token) → download (size + SHA-256 vs server record) → open → validate → journaled swap (`RestoreTransaction`) under an exclusive session hold → open check without daemon → seed save as commit point; v1 legacy fallback through the same transaction; launch settles an interrupted restore before reading launch state — iOS (live round trip + crash-boundary, race and Keychain-failure tests)
 - [x] Unpack limits: streaming 1 GiB cap (headers can lie), CRC-32 verified per entry — iOS
-- [ ] Restore — Android (same journal semantics)
+- [x] Restore — Android (same journal semantics; durable seed read-back, launch recovery, failure/race tests)
 - [x] Restore UI (RestoreWalletScreen); seed `backup-storage` after a restore (`BackupCoordinator.seedRestored`) — iOS
+- [ ] Restore UI — Android
 - [x] Backup coordinator: single in-flight, 5 s debounce, generation counter, backoff 15 s → 15 min with jitter, suspension gates; `backup-storage` with RN's actions; triggers from wallet state changes (session-owned), foreground and push — iOS
-- [ ] Backup coordinator — Android
+- [x] Backup coordinator — Android (generation counter, manual-clock tests, foreground/state-change/push triggers)
+- [x] v1 legacy extraction, bounded streaming download, startup scratch sweep and Auto Backup/device-transfer exclusions — Android
+- [x] Backup upload and unchanged-snapshot skip; live S3 round trip at port 3100 — Android
+- [x] Shared Node/Info-ZIP v1/v2 archives and a Node-made real wallet snapshot restored/reopened — Android
 - [x] Independently built v2 + v1 backup files (Node crypto + Info-ZIP, `backup-archives.json`) open on iOS
-- [ ] Same fixtures on Android; iOS ↔ Android round trip; `scripts/decrypt_backup.js` supports v2
+- [ ] Direct iOS ↔ Android round trip; `scripts/decrypt_backup.js` supports v2 (shared fixtures and Node → Android verified)
 
 ### 0.8 Translations
 - [ ] Tool: GT catalogs → `.xcstrings` + `strings.xml` for en/es/ja/ko/sv (placeholders, plurals, rich text flattened)

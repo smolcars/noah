@@ -6,7 +6,7 @@ onboarding at the recovery phrase. It never creates a wallet at launch or delete
 legacy secrets. Fresh creation derives key 0 before server registration.
 
 Onboarding includes the beta warning, secure recovery phrase, emergency email and
-Lightning identity. Restore remains a placeholder pending the Android restore engine.
+Lightning identity. Restore UI remains a placeholder; the Android restore engine is implemented below.
 Home uses the full wallet balance and RN-compatible unit/privacy settings. Receive
 supports BIP-321 QR, amount/note editing, fiat, copy/share and Ark/Lightning completion.
 Notification permission and the existing push layer run after onboarding.
@@ -135,13 +135,13 @@ regtest host and explicit 10,000 sat/kvB → 2,500 sat/kwu conversion.
 `WalletDatabase` opens SQLite read-only to reject missing/non-bark/wrong-network
 files before the SDK can run migrations. `WalletSession.shared(context)` owns both
 native handles; concurrent `ensureOpen` calls share one attempt. Canceling a UI
-waiter does not cancel that attempt. Summary, sync, snapshot and close are serialized.
+waiter does not cancel that attempt. Native calls are counted; close stops observers and drains those calls.
 Kotlin explicitly closes both handles, including the onchain handle on open failure.
 
 `WalletCreator` resumes existing data or saves a new seed before creating files.
 Any nonempty datadir counts as existing data. Cleanup is limited to a failed fresh
 attempt in an absent/empty datadir; a failed close or cleanup keeps the seed.
-There is no launch-time create, seed deletion or interrupted-restore recovery.
+Launch never creates a wallet or deletes an existing seed; it settles interrupted restores before reading launch state.
 
 `WalletBalance` uses bark's accounting and the shared balance fixture. The three
 balance buckets missing from SDK 0.2.0 remain zero, matching iOS.
@@ -322,7 +322,7 @@ exit because a failed onboarding flow can capture a recovery phrase.
 
 Unverified: physical devices and actual API 24–29 OS behavior (the formatter's
 fallback path was exercised on API 35); an upgrade with onchain funds, recurring
-rules or an existing RN Expo ID. Interrupted restore recovery is out of scope.
+rules or an existing RN Expo ID. See the native backups section below for interrupted-restore recovery verification.
 
 ## Server API and identity
 
@@ -424,8 +424,8 @@ ntfy, then the first available distributor. No distributor means waiting for one
 there is no Firebase fallback on a non-GMS device. Settings UI is still pending.
 
 Both transports run maintenance (with correlated status), invoice creation/submission,
-claim + local receive notification, and heartbeat. Backups are log-only with **no
-status report** until the Android backup port; recurring wakes are log-only until M7.
+claim + local receive notification, heartbeat and correlated backup jobs. Recurring
+wakes remain log-only until M7.
 Widget updates preserve the six Long keys read by `NoahWidgetProvider`, including
 `-999` for no VTXO expiry. Existing `default` and `noah-push-default` channels are
 never recreated or reconfigured. Notification copy currently uses English and BIP177,
@@ -492,9 +492,9 @@ MAX channel importance is locally documented; all other push lint errors are cle
 
 JVM tests consume all cases in `receive-request.json` and `fiat-currency.json`.
 Session tests cover waiting-observer shutdown, cancellation before observer startup,
-and cancellation of an active native call. Observers never hold the operations mutex;
-shutdown releases their native wait and joins them before stopping the wallet.
-Submitted wallet calls finish under `NonCancellable` before the mutex is released.
+and cancellation of an active native call. Observers belong to the session; shutdown releases their native wait and joins
+them before draining counted calls and stopping the wallet. Submitted calls finish
+under `NonCancellable` before their drain count is released.
 
 The mnemonic screen sets `FLAG_SECURE`, marks clipboard content sensitive, clears
 its own clipboard item on exit, and expires it after two minutes while visible.
@@ -506,3 +506,84 @@ notification permission, and Home. Bark paid a 5,000-sat Ark address and a 6,000
 Lightning invoice from Receive; both reached success, and the SDK reported a final
 10,888-sat wallet balance. The amount/note sheet remained visible above Gboard.
 Email delivery/OTP entry and real push delivery were not repeated in this screen pass.
+
+## Native encrypted backups and restore
+
+`services/backup` ports the reviewed iOS design. `WalletSession` reservations cover
+fresh creation and restore, counted native calls finish despite cancellation, and
+close stops both observer kinds before draining calls and stopping the daemon.
+An unfinished restore blocks ordinary open/create. Failed verification teardown
+quarantines its handles and leaves the journal for recovery after a successful
+close or process restart; files are never swapped beneath live native work.
+
+V2 contains only a strict manifest and SQLite snapshot. Commons Compress 1.28.0
+reads central-directory types (including symlinks); Noah checks CRC per entry and
+counts inflated bytes independently of headers, with a 1 GiB aggregate cap.
+Legacy v1 extraction accepts only this variant's subtree, with path and entry
+limits. OkHttp streams downloads with the server-recorded v2 size as its cap,
+then the restorer checks both size and SHA-256. Newly required Commons artifacts,
+including build-plugin versions, have independently downloaded SHA-256 pins.
+
+Snapshots and their seed are read inside one counted session call. Upload uses
+initiate → S3 PUT (RN headers) → complete and skips unchanged snapshots. The
+coordinator retains RN's `backup-storage` JSON shape and explicit nulls, generation
+coverage, five-second debounce and jittered exponential retry. State changes,
+foreground and push trigger it; push bypasses only the backup-enabled preference
+and reports its correlated result. A cancelled flush waiter leaves the pass running.
+
+Restore reserves the session, settles any old journal, fetches and validates,
+installs, opens without a daemon, and saves the seed last. The sibling workspace
+keeps journal/previous/staged/discard/work. Files use `fd.sync()` and directories
+use `Os.fsync`; errors are surfaced. The journal stores an HMAC seed tag, never the
+seed. Undo renames to discard before deleting; unreadable seed storage waits.
+Failed seed writes are read back to decide whether to finish or undo. Android seed
+read-back also synchronizes the file and directory before returning a value: an
+unsynced replacement must not be mistaken for a durable commit. Cleanup retries
+once, then returns `cleanupPending` for launch recovery. Launch recovers before
+reading wallet state; scratch sweeps also cover the busy/no-journal path.
+
+Backup/export/preflight scratch lives in cache and is tracked per operation;
+restore workspaces are excluded from cloud backup and device transfer in both XML
+rule files. The native seed remains in `noBackupFilesDir`. The optional restore
+screen is still a placeholder; `AppServices.restorer()` and `seedRestored` are ready
+for that UI to call. No restored phrase is persisted in UI state.
+
+### Backup verification (2026-10-19)
+
+- Nix/JDK 17: **216 JVM tests pass**; regtest debug APK and instrumentation APK build successfully.
+  Tests cover crash boundaries, sync failures, reservations, cancellation, seed
+  failures/read-back, legacy fallback, retained-backup fallback, manifest/path/CRC
+  limits, shared crypto/archive fixtures, and coordinator timing with a manual clock.
+- Dedicated Google APIs Android 15 ARM64 AVD `NoahBackupRestoreAgent`, port 5560:
+  real upload to the existing S3-configured server on `10.0.2.2:3100`, unchanged
+  snapshot skip, restore into a fresh datadir/seed store, reopen and matching
+  fingerprint, movement count and balance. This is a fresh unfunded wallet (zero
+  movements), matching the iOS integration-test scope. Its test backup is deleted.
+- **11 distinct instrumented cases passed**: nine backup/storage/database/crypto cases,
+  the Node snapshot preparation, and the Node restore.
+- A separate real offline-wallet snapshot was zipped with Info-ZIP and encrypted
+  by Node crypto, then downloaded, validated, committed and reopened by Android.
+  The fixture uses a public BIP39 vector, never a user's seed. Real filesystem
+  journal recovery and atomic seed persistence were also exercised on the emulator.
+- Repository hooks run lint, React Compiler checks, 148 RN tests, TypeScript and
+  Rust formatting. Android lint still has the pre-existing camera permission /
+  optional hardware declaration error; no new backup lint errors were reported.
+
+To repeat on **your own** emulator, build/install both APKs and run:
+
+```sh
+adb -s YOUR_SERIAL shell am instrument -w -e noahBackupIT 1 \
+  -e class 'com.noahwallet.services.BackupIntegrationTest#liveUploadSkipAndRestore,com.noahwallet.services.BackupIntegrationTest#prepareNodeSnapshot,com.noahwallet.services.BackupIntegrationTest#realFilesystemCrashRecoveryAndSeedDurability' \
+  com.noahwallet.regtest.test/androidx.test.runner.AndroidJUnitRunner
+node apps/android/scripts/serve-node-backup-fixture.mjs YOUR_SERIAL
+# In a second terminal, while the fixture server runs on port 3161:
+adb -s YOUR_SERIAL shell am instrument -w -e noahNodeBackupIT 1 \
+  -e class 'com.noahwallet.services.BackupIntegrationTest#restoreNodeMadeSnapshot' \
+  com.noahwallet.regtest.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+Stop the fixture server with Ctrl-C to remove its plaintext temp folder, then
+remove your disposable AVD. These commands never restart the shared stack. Direct
+iOS-device ↔ Android-device restore, physical devices, API 24–34 and hardware power
+loss remain unverified. Unit tests inject each journal boundary and sync failure;
+they do not emulate a filesystem losing writes after power removal.

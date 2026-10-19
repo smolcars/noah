@@ -4,7 +4,7 @@
       <verify-metadata>false</verify-metadata>
       <verify-signatures>false</verify-signatures>
       <trusted-artifacts>
-         <trust group="^(?!io[.]github[.]niteshbalusu11$|io[.]ktor$|org[.]jetbrains[.]kotlinx$|org[.]slf4j$|androidx[.]work$|androidx[.]room$|androidx[.]sqlite$|androidx[.]concurrent$|org[.]unifiedpush[.]android$|org[.]apache[.]commons$|commons-io$|commons-codec$|com[.]google[.]zxing$).*" regex="true" reason="Verify the wallet AAR, server networking, push connector and WorkManager dependencies; retain the scaffold trust policy for other groups."/>
+         <trust group="^(?!io[.]github[.]niteshbalusu11$|io[.]ktor$|org[.]jetbrains[.]kotlinx$|org[.]slf4j$|androidx[.]work$|androidx[.]room$|androidx[.]sqlite$|androidx[.]concurrent$|org[.]unifiedpush[.]android$|org[.]apache[.]commons$|commons-io$|commons-codec$|com[.]google[.]zxing$).*" regex="true" reason="Verify the wallet AAR, backup extraction, server networking, push connector and WorkManager dependencies; retain the scaffold trust policy for other groups."/>
       </trusted-artifacts>
    </configuration>
    <components>
