@@ -41,10 +41,31 @@ class BackupService(
             V0BackupV2CompleteClient(client).completeBackupObjectUpload(CompleteBackupUploadPayload(upload.backupId)).value()
             Outcome(upload.backupId, snapshot.sha256, true)
         }
-    suspend fun exportEncryptedBackup(destination: File): BackupArchive.EncryptedFile = scratch.withFolder("export") { folder ->
-        val snapshotFile = File(folder, "snapshot.sqlite")
-        val (snapshot, mnemonic) = session.withOpen { it.createSnapshot(snapshotFile) to readMnemonic() }
-        withContext(Dispatchers.IO) { BackupArchive.seal(snapshotFile, manifest(snapshot), mnemonic, destination, folder) }
+    /** An export the caller shares, then discards; the launch sweep removes it if the process dies first. */
+    class Export(val archive: BackupArchive.EncryptedFile, private val folder: File, private val scratch: ScratchSpace) {
+        fun discard() = scratch.discard(folder)
+    }
+    /**
+     * Seals into a fresh scratch folder this operation owns, never a caller-chosen path: the
+     * placeholder-then-rename publication is only safe where no other writer exists and a process
+     * death's leftovers get swept.
+     */
+    suspend fun exportEncryptedBackup(fileName: String): Export {
+        require(fileName.isNotBlank() && '/' !in fileName && fileName != "." && fileName != "..") { "Invalid export name" }
+        val shared = scratch.makeFolder("share-backup")
+        try {
+            val archive = scratch.withFolder("export") { folder ->
+                val snapshotFile = File(folder, "snapshot.sqlite")
+                val (snapshot, mnemonic) = session.withOpen { it.createSnapshot(snapshotFile) to readMnemonic() }
+                withContext(Dispatchers.IO) {
+                    BackupArchive.seal(snapshotFile, manifest(snapshot), mnemonic, File(shared, fileName), folder)
+                }
+            }
+            return Export(archive, shared, scratch)
+        } catch (failure: Throwable) {
+            scratch.discard(shared)
+            throw failure
+        }
     }
     companion object {
         fun manifest(snapshot: WalletSnapshotInfo) = BackupArchive.Manifest(2, BackupArchive.timestamp(), snapshot.sha256,

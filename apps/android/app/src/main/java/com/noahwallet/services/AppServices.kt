@@ -73,8 +73,10 @@ class AppServices private constructor(private val context: Context) {
         if (foreground) backupCoordinator.schedule(BackupCoordinator.Reason.appForeground, true)
     }
 
-    suspend fun recoverRestore(): RestoreTransaction.Recovery = WalletRestorer.recoverInterruptedRestore(
-        session, WalletDataLocation(context.filesDir, variant), SeedItem(seed))
+    private val restoreRecovery = RestoreRecovery {
+        WalletRestorer.recoverInterruptedRestore(session, WalletDataLocation(context.filesDir, variant), SeedItem(seed))
+    }
+    suspend fun recoverRestore(): RestoreTransaction.Recovery = restoreRecovery.settle()
 
     fun restorer() = WalletRestorer(variant, session, WalletDataLocation(context.filesDir, variant), SeedItem(seed),
         makeClient = { phrase ->
@@ -97,15 +99,14 @@ class AppServices private constructor(private val context: Context) {
     /**
      * Opens the wallet if needed (RN `loadWalletIfNeeded`): never while the user suspended it, and
      * only after an interrupted restore is settled, so headless launches (FCM, WorkManager) recover
-     * it too instead of failing until the app is opened.
+     * it too instead of failing until the app is opened. Recovery runs even without a journal (it
+     * removes plaintext a restore left before writing one) and even while suspended (no opening).
      */
     suspend fun ensureWalletOpen() {
+        if (recoverRestore() == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
         if (settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
             throw WalletSuspended()
         }
-        if (WalletDataLocation(context.filesDir, variant).restorePending &&
-            recoverRestore() == RestoreTransaction.Recovery.waitingForSecret
-        ) throw RestoreNotSettled()
         val mnemonic = seed.read()
         check(mnemonic is SecretResult.Found && mnemonic.value.isNotEmpty()) { "Wallet seed unavailable" }
         session.ensureOpen(mnemonic.value, true, BuildConfig.VERSION_NAME)

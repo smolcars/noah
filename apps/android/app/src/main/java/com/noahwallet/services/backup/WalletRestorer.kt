@@ -9,6 +9,8 @@ import io.github.niteshbalusu11.bark.*
 import io.ktor.client.HttpClient
 import java.io.File
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.Request
 
 class WalletRestorer(
@@ -132,4 +134,14 @@ class WalletRestorer(
             try { transaction.recover(seed) } finally { session.release(reservation) }
         }
     }
+}
+
+/**
+ * One launch recovery at a time. UI startup and headless jobs (FCM, WorkManager) each settle an
+ * interrupted restore first; without this, whichever came second hit the reservation the first
+ * held and failed. A restore actually in flight still rejects them.
+ */
+class RestoreRecovery(private val recover: suspend () -> RestoreTransaction.Recovery) {
+    private val mutex = Mutex()
+    suspend fun settle(): RestoreTransaction.Recovery = mutex.withLock { recover() }
 }

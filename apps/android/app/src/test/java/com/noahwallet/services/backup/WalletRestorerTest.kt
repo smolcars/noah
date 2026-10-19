@@ -164,6 +164,24 @@ class WalletRestorerTest {
         assertEquals(RestoreTransaction.Recovery.completed, WalletRestorer.recoverInterruptedRestore(session, location, seed, tx))
         assertEquals("new wallet", location.database.readText()); assertEquals("new seed", seed.value)
     } }
+    /** Review finding: two launches (UI + push, or two push jobs) recovering at once both settle. */
+    @Test fun concurrentLaunchRecoveriesBothSucceed() = runBlocking { world {
+        seed.fail = true; seed.lands = true; seed.lockAfterWrite = true
+        assertTrue(runCatching { restorer().restore("new seed") }.isFailure); seed.unavailable = false
+        assertTrue(location.restorePending)
+        val inside = CompletableDeferred<Unit>()
+        val proceed = java.util.concurrent.CountDownLatch(1)
+        val gated = transaction(location) { inside.complete(Unit); proceed.await() }
+        val recovery = RestoreRecovery { WalletRestorer.recoverInterruptedRestore(session, location, seed, gated) }
+        val first = async(Dispatchers.Default) { recovery.settle() }
+        inside.await()
+        val second = async(Dispatchers.Default) { runCatching { recovery.settle() } }
+        try { delay(20); assertFalse("waits for the first instead of failing on its reservation", second.isCompleted) }
+        finally { proceed.countDown() }
+        assertEquals(RestoreTransaction.Recovery.completed, first.await())
+        assertEquals(RestoreTransaction.Recovery.nothingPending, second.await().getOrThrow())
+        assertEquals("new wallet", location.database.readText()); assertFalse(location.restorePending)
+    } }
     @Test fun unreadableSeedTouchesNothing() = runBlocking { world {
         seed.unavailable = true; assertTrue(runCatching { restorer().restore("new seed") }.isFailure)
         seed.unavailable = false; previous()

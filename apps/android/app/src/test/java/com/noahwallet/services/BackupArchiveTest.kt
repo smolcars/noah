@@ -152,6 +152,10 @@ class BackupArchiveTest {
             }
             runCatching { scratch.withFolder("test") { throw IOException() } }
             assertTrue(root.listFiles()!!.isEmpty())
+            // A shared export outlives its operation until the caller discards it.
+            val shared = scratch.makeFolder("share-backup")
+            scratch.sweepAbandoned(); assertTrue(shared.exists())
+            scratch.discard(shared); assertTrue(root.listFiles()!!.isEmpty())
         }
     }
     @Test fun boundedDownloadChecksActualBytesWithoutTrustingHeaders() = runBlocking {

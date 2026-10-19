@@ -16,13 +16,14 @@ class ScratchSpace(val root: File) {
         try { return body(folder) }
         finally { discard(folder) }
     }
-    private fun makeFolder(purpose: String): File = synchronized(inUse) {
+    /** For share-sheet lifetimes; the caller must discard after dismissal. */
+    fun makeFolder(purpose: String): File = synchronized(inUse) {
         File(root, "$purpose-${UUID.randomUUID()}").also {
             check(it.mkdirs()) { "Cannot create scratch folder" }
             inUse.add(it.name)
         }
     }
-    private fun discard(folder: File) = synchronized(inUse) {
+    fun discard(folder: File) = synchronized(inUse) {
         folder.deleteRecursively(); inUse.remove(folder.name)
     }
     fun sweepAbandoned() = synchronized(inUse) {
