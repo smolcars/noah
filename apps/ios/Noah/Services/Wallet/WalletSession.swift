@@ -112,14 +112,21 @@ actor WalletSession {
         try checkExistingDatabase()
         let opener = self.opener
         let datadir = location.directory.path
-        let attempt = Task { try await opener(mnemonic, datadir, runDaemon, appVersion, false) }
-        state = .opening(attempt)
-        do {
-            state = .open(try await attempt.value)
-        } catch {
-            state = .closed
-            throw error
+        // The attempt settles the state itself before anyone awaiting it
+        // resumes, so `ensureOpen` joiners and `closeSettled` never see a
+        // finished open still marked as opening.
+        let attempt = Task {
+            do {
+                let handles = try await opener(mnemonic, datadir, runDaemon, appVersion, false)
+                state = .open(handles)
+                return handles
+            } catch {
+                state = .closed
+                throw error
+            }
         }
+        state = .opening(attempt)
+        _ = try await attempt.value
     }
 
     /// Opens the existing wallet unless it is already open (RN's
@@ -158,6 +165,13 @@ actor WalletSession {
             }
             state = .closed
         }
+    }
+
+    /// `close`, after waiting for an open already in progress (suspend,
+    /// delete). Still `busy` while a reservation is held.
+    func closeSettled() async throws {
+        if case .opening(let attempt) = state { _ = try? await attempt.value }
+        try await close()
     }
 
     var isOpen: Bool {
