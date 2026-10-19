@@ -176,6 +176,10 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] TransactionsScreen (filters, pull refresh, CSV export of filtered list) — iOS
 - [x] TransactionDetail (sheet / split pane, historical fiat, technical details, explorer, repeat callback) — iOS; RN-generated `transactionHistory` / `barkMovement` fixtures; Send hookup remains `TODO(M3)`
 
+- [x] TransactionsScreen: unified Ark/onchain history, filters, pull refresh, filtered CSV via FileProvider/share sheet — Android
+- [x] TransactionDetail: phone sheet / wide split pane, historical fiat, technical details, variant explorer and repeat callback (Send hookup `TODO(M3)`) — Android
+- [x] Home recent 3 transactions, View all and detail; 107 shared history fixture cases and live three-rail verification (`apps/android/HistoryTests/README.md`) — Android
+
 ## M5 — Settings & recovery
 - [x] SettingsScreen (biometrics, auto-board preference, mailbox, version/debug unlock) — iOS
 - [x] Suspend/resume, delete wallet (files before seed, under a reservation; refused while a restore is pending), re-register: model layer + suspended Home — iOS

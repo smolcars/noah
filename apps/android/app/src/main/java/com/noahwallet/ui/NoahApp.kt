@@ -11,7 +11,10 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -36,6 +39,15 @@ enum class Destination(val title: Int, val icon: Int) : NavKey {
 @Composable
 fun NoahApp(model: AppModel) {
     val backStack = rememberNavBackStack(Destination.Home)
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(model, model.preferredCurrency, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.history.observe(model.preferredCurrency) }
+    }
+    val repeat: (com.noahwallet.history.RepeatPayment) -> Unit = {
+        model.repeatPayment = it
+        // TODO(M3): consume repeatPayment in Send using prefill(preferredCurrency), then clear it.
+        backStack.clear(); backStack.add(Destination.Home); backStack.add(Destination.Send)
+    }
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -67,7 +79,10 @@ fun NoahApp(model: AppModel) {
             onBack = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) },
             entryProvider = entryProvider {
                 entry<Destination> { destination ->
-                    if (destination == Destination.Home) HomeScreen(model)
+                    if (destination == Destination.Home) HomeScreen(model, onViewAll = {
+                        backStack.add(Destination.History)
+                    }, onRepeatPayment = repeat)
+                    else if (destination == Destination.History) TransactionsScreen(model, repeat)
                     else if (destination == Destination.Receive) ReceiveScreen(model) {
                         backStack.clear(); backStack.add(Destination.Home)
                     } else Column(

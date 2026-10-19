@@ -30,6 +30,12 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         private set
     val amountUnit = if ((state("profile-storage")["bitcoinAmountUnit"] as? JsonPrimitive)?.contentOrNull == "sats") BitcoinAmountUnit.sats else BitcoinAmountUnit.bip177
     val preferredCurrency = (state("profile-storage")["preferredCurrency"] as? JsonPrimitive)?.contentOrNull ?: "USD"
+    val history = com.noahwallet.history.HistoryModel(com.noahwallet.history.HistoryModel.Dependencies.live(
+        session, services.client, BuildConfig.APP_VARIANT,
+        suspended = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true },
+        warn = com.noahwallet.services.logging.AppLog(application, "history")::w,
+    ))
+    var repeatPayment by mutableStateOf<com.noahwallet.history.RepeatPayment?>(null)
     private var starting = false
 
     private fun state(key: String): JsonObject = settings.string(key)?.let {
