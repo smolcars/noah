@@ -98,11 +98,8 @@ final class AppModel {
         await refresh()
     }
 
-    /// Error text safe for logs: SDK messages, never generated-client errors
-    /// (their descriptions include request inputs and headers).
     private static func describe(_ error: Error) -> String {
-        if let bark = error as? BarkError { return bark.message }
-        return String(describing: type(of: error))
+        SafeErrorDescription.of(error)
     }
 
     private func openExistingWallet() async {

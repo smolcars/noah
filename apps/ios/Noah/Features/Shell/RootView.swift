@@ -13,6 +13,9 @@ struct RootView: View {
                 OnboardingFlow()
             case .wallet:
                 WalletTabs()
+                    // Server registration (and with it the push token) lands with
+                    // the registration work; ask for permission once in the wallet.
+                    .task { _ = await PushRegistration.shared.requestPermission() }
             case .blocked(let state):
                 LaunchMessageView(state: state)
             }

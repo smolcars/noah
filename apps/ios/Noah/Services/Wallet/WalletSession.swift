@@ -161,6 +161,35 @@ actor WalletSession {
         return try await handles.wallet.createSnapshot(destinationPath: destination.path)
     }
 
+    private func openHandles() throws -> Handles {
+        guard case .open(let handles) = state else { throw SessionError.notOpen }
+        return handles
+    }
+
+    /// Background maintenance the server asks for (`maintenanceDelegated`).
+    func maintenanceDelegated() async throws {
+        try await openHandles().wallet.maintenanceDelegated()
+    }
+
+    /// BOLT11 invoice for a forwarded Lightning address payment.
+    func bolt11Invoice(amountSats: UInt64) async throws -> String {
+        try await openHandles().wallet.bolt11Invoice(amountSats: amountSats, description: nil).invoice
+    }
+
+    /// Claims pending Lightning receives without waiting (RN `wait: false`).
+    func claimLightningReceives() async throws {
+        _ = try await openHandles().wallet.tryClaimAllLightningReceives(wait: false)
+    }
+
+    /// Blocks until the soonest VTXO expiry, as the widget shows it.
+    func closestExpiryBlocks() async throws -> Int? {
+        let handles = try openHandles()
+        let vtxos = try await handles.wallet.vtxos()
+        guard !vtxos.isEmpty else { return nil }
+        let tip = Int(try await handles.onchain.tipHeight())
+        return vtxos.map { Int($0.expiryHeight) - tip }.min()
+    }
+
     /// Syncs onchain then Ark state, like `syncWallet` minus Lightning claims.
     func sync() async throws {
         guard case .open(let handles) = state else { return }

@@ -81,10 +81,13 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Server auth: `/v0/getk1` → sign (offline key `m/350/0`) → `/v0/auth/login` → JWT; refresh near expiry; retry once — iOS (live-tested on regtest)
 - [ ] Server auth — Android
 - [ ] Server registration + last-login + device info
-- [ ] Push: iOS APNs + Expo token; Android FirebaseMessagingService + Expo token; all 6 `NotificationData` types; job status + heartbeat reporting
+- [x] Push iOS: permission, APNs token → Expo token (RN installation ID, provisioning aps-environment), `register_push_token`, silent-push handler with 25 s budget, jobs for maintenance / invoice / claim / backup / heartbeat with job-status reports, widget refresh
+- [ ] Push iOS: wire registration after server registration; recurring_payment_due (M7); verify real delivery on a device (simctl push does not run the background handler)
+- [ ] Push Android: FirebaseMessagingService + Expo token; all 6 types; job status + heartbeat
 - [ ] UnifiedPush (Android, non-GMS) in pure Kotlin
 - [ ] Background tasks: BGTaskScheduler / WorkManager (maintenance, recurring)
-- [ ] Widget data writers (same keys)
+- [x] Widget data writer — iOS (`widgetBalance`, same keys, expiry from VTXOs and onchain tip)
+- [ ] Widget data writer — Android
 
 ### 0.7 Backups
 - [x] Envelope crypto v1/v2 (salt16 | nonce12 | AES-256-GCM; PBKDF2-SHA256 600k) with Node-generated vectors (`apps/fixtures/backup-crypto.json`) — iOS
