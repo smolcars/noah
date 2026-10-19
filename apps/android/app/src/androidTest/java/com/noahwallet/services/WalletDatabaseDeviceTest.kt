@@ -46,4 +46,42 @@ class WalletDatabaseDeviceTest {
             reject(WalletSession.OpenFailure.networkMismatch)
         } finally { root.deleteRecursively() }
     }
+
+    /** Bark's own SQLite deletes -wal/-shm on a clean close; such a wallet must pass the check. */
+    @Test fun cleanlyClosedWalDatabasePassesWithoutCreatingSidecars() {
+        val root = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "wal-${UUID.randomUUID()}")
+        val location = WalletDataLocation(root, "regtest")
+        try {
+            location.directory.mkdirs()
+            SQLiteDatabase.openOrCreateDatabase(location.database, null).use { db ->
+                db.rawQuery("PRAGMA journal_mode=WAL", null).use { it.moveToFirst() }
+                db.execSQL("CREATE TABLE bark_properties (network TEXT, fingerprint TEXT)")
+                db.execSQL("INSERT INTO bark_properties VALUES ('regtest', 'abcd1234')")
+                db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null).use { it.moveToFirst() }
+            }
+            // Whatever the framework left, reproduce bark's clean close.
+            File(location.database.path + "-wal").delete()
+            File(location.database.path + "-shm").delete()
+            val bytes = location.database.readBytes()
+            assertEquals(2, bytes[18].toInt())  // still a WAL-mode file
+
+            assertEquals(WalletDatabase.Properties("regtest", "abcd1234"), WalletDatabase.properties(location.database))
+            assertFalse(File(location.database.path + "-shm").exists())
+            assertFalse(File(location.database.path + "-wal").exists())
+            assertArrayEquals(bytes, location.database.readBytes())
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun corruptDatabaseIsReportedNeverDeleted() {
+        val root = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "corrupt-${UUID.randomUUID()}")
+        val location = WalletDataLocation(root, "regtest")
+        try {
+            location.directory.mkdirs()
+            val garbage = ByteArray(8192) { (it * 31).toByte() }
+            location.database.writeBytes(garbage)
+            assertThrows(WalletDatabase.InspectionError::class.java) { WalletDatabase.properties(location.database) }
+            assertTrue(location.database.exists())
+            assertArrayEquals(garbage, location.database.readBytes())
+        } finally { root.deleteRecursively() }
+    }
 }
