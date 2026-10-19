@@ -5,6 +5,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.BuildConfig
 import com.noahwallet.services.launch.LaunchState
 import com.noahwallet.services.storage.*
+import com.noahwallet.services.wallet.WalletSession
+import io.github.niteshbalusu11.bark.Network
 import java.io.File
 import java.security.MessageDigest
 import kotlinx.coroutines.runBlocking
@@ -20,6 +22,15 @@ class UpgradeCompatibilityTest {
         val args = InstrumentationRegistry.getArguments()
         assumeTrue(args.getString("noahUpgradeCheck") == "1")
         assertEquals("regtest", BuildConfig.APP_VARIANT)
+        val fingerprint = requireNotNull(args.getString("expectedFingerprint")?.takeIf { it.isNotEmpty() }) {
+            "RN fingerprint expectation is required"
+        }
+        val movements = requireNotNull(args.getString("expectedMovements")?.toIntOrNull()?.takeIf { it >= 0 }) {
+            "RN movement count expectation is required"
+        }
+        val spendable = requireNotNull(args.getString("expectedSpendable")?.toULongOrNull()) {
+            "RN spendable expectation is required"
+        }
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val legacyFiles = listOf(
             File(context.filesDir, "datastore/RN_KEYCHAIN.preferences_pb"),
@@ -42,6 +53,14 @@ class UpgradeCompatibilityTest {
         assertEquals(LaunchState.existingWallet, LaunchState.current(context))
         val state = SettingsStorage(context).persistedState<PersistedWalletState>(PersistedWalletState.key)
         assertEquals("RN initialized flag missing", true, state?.isInitialized)
+        // Launch and instrumentation must share the owner of bark's datadir lock.
+        val session = WalletSession.shared(context)
+        session.ensureOpen(oldValue, true, "upgrade-test")
+        val summary = requireNotNull(session.summary())
+        assertEquals(Network.REGTEST, summary.network)
+        assertEquals("Wallet identity changed", fingerprint, summary.fingerprint)
+        assertEquals("History differs from RN", movements, summary.movementCount)
+        assertEquals("Spendable balance differs from RN", spendable, summary.spendableSats)
         val expo = ExpoInstallationID(context)
         val expectedHash = args.getString("expoIdSha256")
         if (expectedHash != null && expectedHash != "absent") {

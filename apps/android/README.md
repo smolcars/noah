@@ -2,9 +2,10 @@
 
 Kotlin/Compose `:app` with the upgrade compatibility layer, backup envelope
 crypto, four Navigation 3 placeholder destinations and the existing widgets.
-Launch checks the seed and existing database before showing the shell. It never
-creates a wallet or deletes legacy secrets. Wallet operations, onboarding and
-push registration remain future work; Firebase messaging auto-init is disabled.
+Launch checks the seed and existing database, then opens through the process-wide
+`WalletSession.shared(context)` before showing the shell. It never creates a wallet
+at launch or deletes legacy secrets. Onboarding UI and push registration remain
+future work; Firebase messaging auto-init is disabled.
 
 ## Build and install
 
@@ -70,8 +71,7 @@ Android requires matching package ID and signing certificate to replace an app.
 The old app's private files, Keystore entries and SharedPreferences remain in the
 same sandbox. The compatibility layer reads the existing wallet DB path and MMKV settings,
 and copies a readable legacy seed into a verified native secret store. The shell
-alone is not a usable replacement wallet; funded-wallet operations are still
-outside this implementation.
+alone is not a usable replacement wallet; payment UI remains future work.
 
 Launcher artwork and widget Kotlin/layout/drawable/provider XML files are copied
 from `client/android/app/src/main/`. Widget classes remain
@@ -102,18 +102,18 @@ Versions are pinned in `gradle/libs.versions.toml`, checked against
 [AGP 9.4 compatibility](https://developer.android.com/build/releases/agp-9-4-0-release-notes)
 requires Gradle 9.6.0+ and JDK 17.
 
-`io.github.niteshbalusu11:bark-bolt-ffi-android:0.1.0@aar` resolves directly from
-[the v0.1.0 GitHub release](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.1.0).
+`io.github.niteshbalusu11:bark-bolt-ffi-android:0.2.0@aar` resolves directly from
+[the v0.2.0 GitHub release](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.2.0).
 An exclusive Ivy repository filters to `io.github.niteshbalusu11` and uses
 `https://github.com/smolcars/bark-bolt-ffi/releases/download/v[revision]/[module]-[revision].[ext]`.
 No AAR is committed. Artifact-only Ivy metadata does not import the release POM,
 so coroutines-core is declared explicitly.
 
 `gradle/verification-metadata.xml` pins the AAR's SHA-256 from the release
-[`SHA256SUMS`](https://github.com/smolcars/bark-bolt-ffi/releases/download/v0.1.0/SHA256SUMS):
+[`SHA256SUMS`](https://github.com/smolcars/bark-bolt-ffi/releases/download/v0.2.0/SHA256SUMS):
 
 ```text
-87ba0c4946ca417a66787451892de452127b3890b4ce1c6941d07652cc61179c
+726bc3271c7057090064d191b6070b62ef6d01a1ffd632c3b68d34be59489932
 ```
 
 Gradle's default strict verification rejects a mismatched AAR. Verification is
@@ -123,6 +123,31 @@ compare the downloaded artifact with the new release's `SHA256SUMS` before
 changing the catalog and verification entry. `BarkSdkLinkTest` references the
 SDK's `Config` class and proves the AAR is on the compiled test classpath; it does
 not execute Android JNI on the host JVM or create/log a mnemonic.
+
+## Wallet layer
+
+`WalletConfiguration` mirrors iOS and RN, with `10.0.2.2` for the Android emulator's
+regtest host and explicit 10,000 sat/kvB → 2,500 sat/kwu conversion.
+`WalletDatabase` opens SQLite read-only to reject missing/non-bark/wrong-network
+files before the SDK can run migrations. `WalletSession.shared(context)` owns both
+native handles; concurrent `ensureOpen` calls share one attempt. Canceling a UI
+waiter does not cancel that attempt. Summary, sync, snapshot and close are serialized.
+Kotlin explicitly closes both handles, including the onchain handle on open failure.
+
+`WalletCreator` resumes existing data or saves a new seed before creating files.
+Any nonempty datadir counts as existing data. Cleanup is limited to a failed fresh
+attempt in an absent/empty datadir; a failed close or cleanup keeps the seed.
+There is no launch-time create, seed deletion or interrupted-restore recovery.
+
+`WalletBalance` uses bark's accounting and the shared balance fixture. The three
+balance buckets missing from SDK 0.2.0 remain zero, matching iOS.
+`BitcoinAmount` uses Android ICU; `BitcoinAmountDeviceTest` checks all 70 shared
+cases on the device, including Spanish grouping and Swedish no-break spaces.
+API 30+ uses `NumberFormatter`'s locale defaults; API 24–29 uses the legacy ICU
+formatter with the Spanish four-digit grouping adjustment. The device fixture
+check exercises both paths (an actual API 24–29 OS run remains outstanding).
+`AppLog` redacts mnemonic-shaped text before logcat/file writes and preserves
+RN's `cacheDir/noah_logs/noah.log` rotation (four old 512 KiB segments, 4,000 exported lines).
 
 ## Upgrade compatibility and secret storage
 
@@ -134,9 +159,8 @@ missing keys, malformed UTF-8 and decryption failures return `Unavailable`.
 `Found.toString()` redacts its value; no provider exception text is retained.
 The auth-token reader uses the same RN formats but not the mnemonic fallback.
 
-`SeedStorage.read()` first reads the native store. On its first successful legacy
-read, it writes and reads back the seed, compares the values, and only then returns
-it. Migration is serialized across instances. An unreadable native record blocks
+`SeedStorage.read()` first reads the native store. On a successful legacy read it attempts a verified native copy. If that copy
+fails it still returns the legacy seed and retries migration next time. Migration is serialized across instances. An unreadable native record blocks
 fallback and overwrite. Legacy records are kept even after successful migration.
 
 The native store uses alias `noah.native.seed.<variant>`, AES-256-GCM, no user
@@ -150,7 +174,8 @@ future background services must remain in the app process or add process locking
 Launch states match `apps/fixtures/launch-state.json`. The existing wallet shell
 requires both a readable nonempty seed and `filesDir/noah-data-<variant>/db.sqlite`.
 The other states show the same placeholders as iOS and never create/delete data.
-Secure-storage failures are retried when the activity resumes.
+Secure-storage and wallet-open failures are retried when the activity resumes.
+The shell is displayed only after the existing wallet opens successfully.
 
 ## Verified RN source facts
 
@@ -224,48 +249,73 @@ For the required end-to-end upgrade, boot a **fresh Google APIs emulator with
 Play Services** (root-capable, not a locked Play Store image), then from the repo:
 
 ```sh
-nix develop --command apps/android/UpgradeTests/run.sh emulator-5556
+nix develop --command apps/android/UpgradeTests/run.sh emulator-5558
 # Or reuse an already built RN regtest release APK:
-nix develop --command apps/android/UpgradeTests/run.sh emulator-5556 /absolute/path/to/app-regtest-release.apk
+nix develop --command apps/android/UpgradeTests/run.sh emulator-5558 /absolute/path/to/app-regtest-release.apk
 ```
+
+Use a dedicated emulator you created. `emulator-5554` (BarkRegtest) is reserved and
+rejected. For `FUNDED=1`, boot with `-grpc <unused-port> -grpc-use-token` and set
+`EMULATOR_PROTO_DIR` to the directory containing that emulator's
+`emulator_controller.proto` if it differs from `$ANDROID_HOME/emulator/lib` (for
+example, the Nix build SDK and the host emulator SDK).
+`clipboard.py` discovers the gRPC endpoint by serial, so it never targets another AVD.
+
+```sh
+FUNDED=1 nix develop --command apps/android/UpgradeTests/run.sh emulator-5558 /absolute/path/to/RN.apk
+```
+
+FUNDED runs the RN prepare flow (which resets the fresh test install), receives
+100,000 sats and sends 5,000 back. The script force-stops RN, pulls its datadir with
+any WAL, and requires fingerprint, movement count and spendable expectations from
+SQLite before installing native with `adb install -r`. Instrumentation opens via
+the shared session and compares all three. Missing expectations fail the check.
+The funded RN state must contain at least two movements and 95,000 spendable sats.
+Bark commands use `docker compose run --rm --no-deps` inside the harness: the current
+`just bark` wrapper omits `--no-deps` and can recreate running dependency containers
+when a worktree's Compose configuration differs.
 
 The script refuses an existing Noah regtest install, builds RN release with
 `CI_DEBUG_SIGNING=true` and `SENTRY_DISABLE_AUTO_UPLOAD=true` (embedded JS, no Metro or Sentry upload), checks both signing certificates,
 creates the wallet using the RN Maestro subflows, captures only a hash of the Expo
-ID, and replaces RN using `adb install -r`. No uninstall or clear-data operation
-occurs. The gated test asserts seed readability and verified migration, unchanged
+ID, and replaces RN using `adb install -r`. There is no uninstall or clear-data
+operation between the RN wallet creation and native replacement. The gated test asserts seed readability and verified migration, unchanged
 legacy secret files, RN DB presence, initialized MMKV state, `existingWallet`, and
 unchanged Expo ID when RN had one. Maestro artifacts are private and deleted on
 exit because a failed onboarding flow can capture a recovery phrase.
 
-### Verification on 2026-10-19
+### Wallet parity verification on 2026-10-19
 
-- All three debug variants, `testRegtestDebugUnitTest` (16 tests, zero failures),
-  and regtest/signet instrumented test APKs built successfully in Nix/JDK 17.
-- On the Android 15 Google APIs ARM64 `NoahNativeUpgrade` emulator, the signet
-  instrumentation run returned `OK (6 tests)`: five enabled tests passed and the
-  upgrade-only test was skipped. GCM/CBC were each tested through both storage
-  locations. The fresh-install launch screen displayed “Welcome to Noah”.
-- The RN regtest release APK built successfully with embedded JS, debug signing,
-  Sentry auto-upload disabled, ARM64 only and two Gradle workers. RN and native
-  APKs have the same SHA-256 signing certificate:
+- `assembleRegtestDebug`, `assembleMainnetDebug`, `assembleSignetDebug`,
+  `testRegtestDebugUnitTest` and `assembleRegtestDebugAndroidTest` passed in Nix/JDK 17.
+  The JVM suite ran **42 tests, zero failures**. Repository commit checks also passed
+  RN lint, React Compiler checks, 148 RN unit tests and TypeScript checking.
+- On the dedicated Android 15 Google APIs ARM64 `NoahNativeWalletParity` AVD
+  (`emulator-5558`), instrumentation reported `OK (8 tests)`: **seven passed** and
+  the upgrade-only test was skipped until the funded run. SQLite preflight left
+  missing/empty/foreign/wrong-network databases untouched. All **70 amount cases**
+  matched on both modern ICU and the legacy fallback path. The first run exposed
+  Spanish `1234` grouping in the legacy formatter; the final run has no mismatches.
+- RN `assembleRegtestRelease -PreactNativeArchitectures=arm64-v8a` passed with
+  embedded JS, debug signing and Sentry upload disabled. RN and native signing
+  certificate SHA-256:
   `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c`.
-- **The required RN-to-native upgrade has not passed yet.** Its script stopped
-  at the stack preflight, before installing RN:
+- **Funded RN → native upgrade passed (`OK (1 test)`)** after RN received 100,000
+  sats and sent 5,000 back. Native matched the RN database's **fingerprint
+  `4707393a`, two movements, and 95,000 spendable sats**. Verified seed migration,
+  untouched legacy secret files, initialized MMKV and existing-wallet launch state.
+  RN had no Expo ID; its existing-ID continuity was therefore not exercised by
+  this run (separate instrumented Expo migration tests passed).
+- The first funded harness invocation stopped after the payments because
+  `adb exec-out cat` returned a missing-file diagnostic as successful output while
+  reading optional Expo preferences. The reader now checks existence with
+  `adb shell test -f`. The unchanged funded RN install was retained and the
+  corrected harness's post-payment section resumed; neither payment was repeated.
+- A preliminary `just bark balance` unexpectedly recreated bitcoind, Postgres and
+  captaind through Compose dependency startup, retaining their volumes. Services
+  returned healthy and the funded test passed. The harness now uses `--no-deps`;
+  the shared `scripts/ark-dev.sh` wrapper needs the equivalent fix in its own task.
 
-  ```text
-  Signing certificates match: fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c
-  Regtest prerequisite unavailable: host port 3535. Restore the existing stack before running the upgrade.
-  ```
-
-  OrbStack was stopped after host resource pressure. Restarting OrbStack and
-  running `just up` preserved the existing volumes, but Bitcoin reported height
-  106 while CLN recorded 255 and captaind panicked with “bitcoind chain went
-  backward”. No stack reset, replacement wallet creation or mining was performed.
-  Recover the existing working stack/override, then rerun the script on the fresh
-  regtest sandbox (only the separate signet test app is currently installed).
-
-Unverified: actual RN-written seed/MMKV/Expo continuity until the upgrade gate
-passes; physical-device Keystore behavior; an API 24/25 device run; funded-wallet
-balance/history continuity and opening the DB through the new wallet SDK. Those
-wallet operations are not implemented by this compatibility layer.
+Unverified: physical devices and actual API 24–29 OS behavior (the formatter's
+fallback path was exercised on API 35); an upgrade with onchain funds, recurring
+rules or an existing RN Expo ID. Interrupted restore recovery is out of scope.
