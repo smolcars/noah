@@ -16,6 +16,8 @@ class PushJobs(private val dependencies: Dependencies) {
         val announceReceived: (Long, String?, String) -> Unit,
         val refreshWidget: suspend () -> Unit,
         val log: (String) -> Unit,
+        val backup: suspend () -> Unit,
+        val reportBackup: suspend (String, Boolean) -> Unit,
     )
 
     suspend fun handle(notification: NotificationData) {
@@ -53,8 +55,12 @@ class PushJobs(private val dependencies: Dependencies) {
                 d.heartbeat(notification.notificationId)
             }
             is NotificationDataBackupTrigger -> {
-                // TODO: Port Android backups, then execute and report the correlated backup job.
-                d.log("Backup push ignored; Android backups are not implemented")
+                val failure = try {
+                    d.ensureWalletOpen(); d.backup(); null
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (error: Exception) { error }
+                bestEffort("Failed to report backup status") { d.reportBackup(notification.notificationK1, failure == null) }
+                if (failure != null) throw failure
             }
             is NotificationDataRecurringPaymentDue -> d.log("Recurring payment wake-up received; executor not ported yet")
         }

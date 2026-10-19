@@ -6,6 +6,8 @@ import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.server.*
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.WalletSession
+import com.noahwallet.services.backup.*
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -30,6 +32,46 @@ class AppServices private constructor(private val context: Context) {
     val registration = ServerRegistration(client, ServerStateStorage(SettingsStorage(context)),
         peekAddress = { session.peekAddress(0u) }, warn = log::w)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val settings = SettingsStorage(context)
+    val scratch = ScratchSpace(java.io.File(context.cacheDir, "noah-scratch")).also { it.sweepAbandoned() }
+    val backupService = BackupService(session, client,
+        { (seed.read() as? SecretResult.Found)?.value ?: throw ServerFailure("Wallet seed unavailable") }, scratch)
+    val backupCoordinator = BackupCoordinator(BackupCoordinator.Dependencies(
+        perform = backupService::performBackup,
+        canBackup = { required ->
+            val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
+            wallet?.isInitialized == true && wallet.isWalletSuspended != true && session.isOpen &&
+                (!required || registration.state.isBackupEnabled == true)
+        },
+        loadState = { PersistedBackupState.decode(settings.string(PersistedBackupState.key)) },
+        saveState = { settings.set(it.encode(), PersistedBackupState.key) },
+    ))
+    private var backupObserver: Job? = null
+
+    @Synchronized fun reconcileBackupTriggers(foreground: Boolean = false) {
+        val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
+        if (!session.isOpen || wallet?.isInitialized != true || wallet.isWalletSuspended == true || registration.state.isBackupEnabled != true) {
+            backupObserver?.cancel(); backupObserver = null; backupCoordinator.cancelScheduled(); return
+        }
+        if (backupObserver?.isActive != true) backupObserver = scope.launch {
+            try {
+                do {
+                    var resubscribe = false
+                    session.stateChanges().takeWhile { event ->
+                        when (event.reason) {
+                            "databaseChanged" -> backupCoordinator.schedule(BackupCoordinator.Reason.databaseChanged)
+                            "resyncRequired" -> { backupCoordinator.schedule(BackupCoordinator.Reason.resyncRequired, true); resubscribe = true }
+                            else -> backupCoordinator.schedule(BackupCoordinator.Reason.startup, true)
+                        }
+                        !resubscribe
+                    }.collect { }
+                } while (resubscribe && isActive)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { backupCoordinator.schedule(BackupCoordinator.Reason.startup, true) }
+        }
+        if (foreground) backupCoordinator.schedule(BackupCoordinator.Reason.appForeground, true)
+    }
+
     private val startup = Mutex()
     private var started = false
 
@@ -48,6 +90,7 @@ class AppServices private constructor(private val context: Context) {
                 if (!session.isOpen || !isOnboarded()) return@withLock
                 try {
                     registration.ensureRegistered()
+                    reconcileBackupTriggers()
                     com.noahwallet.services.push.PushWork.register(context)
                     if (!started) {
                         registration.reportLastLogin()

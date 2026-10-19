@@ -16,6 +16,8 @@ class PushJobsTest {
             if (cancelled) throw CancellationException()
             if (openFails) error("private provider error")
         },
+        backup = { events += "backup" },
+        reportBackup = { k1, success -> events += "backup-report:$k1:$success" },
         maintenance = { events += "maintenance" },
         createInvoice = { events += "invoice:$it"; "bolt11" },
         submitInvoice = { id, invoice -> events += "submit:$id:$invoice" },
@@ -51,10 +53,15 @@ class PushJobsTest {
         jobs.handle(NotificationDataHeartbeat("id"))
         assertEquals(listOf("heartbeat:id", "log"), events)
     }
-    @Test fun backupAndRecurringAreLogOnlyWithNoReports() = runBlocking {
+    @Test fun backupReportsSuccessAndRecurringRemainsLogOnly() = runBlocking {
         jobs.handle(NotificationDataBackupTrigger("k1"))
         jobs.handle(NotificationDataRecurringPaymentDue(1))
-        assertEquals(listOf("log", "log"), events)
+        assertEquals(listOf("open", "backup", "backup-report:k1:true", "log"), events)
+    }
+    @Test fun backupOpenFailureReportsFailure() = runBlocking {
+        openFails = true
+        assertTrue(runCatching { jobs.handle(NotificationDataBackupTrigger("k1")) }.isFailure)
+        assertEquals(listOf("open", "backup-report:k1:false"), events)
     }
     @Test fun cancellationDoesNotBecomeAReportedFailure() = runBlocking {
         cancelled = true

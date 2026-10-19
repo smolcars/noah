@@ -6,6 +6,9 @@ import com.noahwallet.services.storage.WalletDataLocation
 import io.github.niteshbalusu11.bark.*
 import java.io.File
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 
 /** One owner per process: bark locks the datadir. All wallet operations go through this session. */
 class WalletSession internal constructor(
@@ -23,6 +26,7 @@ class WalletSession internal constructor(
     }
 
     internal interface Handles {
+        fun stateChanges(): Changes = throw UnsupportedOperationException()
         fun notifications(): Notifications
         suspend fun history(): List<Movement>
         suspend fun receiveRequest(): ReceiveRequest
@@ -45,6 +49,48 @@ class WalletSession internal constructor(
         suspend fun next(): WalletNotification?
         fun cancelWait()
     }
+    internal interface Changes : AutoCloseable {
+        suspend fun next(): StateChangeEvent?
+        fun stop()
+    }
+    private class StateObserver(val holder: Changes) {
+        lateinit var job: Job
+        var closed = false
+    }
+    private val stateObservers = mutableSetOf<StateObserver>()
+
+    @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
+    fun stateChanges(): Flow<StateChangeEvent> = flow {
+        val events = Channel<StateChangeEvent>(Channel.UNLIMITED)
+        val observer = synchronized(lock) {
+            val holder = (state as? State.Open)?.handles?.stateChanges() ?: throw SessionError()
+            StateObserver(holder).also { observer ->
+                observer.job = scope.launch(start = CoroutineStart.ATOMIC) {
+                    try {
+                        while (isActive) { events.send(holder.next() ?: break) }
+                    } catch (failure: Exception) { events.close(failure) }
+                    finally {
+                        synchronized(holder) { holder.stop(); holder.close(); observer.closed = true }
+                        events.close()
+                    }
+                }
+                stateObservers.add(observer)
+            }
+        }
+        try { for (event in events) emit(event) }
+        finally {
+            withContext(NonCancellable) { stopStateObserver(observer) }
+            synchronized(lock) { stateObservers.remove(observer) }
+            events.cancel()
+        }
+    }
+    private suspend fun stopStateObserver(observer: StateObserver) {
+        synchronized(observer.holder) {
+            if (!observer.closed) { observer.holder.stop(); observer.job.cancel() }
+        }
+        observer.job.join()
+    }
+
     private class Observer(val holder: Notifications) {
         lateinit var job: Deferred<ReceiveCompletion?>
         var holderClosed = false
@@ -55,6 +101,7 @@ class WalletSession internal constructor(
         data object Closed : State
         class Opening(val attempt: Deferred<Unit>) : State
         class Open(val handles: Handles) : State
+        class Quarantined(val handles: Handles) : State
         class Reserved(val reservation: Reservation) : State
         data object Closing : State
     }
@@ -100,7 +147,7 @@ class WalletSession internal constructor(
             try { handles.stopDaemonWait(); handles.close() }
             catch (_: Throwable) {
                 // Never allow rollback underneath native work when teardown failed.
-                synchronized(lock) { state = State.Open(handles) }
+                synchronized(lock) { state = State.Quarantined(handles) }
                 throw OpenError(OpenFailure.teardownFailed)
             }
         }
@@ -255,10 +302,14 @@ class WalletSession internal constructor(
             when (val current = state) {
                 State.Closed -> return
                 is State.Open -> current.handles.also { state = State.Closing }
+                is State.Quarantined -> current.handles.also { state = State.Closing }
                 else -> throw OpenError(OpenFailure.busy)
             }
         }
         withContext(NonCancellable + Dispatchers.IO) {
+            val changes = synchronized(lock) { stateObservers.toList() }
+            changes.forEach { stopStateObserver(it) }
+            synchronized(lock) { stateObservers.removeAll(changes.toSet()) }
             val running = synchronized(lock) { observers.toList() }
             running.forEach { stopObserver(it) }
             synchronized(lock) { observers.removeAll(running.toSet()) }
@@ -267,7 +318,7 @@ class WalletSession internal constructor(
                 try {
                     handles.stopDaemonWait()
                 } catch (failure: Throwable) {
-                    synchronized(lock) { state = State.Open(handles) }
+                    synchronized(lock) { state = if (location.restorePending) State.Quarantined(handles) else State.Open(handles) }
                     throw failure
                 }
                 handles.close()
@@ -308,6 +359,14 @@ class WalletSession internal constructor(
     }
 
     private class SdkHandles(val wallet: Wallet, val onchain: OnchainWallet) : Handles {
+        override fun stateChanges(): Changes {
+            val subscription = wallet.stateChanges()
+            return object : Changes {
+                override suspend fun next() = subscription.nextChange()
+                override fun stop() = subscription.stop()
+                override fun close() = subscription.close()
+            }
+        }
         override fun notifications(): Notifications {
             val holder = wallet.notifications()
             return object : Notifications {

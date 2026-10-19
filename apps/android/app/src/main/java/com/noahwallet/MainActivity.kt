@@ -8,6 +8,11 @@ import com.noahwallet.ui.LaunchGateView
 import com.noahwallet.ui.NoahTheme
 
 class MainActivity : ComponentActivity() {
+    override fun onResume() {
+        super.onResume()
+        com.noahwallet.services.AppServices.shared(this).reconcileBackupTriggers(foreground = true)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

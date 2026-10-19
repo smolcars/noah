@@ -23,6 +23,19 @@ class PushRuntime(private val context: Context, private val services: AppService
     val jobs = PushJobs(PushJobs.Dependencies(
         ensureWalletOpen = services::ensureWalletOpen,
         maintenance = services.session::maintenanceDelegated,
+        backup = { services.backupCoordinator.flush(com.noahwallet.services.backup.BackupCoordinator.Reason.push, requireEnabled = false) },
+        reportBackup = { k1, success ->
+            val payload = ReportJobStatusPayload(errorMessage = if (success) null else "Wallet backup failed",
+                notificationK1 = k1, reportType = ReportType.BACKUP, status = if (success) ReportStatus.SUCCESS else ReportStatus.FAILURE)
+            val delays = listOf(250L, 1000L, 2000L)
+            for (attempt in 0..delays.size) {
+                try { V0ReportJobStatusClient(client).reportJobStatus(payload).value(); break }
+                catch (failure: ServerFailure) {
+                    if (failure.status != 404 || attempt == delays.size) throw failure
+                    delay(delays[attempt])
+                }
+            }
+        },
         createInvoice = services.session::bolt11Invoice,
         submitInvoice = { id, invoice -> V0LnurlpSubmitInvoiceClient(client).submitInvoice(SubmitInvoicePayload(invoice, id)).value() },
         claimLightning = services.session::claimLightningReceives,
