@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 import com.noahwallet.R
 import com.noahwallet.services.launch.LaunchState
 
@@ -39,6 +40,15 @@ fun LaunchGateView() {
     val lifecycleOwner = LocalLifecycleOwner.current
     val model: AppModel = androidx.lifecycle.viewmodel.compose.viewModel()
     val state = model.launchState
+    val activity = LocalContext.current as androidx.fragment.app.FragmentActivity
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP && !activity.isChangingConfigurations) model.walletLock.background()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     var permissionRequested by rememberSaveable { mutableStateOf(false) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         PushWork.register(context)
@@ -61,17 +71,30 @@ fun LaunchGateView() {
     androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.background) {
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().then(Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing))) {
             when {
-                model.open && model.onboarded -> NoahApp(model)
+                (model.open || model.isWalletSuspended) && model.onboarded -> NoahApp(model)
                 state == LaunchState.onboarding || (model.open && !model.onboarded) -> Onboarding(model)
                 else -> LaunchMessage(state, model.error != null, model::start)
             }
         }
     }
-    model.error?.let { message ->
+    if (!model.walletLock.locked) model.error?.let { message ->
         androidx.compose.material3.AlertDialog(onDismissRequest = { model.error = null },
             title = { Text("Please try again") }, text = { Text(message) },
             confirmButton = { androidx.compose.material3.TextButton({ model.error = null }) { Text("OK") } })
     }
+    if (model.walletLock.locked) androidx.compose.ui.window.Dialog(onDismissRequest = {}, properties = androidx.compose.ui.window.DialogProperties(
+        dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false,
+        securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn,
+    )) {
+        androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            NoahForm("Noah is Locked") {
+                Text("Authenticate to access your wallet")
+                model.walletLock.error?.let { Text(it) }
+                NoahButton("Unlock", !model.walletLock.authenticating) { scope.launch { model.walletLock.unlock(activity) } }
+            }
+        }
+    }
+
 }
 
 @Composable

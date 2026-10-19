@@ -34,9 +34,8 @@
             </intent-filter>
         </service>
         <provider android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.history-files"
-            android:exported="false" android:grantUriPermissions="true">
-            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/history_file_paths" />
+            android:authorities="${applicationId}.files" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/share_paths" />
         </provider>
         <activity
             android:name="com.noahwallet.MainActivity"

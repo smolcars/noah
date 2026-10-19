@@ -24,6 +24,10 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.noahwallet.ui.settings.*
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
 import com.noahwallet.BuildConfig
 import com.noahwallet.R
 import kotlinx.serialization.Serializable
@@ -36,6 +40,7 @@ enum class Destination(val title: Int, val icon: Int) : NavKey {
     History(R.string.history, R.drawable.ic_history),
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoahApp(model: AppModel) {
     val backStack = rememberNavBackStack(Destination.Home)
@@ -49,8 +54,14 @@ fun NoahApp(model: AppModel) {
         backStack.clear(); backStack.add(Destination.Home); backStack.add(Destination.Send)
     }
     Scaffold(
+        topBar = {
+            val destination = backStack.last() as? SettingsDestination
+            if (destination != null) TopAppBar(title = { Text(destination.title) }, navigationIcon = {
+                TextButton({ if (!model.busy && backStack.size > 1) backStack.removeAt(backStack.lastIndex) }) { Text("Back") }
+            })
+        },
         bottomBar = {
-            NavigationBar {
+            if (backStack.last() !is SettingsDestination) NavigationBar {
                 Destination.entries.forEach { destination ->
                     NavigationBarItem(
                         selected = backStack.last() == destination,
@@ -76,12 +87,18 @@ fun NoahApp(model: AppModel) {
         NavDisplay(
             backStack = backStack,
             modifier = Modifier.padding(padding),
-            onBack = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) },
+            onBack = { if (!model.busy && backStack.size > 1) backStack.removeAt(backStack.lastIndex) },
             entryProvider = entryProvider {
+                entry<SettingsDestination> { destination ->
+                    SettingsPage(model, destination) { next ->
+                        if (next == SettingsDestination.Profile && backStack.last() in listOf(SettingsDestination.Email, SettingsDestination.Lightning)) backStack.removeAt(backStack.lastIndex)
+                        else backStack.add(next)
+                    }
+                }
                 entry<Destination> { destination ->
-                    if (destination == Destination.Home) HomeScreen(model, onViewAll = {
+                    if (destination == Destination.Home || model.isWalletSuspended) HomeScreen(model, onViewAll = {
                         backStack.add(Destination.History)
-                    }, onRepeatPayment = repeat)
+                    }, onRepeatPayment = repeat) { backStack.add(SettingsDestination.Settings) }
                     else if (destination == Destination.History) TransactionsScreen(model, repeat)
                     else if (destination == Destination.Receive) ReceiveScreen(model) {
                         backStack.clear(); backStack.add(Destination.Home)

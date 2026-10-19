@@ -58,7 +58,7 @@ fun TransactionsScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit) 
                                 androidx.work.WorkManager.getInstance(context).enqueue(
                                     androidx.work.OneTimeWorkRequestBuilder<HistoryExportCleanup>()
                                         .setInitialDelay(HistoryExportFiles.retentionMillis, java.util.concurrent.TimeUnit.MILLISECONDS).build())
-                                val uri = FileProvider.getUriForFile(context, "${context.packageName}.history-files", file)
+                                val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
                                 context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                                     type = "text/csv"
                                     putExtra(Intent.EXTRA_STREAM, uri)

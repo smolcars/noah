@@ -1,0 +1,55 @@
+package com.noahwallet.ui
+
+import com.noahwallet.ui.settings.*
+import com.noahwallet.services.storage.SettingsPreferences
+import com.noahwallet.api.generated.models.DeviceInfo
+import kotlinx.serialization.json.*
+import org.junit.Assert.*
+import org.junit.Test
+
+class SettingsFeaturesTest {
+    @Test fun launchBackgroundAndStaleAuthentication() {
+        val policy = BiometricLockPolicy(true)
+        assertTrue(policy.locked)
+        policy.authenticated(policy.generation); assertFalse(policy.locked)
+        val old = policy.generation
+        policy.background(); policy.authenticated(old); assertTrue(policy.locked)
+        policy.authenticated(policy.generation); assertFalse(policy.locked)
+        policy.setEnabled(false); policy.background(); assertFalse(policy.locked)
+        policy.setEnabled(true); assertFalse(policy.locked)
+        policy.background(); assertTrue(policy.locked)
+    }
+    @Test fun screenshotBoundedAndMimeChecked() {
+        val png = byteArrayOf(0x89.toByte(), 0x50, 0x4e, 0x47, 13, 10, 26, 10).copyOf(FeedbackDraft.maximumScreenshotBytes)
+        assertEquals("image/png", FeedbackDraft.imageType(png))
+        assertEquals(png.size, FeedbackDraft.readScreenshot(png.inputStream()).size)
+        assertTrue(runCatching { FeedbackDraft.readScreenshot(png.copyOf(png.size + 1).inputStream()) }.isFailure)
+        assertTrue(runCatching { FeedbackDraft.imageType("not image".toByteArray()) }.isFailure)
+        assertEquals("image/jpeg", FeedbackDraft.imageType(byteArrayOf(-1, -40, -1)))
+    }
+    @Test fun feedbackLimitsAreUtf8BytesAndBlankEmailIsNull() {
+        val draft = FeedbackDraft(" Alice ", " ", "é".repeat(75), " message ")
+        val payload = draft.payload(DeviceInfo(appVersion = "1", osName = "Android")) { "unused" }
+        assertEquals("Alice", payload.name); assertEquals("message", payload.body); assertNull(payload.email)
+        assertEquals("Android", payload.deviceInfo!!.osName)
+        draft.subject += "a"; assertTrue(runCatching { draft.payload(DeviceInfo()) { "" } }.isFailure)
+        draft.subject = "ok"; draft.body = "x".repeat(60_001)
+        assertTrue(runCatching { draft.payload(DeviceInfo()) { "" } }.isFailure)
+    }
+    @Test fun preferencesRetainIdentityAndUnknownFields() {
+        val original = """{"state":{"displayName":"Alice","preferredCurrency":"EUR","bitcoinAmountUnit":"sats","future":true},"version":0}"""
+        val result = SettingsPreferences.update(original, mapOf("preferredCurrency" to JsonPrimitive("JPY")))
+        val state = SettingsPreferences.state(result)
+        assertEquals("Alice", state["displayName"]!!.jsonPrimitive.content)
+        assertEquals("sats", state["bitcoinAmountUnit"]!!.jsonPrimitive.content)
+        assertEquals("JPY", state["preferredCurrency"]!!.jsonPrimitive.content)
+        assertTrue(state["future"]!!.jsonPrimitive.boolean)
+    }
+    @Test fun autoBoardMigratesVersionZeroAndResetsAttemptOnlyWhenEnabled() {
+        val old = """{"state":{"isAutoBoardingEnabled":false,"hasAttemptedAutoBoarding":true},"version":0}"""
+        assertFalse(SettingsPreferences.state(SettingsPreferences.autoBoard(old, false))["hasAttemptedAutoBoarding"]!!.jsonPrimitive.boolean)
+        val current = old.replace("\"version\":0", "\"version\":1")
+        assertTrue(SettingsPreferences.state(SettingsPreferences.autoBoard(current, false))["hasAttemptedAutoBoarding"]!!.jsonPrimitive.boolean)
+        assertFalse(SettingsPreferences.state(SettingsPreferences.autoBoard(current, true))["hasAttemptedAutoBoarding"]!!.jsonPrimitive.boolean)
+    }
+}

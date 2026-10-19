@@ -4,10 +4,20 @@
       <verify-metadata>false</verify-metadata>
       <verify-signatures>false</verify-signatures>
       <trusted-artifacts>
-         <trust group="^(?!io[.]github[.]niteshbalusu11$|io[.]ktor$|org[.]jetbrains[.]kotlinx$|org[.]slf4j$|androidx[.]work$|androidx[.]room$|androidx[.]sqlite$|androidx[.]concurrent$|org[.]unifiedpush[.]android$|org[.]apache[.]commons$|commons-io$|commons-codec$|com[.]google[.]zxing$).*" regex="true" reason="Verify the wallet AAR, backup extraction, server networking, push connector and WorkManager dependencies; retain the scaffold trust policy for other groups."/>
+         <trust group="^(?!io[.]github[.]niteshbalusu11$|io[.]ktor$|org[.]jetbrains[.]kotlinx$|org[.]slf4j$|androidx[.]work$|androidx[.]biometric$|androidx[.]fragment$|androidx[.]room$|androidx[.]sqlite$|androidx[.]concurrent$|org[.]unifiedpush[.]android$|org[.]apache[.]commons$|commons-io$|commons-codec$|com[.]google[.]zxing$).*" regex="true" reason="Verify the wallet AAR, backup extraction, server networking, push connector and WorkManager dependencies; retain the scaffold trust policy for other groups."/>
       </trusted-artifacts>
    </configuration>
    <components>
+      <component group="androidx.fragment" name="fragment" version="1.8.9">
+         <artifact name="fragment-1.8.9.aar">
+            <sha256 value="12de5b89ab6641c1d8da82b63dc816652622b06d2781b949b6fbd2dff9fac492" origin="Google Maven artifact, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="androidx.biometric" name="biometric" version="1.1.0">
+         <artifact name="biometric-1.1.0.aar">
+            <sha256 value="270c7b7d99942d5ec1dd88594e4648feb33d8e31d8c3c2ab2321d49d9abdfc1f" origin="Google Maven artifact, independently downloaded"/>
+         </artifact>
+      </component>
       <component group="com.google.zxing" name="core" version="3.5.3">
          <artifact name="core-3.5.3.jar">
             <sha256 value="8d8064c1636fdaef7189dd9055c7d59950a8940a12f2293956446ec3c109fd82" origin="Maven Central artifact, independently downloaded"/>

@@ -126,6 +126,8 @@ android {
 }
 
 dependencies {
+    implementation(libs.biometric)
+    implementation(libs.fragment)
     implementation(libs.commons.compress)
     implementation(platform(libs.compose.bom))
     implementation(libs.zxing.core)

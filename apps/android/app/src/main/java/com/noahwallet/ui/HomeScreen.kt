@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatPayment) -> Unit) {
+fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatPayment) -> Unit, settings: () -> Unit) {
     var selectedID by rememberSaveable { mutableStateOf<String?>(null) }
     var email by remember { mutableStateOf(false) }
     var dismissed by remember { mutableStateOf(model.server.state.isEmailPromptDismissed == true) }
@@ -38,7 +38,19 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
         }) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(28.dp)) {
-                Text("Noah", style = MaterialTheme.typography.headlineMedium)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Noah", style = MaterialTheme.typography.headlineMedium)
+                    TextButton(settings) { Text("Settings") }
+                }
+                // Like RN, a suspended wallet shows only the suspended card.
+                if (model.isWalletSuspended) {
+                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Wallet Suspended", style = MaterialTheme.typography.titleLarge)
+                        Text("All wallet operations are disabled. Resume your wallet in Settings.")
+                        TextButton(settings) { Text("Open Settings") }
+                    } }
+                    return@Column
+                }
                 if (BuildConfig.APP_VARIANT != "mainnet") Text(BuildConfig.APP_VARIANT.uppercase(),
                     Modifier.background(if (BuildConfig.APP_VARIANT == "regtest") Color(0xFFFFCC00) else Color(0xFFFF9500), CircleShape)
                         .padding(horizontal = 10.dp, vertical = 4.dp), color = Color.Black,

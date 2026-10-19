@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.noahwallet.BuildConfig
 import com.noahwallet.services.server.LightningIdentity
 import com.noahwallet.services.server.Nostr
@@ -49,7 +50,7 @@ fun Onboarding(model: AppModel) {
 }
 
 @Composable
-private fun MnemonicScreen(model: AppModel) {
+fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
     val context = LocalContext.current
     val activity = context as Activity
     var words by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -71,7 +72,15 @@ private fun MnemonicScreen(model: AppModel) {
             handler.removeCallbacks(clear); clear.run()
         }
     }
-    LaunchedEffect(model) { words = model.mnemonic() }
+    val scope = rememberCoroutineScope()
+    val generation = model.walletLock.generation
+    LaunchedEffect(generation) { words = emptyList(); copied = false; clear.run() }
+    LaunchedEffect(model) {
+        if (!fromSettings || model.walletLock.authenticate(activity as androidx.fragment.app.FragmentActivity, "View your seed phrase")) {
+            val loaded = model.mnemonic()
+            if (generation == model.walletLock.generation) words = loaded
+        }
+    }
     NoahForm("Your Recovery Phrase") {
         Text("Write down these ${words.size} words in order and store them in a safe place. This is the only way to recover your wallet.")
         Card {
@@ -90,7 +99,19 @@ private fun MnemonicScreen(model: AppModel) {
             handler.removeCallbacks(clear); handler.postDelayed(clear, 120_000)
             copied = true
         }
-        NoahButton("I Have Saved It, Continue", words.isNotEmpty()) { model.step = "email" }
+        if (fromSettings && words.isEmpty()) {
+            model.walletLock.error?.let { Text(it) }
+            NoahButton("Authenticate to view seed phrase", !model.walletLock.authenticating) {
+                scope.launch {
+                    val started = model.walletLock.generation
+                    if (model.walletLock.authenticate(activity as androidx.fragment.app.FragmentActivity, "View your seed phrase")) {
+                        val loaded = model.mnemonic()
+                        if (started == model.walletLock.generation) words = loaded
+                    }
+                }
+            }
+        }
+        if (!fromSettings) NoahButton("I Have Saved It, Continue", words.isNotEmpty()) { model.step = "email" }
     }
 }
 
@@ -143,12 +164,12 @@ fun EmergencyEmailScreen(model: AppModel, onContinue: () -> Unit) {
 }
 
 @Composable
-private fun LightningScreen(model: AppModel) {
+fun LightningScreen(model: AppModel, onContinue: (suspend () -> Unit)? = null) {
     var username by rememberSaveable { mutableStateOf(model.server.state.lightningAddress?.substringBefore('@') ?: "") }
     var npub by rememberSaveable { mutableStateOf(Nostr.npub(model.server.state.nostrPubkey)) }
     val focus = LocalFocusManager.current
     val domain = LightningIdentity.domain(BuildConfig.APP_VARIANT)
-    fun finish() { focus.clearFocus(); model.action("Couldn't finish setup. Please try again.") { model.finish() } }
+    fun finish() { focus.clearFocus(); model.action("Couldn't finish setup. Please try again.") { if (onContinue != null) onContinue() else model.finish() } }
     NoahForm("Choose your Lightning Address") {
         Text("Choose a Lightning username. You can optionally link a Nostr public key so the same address also works as a NIP-05 identifier.")
         OutlinedTextField(username, { username = LightningIdentity.normalizeUsername(it) }, label = { Text("Username") },
@@ -163,7 +184,7 @@ private fun LightningScreen(model: AppModel) {
             catch (failure: IllegalArgumentException) { model.error = failure.message; return@NoahButton }
             focus.clearFocus()
             model.action("Failed to update Lightning address. Please try again.") {
-                model.server.saveIdentity(username, npub); model.finish()
+                model.server.saveIdentity(username, npub); if (onContinue != null) onContinue() else model.finish()
             }
         }
         NoahButton("Skip", !model.busy, secondary = true) { finish() }
