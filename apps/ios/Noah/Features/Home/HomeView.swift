@@ -2,7 +2,11 @@ import SwiftUI
 
 struct HomeView: View {
     @Environment(AppModel.self) private var model
+    @Environment(HistoryModel.self) private var history
     @State private var showEmail = false
+    @State private var selectedID: String?
+    let onOpenHistory: () -> Void
+    let onRepeatPayment: (RepeatPayment) -> Void
 
     var body: some View {
         @Bindable var model = model
@@ -53,21 +57,29 @@ struct HomeView: View {
 
                     NoahCard {
                         VStack(alignment: .leading, spacing: 16) {
-                            Text("Recent Activity")
-                                .font(NoahFont.headline)
-                                .foregroundStyle(NoahColor.foreground)
-                            if let count = model.summary?.movementCount, count > 0 {
-                                Text("\(count) payments")
-                                    .font(NoahFont.body)
-                                    .foregroundStyle(NoahColor.mutedForeground)
-                            } else {
+                            HStack {
+                                Text("Recent Activity").font(NoahFont.headline)
+                                Spacer()
+                                Button("View all", action: onOpenHistory).font(NoahFont.footnote)
+                            }
+                            if history.isLoading {
+                                ProgressView("Loading transactions")
+                            } else if let error = history.error {
+                                Text(error).font(NoahFont.footnote)
+                                Button("Retry") { Task { await history.refresh(currency: model.preferredCurrency) } }
+                            } else if history.transactions.isEmpty {
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Text("No activity yet")
-                                        .font(NoahFont.callout)
-                                        .foregroundStyle(NoahColor.foreground)
+                                    Text("No activity yet").font(NoahFont.callout)
                                     Text("Receive or send bitcoin to start your history.")
-                                        .font(NoahFont.footnote)
-                                        .foregroundStyle(NoahColor.mutedForeground)
+                                        .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+                                }
+                            } else {
+                                ForEach(Array(history.transactions.prefix(3))) { transaction in
+                                    Button { selectedID = transaction.id } label: {
+                                        TransactionRow(transaction: transaction, unit: model.amountUnit, recent: true)
+                                            .padding(.vertical, 8)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
                         }
@@ -82,7 +94,22 @@ struct HomeView: View {
                 .frame(maxWidth: 640)
                 .frame(maxWidth: .infinity)
             }
-            .refreshable { await model.sync() }
+            .refreshable {
+                await model.sync()
+                await history.refresh(currency: model.preferredCurrency)
+            }
+            .sheet(isPresented: Binding(get: { selectedID != nil }, set: { if !$0 { selectedID = nil } })) {
+                if let transaction = history.transactions.first(where: { $0.id == selectedID }) {
+                    NavigationStack {
+                        TransactionDetailView(transaction: transaction, onRepeatPayment: { details in
+                            selectedID = nil
+                            onRepeatPayment(details)
+                        }, onClose: { selectedID = nil })
+                    }
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+                }
+            }
             .background(NoahColor.background.ignoresSafeArea())
             .toolbar {
                 ToolbarItemGroup(placement: .topBarLeading) {

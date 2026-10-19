@@ -136,6 +136,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] UnifiedPushScreen (Android, non-GMS)
 - [x] HomeScreen first pass: balance (BIP-177/sats from `profile-storage`), hide toggle (`privacy-storage`), pull-to-sync, variant badge — iOS
 - [ ] HomeScreen: fiat, recent 3 transactions, shortcuts, banners, facts
+- [x] HomeScreen: recent 3 transactions, View all, transaction detail — iOS
 - [ ] Banners: backup status, auto-boarding, pending round, email verification, update warning
 - [ ] App version check
 
@@ -165,8 +166,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] External LNURL/BOLT12 provider acceptance and camera hardware verification — iOS
 
 ## M4 — History
-- [ ] TransactionsScreen (filters, pull refresh, CSV export of filtered list)
-- [ ] TransactionDetail (sheet / split pane, historical fiat, technical details, explorer, repeat) — fixtures from `transactionHistory`, `barkMovement`
+- [x] TransactionsScreen (filters, pull refresh, CSV export of filtered list) — iOS
+- [x] TransactionDetail (sheet / split pane, historical fiat, technical details, explorer, repeat callback) — iOS; RN-generated `transactionHistory` / `barkMovement` fixtures; Send hookup remains `TODO(M3)`
 
 ## M5 — Settings & recovery
 - [ ] SettingsScreen (biometrics, auto-board, mailbox, suspend/resume, delete wallet, re-register, version/debug unlock)

@@ -40,25 +40,47 @@ struct WalletTabs: View {
         case home, receive, send, history
     }
 
+    @Environment(AppModel.self) private var app
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var history = HistoryModel(dependencies: .live(
+        session: .shared, client: AppServices.shared.client, variant: .current))
+    @State private var pendingRepeatPayment: RepeatPayment?
     @State private var selection: Tab = .home
 
     var body: some View {
         TabView(selection: $selection) {
             SwiftUI.Tab("Home", systemImage: "house", value: .home) {
-                HomeView()
+                HomeView(onOpenHistory: { selection = .history }, onRepeatPayment: repeatPayment)
             }
             SwiftUI.Tab("Receive", systemImage: "arrow.down.left", value: .receive) {
                 NavigationStack { ReceiveView(isActive: selection == .receive) { selection = .home } }
             }
             SwiftUI.Tab("Send", systemImage: "arrow.up.right", value: .send) {
+                // TODO: hand `pendingRepeatPayment` to SendView once it takes a prefill
+                // (after the Send safety fixes, which also reset routes on prefill).
                 NavigationStack { SendView() }
             }
             SwiftUI.Tab("History", systemImage: "clock.arrow.circlepath", value: .history) {
-                NavigationStack { PendingFeatureView(title: "History") }
+                NavigationStack { TransactionsView(onRepeatPayment: repeatPayment) }
+            }
+        }
+        .environment(history)
+        .task(id: app.summary == nil ? nil : app.preferredCurrency) {
+            guard app.summary != nil else { return }
+            await history.observe(currency: app.preferredCurrency)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task { await history.refresh(currency: app.preferredCurrency) }
             }
         }
         .tint(NoahColor.brand)
         .tabBarMinimizeOnScrollIfAvailable()
+    }
+
+    private func repeatPayment(_ details: RepeatPayment) {
+        pendingRepeatPayment = details
+        selection = .send
     }
 }
 

@@ -1,0 +1,158 @@
+import Foundation
+import Observation
+
+@MainActor
+@Observable
+final class HistoryModel {
+    struct Dependencies: Sendable {
+        var load: @Sendable () async throws -> [HistoryTransaction]
+        var sync: @Sendable () async throws -> Void
+        var changes: @Sendable () async throws -> AsyncThrowingStream<String, Error>
+        var blockTime: @Sendable (String) async throws -> Date?
+        var price: @Sendable (Int64, String) async throws -> Double?
+        var currentPrice: @Sendable (String) async throws -> Double? = { _ in nil }
+
+        static func live(session: WalletSession, client: Client, variant: AppVariant) -> Self {
+            Self(
+                load: { try await session.transactionHistory() }, sync: { try await session.sync() },
+                changes: {
+                    // Stream adaptation has no wallet handle; the session owns and stops the native wait.
+                    let changes = try await session.stateChanges()
+                    return AsyncThrowingStream { continuation in
+                        let task = Task {
+                            do {
+                                for try await event in changes { continuation.yield(event.reason) }
+                                continuation.finish()
+                            } catch { continuation.finish(throwing: error) }
+                        }
+                        continuation.onTermination = { _ in task.cancel() }
+                    }
+                },
+                blockTime: { txid in
+                    guard let base = WalletConfiguration.base(for: variant).esplora,
+                          let url = URL(string: base)?.appendingPathComponent("tx").appendingPathComponent(txid) else { return nil }
+                    var request = URLRequest(url: url)
+                    request.timeoutInterval = 10
+                    let (data, response) = try await URLSession.shared.data(for: request)
+                    guard (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+                    struct Transaction: Decodable {
+                        struct Status: Decodable { var confirmed: Bool?; var block_time: Double? }
+                        var status: Status?
+                    }
+                    let status = try JSONDecoder().decode(Transaction.self, from: data).status
+                    return status?.confirmed == true ? status?.block_time.map(Date.init(timeIntervalSince1970:)) : nil
+                },
+                price: { timestamp, currency in
+                    let response = try await client.historicalFiatPrice(body: .json(.init(currency: currency, timestamp: timestamp)))
+                        .ok.body.json
+                    return response.rate.isFinite && response.rate > 0 ? response.rate : nil
+                },
+                currentPrice: { currency in
+                    let response = try await client.fiatPrices(body: .json(.init())).ok.body.json
+                    guard let rate = response.rates.additionalProperties[currency], rate.isFinite, rate > 0 else { return nil }
+                    return rate
+                })
+        }
+    }
+
+    private(set) var transactions: [HistoryTransaction] = []
+    private(set) var isLoading = true
+    private(set) var isRefreshing = false
+    private(set) var error: String?
+    private let dependencies: Dependencies
+    private var blockTimes: [String: Date] = [:]
+    private var prices: [String: Double] = [:]
+    private var priceKeys: [String] = []
+    private var generation = UUID()
+    private let log = AppLog("history")
+
+    init(dependencies: Dependencies) { self.dependencies = dependencies }
+
+    /// The view owns this task's lifetime. Subscribe before the initial read;
+    /// the session's initial event covers commits that race with mounting.
+    func observe(currency: String) async {
+        do {
+            var resubscribe = true
+            while resubscribe && !Task.isCancelled {
+                resubscribe = false
+                let changes = try await dependencies.changes()
+                await refresh(currency: currency)
+                for try await reason in changes {
+                    guard !Task.isCancelled else { return }
+                    await refresh(currency: currency)
+                    if reason == "resyncRequired" { resubscribe = true; break }
+                }
+            }
+        } catch {
+            guard !Task.isCancelled else { return }
+            await refresh(currency: currency)
+        }
+    }
+
+    private static func unified(_ entries: [HistoryTransaction]) -> [HistoryTransaction] {
+        HistoryRules.merge(entries.filter { $0.source != "onchain-wallet" },
+                           onchain: entries.filter { $0.source == "onchain-wallet" })
+            .sorted(by: HistoryRules.precedes)
+    }
+
+    func refresh(currency: String, sync: Bool = false) async {
+        let generation = UUID()
+        self.generation = generation
+        isRefreshing = true
+        defer {
+            if self.generation == generation { isRefreshing = false; isLoading = false }
+        }
+        do {
+            if sync { try await dependencies.sync() }
+            var latest = try await dependencies.load()
+            guard self.generation == generation, !Task.isCancelled else { return }
+            // Publish wallet data before optional network enrichment finishes.
+            transactions = Self.unified(latest)
+            isLoading = false
+            error = nil
+            for index in latest.indices {
+                if Task.isCancelled || self.generation != generation { return }
+                if latest[index].source == "onchain-wallet", latest[index].hasConfirmation == true,
+                   let txid = latest[index].txid {
+                    let time: Date?
+                    if let cached = blockTimes[txid] { time = cached }
+                    else { time = try? await dependencies.blockTime(txid) }
+                    if let time {
+                        blockTimes[txid] = time
+                        latest[index].date = HistoryRules.isoDate(time)
+                        latest[index].dateLabel = nil
+                        latest[index].sortTimestamp = time.timeIntervalSince1970 * 1000
+                    }
+                }
+                if let date = latest[index].timestamp, date.timeIntervalSince1970 > 0 {
+                    let seconds = Int64(date.timeIntervalSince1970)
+                    let key = "\(currency):\(latest[index].date.prefix(10))"
+                    let price: Double?
+                    if let cached = prices[key] { price = cached }
+                    else { price = try? await dependencies.price(seconds, currency) }
+                    if let price {
+                        if prices[key] == nil { priceKeys.append(key) }
+                        prices[key] = price
+                        if priceKeys.count > 200 { prices.removeValue(forKey: priceKeys.removeFirst()) }
+                        latest[index].btcPrice = price
+                    } else {
+                        // RN falls back to today's quote, without caching it as historical.
+                        latest[index].btcPrice = try? await dependencies.currentPrice(currency)
+                    }
+                }
+            }
+            guard self.generation == generation, !Task.isCancelled else { return }
+            transactions = Self.unified(latest)
+        } catch {
+            guard self.generation == generation, !Task.isCancelled else { return }
+            if error is WalletSession.SessionError {
+                transactions = []
+                self.error = String(localized: "Your wallet isn't ready. Please try again.")
+            } else {
+                self.error = String(localized: "Couldn't load transactions. Please try again.")
+                // Native errors can contain destinations or full transaction IDs.
+                log.w("History read failed")
+            }
+        }
+    }
+}
