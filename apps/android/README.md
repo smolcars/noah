@@ -4,8 +4,9 @@ Kotlin/Compose `:app` with the upgrade compatibility layer, backup envelope
 crypto, four Navigation 3 placeholder destinations and the existing widgets.
 Launch checks the seed and existing database, then opens through the process-wide
 `WalletSession.shared(context)` before showing the shell. It never creates a wallet
-at launch or deletes legacy secrets. Onboarding UI and push registration remain
-future work; Firebase messaging auto-init is disabled.
+at launch or deletes legacy secrets. Onboarding UI remains future work. Native push registration and background jobs
+use the shared services/session; Firebase auto-init is enabled after onboarding
+and notification permission.
 
 ## Build and install
 
@@ -397,3 +398,89 @@ endpoint. Without the opt-in flag, the live case is skipped. The live run did no
 exercise email delivery, push, physical devices or Android API 24; email/identity
 behavior is covered by unit tests. Like iOS, retry requires HTTP 401 plus one of
 the three auth codes; a late 401 for an old token reuses an already refreshed token.
+
+
+## Native push
+
+`services/push` replaces Expo's Android service with `NoahFirebaseMessagingService`.
+FCM `data.body` is decoded with the generated notification types, then queued in
+WorkManager. High-priority messages use expedited work with a regular-work fallback;
+normal-priority and UnifiedPush messages use regular work. Android < 12 gets the
+WorkManager foreground notification. Duplicate pending/running payloads coalesce.
+Wallet operations are not automatically retried after an ambiguous failure;
+registration retries use WorkManager's exponential backoff and a network constraint.
+
+The wallet phase requests `POST_NOTIFICATIONS` on Android 13+. Registration requires
+RN `wallet-storage.isInitialized`, successful server registration and permission.
+GMS devices exchange their current FCM token with Expo using the preserved installation
+UUID, application ID, Firebase app and EAS project. `onNewToken` queues registration
+with the latest token. No-GMS devices reuse connector **3.1.2**, its database/legacy
+preferences, `noah-<variant>` and `noah_unified_push` endpoints. Endpoint changes
+queue authenticated server registration. Saved distributors take precedence, then
+ntfy, then the first available distributor. No distributor means waiting for one;
+there is no Firebase fallback on a non-GMS device. Settings UI is still pending.
+
+Both transports run maintenance (with correlated status), invoice creation/submission,
+claim + local receive notification, and heartbeat. Backups are log-only with **no
+status report** until the Android backup port; recurring wakes are log-only until M7.
+Widget updates preserve the six Long keys read by `NoahWidgetProvider`, including
+`-999` for no VTXO expiry. Existing `default` and `noah-push-default` channels are
+never recreated or reconfigured. Notification copy currently uses English and BIP177,
+as the native locale/profile UI ports remain pending.
+
+### Push verification (2026-10-19)
+
+- All three debug variants build. **89 JVM tests pass**, including boundary string/
+  object decoding from server fixtures, malformed/negative inputs, all six job routes,
+  maintenance failure reporting, registration gates/retry, Expo wire shape and widget
+  keys/balance accounting. Dependency verification now pins WorkManager and its
+  storage dependencies as well as the retained UnifiedPush connector.
+- Dedicated Android 15 Google APIs ARM64 AVD **NoahNativePushAgent**, `emulator-5562`:
+  connector 3.1.2 reads seeded RN-shaped SQLite registrations and migrates a legacy
+  registration without losing existing tokens; endpoint fallback/rotation, channel
+  preservation and actual widget preference types pass instrumented tests.
+- **Live FCM → Expo → register_push_token passed** against the existing host server
+  at port **3100**. Repeating the Expo exchange with the same persisted installation
+  UUID returned the same Expo token (compared privately). Notification permission was
+  also requested and accepted in the actual wallet UI.
+- Simulated RN `RemoteMessage` → native service → WorkManager maintenance also passed
+  and reported `Success` to the live server.
+- **Real Expo heartbeat and maintenance delivered after killing the background app
+  process** (not force-stopping it). The native service queued both jobs, heartbeat
+  became `responded`, maintenance reported `Success`, and widget preferences updated.
+  A host driver sent RN-shaped payloads through Expo with the running server's
+  credentials and inserted pending correlation rows for **only the disposable test
+  identity**. The live server, containers and volumes were not restarted or recreated.
+- The fresh test wallet used the server's supported address-less registration, like
+  `ServerIntegrationTest`; a new SDK wallet has no address at index zero until one is
+  generated. Production upgraded RN wallets already have that address. Onboarding
+  must generate its address before the existing `ServerRegistration.peekAddress(0)`.
+
+To run the gated test on a disposable emulator **you created**:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew -PnoahRegtestServerURL=http://10.0.2.2:3100 :app:assembleRegtestDebug :app:assembleRegtestDebugAndroidTest'
+adb -s YOUR_SERIAL install -r apps/android/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk
+adb -s YOUR_SERIAL install -r apps/android/app/build/outputs/apk/androidTest/regtest/debug/app-regtest-debug-androidTest.apk
+adb -s YOUR_SERIAL shell pm grant com.noahwallet.regtest android.permission.POST_NOTIFICATIONS
+adb -s YOUR_SERIAL shell am instrument -w -e noahPushIT 1 -e class 'com.noahwallet.services.PushIntegrationTest#liveTokenRegistration' com.noahwallet.regtest.test/androidx.test.runner.AndroidJUnitRunner
+adb -s YOUR_SERIAL shell am instrument -w -e class com.noahwallet.services.PushCompatibilityTest com.noahwallet.regtest.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+The live test creates/resumes a throwaway wallet and exports only its public auth
+identity to `no_backup/push-test-public-key` for targeting the test push row. It keeps
+the app data for background delivery checks; remove the disposable AVD afterward.
+`simulateRnMessageThroughFirebaseService` additionally accepts `-e noahPushK1 <k1>`
+for a pending maintenance row owned by that test identity. Do not run UI automation
+instrumentation concurrently with these tests.
+
+Still unverified: an actual RN → native upgrade retaining a registered Expo token,
+push before opening that update, physical devices/Doze/token rotation, API 24–30's
+expedited foreground path, and delivery through a real UnifiedPush distributor.
+Expo's SDK-free HTTP exchange is a compatibility endpoint rather than a guaranteed
+public API; keep the existing Expo server credentials configured.
+
+`lintRegtestDebug` remains blocked by the pre-existing camera permission lacking
+an optional `android.hardware.camera` feature declaration
+(`PermissionImpliesUnsupportedChromeOsHardware`). Push's deliberate RN-compatible
+MAX channel importance is locally documented; all other push lint errors are clear.

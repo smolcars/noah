@@ -69,7 +69,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] GT locale reader (`gt_store`) — Android
 - [x] Expo installation UUID reuse — iOS (keychain `EXDeviceInstallationUUIDKey`)
 - [x] Expo installation UUID reuse — Android (`noBackupFilesDir/expo_notifications_installation_uuid.txt`)
-- [ ] UnifiedPush connector storage + instance names preserved
+- [x] UnifiedPush connector storage + instance names preserved — Android (3.1.2 SQLite + legacy prefs fixture on device)
 - [x] Upgrade test iOS (`apps/ios/UpgradeTests/run.sh`): RN regtest creates wallet via Maestro → native installed over it → seed, DB, MMKV readable, launch = existingWallet, RN DB opens with new bark (same file, not recreated)
 - [x] Funded upgrade test iOS (`FUNDED=1`): RN receives 100k + sends 5k → native sees same fingerprint, 2 movements, 95,000 spendable
 - [ ] Extend funded upgrade test: onchain funds, recurring rule, settings values, Expo token
@@ -89,11 +89,11 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Push iOS: permission, APNs token → Expo token (RN installation ID, provisioning aps-environment), `register_push_token`, silent-push handler with 25 s budget, jobs for maintenance / invoice / claim / backup / heartbeat with job-status reports, widget refresh
 - [x] Push iOS: register the push token after server registration once onboarding is done (RN `usePushNotifications` gating)
 - [ ] Push iOS: recurring_payment_due (M7); verify real delivery on a device (simctl push does not run the background handler)
-- [ ] Push Android: FirebaseMessagingService + Expo token; all 6 types; job status + heartbeat
-- [ ] UnifiedPush (Android, non-GMS) in pure Kotlin
+- [x] FirebaseMessagingService + Expo token, onboarding/permission/server gates, expedited push work, maintenance/invoice/claim + status/heartbeat — Android (real Expo heartbeat + maintenance delivered; backup/recurring log-only pending their ports)
+- [x] UnifiedPush (Android, non-GMS) in pure Kotlin — Android (shared jobs, preserved endpoint/connector storage; live distributor test pending)
 - [ ] Background tasks: BGTaskScheduler / WorkManager (maintenance, recurring)
 - [x] Widget data writer — iOS (`widgetBalance`, same keys, expiry from VTXOs and onchain tip)
-- [ ] Widget data writer — Android
+- [x] Widget data writer — Android (provider Long keys, expiry sentinel, explicit update broadcast; refreshed by real push)
 
 ### 0.7 Backups
 - [x] Envelope crypto v1/v2 (salt16 | nonce12 | AES-256-GCM; PBKDF2-SHA256 600k) with Node-generated vectors (`apps/fixtures/backup-crypto.json`) — iOS
