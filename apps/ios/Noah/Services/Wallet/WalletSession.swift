@@ -18,6 +18,8 @@ actor WalletSession {
         case busy
         /// `createNew` found an existing database; it never overwrites one.
         case walletDatabaseExists
+        /// An interrupted restore has not been settled (`RestoreTransaction`).
+        case restorePending
     }
 
     /// Opener seam so lifecycle rules can be tested without the SDK.
@@ -36,6 +38,14 @@ actor WalletSession {
         case opening(Task<Handles, Error>)
         case open(Handles)
         case closing
+        /// A restore is replacing the wallet files; everyone else sees `busy`.
+        case replacing(UUID)
+    }
+
+    /// Exclusive hold on a closed session while a restore swaps the wallet
+    /// files. Only its holder may check the new files (`verifyReplacement`).
+    struct Replacement: Sendable, Equatable {
+        fileprivate let id: UUID
     }
 
     /// The one session per app process. bark-bolt-ffi locks the datadir, so a
@@ -68,6 +78,13 @@ actor WalletSession {
     /// wallet, or belongs to another network.
     func openExisting(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
         guard case .closed = state else { throw OpenError.busy }
+        guard !location.restorePending else { throw OpenError.restorePending }
+        try checkExistingDatabase()
+        try await open(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion, create: false)
+    }
+
+    /// Read-only checks before bark touches the database.
+    private func checkExistingDatabase() throws {
         guard location.databaseExists else { throw OpenError.walletDatabaseMissing }
         let properties: WalletDatabase.Properties
         do {
@@ -79,8 +96,30 @@ actor WalletSession {
         guard properties.network == expectedNetwork else {
             throw OpenError.networkMismatch(found: properties.network)
         }
+    }
 
-        try await open(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion, create: false)
+    /// Reserves the closed session for a restore. Opens, closes and wallet
+    /// calls from anyone else fail (or see no wallet) until `endReplacement`.
+    func beginReplacement() throws -> Replacement {
+        guard case .closed = state else { throw OpenError.busy }
+        let replacement = Replacement(id: UUID())
+        state = .replacing(replacement.id)
+        return replacement
+    }
+
+    /// Opens the swapped-in files with `mnemonic`, without the daemon, and
+    /// closes them again: proof the restore is usable before the seed is
+    /// committed. Nothing else can reach this wallet in between.
+    func verifyReplacement(_ replacement: Replacement, mnemonic: String, appVersion: String) async throws {
+        guard case .replacing(let id) = state, id == replacement.id else { throw OpenError.busy }
+        try checkExistingDatabase()
+        let handles = try await opener(mnemonic, location.directory.path, false, appVersion, false)
+        try await handles.wallet.stopDaemonWait()
+    }
+
+    func endReplacement(_ replacement: Replacement) {
+        guard case .replacing(let id) = state, id == replacement.id else { return }
+        state = .closed
     }
 
     /// Opens the existing wallet unless it is already open (RN's
@@ -92,7 +131,7 @@ actor WalletSession {
             return
         case .opening(let inFlight):
             _ = try await inFlight.value
-        case .closing:
+        case .closing, .replacing:
             throw OpenError.busy
         case .closed:
             try await openExisting(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion)
@@ -102,6 +141,7 @@ actor WalletSession {
     /// Creates a new wallet. Only valid when no database exists yet.
     func createNew(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
         guard case .closed = state else { throw OpenError.busy }
+        guard !location.restorePending else { throw OpenError.restorePending }
         guard !location.databaseExists else { throw OpenError.walletDatabaseExists }
         try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
         try await open(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion, create: true)
@@ -216,7 +256,7 @@ actor WalletSession {
         switch state {
         case .closed:
             return
-        case .opening, .closing:
+        case .opening, .closing, .replacing:
             throw OpenError.busy
         case .open(let handles):
             state = .closing

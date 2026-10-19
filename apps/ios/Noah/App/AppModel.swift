@@ -11,6 +11,8 @@ final class AppModel {
         case onboarding
         case wallet
         case blocked(LaunchState)
+        /// An interrupted restore could not be settled; nothing was touched.
+        case restoreIncomplete
     }
 
     private(set) var phase: Phase = .launching
@@ -41,9 +43,23 @@ final class AppModel {
     }
 
     func start() async {
-        // A restore interrupted mid-swap must not look like a fresh install.
-        if SnapshotInstaller(datadir: WalletDataLocation(variant: variant).directory).recoverInterruptedInstall() {
-            log.w("Recovered the wallet folder from an interrupted restore")
+        // An interrupted restore must be settled before the datadir and seed
+        // say anything about which wallet this is.
+        do {
+            switch try await WalletRestorer.recoverInterruptedRestore(
+                session: session, location: WalletDataLocation(variant: variant),
+                seed: KeychainPassword.mnemonic(for: variant)) {
+            case .nothingPending: break
+            case .rolledBack: log.w("Undid an interrupted restore")
+            case .completed: log.w("Finished an interrupted restore")
+            case .waitingForKeychain:
+                phase = .blocked(.secureStorageUnavailable)
+                return
+            }
+        } catch {
+            log.e("Couldn't settle an interrupted restore: \(Self.describe(error))")
+            phase = .restoreIncomplete
+            return
         }
         let state = LaunchState.current(variant: variant)
         switch state {

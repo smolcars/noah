@@ -15,6 +15,10 @@ struct RootView: View {
                 WalletTabs()
             case .blocked(let state):
                 LaunchMessageView(state: state)
+            case .restoreIncomplete:
+                LaunchMessageView(
+                    title: "Restore didn't finish",
+                    message: "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again.")
             }
         }
         .task { await model.start() }
@@ -50,7 +54,17 @@ struct WalletTabs: View {
 }
 
 private struct LaunchMessageView: View {
-    let state: LaunchState
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
+
+    init(title: LocalizedStringKey, message: LocalizedStringKey) {
+        self.title = title
+        self.message = message
+    }
+
+    init(state: LaunchState) {
+        self.init(title: Self.title(for: state), message: Self.message(for: state))
+    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -67,7 +81,7 @@ private struct LaunchMessageView: View {
         .background(NoahColor.background.ignoresSafeArea())
     }
 
-    private var title: LocalizedStringKey {
+    private static func title(for state: LaunchState) -> LocalizedStringKey {
         switch state {
         case .seedWithoutWalletData: "Recovery phrase found"
         case .walletDataWithoutSeed: "Recovery phrase needed"
@@ -76,7 +90,7 @@ private struct LaunchMessageView: View {
         }
     }
 
-    private var message: LocalizedStringKey {
+    private static func message(for state: LaunchState) -> LocalizedStringKey {
         switch state {
         case .seedWithoutWalletData:
             "A recovery phrase from a previous install is stored on this device. Restoring it lands soon."

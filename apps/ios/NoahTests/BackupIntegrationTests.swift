@@ -84,19 +84,19 @@ struct BackupIntegrationTests {
                     readMnemonic: { phrase },
                     login: { try await ServerClient.login(variant: .regtest, mnemonic: $0) },
                     now: { Date() })))
-            },
-            workDirectory: restoreRoot)
+            })
 
         let outcome = try await restorer.restore(mnemonic: mnemonic)
         #expect(outcome.backupId == backupId)
         #expect(outcome.snapshotSha256 == first.snapshotSha256)
         #expect(seedItem.read() == .found(mnemonic))
+        #expect(await !restoredSession.isOpen, "restore leaves the session closed")
+        try await restoredSession.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
         let restored = try #require(try await restoredSession.summary())
         #expect(restored.fingerprint == original.fingerprint)
         #expect(restored.movementCount == original.movementCount)
         try await restoredSession.close()
-        let leftovers = try FileManager.default.contentsOfDirectory(atPath: restoreRoot.path)
-            .filter { $0.hasPrefix(".wallet-") }
-        #expect(leftovers.isEmpty, "rollback and staging folders are cleaned up")
+        let leftovers = (try? FileManager.default.contentsOfDirectory(atPath: restoredLocation.restoreDirectory.path)) ?? []
+        #expect(leftovers.isEmpty, "journal, rollback and decrypted files are cleaned up")
     }
 }

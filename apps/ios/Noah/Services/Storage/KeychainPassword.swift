@@ -92,6 +92,15 @@ struct KeychainPassword: Sendable {
     }
 }
 
+/// What restore needs from the seed item, so its Keychain failure paths
+/// can be tested.
+protocol SecretItem: Sendable {
+    func read() -> KeychainPassword.ReadResult
+    func save(_ value: String) throws
+}
+
+extension KeychainPassword: SecretItem {}
+
 extension KeychainPassword {
     /// Username react-native-keychain items were written with (`KEYCHAIN_USERNAME`).
     private static let reactNativeAccount = "noah"

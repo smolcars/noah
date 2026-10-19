@@ -13,6 +13,19 @@ struct WalletDataLocation: Sendable {
 
     var database: URL { directory.appending(path: "db.sqlite", directoryHint: .notDirectory) }
 
+    /// Restore workspace (`RestoreTransaction`): next to the datadir, so on
+    /// the same volume and every swap is a rename.
+    var restoreDirectory: URL {
+        directory.deletingLastPathComponent().appending(
+            path: ".\(directory.lastPathComponent)-restore", directoryHint: .isDirectory)
+    }
+
+    /// A restore was interrupted and is not settled yet. Nothing may open or
+    /// create the wallet until `RestoreTransaction.recover` has run.
+    var restorePending: Bool {
+        FileManager.default.fileExists(atPath: restoreDirectory.appending(path: RestoreTransaction.journalName).path)
+    }
+
     var databaseExists: Bool {
         FileManager.default.fileExists(atPath: database.path)
     }
