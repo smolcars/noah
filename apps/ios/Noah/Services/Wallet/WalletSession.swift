@@ -303,19 +303,18 @@ actor WalletSession {
                 network: try await wallet.network(),
                 fingerprint: wallet.fingerprint(),
                 balance: WalletBalance(
-                    // bark-bolt-ffi 0.2.0 drops needs_refresh, pending_arkoor_send
-                    // and pending_offboard from bark's Balance; they read as 0
-                    // until the SDK exposes them (FFI handoff item 12).
                     ark: .init(
                         spendable: ark.spendableSats,
-                        needsRefresh: 0,
+                        needsRefresh: ark.needsRefreshSats,
                         pendingLightningSend: ark.pendingLightningSendSats,
                         claimableLightningReceive: ark.claimableLightningReceiveSats,
                         pendingInRound: ark.pendingInRoundSats,
                         pendingExit: ark.pendingExitSats,
                         pendingBoard: ark.pendingBoardSats,
-                        pendingArkoorSend: 0,
-                        pendingOffboard: 0),
+                        pendingArkoorSend: ark.pendingArkoorSendSats,
+                        pendingOffboard: ark.pendingOffboardSats,
+                        pending: ark.pendingSats,
+                        total: ark.totalSats),
                     onchain: .init(confirmed: chain.confirmedSats, pending: chain.pendingSats, total: chain.totalSats)),
                 movementCount: try await wallet.history().count)
         }
@@ -447,8 +446,14 @@ actor WalletSession {
             let configuration = WalletConfiguration.base(for: variant)
             let config = configuration.sdkConfig(
                 userAgent: WalletConfiguration.userAgent(variant: variant, version: appVersion))
-            let onchain = try await OnchainWallet.default(
-                network: configuration.network, mnemonic: mnemonic, config: config, datadir: datadir)
+            // Existing wallets go through the SDK's read-only identity check
+            // (properties, network, seed fingerprint) before anything writes;
+            // only creation may use the creating factory.
+            let onchain = create
+                ? try await OnchainWallet.default(
+                    network: configuration.network, mnemonic: mnemonic, config: config, datadir: datadir)
+                : try await OnchainWallet.openExisting(
+                    network: configuration.network, mnemonic: mnemonic, config: config, datadir: datadir)
             let wallet = try await Wallet.openWithOnchain(
                 network: configuration.network,
                 mnemonicOrSeed: mnemonic,

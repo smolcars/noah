@@ -17,15 +17,54 @@ struct WalletBalance: Equatable, Sendable {
         var pendingBoard: UInt64
         var pendingArkoorSend: UInt64
         var pendingOffboard: UInt64
+        /// `Balance::pending()`: the seven operation buckets.
+        var pending: UInt64
+        /// `Balance::total()`: spendable + needs refresh + pending.
+        var total: UInt64
 
-        /// `Balance::pending()`.
-        var pending: UInt64 {
-            pendingInRound + pendingBoard + pendingArkoorSend + pendingLightningSend
-                + claimableLightningReceive + pendingOffboard + pendingExit
+        /// `pending` and `total` as the SDK reports them (bark's own
+        /// methods); computed with bark's formula only when not given, as in
+        /// the shared fixtures.
+        init(
+            spendable: UInt64, needsRefresh: UInt64, pendingLightningSend: UInt64, claimableLightningReceive: UInt64,
+            pendingInRound: UInt64, pendingExit: UInt64, pendingBoard: UInt64, pendingArkoorSend: UInt64,
+            pendingOffboard: UInt64, pending: UInt64? = nil, total: UInt64? = nil
+        ) {
+            self.spendable = spendable
+            self.needsRefresh = needsRefresh
+            self.pendingLightningSend = pendingLightningSend
+            self.claimableLightningReceive = claimableLightningReceive
+            self.pendingInRound = pendingInRound
+            self.pendingExit = pendingExit
+            self.pendingBoard = pendingBoard
+            self.pendingArkoorSend = pendingArkoorSend
+            self.pendingOffboard = pendingOffboard
+            let pending = pending ?? (pendingInRound + pendingBoard + pendingArkoorSend + pendingLightningSend
+                + claimableLightningReceive + pendingOffboard + pendingExit)
+            self.pending = pending
+            self.total = total ?? (spendable + needsRefresh + pending)
         }
 
-        /// `Balance::total()`.
-        var total: UInt64 { spendable + needsRefresh + pending }
+        private enum CodingKeys: String, CodingKey {
+            case spendable, needsRefresh, pendingLightningSend, claimableLightningReceive, pendingInRound
+            case pendingExit, pendingBoard, pendingArkoorSend, pendingOffboard, pending, total
+        }
+
+        init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            try self.init(
+                spendable: values.decode(UInt64.self, forKey: .spendable),
+                needsRefresh: values.decode(UInt64.self, forKey: .needsRefresh),
+                pendingLightningSend: values.decode(UInt64.self, forKey: .pendingLightningSend),
+                claimableLightningReceive: values.decode(UInt64.self, forKey: .claimableLightningReceive),
+                pendingInRound: values.decode(UInt64.self, forKey: .pendingInRound),
+                pendingExit: values.decode(UInt64.self, forKey: .pendingExit),
+                pendingBoard: values.decode(UInt64.self, forKey: .pendingBoard),
+                pendingArkoorSend: values.decode(UInt64.self, forKey: .pendingArkoorSend),
+                pendingOffboard: values.decode(UInt64.self, forKey: .pendingOffboard),
+                pending: values.decodeIfPresent(UInt64.self, forKey: .pending),
+                total: values.decodeIfPresent(UInt64.self, forKey: .total))
+        }
     }
 
     struct Onchain: Equatable, Sendable, Decodable {

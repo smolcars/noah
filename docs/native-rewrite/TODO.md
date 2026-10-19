@@ -27,9 +27,10 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] CI: build + unit tests for both apps (all three variants compile)
 
 ### 0.3 Wallet SDK integration
-- [x] FFI gaps P0+P1 shipped in bark-bolt-ffi v0.2.0 (iOS pinned to 0.2.0)
-- [ ] FFI item 11 (no-write open of an existing wallet) — not in 0.2.0; Noah keeps its read-only `bark_properties` preflight
-- [x] Android pinned to bark-bolt-ffi 0.2.0
+- [x] FFI gaps P0+P1 shipped in bark-bolt-ffi v0.2.0
+- [x] FFI items 11 + 12 in v0.3.0: `OnchainWallet.openExisting` (read-only identity check before writes) and all nine balance buckets + Bark's pending/total — iOS pinned to 0.3.0 (Noah's own preflight kept)
+- [ ] Android to bark-bolt-ffi 0.3.0 (`openExisting`, full balance, close Kotlin wrappers on teardown); Android currently on 0.2.0
+- [ ] Funded RN→native upgrade re-run on 0.3.0 (iOS, Android)
 - [ ] `WalletService` protocol/interface over bark-bolt-ffi (Swift + Kotlin), with a fake for UI work
 - [x] Config mapping per variant with **fee units: sat/kvB → sat/kwu** — iOS
 - [x] Config mapping — Android (sat/kwu; regtest via `10.0.2.2`)

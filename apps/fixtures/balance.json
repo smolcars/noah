@@ -1,5 +1,5 @@
 {
-  "description": "Wallet balance with bark's own accounting (bark/src/balance.rs: total = spendable + needs_refresh + pending, every VTXO in exactly one bucket) plus the onchain total (confirmed + immature + pending). bark-bolt-ffi 0.2.0 does not yet expose needsRefresh, pendingArkoorSend or pendingOffboard.",
+  "description": "Wallet balance with bark's own accounting (bark/src/balance.rs: total = spendable + needs_refresh + pending, every VTXO in exactly one bucket) plus the onchain total (confirmed + immature + pending). bark-bolt-ffi 0.3.0 reports all nine buckets plus pendingSats/totalSats from bark's own methods; these cases hold the apps' formula fallback to the same accounting.",
   "cases": [
     {
       "name": "empty wallet",

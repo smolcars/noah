@@ -2,9 +2,9 @@ import Foundation
 import SQLite3
 
 /// Read-only look at an existing bark database, used before handing the
-/// datadir to bark-bolt-ffi. `OnchainWallet.default` runs migrations and
-/// creates BDK tables before bark checks the wallet, so anything that is
-/// not a bark wallet for this network must be rejected first.
+/// datadir to bark-bolt-ffi. Since 0.3.0 `OnchainWallet.openExisting` makes
+/// the same check (plus the seed fingerprint) before any write; this one
+/// stays as defence in depth and gives Noah its own error for the UI.
 enum WalletDatabase {
     struct Properties: Equatable, Sendable {
         let network: String
