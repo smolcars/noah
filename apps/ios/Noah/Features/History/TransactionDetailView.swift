@@ -73,7 +73,7 @@ struct TransactionDetailView: View {
                             if let hash = transaction.confirmationHash { detail("Block hash", hash, copyable: true) }
                             if let hex = transaction.txHex { detail("Raw transaction", hex, copyable: true) }
                         }
-                        if let kind = transaction.movementKind { detail("Movement type", kind) }
+                        if let kind = transaction.movementKindLabel { detail("Movement type", kind) }
                         if let id = transaction.movementId { detail("Movement ID", String(id), copyable: true) }
                         if let name = transaction.subsystemName { detail("Subsystem", "\(name) (\(transaction.subsystemKind ?? ""))") }
                         amountDetail("Intended balance change", transaction.intendedBalanceSat)
@@ -113,7 +113,7 @@ struct TransactionDetailView: View {
                 Spacer()
                 if copyable {
                     Button { copy(value) } label: { Image(systemName: "doc.on.doc").frame(minWidth: 44, minHeight: 44) }
-                        .accessibilityLabel(Text("Copy \(label)"))
+                        .accessibilityLabel(Text("Copy \(Text(label))"))
                 }
             }
             Text(value).font(NoahFont.callout).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)

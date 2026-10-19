@@ -45,7 +45,10 @@ current-rate fallback, filtered signed CSV values/escaping, and explorer variant
   exported CSV and verified exactly one row: Ark / Successful / Incoming / 1234 sats,
   historical BTC price **82032 USD**. No unrelated rows were exported.
 - Opened the phone detail sheet and the inline detail pane in landscape (wide
-  layout). Historical prices came from the running server's generated Swift client.
+  layout). Pull-to-refresh and technical-details expansion were exercised.
+  Verified readable VoiceOver copy labels and preserved selection when rotating
+  the phone sheet into the wide pane, including dark appearance.
+  Historical prices came from the running server's generated Swift client.
 - Used the existing regtest services and `just bark`'s `--no-deps` wrapper. No
   services, containers with persistent state, ports, or volumes were restarted.
   The current CLI uses `bark send`; the skill's old `send-to` was rejected before

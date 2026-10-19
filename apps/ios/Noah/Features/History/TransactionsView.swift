@@ -5,6 +5,7 @@ struct TransactionsView: View {
     @Environment(HistoryModel.self) private var history
     @State private var filter = HistoryFilter.all
     @State private var selectedID: String?
+    @State private var showSheet = false
     let onRepeatPayment: (RepeatPayment) -> Void
 
     private var filtered: [HistoryTransaction] { history.transactions.filter(filter.includes) }
@@ -37,7 +38,7 @@ struct TransactionsView: View {
                                                        description: Text("Your payments will appear here."))
                             } else {
                                 ForEach(filtered) { transaction in
-                                    Button { selectedID = transaction.id } label: {
+                                    Button { selectedID = transaction.id; showSheet = true } label: {
                                         TransactionRow(transaction: transaction, unit: app.amountUnit)
                                             .padding(.horizontal, 20).padding(.vertical, 16)
                                             .background(selectedID == transaction.id && expanded ? NoahColor.card : Color.clear)
@@ -66,7 +67,8 @@ struct TransactionsView: View {
                     .accessibilityIdentifier("history-detail-pane")
                 }
             }
-            .sheet(isPresented: Binding(get: { !expanded && selected != nil }, set: { if !$0 { selectedID = nil } })) {
+            // Selection survives the system dismissing the phone sheet during rotation.
+            .sheet(isPresented: Binding(get: { !expanded && showSheet && selected != nil }, set: { showSheet = $0 })) {
                 if let selected {
                     NavigationStack {
                         TransactionDetailView(transaction: selected, onRepeatPayment: repeatPayment, onClose: { selectedID = nil })

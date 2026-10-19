@@ -74,6 +74,18 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
             : Accounting(direction: "Incoming", amount: amount)
     }
 
+    var movementKindLabel: String? {
+        switch movementKind {
+        case "arkoor-receive": "Ark Receive"
+        case "onboard": "Board"
+        case "offboard": "Offboard"
+        case "send-onchain": "Onchain Send"
+        case "exit": "Ark Exit"
+        case "lightning-receive": "Lightning Receive"
+        default: movementKind
+        }
+    }
+
     var confirmationLabel: String? {
         guard dateLabel != nil else { return nil }
         return hasConfirmation == true ? "Confirmed at block \(confirmationHeight ?? 0)" : "Unconfirmed"
