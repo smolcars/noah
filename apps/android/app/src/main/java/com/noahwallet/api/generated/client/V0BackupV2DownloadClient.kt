@@ -23,7 +23,7 @@ public class V0BackupV2DownloadClient(
    * Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
    *
    * Parameters:
-   * 	 @param getBackupObjectDownloadPayload 
+   * 	 @param getBackupObjectDownloadPayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.BackupObjectDownloadResponse] if the request was successful.

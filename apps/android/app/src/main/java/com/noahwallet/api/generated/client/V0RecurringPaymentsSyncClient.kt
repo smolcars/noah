@@ -24,7 +24,7 @@ public class V0RecurringPaymentsSyncClient(
    * Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
    *
    * Parameters:
-   * 	 @param syncRecurringPaymentsPayload 
+   * 	 @param syncRecurringPaymentsPayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.DefaultSuccessPayload] if the request was successful.

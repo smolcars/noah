@@ -23,7 +23,7 @@ public class V0BackupUploadUrlClient(
    * Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
    *
    * Parameters:
-   * 	 @param getUploadUrlPayload 
+   * 	 @param getUploadUrlPayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.UploadUrlResponse] if the request was successful.

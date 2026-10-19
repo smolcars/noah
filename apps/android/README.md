@@ -319,3 +319,81 @@ exit because a failed onboarding flow can capture a recovery phrase.
 Unverified: physical devices and actual API 24–29 OS behavior (the formatter's
 fallback path was exercised on API 35); an upgrade with onchain funds, recurring
 rules or an existing RN Expo ID. Interrupted restore recovery is out of scope.
+
+## Server API and identity
+
+`nix develop --command just generate-api-android` generates committed models and
+clients from `api/openapi.json`. The script downloads **Fabrikt 28.1.1** (the latest
+stable release checked on 2026-10-19), verifies its pinned SHA-256, and removes the
+16 MiB tool when finished. [Fabrikt's client support](https://github.com/fabrikt-io/fabrikt/tree/28.1.1)
+limits the OkHttp generator to Jackson; the Ktor target provides suspending calls
+and kotlinx.serialization. We use Ktor 3.6.0 with its OkHttp engine and the app's
+existing OkHttp dependency. Dependencies remain checksum-verified by Gradle.
+
+Generation adaptations: `integer:uint32` maps to `Long` because Fabrikt otherwise
+uses `Int` (the recurring-payment fixture includes 4294967295). The generated
+notification interface's experimental serialization annotation becomes a local
+`@OptIn`, avoiding propagation to callers; generated trailing whitespace is stripped.
+Public method/path templates are
+emitted directly from OpenAPI `security`. No endpoint security list is handwritten.
+All six notification variants remain generated sealed-interface implementations.
+As on iOS, normalized `u64` uses signed `Long`; values above `Long.MAX_VALUE` are
+rejected. The server spec needs explicit bounds if that range becomes meaningful.
+
+`AppServices.shared(context)` owns the shared wallet session, token provider,
+public login client, authenticated client and registration service. Launch starts
+registration after opening the existing wallet, then reports last login. Failed
+setup retries on resume; server failure never prevents access to the wallet.
+Regtest defaults to `http://10.0.2.2:3000`; tests may inject another base URL.
+The login signs k1 using bark-bolt-ffi 0.2.0's offline mnemonic key at index zero.
+Tokens refresh within 3 hours + 60 seconds of expiry; concurrent callers share a
+login, and an auth 401 retries once. Redirects are disabled for these clients.
+
+Tokens are read/written in RN's `RN_KEYCHAIN` DataStore row for
+`com.noah.auth-token.<variant>`, account `noah`, using the existing Keystore alias
+and GCM or CBC cipher. Only token rows can be cleared by the auth writer. Both
+backup rule files already exclude RN_KEYCHAIN preferences and DataStore for cloud
+backup and device transfer; JWTs never go into MMKV. Server state retains the RN
+`server-storage` version-0 envelope and profile changes preserve other preferences.
+
+The shared `apps/fixtures/device-info.json` ports RN's device-report rules plus the
+iOS boundary/null cases; JUnit consumes it. iOS currently has equivalent inline
+tests and has not been changed to consume the new fixture. `nostr-npub.json` is
+reused. Email sending preserves the saved email until verification, reconciles
+"already verified", and identity updates reject nsec locally. No screens or push
+registration were added.
+
+### Server verification (2026-10-19)
+
+- JDK 17/Nix: regtest, mainnet and signet debug APKs and the instrumentation APK
+  built successfully. **72 JVM tests passed**, including **30 server tests**.
+- The server fixtures decode and round-trip all six notification types (7 cases),
+  including unsigned-32 maximum and large satoshi amounts. Regeneration produces
+  no diff. Unknown notification tags and signed-64 overflow are rejected.
+- Dedicated Android 15 ARM64 `NoahNativeServerAgent`, `emulator-5560`:
+  **3 instrumented tests passed**, including live login → registration →
+  last-login against the existing server at `10.0.2.2:3000`, persisted token read,
+  and recovery after a rejected token. Storage tests covered fresh GCM and existing
+  RN CBC aliases, replacements and clearing; device metadata matched Expo sources.
+  No other emulator or Docker service was modified. The test uses a throwaway
+  identity, does not open/fund a wallet, and removes its local token/key afterward.
+- Repository commit hooks passed lint, React Compiler checks, **148 RN tests**,
+  TypeScript checking and Rust formatting. The initial worktree lacked installed
+  Husky files; dependencies were installed and the first commit was amended through
+  the installed hook before proceeding.
+
+To rerun the gated live test, build and install the regtest app and test APK on an
+emulator **you created**, then run (replace the serial with that emulator's):
+
+```sh
+adb -s emulator-5560 shell am instrument -w -e noahServerIT 1 \
+  -e class com.noahwallet.services.ServerIntegrationTest,com.noahwallet.services.AuthTokenStorageTest \
+  com.noahwallet.regtest.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+Do not use `BarkRegtest` / `emulator-5554`, another agent's emulator, or restart the
+regtest stack. Optional `-e noahServerURL http://10.0.2.2:3000` overrides the test
+endpoint. Without the opt-in flag, the live case is skipped. The live run did not
+exercise email delivery, push, physical devices or Android API 24; email/identity
+behavior is covered by unit tests. Like iOS, retry requires HTTP 401 plus one of
+the three auth codes; a late 401 for an old token reuses an already refreshed token.

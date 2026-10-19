@@ -23,7 +23,7 @@ public class V0BackupV2DeleteClient(
    * Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
    *
    * Parameters:
-   * 	 @param deleteBackupObjectPayload 
+   * 	 @param deleteBackupObjectPayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.DefaultSuccessPayload] if the request was successful.

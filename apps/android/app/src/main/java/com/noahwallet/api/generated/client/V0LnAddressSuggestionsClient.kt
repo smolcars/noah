@@ -24,7 +24,7 @@ public class V0LnAddressSuggestionsClient(
    * Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
    *
    * Parameters:
-   * 	 @param lightningAddressSuggestionsPayload 
+   * 	 @param lightningAddressSuggestionsPayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.LightningAddressSuggestionsResponse] if the request was successful.

@@ -23,7 +23,7 @@ public class WellKnownNostrJsonClient(
    * Public endpoint; no bearer token required.
    *
    * Parameters:
-   * 	 @param name 
+   * 	 @param name
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.Nip05Response] if the request was successful.

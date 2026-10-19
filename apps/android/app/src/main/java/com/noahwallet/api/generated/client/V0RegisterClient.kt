@@ -24,7 +24,7 @@ public class V0RegisterClient(
    * Requires a bearer JWT. Registration is optional. Registers the authenticated public key or updates an existing registration.
    *
    * Parameters:
-   * 	 @param registerPayload 
+   * 	 @param registerPayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.RegisterResponse] if the request was successful.

@@ -23,7 +23,7 @@ public class V0AppVersionClient(
    * Public endpoint; no bearer token required.
    *
    * Parameters:
-   * 	 @param appVersionCheckPayload 
+   * 	 @param appVersionCheckPayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.AppVersionInfo] if the request was successful.

@@ -24,7 +24,7 @@ public class V0SupportTicketClient(
    * Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
    *
    * Parameters:
-   * 	 @param submitSupportTicketPayload 
+   * 	 @param submitSupportTicketPayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.SubmitSupportTicketResponse] if the request was successful.

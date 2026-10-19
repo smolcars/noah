@@ -46,6 +46,8 @@ with tempfile.TemporaryDirectory(prefix="noah-fabrikt-") as tmp:
         "// Generated from OpenAPI security by tools/generate-api.py.\n"
         f"package {PACKAGE}\n\nobject PublicOperations {{\n"
         "    val routes: Set<String> = setOf(\n" + "\n".join(sorted(routes)) + "\n    )\n}\n")
+    for source in generated.rglob("*.kt"):
+        source.write_text("\n".join(line.rstrip() for line in source.read_text().splitlines()) + "\n")
     if DEST.exists():
         shutil.rmtree(DEST)
     shutil.copytree(generated, DEST)

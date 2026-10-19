@@ -23,7 +23,7 @@ public class V0AuthLoginClient(
    * Public endpoint; no bearer token required.
    *
    * Parameters:
-   * 	 @param authLoginPayload 
+   * 	 @param authLoginPayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.AuthLoginResponse] if the request was successful.

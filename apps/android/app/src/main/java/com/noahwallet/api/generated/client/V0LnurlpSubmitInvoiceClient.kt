@@ -24,7 +24,7 @@ public class V0LnurlpSubmitInvoiceClient(
    * Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
    *
    * Parameters:
-   * 	 @param submitInvoicePayload 
+   * 	 @param submitInvoicePayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.DefaultSuccessPayload] if the request was successful.

@@ -23,7 +23,7 @@ public class V0PricesClient(
    * Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
    *
    * Parameters:
-   * 	 @param fiatPricesPayload 
+   * 	 @param fiatPricesPayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.FiatPricesResponse] if the request was successful.

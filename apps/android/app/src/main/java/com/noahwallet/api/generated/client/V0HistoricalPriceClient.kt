@@ -23,7 +23,7 @@ public class V0HistoricalPriceClient(
    * Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
    *
    * Parameters:
-   * 	 @param historicalFiatPricePayload 
+   * 	 @param historicalFiatPricePayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.HistoricalFiatPriceResponse] if the request was successful.

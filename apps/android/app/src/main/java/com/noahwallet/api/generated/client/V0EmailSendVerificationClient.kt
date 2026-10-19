@@ -24,7 +24,7 @@ public class V0EmailSendVerificationClient(
    * Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
    *
    * Parameters:
-   * 	 @param sendEmailVerificationPayload 
+   * 	 @param sendEmailVerificationPayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.EmailVerificationResponse] if the request was successful.

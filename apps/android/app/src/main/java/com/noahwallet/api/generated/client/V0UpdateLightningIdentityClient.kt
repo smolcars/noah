@@ -24,7 +24,7 @@ public class V0UpdateLightningIdentityClient(
    * Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
    *
    * Parameters:
-   * 	 @param updateLightningIdentityPayload 
+   * 	 @param updateLightningIdentityPayload
    *
    * Returns:
    * 	[NetworkResult.Success] with [com.noahwallet.api.generated.models.LightningIdentityResponse] if the request was successful.
