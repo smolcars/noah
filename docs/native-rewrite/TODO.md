@@ -109,7 +109,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Restore: list (temporary token) → download (size + SHA-256 vs server record) → open → validate → journaled swap (`RestoreTransaction`) under an exclusive session hold → open check without daemon → seed save as commit point; v1 legacy fallback through the same transaction; launch settles an interrupted restore before reading launch state — iOS (live round trip + crash-boundary, race and Keychain-failure tests)
 - [x] Unpack limits: streaming 1 GiB cap (headers can lie), CRC-32 verified per entry — iOS
 - [ ] Restore — Android (same journal semantics)
-- [ ] Restore UI (RestoreWalletScreen); seed `backup-storage` after a restore (`BackupCoordinator.seedRestored`)
+- [x] Restore UI (RestoreWalletScreen); seed `backup-storage` after a restore (`BackupCoordinator.seedRestored`) — iOS
 - [x] Backup coordinator: single in-flight, 5 s debounce, generation counter, backoff 15 s → 15 min with jitter, suspension gates; `backup-storage` with RN's actions; triggers from wallet state changes (session-owned), foreground and push — iOS
 - [ ] Backup coordinator — Android
 - [x] Independently built v2 + v1 backup files (Node crypto + Info-ZIP, `backup-archives.json`) open on iOS
@@ -128,7 +128,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] BetaWarningScreen (accept before create, no double create) — iOS
 - [x] MnemonicScreen in onboarding (numbered grid, local-only expiring copy) — iOS
 - [ ] MnemonicScreen from Settings with biometric re-auth
-- [ ] RestoreWalletScreen (backup restore with staged progress)
+- [x] RestoreWalletScreen (backup restore with staged progress) — iOS
 - [x] EmailVerificationScreen (send/resend, 6-digit OTP, skip, reconcile verified) — iOS
 - [x] LightningAddressScreen (username/domain, optional npub, skip) — iOS
 - [ ] PushNotificationsRequiredScreen
