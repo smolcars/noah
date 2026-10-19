@@ -3,6 +3,7 @@ import SwiftUI
 /// Picks onboarding, the wallet tabs or a blocking message from `AppModel`.
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -22,6 +23,9 @@ struct RootView: View {
             }
         }
         .task { await model.start() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await model.appBecameActive() } }
+        }
     }
 }
 

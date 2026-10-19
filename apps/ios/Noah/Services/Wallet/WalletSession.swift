@@ -87,11 +87,12 @@ actor WalletSession {
     private var drainWaiters: [CheckedContinuation<Void, Never>] = []
     private var observers: [UUID: Observer] = [:]
 
-    /// Long-lived notification readers (receive completion). Not counted
+    /// Long-lived readers (receive completion, state changes). Not counted
     /// calls: `close` stops them first, then waits for them to end.
     private struct Observer {
         let task: Task<Void, Never>
-        let holder: NotificationHolder
+        /// Releases the reader's pending native wait.
+        let stop: @Sendable () -> Void
     }
 
     init(variant: AppVariant = .current, location: WalletDataLocation? = nil, opener: Opener? = nil) {
@@ -405,10 +406,38 @@ actor WalletSession {
             }
             await self?.observerEnded(id)
         }
-        observers[id] = Observer(task: task, holder: holder)
+        observers[id] = Observer(task: task, stop: { holder.cancelNextNotificationWait() })
         continuation.onTermination = { _ in
             task.cancel()
             holder.cancelNextNotificationWait()
+        }
+        return stream
+    }
+
+    /// Every committed database change (`initial`, `databaseChanged`,
+    /// `resyncRequired`), for scheduling backups. Session-owned like the
+    /// receive observer: `close` stops it and waits for it.
+    func stateChanges() throws -> AsyncThrowingStream<StateChangeEvent, Error> {
+        guard case .open(let handles) = state else { throw SessionError.notOpen }
+        let subscription = try handles.wallet.stateChanges()
+        let id = UUID()
+        let (stream, continuation) = AsyncThrowingStream<StateChangeEvent, Error>.makeStream()
+        let task = Task.detached { [weak self] in
+            do {
+                while !Task.isCancelled, let event = try await subscription.nextChange() {
+                    continuation.yield(event)
+                }
+                continuation.finish()
+            } catch {
+                continuation.finish(throwing: error)
+            }
+            subscription.stop()
+            await self?.observerEnded(id)
+        }
+        observers[id] = Observer(task: task, stop: { subscription.stop() })
+        continuation.onTermination = { _ in
+            task.cancel()
+            subscription.stop()
         }
         return stream
     }
@@ -427,7 +456,7 @@ actor WalletSession {
         let running = Array(observers.values)
         for observer in running {
             observer.task.cancel()
-            observer.holder.cancelNextNotificationWait()
+            observer.stop()
         }
         for observer in running { await observer.task.value }
     }

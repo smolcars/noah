@@ -11,13 +11,23 @@ final class AppServices: Sendable {
     let tokens: AuthTokenProvider
     let client: Client
     let seed: KeychainPassword
+    /// One backup at a time for UI, push and background work.
+    let backupCoordinator: BackupCoordinator
 
     init(variant: AppVariant, session: WalletSession = .shared) {
         self.variant = variant
         self.session = session
-        self.tokens = AuthTokenProvider(dependencies: .live(variant: variant))
-        self.client = ServerClient.make(variant: variant, tokens: tokens)
-        self.seed = KeychainPassword.mnemonic(for: variant)
+        let tokens = AuthTokenProvider(dependencies: .live(variant: variant))
+        let client = ServerClient.make(variant: variant, tokens: tokens)
+        let seed = KeychainPassword.mnemonic(for: variant)
+        self.tokens = tokens
+        self.client = client
+        self.seed = seed
+        let backups = BackupService(session: session, client: client, readMnemonic: {
+            guard case .found(let mnemonic) = seed.read() else { throw SeedUnavailable() }
+            return mnemonic
+        })
+        backupCoordinator = BackupCoordinator(dependencies: .live(service: backups, session: session))
     }
 
     var appVersion: String {
@@ -38,5 +48,25 @@ final class AppServices: Sendable {
 
     var backupService: BackupService {
         BackupService(session: session, client: client, readMnemonic: { [self] in try readMnemonic() })
+    }
+}
+
+extension BackupCoordinator.Dependencies {
+    static func live(service: BackupService, session: WalletSession, settings: SettingsStorage = .shared) -> Self {
+        Self(
+            perform: { last, onUploadRequired in
+                try await service.performBackup(lastUploadedSnapshotSha256: last, onUploadRequired: onUploadRequired)
+            },
+            canBackup: { requireEnabled in
+                // RN `canBackup`: initialized, loaded (open) and not suspended;
+                // automatic backups also need the user's backup setting.
+                guard await session.isOpen else { return false }
+                let wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
+                guard wallet?.isInitialized == true, wallet?.isWalletSuspended != true else { return false }
+                guard requireEnabled else { return true }
+                return settings.persistedState(PersistedServerState.self, key: PersistedServerState.key)?.isBackupEnabled == true
+            },
+            loadState: { settings.persistedState(PersistedBackupState.self, key: PersistedBackupState.key) ?? .init() },
+            saveState: { try? settings.setPersistedState($0, key: PersistedBackupState.key, version: PersistedBackupState.version) })
     }
 }

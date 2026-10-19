@@ -109,8 +109,9 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Restore: list (temporary token) → download (size + SHA-256 vs server record) → open → validate → journaled swap (`RestoreTransaction`) under an exclusive session hold → open check without daemon → seed save as commit point; v1 legacy fallback through the same transaction; launch settles an interrupted restore before reading launch state — iOS (live round trip + crash-boundary, race and Keychain-failure tests)
 - [x] Unpack limits: streaming 1 GiB cap (headers can lie), CRC-32 verified per entry — iOS
 - [ ] Restore — Android (same journal semantics)
-- [ ] Restore UI (RestoreWalletScreen) and `backup-storage` bookkeeping
-- [ ] Backup coordinator: single in-flight, 5 s debounce, generation counter, backoff 15 s → 15 min with jitter, suspension gates
+- [ ] Restore UI (RestoreWalletScreen); seed `backup-storage` after a restore (`BackupCoordinator.seedRestored`)
+- [x] Backup coordinator: single in-flight, 5 s debounce, generation counter, backoff 15 s → 15 min with jitter, suspension gates; `backup-storage` with RN's actions; triggers from wallet state changes (session-owned), foreground and push — iOS
+- [ ] Backup coordinator — Android
 - [x] Independently built v2 + v1 backup files (Node crypto + Info-ZIP, `backup-archives.json`) open on iOS
 - [ ] Same fixtures on Android; iOS ↔ Android round trip; `scripts/decrypt_backup.js` supports v2
 

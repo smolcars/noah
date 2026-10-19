@@ -104,8 +104,8 @@ extension PushJobs.Dependencies {
             },
             claimLightning: { try await session.claimLightningReceives() },
             backup: {
-                // The backup coordinator (dedupe against the last upload) lands with backup-storage.
-                _ = try await services.backupService.performBackup(lastUploadedSnapshotSha256: nil)
+                // RN `triggerBackupTask`: flush regardless of the backup setting.
+                try await services.backupCoordinator.flush(.push, requireEnabled: false)
             },
             reportJob: { report, error, k1 in
                 let message = error.map(SafeErrorDescription.of)

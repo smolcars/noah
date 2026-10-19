@@ -24,19 +24,27 @@ struct BackupService: Sendable {
         _ = try await client.updateBackupSettings(body: .json(.init(backupEnabled: true))).ok
     }
 
-    func performBackup(lastUploadedSnapshotSha256: String?) async throws -> Outcome {
+    /// `onUploadRequired` runs once the snapshot is known to differ from
+    /// the last upload (RN marks the backup in progress there).
+    func performBackup(
+        lastUploadedSnapshotSha256: String?, onUploadRequired: @Sendable () -> Void = {}
+    ) async throws -> Outcome {
         try await scratch.withFolder("backup") { folder in
-            try await performBackup(lastUploadedSnapshotSha256: lastUploadedSnapshotSha256, in: folder)
+            try await performBackup(
+                lastUploadedSnapshotSha256: lastUploadedSnapshotSha256, onUploadRequired: onUploadRequired, in: folder)
         }
     }
 
-    private func performBackup(lastUploadedSnapshotSha256: String?, in folder: URL) async throws -> Outcome {
+    private func performBackup(
+        lastUploadedSnapshotSha256: String?, onUploadRequired: @Sendable () -> Void, in folder: URL
+    ) async throws -> Outcome {
         let snapshotURL = folder.appending(path: "wallet-snapshot.sqlite")
         let encryptedURL = folder.appending(path: "wallet-backup.noahbackup")
         let snapshot = try await session.createSnapshot(at: snapshotURL)
         if snapshot.sha256 == lastUploadedSnapshotSha256 {
             return Outcome(backupId: nil, snapshotSha256: snapshot.sha256, uploaded: false)
         }
+        onUploadRequired()
 
         let encrypted = try BackupArchive.seal(
             snapshot: snapshotURL, manifest: Self.manifest(for: snapshot), mnemonic: try readMnemonic(),

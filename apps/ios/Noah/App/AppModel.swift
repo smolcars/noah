@@ -33,6 +33,7 @@ final class AppModel {
     private let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
     @ObservationIgnored private let creator: WalletCreator
     @ObservationIgnored private var started = false
+    @ObservationIgnored private var backupTriggers: Task<Void, Never>?
 
     init() {
         server = ServerRegistration(variant: .current, client: AppServices.shared.client)
@@ -105,6 +106,7 @@ final class AppModel {
         phase = .wallet
         await refresh()
         await registerPush()
+        startBackupTriggers()
     }
 
     func refresh() async {
@@ -156,7 +158,55 @@ final class AppModel {
             walletError = String(localized: "Couldn't open your wallet.")
             return
         }
+        startBackupTriggers()
         await startServerServices()
+    }
+
+    // MARK: Backups (RN `useBackupCoordinator`)
+
+    /// In the wallet, backups switched on, initialized and not suspended.
+    private var canCoordinateBackups: Bool {
+        guard phase == .wallet, server.state.isBackupEnabled == true else { return false }
+        let wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
+        return wallet?.isInitialized == true && wallet?.isWalletSuspended != true
+    }
+
+    /// Back up after committed wallet changes (debounced); at once on the
+    /// first event and after a resync. Ends when the session closes.
+    private func startBackupTriggers() {
+        guard backupTriggers == nil, canCoordinateBackups else { return }
+        let coordinator = AppServices.shared.backupCoordinator
+        let session = self.session
+        backupTriggers = Task { [weak self] in
+            defer { self?.backupTriggers = nil }
+            var resubscribe = true
+            while resubscribe, !Task.isCancelled {
+                resubscribe = false
+                do {
+                    for try await event in try await session.stateChanges() {
+                        switch event.reason {
+                        case "databaseChanged":
+                            await coordinator.schedule(.databaseChanged)
+                        case "resyncRequired":
+                            await coordinator.schedule(.resyncRequired, immediate: true)
+                            resubscribe = true
+                        default:
+                            await coordinator.schedule(.startup, immediate: true)
+                        }
+                        if resubscribe { break }
+                    }
+                } catch {
+                    self?.log.w("Couldn't watch wallet changes for backups: \(Self.describe(error))")
+                    await coordinator.schedule(.startup, immediate: true)
+                }
+            }
+        }
+    }
+
+    func appBecameActive() async {
+        guard canCoordinateBackups else { return }
+        startBackupTriggers()
+        await AppServices.shared.backupCoordinator.schedule(.appForeground, immediate: true)
     }
 
     private func startServerServices() async {
