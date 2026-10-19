@@ -59,6 +59,44 @@ struct ServerAuthTests {
         #expect(fake.stored == fresh)
     }
 
+    /// Unsigned test token for a given subject (login key).
+    static func token(subject: String, expiresIn seconds: TimeInterval, now: Date) -> String {
+        let payload = try! JSONSerialization.data(withJSONObject: [
+            "sub": subject, "exp": Int(now.timeIntervalSince1970 + seconds),
+        ])
+        let encoded = payload.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        return "e30.\(encoded).sig"
+    }
+
+    /// After the seed changes (new, restored or replaced wallet), a still-valid
+    /// token for the old wallet must not be used: the server would treat the
+    /// app as the old user.
+    @Test func tokenForAnotherWalletIsNeverReused() async throws {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let current = Self.token(subject: "02current", expiresIn: 72 * 3600, now: now)
+        let fake = Fake(nextToken: current)
+        fake.stored = Self.token(subject: "02previous", expiresIn: 72 * 3600, now: now)
+        var dependencies = fake.dependencies(now: now)
+        dependencies.loginKey = { _ in "02current" }
+        let provider = AuthTokenProvider(dependencies: dependencies)
+
+        #expect(try await provider.token() == current)
+        #expect(fake.logins == 1)
+        #expect(fake.stored == current)
+        // The matching token is then reused as before.
+        #expect(try await provider.token() == current)
+        #expect(fake.logins == 1)
+    }
+
+    @Test func loginKeyMatchesTheOfflineLoginDerivation() throws {
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+        let key = try ServerClient.loginKey(variant: .regtest, mnemonic: mnemonic)
+        #expect(key.count == 66 && (key.hasPrefix("02") || key.hasPrefix("03")))
+        #expect(try JWT.subject(of: Self.token(subject: key, expiresIn: 60, now: Date())) == key)
+    }
+
     @Test func forcedRefreshLogsInAgain() async throws {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         let fake = Fake(nextToken: Self.token(expiresIn: 72 * 3600, now: now))

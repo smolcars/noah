@@ -13,6 +13,17 @@ enum JWT {
     static let clockSkew: TimeInterval = 60
 
     static func expiry(of token: String) throws(Failure) -> Date {
+        guard let exp = try payload(of: token)["exp"] as? NSNumber, exp.doubleValue.isFinite else { throw .missingExpiry }
+        return Date(timeIntervalSince1970: exp.doubleValue)
+    }
+
+    /// `sub`: the login public key the server issued the token to.
+    static func subject(of token: String) throws(Failure) -> String {
+        guard let subject = try payload(of: token)["sub"] as? String else { throw .malformed }
+        return subject
+    }
+
+    private static func payload(of token: String) throws(Failure) -> [String: Any] {
         let segments = token.split(separator: ".", omittingEmptySubsequences: false)
         guard segments.count == 3 else { throw .malformed }
         var base64 = segments[1].replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
@@ -20,8 +31,7 @@ enum JWT {
         guard let data = Data(base64Encoded: base64),
             let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { throw .malformed }
-        guard let exp = payload["exp"] as? NSNumber, exp.doubleValue.isFinite else { throw .missingExpiry }
-        return Date(timeIntervalSince1970: exp.doubleValue)
+        return payload
     }
 
     static func needsRefresh(_ token: String, now: Date = Date()) throws(Failure) -> Bool {

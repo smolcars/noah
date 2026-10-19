@@ -31,11 +31,16 @@ enum ServerClient {
 
     /// Live login: GET /v0/getk1, sign it with the offline key at index 0,
     /// POST /v0/auth/login.
+    /// The offline login key (`m/350/0`) the server puts in the token's `sub`.
+    static func loginKey(variant: AppVariant, mnemonic: String) throws -> String {
+        try derivePublicKeyFromMnemonic(mnemonic: mnemonic, network: WalletConfiguration.base(for: variant).network, index: 0)
+    }
+
     static func login(variant: AppVariant, mnemonic: String) async throws -> String {
         let client = makePublic(variant: variant)
         let k1 = try await client.getK1().ok.body.json.k1
         let network = WalletConfiguration.base(for: variant).network
-        let key = try derivePublicKeyFromMnemonic(mnemonic: mnemonic, network: network, index: 0)
+        let key = try loginKey(variant: variant, mnemonic: mnemonic)
         let signature = try signMessageWithMnemonic(message: k1, mnemonic: mnemonic, network: network, index: 0)
         return try await client.authLogin(body: .json(.init(k1: k1, key: key, sig: signature)))
             .ok.body.json.accessToken
@@ -59,7 +64,8 @@ extension AuthTokenProvider.Dependencies {
                 return mnemonic
             },
             login: { try await ServerClient.login(variant: variant, mnemonic: $0) },
-            now: { Date() })
+            now: { Date() },
+            loginKey: { try ServerClient.loginKey(variant: variant, mnemonic: $0) })
     }
 }
 
