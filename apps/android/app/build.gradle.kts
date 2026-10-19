@@ -45,6 +45,7 @@ android {
     defaultConfig {
         minSdk = 24
         targetSdk = 37
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = 100
         versionName = "0.2.0"
     }
@@ -110,6 +111,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     sourceSets.getByName("test").resources.directories += "../../fixtures"
+    sourceSets.getByName("androidTest").assets.directories += "../../fixtures"
 }
 
 dependencies {
@@ -129,8 +131,13 @@ dependencies {
     implementation(libs.mmkv)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
-    implementation(libs.unifiedpush)
+    // Same exclusion as RN's noah-tools: use AndroidX Security's Android Tink distribution.
+    implementation(libs.unifiedpush) { exclude(group = "com.google.crypto.tink", module = "tink") }
     // GitHub's Ivy artifact has no transitive metadata; coroutines-core is explicit above.
     implementation("${libs.bark.bolt.get()}@aar")
+    implementation(libs.datastore.preferences)
+    implementation(libs.security.crypto)
     testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.junit)
 }
