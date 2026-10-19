@@ -45,6 +45,10 @@ packages:
   MMKV:
     url: https://github.com/Tencent/MMKV
     exactVersion: 2.4.3
+  # Same version the RN app's noah-tools used for .noahbackup archives.
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation
+    exactVersion: 0.9.20
   # Runtime for the client generated from api/openapi.json (see Noah/API).
   OpenAPIRuntime:
     url: https://github.com/apple/swift-openapi-runtime
@@ -78,6 +82,8 @@ targets:
         product: OpenAPIRuntime
       - package: OpenAPIURLSession
         product: OpenAPIURLSession
+      - package: ZIPFoundation
+        product: ZIPFoundation
 
   NoahWidget:
     type: app-extension

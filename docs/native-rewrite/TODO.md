@@ -88,7 +88,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 ### 0.7 Backups
 - [x] Envelope crypto v1/v2 (salt16 | nonce12 | AES-256-GCM; PBKDF2-SHA256 600k) with Node-generated vectors (`apps/fixtures/backup-crypto.json`) — iOS
 - [ ] Envelope crypto — Android (same vectors)
-- [ ] v2 archive: manifest.json + db.sqlite zip
+- [x] v2 archive: manifest.json + db.sqlite zip (strict manifest, only those two entries extracted, no-overwrite writes) — iOS
+- [ ] v2 archive — Android
 - [ ] v1 legacy restore
 - [ ] Snapshot via FFI; install/rollback sequence; atomic writes; temp cleanup
 - [ ] Backup coordinator: single in-flight, 5 s debounce, generation counter, backoff 15 s → 15 min with jitter, suspension gates
