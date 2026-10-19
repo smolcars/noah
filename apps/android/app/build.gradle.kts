@@ -48,6 +48,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = 100
         versionName = "0.2.0"
+        // Same ABIs as the RN app; MMKV and bark-bolt-ffi ship no x86 libraries.
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
     flavorDimensions += "version"

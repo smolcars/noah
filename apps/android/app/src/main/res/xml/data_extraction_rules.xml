@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+. Keystore-encrypted files must never be restored onto another
+     device: their keys do not travel with the backup, so the copies would be
+     unreadable and could mask the real seed. The native seed lives in
+     noBackupFilesDir, which is never backed up. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="RN_KEYCHAIN.xml" />
+        <exclude domain="sharedpref" path="noah_native_secrets.xml" />
+        <exclude domain="file" path="datastore/RN_KEYCHAIN.preferences_pb" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="RN_KEYCHAIN.xml" />
+        <exclude domain="sharedpref" path="noah_native_secrets.xml" />
+        <exclude domain="file" path="datastore/RN_KEYCHAIN.preferences_pb" />
+    </device-transfer>
+</data-extraction-rules>

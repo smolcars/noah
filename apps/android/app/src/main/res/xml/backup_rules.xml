@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and older; same exclusions as data_extraction_rules.xml. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="RN_KEYCHAIN.xml" />
+    <exclude domain="sharedpref" path="noah_native_secrets.xml" />
+    <exclude domain="file" path="datastore/RN_KEYCHAIN.preferences_pb" />
+</full-backup-content>
