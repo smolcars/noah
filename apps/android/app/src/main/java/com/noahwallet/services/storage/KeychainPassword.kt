@@ -63,6 +63,24 @@ class KeychainPassword private constructor(
 
     suspend fun clearAuthToken() {
         check(service.startsWith("com.noah.auth-token."))
+        clearRecords()
+    }
+
+    suspend fun deleteWalletSeed() {
+        check(mnemonicVariant != null)
+        clearRecords()
+        // This preferences file is wallet-specific (the package separates variants). Clearing even
+        // unreadable encrypted records prevents the fallback reader from resurrecting a deleted seed.
+        check(context.getSharedPreferences("noah_native_secrets", Context.MODE_PRIVATE).edit().clear().commit())
+        check(context.deleteSharedPreferences("noah_native_secrets")) { "Cannot delete legacy seed preferences" }
+        val directory = File(context.applicationInfo.dataDir, "shared_prefs")
+        if (directory.exists()) {
+            val fd = android.system.Os.open(directory.path, android.system.OsConstants.O_RDONLY, 0)
+            try { android.system.Os.fsync(fd) } finally { android.system.Os.close(fd) }
+        }
+    }
+
+    private suspend fun clearRecords() {
         context.rnKeychain.edit { prefs -> fields.forEach { prefs.remove(stringPreferencesKey("$service:$it")) } }
         val editor = context.getSharedPreferences("RN_KEYCHAIN", Context.MODE_PRIVATE).edit()
         fields.forEach { editor.remove("$service:$it") }

@@ -85,6 +85,32 @@ class BackupCoordinatorTest {
         eventually { w.clock.pending().size == 1 }; w.coordinator.cancelScheduled(); eventually { w.clock.pending().isEmpty() }
         assertTrue(w.calls.isEmpty())
     }
+    @Test fun deletedUploadInvalidatesInFlightUnchangedPass() = runBlocking {
+        val w = World()
+        w.coordinator.flush(BackupCoordinator.Reason.manual, false)
+        val gate = CompletableDeferred<Unit>(); w.held = gate
+        val pass = async { w.coordinator.flush(BackupCoordinator.Reason.manual, false) }
+        eventually { w.calls.size == 2 }
+        val deletion = async { w.coordinator.forgetUploadedBackup("id-sha-1") }
+        yield(); assertFalse(deletion.isCompleted)
+        gate.complete(Unit); pass.await(); deletion.await()
+        assertNull(w.state.lastUploadedSnapshotSha256); assertNull(w.state.lastBackupId); assertTrue(w.state.backupPending)
+        w.coordinator.flush(BackupCoordinator.Reason.manual, false)
+        assertNull(w.calls.last())
+        w.coordinator.cancelScheduled()
+    }
+
+    @Test fun settleDrainsAnInFlightBackupBeforeStateCanBeErased() = runBlocking {
+        val w = World(); val gate = CompletableDeferred<Unit>(); w.held = gate
+        w.coordinator.schedule(BackupCoordinator.Reason.startup, true); w.entered.await()
+        w.eligible = false
+        val drain = async { w.coordinator.settle() }; yield(); assertFalse(drain.isCompleted)
+        gate.complete(Unit); drain.await()
+        w.state = PersistedBackupState()
+        w.coordinator.schedule(BackupCoordinator.Reason.databaseChanged)
+        assertEquals(PersistedBackupState(), w.state); assertTrue(w.clock.pending().isEmpty())
+    }
+
     @Test fun rnShapeAndExplicitNulls() {
         val state = PersistedBackupState.decode("""{"state":{"backupPending":true,"lastBackupAt":1784160000000,"lastBackupAttemptAt":null,"lastBackupStatus":"in_progress","lastBackupError":null,"lastBackupId":"b1","lastUploadedSnapshotSha256":"ab"},"version":0}""")
         state.markPending(); assertEquals("in_progress", state.lastBackupStatus); assertEquals("ab", state.lastUploadedSnapshotSha256)

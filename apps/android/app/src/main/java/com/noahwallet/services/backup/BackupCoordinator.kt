@@ -50,6 +50,24 @@ class BackupCoordinator(private val dependencies: Dependencies) {
     fun cancelScheduled() = synchronized(lock) {
         debounce?.cancel(); debounce = null; retry?.cancel(); retry = null
     }
+    suspend fun settle() {
+        val pass = synchronized(lock) { cancelScheduled(); inFlight }
+        pass?.await()
+        cancelScheduled()
+    }
+
+    suspend fun forgetUploadedBackup(id: String) {
+        while (true) {
+            val pass = synchronized(lock) {
+                inFlight ?: run {
+                    update { it.forgetUploadedBackup(id) }
+                    return
+                }
+            }
+            pass.await()
+        }
+    }
+
     private fun passTask(): Deferred<Result<Unit>> {
         inFlight?.let { return it }
         return scope.async(start = CoroutineStart.LAZY) {

@@ -6,10 +6,14 @@ import kotlinx.coroutines.sync.withLock
 
 class SeedStorage internal constructor(
     private val native: NativeSecretStore,
+    private val deleteLegacy: suspend () -> Unit,
     private val legacy: suspend () -> SecretResult,
 ) {
+    internal constructor(native: NativeSecretStore, legacy: suspend () -> SecretResult) : this(native, {}, legacy)
+
     constructor(context: Context, variant: String) : this(
         nativeSecretStore(context, variant),
+        { KeychainPassword.mnemonic(context, variant).deleteWalletSeed() },
         { KeychainPassword.mnemonic(context, variant).read() },
     )
 
@@ -37,6 +41,12 @@ class SeedStorage internal constructor(
 
     internal suspend fun delete(onlyIfValueIs: String) = migrationLock.withLock {
         native.delete(onlyIfValueIs)
+    }
+
+    suspend fun deleteWalletSeed() = migrationLock.withLock {
+        // Keep the native copy if clearing a legacy source fails; never migrate an old seed back.
+        deleteLegacy()
+        native.deleteWalletSeed()
     }
 
     companion object {

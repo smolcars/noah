@@ -64,16 +64,17 @@ class PushRuntime(private val context: Context, private val services: AppService
         },
         announceReceived = { sats, usd, hash -> PushNotifications.received(context, sats, usd, hash) },
         refreshWidget = {
-            services.session.summary()?.let {
-                val expiry = try { services.session.closestExpiryBlocks() }
+            services.session.withOpen { handles ->
+                val summary = handles.summary()
+                val expiry = try { handles.closestExpiryBlocks() }
                 catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { null }
-                WidgetDataWriter.write(context, it.balance, expiry, BuildConfig.APP_VARIANT)
+                WidgetDataWriter.write(context, summary.balance, expiry, BuildConfig.APP_VARIANT)
             }
         }, log = log::i,
     ))
 
-    suspend fun register(): PushRegistration.Outcome {
+    suspend fun register(onToken: (String) -> Unit = {}): PushRegistration.Outcome {
         PushNotifications.ensureChannels(context)
         val outcome = PushRegistration(
             onboarded = services::isOnboarded,
@@ -94,7 +95,7 @@ class PushRuntime(private val context: Context, private val services: AppService
                     ExpoPushToken(it).fetch(ExpoPushToken.request(ExpoInstallationID(context).getOrCreate(), context.packageName, token))
                 }.also { log.i("Expo token obtained") }
             },
-            registerToken = { V0RegisterPushTokenClient(client).registerPushToken(RegisterPushToken(it)).value() },
+            registerToken = { V0RegisterPushTokenClient(client).registerPushToken(RegisterPushToken(it)).value(); onToken(it) },
         ).register()
         if (outcome == PushRegistration.Outcome.registered) log.i("Push token registered with Noah server")
         return outcome

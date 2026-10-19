@@ -194,6 +194,29 @@ class SecretStorageTest {
         assertEquals(SecretResult.NotFound, store.read())
     }
 
+    @Test fun explicitDeleteClearsLegacyBeforeNativeAndCannotMigrateBack() = runBlocking {
+        val file = FakeFile()
+        val native = NativeSecretStore("test", FakeKeys(), file)
+        native.save(secret)
+        var legacy: SecretResult = SecretResult.Found(secret)
+        val storage = SeedStorage(native, deleteLegacy = {
+            assertTrue(native.read() is SecretResult.Found)
+            legacy = SecretResult.NotFound
+        }, legacy = { legacy })
+        storage.deleteWalletSeed()
+        assertEquals(SecretResult.NotFound, storage.read())
+        assertNull(file.bytes)
+    }
+
+    @Test fun failedLegacyDeletePreservesNativeSeed() = runBlocking {
+        val file = FakeFile()
+        val native = NativeSecretStore("test", FakeKeys(), file)
+        native.save(secret)
+        val storage = SeedStorage(native, deleteLegacy = { error("Delete failed") }, legacy = { SecretResult.NotFound })
+        assertTrue(runCatching { storage.deleteWalletSeed() }.isFailure)
+        assertFound(native.read())
+    }
+
     private fun assertFound(result: SecretResult) {
         assertTrue("Secret round trip failed", result is SecretResult.Found && result.value == secret)
     }

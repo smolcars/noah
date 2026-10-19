@@ -16,6 +16,8 @@ class SettingsStorage(context: Context) {
 
     fun string(key: String): String? = mmkv.decodeString(key)
     fun set(value: String, key: String) { check(mmkv.encode(key, value)) }
+    fun sync() { mmkv.sync() }
+    fun removeAll() { mmkv.clearAll(); mmkv.sync() }
     inline fun <reified State> persistedState(key: String): State? =
         string(key)?.let { PersistedStateCodec.decode<State>(it) }
     inline fun <reified State> setPersistedState(state: State, key: String, version: Int) =

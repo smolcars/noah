@@ -87,6 +87,33 @@ class AppServices private constructor(private val context: Context) {
             ServerClient.make(ServerEndpoint.baseURL(variant, BuildConfig.REGTEST_SERVER_URL), temporaryTokens)
         })
 
+    val lifecycle = com.noahwallet.services.wallet.WalletLifecycle(
+        session, WalletDataLocation(context.filesDir, variant),
+        setSuspended = { suspended ->
+            val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
+            settings.setPersistedState(wallet.copy(isWalletSuspended = suspended), PersistedWalletState.key, 0)
+            settings.sync()
+        },
+        deregister = { com.noahwallet.api.generated.client.V0DeregisterClient(client).deregister().value() },
+        deleteSeed = seed::deleteWalletSeed,
+        clearToken = tokens::clear,
+        clearSettings = {
+            settings.removeAll()
+            check(context.getSharedPreferences("gt_store", Context.MODE_PRIVATE).edit().clear().commit())
+        },
+        clearWidget = { com.noahwallet.services.push.WidgetDataWriter.clear(context, variant) },
+        sweepScratch = scratch::sweepAbandoned,
+        settleBackground = {
+            reconcileBackupTriggers()
+            backupCoordinator.settle()
+            startup.withLock { started = false }
+        },
+        syncFiles = {
+            val fd = android.system.Os.open(context.filesDir.path, android.system.OsConstants.O_RDONLY, 0)
+            try { android.system.Os.fsync(fd) } finally { android.system.Os.close(fd) }
+        }, warn = log::w,
+    )
+
     private val startup = Mutex()
     private var started = false
 
@@ -115,7 +142,7 @@ class AppServices private constructor(private val context: Context) {
     fun startServerServices() {
         scope.launch {
             startup.withLock {
-                if (!session.isOpen || !isOnboarded()) return@withLock
+                if (!session.isOpen || !isOnboarded() || settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) return@withLock
                 try {
                     registration.ensureRegistered()
                     reconcileBackupTriggers()

@@ -17,9 +17,10 @@ class WalletSession internal constructor(
     private val variant: String,
     private val location: WalletDataLocation,
     private val inspect: (File) -> WalletDatabase.Properties = WalletDatabase::properties,
+    private val isSuspended: () -> Boolean = { false },
     private val opener: suspend (String, String, Boolean, String, Boolean) -> Handles = sdkOpener(variant),
 ) {
-    enum class OpenFailure { walletDatabaseMissing, notABarkWallet, networkMismatch, busy, walletDatabaseExists, restorePending, teardownFailed }
+    enum class OpenFailure { walletDatabaseMissing, notABarkWallet, networkMismatch, busy, walletDatabaseExists, restorePending, teardownFailed, suspended }
     class OpenError(val reason: OpenFailure, val found: String? = null) : Exception(reason.name)
     class SessionError : Exception("Wallet not open")
 
@@ -27,7 +28,17 @@ class WalletSession internal constructor(
         val spendableSats: ULong get() = balance.ark.spendable
     }
 
+    enum class DebugAction(val title: String, val needsInput: Boolean = false, val destructive: Boolean = false) {
+        ark("Get Ark Info"), refresh("Refresh Server"), maintenance("Maintenance"),
+        maintenanceRefresh("Maintenance Refresh"), delegated("Maintenance Delegated"),
+        offboard("Offboard All", true, true), decode("Decode VTXO Hex", true),
+        importVtxo("Import VTXO", true), drop("Drop VTXO", true, true), unlock("Unlock VTXO", true),
+    }
+
     internal interface Handles {
+        suspend fun arkInfo(): io.github.niteshbalusu11.bark.ArkInfo? = throw UnsupportedOperationException()
+        fun mailboxAuthorization(expiry: Long): io.github.niteshbalusu11.bark.MailboxAuthorization = throw UnsupportedOperationException()
+        suspend fun debug(action: DebugAction, input: String): String = throw UnsupportedOperationException()
         fun stateChanges(): Changes = throw UnsupportedOperationException()
         fun notifications(): Notifications
         suspend fun history(): List<Movement>
@@ -186,6 +197,7 @@ class WalletSession internal constructor(
         mnemonic: String, runDaemon: Boolean, appVersion: String, create: Boolean, join: Boolean,
     ): Deferred<Unit>? = withContext(Dispatchers.IO) {
         synchronized(lock) {
+            if (isSuspended()) throw OpenError(OpenFailure.suspended)
             when (val current = state) {
                 is State.Open -> if (join) return@synchronized null else throw OpenError(OpenFailure.busy)
                 is State.Opening -> if (join) return@synchronized current.attempt else throw OpenError(OpenFailure.busy)
@@ -238,6 +250,7 @@ class WalletSession internal constructor(
 
     internal suspend fun <T> withOpen(block: suspend (Handles) -> T): T {
         val handles = synchronized(lock) {
+            if (isSuspended()) throw OpenError(OpenFailure.suspended)
             val handles = (state as? State.Open)?.handles ?: throw SessionError()
             if (runningCalls++ == 0) drained = CompletableDeferred()
             handles
@@ -245,6 +258,10 @@ class WalletSession internal constructor(
         try { return withContext(NonCancellable + Dispatchers.IO) { block(handles) } }
         finally { synchronized(lock) { if (--runningCalls == 0) drained.complete(Unit) } }
     }
+
+    suspend fun arkInfo() = withOpen { it.arkInfo() }
+    suspend fun mailboxAuthorization(expiry: Long) = withOpen { it.mailboxAuthorization(expiry) }
+    suspend fun debug(action: DebugAction, input: String) = withOpen { it.debug(action, input.trim()) }
 
     suspend fun createSnapshot(destination: File): WalletSnapshotInfo = withOpen { it.createSnapshot(destination) }
 
@@ -305,6 +322,12 @@ class WalletSession internal constructor(
         observer.job.join()
     }
 
+    suspend fun closeSettled() = withContext(NonCancellable) {
+        val opening = synchronized(lock) { (state as? State.Opening)?.attempt }
+        try { opening?.await() } catch (_: Exception) { /* A failed open is already closed. */ }
+        close()
+    }
+
     suspend fun close() {
         val handles = synchronized(lock) {
             when (val current = state) {
@@ -329,7 +352,11 @@ class WalletSession internal constructor(
                     synchronized(lock) { state = if (location.restorePending) State.Quarantined(handles) else State.Open(handles) }
                     throw failure
                 }
-                handles.close()
+                try { handles.close() }
+                catch (failure: Throwable) {
+                    synchronized(lock) { state = State.Quarantined(handles) }
+                    throw failure
+                }
                 synchronized(lock) { state = State.Closed }
             }
         }
@@ -340,7 +367,11 @@ class WalletSession internal constructor(
 
         fun shared(context: Context): WalletSession = instance ?: synchronized(this) {
             instance ?: WalletSession(BuildConfig.APP_VARIANT,
-                WalletDataLocation(context.applicationContext.filesDir, BuildConfig.APP_VARIANT))
+                WalletDataLocation(context.applicationContext.filesDir, BuildConfig.APP_VARIANT),
+                isSuspended = {
+                    com.noahwallet.services.storage.SettingsStorage(context).persistedState<com.noahwallet.services.storage.PersistedWalletState>(
+                        com.noahwallet.services.storage.PersistedWalletState.key)?.isWalletSuspended == true
+                })
                 .also { instance = it }
         }
 
@@ -367,6 +398,22 @@ class WalletSession internal constructor(
     }
 
     private class SdkHandles(val wallet: Wallet, val onchain: OnchainWallet) : Handles {
+        override suspend fun arkInfo() = wallet.arkInfo()
+        override fun mailboxAuthorization(expiry: Long) = wallet.mailboxAuthorizationAt(expiry)
+        override suspend fun debug(action: DebugAction, input: String): String {
+            return when (action) {
+                DebugAction.ark -> wallet.arkInfo().toString()
+                DebugAction.refresh -> { wallet.refreshServer(); "Server refreshed" }
+                DebugAction.maintenance -> { wallet.maintenance(); "Maintenance completed" }
+                DebugAction.maintenanceRefresh -> wallet.maintenanceRefresh() ?: "Maintenance refresh completed"
+                DebugAction.delegated -> { wallet.maintenanceDelegated(); "Delegated maintenance completed" }
+                DebugAction.offboard -> wallet.offboardAll(input).toString()
+                DebugAction.decode -> io.github.niteshbalusu11.bark.decodeVtxo(input).toString()
+                DebugAction.importVtxo -> wallet.importVtxos(listOf(input)).toString()
+                DebugAction.drop -> { wallet.dangerousDropVtxo(input); "VTXO removed" }
+                DebugAction.unlock -> { wallet.unlockVtxos(listOf(input), null); "VTXO unlocked" }
+            }
+        }
         override fun stateChanges(): Changes {
             val subscription = wallet.stateChanges()
             return object : Changes {

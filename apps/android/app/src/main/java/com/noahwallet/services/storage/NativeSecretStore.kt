@@ -74,6 +74,8 @@ internal class NativeSecretStore(
         if (current is SecretResult.Found && current.value == onlyIfValueIs) file.delete()
     }
 
+    fun deleteWalletSeed() = synchronized(lock) { file.delete() }
+
     /**
      * Migration and creation: a failed first write must not leave an unreadable file that would
      * mask the legacy seed forever (the deletion is durable). A restore commit keeps it instead.

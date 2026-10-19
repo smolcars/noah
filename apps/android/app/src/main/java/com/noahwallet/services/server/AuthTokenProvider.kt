@@ -58,6 +58,12 @@ class AuthTokenProvider(
         return attempt.await()
     }
 
+    suspend fun clear() {
+        // Deletion has already gated opens and removed the seed. Drain an older login before erase.
+        mutex.withLock { inFlight }?.let { runCatching { it.await() } }
+        mutex.withLock { cached = null; loginKeyCache = null; clearToken() }
+    }
+
     /** Derived once per seed (by digest, so the phrase itself isn't kept as a key). */
     private fun loginKeyFor(mnemonic: String): String? {
         val digest = java.security.MessageDigest.getInstance("SHA-256").digest(mnemonic.toByteArray())

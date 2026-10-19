@@ -18,12 +18,21 @@ object WidgetDataWriter {
         "expiryThreshold" to WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toLong(),
     )
 
+    fun clear(context: Context, variant: String) {
+        check(context.getSharedPreferences("com.noahwallet.$variant", Context.MODE_PRIVATE).edit().clear().commit())
+        broadcast(context, variant)
+    }
+
+    private fun broadcast(context: Context, variant: String) {
+        val name = variant.replaceFirstChar { it.uppercase() }
+        context.sendBroadcast(Intent(NoahWidgetProvider.ACTION_WIDGET_DATA_CHANGED).setComponent(
+            ComponentName(context.packageName, "com.noahwallet.widgets.NoahWidget${name}Provider")))
+    }
+
     fun write(context: Context, balance: WalletBalance, closestExpiryBlocks: Long?, variant: String) {
         val editor = context.getSharedPreferences("com.noahwallet.$variant", Context.MODE_PRIVATE).edit()
         values(balance, closestExpiryBlocks, variant).forEach { (key, value) -> editor.putLong(key, value) }
         check(editor.commit()) { "Widget preferences could not be saved" }
-        val name = variant.replaceFirstChar { it.uppercase() }
-        context.sendBroadcast(Intent(NoahWidgetProvider.ACTION_WIDGET_DATA_CHANGED).setComponent(
-            ComponentName(context.packageName, "com.noahwallet.widgets.NoahWidget${name}Provider")))
+        broadcast(context, variant)
     }
 }

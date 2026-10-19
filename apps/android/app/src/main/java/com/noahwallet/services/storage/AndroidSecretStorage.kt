@@ -57,6 +57,7 @@ internal class AtomicSecretFile(private val path: File) : SecretFile {
     /** Durable: the unlink is synced, so a deleted seed can't reappear after power loss. */
     override fun delete() {
         file.delete()
+        check(listOf(path, File(path.path + ".bak"), File(path.path + ".new")).none { it.exists() }) { "Cannot delete seed file" }
         syncPath(path.parentFile!!)
     }
 
