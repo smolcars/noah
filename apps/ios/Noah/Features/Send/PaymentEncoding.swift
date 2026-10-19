@@ -66,6 +66,7 @@ enum PaymentEncoding {
             let unit = hrpAmount.last!, suffix = ["m","u","n","p"].contains(String(unit))
             let digits = suffix ? String(hrpAmount.dropLast()) : hrpAmount
             guard !digits.isEmpty, digits.allSatisfy(\.isNumber), let value = Decimal(string: digits) else { return nil }
+            if suffix && unit == "p" && !digits.hasSuffix("0") { return nil }
             let factors: [Character: Decimal] = ["m":100000,"u":100,"n":Decimal(string:"0.1")!,"p":Decimal(string:"0.0001")!]
             amount = value * (suffix ? factors[unit]! : 100000000)
         }

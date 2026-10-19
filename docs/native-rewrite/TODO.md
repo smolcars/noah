@@ -154,12 +154,15 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Shared receive-request (9 cases) and fiat-currency (48 cases) fixtures in JUnit; session observer cancellation/close regressions — Android
 
 ## M3 — Send
-- [ ] Input parsing (BIP21/BIP321, bolt11, bolt12, lightning address, Ark address, onchain) — fixtures from `client/tests/unit/{sendUtils,sendFlow,onchainSend,lightningInvoice,fiatCurrency}`
-- [ ] SendScreen (amount-first + recipient-first, MAX, method/source choice, fee review, notes, suggestions)
-- [ ] AmountKeypad (custom keypad, never with system keyboard)
-- [ ] QR scanner (AVFoundation / CameraX + ZXing)
-- [ ] SendConfirmation + SendSuccess sheets
-- [ ] Repeat payment metadata
+- [x] Input parsing (BIP21/BIP321, bolt11, bolt12, lightning address/LNURL, Ark address, onchain) — iOS; RN-generated `send-utils`, `send-flow`, `onchain-send`, `lightning-invoice` fixtures; shared `fiat-currency` reused
+- [x] SendScreen (amount-first + recipient-first, MAX, method/source choice, fee review, notes, suggestions) — iOS
+- [x] AmountKeypad (custom keypad, never with system keyboard) — iOS
+- [x] QR scanner (AVFoundation; RN camera permission wording preserved) — iOS
+- [x] SendConfirmation + SendSuccess sheets — iOS
+- [x] Repeat payment metadata (`updateHistoryMetadata`, RN envelope) — iOS
+- [x] Submission lock, persisted attempt, cancellation-shielded wallet calls, sync/history reconciliation without automatic retry — iOS
+- [x] Live Ark, BOLT11, Ark-to-onchain, onchain MAX, forced FFI failure/relaunch verification — iOS; evidence and limits in `apps/ios/SendTests/README.md`
+- [ ] External LNURL/BOLT12 provider acceptance and camera hardware verification — iOS
 
 ## M4 — History
 - [ ] TransactionsScreen (filters, pull refresh, CSV export of filtered list)

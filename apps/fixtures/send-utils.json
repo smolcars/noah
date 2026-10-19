@@ -4,6 +4,107 @@
     {
       "name": "destination 0",
       "input": {
+        "destination": "lnbc1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq50gw7z",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lightning",
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "destination 1",
+      "input": {
+        "destination": "lnbc01p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq5g2sgt",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lightning",
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "destination 2",
+      "input": {
+        "destination": "lnbc1p1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq29mj32",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "destination 3",
+      "input": {
+        "destination": "lnbc10p1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsqtqmlj3",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lightning",
+        "isAmountEditable": true,
+        "error": "Invoice amount is less than 1 satoshi."
+      }
+    },
+    {
+      "name": "destination 4",
+      "input": {
+        "destination": "lnbc15n1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsqfcvjmr",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lightning",
+        "amount": 1.5,
+        "isAmountEditable": false
+      }
+    },
+    {
+      "name": "destination 5",
+      "input": {
+        "destination": "lntb15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsqz59y5g",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Network mismatch: expected mainnet, got testnet"
+      }
+    },
+    {
+      "name": "destination 6",
+      "input": {
+        "destination": "lntbs15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsqun7mgz",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Network mismatch: expected mainnet, got signet"
+      }
+    },
+    {
+      "name": "destination 7",
+      "input": {
+        "destination": "lnbcrt15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsqjqjd37",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Network mismatch: expected mainnet, got regtest"
+      }
+    },
+    {
+      "name": "destination 8",
+      "input": {
         "destination": "lno1pqps7sjqpgtyzm3qv4uxzmtsd3jjqer9wd3hy6tsw35k7msjzfpy7nz5yqcnygrfdej82um5wf5k2uckyypwa3eyt44h6txtxquqh7lz5djge4afgfjn7k4rgrkuag0jsd5xvxg",
         "network": "mainnet"
       },
@@ -14,7 +115,7 @@
       }
     },
     {
-      "name": "destination 1",
+      "name": "destination 9",
       "input": {
         "destination": "lightning:lno1pqps7sjqpgtyzm3qv4uxzmtsd3jjqer9wd3hy6tsw35k7msjzfpy7nz5yqcnygrfdej82um5wf5k2uckyypwa3eyt44h6txtxquqh7lz5djge4afgfjn7k4rgrkuag0jsd5xvxg",
         "network": "mainnet"
@@ -26,7 +127,7 @@
       }
     },
     {
-      "name": "destination 2",
+      "name": "destination 10",
       "input": {
         "destination": "LNO1PQPS7SJQPGTYZM3QV4UXZMTSD3JJQER9WD3HY6TSW35K7MSJZFPY7NZ5YQCNYGRFDEJ82UM5WF5K2UCKYYPWA3EYT44H6TXTXQUQH7LZ5DJGE4AFGFJN7K4RGRKUAG0JSD5XVXG",
         "network": "mainnet"
@@ -38,7 +139,7 @@
       }
     },
     {
-      "name": "destination 3",
+      "name": "destination 11",
       "input": {
         "destination": "lno1pqps7sjqpgtyzm3qv4uxzmtsd3jjqer9wd3h+ \n  y6tsw35k7msjzfpy7nz5yqcnygrfdej82um5wf5k2uckyypwa3eyt44h6txtxquqh7lz5djge4afgfjn7k4rgrkuag0jsd5xvxg",
         "network": "mainnet"
@@ -50,7 +151,7 @@
       }
     },
     {
-      "name": "destination 4",
+      "name": "destination 12",
       "input": {
         "destination": "bitcoin:?lno=lno1pqps7sjqpgtyzm3qv4uxzmtsd3jjqer9wd3hy6tsw35k7msjzfpy7nz5yqcnygrfdej82um5wf5k2uckyypwa3eyt44h6txtxquqh7lz5djge4afgfjn7k4rgrkuag0jsd5xvxg",
         "network": "mainnet"
@@ -65,7 +166,7 @@
       }
     },
     {
-      "name": "destination 5",
+      "name": "destination 13",
       "input": {
         "destination": "lno1",
         "network": "mainnet"
@@ -77,7 +178,7 @@
       }
     },
     {
-      "name": "destination 6",
+      "name": "destination 14",
       "input": {
         "destination": "lno1not-an-offer",
         "network": "mainnet"
@@ -89,7 +190,7 @@
       }
     },
     {
-      "name": "destination 7",
+      "name": "destination 15",
       "input": {
         "destination": "LNO1PQPS7Sjqpgtyzm3qv4uxzmtsd3jjqer9wd3hy6tsw35k7msjzfpy7nz5yqcnygrfdej82um5wf5k2uckyypwa3eyt44h6txtxquqh7lz5djge4afgfjn7k4rgrkuag0jsd5xvxg",
         "network": "mainnet"
@@ -101,7 +202,7 @@
       }
     },
     {
-      "name": "destination 8",
+      "name": "destination 16",
       "input": {
         "destination": "bitcoin:?lno=lno1not-an-offer",
         "network": "mainnet"
@@ -114,7 +215,7 @@
       }
     },
     {
-      "name": "destination 9",
+      "name": "destination 17",
       "input": {
         "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0",
         "network": "mainnet"
@@ -129,7 +230,7 @@
       }
     },
     {
-      "name": "destination 10",
+      "name": "destination 18",
       "input": {
         "destination": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
         "network": "mainnet"
@@ -141,7 +242,7 @@
       }
     },
     {
-      "name": "destination 11",
+      "name": "destination 19",
       "input": {
         "destination": "ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy",
         "network": "mainnet"
@@ -153,7 +254,7 @@
       }
     },
     {
-      "name": "destination 12",
+      "name": "destination 20",
       "input": {
         "destination": "lnbc15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs",
         "network": "mainnet"
@@ -166,7 +267,7 @@
       }
     },
     {
-      "name": "destination 13",
+      "name": "destination 21",
       "input": {
         "destination": "LIGHTNING:lnbc15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs",
         "network": "mainnet"
@@ -179,7 +280,7 @@
       }
     },
     {
-      "name": "destination 14",
+      "name": "destination 22",
       "input": {
         "destination": " Alice@Example.com ",
         "network": "mainnet"
@@ -191,7 +292,7 @@
       }
     },
     {
-      "name": "destination 15",
+      "name": "destination 23",
       "input": {
         "destination": "lightning:ALICE@EXAMPLE.COM",
         "network": "mainnet"
@@ -203,7 +304,7 @@
       }
     },
     {
-      "name": "destination 16",
+      "name": "destination 24",
       "input": {
         "destination": "bad",
         "network": "mainnet"
@@ -215,7 +316,7 @@
       }
     },
     {
-      "name": "destination 17",
+      "name": "destination 25",
       "input": {
         "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.00001",
         "network": "mainnet"
@@ -231,7 +332,7 @@
       }
     },
     {
-      "name": "destination 18",
+      "name": "destination 26",
       "input": {
         "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=-1",
         "network": "mainnet"
@@ -244,7 +345,7 @@
       }
     },
     {
-      "name": "destination 19",
+      "name": "destination 27",
       "input": {
         "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?req-unknown=1",
         "network": "mainnet"
@@ -257,7 +358,7 @@
       }
     },
     {
-      "name": "destination 20",
+      "name": "destination 28",
       "input": {
         "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=1&amount=2",
         "network": "mainnet"
@@ -270,7 +371,7 @@
       }
     },
     {
-      "name": "destination 21",
+      "name": "destination 29",
       "input": {
         "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?ark=ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy&lightning=lnbc15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs",
         "network": "mainnet"
@@ -287,7 +388,7 @@
       }
     },
     {
-      "name": "destination 22",
+      "name": "destination 30",
       "input": {
         "destination": "bitcoin:?bc=1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa&lno=lno1pqps7sjqpgtyzm3qv4uxzmtsd3jjqer9wd3hy6tsw35k7msjzfpy7nz5yqcnygrfdej82um5wf5k2uckyypwa3eyt44h6txtxquqh7lz5djge4afgfjn7k4rgrkuag0jsd5xvxg",
         "network": "mainnet"

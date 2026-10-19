@@ -4,7 +4,11 @@ import Testing
 
 struct SendFixtureTests {
     struct ParseInput: Decodable { let destination: String; let network: String }
+    struct ParseExpected: Decodable { let valid: Bool }
     @Test func destinationsMatchRN() throws {
+        for fixture in try Fixtures.load("send-utils", input: ParseInput.self, expected: ParseExpected.self) {
+            #expect((SendDestination.parse(fixture.input.destination, network: fixture.input.network).destinationType != nil) == fixture.expected.valid)
+        }
         for fixture in try Fixtures.load("send-utils", input: ParseInput.self, expected: SendDestination.self) {
             let actual = SendDestination.parse(fixture.input.destination, network: fixture.input.network)
             #expect(actual.destinationType == fixture.expected.destinationType, "\(fixture.name)")
