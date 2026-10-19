@@ -1,6 +1,8 @@
 package com.noahwallet.services.wallet
 
 import android.content.Context
+import com.noahwallet.history.HistoryMapping
+import com.noahwallet.history.HistoryTransaction
 import com.noahwallet.BuildConfig
 import com.noahwallet.services.storage.WalletDataLocation
 import io.github.niteshbalusu11.bark.*
@@ -29,6 +31,7 @@ class WalletSession internal constructor(
         fun stateChanges(): Changes = throw UnsupportedOperationException()
         fun notifications(): Notifications
         suspend fun history(): List<Movement>
+        suspend fun transactions(): List<WalletTransaction> = throw UnsupportedOperationException()
         suspend fun receiveRequest(): ReceiveRequest
         suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest
         suspend fun initializeAddress()
@@ -219,6 +222,11 @@ class WalletSession internal constructor(
     suspend fun summary(): Summary? = if (isOpen) withOpen { it.summary() } else null
     suspend fun sync() { if (isOpen) withOpen { it.sync() } }
 
+    suspend fun transactionHistory(): List<HistoryTransaction> = withOpen { handles ->
+        handles.history().filter(HistoryMapping::include).map { HistoryMapping.transaction(it) } +
+            handles.transactions().filter { it.balanceChangeSats != 0L }.map { HistoryMapping.transaction(it) }
+    }
+
     suspend fun peekAddress(index: UInt): String = withOpen { it.peekAddress(index) }
 
     suspend fun peekPublicKey(index: UInt): String = withOpen { it.peekPublicKey(index) }
@@ -376,6 +384,7 @@ class WalletSession internal constructor(
             }
         }
         override suspend fun history() = wallet.history()
+        override suspend fun transactions() = onchain.transactions()
         override suspend fun receiveRequest() = ReceiveRequest(wallet.newAddress(), onchain.newAddress())
         override suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest {
             val invoice = wallet.bolt11Invoice(amountSat.toULong(), description.ifEmpty { null })

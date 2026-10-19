@@ -46,7 +46,17 @@ class WalletSessionTest {
                 override fun close() { holderClosed = true }
             }
         }
-        override suspend fun history() = emptyList<io.github.niteshbalusu11.bark.Movement>()
+        var historyEntered: CompletableDeferred<Unit>? = null
+        var historyGate: CompletableDeferred<Unit>? = null
+        var chainRead = false
+        override suspend fun history(): List<io.github.niteshbalusu11.bark.Movement> {
+            historyEntered?.complete(Unit); historyGate?.await(); assertFalse(closed)
+            return emptyList()
+        }
+        override suspend fun transactions(): List<io.github.niteshbalusu11.bark.WalletTransaction> {
+            assertFalse(closed); chainRead = true
+            return emptyList()
+        }
         override suspend fun receiveRequest() = ReceiveRequest("ark-test", "chain-test")
         override suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String) =
             request.copy(amountSat = amountSat, description = description, lightningInvoice = "invoice", paymentHash = "hash")
@@ -87,6 +97,20 @@ class WalletSessionTest {
     private fun bark(location: WalletDataLocation) { location.directory.mkdirs(); location.database.writeText("fake") }
     private fun assertFailure(expected: WalletSession.OpenFailure, result: Result<Unit>) {
         assertEquals(expected, (result.exceptionOrNull() as? WalletSession.OpenError)?.reason)
+    }
+    @Test fun canceledHistoryReadCompletesBothReadsBeforeClose() = runBlocking {
+        withLocation { location ->
+            val handles = Handles().apply { historyEntered = CompletableDeferred(); historyGate = CompletableDeferred() }
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            assertTrue(runCatching { session.transactionHistory() }.exceptionOrNull() is WalletSession.SessionError)
+            session.createNew("unused", false, "test")
+            val reading = launch { session.transactionHistory() }
+            handles.historyEntered!!.await(); reading.cancel()
+            val closing = launch { session.close() }
+            yield(); assertFalse(handles.closed)
+            handles.historyGate!!.complete(Unit); reading.join(); closing.join()
+            assertTrue(handles.chainRead); assertTrue(handles.closed)
+        }
     }
     @Test fun closeStopsStateObserverBeforeDrainingCalls() = runBlocking {
         withLocation { location ->
