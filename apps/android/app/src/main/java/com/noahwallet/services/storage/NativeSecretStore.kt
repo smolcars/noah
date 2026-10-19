@@ -64,6 +64,12 @@ internal class NativeSecretStore(
         }
     }
 
+    /** Roll back only our fresh creation; never remove a different or unreadable seed. */
+    fun delete(onlyIfValueIs: String) = synchronized(lock) {
+        val current = readUnlocked()
+        if (current is SecretResult.Found && current.value == onlyIfValueIs) file.delete()
+    }
+
     /** A failed first write must not leave an unreadable file that would mask the legacy seed forever. */
     private fun failedWrite(prior: SecretResult): SecretResult {
         if (prior == SecretResult.NotFound) runCatching { file.delete() }

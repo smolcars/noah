@@ -152,6 +152,21 @@ class SecretStorageTest {
         assertNull(file.bytes)
     }
 
+    @Test fun rollbackDeletesOnlyMatchingReadableNativeSeed() {
+        val file = FakeFile()
+        val store = NativeSecretStore("test", FakeKeys(), file)
+        assertFound(store.save(secret))
+        val original = file.bytes!!.copyOf()
+        store.delete("another-attempt")
+        assertArrayEquals(original, file.bytes)
+        file.bytes = byteArrayOf(99)
+        store.delete(secret)
+        assertArrayEquals(byteArrayOf(99), file.bytes)
+        file.bytes = original
+        store.delete(secret)
+        assertEquals(SecretResult.NotFound, store.read())
+    }
+
     private fun assertFound(result: SecretResult) {
         assertTrue("Secret round trip failed", result is SecretResult.Found && result.value == secret)
     }

@@ -34,6 +34,10 @@ class SeedStorage internal constructor(
 
     suspend fun save(value: String): SecretResult = migrationLock.withLock { native.save(value) }
 
+    internal suspend fun delete(onlyIfValueIs: String) = migrationLock.withLock {
+        native.delete(onlyIfValueIs)
+    }
+
     companion object {
         private val migrationLock = Mutex()
     }

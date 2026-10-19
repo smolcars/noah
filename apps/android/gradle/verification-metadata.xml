@@ -8,9 +8,9 @@
         </trusted-artifacts>
     </configuration>
     <components>
-        <component group="io.github.niteshbalusu11" name="bark-bolt-ffi-android" version="0.1.0">
-            <artifact name="bark-bolt-ffi-android-0.1.0.aar">
-                <sha256 value="87ba0c4946ca417a66787451892de452127b3890b4ce1c6941d07652cc61179c" origin="https://github.com/smolcars/bark-bolt-ffi/releases/download/v0.1.0/SHA256SUMS" />
+        <component group="io.github.niteshbalusu11" name="bark-bolt-ffi-android" version="0.2.0">
+            <artifact name="bark-bolt-ffi-android-0.2.0.aar">
+                <sha256 value="726bc3271c7057090064d191b6070b62ef6d01a1ffd632c3b68d34be59489932" origin="https://github.com/smolcars/bark-bolt-ffi/releases/download/v0.2.0/SHA256SUMS" />
             </artifact>
         </component>
     </components>
