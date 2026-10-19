@@ -32,7 +32,12 @@ fun NoahTheme(content: @Composable () -> Unit) {
         surfaceVariant = Color(0xFFE4EBF4), onSurfaceVariant = Color(0xFF5A6578), outline = Color(0xFFD8E2ED),
     )
     MaterialTheme(colorScheme = colors.copy(primary = Color(0xFFC98A3C), onPrimary = Color(0xFF1A2332),
-        error = Color(0xFFEF4444)), typography = Typography(
+        secondary = colors.surfaceVariant, onSecondary = colors.onSurface,
+        primaryContainer = colors.surfaceVariant, onPrimaryContainer = colors.onSurface,
+        secondaryContainer = colors.surfaceVariant, onSecondaryContainer = colors.onSurface,
+        surfaceContainer = colors.surface, surfaceContainerLow = colors.surface,
+        surfaceContainerHigh = colors.surface, surfaceContainerHighest = colors.surfaceVariant,
+        surfaceTint = Color(0xFFC98A3C), error = Color(0xFFEF4444)), typography = Typography(
         displaySmall = type(44, FontWeight.Bold), headlineLarge = type(32, FontWeight.Bold),
         headlineMedium = type(26, FontWeight.Bold), titleLarge = type(18, FontWeight.SemiBold),
         bodyLarge = type(17), bodyMedium = type(16), bodySmall = type(14),

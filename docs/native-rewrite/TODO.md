@@ -149,6 +149,10 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] ReceiveSuccessScreen + animation — iOS
 - [ ] QRHubScreen (my lightning-address code / scan)
 
+- [x] ReceiveScreen: BIP-321 QR with Noah logo, amount/note/fiat sheet, copy/share, Ark and Lightning completion — Android
+- [x] ReceiveSuccessScreen with animation, settled status and refreshed balance — Android
+- [x] Shared receive-request (9 cases) and fiat-currency (48 cases) fixtures in JUnit; session observer cancellation/close regressions — Android
+
 ## M3 — Send
 - [ ] Input parsing (BIP21/BIP321, bolt11, bolt12, lightning address, Ark address, onchain) — fixtures from `client/tests/unit/{sendUtils,sendFlow,onchainSend,lightningInvoice,fiatCurrency}`
 - [ ] SendScreen (amount-first + recipient-first, MAX, method/source choice, fee review, notes, suggestions)

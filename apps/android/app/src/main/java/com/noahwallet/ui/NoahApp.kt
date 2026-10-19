@@ -59,7 +59,10 @@ fun NoahApp(model: AppModel) {
             onBack = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) },
             entryProvider = entryProvider {
                 entry<Destination> { destination ->
-                    if (destination == Destination.Home) HomeScreen(model) else Column(
+                    if (destination == Destination.Home) HomeScreen(model)
+                    else if (destination == Destination.Receive) ReceiveScreen(model) {
+                        backStack.clear(); backStack.add(Destination.Home)
+                    } else Column(
                         modifier = Modifier.fillMaxSize().padding(24.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
                         horizontalAlignment = Alignment.CenterHorizontally,

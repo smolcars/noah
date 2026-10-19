@@ -12,6 +12,24 @@ import org.junit.Test
 class WalletSessionTest {
     private class Boom : Exception()
     private class Handles : WalletSession.Handles {
+        val subscribed = CompletableDeferred<Unit>()
+        val waiting = CompletableDeferred<Unit>()
+        val released = CompletableDeferred<Unit>()
+        var holderClosed = false
+        override fun notifications(): WalletSession.Notifications {
+            subscribed.complete(Unit)
+            return object : WalletSession.Notifications {
+            override suspend fun next(): io.github.niteshbalusu11.bark.WalletNotification? {
+                waiting.complete(Unit); released.await(); return null
+            }
+            override fun cancelWait() { check(!holderClosed); released.complete(Unit) }
+            override fun close() { holderClosed = true }
+            }
+        }
+        override suspend fun history() = emptyList<io.github.niteshbalusu11.bark.Movement>()
+        override suspend fun receiveRequest() = ReceiveRequest("ark-test", "chain-test")
+        override suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String) =
+            request.copy(amountSat = amountSat, description = description, lightningInvoice = "invoice", paymentHash = "hash")
         var initialized = false
         var initializationFails = false
         override suspend fun initializeAddress() { if (initializationFails) throw Boom(); initialized = true }
@@ -50,6 +68,61 @@ class WalletSessionTest {
     private fun assertFailure(expected: WalletSession.OpenFailure, result: Result<Unit>) {
         assertEquals(expected, (result.exceptionOrNull() as? WalletSession.OpenError)?.reason)
     }
+    @Test fun closeReleasesWaitingReceiveObserverBeforeClosingHandles() = runBlocking {
+        withLocation { location ->
+            val handles = Handles()
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test")
+            val observer = launch { session.receiveCompletion(ReceiveRequest("ark-test", "chain-test")) }
+            handles.waiting.await()
+            withTimeout(2000) { session.close(); observer.join() }
+            assertTrue(handles.holderClosed); assertTrue(handles.closed)
+        }
+    }
+
+    @Test fun immediateCloseCannotAbandonAnObserverBeforeItStarts() = runBlocking {
+        repeat(20) {
+            withLocation { location ->
+                val handles = Handles()
+                val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+                session.createNew("unused", false, "test")
+                val observer = launch(Dispatchers.Default) {
+                    runCatching { session.receiveCompletion(ReceiveRequest("ark-test", "chain-test")) }
+                }
+                handles.subscribed.await()
+                withTimeout(2000) { session.close(); observer.join() }
+                assertTrue(handles.holderClosed); assertTrue(handles.closed)
+            }
+        }
+    }
+
+    @Test fun cancelReceiveObserverReleasesHolderButLeavesWalletUsable() = runBlocking {
+        withLocation { location ->
+            val handles = Handles()
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test")
+            val observer = launch { session.receiveCompletion(ReceiveRequest("ark-test", "chain-test")) }
+            handles.waiting.await()
+            withTimeout(2000) { observer.cancelAndJoin() }
+            assertTrue(handles.holderClosed); assertNotNull(session.summary())
+            session.close()
+        }
+    }
+
+    @Test fun canceledOperationKeepsMutexUntilNativeWorkFinishes() = runBlocking {
+        withLocation { location ->
+            val handles = Handles().apply { summaryEntered = CompletableDeferred(); summaryGate = CompletableDeferred() }
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test")
+            val reading = launch { session.summary() }
+            handles.summaryEntered!!.await(); reading.cancel()
+            val closing = launch { session.close() }
+            yield(); assertFalse(handles.closed)
+            handles.summaryGate!!.complete(Unit)
+            reading.join(); closing.join(); assertTrue(handles.closed)
+        }
+    }
+
     @Test fun preflightNeverInvokesOpenerForMissingForeignOrWrongNetwork() = runBlocking {
         withLocation { location ->
             var calls = 0

@@ -1,12 +1,15 @@
 # Noah native Android
 
-Kotlin/Compose `:app` with the upgrade compatibility layer, backup envelope
-crypto, four Navigation 3 placeholder destinations and the existing widgets.
-Launch checks the seed and existing database, then opens through the process-wide
-`WalletSession.shared(context)` before showing the shell. It never creates a wallet
-at launch or deletes legacy secrets. Onboarding UI remains future work. Native push registration and background jobs
-use the shared services/session; Firebase auto-init is enabled after onboarding
-and notification permission.
+Kotlin/Compose `:app` with Navigation 3, onboarding, Home and Receive. Launch
+opens through the process-wide `WalletSession.shared(context)` and resumes unfinished
+onboarding at the recovery phrase. It never creates a wallet at launch or deletes
+legacy secrets. Fresh creation derives key 0 before server registration.
+
+Onboarding includes the beta warning, secure recovery phrase, emergency email and
+Lightning identity. Restore remains a placeholder pending the Android restore engine.
+Home uses the full wallet balance and RN-compatible unit/privacy settings. Receive
+supports BIP-321 QR, amount/note editing, fiat, copy/share and Ark/Lightning completion.
+Notification permission and the existing push layer run after onboarding.
 
 ## Build and install
 
@@ -484,3 +487,22 @@ public API; keep the existing Expo server credentials configured.
 an optional `android.hardware.camera` feature declaration
 (`PermissionImpliesUnsupportedChromeOsHardware`). Push's deliberate RN-compatible
 MAX channel importance is locally documented; all other push lint errors are clear.
+
+## Native screen verification
+
+JVM tests consume all cases in `receive-request.json` and `fiat-currency.json`.
+Session tests cover waiting-observer shutdown, cancellation before observer startup,
+and cancellation of an active native call. Observers never hold the operations mutex;
+shutdown releases their native wait and joins them before stopping the wallet.
+Submitted wallet calls finish under `NonCancellable` before the mutex is released.
+
+The mnemonic screen sets `FLAG_SECURE`, marks clipboard content sensitive, clears
+its own clipboard item on exit, and expires it after two minutes while visible.
+No recovery phrase is stored in Compose saved state.
+
+Verified on a dedicated Android 15 Google APIs emulator: fresh UI creation, process
+restart during onboarding, server registration, Lightning identity save, post-onboarding
+notification permission, and Home. Bark paid a 5,000-sat Ark address and a 6,000-sat
+Lightning invoice from Receive; both reached success, and the SDK reported a final
+10,888-sat wallet balance. The amount/note sheet remained visible above Gboard.
+Email delivery/OTP entry and real push delivery were not repeated in this screen pass.

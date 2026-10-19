@@ -26,10 +26,10 @@ class AppModel(application: Application) : AndroidViewModel(application) {
     var busy by mutableStateOf(false); private set
     var error by mutableStateOf<String?>(null)
     var summary by mutableStateOf<WalletSession.Summary?>(null); private set
-    var hidden by mutableStateOf(state("privacy-storage")["isHomeBalanceHidden"]?.jsonPrimitive?.booleanOrNull ?: false)
+    var hidden by mutableStateOf((state("privacy-storage")["isHomeBalanceHidden"] as? JsonPrimitive)?.booleanOrNull ?: false)
         private set
-    val amountUnit = if (state("profile-storage")["bitcoinAmountUnit"]?.jsonPrimitive?.contentOrNull == "sats") BitcoinAmountUnit.sats else BitcoinAmountUnit.bip177
-    val preferredCurrency = state("profile-storage")["preferredCurrency"]?.jsonPrimitive?.contentOrNull ?: "USD"
+    val amountUnit = if ((state("profile-storage")["bitcoinAmountUnit"] as? JsonPrimitive)?.contentOrNull == "sats") BitcoinAmountUnit.sats else BitcoinAmountUnit.bip177
+    val preferredCurrency = (state("profile-storage")["preferredCurrency"] as? JsonPrimitive)?.contentOrNull ?: "USD"
     private var starting = false
 
     private fun state(key: String): JsonObject = settings.string(key)?.let {

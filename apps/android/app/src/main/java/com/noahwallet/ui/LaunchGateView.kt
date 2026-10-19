@@ -32,11 +32,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.noahwallet.R
 import com.noahwallet.services.launch.LaunchState
-import com.noahwallet.services.logging.AppLog
-import com.noahwallet.services.AppServices
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Composable
 fun LaunchGateView() {

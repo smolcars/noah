@@ -25,6 +25,10 @@ class WalletSession internal constructor(
     }
 
     internal interface Handles {
+        fun notifications(): Notifications
+        suspend fun history(): List<Movement>
+        suspend fun receiveRequest(): ReceiveRequest
+        suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest
         suspend fun initializeAddress()
         suspend fun peekPublicKey(index: UInt): String
         suspend fun peekAddress(index: UInt): String
@@ -38,6 +42,16 @@ class WalletSession internal constructor(
         suspend fun stopDaemonWait()
         fun close()
     }
+
+    internal interface Notifications : AutoCloseable {
+        suspend fun next(): WalletNotification?
+        fun cancelWait()
+    }
+    private class Observer(val holder: Notifications) {
+        lateinit var job: Deferred<ReceiveCompletion?>
+        var holderClosed = false
+    }
+    private val observers = mutableSetOf<Observer>()
 
     private sealed interface State {
         data object Closed : State
@@ -116,18 +130,19 @@ class WalletSession internal constructor(
     }
 
     suspend fun summary(): Summary? = operations.withLock {
-        synchronized(lock) { (state as? State.Open)?.handles }?.summary()
+        withContext(NonCancellable + Dispatchers.IO) {
+            synchronized(lock) { (state as? State.Open)?.handles }?.summary()
+        }
     }
 
     suspend fun sync() = operations.withLock {
-        synchronized(lock) { (state as? State.Open)?.handles }?.sync()
-        Unit
+        withContext(NonCancellable + Dispatchers.IO) {
+            synchronized(lock) { (state as? State.Open)?.handles }?.sync()
+            Unit
+        }
     }
 
-    suspend fun peekAddress(index: UInt): String = operations.withLock {
-        val handles = synchronized(lock) { (state as? State.Open)?.handles } ?: throw SessionError()
-        handles.peekAddress(index)
-    }
+    suspend fun peekAddress(index: UInt): String = withOpen { it.peekAddress(index) }
 
     suspend fun peekPublicKey(index: UInt): String = withOpen { it.peekPublicKey(index) }
 
@@ -137,13 +152,67 @@ class WalletSession internal constructor(
     suspend fun closestExpiryBlocks(): Long? = withOpen { it.closestExpiryBlocks() }
 
     private suspend fun <T> withOpen(block: suspend (Handles) -> T): T = operations.withLock {
-        val handles = synchronized(lock) { (state as? State.Open)?.handles } ?: throw SessionError()
-        block(handles)
+        withContext(NonCancellable + Dispatchers.IO) {
+            val handles = synchronized(lock) { (state as? State.Open)?.handles } ?: throw SessionError()
+            block(handles)
+        }
     }
 
-    suspend fun createSnapshot(destination: File): WalletSnapshotInfo = operations.withLock {
-        val handles = synchronized(lock) { (state as? State.Open)?.handles } ?: throw SessionError()
-        handles.createSnapshot(destination)
+    suspend fun createSnapshot(destination: File): WalletSnapshotInfo = withOpen { it.createSnapshot(destination) }
+
+    suspend fun receiveRequest(): ReceiveRequest = withOpen { it.receiveRequest() }
+    suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest {
+        val note = description.trim()
+        ReceiveRequest.validate(amountSat, note)
+        return withOpen { it.receiveInvoice(request, amountSat, note) }
+    }
+
+    /** Subscribe before history. This wait never owns the operations mutex. */
+    @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
+    suspend fun receiveCompletion(request: ReceiveRequest): ReceiveCompletion? {
+        val observer = synchronized(lock) {
+            val handles = (state as? State.Open)?.handles ?: throw SessionError()
+            val holder = handles.notifications()
+            val observer = Observer(holder)
+            // ATOMIC guarantees finally runs even if close wins before the IO dispatcher starts.
+            observer.job = scope.async(start = CoroutineStart.ATOMIC) {
+                try {
+                    suspend fun reconcile() = withOpen { it.history() }.firstNotNullOfOrNull {
+                        ReceiveCompletion.matching(it, request)
+                    }
+                    var completion = reconcile()
+                    while (completion == null && isActive) {
+                        val event = withContext(NonCancellable) { holder.next() } ?: break
+                        completion = when (event) {
+                            is WalletNotification.MovementCreated -> ReceiveCompletion.matching(event.movement, request)
+                            is WalletNotification.MovementUpdated -> ReceiveCompletion.matching(event.movement, request)
+                            WalletNotification.ChannelLagging -> reconcile()
+                        }
+                    }
+                    completion
+                } finally { synchronized(holder) { observer.holderClosed = true; holder.close() } }
+            }
+            observer.also { observers.add(it) }
+        }
+        try { return observer.job.await() }
+        finally {
+            withContext(NonCancellable) {
+                stopObserver(observer)
+                synchronized(lock) { observers.remove(observer) }
+            }
+        }
+    }
+
+    private suspend fun stopObserver(observer: Observer) {
+        // Cancel the coroutine and release Rust's pending wait before disposing its wrapper.
+        // The job closes the holder; synchronized prevents cancelWait racing that close.
+        synchronized(observer.holder) {
+            if (!observer.holderClosed) {
+                observer.job.cancel()
+                observer.holder.cancelWait()
+            }
+        }
+        observer.job.join()
     }
 
     suspend fun close() {
@@ -155,6 +224,9 @@ class WalletSession internal constructor(
             }
         }
         withContext(NonCancellable + Dispatchers.IO) {
+            val running = synchronized(lock) { observers.toList() }
+            running.forEach { stopObserver(it) }
+            synchronized(lock) { observers.removeAll(running.toSet()) }
             operations.withLock {
                 try {
                     handles.stopDaemonWait()
@@ -200,6 +272,21 @@ class WalletSession internal constructor(
     }
 
     private class SdkHandles(val wallet: Wallet, val onchain: OnchainWallet) : Handles {
+        override fun notifications(): Notifications {
+            val holder = wallet.notifications()
+            return object : Notifications {
+                override suspend fun next() = holder.nextNotification()
+                override fun cancelWait() = holder.cancelNextNotificationWait()
+                override fun close() = holder.close()
+            }
+        }
+        override suspend fun history() = wallet.history()
+        override suspend fun receiveRequest() = ReceiveRequest(wallet.newAddress(), onchain.newAddress())
+        override suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest {
+            val invoice = wallet.bolt11Invoice(amountSat.toULong(), description.ifEmpty { null })
+            return request.copy(amountSat = amountSat, description = description,
+                lightningInvoice = invoice.invoice, paymentHash = invoice.paymentHash)
+        }
         override suspend fun initializeAddress() { wallet.deriveStoreNextKeypair() }
         override suspend fun peekPublicKey(index: UInt) = wallet.peekPublicKey(index)
         override suspend fun peekAddress(index: UInt): String = wallet.peekAddress(index)
