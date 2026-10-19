@@ -23,6 +23,7 @@ androidx-test-runner = "1.6.2"
 androidx-test-junit = "1.2.1"
 
 [libraries]
+commons-compress = { module = "org.apache.commons:commons-compress", version = "1.28.0" }
 zxing-core = { module = "com.google.zxing:core", version = "3.5.3" }
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
 compose-ui = { module = "androidx.compose.ui:ui" }

@@ -126,6 +126,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.commons.compress)
     implementation(platform(libs.compose.bom))
     implementation(libs.zxing.core)
     implementation(libs.compose.ui)
