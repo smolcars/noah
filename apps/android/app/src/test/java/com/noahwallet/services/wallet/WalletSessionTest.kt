@@ -126,6 +126,7 @@ class WalletSessionTest {
             yield(); assertFalse(handles.closed); assertFalse(handles.stopEntered!!.isCompleted)
             handles.summaryGate!!.complete(Unit); reading.await(); handles.stopEntered!!.await()
             assertFailure(WalletSession.OpenFailure.busy, runCatching { session.ensureOpen("unused", false, "test") })
+            assertFailure(WalletSession.OpenFailure.busy, runCatching { session.close() })
             handles.stopGate!!.complete(Unit); closing.await(); assertTrue(handles.closed)
         }
     }

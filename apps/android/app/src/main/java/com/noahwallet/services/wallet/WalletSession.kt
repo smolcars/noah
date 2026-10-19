@@ -109,23 +109,25 @@ class WalletSession internal constructor(
         handles.createSnapshot(destination)
     }
 
-    suspend fun close() = operations.withLock {
+    suspend fun close() {
         val handles = synchronized(lock) {
             when (val current = state) {
-                State.Closed -> return@withLock
+                State.Closed -> return
                 is State.Open -> current.handles.also { state = State.Closing }
                 else -> throw OpenError(OpenFailure.busy)
             }
         }
         withContext(NonCancellable + Dispatchers.IO) {
-            try {
-                handles.stopDaemonWait()
-            } catch (failure: Throwable) {
-                synchronized(lock) { state = State.Open(handles) }
-                throw failure
+            operations.withLock {
+                try {
+                    handles.stopDaemonWait()
+                } catch (failure: Throwable) {
+                    synchronized(lock) { state = State.Open(handles) }
+                    throw failure
+                }
+                handles.close()
+                synchronized(lock) { state = State.Closed }
             }
-            handles.close()
-            synchronized(lock) { state = State.Closed }
         }
     }
 
