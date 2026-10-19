@@ -21,8 +21,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.noahwallet.BuildConfig
 import com.noahwallet.R
 import com.noahwallet.services.launch.LaunchState
+import com.noahwallet.services.logging.AppLog
+import com.noahwallet.services.storage.SecretResult
+import com.noahwallet.services.storage.SeedStorage
+import com.noahwallet.services.wallet.WalletSession
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -31,19 +37,40 @@ fun LaunchGateView() {
     val context = LocalContext.current.applicationContext
     val lifecycleOwner = LocalLifecycleOwner.current
     var state by remember { mutableStateOf<LaunchState?>(null) }
+    var walletOpen by remember { mutableStateOf(false) }
+    var openFailed by remember { mutableStateOf(false) }
     LaunchedEffect(context, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             if (state == null || state == LaunchState.secureStorageUnavailable) {
                 state = withContext(Dispatchers.IO) { LaunchState.current(context) }
             }
+            if (state == LaunchState.existingWallet && !walletOpen) {
+                openFailed = false
+                try {
+                    withContext(Dispatchers.IO) {
+                        val seed = SeedStorage(context, BuildConfig.APP_VARIANT).read()
+                        check(seed is SecretResult.Found && seed.value.isNotEmpty())
+                        WalletSession.shared(context).ensureOpen(seed.value, true, BuildConfig.VERSION_NAME)
+                    }
+                    walletOpen = true
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    AppLog(context, "launch").e("Existing wallet could not be opened")
+                    openFailed = true
+                }
+            }
         }
     }
-    if (state == LaunchState.existingWallet) {
+    if (state == LaunchState.existingWallet && walletOpen) {
         NoahApp()
         return
     }
     val message = when (state) {
-        null, LaunchState.existingWallet -> return
+        null -> R.string.launch_loading to R.string.launch_loading_message
+        LaunchState.existingWallet -> if (openFailed) {
+            R.string.launch_open_failed to R.string.launch_open_failed_message
+        } else R.string.launch_loading to R.string.launch_loading_message
         LaunchState.onboarding -> R.string.launch_welcome to R.string.launch_onboarding_message
         LaunchState.seedWithoutWalletData -> R.string.launch_seed_found to R.string.launch_seed_found_message
         LaunchState.walletDataWithoutSeed -> R.string.launch_seed_needed to R.string.launch_seed_needed_message
