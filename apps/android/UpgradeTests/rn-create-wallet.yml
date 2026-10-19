@@ -1,0 +1,7 @@
+# Fresh emulator only. Never clear state during an upgrade test.
+appId: com.noahwallet.regtest
+---
+- launchApp
+- runFlow: ../../../client/.maestro/subflows/start-wallet-onboarding.yml
+- runFlow: ../../../client/.maestro/subflows/complete-wallet-onboarding-without-email.yml
+- stopApp
