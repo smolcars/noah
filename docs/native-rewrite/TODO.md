@@ -41,7 +41,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Deterministic `openapi.json` export + normalization step (tagged `NotificationData`, nullable refs)
 - [ ] swift-openapi-generator → `apps/ios` generated client; Fabrikt → `apps/android` generated models/client
 - [ ] u64 → Int64/Long mapping + boundary fixtures; all 6 notification variants round-trip
-- [ ] `just generate-api`; CI drift gate (TS + schema + native)
+- [x] `just generate-api`; server tests fail on a stale `api/openapi.json` or `apps/fixtures/server-notification-data.json`
+- [ ] CI drift gate for generated native code
 
 ### 0.5 Upgrade compatibility (gate before any funded-wallet milestone)
 - [x] iOS seed reader: keychain service `com.noah.mnemonic.<variant>`, account `noah` (read + in-place save, RN attributes)

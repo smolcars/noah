@@ -134,6 +134,10 @@ server-test:
 server-check:
     cargo check
 
+# Regenerate api/openapi.json after an intentional API change
+generate-api:
+    UPDATE_OPENAPI=1 cargo test -p server --bin server openapi::export_openapi -- --exact
+
 # Start ngrok tunnel to localhost:3000
 ngrok:
     ngrok http 3000 --domain $(cat .ngrok-domain)
