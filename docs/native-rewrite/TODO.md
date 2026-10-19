@@ -70,7 +70,9 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Widget data writers (same keys)
 
 ### 0.7 Backups
-- [ ] Byte-compatible v2 encrypt/decrypt (0x02 | salt16 | nonce12 | AES-256-GCM; PBKDF2-SHA256 600k), manifest.json + db.sqlite zip
+- [x] Envelope crypto v1/v2 (salt16 | nonce12 | AES-256-GCM; PBKDF2-SHA256 600k) with Node-generated vectors (`apps/fixtures/backup-crypto.json`) — iOS
+- [ ] Envelope crypto — Android (same vectors)
+- [ ] v2 archive: manifest.json + db.sqlite zip
 - [ ] v1 legacy restore
 - [ ] Snapshot via FFI; install/rollback sequence; atomic writes; temp cleanup
 - [ ] Backup coordinator: single in-flight, 5 s debounce, generation counter, backoff 15 s → 15 min with jitter, suspension gates
