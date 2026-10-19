@@ -46,6 +46,9 @@ android {
         minSdk = 24
         targetSdk = 37
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        val regtestServer = providers.gradleProperty("noahRegtestServerURL").orElse("http://10.0.2.2:3000").get()
+        require(regtestServer.matches(Regex("https?://[a-zA-Z0-9.:-]+"))) { "Invalid regtest server URL" }
+        buildConfigField("String", "REGTEST_SERVER_URL", "\"$regtestServer\"")
         versionCode = 100
         versionName = "0.2.0"
         // Same ABIs as the RN app; MMKV and bark-bolt-ffi ship no x86 libraries.
@@ -138,6 +141,7 @@ dependencies {
     implementation(libs.mmkv)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
+    implementation(libs.work.runtime)
     // Same exclusion as RN's noah-tools: use AndroidX Security's Android Tink distribution.
     implementation(libs.unifiedpush) { exclude(group = "com.google.crypto.tink", module = "tink") }
     // GitHub's Ivy artifact has no transitive metadata; coroutines-core is explicit above.

@@ -1,5 +1,12 @@
 package com.noahwallet.ui
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.noahwallet.services.push.PushNotifications
+import com.noahwallet.services.push.PushWork
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,12 +28,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import com.noahwallet.BuildConfig
 import com.noahwallet.R
 import com.noahwallet.services.launch.LaunchState
 import com.noahwallet.services.logging.AppLog
-import com.noahwallet.services.storage.SecretResult
-import com.noahwallet.services.storage.SeedStorage
 import com.noahwallet.services.AppServices
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +43,19 @@ fun LaunchGateView() {
     var state by remember { mutableStateOf<LaunchState?>(null) }
     var walletOpen by remember { mutableStateOf(false) }
     var openFailed by remember { mutableStateOf(false) }
+    var permissionRequested by rememberSaveable { mutableStateOf(false) }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        PushWork.register(context)
+    }
+    LaunchedEffect(walletOpen) {
+        if (walletOpen && AppServices.shared(context).isOnboarded()) {
+            PushNotifications.ensureChannels(context)
+            if (Build.VERSION.SDK_INT >= 33 && !permissionRequested && !PushNotifications.permissionGranted(context)) {
+                permissionRequested = true
+                permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
     LaunchedEffect(context, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             if (state == null || state == LaunchState.secureStorageUnavailable) {
@@ -48,9 +65,7 @@ fun LaunchGateView() {
                 openFailed = false
                 try {
                     withContext(Dispatchers.IO) {
-                        val seed = SeedStorage(context, BuildConfig.APP_VARIANT).read()
-                        check(seed is SecretResult.Found && seed.value.isNotEmpty())
-                        AppServices.shared(context).session.ensureOpen(seed.value, true, BuildConfig.VERSION_NAME)
+                        AppServices.shared(context).ensureWalletOpen()
                     }
                     walletOpen = true
                 } catch (cancelled: CancellationException) {
