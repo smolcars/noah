@@ -151,16 +151,6 @@ struct SendView: View {
                 .textFieldStyle(.roundedBorder).focused($focus, equals: .recipient).accessibilityIdentifier(
                     "send-recipient"
                 )
-                .onChange(of: model.destination) { _, _ in
-                    model.progress.recipientConfirmed = false
-                    model.progress.railConfirmed = false
-                    if !model.isMax {
-                        model.progress.sourceConfirmed = false
-                        model.source = nil
-                    }
-                    model.quote = nil
-                    model.route = nil
-                }
                 .task(id: model.destination) {
                     async let suggestions: Void = loadSuggestions()
                     await model.previewRecipient()
@@ -178,7 +168,7 @@ struct SendView: View {
                     scanner = true
                 }
             }
-            if let route = model.route {
+            if let route = model.matchingRoute {
                 Text("Recipient verified").foregroundStyle(NoahColor.success)
                 if route.commentAllowed > 0 {
                     TextField("Add a note", text: $model.comment, axis: .vertical)

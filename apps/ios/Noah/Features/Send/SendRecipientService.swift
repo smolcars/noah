@@ -1,6 +1,7 @@
 import Foundation
 
 struct SendRecipientRoute: Sendable {
+    var destination: String
     var minMsat: UInt64
     var maxMsat: UInt64
     var commentAllowed: Int
@@ -40,7 +41,7 @@ enum SendRecipientService {
         var ark: String?
         if let address = decoded.ark, (try? await session.validateSendArkAddress(address)) == true { ark = address }
         return SendRecipientRoute(
-            minMsat: decoded.minSendable, maxMsat: decoded.maxSendable,
+            destination: SendDestination.cleaned(destination).lowercased(), minMsat: decoded.minSendable, maxMsat: decoded.maxSendable,
             commentAllowed: max(0, decoded.commentAllowed ?? 0), arkAddress: ark)
     }
     static func suggestionQuery(_ destination: String, domain: String) -> String? {

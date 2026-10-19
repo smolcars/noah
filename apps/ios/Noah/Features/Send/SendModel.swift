@@ -3,7 +3,29 @@ import Observation
 
 @MainActor @Observable final class SendModel {
     var amount = ""
-    var destination = ""
+    var destination = "" {
+        didSet {
+            guard destination != oldValue else { return }
+            recipientRevision += 1
+            if parsed.amount != nil { amount = ""; progress.amountConfirmed = false }
+            parsed = SendDestination()
+            route = nil
+            comment = ""
+            suggestions = []
+            error = nil
+            resolvingRecipient = false
+            progress.recipientConfirmed = false
+            progress.railConfirmed = false
+            progress.selectedRail = nil
+            progress.rails = []
+            progress.selectedRailAvailable = nil
+            if !isMax { progress.sourceConfirmed = false; source = nil }
+            quote = nil
+            payment = nil
+            showReview = false
+        }
+    }
+    private var recipientRevision = 0
     var comment = ""
     var useFiat = false
     var btcPrice: Double?
@@ -24,9 +46,15 @@ import Observation
     var showReview = false
     let controller: SendPaymentController
     private let session: WalletSession
-    init(session: WalletSession = .shared, controller: SendPaymentController = .shared) {
+    private let resolveRecipient: (String) async throws -> SendRecipientRoute
+    private let quotePayment: (SendPayment) async throws -> SendQuote
+    init(session: WalletSession = .shared, controller: SendPaymentController = .shared,
+         resolveRecipient: ((String) async throws -> SendRecipientRoute)? = nil,
+         quotePayment: ((SendPayment) async throws -> SendQuote)? = nil) {
         self.session = session
         self.controller = controller
+        self.resolveRecipient = resolveRecipient ?? { try await SendRecipientService.resolve($0, session: session) }
+        self.quotePayment = quotePayment ?? { try await session.quoteSend($0) }
     }
     var isMax: Bool { progress.entry == .max }
     var sats: UInt64 {
@@ -36,8 +64,13 @@ import Observation
         }
         return UInt64(amount) ?? 0
     }
+    var matchingRoute: SendRecipientRoute? {
+        guard parsed.destinationType == "lnurl", let route,
+              route.destination == SendDestination.cleaned(destination).lowercased() else { return nil }
+        return route
+    }
     var rails: [SendRail] {
-        if parsed.destinationType == "lnurl", route?.arkAddress != nil, comment.isEmpty { return [.ark, .lightning] }
+        if parsed.destinationType == "lnurl", matchingRoute?.arkAddress != nil, comment.isEmpty { return [.ark, .lightning] }
         return SendFlow.rails(type: parsed.destinationType, request: parsed.bip321)
     }
     var availability: [String: Bool] {
@@ -58,7 +91,7 @@ import Observation
             arkBalance = summary?.balance.ark.spendable ?? 0
             onchainBalance = summary?.balance.onchain.confirmed ?? 0
         } catch { self.error = "Unable to read available balances." }
-        if controller.state == .uncertain { await controller.checkStatus() }
+        await controller.checkStatus()
     }
     func maxSend() {
         guard !controller.locked else { return }
@@ -81,15 +114,15 @@ import Observation
     }
     func previewRecipient() async {
         let candidate = destination
+        let revision = recipientRevision
         guard SendDestination.parse(candidate).destinationType == "lnurl" else {
             resolvingRecipient = false
             return
         }
         resolvingRecipient = true
-        defer { if candidate == destination { resolvingRecipient = false } }
-        let resolved = try? await SendRecipientService.resolve(
-            SendDestination.cleaned(candidate).lowercased(), session: session)
-        guard !Task.isCancelled, candidate == destination else { return }
+        defer { if revision == recipientRevision { resolvingRecipient = false } }
+        let resolved = try? await resolveRecipient(SendDestination.cleaned(candidate).lowercased())
+        guard !Task.isCancelled, revision == recipientRevision else { return }
         route = resolved
     }
     func acceptRecipient() async {
@@ -123,12 +156,16 @@ import Observation
             useFiat = false
             progress.amountConfirmed = true
         }
-        if type == "lnurl", route == nil {
-            destination = SendDestination.cleaned(destination).lowercased()
+        if type == "lnurl", matchingRoute == nil {
+            let revision = recipientRevision
+            let candidate = SendDestination.cleaned(destination).lowercased()
             do {
-                route = try await SendRecipientService.resolve(destination, session: session)
-                return
+                let resolved = try await resolveRecipient(candidate)
+                guard revision == recipientRevision else { return }
+                route = resolved
+                guard matchingRoute != nil else { throw SendFailure.invalid }
             } catch {
+                guard revision == recipientRevision else { return }
                 self.error = "Unable to resolve this Lightning recipient. Please check the address."
                 return
             }
@@ -185,6 +222,7 @@ import Observation
     }
     func review() async {
         busy = true
+        let revision = recipientRevision
         defer { busy = false }
         do {
             guard let rail = progress.selectedRail else { throw SendFailure.invalid }
@@ -200,7 +238,8 @@ import Observation
                         "onchain": "onchainAddress",
                     ][selected]!]!
             }
-            if let route {
+            if method == "lnurl" {
+                guard let route = matchingRoute else { throw SendFailure.invalid }
                 let (msat, overflow) = sats.multipliedReportingOverflow(by: 1000)
                 guard !overflow, msat >= route.minMsat, msat <= route.maxMsat,
                     comment.utf16.count <= route.commentAllowed
@@ -224,7 +263,9 @@ import Observation
                     destination: destination, comment: comment, amount: amount,
                     fiatCurrency: useFiat ? fiatCurrency : nil)
             }
-            quote = try await session.quoteSend(payment)
+            let reviewed = try await quotePayment(payment)
+            guard revision == recipientRevision else { return }
+            quote = reviewed
             self.payment = payment
             showReview = true
         } catch {
