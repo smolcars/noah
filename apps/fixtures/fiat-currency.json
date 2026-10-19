@@ -68,6 +68,50 @@
       "expected": "$0.00"
     },
     {
+      "name": "Display 125 sats in USD",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 125,
+        "btcPrice": 100000,
+        "currency": "USD",
+        "locale": "en-US"
+      },
+      "expected": "$0.13"
+    },
+    {
+      "name": "Display 375 sats in USD",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 375,
+        "btcPrice": 100000,
+        "currency": "USD",
+        "locale": "en-US"
+      },
+      "expected": "$0.38"
+    },
+    {
+      "name": "Display 1005 sats in USD",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 1005,
+        "btcPrice": 100000,
+        "currency": "USD",
+        "locale": "en-US"
+      },
+      "expected": "$1.00"
+    },
+    {
+      "name": "Display 2675 sats in USD",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 2675,
+        "btcPrice": 100000,
+        "currency": "USD",
+        "locale": "en-US"
+      },
+      "expected": "$2.67"
+    },
+    {
       "name": "Display 12500 sats in USD",
       "input": {
         "operation": "satsToFiat",
@@ -110,6 +154,50 @@
         "locale": "en-US"
       },
       "expected": "€0.00"
+    },
+    {
+      "name": "Display 125 sats in EUR",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 125,
+        "btcPrice": 100000,
+        "currency": "EUR",
+        "locale": "en-US"
+      },
+      "expected": "€0.13"
+    },
+    {
+      "name": "Display 375 sats in EUR",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 375,
+        "btcPrice": 100000,
+        "currency": "EUR",
+        "locale": "en-US"
+      },
+      "expected": "€0.38"
+    },
+    {
+      "name": "Display 1005 sats in EUR",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 1005,
+        "btcPrice": 100000,
+        "currency": "EUR",
+        "locale": "en-US"
+      },
+      "expected": "€1.00"
+    },
+    {
+      "name": "Display 2675 sats in EUR",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 2675,
+        "btcPrice": 100000,
+        "currency": "EUR",
+        "locale": "en-US"
+      },
+      "expected": "€2.67"
     },
     {
       "name": "Display 12500 sats in EUR",
@@ -156,6 +244,50 @@
       "expected": "¥0"
     },
     {
+      "name": "Display 125 sats in JPY",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 125,
+        "btcPrice": 100000,
+        "currency": "JPY",
+        "locale": "en-US"
+      },
+      "expected": "¥0"
+    },
+    {
+      "name": "Display 375 sats in JPY",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 375,
+        "btcPrice": 100000,
+        "currency": "JPY",
+        "locale": "en-US"
+      },
+      "expected": "¥0"
+    },
+    {
+      "name": "Display 1005 sats in JPY",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 1005,
+        "btcPrice": 100000,
+        "currency": "JPY",
+        "locale": "en-US"
+      },
+      "expected": "¥1"
+    },
+    {
+      "name": "Display 2675 sats in JPY",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 2675,
+        "btcPrice": 100000,
+        "currency": "JPY",
+        "locale": "en-US"
+      },
+      "expected": "¥3"
+    },
+    {
       "name": "Display 12500 sats in JPY",
       "input": {
         "operation": "satsToFiat",
@@ -198,6 +330,50 @@
         "locale": "en-US"
       },
       "expected": "₩0"
+    },
+    {
+      "name": "Display 125 sats in KRW",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 125,
+        "btcPrice": 100000,
+        "currency": "KRW",
+        "locale": "en-US"
+      },
+      "expected": "₩0"
+    },
+    {
+      "name": "Display 375 sats in KRW",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 375,
+        "btcPrice": 100000,
+        "currency": "KRW",
+        "locale": "en-US"
+      },
+      "expected": "₩0"
+    },
+    {
+      "name": "Display 1005 sats in KRW",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 1005,
+        "btcPrice": 100000,
+        "currency": "KRW",
+        "locale": "en-US"
+      },
+      "expected": "₩1"
+    },
+    {
+      "name": "Display 2675 sats in KRW",
+      "input": {
+        "operation": "satsToFiat",
+        "sats": 2675,
+        "btcPrice": 100000,
+        "currency": "KRW",
+        "locale": "en-US"
+      },
+      "expected": "₩3"
     },
     {
       "name": "Display 12500 sats in KRW",

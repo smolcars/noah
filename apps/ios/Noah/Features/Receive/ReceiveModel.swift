@@ -21,6 +21,7 @@ final class ReceiveModel {
     private(set) var isSaving = false
     private(set) var receivedSats: Int64?
     private(set) var baseError: String?
+    private(set) var baseErrorTitle = String(localized: "Couldn’t create a request")
     var invoiceError: String?
     private let dependencies: Dependencies
     private var generation = UUID()
@@ -34,6 +35,7 @@ final class ReceiveModel {
         stop()
         receivedSats = nil
         baseError = nil
+        baseErrorTitle = String(localized: "Couldn’t create a request")
         isGenerating = true
         let generation = generation
         defer { if self.generation == generation { isGenerating = false } }
@@ -106,7 +108,8 @@ final class ReceiveModel {
                         self.stop()
                         switch event {
                         case .received(let sats): self.receivedSats = sats
-                        case .lightningFailed:
+                        case .lightningFailed(let canceled):
+                            self.baseErrorTitle = canceled ? String(localized: "Lightning Receive Canceled") : String(localized: "Lightning Receive Failed")
                             self.baseError = String(localized: "The Lightning payment could not be received. Generate a new payment request and try again.")
                         }
                         return

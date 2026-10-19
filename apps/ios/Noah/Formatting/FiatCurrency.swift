@@ -21,7 +21,7 @@ enum FiatCurrency {
             let scale = pow(10, Double(digits))
             value = (value * scale).rounded(.toNearestOrAwayFromZero) / scale
         }
-        return String(format: "%.*f", locale: Locale(identifier: "en_US_POSIX"), digits, value)
+        return String(format: "%.*f", digits, value)
     }
 
     static func format(_ amount: Double, currency: String, locale: Locale = .current) -> String {

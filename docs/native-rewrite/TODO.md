@@ -134,8 +134,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] App version check
 
 ## M2 — Receive
-- [ ] ReceiveScreen (BIP-321 unified QR, amount/description sheet, copy sheet, share, completion subscriptions)
-- [ ] ReceiveSuccessScreen + animation
+- [x] ReceiveScreen (BIP-321 unified QR, amount/description sheet, copy sheet, share, completion subscriptions) — iOS
+- [x] ReceiveSuccessScreen + animation — iOS
 - [ ] QRHubScreen (my lightning-address code / scan)
 
 ## M3 — Send

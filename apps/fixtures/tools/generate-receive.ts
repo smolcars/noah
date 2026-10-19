@@ -22,7 +22,7 @@ const fiatCases = [
     input: { operation: "fiatToSats", amount, btcPrice: 100000, currency: "USD", locale: "en-US" },
     expected: String(fiatToSats(Number.parseFloat(amount), 100000)),
   })),
-  ...(["USD", "EUR", "JPY", "KRW"] as const).flatMap(currency => [0, 1, 12500, 1234567].map(sats => ({
+  ...(["USD", "EUR", "JPY", "KRW"] as const).flatMap(currency => [0, 1, 125, 375, 1005, 2675, 12500, 1234567].map(sats => ({
     name: `Display ${sats} sats in ${currency}`,
     input: { operation: "satsToFiat", sats, btcPrice: 100000, currency, locale: "en-US" },
     expected: formatFiatAmount(satsToFiat(sats, 100000, currency), currency, "en-US"),

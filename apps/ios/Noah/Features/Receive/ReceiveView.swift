@@ -29,10 +29,13 @@ struct ReceiveView: View {
         }
         .background(NoahColor.background.ignoresSafeArea())
         .task(id: isActive) {
-            if isActive { await model.start() } else { model.stop(); sheet = nil }
+            if isActive {
+                async let rate: Void = loadRate()
+                await model.start()
+                await rate
+            } else { model.stop(); sheet = nil }
         }
         .onDisappear { model.stop() }
-        .task(id: app.preferredCurrency) { await loadRate() }
         .onChange(of: model.receivedSats) { _, sats in
             if sats != nil {
                 sheet = nil
@@ -105,7 +108,7 @@ struct ReceiveView: View {
                     }
                 } else if let error = model.baseError {
                     ContentUnavailableView {
-                        Label("Couldn’t create a request", systemImage: "exclamationmark.circle")
+                        Label(model.baseErrorTitle, systemImage: "exclamationmark.circle")
                     } description: { Text(error) } actions: {
                         NoahButton(title: "Retry") { Task { await model.start() } }
                     }
@@ -118,11 +121,13 @@ struct ReceiveView: View {
     }
 
     private func loadRate() async {
+        btcPrice = nil
         do {
             let response = try await AppServices.shared.client.fiatPrices(.init(body: .json(.init())))
             let rate = try response.ok.body.json.rates.additionalProperties[app.preferredCurrency]
             if let rate, rate.isFinite, rate > 0 { btcPrice = rate }
         } catch {
+            guard !Task.isCancelled else { return }
             AppLog("receive").w("Fiat rate unavailable: \(SafeErrorDescription.of(error))")
         }
     }

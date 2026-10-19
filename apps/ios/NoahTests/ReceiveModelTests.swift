@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import Noah
 
+@Suite(.timeLimit(.minutes(1)))
 @MainActor
 struct ReceiveModelTests {
     private let request = ReceiveRequest(arkAddress: "ark", onchainAddress: "chain")
@@ -59,6 +60,19 @@ struct ReceiveModelTests {
         model.removeAmount()
         #expect(model.request == self.request)
         model.stop()
+    }
+
+    @Test func canceledLightningClearsRequestAndShowsFailure() async {
+        let request = request
+        let model = ReceiveModel(dependencies: .init(addresses: { request }, invoice: { request, _, _ in request },
+                                                      completions: { _ in AsyncThrowingStream {
+                                                          $0.yield(.lightningFailed(canceled: true)); $0.finish()
+                                                      } }))
+        await model.start()
+        while model.baseError == nil { await Task.yield() }
+        #expect(model.request == nil)
+        #expect(model.receivedSats == nil)
+        #expect(model.baseErrorTitle == String(localized: "Lightning Receive Canceled"))
     }
 
     @Test func unavailableWalletShowsRetryError() async {

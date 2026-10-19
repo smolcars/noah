@@ -14,7 +14,9 @@ struct ReceiveFixtureTests {
     @Test func requestsMatchReactNative() throws {
         for fixture in try Fixtures.load("receive-request", input: RequestInput.self, expected: RequestExpected.self) {
             let input = fixture.input
-            if let amount = input.amountSat, amount.rounded() != amount || amount > 9_007_199_254_740_991 {
+            if let amount = input.amountSat, amount.rounded() != amount {
+                // Fractional sats cannot enter the Int64 native API or its amount field.
+                #expect(Int64(String(amount)) == nil)
                 #expect(fixture.expected.error != nil)
                 continue
             }
