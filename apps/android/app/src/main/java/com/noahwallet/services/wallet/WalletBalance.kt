@@ -16,11 +16,12 @@ data class WalletBalance(val ark: Ark, val onchain: Onchain) {
         val pendingBoard: ULong,
         val pendingArkoorSend: ULong,
         val pendingOffboard: ULong,
-    ) {
-        val pending: ULong get() = pendingInRound + pendingBoard + pendingArkoorSend +
-            pendingLightningSend + claimableLightningReceive + pendingOffboard + pendingExit
-        val total: ULong get() = spendable + needsRefresh + pending
-    }
+        /** Bark's `pending()` as the SDK reports it; bark's formula only when absent (fixtures). */
+        val pending: ULong = pendingInRound + pendingBoard + pendingArkoorSend +
+            pendingLightningSend + claimableLightningReceive + pendingOffboard + pendingExit,
+        /** Bark's `total()`: spendable + needs refresh + pending. */
+        val total: ULong = spendable + needsRefresh + pending,
+    )
 
     @Serializable
     data class Onchain(val confirmed: ULong, val pending: ULong, val total: ULong)

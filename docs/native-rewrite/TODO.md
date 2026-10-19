@@ -29,7 +29,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 ### 0.3 Wallet SDK integration
 - [x] FFI gaps P0+P1 shipped in bark-bolt-ffi v0.2.0
 - [x] FFI items 11 + 12 in v0.3.0: `OnchainWallet.openExisting` (read-only identity check before writes) and all nine balance buckets + Bark's pending/total — iOS pinned to 0.3.0 (Noah's own preflight kept)
-- [ ] Android to bark-bolt-ffi 0.3.0 (`openExisting`, full balance, close Kotlin wrappers on teardown); Android currently on 0.2.0
+- [x] Android on bark-bolt-ffi 0.3.0 (`openExisting` for existing wallets, full balance; wrappers already closed on teardown)
+- [ ] Android session lifecycle parity with iOS (reservations, calls shielded from cancellation, observers), with the Android restore port
 - [ ] Funded RN→native upgrade re-run on 0.3.0 (iOS, Android)
 - [ ] `WalletService` protocol/interface over bark-bolt-ffi (Swift + Kotlin), with a fake for UI work
 - [x] Config mapping per variant with **fee units: sat/kvB → sat/kwu** — iOS

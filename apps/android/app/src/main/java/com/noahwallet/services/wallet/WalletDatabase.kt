@@ -3,7 +3,7 @@ package com.noahwallet.services.wallet
 import android.database.sqlite.SQLiteDatabase
 import java.io.File
 
-/** Inspect before OnchainWallet.default can migrate or add BDK tables. */
+/** Read-only check before opening; OnchainWallet.openExisting repeats it in the SDK (defence in depth). */
 object WalletDatabase {
     data class Properties(val network: String, val fingerprint: String)
     class InspectionError : Exception("Cannot read bark wallet properties")

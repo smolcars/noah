@@ -164,7 +164,13 @@ class WalletSession internal constructor(
             { mnemonic, datadir, runDaemon, appVersion, create ->
                 val configuration = WalletConfiguration.base(variant)
                 val config = configuration.sdkConfig(WalletConfiguration.userAgent(variant, appVersion))
-                val onchain = OnchainWallet.default(configuration.network, mnemonic, config, datadir)
+                // Existing wallets go through the SDK's read-only identity check (properties,
+                // network, seed fingerprint) before anything writes; only creation may use default.
+                val onchain = if (create) {
+                    OnchainWallet.default(configuration.network, mnemonic, config, datadir)
+                } else {
+                    OnchainWallet.openExisting(configuration.network, mnemonic, config, datadir)
+                }
                 val wallet = try {
                     Wallet.openWithOnchain(configuration.network, mnemonic, config,
                         WalletOpenArgs(runDaemon = runDaemon, datadir = datadir, createIfNotExists = create), onchain)
@@ -182,11 +188,10 @@ class WalletSession internal constructor(
             val ark = wallet.balance()
             val chain = onchain.balance()
             return Summary(wallet.network(), wallet.fingerprint(), WalletBalance(
-                // bark-bolt-ffi 0.2.0 drops needs_refresh, pending_arkoor_send and pending_offboard
-                // from bark's Balance; use 0 until the SDK exposes them (FFI handoff item 12).
-                WalletBalance.Ark(ark.spendableSats, 0u, ark.pendingLightningSendSats,
+                WalletBalance.Ark(ark.spendableSats, ark.needsRefreshSats, ark.pendingLightningSendSats,
                     ark.claimableLightningReceiveSats, ark.pendingInRoundSats, ark.pendingExitSats,
-                    ark.pendingBoardSats, 0u, 0u),
+                    ark.pendingBoardSats, ark.pendingArkoorSendSats, ark.pendingOffboardSats,
+                    pending = ark.pendingSats, total = ark.totalSats),
                 WalletBalance.Onchain(chain.confirmedSats, chain.pendingSats, chain.totalSats),
             ), wallet.history().size)
         }
