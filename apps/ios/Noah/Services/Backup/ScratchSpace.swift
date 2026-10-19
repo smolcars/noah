@@ -32,7 +32,8 @@ final class ScratchSpace: Sendable {
         }
     }
 
-    private func makeFolder(_ purpose: String) throws -> URL {
+    /// For share-sheet lifetimes; the caller must discard after dismissal.
+    func makeFolder(_ purpose: String) throws -> URL {
         let name = "\(purpose)-\(UUID().uuidString)"
         let folder = root.appending(path: name, directoryHint: .isDirectory)
         try inUse.withLock { live in
@@ -44,7 +45,7 @@ final class ScratchSpace: Sendable {
         return folder
     }
 
-    private func discard(_ folder: URL) {
+    func discard(_ folder: URL) {
         inUse.withLock { live in
             try? FileManager.default.removeItem(at: folder)
             live.remove(folder.lastPathComponent)

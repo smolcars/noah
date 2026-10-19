@@ -29,6 +29,22 @@ final class AppModel {
     private(set) var preferredCurrency: String
     /// Settings → suspend: nothing opens the wallet until it is resumed.
     private(set) var isWalletSuspended: Bool
+    var localeIdentifier = LegacyLocale.read() ?? "en"
+
+    func updateProfile(_ change: (inout PersistedProfileState) -> Void) throws {
+        var profile = settings.persistedState(PersistedProfileState.self, key: PersistedProfileState.key) ?? .init()
+        change(&profile)
+        try settings.setPersistedState(profile, key: PersistedProfileState.key, version: PersistedProfileState.version)
+        amountUnit = profile.amountUnit
+        preferredCurrency = profile.preferredCurrency ?? "USD"
+    }
+
+    func setLanguage(_ code: String) {
+        UserDefaults.standard.set(code, forKey: LegacyLocale.key)
+        localeIdentifier = code
+    }
+
+    func backupSettingsChanged() async { await reconcileBackupTriggers() }
 
     let variant = AppVariant.current
     let session = WalletSession.shared
@@ -318,6 +334,7 @@ final class AppModel {
     }
 
     func appBecameActive() async {
+        if phase == .wallet { try? await server.refreshMailboxIfNeeded() }
         await reconcileBackupTriggers()
         guard canCoordinateBackups else { return }
         await AppServices.shared.backupCoordinator.schedule(.appForeground, immediate: true)
@@ -329,6 +346,7 @@ final class AppModel {
             // Registration may have switched backups on.
             await reconcileBackupTriggers()
             try await server.reportLastLogin()
+            try await server.refreshMailboxIfNeeded()
         } catch {
             log.w("Server setup failed; it can be retried from onboarding or Home")
             return

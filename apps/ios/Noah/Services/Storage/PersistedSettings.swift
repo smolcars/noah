@@ -22,3 +22,16 @@ struct PersistedProfileState: Codable, Equatable, Sendable {
         bitcoinAmountUnit.flatMap(BitcoinAmountUnit.init(rawValue:)) ?? .bip177
     }
 }
+
+/// RN transaction-storage v1. Enabling auto-board resets the one-shot prompt.
+struct PersistedTransactionState: Codable, Equatable, Sendable {
+    static let key = "transaction-storage"
+    static let version = 1
+    var isAutoBoardingEnabled = true
+    var hasAttemptedAutoBoarding = false
+
+    mutating func setAutoBoarding(_ enabled: Bool) {
+        isAutoBoardingEnabled = enabled
+        if enabled { hasAttemptedAutoBoarding = false }
+    }
+}

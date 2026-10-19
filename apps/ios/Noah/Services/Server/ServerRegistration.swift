@@ -14,6 +14,7 @@ final class ServerRegistration {
     private let log = AppLog("serverRegistration")
     @ObservationIgnored private var registration: Task<Void, Error>?
     private var checkedVersion = false
+    private var updatingMailbox = false
 
     init(variant: AppVariant, settings: SettingsStorage = .shared, session: WalletSession = .shared,
          client: Client? = nil) {
@@ -131,6 +132,54 @@ final class ServerRegistration {
     func dismissEmailPrompt() {
         do { try update { $0.isEmailPromptDismissed = true } }
         catch { log.w("Failed to save email prompt dismissal") }
+    }
+
+    func setMailboxEnabled(_ enabled: Bool) async throws {
+        guard !updatingMailbox else { throw IdentityValidationError("Mailbox update is in progress.") }
+        updatingMailbox = true
+        defer { updatingMailbox = false }
+        if enabled {
+            try await authorizeMailbox()
+            try update { $0.isMailboxAuthorizationEnabled = true }
+        } else {
+            _ = try await client.revokeMailboxAuthorization().ok
+            try update { $0.isMailboxAuthorizationEnabled = false; $0.mailboxAuthorizationExpiry = nil }
+        }
+    }
+
+    func refreshMailboxIfNeeded() async throws {
+        guard !updatingMailbox, state.isRegisteredWithServer == true,
+              state.isMailboxAuthorizationEnabled != false,
+              (state.mailboxAuthorizationExpiry ?? 0) < Date().timeIntervalSince1970 + 60 * 86400 else { return }
+        updatingMailbox = true
+        defer { updatingMailbox = false }
+        try await authorizeMailbox()
+    }
+
+    private func authorizeMailbox() async throws {
+        let expiry = Int64(Date().timeIntervalSince1970) + 89 * 86400
+        let authorization = try await session.withOpenWallet { try $0.wallet.mailboxAuthorization(authorizationExpiry: expiry) }
+        _ = try await client.authorizeMailbox(body: .json(.init(
+            encoded: authorization.encoded, expiry: authorization.expiry, mailboxId: authorization.mailboxId))).ok
+        try update { $0.mailboxAuthorizationExpiry = Double(authorization.expiry) }
+    }
+
+    func setBackupEnabled(_ enabled: Bool) async throws {
+        _ = try await client.updateBackupSettings(body: .json(.init(backupEnabled: enabled))).ok
+        try update { $0.isBackupEnabled = enabled }
+    }
+
+    func saveDisplayName(_ name: String) async throws {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        _ = try await client.updateProfile(body: .json(.init(displayName: name.isEmpty ? nil : name))).ok
+        var profile = settings.persistedState(PersistedProfileState.self, key: PersistedProfileState.key) ?? .init()
+        profile.displayName = name
+        try settings.setPersistedState(profile, key: PersistedProfileState.key, version: PersistedProfileState.version)
+    }
+
+    func refreshProfile() async throws {
+        let info = try await client.getUserInfo().ok.body.json
+        try update { $0.emailAddress = info.email; $0.nostrPubkey = info.nostrPubkey }
     }
 
     private func verifiedEmail(_ email: String) throws {
