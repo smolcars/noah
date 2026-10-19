@@ -16,11 +16,15 @@ actor WalletSession {
         case networkMismatch(found: String)
         /// Another open or close is in progress, or a wallet is already open.
         case busy
+        /// `createNew` found an existing database; it never overwrites one.
+        case walletDatabaseExists
     }
 
     /// Opener seam so lifecycle rules can be tested without the SDK.
-    typealias Opener = @Sendable (_ mnemonic: String, _ datadir: String, _ runDaemon: Bool, _ appVersion: String)
-        async throws -> Handles
+    /// `create` allows bark to create a new wallet in an empty datadir.
+    typealias Opener = @Sendable (
+        _ mnemonic: String, _ datadir: String, _ runDaemon: Bool, _ appVersion: String, _ create: Bool
+    ) async throws -> Handles
 
     struct Handles: @unchecked Sendable {
         let wallet: Wallet
@@ -67,14 +71,30 @@ actor WalletSession {
             throw OpenError.networkMismatch(found: properties.network)
         }
 
+        try await open(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion, create: false)
+    }
+
+    /// Creates a new wallet. Only valid when no database exists yet.
+    func createNew(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
+        guard case .closed = state else { throw OpenError.busy }
+        guard !location.databaseExists else { throw OpenError.walletDatabaseExists }
+        try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
+        try await open(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion, create: true)
+    }
+
+    private func open(mnemonic: String, runDaemon: Bool, appVersion: String, create: Bool) async throws {
         state = .opening
         do {
-            let handles = try await opener(mnemonic, location.directory.path, runDaemon, appVersion)
+            let handles = try await opener(mnemonic, location.directory.path, runDaemon, appVersion, create)
             state = .open(handles)
         } catch {
             state = .closed
             throw error
         }
+    }
+
+    var isOpen: Bool {
+        if case .open = state { true } else { false }
     }
 
     func summary() async throws -> Summary? {
@@ -108,7 +128,7 @@ actor WalletSession {
     }
 
     private static func sdkOpener(variant: AppVariant) -> Opener {
-        { mnemonic, datadir, runDaemon, appVersion in
+        { mnemonic, datadir, runDaemon, appVersion, create in
             let configuration = WalletConfiguration.base(for: variant)
             let config = configuration.sdkConfig(
                 userAgent: WalletConfiguration.userAgent(variant: variant, version: appVersion))
@@ -118,7 +138,7 @@ actor WalletSession {
                 network: configuration.network,
                 mnemonicOrSeed: mnemonic,
                 config: config,
-                args: WalletOpenArgs(runDaemon: runDaemon, datadir: datadir, createIfNotExists: false),
+                args: WalletOpenArgs(runDaemon: runDaemon, datadir: datadir, createIfNotExists: create),
                 onchain: onchain)
             return Handles(wallet: wallet, onchain: onchain)
         }

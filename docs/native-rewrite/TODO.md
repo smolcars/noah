@@ -98,6 +98,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Launch gating: wallet check, onboarding vs main, push-permission gate, battery gate (Android), biometric lock overlay, beta warning
 - [ ] Tab shell: Home, Receive, Send, History (Liquid Glass tab bar on iOS 26)
 - [ ] OnboardingScreen (language picker, create/restore)
+- [x] Create-or-resume logic (`WalletCreator`, RN `walletCreation` test cases ported) — iOS
+- [ ] After FFI P0: `deriveStoreNextKeypair` + `peekKeyPair(0)` on creation, as RN does
 - [ ] BetaWarningScreen (accept before create, no double create)
 - [ ] MnemonicScreen (biometric re-auth outside onboarding, copy, never log)
 - [ ] RestoreWalletScreen (backup restore with staged progress)

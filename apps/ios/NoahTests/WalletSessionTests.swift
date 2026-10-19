@@ -36,7 +36,7 @@ struct WalletSessionTests {
     private struct OpenerFailed: Error {}
 
     private func session(gate: Gate? = nil) -> WalletSession {
-        WalletSession(variant: .regtest, location: location) { _, _, _, _ in
+        WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in
             if let gate { await gate.enter() }
             throw OpenerFailed()
         }

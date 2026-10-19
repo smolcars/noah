@@ -66,6 +66,15 @@ struct KeychainPassword: Sendable {
         }
     }
 
+    /// Deletes the item only if it still holds `expectedValue`. Used to undo
+    /// a seed this app run just created; never call it on a seed that
+    /// existed before.
+    @discardableResult
+    func delete(onlyIfValueIs expectedValue: String) -> Bool {
+        guard case .found(let current) = read(), current == expectedValue else { return false }
+        return SecItemDelete(baseQuery as CFDictionary) == errSecSuccess
+    }
+
     private var baseQuery: [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,
