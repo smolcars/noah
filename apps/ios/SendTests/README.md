@@ -25,10 +25,56 @@ xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest \
   -skip-testing:NoahTests/UpgradeCompatibilityTests
 ```
 
-160 tests passed on iOS 27 / Swift 6 on 2026-10-19. Upgrade tests are deliberately
-excluded; existing opt-in server integration suites retain their own gates.
-Pre-commit client lint, compiler lint, 148 RN unit tests, typecheck and Rust
-formatting also pass.
+The final xcresult reports **194 tests: 189 passed, 5 opt-in tests skipped,
+0 failures** (41 suites) on iOS 27 / Swift 6. The separately enabled live
+stale-route test also passed (1/1). Upgrade tests remain excluded; opt-in live suites
+retain their own gates. Pre-commit checks include client lint, compiler lint,
+148 RN unit tests, typecheck, and Rust formatting.
+
+## Payment-safety verification (2026-10-19)
+
+Dedicated simulator: `Noah Send Fix Agent` (iPhone 17, iOS 27), with DerivedData
+inside this worktree. No other simulator or port 3000/3100 service was changed;
+Docker services were neither restarted nor recreated. Bark at `bfbe6b7c` calls
+its unified payment command `send`; the older `send-to` name is unavailable.
+
+- Funded a new simulator wallet with 100,000 Ark sats and 30,000 onchain sats;
+  mined one block for the onchain deposit.
+- Sent 5,000 sats from the onchain wallet. UI said **Submitted**, with txid prefix
+  `37c9de4686f8`; Core saw 5,000 sats with zero confirmations. Actual fee: 143 sats.
+- With 24,857 sats of unconfirmed change and zero confirmed sats, onchain MAX
+  refused at source confirmation: **Wait for pending onchain funds to confirm.**
+  No payment was submitted. After `just generate 1` and wallet refresh, MAX
+  reviewed 24,649 sats plus an explicitly approximate 208-sat fee (24,857 total).
+  It submitted 24,757 sats with an actual 100-sat fee, txid prefix `f1d176567e4e`.
+  After another block, Refresh changed **Submitted** to **Payment confirmed**.
+- Stale-route scenario: opt-in `SendLiveTests` resolved Lightning recipient A to
+  Ark route A, then imported distinct Ark address B through the scanner's import
+  path. Review and actual SDK submission paid only B, 1,000 sats, zero fee. Local
+  sender history and Bark receiver movement 27 agree. Only the LNURL resolver
+  was faked; payment, quote, controller journal and history were live. No camera
+  hardware or external LNURL provider was involved.
+- Paid a fresh CLN BOLT11 invoice for 2,000 sats; review fee 83 sats. UI showed
+  **Payment sent**; CLN reported `paid`, 2,000,000 msat received.
+- Offchain MAX reviewed 93,989 sats plus 2,928 sats fee, total 96,917 sats. It
+  submitted txid prefix `b9579cef9e61`. Compared the persisted quote's five VTXO
+  IDs with movement 4's input-VTXO records in SQLite: **exactly the same set**.
+  Core received 93,989 sats and confirmed it after one block. UI conservatively
+  stays **Submitted** because external offboards are absent from BDK's wallet
+  history. Relaunch preserved that submitted txid and never exposed retry.
+- Final outgoing Ark-backed history: one Ark send, one Lightning send, one
+  offboard; the two BDK sends are separate. No duplicate payment.
+
+The dedicated simulator and `apps/ios/build` are removed after verification.
+No screenshots, wallet databases, runtime destinations, invoices, or seeds are
+committed.
+
+To repeat the live stale-route test, first create and fund a disposable regtest
+simulator wallet and obtain two distinct fresh regtest Ark destinations. Pass
+`TEST_RUNNER_NOAH_SEND_LIVE_STALE=1`, `TEST_RUNNER_NOAH_SEND_ROUTE_A`, and
+`TEST_RUNNER_NOAH_SEND_ROUTE_B` to the xcodebuild command above, replacing the
+skip flag with `-only-testing:NoahTests/SendLiveTests`. This test **spends 1,000
+regtest sats**. Without the explicit gate it is disabled.
 
 ## Live regtest acceptance (2026-10-19)
 
@@ -73,31 +119,62 @@ attempt before submission. A sheet's cancellation cannot cancel its owned task;
 all SDK operations use counted `WalletSession.withOpenWallet` calls. A failed
 metadata write never converts a successful payment into a retryable failure.
 
-Any submission throw or nonterminal Lightning result triggers sync and history
-reconciliation. Only a matching **new outgoing** successful/failed/canceled
-movement establishes a terminal result. Missing history is not proof of failure.
-Unmatched outcomes remain locked, including after relaunch; there is deliberately
-no “retry anyway” or clear-marker button. The unit tests cover timeout, duplicate
-taps, caller cancellation, restart, corrupt/unwritable markers, and failure to
-save a successful receipt.
+Reconciliation follows the rail and strength of identity:
 
-Differences from RN / SDK limits:
+- Onchain-wallet sends use only BDK transactions, never Ark movements. Both Ark
+  movement IDs and BDK txids are snapshotted before submission. A new outgoing
+  transaction paying the destination proves submission; missing BDK evidence
+  after a thrown SDK error proves construction failed, because bark records
+  before broadcast. Malformed/unreadable evidence and old journals without a
+  BDK snapshot stay locked. A persist error can leave the transaction in BDK
+  memory, so reconciliation reads transactions even if sync fails.
+- BOLT11 uses only its pre-known payment hash. Successful is terminal success;
+  failed/canceled permits a new payment; pending remains locked.
+- Ark, offers, Lightning addresses/LNURL and offboards use weak correlation:
+  source, subsystem/kind, destination, exact amount (except MAX), new movement ID
+  and creation time. Candidates are shown within the uncertain screen. A weak
+  success says it appears to have gone through; weak failure or missing history
+  **never automatically unlocks**. The explicit “I've checked my history, start
+  a new payment” action requires a second destructive confirmation warning that
+  the first payment may still complete. Failed marker removal keeps Send locked.
+  The native History tab is still a placeholder; candidate evidence is therefore
+  displayed directly here. FFI item 16 replaces this weak matching/override limit.
+- A returned txid is persisted as **Submitted — it may take a moment to reach
+  the network**, never as proof of broadcast. BDK confirmation upgrades the
+  receipt on refresh. An external offboard may remain Submitted until FFI item
+  15 exposes chain-source status; absent BDK history cannot undo a receipt.
 
-- Raw LNURL-pay links are supported in addition to Lightning addresses. Whole
-  satoshis are required at submission, amounts above Bitcoin's supply are
-  rejected, and unsupported required URI parameters (including proof-of-payment
-  requests) fail closed. Parser-library error wording differs.
-- Native errors do not expose a safe “definitely not sent” classification or a
-  durable client payment-attempt ID. An unmatched error (including an onchain
-  broadcast without a returned txid) can therefore leave Send blocked pending
-  wallet evidence. This is intentional; support/recovery UX is future work.
-- `feeRates()` is sat/kwu. The conversion to sat/vB is tested, including fractional
-  rates. FFI send/drain accept integer sat/vB, so fractional rates round **up**.
-  Exact onchain transaction construction estimates are not exposed; the screen
-  labels RN's 208-vbyte estimate as approximate and MAX reports the actual result
-  when BDK provides it.
-- Live external Lightning-address/LNURL and BOLT12 provider acceptance, camera
-  hardware scanning, and network loss during a real submitted payment were not
-  exercised. LNURL comments/routing and repeat metadata are implemented; metadata
-  shape has a contract test. Timeout/cancellation behavior is fault-injected in
-  unit tests, and a real FFI throw was tested above.
+The journal also persists the reviewed quote (including MAX VTXO IDs), method,
+source, destination, amount, start time and BOLT11 hash. Pre-fix journals with weak terminal outcomes are reopened as
+uncertain; previously returned txids remain submitted. Recipient assignments
+invalidate parsing, routes, comment, choices, quote and payment synchronously;
+asynchronous results carry a revision guard, and a route records its originating
+LNURL recipient before any substitution is allowed.
+
+MAX safeguards until FFI item 14:
+
+- Onchain MAX requires total == confirmed at quote time and immediately before
+  `drain`, inside the same counted wallet call. The latter check also requires
+  balance == reviewed total. Pending funds or changed balance refuse submission.
+- Offchain MAX quotes `estimateOffboardFee(address:vtxoIds:)` for the exact
+  spendable IDs, rechecks that set before submission, and calls `offboardVtxos`
+  with precisely the reviewed IDs. Added, removed or replaced IDs require review.
+- The SDK still has no prepared onchain transaction / atomic coin-control API.
+  A sync can race between the last balance read and Rust coin selection. The
+  conservative gate implements the available mitigation, not an atomic guarantee.
+- `feeRates()` is sat/kwu; integer sat/vB rounds up. Exact BDK construction fees
+  are unavailable, so the 208-vbyte fee remains explicitly approximate. A failed
+  construction with no recorded transaction now unlocks with honest copy instead
+  of permanently blocking Send.
+
+Regression tests use fake dependencies and SDK value objects for route changes,
+late resolution, MAX balance/set changes, strong and weak identity, unrelated
+history, corrupt transaction evidence, all rail recovery paths, submitted receipts,
+confirmation, override confirmation/storage failure, and legacy journal safety.
+Existing double-tap, cancellation, corrupt journal, repeat metadata, BOLT11 amount
+and expiry, RN fixtures and fee-unit coverage remain intact.
+
+Not exercised live: external LNURL/BOLT12 providers, camera hardware, real network
+loss during a submitted payment, and a Rust persistence failure. Those outcome
+branches use fault-injected tests. No prepared-transaction, broadcast-status, or
+operation-ID FFI capability was invented; items 14–16 remain SDK work.
