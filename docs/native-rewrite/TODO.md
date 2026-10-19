@@ -102,7 +102,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Restore — Android (same journal semantics)
 - [ ] Restore UI (RestoreWalletScreen) and `backup-storage` bookkeeping
 - [ ] Backup coordinator: single in-flight, 5 s debounce, generation counter, backoff 15 s → 15 min with jitter, suspension gates
-- [ ] Cross-platform fixtures (iOS ↔ Android ↔ RN-created backups); `scripts/decrypt_backup.js` supports v2
+- [x] Independently built v2 + v1 backup files (Node crypto + Info-ZIP, `backup-archives.json`) open on iOS
+- [ ] Same fixtures on Android; iOS ↔ Android round trip; `scripts/decrypt_backup.js` supports v2
 
 ### 0.8 Translations
 - [ ] Tool: GT catalogs → `.xcstrings` + `strings.xml` for en/es/ja/ko/sv (placeholders, plurals, rich text flattened)

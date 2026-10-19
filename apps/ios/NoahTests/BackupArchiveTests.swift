@@ -229,6 +229,67 @@ struct BackupArchiveTests {
         }
     }
 
+    struct ArchiveInput: Decodable {
+        let kind: String
+        let variant: String
+        let mnemonic: String
+        let fileBase64: String?
+        let fileText: String?
+    }
+
+    struct ArchiveExpected: Decodable {
+        struct Manifest: Decodable {
+            let formatVersion: Int
+            let createdAt: String
+            let snapshotSha256: String
+            let network: String
+            let walletFingerprint: String
+            let serverPubkey: String?
+            let mailboxPubkey: String?
+            let barkSchemaVersion: Int
+        }
+
+        let manifest: Manifest?
+        let files: [String: String]
+    }
+
+    /// Files from Node crypto + Info-ZIP (`apps/fixtures/backup-archives.json`).
+    @Test func opensIndependentlyBuiltBackups() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let cases = try Fixtures.load("backup-archives", input: ArchiveInput.self, expected: ArchiveExpected.self)
+        #expect(Set(cases.map(\.input.kind)) == ["v2", "legacy"])
+        for fixture in cases {
+            let variant = try #require(AppVariant(rawValue: fixture.input.variant))
+            let destination = root.appending(path: UUID().uuidString)
+            switch fixture.input.kind {
+            case "v2":
+                let file = root.appending(path: "\(UUID().uuidString).noahbackup")
+                try #require(Data(base64Encoded: fixture.input.fileBase64 ?? "")).write(to: file)
+                let opened = try BackupArchive.open(encrypted: file, mnemonic: fixture.input.mnemonic, into: destination)
+                let expected = try #require(fixture.expected.manifest)
+                #expect(opened.manifest == .init(
+                    formatVersion: expected.formatVersion, createdAt: expected.createdAt,
+                    snapshotSha256: expected.snapshotSha256, network: expected.network,
+                    walletFingerprint: expected.walletFingerprint, serverPubkey: expected.serverPubkey,
+                    mailboxPubkey: expected.mailboxPubkey, barkSchemaVersion: expected.barkSchemaVersion))
+            default:
+                try BackupArchive.openLegacy(
+                    base64: Data((fixture.input.fileText ?? "").utf8), mnemonic: fixture.input.mnemonic,
+                    variant: variant, into: destination)
+            }
+            for (path, hash) in fixture.expected.files {
+                #expect(BackupArchive.sha256Hex(try Data(contentsOf: destination.appending(path: path))) == hash, "\(fixture.name): \(path)")
+            }
+            let unpacked = FileManager.default.enumerator(at: destination, includingPropertiesForKeys: [.isRegularFileKey])?
+                .compactMap { $0 as? URL }
+                .filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }
+                .count
+            let extra = fixture.input.kind == "v2" ? 1 : 0  // manifest.json
+            #expect(unpacked == fixture.expected.files.count + extra, "\(fixture.name): nothing else unpacked")
+        }
+    }
+
     /// Expected strings from `new Date(ms).toISOString()` in Node.
     @Test func timestampMatchesJavaScriptToISOString() {
         #expect(BackupArchive.timestamp(Date(timeIntervalSince1970: 1_792_436_137.5)) == "2026-10-19T18:55:37.500Z")
