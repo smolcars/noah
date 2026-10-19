@@ -60,7 +60,7 @@ class WalletRestorerTest {
             val source = File(root, "snapshot").apply { writeText("new wallet") }
             val encrypted = File(root, "backup")
             if (!encrypted.exists()) BackupArchive.seal(source,
-                BackupArchive.Manifest(2, "x", "sha", network, "abcd", null, null, 42), "new seed", encrypted, root)
+                BackupArchive.Manifest(2, "x", "sha", network, "abcd", null, null, 42), "new seed", encrypted, root) { complete, target -> Files.createLink(target.toPath(), complete.toPath()); Unit }
             val legacyFile = File(root, "legacy")
             if (legacy) {
                 val bytes = java.io.ByteArrayOutputStream()

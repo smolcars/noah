@@ -73,7 +73,10 @@ class BackupIntegrationTest {
                 stage = "remove disposable server backup"
                 V0BackupV2DeleteClient(client).deleteBackupObject(DeleteBackupObjectPayload(first.backupId!!)).value()
             }
-        } catch (_: Exception) { fail("Backup integration failed at $stage (provider details suppressed)") }
+        } catch (failure: Exception) {
+            val errno = (failure as? android.system.ErrnoException)?.errno
+            fail("Backup integration failed at $stage: ${failure.javaClass.simpleName}, errno=$errno (provider details suppressed)")
+        }
         finally { runCatching { session.close() }; runCatching { restored.close() }; public.close(); root.deleteRecursively() }
     }
 
@@ -121,6 +124,21 @@ class BackupIntegrationTest {
             assertEquals(expected.walletFingerprint, summary.fingerprint); assertEquals(0, summary.movementCount)
         } catch (failure: Exception) { fail("Node-made backup restore failed at $stage: ${failure.javaClass.simpleName}; ${(failure as? WalletRestorer.Failure)?.reason ?: (failure as? WalletSession.OpenError)?.reason ?: (failure as? BackupCrypto.Failure)?.reason}") }
         finally { runCatching { session.close() }; root.deleteRecursively(); File(context.cacheDir, "backup-node-fixture").deleteRecursively() }
+    }
+
+    @Test fun atomicArchivePublicationRefusesExistingTargets() {
+        val root = File(context.cacheDir, "publication-${UUID.randomUUID()}").apply { mkdirs() }
+        try {
+            val source = File(root, "complete-🔒").apply { writeText("complete archive") }
+            val target = File(root, "export-🔒")
+            AtomicBackupMove.publish(source, target)
+            assertFalse(source.exists()); assertEquals("complete archive", target.readText())
+            source.writeText("different archive")
+            val failure = runCatching { AtomicBackupMove.publish(source, target) }.exceptionOrNull()
+            assertTrue(failure is android.system.ErrnoException)
+            assertEquals(android.system.OsConstants.EEXIST, (failure as android.system.ErrnoException).errno)
+            assertEquals("complete archive", target.readText()); assertEquals("different archive", source.readText())
+        } finally { root.deleteRecursively() }
     }
 
     @Test fun realFilesystemCrashRecoveryAndSeedDurability() = runBlocking<Unit> {

@@ -59,7 +59,9 @@ object BackupArchive {
     }
     private fun hex(bytes: ByteArray) = bytes.joinToString("") { "%02x".format(it.toInt() and 255) }
 
-    fun seal(snapshot: File, manifest: Manifest, mnemonic: String, destination: File, workDirectory: File): EncryptedFile {
+    fun seal(snapshot: File, manifest: Manifest, mnemonic: String, destination: File, workDirectory: File,
+        publish: (File, File) -> Unit = { complete, target -> AtomicBackupMove.publish(complete, target) },
+    ): EncryptedFile {
         if (!snapshot.isFile) throw Failure(Reason.snapshotMissing)
         if (destination.exists()) throw Failure(Reason.destinationExists)
         val zip = File(workDirectory, ".backup-${UUID.randomUUID()}.zip")
@@ -69,9 +71,12 @@ object BackupArchive {
                 output.putNextEntry(ZipEntry("db.sqlite")); snapshot.inputStream().use { it.copyTo(output) }; output.closeEntry()
             }
             val bytes = BackupCrypto.encrypt(zip.readBytes(), mnemonic, BackupCrypto.Version.snapshot)
-            // createNewFile is an atomic no-overwrite claim; failure only removes our own file.
-            if (!destination.createNewFile()) throw Failure(Reason.destinationExists)
-            try { destination.writeBytes(bytes) } catch (failure: Throwable) { destination.delete(); throw failure }
+            // Publish the complete file atomically, refusing an existing target.
+            val partial = File(destination.parentFile, ".${UUID.randomUUID()}.partial")
+            try {
+                partial.writeBytes(bytes)
+                publish(partial, destination)
+            } finally { partial.delete() }
             return EncryptedFile(destination, bytes.size.toLong(), sha256(bytes))
         } finally { zip.delete() }
     }

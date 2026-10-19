@@ -41,6 +41,10 @@ gradle.taskGraph.whenReady {
 android {
     namespace = "com.noahwallet"
     compileSdk = 37
+    ndkVersion = "27.1.12297006"
+    externalNativeBuild {
+        cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" }
+    }
 
     defaultConfig {
         minSdk = 24

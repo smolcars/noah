@@ -13,7 +13,8 @@ Notification permission and the existing push layer run after onboarding.
 
 ## Build and install
 
-Use JDK 17 and an Android SDK with platform 37 and build-tools 36.0.0 or newer.
+Use JDK 17 and an Android SDK with platform 37 and build-tools 36.0.0 or newer,
+NDK 27.1.12297006 and CMake 3.22.1 (also supplied by Nix).
 Set `ANDROID_HOME` (or `sdk.dir` in the ignored `local.properties`). The repo's
 `nix develop` shell provides JDK 17 and the SDK; no newer JDK is required.
 The committed wrapper uses Gradle 9.6.1 with its distribution checksum pinned.
@@ -519,6 +520,12 @@ close or process restart; files are never swapped beneath live native work.
 V2 contains only a strict manifest and SQLite snapshot. Commons Compress 1.28.0
 reads central-directory types (including symlinks); Noah checks CRC per entry and
 counts inflated bytes independently of headers, with a 1 GiB aggregate cap.
+Sealed files publish from a complete temporary file through a small JNI bridge to
+Linux [`renameat2(RENAME_NOREPLACE)`](https://man7.org/linux/man-pages/man2/rename.2.html);
+failed publication leaves existing destinations intact. Android's app sandbox
+denies hard links, and `Os.rename` overwrites existing targets. This bridge keeps
+iOS's exclusive publication semantics without a check-then-rename race; unsupported
+filesystems fail explicitly. The JNI path uses UTF-8 (including supplementary characters).
 Legacy v1 extraction accepts only this variant's subtree, with path and entry
 limits. OkHttp streams downloads with the server-recorded v2 size as its cap,
 then the restorer checks both size and SHA-256. Newly required Commons artifacts,
@@ -550,7 +557,7 @@ for that UI to call. No restored phrase is persisted in UI state.
 
 ### Backup verification (2026-10-19)
 
-- Nix/JDK 17: **216 JVM tests pass**; regtest debug APK and instrumentation APK build successfully.
+- Nix/JDK 17: **217 JVM tests pass**; regtest debug APK and instrumentation APK build successfully.
   Tests cover crash boundaries, sync failures, reservations, cancellation, seed
   failures/read-back, legacy fallback, retained-backup fallback, manifest/path/CRC
   limits, shared crypto/archive fixtures, and coordinator timing with a manual clock.
@@ -559,7 +566,7 @@ for that UI to call. No restored phrase is persisted in UI state.
   snapshot skip, restore into a fresh datadir/seed store, reopen and matching
   fingerprint, movement count and balance. This is a fresh unfunded wallet (zero
   movements), matching the iOS integration-test scope. Its test backup is deleted.
-- **11 distinct instrumented cases passed**: nine backup/storage/database/crypto cases,
+- **12 distinct instrumented cases passed**: ten backup/storage/database/crypto/publication cases,
   the Node snapshot preparation, and the Node restore.
 - A separate real offline-wallet snapshot was zipped with Info-ZIP and encrypted
   by Node crypto, then downloaded, validated, committed and reopened by Android.
@@ -573,7 +580,7 @@ To repeat on **your own** emulator, build/install both APKs and run:
 
 ```sh
 adb -s YOUR_SERIAL shell am instrument -w -e noahBackupIT 1 \
-  -e class 'com.noahwallet.services.BackupIntegrationTest#liveUploadSkipAndRestore,com.noahwallet.services.BackupIntegrationTest#prepareNodeSnapshot,com.noahwallet.services.BackupIntegrationTest#realFilesystemCrashRecoveryAndSeedDurability' \
+  -e class 'com.noahwallet.services.BackupIntegrationTest#liveUploadSkipAndRestore,com.noahwallet.services.BackupIntegrationTest#prepareNodeSnapshot,com.noahwallet.services.BackupIntegrationTest#realFilesystemCrashRecoveryAndSeedDurability,com.noahwallet.services.BackupIntegrationTest#atomicArchivePublicationRefusesExistingTargets' \
   com.noahwallet.regtest.test/androidx.test.runner.AndroidJUnitRunner
 node apps/android/scripts/serve-node-backup-fixture.mjs YOUR_SERIAL
 # In a second terminal, while the fixture server runs on port 3161:

@@ -23,6 +23,19 @@ class BackupArchiveTest {
             zip.putNextEntry(ZipEntry(name)); zip.write(value); zip.closeEntry()
         } }
     }.toByteArray()
+    private fun publish(from: File, to: File) { Files.createLink(to.toPath(), from.toPath()) }
+    @Test fun publicationRefusesATargetCreatedWhileSealing() = temp { root ->
+        val snapshot = File(root, "snapshot").apply { writeText("wallet") }
+        val destination = File(root, "backup")
+        assertTrue(runCatching {
+            BackupArchive.seal(snapshot, manifest, phrase, destination, root) { complete, target ->
+                target.writeText("someone else's export")
+                publish(complete, target)
+            }
+        }.isFailure)
+        assertEquals("someone else's export", destination.readText())
+        assertFalse(root.listFiles()!!.any { it.name.endsWith(".partial") || it.name.endsWith(".zip") })
+    }
     @Test fun independentlyBuiltNodeAndInfoZipFixtures() = temp { root ->
         val cases = Json.parseToJsonElement(javaClass.classLoader!!.getResource("backup-archives.json")!!.readText())
             .jsonObject["cases"]!!.jsonArray
@@ -47,10 +60,10 @@ class BackupArchiveTest {
     }
     @Test fun roundTripAndNoOverwrite() = temp { root ->
         val snapshot = File(root, "snapshot").apply { writeBytes(ByteArray(4096) { (it % 251).toByte() }) }
-        val encrypted = BackupArchive.seal(snapshot, manifest, phrase, File(root, "sealed"), root)
+        val encrypted = BackupArchive.seal(snapshot, manifest, phrase, File(root, "sealed"), root, ::publish)
         val opened = BackupArchive.open(encrypted.file, phrase, File(root, "open"))
         assertEquals(manifest, opened.manifest); assertArrayEquals(snapshot.readBytes(), opened.snapshot.readBytes())
-        assertTrue(runCatching { BackupArchive.seal(snapshot, manifest, phrase, encrypted.file, root) }.isFailure)
+        assertTrue(runCatching { BackupArchive.seal(snapshot, manifest, phrase, encrypted.file, root, ::publish) }.isFailure)
     }
     @Test fun strictManifest() {
         val valid = BackupArchive.encode(manifest).toString(Charsets.UTF_8)
