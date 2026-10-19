@@ -38,6 +38,10 @@ Team `AT26Z24V2Q`. The app entitlements list all three app groups, as in the RN 
 
 With the regtest stack up, `TEST_RUNNER_NOAH_SERVER_IT=1 xcodebuild … -only-testing:NoahTests/ServerIntegrationTests test` logs in with a throwaway mnemonic (k1 signed through bark-bolt-ffi), registers, calls a gated endpoint and checks the one-retry path after a rejected token.
 
+## Live backup test
+
+Run a Noah server with S3 configured (the dev `.env`) on another port, e.g. `PORT=3100 PRIVATE_PORT=3199 cargo run -p server` with the `.env` sourced, then `TEST_RUNNER_NOAH_BACKUP_IT=1 TEST_RUNNER_NOAH_REGTEST_SERVER_URL=http://127.0.0.1:3100 xcodebuild … -only-testing:NoahTests/BackupIntegrationTests test`. It uploads a throwaway wallet's backup to the regtest bucket and restores it.
+
 ## Simulators
 
 Don't install native builds onto a simulator that holds an RN Noah install you care about: the bundle IDs are the same, so the native build replaces it (that is the upgrade path, use it deliberately).

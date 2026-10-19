@@ -151,6 +151,16 @@ actor WalletSession {
             movementCount: try await wallet.history().count)
     }
 
+    enum SessionError: Error, Equatable {
+        case notOpen
+    }
+
+    /// Consistent plaintext SQLite export of the open wallet (backups).
+    func createSnapshot(at destination: URL) async throws -> WalletSnapshotInfo {
+        guard case .open(let handles) = state else { throw SessionError.notOpen }
+        return try await handles.wallet.createSnapshot(destinationPath: destination.path)
+    }
+
     /// Syncs onchain then Ark state, like `syncWallet` minus Lightning claims.
     func sync() async throws {
         guard case .open(let handles) = state else { return }
