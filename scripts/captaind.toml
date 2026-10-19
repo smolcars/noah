@@ -41,9 +41,6 @@ sync_manager_block_poll_interval = "100ms"
 # on every new block
 nursery_confirm_target_blocks = 6
 
-# Required by the pinned nightly; local regtest disables the watchman.
-watchman_min_balance = "0 sat"
-
 # A public service announcement to send on each client-server handshake request
 #
 # Clients are supposed to display this message to their users.
@@ -169,9 +166,6 @@ ln_receive_anti_dos_required = false
 # and the ln_max_fee_ppm is set to 750000, we set CLN's maxfee to 3 sats.
 ln_max_fee_ppm = 900000
 
-[watchman]
-enabled = false
-
 
 ########
 # FEES #
@@ -244,8 +238,6 @@ vtxo_lifetime = 432
 vtxo_pre_expiry = 144
 # Maximum depth for pool VTXOs
 max_vtxo_exit_depth = 3
-# The interval at which to check if an issuance should be made
-issue_interval = "1m"
 
 
 #################

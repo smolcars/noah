@@ -5,12 +5,13 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 ## Phase 0 — Foundations
 
 ### 0.1 Regtest stack
-- [ ] Bitcoin Core 31+ (digest-pinned) in `scripts/docker-compose.yml`
-- [ ] captaind + bark CLI `nightly-2026-10-19`, digest-pinned
-- [ ] `scripts/captaind.toml`: remove `watchman_min_balance`, `[watchman]`, `vtxopool.issue_interval`
-- [ ] Other image refs in `justfile` / `scripts/` updated
-- [ ] `just setup-everything` works from clean volumes
-- [ ] Server (with `.env`) + barkd 0.7.1: lightning-address invoice forwarding works end to end (bump barkd only if broken)
+- [x] Bitcoin Core 31+ (digest-pinned) in `scripts/docker-compose.yml`
+- [x] captaind + bark CLI `nightly-2026-10-19`, digest-pinned
+- [x] `scripts/captaind.toml`: remove `watchman_min_balance`, `[watchman]`, `vtxopool.issue_interval`
+- [x] Other image refs in `justfile` / `scripts/` updated
+- [x] `just setup-everything` works (run on existing volumes; recreates the bark CLI wallet)
+- [x] barkd 0.7.1 forwarding against captaind 2026-10-19: invoice-for-address → LND pays → VTXO delivered (no bump needed)
+- [ ] barkd restart while a forward is pending (not yet tested)
 
 ### 0.2 Project scaffolding
 - [ ] `apps/ios`: XcodeGen spec, SwiftPM deps, schemes `Noah` / `Noah-Signet` / `Noah-Regtest`, xcconfigs, bundle IDs `com.noahwallet.{mainnet,signet,regtest}`, entitlements (aps, app groups), URL schemes, Info.plist background modes

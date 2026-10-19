@@ -1,6 +1,6 @@
 services:
   bitcoind:
-    image: bitcoin/bitcoin:30
+    image: bitcoin/bitcoin:31.1@sha256:da25cedc66b1daefff9f412ee196c901a899c3fa68a33b20849c3e08b5c40d63
     command:
       [
         "bitcoind",
@@ -74,7 +74,7 @@ services:
 
   # Local regtest intentionally runs without a watchman.
   captaind:
-    image: niteshbalusu/captaind:nightly-2026-09-04
+    image: niteshbalusu/captaind:nightly-2026-10-19@sha256:42b7bb01c7e7e9872f730a31c3132f5b0678dacca11b483d7309c64c86c5f649
     volumes:
       - captaind:/data/captaind
       - ./captaind.toml:/data/captaind/captaind.toml
@@ -93,7 +93,7 @@ services:
         condition: service_healthy
 
   bark:
-    image: niteshbalusu/bark:nightly-2026-09-04
+    image: niteshbalusu/bark:nightly-2026-10-19@sha256:6ddad8bd07a21096d8487b8caa1825185f43b9d8ea1a2f2644bd82206a7122ba
     volumes:
       - bark:/root
     depends_on:
