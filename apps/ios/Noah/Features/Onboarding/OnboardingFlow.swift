@@ -150,7 +150,7 @@ private struct MnemonicView: View {
                         }
                     }
                 }
-                .privacySensitive()
+                .secretShield()
 
                 VStack(spacing: 12) {
                     NoahButton(title: copied ? "Copied" : "Copy Seed Phrase", kind: .secondary, action: copy)

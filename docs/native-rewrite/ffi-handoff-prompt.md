@@ -94,6 +94,8 @@ Nitro polls `PRAGMA data_version` every 750 ms on an independent read-only conne
 
 11. **No-write open of an existing wallet:** `OnchainWallet.default` currently opens `db.sqlite`, runs SQLite migrations and creates BDK tables before `Wallet.openWithOnchain` checks `bark_properties` and the seed fingerprint. So a wrong mnemonic, the wrong network or an empty file all get written to before the open fails. Provide an opener, or make `createIfNotExists = false` behave this way, that validates properties, network and fingerprint read-only first and never creates or migrates the database when those checks fail. Noah currently works around this with its own read-only `bark_properties` check.
 
+12. **Full wallet balance (high priority):** bark's `Balance` (`bark/src/balance.rs` at the pinned commit) has nine buckets, and v0.2.0 only exposes six. It drops `needs_refresh`, `pending_arkoor_send` and `pending_offboard`, plus `total()` / `pending()` / `summary()`. Because current bark keeps `needs_refresh` sats out of `spendable`, any total built from the FFI undercounts the wallet whenever VTXOs need a refresh or an Ark send or offboard is in flight. Expose all nine fields in sats, and either `totalSats`/`pendingSats` or a `BalanceSummary { spendableSats, needsRefreshSats, pendingSats, totalSats }`, so apps use bark's own accounting instead of re-deriving it. Add a contract test that the FFI total equals `Balance::total()`.
+
 ## P2: optional, needs a product decision
 
 - Onchain balance split into trusted and untrusted pending.

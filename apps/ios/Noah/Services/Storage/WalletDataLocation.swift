@@ -16,4 +16,12 @@ struct WalletDataLocation: Sendable {
     var databaseExists: Bool {
         FileManager.default.fileExists(atPath: database.path)
     }
+
+    /// Anything at all in the datadir, as the RN app checked
+    /// (`walletDataExists`). A datadir with other files but no `db.sqlite`
+    /// is still someone's data and must never be treated as empty.
+    var hasAnyData: Bool {
+        let contents = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+        return !contents.isEmpty
+    }
 }

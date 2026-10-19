@@ -18,6 +18,7 @@ struct WalletCreatorTests {
         var openFailure: Error?
         var createGate: CheckedContinuation<Void, Never>?
         var holdCreate = false
+        var cleanupFails = false
 
         func withLock<T>(_ body: () throws -> T) rethrows -> T { lock.lock(); defer { lock.unlock() }; return try body() }
 
@@ -26,9 +27,16 @@ struct WalletCreatorTests {
                 readSeed: { self.withLock { self.seed } },
                 saveSeed: { value in self.withLock { self.seed = .found(value) } },
                 deleteSeed: { value in self.withLock { if self.seed == .found(value) { self.seed = .notFound } } },
-                walletDatabaseExists: { self.withLock { self.database } },
+                walletDataExists: { self.withLock { self.database } },
                 datadirExists: { self.withLock { self.datadir } },
-                removeAttemptFiles: { existed in self.withLock { self.database = false; if !existed { self.datadir = false } } },
+                removeAttemptFiles: { existed in
+                    self.withLock {
+                        if self.cleanupFails { return false }
+                        self.database = false
+                        if !existed { self.datadir = false }
+                        return true
+                    }
+                },
                 generateMnemonic: {
                     self.withLock {
                         let value = "seed-\(self.generated.count + 1)"
@@ -135,5 +143,14 @@ struct WalletCreatorTests {
         try await second.value
         #expect(fake.generated == ["seed-1"])
         #expect(fake.created == ["seed-1"])
+    }
+
+    @Test func keepsTheNewSeedWhenCleanupFails() async {
+        let fake = Fake()
+        fake.createFailure = Boom()
+        fake.cleanupFails = true
+        await #expect(throws: Boom.self) { try await WalletCreator(dependencies: fake.dependencies()).createOrResume() }
+        #expect(fake.seed == .found("seed-1"), "leftover wallet files must keep their seed")
+        #expect(fake.database)
     }
 }

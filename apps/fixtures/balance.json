@@ -1,0 +1,140 @@
+{
+  "description": "Wallet balance with bark's own accounting (bark/src/balance.rs: total = spendable + needs_refresh + pending, every VTXO in exactly one bucket) plus the onchain total (confirmed + immature + pending). bark-bolt-ffi 0.2.0 does not yet expose needsRefresh, pendingArkoorSend or pendingOffboard.",
+  "cases": [
+    {
+      "name": "empty wallet",
+      "input": {
+        "ark": {
+          "spendable": 0,
+          "needsRefresh": 0,
+          "pendingLightningSend": 0,
+          "claimableLightningReceive": 0,
+          "pendingInRound": 0,
+          "pendingExit": 0,
+          "pendingBoard": 0,
+          "pendingArkoorSend": 0,
+          "pendingOffboard": 0
+        },
+        "onchain": {
+          "confirmed": 0,
+          "pending": 0,
+          "total": 0
+        }
+      },
+      "expected": {
+        "total": 0,
+        "onchain": 0,
+        "offchain": 0,
+        "pending": 0
+      }
+    },
+    {
+      "name": "spendable only",
+      "input": {
+        "ark": {
+          "spendable": 95000,
+          "needsRefresh": 0,
+          "pendingLightningSend": 0,
+          "claimableLightningReceive": 0,
+          "pendingInRound": 0,
+          "pendingExit": 0,
+          "pendingBoard": 0,
+          "pendingArkoorSend": 0,
+          "pendingOffboard": 0
+        },
+        "onchain": {
+          "confirmed": 0,
+          "pending": 0,
+          "total": 0
+        }
+      },
+      "expected": {
+        "total": 95000,
+        "onchain": 0,
+        "offchain": 95000,
+        "pending": 0
+      }
+    },
+    {
+      "name": "vtxos waiting for refresh still count",
+      "input": {
+        "ark": {
+          "spendable": 1000,
+          "needsRefresh": 4000,
+          "pendingLightningSend": 0,
+          "claimableLightningReceive": 0,
+          "pendingInRound": 0,
+          "pendingExit": 0,
+          "pendingBoard": 0,
+          "pendingArkoorSend": 0,
+          "pendingOffboard": 0
+        },
+        "onchain": {
+          "confirmed": 0,
+          "pending": 0,
+          "total": 0
+        }
+      },
+      "expected": {
+        "total": 5000,
+        "onchain": 0,
+        "offchain": 5000,
+        "pending": 0
+      }
+    },
+    {
+      "name": "every pending bucket counts once",
+      "input": {
+        "ark": {
+          "spendable": 1000,
+          "needsRefresh": 50,
+          "pendingLightningSend": 400,
+          "claimableLightningReceive": 150,
+          "pendingInRound": 200,
+          "pendingExit": 300,
+          "pendingBoard": 500,
+          "pendingArkoorSend": 60,
+          "pendingOffboard": 70
+        },
+        "onchain": {
+          "confirmed": 7000,
+          "pending": 600,
+          "total": 7600
+        }
+      },
+      "expected": {
+        "total": 10330,
+        "onchain": 7600,
+        "offchain": 2730,
+        "pending": 2280
+      }
+    },
+    {
+      "name": "onchain total includes immature coins",
+      "input": {
+        "ark": {
+          "spendable": 0,
+          "needsRefresh": 0,
+          "pendingLightningSend": 0,
+          "claimableLightningReceive": 0,
+          "pendingInRound": 0,
+          "pendingExit": 0,
+          "pendingBoard": 0,
+          "pendingArkoorSend": 0,
+          "pendingOffboard": 0
+        },
+        "onchain": {
+          "confirmed": 1000,
+          "pending": 0,
+          "total": 1500
+        }
+      },
+      "expected": {
+        "total": 1500,
+        "onchain": 1500,
+        "offchain": 0,
+        "pending": 500
+      }
+    }
+  ]
+}

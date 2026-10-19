@@ -17,7 +17,7 @@ struct HomeView: View {
                     }
 
                     BalanceHeader(
-                        sats: model.summary.map { Int64($0.spendableSats + $0.onchainTotalSats) },
+                        sats: model.summary.map { Int64($0.balance.totalSats) },
                         unit: model.amountUnit,
                         isHidden: $model.isBalanceHidden)
                         .padding(.top, 24)
@@ -100,6 +100,8 @@ private struct BalanceHeader: View {
                 Image(systemName: isHidden ? "eye" : "eye.slash")
                     .font(.title3)
                     .foregroundStyle(NoahColor.foreground)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel(isHidden ? "Show balance" : "Hide balance")
         }

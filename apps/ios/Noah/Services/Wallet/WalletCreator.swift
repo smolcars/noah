@@ -24,11 +24,13 @@ actor WalletCreator {
         var readSeed: @Sendable () -> KeychainPassword.ReadResult
         var saveSeed: @Sendable (String) throws -> Void
         var deleteSeed: @Sendable (_ onlyIfValueIs: String) -> Void
-        var walletDatabaseExists: @Sendable () -> Bool
+        /// Anything in the datadir (RN `walletDataExists`).
+        var walletDataExists: @Sendable () -> Bool
         var datadirExists: @Sendable () -> Bool
-        /// Removes what a failed fresh attempt created: the whole datadir if
-        /// it did not exist before, otherwise only the database files.
-        var removeAttemptFiles: @Sendable (_ datadirExisted: Bool) -> Void
+        /// Removes what a failed fresh attempt created. The datadir was
+        /// absent or empty before the attempt, so everything in it is ours.
+        /// Returns false if anything could not be removed.
+        var removeAttemptFiles: @Sendable (_ datadirExisted: Bool) -> Bool
         var generateMnemonic: @Sendable () throws -> String
         var openExisting: @Sendable (_ mnemonic: String) async throws -> Void
         var createNew: @Sendable (_ mnemonic: String) async throws -> Void
@@ -63,7 +65,7 @@ actor WalletCreator {
             seed = nil
         }
 
-        switch (seed, dependencies.walletDatabaseExists()) {
+        switch (seed, dependencies.walletDataExists()) {
         case (let seed?, true):
             try await dependencies.openExisting(seed)
             return
@@ -80,8 +82,11 @@ actor WalletCreator {
             try await dependencies.createNew(mnemonic)
         } catch {
             await dependencies.close()
-            dependencies.removeAttemptFiles(datadirExisted)
-            dependencies.deleteSeed(mnemonic)
+            // Only drop the new seed once its wallet files are really gone;
+            // otherwise keep it so the leftover data stays recoverable.
+            if dependencies.removeAttemptFiles(datadirExisted) {
+                dependencies.deleteSeed(mnemonic)
+            }
             throw error
         }
     }
@@ -95,20 +100,27 @@ extension WalletCreator.Dependencies {
             readSeed: { seedItem.read() },
             saveSeed: { try seedItem.save($0) },
             deleteSeed: { seedItem.delete(onlyIfValueIs: $0) },
-            walletDatabaseExists: { location.databaseExists },
+            walletDataExists: { location.hasAnyData },
             datadirExists: { FileManager.default.fileExists(atPath: location.directory.path) },
             removeAttemptFiles: { datadirExisted in
                 let fileManager = FileManager.default
-                if !datadirExisted {
-                    try? fileManager.removeItem(at: location.directory)
-                    return
-                }
-                for name in ["db.sqlite", "db.sqlite-wal", "db.sqlite-shm", "LOCK"] {
-                    try? fileManager.removeItem(at: location.directory.appending(path: name))
+                do {
+                    if !datadirExisted {
+                        if fileManager.fileExists(atPath: location.directory.path) {
+                            try fileManager.removeItem(at: location.directory)
+                        }
+                    } else {
+                        for name in try fileManager.contentsOfDirectory(atPath: location.directory.path) {
+                            try fileManager.removeItem(at: location.directory.appending(path: name))
+                        }
+                    }
+                    return true
+                } catch {
+                    return false
                 }
             },
             generateMnemonic: { try BarkBoltFFI.generateMnemonic() },
-            openExisting: { try await session.openExisting(mnemonic: $0, runDaemon: true, appVersion: appVersion) },
+            openExisting: { try await session.ensureOpen(mnemonic: $0, runDaemon: true, appVersion: appVersion) },
             createNew: { try await session.createNew(mnemonic: $0, runDaemon: true, appVersion: appVersion) },
             close: { try? await session.close() })
     }

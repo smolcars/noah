@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 import Observation
 
@@ -66,21 +67,38 @@ final class AppModel {
 
     func refresh() async {
         do {
-            summary = try await session.summary()
+            guard let latest = try await session.summary() else {
+                // Not open (e.g. the first open failed): try again rather than
+                // clearing the error with nothing to show.
+                await openExistingWallet()
+                return
+            }
+            summary = latest
             walletError = nil
         } catch {
-            log.e("Failed to read wallet summary: \(error)")
+            log.e("Failed to read wallet summary: \(Self.describe(error))")
             walletError = String(localized: "Couldn't load your balance.")
         }
     }
 
     func sync() async {
+        guard await session.isOpen else {
+            await openExistingWallet()
+            return
+        }
         do {
             try await session.sync()
         } catch {
-            log.w("Wallet sync failed: \(error)")
+            log.w("Wallet sync failed: \(Self.describe(error))")
         }
         await refresh()
+    }
+
+    /// Error text safe for logs: SDK messages, never generated-client errors
+    /// (their descriptions include request inputs and headers).
+    private static func describe(_ error: Error) -> String {
+        if let bark = error as? BarkError { return bark.message }
+        return String(describing: type(of: error))
     }
 
     private func openExistingWallet() async {
@@ -89,10 +107,13 @@ final class AppModel {
             return
         }
         do {
-            try await session.openExisting(mnemonic: mnemonic, runDaemon: true, appVersion: appVersion)
-            await refresh()
+            try await session.ensureOpen(mnemonic: mnemonic, runDaemon: true, appVersion: appVersion)
+            if let latest = try await session.summary() {
+                summary = latest
+                walletError = nil
+            }
         } catch {
-            log.e("Failed to open wallet: \(error)")
+            log.e("Failed to open wallet: \(Self.describe(error))")
             walletError = String(localized: "Couldn't open your wallet.")
         }
     }

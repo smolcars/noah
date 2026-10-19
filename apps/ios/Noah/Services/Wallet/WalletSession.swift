@@ -38,9 +38,10 @@ actor WalletSession {
     struct Summary: Equatable, Sendable {
         let network: Network
         let fingerprint: String
-        let spendableSats: UInt64
-        let onchainTotalSats: UInt64
+        let balance: WalletBalance
         let movementCount: Int
+
+        var spendableSats: UInt64 { balance.ark.spendable }
     }
 
     private let variant: AppVariant
@@ -74,6 +75,13 @@ actor WalletSession {
         try await open(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion, create: false)
     }
 
+    /// Opens the existing wallet unless it is already open (RN's
+    /// `loadWalletIfNeeded`). Still rejects overlapping open/close.
+    func ensureOpen(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
+        if case .open = state { return }
+        try await openExisting(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion)
+    }
+
     /// Creates a new wallet. Only valid when no database exists yet.
     func createNew(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
         guard case .closed = state else { throw OpenError.busy }
@@ -101,11 +109,26 @@ actor WalletSession {
         guard case .open(let handles) = state else { return nil }
         let wallet = handles.wallet
         let onchain = handles.onchain
+        let ark = try await wallet.balance()
+        let chain = try await onchain.balance()
         return Summary(
             network: try await wallet.network(),
             fingerprint: wallet.fingerprint(),
-            spendableSats: try await wallet.balance().spendableSats,
-            onchainTotalSats: try await onchain.balance().totalSats,
+            balance: WalletBalance(
+                // bark-bolt-ffi 0.2.0 drops needs_refresh, pending_arkoor_send
+                // and pending_offboard from bark's Balance; they read as 0
+                // until the SDK exposes them (FFI handoff item 12).
+                ark: .init(
+                    spendable: ark.spendableSats,
+                    needsRefresh: 0,
+                    pendingLightningSend: ark.pendingLightningSendSats,
+                    claimableLightningReceive: ark.claimableLightningReceiveSats,
+                    pendingInRound: ark.pendingInRoundSats,
+                    pendingExit: ark.pendingExitSats,
+                    pendingBoard: ark.pendingBoardSats,
+                    pendingArkoorSend: 0,
+                    pendingOffboard: 0),
+                onchain: .init(confirmed: chain.confirmedSats, pending: chain.pendingSats, total: chain.totalSats)),
             movementCount: try await wallet.history().count)
     }
 

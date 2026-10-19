@@ -23,6 +23,7 @@ enum LaunchState: String, Equatable, Sendable {
         case present, absent, unavailable
     }
 
+    /// `walletDatabaseExists` means "the datadir holds any wallet data".
     static func resolve(seed: SeedStatus, walletDatabaseExists: Bool) -> LaunchState {
         switch (seed, walletDatabaseExists) {
         case (.unavailable, _): .secureStorageUnavailable
@@ -52,7 +53,7 @@ extension LaunchState {
     static func current(variant: AppVariant = .current) -> LaunchState {
         resolve(
             seed: SeedStatus(KeychainPassword.mnemonic(for: variant).read()),
-            walletDatabaseExists: WalletDataLocation(variant: variant).databaseExists
+            walletDatabaseExists: WalletDataLocation(variant: variant).hasAnyData
         )
     }
 }
