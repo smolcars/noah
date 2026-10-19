@@ -26,6 +26,10 @@ class WalletSessionTest {
                 WalletBalance.Ark(1u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u)), 2)
         }
         override suspend fun sync() { assertFalse(closed) }
+        override suspend fun maintenanceDelegated() { assertFalse(closed) }
+        override suspend fun bolt11Invoice(amountSats: ULong): String { check(!closed); return "invoice-$amountSats" }
+        override suspend fun claimLightningReceives() { assertFalse(closed) }
+        override suspend fun closestExpiryBlocks(): Long? { check(!closed); return -1L }
         override suspend fun createSnapshot(destination: File): WalletSnapshotInfo = throw UnsupportedOperationException()
         override suspend fun stopDaemonWait() {
             stopEntered?.complete(Unit); stopGate?.await()

@@ -28,6 +28,10 @@ class WalletSession internal constructor(
         suspend fun peekAddress(index: UInt): String
         suspend fun summary(): Summary
         suspend fun sync()
+        suspend fun maintenanceDelegated()
+        suspend fun bolt11Invoice(amountSats: ULong): String
+        suspend fun claimLightningReceives()
+        suspend fun closestExpiryBlocks(): Long?
         suspend fun createSnapshot(destination: File): WalletSnapshotInfo
         suspend fun stopDaemonWait()
         fun close()
@@ -110,6 +114,16 @@ class WalletSession internal constructor(
         handles.peekAddress(index)
     }
 
+    suspend fun maintenanceDelegated() = withOpen { it.maintenanceDelegated() }
+    suspend fun bolt11Invoice(amountSats: ULong): String = withOpen { it.bolt11Invoice(amountSats) }
+    suspend fun claimLightningReceives() = withOpen { it.claimLightningReceives() }
+    suspend fun closestExpiryBlocks(): Long? = withOpen { it.closestExpiryBlocks() }
+
+    private suspend fun <T> withOpen(block: suspend (Handles) -> T): T = operations.withLock {
+        val handles = synchronized(lock) { (state as? State.Open)?.handles } ?: throw SessionError()
+        block(handles)
+    }
+
     suspend fun createSnapshot(destination: File): WalletSnapshotInfo = operations.withLock {
         val handles = synchronized(lock) { (state as? State.Open)?.handles } ?: throw SessionError()
         handles.createSnapshot(destination)
@@ -177,6 +191,15 @@ class WalletSession internal constructor(
             ), wallet.history().size)
         }
         override suspend fun sync() { onchain.sync(); wallet.sync() }
+        override suspend fun maintenanceDelegated() { wallet.maintenanceDelegated() }
+        override suspend fun bolt11Invoice(amountSats: ULong) = wallet.bolt11Invoice(amountSats, null).invoice
+        override suspend fun claimLightningReceives() { wallet.tryClaimAllLightningReceives(false) }
+        override suspend fun closestExpiryBlocks(): Long? {
+            val vtxos = wallet.vtxos()
+            if (vtxos.isEmpty()) return null
+            val tip = onchain.tipHeight().toLong()
+            return vtxos.minOf { it.expiryHeight.toLong() - tip }
+        }
         override suspend fun createSnapshot(destination: File) = wallet.createSnapshot(destination.path)
         override suspend fun stopDaemonWait() { wallet.stopDaemonWait() }
         override fun close() { try { wallet.close() } finally { onchain.close() } }
