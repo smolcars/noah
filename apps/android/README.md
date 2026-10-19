@@ -13,8 +13,7 @@ Notification permission and the existing push layer run after onboarding.
 
 ## Build and install
 
-Use JDK 17 and an Android SDK with platform 37 and build-tools 36.0.0 or newer,
-NDK 27.1.12297006 and CMake 3.22.1 (also supplied by Nix).
+Use JDK 17 and an Android SDK with platform 37 and build-tools 36.0.0 or newer.
 Set `ANDROID_HOME` (or `sdk.dir` in the ignored `local.properties`). The repo's
 `nix develop` shell provides JDK 17 and the SDK; no newer JDK is required.
 The committed wrapper uses Gradle 9.6.1 with its distribution checksum pinned.
@@ -520,12 +519,11 @@ close or process restart; files are never swapped beneath live native work.
 V2 contains only a strict manifest and SQLite snapshot. Commons Compress 1.28.0
 reads central-directory types (including symlinks); Noah checks CRC per entry and
 counts inflated bytes independently of headers, with a 1 GiB aggregate cap.
-Sealed files publish from a complete temporary file through a small JNI bridge to
-Linux [`renameat2(RENAME_NOREPLACE)`](https://man7.org/linux/man-pages/man2/rename.2.html);
-failed publication leaves existing destinations intact. Android's app sandbox
-denies hard links, and `Os.rename` overwrites existing targets. This bridge keeps
-iOS's exclusive publication semantics without a check-then-rename race; unsupported
-filesystems fail explicitly. The JNI path uses UTF-8 (including supplementary characters).
+Sealed files publish from a complete temporary file without replacing anything:
+`createNewFile` claims the destination name exclusively (O_CREAT|O_EXCL), then
+`Os.rename` swaps the complete file in over that empty placeholder. Android's app
+sandbox denies hard links and `Os.rename` alone would overwrite, so this keeps
+iOS's exclusive publication semantics in plain Kotlin (no native code).
 Legacy v1 extraction accepts only this variant's subtree, with path and entry
 limits. OkHttp streams downloads with the server-recorded v2 size as its cap,
 then the restorer checks both size and SHA-256. Newly required Commons artifacts,

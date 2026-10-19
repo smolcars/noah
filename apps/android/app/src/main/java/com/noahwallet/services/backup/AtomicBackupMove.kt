@@ -1,17 +1,25 @@
 package com.noahwallet.services.backup
 
 import android.system.ErrnoException
+import android.system.Os
+import android.system.OsConstants
 import java.io.File
 
+/**
+ * Publishes a complete file under `destination` without ever replacing an existing file.
+ * `createNewFile` claims the name atomically (O_CREAT|O_EXCL) and fails if anything is there;
+ * `Os.rename` then swaps the complete file in over that empty placeholder in one step. Hard
+ * links (the usual no-replace trick) are denied in Android's app sandbox.
+ */
 internal object AtomicBackupMove {
-    init { System.loadLibrary("noah_files") }
-    private external fun moveExclusive(source: ByteArray, destination: ByteArray): Int
     fun publish(source: File, destination: File) {
-        val error = moveExclusive(path(source), path(destination))
-        if (error != 0) throw ErrnoException("renameat2", error)
-    }
-    private fun path(file: File): ByteArray {
-        require('\u0000' !in file.absolutePath)
-        return file.absolutePath.toByteArray(Charsets.UTF_8) + 0.toByte()
+        if (!destination.createNewFile()) throw ErrnoException("publish", OsConstants.EEXIST)
+        try {
+            Os.rename(source.absolutePath, destination.absolutePath)
+        } catch (failure: ErrnoException) {
+            // Only ever our own empty placeholder.
+            if (destination.length() == 0L) destination.delete()
+            throw failure
+        }
     }
 }
