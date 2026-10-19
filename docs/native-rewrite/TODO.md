@@ -39,8 +39,10 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 ### 0.4 Server API contract
 - [x] Utoipa `ToSchema` on `server/src/types.rs` exports + path annotations on all handlers (bearer + registered-user security)
 - [x] Deterministic `openapi.json` export + normalization step (tagged `NotificationData`, nullable refs)
-- [ ] swift-openapi-generator → `apps/ios` generated client; Fabrikt → `apps/android` generated models/client
-- [ ] u64 → Int64/Long mapping + boundary fixtures; all 6 notification variants round-trip
+- [x] swift-openapi-generator 1.14.2 → `apps/ios/Noah/API/Generated` (committed, `just generate-api-ios`)
+- [ ] Fabrikt → `apps/android` generated models/client
+- [x] All notification variants decode + round-trip from server-generated fixtures — iOS
+- [ ] Same for Android
 - [x] `just generate-api`; server tests fail on a stale `api/openapi.json` or `apps/fixtures/server-notification-data.json`
 - [ ] CI drift gate for generated native code
 

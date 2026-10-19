@@ -1,3 +1,4 @@
 Noah.xcodeproj/
 build/
 DerivedData/
+Tools/OpenAPIGenerator/.build/

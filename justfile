@@ -136,7 +136,12 @@ server-check:
 
 # Regenerate api/openapi.json after an intentional API change
 generate-api:
-    UPDATE_OPENAPI=1 cargo test -p server --bin server openapi::export_openapi -- --exact
+    UPDATE_OPENAPI=1 cargo test -p server --bin server openapi::export
+
+# Regenerate the iOS client in apps/ios/Noah/API/Generated from api/openapi.json
+generate-api-ios:
+    rm -rf apps/ios/Noah/API/Generated && mkdir -p apps/ios/Noah/API/Generated
+    swift run --package-path apps/ios/Tools/OpenAPIGenerator swift-openapi-generator generate --config apps/ios/Noah/API/openapi-generator-config.yaml --output-directory apps/ios/Noah/API/Generated api/openapi.json
 
 # Start ngrok tunnel to localhost:3000
 ngrok:
