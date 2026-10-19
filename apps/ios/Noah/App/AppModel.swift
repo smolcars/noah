@@ -33,7 +33,7 @@ final class AppModel {
     private let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
     @ObservationIgnored private let creator: WalletCreator
     @ObservationIgnored private var started = false
-    @ObservationIgnored private var backupTriggers: Task<Void, Never>?
+    @ObservationIgnored private var backupTriggers: (id: UUID, task: Task<Void, Never>)?
 
     init() {
         server = ServerRegistration(variant: .current, client: AppServices.shared.client)
@@ -106,7 +106,7 @@ final class AppModel {
         phase = .wallet
         await refresh()
         await registerPush()
-        startBackupTriggers()
+        await reconcileBackupTriggers()
     }
 
     func refresh() async {
@@ -158,7 +158,7 @@ final class AppModel {
             walletError = String(localized: "Couldn't open your wallet.")
             return
         }
-        startBackupTriggers()
+        await reconcileBackupTriggers()
         await startServerServices()
     }
 
@@ -171,14 +171,28 @@ final class AppModel {
         return wallet?.isInitialized == true && wallet?.isWalletSuspended != true
     }
 
+    /// Starts or stops automatic backups whenever eligibility may have
+    /// changed (wallet opened, onboarding finished, registration switched
+    /// backups on, foreground), like RN's reactive effect.
+    private func reconcileBackupTriggers() async {
+        if canCoordinateBackups {
+            startBackupTriggers()
+        } else if let running = backupTriggers {
+            running.task.cancel()
+            backupTriggers = nil
+            await AppServices.shared.backupCoordinator.cancelScheduled()
+        }
+    }
+
     /// Back up after committed wallet changes (debounced); at once on the
     /// first event and after a resync. Ends when the session closes.
     private func startBackupTriggers() {
         guard backupTriggers == nil, canCoordinateBackups else { return }
         let coordinator = AppServices.shared.backupCoordinator
         let session = self.session
-        backupTriggers = Task { [weak self] in
-            defer { self?.backupTriggers = nil }
+        let id = UUID()
+        let task = Task { [weak self] in
+            defer { if self?.backupTriggers?.id == id { self?.backupTriggers = nil } }
             var resubscribe = true
             while resubscribe, !Task.isCancelled {
                 resubscribe = false
@@ -196,22 +210,26 @@ final class AppModel {
                         if resubscribe { break }
                     }
                 } catch {
+                    if Task.isCancelled { return }
                     self?.log.w("Couldn't watch wallet changes for backups: \(Self.describe(error))")
                     await coordinator.schedule(.startup, immediate: true)
                 }
             }
         }
+        backupTriggers = (id, task)
     }
 
     func appBecameActive() async {
+        await reconcileBackupTriggers()
         guard canCoordinateBackups else { return }
-        startBackupTriggers()
         await AppServices.shared.backupCoordinator.schedule(.appForeground, immediate: true)
     }
 
     private func startServerServices() async {
         do {
             try await server.ensureRegistered()
+            // Registration may have switched backups on.
+            await reconcileBackupTriggers()
             try await server.reportLastLogin()
         } catch {
             log.w("Server setup failed; it can be retried from onboarding or Home")

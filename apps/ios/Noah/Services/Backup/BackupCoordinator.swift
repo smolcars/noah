@@ -78,7 +78,9 @@ actor BackupCoordinator {
     }
 
     /// `flushBackup`: runs now and returns once every request made before
-    /// this call is covered by a finished pass.
+    /// this call is covered by a finished pass. A cancelled caller (a push
+    /// out of background time) stops waiting at once; the pass itself goes
+    /// on, its native work protected by the wallet session.
     func flush(_ reason: Reason, requireEnabled: Bool = true) async throws {
         guard await dependencies.canBackup(requireEnabled) else { throw NotReady() }
         requestedGeneration += 1
@@ -88,9 +90,9 @@ actor BackupCoordinator {
         cancelDebounce()
         cancelRetry()
         log.d("Immediate backup requested: \(reason.rawValue)")
-        var result = await runPass()
+        var result = try await Self.value(of: passTask())
         while case .success = result, completedGeneration < target {
-            result = await runPass()
+            result = try await Self.value(of: passTask())
         }
         try result.get()
     }
@@ -98,17 +100,54 @@ actor BackupCoordinator {
     // MARK: Passes
 
     private func runPass() async -> Result<Void, Error> {
-        if let inFlight { return await inFlight.value }
-        // The pass clears `inFlight` itself before anyone waiting on it
-        // resumes; otherwise `flush` could keep getting this finished pass
-        // back and spin without ever starting the next one.
+        await passTask().value
+    }
+
+    /// The pass in flight, or a new one. The pass clears `inFlight` itself
+    /// before anyone waiting on it resumes; otherwise `flush` could keep
+    /// getting this finished pass back and spin without starting the next.
+    private func passTask() -> Task<Result<Void, Error>, Never> {
+        if let inFlight { return inFlight }
         let task = Task {
             let result = await pass()
             inFlight = nil
             return result
         }
         inFlight = task
-        return await task.value
+        return task
+    }
+
+    /// Waits for `task` unless the caller is cancelled first (then throws
+    /// `CancellationError`); the task itself keeps running either way.
+    private static func value<T: Sendable>(of task: Task<T, Never>) async throws -> T {
+        let waiter = Mutex<(continuation: CheckedContinuation<T, Error>?, early: Result<T, Error>?)>((nil, nil))
+        @Sendable func finish(_ result: Result<T, Error>) {
+            let continuation = waiter.withLock { state -> CheckedContinuation<T, Error>? in
+                if let continuation = state.continuation {
+                    state.continuation = nil
+                    return continuation
+                }
+                if state.early == nil { state.early = result }
+                return nil
+            }
+            continuation?.resume(with: result)
+        }
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let early = waiter.withLock { state -> Result<T, Error>? in
+                    if let early = state.early { return early }
+                    state.continuation = continuation
+                    return nil
+                }
+                if let early {
+                    continuation.resume(with: early)
+                    return
+                }
+                Task { finish(.success(await task.value)) }
+            }
+        } onCancel: {
+            finish(.failure(CancellationError()))
+        }
     }
 
     private func pass() async -> Result<Void, Error> {

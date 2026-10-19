@@ -182,6 +182,24 @@ struct BackupCoordinatorTests {
         #expect(world.state.backupPending == false)
     }
 
+    /// A push out of background time stops waiting; the backup itself finishes.
+    @Test func cancelledFlushStopsWaitingWhileThePassFinishes() async throws {
+        let clock = ManualClock()
+        let world = World()
+        world.hold()
+        let coordinator = BackupCoordinator(dependencies: world.dependencies(clock: clock))
+        let flush = Task { try await coordinator.flush(.push, requireEnabled: false) }
+        await eventually { world.isHolding }
+
+        flush.cancel()
+        await #expect(throws: CancellationError.self) { try await flush.value }
+        #expect(world.state.lastBackupStatus != .success, "the upload hasn't finished yet")
+
+        world.releaseHeld()
+        await eventually { world.state.lastBackupStatus == .success }
+        #expect(world.calls == [nil])
+    }
+
     @Test func ineligibleWalletIsLeftAlone() async throws {
         let clock = ManualClock()
         let world = World()
