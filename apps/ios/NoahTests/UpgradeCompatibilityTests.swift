@@ -42,9 +42,15 @@ extension UpgradeCompatibilityTests {
 
         #expect(summary.network == .regtest)
         #expect(!summary.fingerprint.isEmpty)
-        let expected = ProcessInfo.processInfo.environment["NOAH_UPGRADE_EXPECT_FINGERPRINT"]
-        if let expected, !expected.isEmpty {
-            #expect(summary.fingerprint == expected, "opened a different wallet than the RN app created")
+        let environment = ProcessInfo.processInfo.environment
+        if let fingerprint = environment["NOAH_UPGRADE_EXPECT_FINGERPRINT"], !fingerprint.isEmpty {
+            #expect(summary.fingerprint == fingerprint, "opened a different wallet than the RN app created")
+        }
+        if let movements = environment["NOAH_UPGRADE_EXPECT_MOVEMENTS"].flatMap(Int.init) {
+            #expect(summary.movementCount == movements, "history differs from the RN database")
+        }
+        if let spendable = environment["NOAH_UPGRADE_EXPECT_SPENDABLE"].flatMap(UInt64.init) {
+            #expect(summary.spendableSats == spendable, "spendable balance differs from the RN database")
         }
     }
 }

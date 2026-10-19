@@ -46,4 +46,6 @@ Needs the regtest stack (`just setup-everything`), Maestro, and a Release simula
 apps/ios/UpgradeTests/run.sh <dedicated-simulator-udid> /path/to/Noah-Regtest.app
 ```
 
+`FUNDED=1` also receives 100k sats from the regtest bark CLI and sends 5k through the RN Send flow, then requires the native side to report the RN database's fingerprint, movement count and spendable balance.
+
 It wipes that simulator's Noah regtest app, creates a wallet in the RN app with the RN Maestro onboarding flows, installs the native build over it, and runs `UpgradeCompatibilityTests` inside the upgraded app's sandbox (seed, MMKV, wallet DB, opening the DB with bark-bolt-ffi).

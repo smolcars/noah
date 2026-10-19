@@ -8,17 +8,33 @@ import WidgetKit
 struct NoahWidget: Widget {
     private static let kind = infoValue("NoahWidgetKind")
     private static let appGroup = infoValue("NoahAppGroup")
+    private static let variant = infoValue("NoahAppVariant")
+
+    /// Test-network badge and description, as in the RN per-variant widgets.
+    private static var badge: (name: String, color: Color)? {
+        switch variant {
+        case "signet": ("SIGNET", .orange)
+        case "regtest": ("REGTEST", .yellow)
+        default: nil
+        }
+    }
+
+    private static var description: String {
+        variant == "mainnet" ? "View your Bitcoin balance" : "View your Bitcoin balance on \(variant)"
+    }
 
     var body: some WidgetConfiguration {
         StaticConfiguration(
             kind: Self.kind,
             provider: BalanceProvider(appGroup: Self.appGroup)
         ) { entry in
-            NoahBalanceWidgetView(entry: entry)
-                .containerBackground(Color(red: 0.05, green: 0.05, blue: 0.05), for: .widget)
+            NoahBalanceWidgetView(
+                entry: entry, variantName: Self.badge?.name, variantColor: Self.badge?.color
+            )
+            .containerBackground(Color(red: 0.05, green: 0.05, blue: 0.05), for: .widget)
         }
         .configurationDisplayName("Noah Balance")
-        .description("View your Bitcoin balance")
+        .description(Self.description)
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 

@@ -60,7 +60,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Expo installation UUID reuse — Android (`noBackupFilesDir/expo_notifications_installation_uuid.txt`)
 - [ ] UnifiedPush connector storage + instance names preserved
 - [x] Upgrade test iOS (`apps/ios/UpgradeTests/run.sh`): RN regtest creates wallet via Maestro → native installed over it → seed, DB, MMKV readable, launch = existingWallet, RN DB opens with new bark (same file, not recreated)
-- [ ] Upgrade test with a **funded** RN wallet (VTXOs, onchain, history, recurring rule) asserting balances/history match
+- [x] Funded upgrade test iOS (`FUNDED=1`): RN receives 100k + sends 5k → native sees same fingerprint, 2 movements, 95,000 spendable
+- [ ] Extend funded upgrade test: onchain funds, recurring rule, settings values, Expo token
 - [ ] Upgrade test Android (emulator)
 - [ ] Upgrade test also checks launcher shortcut + placed widget survive (Android) and widget kind/bundle ID (iOS)
 
