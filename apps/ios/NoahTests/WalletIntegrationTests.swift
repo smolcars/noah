@@ -34,6 +34,9 @@ struct WalletIntegrationTests {
 
         try await creator.createOrResume()
         #expect(location.databaseExists)
+        // RN creates key 0 before registration; a fresh native wallet must too.
+        let registrationAddress = try await session.peekAddress(index: 0)
+        #expect(!registrationAddress.isEmpty)
         try await creator.createOrResume()  // already open: resumes instead of failing
 
         let summary = try #require(try await session.summary())
@@ -44,6 +47,7 @@ struct WalletIntegrationTests {
         // A closed session reopens the same wallet from disk.
         try await creator.createOrResume()
         #expect(try await session.summary()?.fingerprint == summary.fingerprint)
+        #expect(try await session.peekAddress(index: 0) == registrationAddress)
         try await session.close()
     }
 }

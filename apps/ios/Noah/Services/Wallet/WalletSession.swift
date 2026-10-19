@@ -105,6 +105,10 @@ actor WalletSession {
         guard !location.databaseExists else { throw OpenError.walletDatabaseExists }
         try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
         try await open(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion, create: true)
+        // RN creation persists key 0 before peeking its registration address.
+        // On failure the creator closes this session before rolling back its files.
+        guard case .open(let handles) = state else { throw OpenError.busy }
+        _ = try await handles.wallet.deriveStoreNextKeypair()
     }
 
     private func open(mnemonic: String, runDaemon: Bool, appVersion: String, create: Bool) async throws {
@@ -122,6 +126,11 @@ actor WalletSession {
 
     var isOpen: Bool {
         if case .open = state { true } else { false }
+    }
+
+    func peekPublicKey(index: UInt32) async throws -> String {
+        guard case .open(let handles) = state else { throw OpenError.walletDatabaseMissing }
+        return try await handles.wallet.peekPublicKey(index: index)
     }
 
     /// Stable registration address; never advances the wallet's address index.
