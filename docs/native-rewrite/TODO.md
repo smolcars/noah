@@ -97,18 +97,20 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 ## M1 — Shell, onboarding, Home
 - [ ] Launch gating: wallet check, onboarding vs main, push-permission gate, battery gate (Android), biometric lock overlay, beta warning
 - [ ] Tab shell: Home, Receive, Send, History (Liquid Glass tab bar on iOS 26)
-- [ ] OnboardingScreen (language picker, create/restore)
+- [x] OnboardingScreen create/restore — iOS (language picker waits for 0.8 translations)
 - [x] Create-or-resume logic (`WalletCreator`, RN `walletCreation` test cases ported) — iOS
 - [ ] After FFI P0: `deriveStoreNextKeypair` + `peekKeyPair(0)` on creation, as RN does
-- [ ] BetaWarningScreen (accept before create, no double create)
-- [ ] MnemonicScreen (biometric re-auth outside onboarding, copy, never log)
+- [x] BetaWarningScreen (accept before create, no double create) — iOS
+- [x] MnemonicScreen in onboarding (numbered grid, local-only expiring copy) — iOS
+- [ ] MnemonicScreen from Settings with biometric re-auth
 - [ ] RestoreWalletScreen (backup restore with staged progress)
 - [ ] EmailVerificationScreen (send/resend, 6-digit OTP, skip, reconcile verified)
 - [ ] LightningAddressScreen (username/domain, optional npub, skip)
 - [ ] PushNotificationsRequiredScreen
 - [ ] BatteryOptimizationScreen (Android)
 - [ ] UnifiedPushScreen (Android, non-GMS)
-- [ ] HomeScreen (balances, fiat, hide balance, recent 3, shortcuts, banners, facts)
+- [x] HomeScreen first pass: balance (BIP-177/sats from `profile-storage`), hide toggle (`privacy-storage`), pull-to-sync, variant badge — iOS
+- [ ] HomeScreen: fiat, recent 3 transactions, shortcuts, banners, facts
 - [ ] Banners: backup status, auto-boarding, pending round, email verification, update warning
 - [ ] App version check
 

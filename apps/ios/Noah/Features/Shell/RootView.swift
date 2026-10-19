@@ -1,8 +1,28 @@
 import SwiftUI
 
-/// Main tab shell. Tabs mirror the React Native app: Home, Receive, Send,
-/// History. Each tab owns its own navigation stack.
+/// Picks onboarding, the wallet tabs or a blocking message from `AppModel`.
 struct RootView: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Group {
+            switch model.phase {
+            case .launching:
+                NoahColor.background.ignoresSafeArea()
+            case .onboarding:
+                OnboardingFlow()
+            case .wallet:
+                WalletTabs()
+            case .blocked(let state):
+                LaunchMessageView(state: state)
+            }
+        }
+        .task { await model.start() }
+    }
+}
+
+/// Home, Receive, Send, History, each with its own navigation stack.
+struct WalletTabs: View {
     enum Tab: Hashable {
         case home, receive, send, history
     }
@@ -12,42 +32,60 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $selection) {
             SwiftUI.Tab("Home", systemImage: "house", value: .home) {
-                PlaceholderScreen(title: "Home")
+                HomeView()
             }
             SwiftUI.Tab("Receive", systemImage: "arrow.down.left", value: .receive) {
-                PlaceholderScreen(title: "Receive")
+                NavigationStack { PendingFeatureView(title: "Receive") }
             }
             SwiftUI.Tab("Send", systemImage: "arrow.up.right", value: .send) {
-                PlaceholderScreen(title: "Send")
+                NavigationStack { PendingFeatureView(title: "Send") }
             }
-            SwiftUI.Tab("History", systemImage: "clock", value: .history) {
-                PlaceholderScreen(title: "History")
+            SwiftUI.Tab("History", systemImage: "clock.arrow.circlepath", value: .history) {
+                NavigationStack { PendingFeatureView(title: "History") }
             }
         }
+        .tint(NoahColor.brand)
         .tabBarMinimizeOnScrollIfAvailable()
     }
 }
 
-private struct PlaceholderScreen: View {
-    let title: String
+private struct LaunchMessageView: View {
+    let state: LaunchState
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 12) {
-                    Text(title)
-                        .font(.largeTitle.bold())
-                    Text(AppVariant.current.rawValue.capitalized)
-                        .font(.subheadline)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .glassCompat(in: Capsule())
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 80)
-            }
-            .navigationTitle(title)
-            .toolbarTitleDisplayMode(.inline)
+        VStack(spacing: 12) {
+            Text(title)
+                .font(NoahFont.title)
+                .foregroundStyle(NoahColor.foreground)
+            Text(message)
+                .font(NoahFont.body)
+                .foregroundStyle(NoahColor.mutedForeground)
+                .multilineTextAlignment(.center)
+        }
+        .padding(32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(NoahColor.background.ignoresSafeArea())
+    }
+
+    private var title: LocalizedStringKey {
+        switch state {
+        case .seedWithoutWalletData: "Recovery phrase found"
+        case .walletDataWithoutSeed: "Recovery phrase needed"
+        case .secureStorageUnavailable: "Unlock your device"
+        case .existingWallet, .onboarding: ""
+        }
+    }
+
+    private var message: LocalizedStringKey {
+        switch state {
+        case .seedWithoutWalletData:
+            "A recovery phrase from a previous install is stored on this device. Restoring it lands soon."
+        case .walletDataWithoutSeed:
+            "Wallet data exists on this device but its recovery phrase could not be found."
+        case .secureStorageUnavailable:
+            "Noah can't read its secure storage yet. Unlock your device to continue."
+        case .existingWallet, .onboarding:
+            ""
         }
     }
 }
@@ -61,8 +99,4 @@ private extension View {
             self
         }
     }
-}
-
-#Preview {
-    RootView()
 }

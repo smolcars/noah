@@ -109,6 +109,13 @@ actor WalletSession {
             movementCount: try await wallet.history().count)
     }
 
+    /// Syncs onchain then Ark state, like `syncWallet` minus Lightning claims.
+    func sync() async throws {
+        guard case .open(let handles) = state else { return }
+        _ = try await handles.onchain.sync()
+        try await handles.wallet.sync()
+    }
+
     func close() async throws {
         switch state {
         case .closed:
