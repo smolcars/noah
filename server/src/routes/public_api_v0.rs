@@ -71,6 +71,7 @@ pub struct Nip05Response {
     params(Nip05RequestQuery),
     responses(
         (status = 200, description = "Success", body = Nip05Response),
+        (status = 400, description = "Malformed query parameters", body = String, content_type = "text/plain"),
         (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
         (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
     ),
@@ -390,7 +391,10 @@ pub struct LnurlpInvoiceResponse {
 /// Schema for the query-dependent JSON returned by `lnurlp_request`.
 #[derive(Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(untagged)]
-#[cfg_attr(not(test), expect(dead_code, reason = "used only by the offline OpenAPI exporter"))]
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "used only by the offline OpenAPI exporter")
+)]
 pub enum LnurlpResponse {
     Parameters(LnurlpDefaultResponse),
     Invoice(LnurlpInvoiceResponse),

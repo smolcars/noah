@@ -37,8 +37,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Notification loop (movement events) + receive subscriptions with cancellation
 
 ### 0.4 Server API contract
-- [ ] Utoipa `ToSchema` on `server/src/types.rs` exports + path annotations on all handlers (bearer + registered-user security)
-- [ ] Deterministic `openapi.json` export + normalization step (tagged `NotificationData`, nullable refs)
+- [x] Utoipa `ToSchema` on `server/src/types.rs` exports + path annotations on all handlers (bearer + registered-user security)
+- [x] Deterministic `openapi.json` export + normalization step (tagged `NotificationData`, nullable refs)
 - [ ] swift-openapi-generator → `apps/ios` generated client; Fabrikt → `apps/android` generated models/client
 - [ ] u64 → Int64/Long mapping + boundary fixtures; all 6 notification variants round-trip
 - [ ] `just generate-api`; CI drift gate (TS + schema + native)

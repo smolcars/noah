@@ -1,0 +1,5067 @@
+{
+  "components": {
+    "schemas": {
+      "ApiErrorResponse": {
+        "description": "Represents a structured API error response.",
+        "properties": {
+          "code": {
+            "description": "Stable machine-readable error code.",
+            "type": "string"
+          },
+          "message": {
+            "description": "User-facing error message.",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Safe error reason for compatibility.",
+            "type": "string"
+          },
+          "status": {
+            "description": "Always \"ERROR\" for error responses.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "code",
+          "message",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "AppVersionCheckPayload": {
+        "properties": {
+          "client_version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_version"
+        ],
+        "type": "object"
+      },
+      "AppVersionInfo": {
+        "properties": {
+          "minimum_required_version": {
+            "type": "string"
+          },
+          "update_required": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "minimum_required_version",
+          "update_required"
+        ],
+        "type": "object"
+      },
+      "AuthEvent": {
+        "description": "Represents events that can occur during LNURL-auth.",
+        "enum": [
+          "REGISTERED"
+        ],
+        "type": "string"
+      },
+      "AuthLoginPayload": {
+        "properties": {
+          "k1": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "sig": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "sig",
+          "k1"
+        ],
+        "type": "object"
+      },
+      "AuthLoginResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string"
+          },
+          "expires_in_seconds": {
+            "description": "Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "token_type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "access_token",
+          "token_type",
+          "expires_at",
+          "expires_in_seconds"
+        ],
+        "type": "object"
+      },
+      "AuthorizeMailboxPayload": {
+        "description": "Defines the payload for granting mailbox authorization to the server.",
+        "properties": {
+          "encoded": {
+            "description": "Hex-encoded mailbox authorization.",
+            "type": "string"
+          },
+          "expiry": {
+            "description": "Authorization expiry as a Unix timestamp in seconds.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "mailbox_id": {
+            "description": "Ark mailbox identifier scoped to the loaded wallet.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mailbox_id",
+          "expiry",
+          "encoded"
+        ],
+        "type": "object"
+      },
+      "BackupInfo": {
+        "properties": {
+          "backup_size": {
+            "description": "Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "backup_version": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "backup_version",
+          "created_at",
+          "backup_size"
+        ],
+        "type": "object"
+      },
+      "BackupObjectDownloadResponse": {
+        "properties": {
+          "backup": {
+            "$ref": "#/components/schemas/BackupObjectInfo"
+          },
+          "download_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "backup",
+          "download_url"
+        ],
+        "type": "object"
+      },
+      "BackupObjectInfo": {
+        "properties": {
+          "backup_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "encrypted_sha256": {
+            "type": "string"
+          },
+          "encrypted_size": {
+            "description": "Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "format_version": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "backup_id",
+          "format_version",
+          "created_at",
+          "encrypted_size",
+          "encrypted_sha256"
+        ],
+        "type": "object"
+      },
+      "BackupSettingsPayload": {
+        "properties": {
+          "backup_enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "backup_enabled"
+        ],
+        "type": "object"
+      },
+      "BackupTriggerNotification": {
+        "properties": {
+          "notification_k1": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "notification_k1"
+        ],
+        "type": "object"
+      },
+      "CompleteBackupUploadPayload": {
+        "properties": {
+          "backup_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "backup_id"
+        ],
+        "type": "object"
+      },
+      "CompleteUploadPayload": {
+        "properties": {
+          "backup_size": {
+            "description": "Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "backup_version": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "s3_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "s3_key",
+          "backup_version",
+          "backup_size"
+        ],
+        "type": "object"
+      },
+      "DefaultSuccessPayload": {
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "type": "object"
+      },
+      "DeleteBackupObjectPayload": {
+        "properties": {
+          "backup_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "backup_id"
+        ],
+        "type": "object"
+      },
+      "DeleteBackupPayload": {
+        "properties": {
+          "backup_version": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "backup_version"
+        ],
+        "type": "object"
+      },
+      "DeviceInfo": {
+        "description": "Defines device information reported by the client.",
+        "properties": {
+          "app_build": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "app_version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "device_manufacturer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "device_model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "os_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "os_version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "DownloadUrlResponse": {
+        "properties": {
+          "backup_size": {
+            "description": "Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "download_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "download_url",
+          "backup_size"
+        ],
+        "type": "object"
+      },
+      "EmailVerificationResponse": {
+        "description": "Represents the response for email verification requests.",
+        "properties": {
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "type": "object"
+      },
+      "FiatPricesPayload": {
+        "type": "object"
+      },
+      "FiatPricesResponse": {
+        "properties": {
+          "rates": {
+            "additionalProperties": {
+              "format": "double",
+              "type": "number"
+            },
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "time": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "time",
+          "rates"
+        ],
+        "type": "object"
+      },
+      "GetBackupObjectDownloadPayload": {
+        "properties": {
+          "backup_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "GetDownloadUrlPayload": {
+        "properties": {
+          "backup_version": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "GetK1": {
+        "description": "Represents the response for a `k1` request, used in LNURL-auth.",
+        "properties": {
+          "k1": {
+            "description": "A unique, single-use secret for the authentication process.",
+            "type": "string"
+          },
+          "tag": {
+            "description": "The LNURL-auth tag, which is always \"login\".",
+            "type": "string"
+          }
+        },
+        "required": [
+          "k1",
+          "tag"
+        ],
+        "type": "object"
+      },
+      "GetUploadUrlPayload": {
+        "properties": {
+          "backup_version": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "backup_version"
+        ],
+        "type": "object"
+      },
+      "HeartbeatNotification": {
+        "properties": {
+          "notification_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "notification_id"
+        ],
+        "type": "object"
+      },
+      "HeartbeatResponsePayload": {
+        "properties": {
+          "notification_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "notification_id"
+        ],
+        "type": "object"
+      },
+      "HistoricalFiatPricePayload": {
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "timestamp": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "currency",
+          "timestamp"
+        ],
+        "type": "object"
+      },
+      "HistoricalFiatPriceResponse": {
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "rate": {
+            "format": "double",
+            "type": "number"
+          },
+          "time": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "currency",
+          "time",
+          "rate"
+        ],
+        "type": "object"
+      },
+      "InitiateBackupUploadPayload": {
+        "properties": {
+          "encrypted_sha256": {
+            "type": "string"
+          },
+          "encrypted_size": {
+            "description": "Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "format_version": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "format_version",
+          "encrypted_size",
+          "encrypted_sha256"
+        ],
+        "type": "object"
+      },
+      "InitiateBackupUploadResponse": {
+        "properties": {
+          "backup_id": {
+            "type": "string"
+          },
+          "checksum_sha256": {
+            "type": "string"
+          },
+          "upload_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "backup_id",
+          "upload_url",
+          "checksum_sha256"
+        ],
+        "type": "object"
+      },
+      "LightningAddressSuggestionsPayload": {
+        "description": "Defines the payload for querying lightning address suggestions.",
+        "properties": {
+          "query": {
+            "description": "Partial lightning address typed in the send screen.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object"
+      },
+      "LightningAddressSuggestionsResponse": {
+        "description": "Represents autocomplete suggestions for lightning addresses.",
+        "properties": {
+          "suggestions": {
+            "description": "Ordered suggestion list.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "suggestions"
+        ],
+        "type": "object"
+      },
+      "LightningClaimRequestNotification": {
+        "properties": {
+          "amount_sat": {
+            "description": "Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "amount_usd": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payment_hash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_hash",
+          "amount_sat"
+        ],
+        "type": "object"
+      },
+      "LightningIdentityResponse": {
+        "description": "Represents a configured hosted Lightning identity.",
+        "properties": {
+          "lightning_address": {
+            "description": "The hosted Lightning address and optional NIP-05 identifier.",
+            "type": "string"
+          },
+          "nostr_pubkey": {
+            "description": "The optional Nostr public key in canonical lowercase hex format.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "lightning_address"
+        ],
+        "type": "object"
+      },
+      "LightningInvoiceRequestNotification": {
+        "properties": {
+          "amount": {
+            "description": "Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "transaction_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "transaction_id",
+          "amount"
+        ],
+        "type": "object"
+      },
+      "LnurlpDefaultResponse": {
+        "description": "Represents the first response in the LNURL-pay protocol.\n\nThis response provides the necessary details for a wallet to make a payment,\nsuch as the callback URL, sendable amounts, and metadata.",
+        "properties": {
+          "ark": {
+            "description": "The user's Ark address when requested for a compatible Ark server.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "callback": {
+            "description": "The URL where the wallet should send the second request.",
+            "type": "string"
+          },
+          "commentAllowed": {
+            "description": "The maximum length of a comment that can be included with the payment.",
+            "format": "uint16",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "maxSendable": {
+            "description": "The maximum amount that can be sent in a single payment, in millisatoshis. Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "metadata": {
+            "description": "A JSON string containing metadata about the payment.",
+            "type": "string"
+          },
+          "minSendable": {
+            "description": "The minimum amount that can be sent in a single payment, in millisatoshis. Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "tag": {
+            "description": "The LNURL-pay tag, which is always \"payRequest\".",
+            "type": "string"
+          }
+        },
+        "required": [
+          "callback",
+          "maxSendable",
+          "minSendable",
+          "metadata",
+          "tag",
+          "commentAllowed"
+        ],
+        "type": "object"
+      },
+      "LnurlpInvoiceResponse": {
+        "description": "Represents the second response in the LNURL-pay protocol.\n\nThis response contains the BOLT11 invoice that the wallet will use to pay.",
+        "properties": {
+          "ark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pr": {
+            "description": "The BOLT11 payment request (invoice).",
+            "type": "string"
+          },
+          "routes": {
+            "description": "A list of routes for the payment, typically empty.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "pr",
+          "routes"
+        ],
+        "type": "object"
+      },
+      "LnurlpRequestQuery": {
+        "description": "Defines the query parameters for an LNURL-pay request.",
+        "properties": {
+          "amount": {
+            "description": "The amount of the payment in millisatoshis. Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "ark": {
+            "description": "The payer's Ark server pubkey, used to negotiate a compatible Ark address.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "LnurlpResponse": {
+        "description": "Schema for the query-dependent JSON returned by `lnurlp_request`.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/LnurlpDefaultResponse"
+          },
+          {
+            "$ref": "#/components/schemas/LnurlpInvoiceResponse"
+          }
+        ]
+      },
+      "MaintenanceNotification": {
+        "properties": {
+          "notification_k1": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "notification_k1"
+        ],
+        "type": "object"
+      },
+      "Nip05RequestQuery": {
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "Nip05Response": {
+        "properties": {
+          "names": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "names"
+        ],
+        "type": "object"
+      },
+      "NotificationData": {
+        "discriminator": {
+          "mapping": {
+            "backup_trigger": "#/components/schemas/NotificationDataBackupTrigger",
+            "heartbeat": "#/components/schemas/NotificationDataHeartbeat",
+            "lightning_claim_request": "#/components/schemas/NotificationDataLightningClaimRequest",
+            "lightning_invoice_request": "#/components/schemas/NotificationDataLightningInvoiceRequest",
+            "maintenance": "#/components/schemas/NotificationDataMaintenance",
+            "recurring_payment_due": "#/components/schemas/NotificationDataRecurringPaymentDue"
+          },
+          "propertyName": "notification_type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/NotificationDataMaintenance"
+          },
+          {
+            "$ref": "#/components/schemas/NotificationDataLightningInvoiceRequest"
+          },
+          {
+            "$ref": "#/components/schemas/NotificationDataLightningClaimRequest"
+          },
+          {
+            "$ref": "#/components/schemas/NotificationDataBackupTrigger"
+          },
+          {
+            "$ref": "#/components/schemas/NotificationDataHeartbeat"
+          },
+          {
+            "$ref": "#/components/schemas/NotificationDataRecurringPaymentDue"
+          }
+        ]
+      },
+      "NotificationDataBackupTrigger": {
+        "properties": {
+          "notification_k1": {
+            "type": "string"
+          },
+          "notification_type": {
+            "enum": [
+              "backup_trigger"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "notification_k1",
+          "notification_type"
+        ],
+        "type": "object"
+      },
+      "NotificationDataHeartbeat": {
+        "properties": {
+          "notification_id": {
+            "type": "string"
+          },
+          "notification_type": {
+            "enum": [
+              "heartbeat"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "notification_id",
+          "notification_type"
+        ],
+        "type": "object"
+      },
+      "NotificationDataLightningClaimRequest": {
+        "properties": {
+          "amount_sat": {
+            "description": "Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "amount_usd": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notification_type": {
+            "enum": [
+              "lightning_claim_request"
+            ],
+            "type": "string"
+          },
+          "payment_hash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_hash",
+          "amount_sat",
+          "notification_type"
+        ],
+        "type": "object"
+      },
+      "NotificationDataLightningInvoiceRequest": {
+        "properties": {
+          "amount": {
+            "description": "Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "notification_type": {
+            "enum": [
+              "lightning_invoice_request"
+            ],
+            "type": "string"
+          },
+          "transaction_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "transaction_id",
+          "amount",
+          "notification_type"
+        ],
+        "type": "object"
+      },
+      "NotificationDataMaintenance": {
+        "properties": {
+          "notification_k1": {
+            "type": "string"
+          },
+          "notification_type": {
+            "enum": [
+              "maintenance"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "notification_k1",
+          "notification_type"
+        ],
+        "type": "object"
+      },
+      "NotificationDataRecurringPaymentDue": {
+        "description": "Silent push asking the device to execute its locally stored recurring\npayments that are due. Carries no amounts or recipients: the device checks\nits own schedules and only pays within the policy the user approved.",
+        "properties": {
+          "due_count": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "notification_type": {
+            "enum": [
+              "recurring_payment_due"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "due_count",
+          "notification_type"
+        ],
+        "type": "object"
+      },
+      "RecurringPaymentDueNotification": {
+        "description": "Silent push asking the device to execute its locally stored recurring\npayments that are due. Carries no amounts or recipients: the device checks\nits own schedules and only pays within the policy the user approved.",
+        "properties": {
+          "due_count": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "due_count"
+        ],
+        "type": "object"
+      },
+      "RecurringPaymentScheduleEntry": {
+        "description": "One active recurring payment schedule, as known to the server.",
+        "properties": {
+          "next_run_at": {
+            "description": "Next due time as a unix timestamp in seconds.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "schedule_id": {
+            "description": "Opaque, client-generated id (`[A-Za-z0-9_-]{1,64}`).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schedule_id",
+          "next_run_at"
+        ],
+        "type": "object"
+      },
+      "RegisterPayload": {
+        "description": "Defines the payload for a user registration request.",
+        "properties": {
+          "ark_address": {
+            "description": "Optional Ark address",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "device_info": {
+            "description": "Defines device information reported by the client.",
+            "properties": {
+              "app_build": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "app_version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "device_manufacturer": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "device_model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "os_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "os_version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "ln_address": {
+            "description": "User chosen lightning address",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "RegisterPushToken": {
+        "description": "Defines the payload for registering a push notification token.",
+        "properties": {
+          "push_token": {
+            "description": "The Expo push token for the user's device.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "push_token"
+        ],
+        "type": "object"
+      },
+      "RegisterResponse": {
+        "description": "Represents the response for an user registration.",
+        "properties": {
+          "display_name": {
+            "description": "The user's optional display name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "description": "The user's optional emergency email address.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "event": {
+            "description": "Represents events that can occur during LNURL-auth.",
+            "enum": [
+              "REGISTERED",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_email_verified": {
+            "description": "Whether the user's email is verified.",
+            "type": "boolean"
+          },
+          "lightning_address": {
+            "description": "The user's lightning address.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nostr_pubkey": {
+            "description": "The user's Nostr public key in canonical lowercase hex format.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "description": "An optional reason for an error, if one occurred.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "description": "The status of the request, either \"OK\" or \"ERROR\".",
+            "type": "string"
+          },
+          "user_status": {
+            "$ref": "#/components/schemas/UserStatus",
+            "description": "The user's current operational lifecycle status."
+          }
+        },
+        "required": [
+          "status",
+          "is_email_verified",
+          "user_status"
+        ],
+        "type": "object"
+      },
+      "ReportJobStatusPayload": {
+        "properties": {
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notification_k1": {
+            "type": "string"
+          },
+          "report_type": {
+            "$ref": "#/components/schemas/ReportType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReportStatus"
+          }
+        },
+        "required": [
+          "notification_k1",
+          "report_type",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ReportLastLoginPayload": {
+        "properties": {
+          "device_info": {
+            "description": "Defines device information reported by the client.",
+            "properties": {
+              "app_build": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "app_version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "device_manufacturer": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "device_model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "os_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "os_version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "ReportStatus": {
+        "enum": [
+          "pending",
+          "success",
+          "failure",
+          "timeout"
+        ],
+        "type": "string"
+      },
+      "ReportType": {
+        "enum": [
+          "maintenance",
+          "backup"
+        ],
+        "type": "string"
+      },
+      "SendEmailVerificationPayload": {
+        "description": "Defines the payload for requesting an email verification code.",
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "type": "object"
+      },
+      "SubmitInvoicePayload": {
+        "description": "Defines the payload for submitting a BOLT11 invoice.",
+        "properties": {
+          "invoice": {
+            "description": "The BOLT11 invoice to be paid.",
+            "type": "string"
+          },
+          "transaction_id": {
+            "description": "The unique identifier for the payment transaction.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice",
+          "transaction_id"
+        ],
+        "type": "object"
+      },
+      "SubmitSupportTicketPayload": {
+        "properties": {
+          "attachment": {
+            "properties": {
+              "base64_data": {
+                "type": "string"
+              },
+              "content_type": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "filename",
+              "content_type",
+              "base64_data"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "body": {
+            "type": "string"
+          },
+          "device_info": {
+            "description": "Defines device information reported by the client.",
+            "properties": {
+              "app_build": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "app_version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "device_manufacturer": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "device_model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "os_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "os_version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject",
+          "body",
+          "name"
+        ],
+        "type": "object"
+      },
+      "SubmitSupportTicketResponse": {
+        "properties": {
+          "ticket_id": {
+            "type": "string"
+          },
+          "ticket_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ticket_id"
+        ],
+        "type": "object"
+      },
+      "SupportTicketAttachment": {
+        "properties": {
+          "base64_data": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "filename",
+          "content_type",
+          "base64_data"
+        ],
+        "type": "object"
+      },
+      "SyncRecurringPaymentsPayload": {
+        "description": "Replaces the full set of active recurring payment schedules for the user.",
+        "properties": {
+          "schedules": {
+            "items": {
+              "$ref": "#/components/schemas/RecurringPaymentScheduleEntry"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "schedules"
+        ],
+        "type": "object"
+      },
+      "UpdateLightningIdentityPayload": {
+        "description": "Defines the payload for atomically configuring a hosted Lightning identity.",
+        "properties": {
+          "nostr_pubkey": {
+            "description": "An optional Nostr public key encoded as npub. Null disables NIP-05.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "username": {
+            "description": "The local part of the user's hosted Lightning address and optional NIP-05 identifier.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username"
+        ],
+        "type": "object"
+      },
+      "UpdateProfilePayload": {
+        "description": "Defines the payload for updating a user's profile.",
+        "properties": {
+          "display_name": {
+            "description": "The user's optional display name. Null or empty clears the name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "UploadUrlResponse": {
+        "properties": {
+          "s3_key": {
+            "type": "string"
+          },
+          "upload_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "upload_url",
+          "s3_key"
+        ],
+        "type": "object"
+      },
+      "UserInfoResponse": {
+        "description": "Represents the response for a user's information.",
+        "properties": {
+          "display_name": {
+            "description": "The user's optional display name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "description": "The user's optional emergency email address.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lightning_address": {
+            "description": "The user's lightning address.",
+            "type": "string"
+          },
+          "nostr_pubkey": {
+            "description": "The user's Nostr public key in canonical lowercase hex format.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user_status": {
+            "$ref": "#/components/schemas/UserStatus",
+            "description": "The user's current operational lifecycle status."
+          }
+        },
+        "required": [
+          "lightning_address",
+          "user_status"
+        ],
+        "type": "object"
+      },
+      "UserStatus": {
+        "enum": [
+          "active",
+          "inactive",
+          "deregistered"
+        ],
+        "type": "string"
+      },
+      "VerifyEmailPayload": {
+        "description": "Defines the payload for verifying an email with a code.",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "bearerFormat": "JWT",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "Noah wallet API. Bearer authentication uses a JWT obtained from /v0/auth/login. Registered-user requirements are stated per operation; email verification is optional. Unsigned 64-bit values use int64 for native Int64/Long clients: practical amounts, sizes, counts and Unix timestamps are below 2^63. This is an interoperability assumption, not a new server validation rule; Rust u64 can represent larger values. JSON extractor and IP rate-limit rejections are plain text, while application errors use ApiErrorResponse.",
+    "license": {
+      "identifier": "MIT",
+      "name": "MIT"
+    },
+    "title": "Noah API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "root",
+        "responses": {
+          "204": {
+            "description": "Server reachable"
+          }
+        },
+        "tags": [
+          "crate"
+        ]
+      }
+    },
+    "/.well-known/lnurlp/{username}": {
+      "get": {
+        "description": "Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment).",
+        "operationId": "lnurlp_request",
+        "parameters": [
+          {
+            "description": "Hosted Lightning username",
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The amount of the payment in millisatoshis.",
+            "in": "query",
+            "name": "amount",
+            "required": false,
+            "schema": {
+              "description": "Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+              "format": "int64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The payer's Ark server pubkey, used to negotiate a compatible Ark address.",
+            "in": "query",
+            "name": "ark",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LnurlpResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Handles LNURL-pay requests.",
+        "tags": [
+          "public_api_v0"
+        ]
+      }
+    },
+    "/.well-known/nostr.json": {
+      "get": {
+        "description": "Public endpoint; no bearer token required.",
+        "operationId": "nip05_request",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Nip05Response"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Malformed query parameters"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "summary": "Resolves a hosted NIP-05 name to the linked Nostr public key.",
+        "tags": [
+          "public_api_v0"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Server healthy"
+          }
+        },
+        "tags": [
+          "crate"
+        ]
+      }
+    },
+    "/v0/app_version": {
+      "post": {
+        "description": "Public endpoint; no bearer token required.",
+        "operationId": "check_app_version",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppVersionCheckPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppVersionInfo"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "public_api_v0"
+        ]
+      }
+    },
+    "/v0/auth/login": {
+      "post": {
+        "description": "Public endpoint; no bearer token required.",
+        "operationId": "auth_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthLoginPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthLoginResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "public_api_v0"
+        ]
+      }
+    },
+    "/v0/backup/complete_upload": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "complete_upload",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteUploadPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/backup/delete": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "delete_backup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteBackupPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Malformed JSON"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/backup/download_url": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "get_download_url",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetDownloadUrlPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadUrlResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Malformed JSON"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/backup/list": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "list_backups",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BackupInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/backup/settings": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "update_backup_settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackupSettingsPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Malformed JSON"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/backup/upload_url": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "get_upload_url",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetUploadUrlPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadUrlResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Malformed JSON"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/backup/v2/complete": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "complete_backup_object_upload",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteBackupUploadPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflicting resource state"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/backup/v2/delete": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "delete_backup_object",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteBackupObjectPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/backup/v2/download": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "get_backup_object_download_url",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetBackupObjectDownloadPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupObjectDownloadResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/backup/v2/list": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "list_backup_objects",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BackupObjectInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/backup/v2/upload": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "initiate_backup_object_upload",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitiateBackupUploadPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InitiateBackupUploadResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Backup reservation limit (ApiError), or IP rate limit (plain text)"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/deregister": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "deregister",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/email/send_verification": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "send_verification_email",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendEmailVerificationPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailVerificationResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sends an email verification code to the user's email address.",
+        "tags": [
+          "public_api_v0"
+        ]
+      }
+    },
+    "/v0/email/verify": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "verify_email",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailVerificationResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verifies the email verification code.",
+        "tags": [
+          "public_api_v0"
+        ]
+      }
+    },
+    "/v0/getk1": {
+      "get": {
+        "description": "Public endpoint; no bearer token required.",
+        "operationId": "get_k1",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetK1"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "description": "Unable to create authentication challenge"
+          }
+        },
+        "summary": "Generates and returns a new `k1` value for an LNURL-auth flow.",
+        "tags": [
+          "public_api_v0"
+        ]
+      }
+    },
+    "/v0/heartbeat_response": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "heartbeat_response",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeartbeatResponsePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Malformed JSON"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/historical-price": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "historical_fiat_price",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoricalFiatPricePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoricalFiatPriceResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "public_api_v0"
+        ]
+      }
+    },
+    "/v0/ln_address_suggestions": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "ln_address_suggestions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LightningAddressSuggestionsPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LightningAddressSuggestionsResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Returns autocomplete suggestions for a partial lightning address query.",
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/lnurlp/submit_invoice": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "submit_invoice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitInvoicePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Malformed JSON"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Receives and processes a BOLT11 invoice from a user's device.",
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/mailbox/authorize": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "authorize_mailbox",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorizeMailboxPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Stores or refreshes mailbox authorization for a user.",
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/mailbox/revoke": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "revoke_mailbox_authorization",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revokes mailbox authorization for a user.",
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/prices": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "fiat_prices",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FiatPricesPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FiatPricesResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Malformed JSON"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "public_api_v0"
+        ]
+      }
+    },
+    "/v0/recurring_payments/sync": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "sync_recurring_payments",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncRecurringPaymentsPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replaces the set of active recurring payment wake-up schedules for the user.",
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/register": {
+      "post": {
+        "description": "Requires a bearer JWT. Registration is optional. Registers the authenticated public key or updates an existing registration.",
+        "operationId": "register",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Handles user registration via LNURL-auth.",
+        "tags": [
+          "public_api_v0"
+        ]
+      }
+    },
+    "/v0/register_push_token": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "register_push_token",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPushToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registers a push notification token for a user.",
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/report_job_status": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "report_job_status",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportJobStatusPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/report_last_login": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "report_last_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportLastLoginPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Malformed JSON"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/support/ticket": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "submit_support_ticket",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitSupportTicketPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmitSupportTicketResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Creates a Zoho Desk support ticket from in-app user feedback.",
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/update_lightning_identity": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "update_lightning_identity",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLightningIdentityPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LightningIdentityResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The sole supported identity-update endpoint.",
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/update_profile": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "update_profile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfilePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Updates a user's profile fields.",
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/user_info": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "get_user_info",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserInfoResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retrieves the user's information.",
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    }
+  }
+}
