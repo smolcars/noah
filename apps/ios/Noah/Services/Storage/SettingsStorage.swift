@@ -61,6 +61,10 @@ final class SettingsStorage: @unchecked Sendable {
         mmkv.set(value, forKey: key)
     }
 
+    func remove(forKey key: String) {
+        mmkv.removeValue(forKey: key)
+    }
+
     /// Every store, as RN's wallet deletion wiped `Documents/mmkv`.
     func removeAll() {
         mmkv.clearAll()

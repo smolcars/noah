@@ -1,0 +1,1 @@
+{"version":8,"name":"Offline BTC Map","glyphs":"https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf","sources":{},"layers":[{"id":"offline-background","type":"background","paint":{"background-color":"#f2f2f7"}}]}

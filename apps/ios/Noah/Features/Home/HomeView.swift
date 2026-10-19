@@ -4,6 +4,7 @@ struct HomeView: View {
     @Environment(AppModel.self) private var model
     @Environment(HistoryModel.self) private var history
     @State private var showEmail = false
+    @State private var showMap = false
     @State private var selectedID: String?
     let onOpenHistory: () -> Void
     let onRepeatPayment: (RepeatPayment) -> Void
@@ -119,7 +120,7 @@ struct HomeView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .topBarLeading) {
                     NavigationLink { SettingsView() } label: { Label("Settings", systemImage: "gearshape") }
-                    Button("Bitcoin Map", systemImage: "map") {}
+                    Button("Bitcoin Map", systemImage: "map") { showMap = true }
                 }
                 ToolbarItem(placement: .principal) {
                     VariantBadge(variant: model.variant)
@@ -129,6 +130,7 @@ struct HomeView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(isPresented: $showMap) { BtcMapView() }
             .navigationDestination(isPresented: $showEmail) {
                 EmergencyEmailView(fromOnboarding: false, onContinue: { showEmail = false })
             }

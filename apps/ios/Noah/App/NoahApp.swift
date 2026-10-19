@@ -7,8 +7,16 @@ struct NoahApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environment(model)
+            #if DEBUG && targetEnvironment(simulator)
+            // Exercise the public map on an isolated simulator without creating a wallet.
+            if ProcessInfo.processInfo.arguments.contains("-btc-map-preview") {
+                NavigationStack { BtcMapView() }
+            } else {
+                RootView().environment(model)
+            }
+            #else
+            RootView().environment(model)
+            #endif
         }
     }
 }
