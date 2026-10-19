@@ -3,25 +3,33 @@ import Darwin
 import Foundation
 
 /// Swaps a restored wallet into the datadir and commits its seed so that a
-/// crash at any point is settled at the next launch: either the restored
-/// wallet with its seed, or the previous wallet with the previous seed,
-/// never one wallet with the other's seed.
+/// crash or power loss at any point is settled at the next launch: either
+/// the restored wallet with its seed, or the previous wallet with the
+/// previous seed, never one wallet with the other's seed.
 ///
 /// Workspace (`WalletDataLocation.restoreDirectory`, next to the datadir):
 ///
-///     journal.json  phase, whether a datadir existed, tag of the new seed
+///     journal.json  id, phase, whether a datadir existed, tag of the new seed
 ///     previous/     the datadir that was there before the restore
 ///     staged/       the restored datadir before it is moved in
 ///     work/         downloads and decrypted files
 ///
-/// Restore order: build `staged/` → `begin` (journal `installing`, datadir to
-/// `previous/`, `staged/` to datadir) → open check → `markCommitting` → save
-/// the seed → `finish`. The seed write is the commit point:
-/// `installing` is always undone; `committing` is finished only if the
-/// Keychain holds the restored seed, undone if it holds anything else, and
-/// left alone while the Keychain can't be read.
+/// Restore order: build `staged/` → `begin` (staged files and the journal
+/// `installing` on disk, datadir to `previous/`, `staged/` to datadir, both
+/// directories synced) → open check → `markCommitting` → save the seed →
+/// `finish`. The seed write is the commit point: `installing` is always
+/// undone; `committing` is finished only if the Keychain holds the restored
+/// seed, undone if it holds anything else, and left alone while the
+/// Keychain can't be read.
+///
+/// Every step that recovery relies on is fully synced before the next one
+/// (`F_FULLFSYNC`), and the journal goes last, so a power loss can't bring
+/// back a journal for a transaction that was already settled. The restored
+/// datadir carries the transaction id until `finish`; undo never removes a
+/// datadir without it.
 struct RestoreTransaction: Sendable {
     static let journalName = "journal.json"
+    static let markerName = ".noah-restore-id"
 
     enum Phase: String, Codable, Sendable {
         case installing, committing
@@ -29,6 +37,7 @@ struct RestoreTransaction: Sendable {
 
     struct Journal: Codable, Equatable, Sendable {
         var version = 1
+        var id: UUID
         var phase: Phase
         var hadPreviousData: Bool
         /// HMAC-SHA256 of the restored mnemonic under `seedSalt`: lets
@@ -51,7 +60,11 @@ struct RestoreTransaction: Sendable {
         /// `previous/` exists without a journal. It may be the user's wallet,
         /// so nothing touches it.
         case orphanedPreviousWallet
+        /// The datadir isn't the one this transaction installed; undo won't
+        /// remove it.
+        case unexpectedDatadir
         case randomUnavailable
+        case syncFailed(Int32)
     }
 
     let datadir: URL
@@ -74,9 +87,8 @@ struct RestoreTransaction: Sendable {
     func prepare() throws {
         guard !isPending else { throw Failure.alreadyPending }
         guard !exists(previous) else { throw Failure.orphanedPreviousWallet }
-        try createWorkspace()
-        try removeIfPresent(staged)
-        try removeIfPresent(work)
+        try ensureWorkspace()
+        try removeScratch()
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: false)
     }
 
@@ -87,13 +99,19 @@ struct RestoreTransaction: Sendable {
         let status = salt.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
         guard status == errSecSuccess else { throw Failure.randomUnavailable }
         let journal = Journal(
-            phase: .installing, hadPreviousData: exists(datadir),
+            id: UUID(), phase: .installing, hadPreviousData: exists(datadir),
             seedSalt: salt, seedTag: Self.tag(mnemonic, salt: salt))
+
+        try Data(journal.id.uuidString.utf8).write(to: staged.appending(path: Self.markerName))
+        try Self.syncTree(staged)
+        try Self.fullSync(directory)
         try write(journal)
+
         if journal.hadPreviousData {
             try FileManager.default.moveItem(at: datadir, to: previous)
         }
         try FileManager.default.moveItem(at: staged, to: datadir)
+        try syncBothSides()
     }
 
     /// The restored files opened with the new seed; the seed write comes next.
@@ -103,29 +121,44 @@ struct RestoreTransaction: Sendable {
         try write(journal)
     }
 
-    /// The seed is saved: drop the previous wallet and the scratch files.
+    /// The seed is saved: drop the previous wallet and the scratch files,
+    /// the journal last.
     func finish() throws {
+        let marker = datadir.appending(path: Self.markerName)
+        if exists(marker) {
+            try FileManager.default.removeItem(at: marker)
+            try Self.fullSync(datadir)
+        }
         try removeIfPresent(previous)
         try removeScratch()
-        try removeIfPresent(journalURL)
+        try Self.fullSync(directory)
+        try removeJournal()
     }
 
     /// Puts the previous datadir back (or removes the restored one when there
     /// was none). Safe to repeat after a crash at any step.
     func undo() throws {
         let journal = try readJournal()
+        let restoredInPlace = (try? String(contentsOf: datadir.appending(path: Self.markerName), encoding: .utf8))
+            == journal.id.uuidString
         if journal.hadPreviousData {
             // Without previous/, the datadir was never moved (or was already
             // moved back): it is the original and stays.
             if exists(previous) {
-                try removeIfPresent(datadir)
+                if exists(datadir) {
+                    guard restoredInPlace else { throw Failure.unexpectedDatadir }
+                    try FileManager.default.removeItem(at: datadir)
+                }
                 try FileManager.default.moveItem(at: previous, to: datadir)
             }
-        } else {
-            try removeIfPresent(datadir)
+        } else if exists(datadir) {
+            guard restoredInPlace else { throw Failure.unexpectedDatadir }
+            try FileManager.default.removeItem(at: datadir)
         }
+        try syncBothSides()
         try removeScratch()
-        try removeIfPresent(journalURL)
+        try Self.fullSync(directory)
+        try removeJournal()
     }
 
     /// Run before anything opens the wallet or reads the datadir at launch.
@@ -173,37 +206,64 @@ struct RestoreTransaction: Sendable {
 
     // MARK: Files
 
-    /// Readable after first unlock (push handlers), excluded from device
-    /// backups like the decrypted data it holds.
-    private func createWorkspace() throws {
-        guard !exists(directory) else { return }
-        try FileManager.default.createDirectory(
-            at: directory, withIntermediateDirectories: true,
-            attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
+    /// Readable after first unlock (push handlers) and excluded from device
+    /// backups, like the decrypted data it holds. Applied every time: an
+    /// existing folder may be left from an interrupted first setup.
+    private func ensureWorkspace() throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: directory.path)
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
         var url = directory
         try url.setResourceValues(values)
+        try Self.fullSync(directory.deletingLastPathComponent())
     }
 
     /// Temp file, full sync, rename, full sync of the directory: the journal
     /// is on disk before any move it describes.
     private func write(_ journal: Journal) throws {
-        try createWorkspace()
+        try ensureWorkspace()
         let data = try JSONEncoder().encode(journal)
         let temporary = directory.appending(path: ".journal-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: temporary) }
         try data.write(to: temporary, options: .completeFileProtectionUntilFirstUserAuthentication)
         try Self.fullSync(temporary)
-        guard Darwin.rename(temporary.path, journalURL.path) == 0 else { throw CocoaError(.fileWriteUnknown) }
+        guard Darwin.rename(temporary.path, journalURL.path) == 0 else { throw Failure.syncFailed(errno) }
         try Self.fullSync(directory)
     }
 
+    /// Settled: the journal's removal is on disk before anyone else may touch
+    /// the datadir, so it can't reappear after a power loss.
+    private func removeJournal() throws {
+        try removeIfPresent(journalURL)
+        try Self.fullSync(directory)
+    }
+
+    /// A rename between the workspace and the datadir's parent changes both.
+    private func syncBothSides() throws {
+        try Self.fullSync(datadir.deletingLastPathComponent())
+        try Self.fullSync(directory)
+    }
+
+    /// Every file and folder under `root`, then `root` itself.
+    private static func syncTree(_ root: URL) throws {
+        let items = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)?
+            .compactMap { $0 as? URL } ?? []
+        for item in items { try fullSync(item) }
+        try fullSync(root)
+    }
+
+    /// `F_FULLFSYNC` (survives power loss); plain `fsync` only where the file
+    /// system doesn't support it. Real I/O errors are reported.
     private static func fullSync(_ url: URL) throws {
         let descriptor = Darwin.open(url.path, O_RDONLY)
-        guard descriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
+        guard descriptor >= 0 else { throw Failure.syncFailed(errno) }
         defer { Darwin.close(descriptor) }
-        guard fcntl(descriptor, F_FULLFSYNC) == 0 || fsync(descriptor) == 0 else { throw CocoaError(.fileWriteUnknown) }
+        if fcntl(descriptor, F_FULLFSYNC) == 0 { return }
+        let fullSyncError = errno
+        guard [ENOTSUP, EINVAL, ENOTTY].contains(fullSyncError) else { throw Failure.syncFailed(fullSyncError) }
+        guard fsync(descriptor) == 0 else { throw Failure.syncFailed(errno) }
     }
 
     private func exists(_ url: URL) -> Bool {

@@ -195,6 +195,37 @@ struct RestoreTransactionTests {
         }
     }
 
+    @Test func undoNeverRemovesADatadirItDidNotInstall() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let transaction = try begun(previous: nil)
+        // Someone else's wallet where the restored one should be.
+        try FileManager.default.removeItem(at: location.directory)
+        try write("other wallet", to: location.directory)
+        #expect(throws: RestoreTransaction.Failure.unexpectedDatadir) {
+            try transaction.recover(seed: FakeSeed(nil))
+        }
+        #expect(read(location.directory) == "other wallet")
+        #expect(transaction.isPending)
+    }
+
+    @Test func finishDropsTheTransactionMarker() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let transaction = try begun()
+        #expect(exists(location.directory.appending(path: RestoreTransaction.markerName)))
+        try transaction.markCommitting()
+        #expect(try transaction.recover(seed: FakeSeed(newSeed)) == .completed)
+        #expect(!exists(location.directory.appending(path: RestoreTransaction.markerName)))
+    }
+
+    @Test func workspaceLeftFromAnInterruptedSetupIsExcludedOnNextUse() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let transaction = RestoreTransaction(location: location)
+        try FileManager.default.createDirectory(at: transaction.directory, withIntermediateDirectories: true)
+        #expect(try transaction.directory.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == false)
+        try transaction.prepare()
+        #expect(try transaction.directory.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+    }
+
     @Test func unreadableJournalTouchesNothing() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let transaction = try begun()
