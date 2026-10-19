@@ -19,6 +19,13 @@ struct WalletCreatorTests {
         var createGate: CheckedContinuation<Void, Never>?
         var holdCreate = false
         var cleanupFails = false
+        /// Real session, only for its reservations (the opener is never used).
+        let session = WalletSession(
+            variant: .regtest,
+            location: WalletDataLocation(
+                variant: .regtest,
+                documentsDirectory: FileManager.default.temporaryDirectory.appending(path: "creator-\(UUID().uuidString)"))
+        ) { _, _, _, _, _ in throw Boom() }
 
         func withLock<T>(_ body: () throws -> T) rethrows -> T { lock.lock(); defer { lock.unlock() }; return try body() }
 
@@ -48,7 +55,9 @@ struct WalletCreatorTests {
                     if let failure = self.withLock({ self.openFailure }) { throw failure }
                     self.withLock { self.opened.append(value) }
                 },
-                createNew: { value in
+                reserve: { try await self.session.reserve() },
+                release: { await self.session.release($0) },
+                createNew: { _, value in
                     if self.withLock({ self.holdCreate }) {
                         await withCheckedContinuation { continuation in self.withLock { self.createGate = continuation } }
                     }
@@ -58,8 +67,7 @@ struct WalletCreatorTests {
                         if let failure = self.createFailure { throw failure }
                         self.created.append(value)
                     }
-                },
-                close: {})
+                })
         }
     }
 
@@ -143,6 +151,39 @@ struct WalletCreatorTests {
         try await second.value
         #expect(fake.generated == ["seed-1"])
         #expect(fake.created == ["seed-1"])
+    }
+
+    @Test func freshCreationWaitsOutAReservationWithoutTouchingAnything() async throws {
+        let fake = Fake()
+        // A restore (or launch recovery) holds the session.
+        let restore = try await fake.session.reserve()
+        await #expect(throws: WalletSession.OpenError.busy) {
+            try await WalletCreator(dependencies: fake.dependencies()).createOrResume()
+        }
+        #expect(fake.generated.isEmpty)
+        #expect(fake.seed == .notFound)
+        #expect(!fake.datadir)
+        await fake.session.release(restore)
+    }
+
+    @Test func freshCreationHoldsTheSessionUntilItsCleanupIsDone() async throws {
+        let fake = Fake()
+        fake.holdCreate = true
+        fake.createFailure = Boom()
+        let creator = WalletCreator(dependencies: fake.dependencies())
+        let attempt = Task { try await creator.createOrResume() }
+        while fake.withLock({ fake.createGate == nil }) { await Task.yield() }
+
+        // Mid-creation: a restore can't start.
+        await #expect(throws: WalletSession.OpenError.busy) { try await fake.session.reserve() }
+        fake.withLock { fake.createGate?.resume(); fake.createGate = nil }
+        await #expect(throws: Boom.self) { try await attempt.value }
+
+        // Cleanup finished under the reservation, then released it.
+        #expect(fake.seed == .notFound)
+        #expect(!fake.database && !fake.datadir)
+        let next = try await fake.session.reserve()
+        await fake.session.release(next)
     }
 
     @Test func keepsTheNewSeedWhenCleanupFails() async {

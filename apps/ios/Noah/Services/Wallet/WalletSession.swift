@@ -4,6 +4,13 @@ import Foundation
 /// Owns the bark wallet handles. Every wallet operation in the app (UI,
 /// push, background tasks, backups, App Intents) must go through this actor
 /// so loads, closes and replacements never overlap.
+///
+/// Native work is never abandoned halfway: BoltFFI answers a cancelled Swift
+/// caller with `CancellationError` while the Rust work keeps running, so
+/// opens, wallet calls and teardown run in their own tasks that the session
+/// waits for. `close` waits for wallet calls still running, and a
+/// `Reservation` (restore, creation, launch recovery) starts from a fully
+/// closed session.
 actor WalletSession {
     enum OpenError: Error, Equatable {
         /// No `db.sqlite` in the datadir. Opening would create a new wallet,
@@ -14,12 +21,20 @@ actor WalletSession {
         case notABarkWallet
         /// The database belongs to another network than this build variant.
         case networkMismatch(found: String)
-        /// Another open or close is in progress, or a wallet is already open.
+        /// Another open, close or reservation is in progress, or a wallet is
+        /// already open.
         case busy
         /// `createNew` found an existing database; it never overwrites one.
         case walletDatabaseExists
         /// An interrupted restore has not been settled (`RestoreTransaction`).
         case restorePending
+        /// A new wallet failed after opening and could not be shut down, so
+        /// it was left open on its files rather than having them removed.
+        case teardownFailed
+    }
+
+    enum SessionError: Error, Equatable {
+        case notOpen
     }
 
     /// Opener seam so lifecycle rules can be tested without the SDK.
@@ -38,13 +53,15 @@ actor WalletSession {
         case opening(Task<Handles, Error>)
         case open(Handles)
         case closing
-        /// A restore is replacing the wallet files; everyone else sees `busy`.
-        case replacing(UUID)
+        /// Held by a restore, a wallet creation or launch recovery; everyone
+        /// else sees `busy`.
+        case reserved(UUID)
     }
 
-    /// Exclusive hold on a closed session while a restore swaps the wallet
-    /// files. Only its holder may check the new files (`verifyReplacement`).
-    struct Replacement: Sendable, Equatable {
+    /// Exclusive hold on a closed session while the wallet files or seed are
+    /// created or replaced. Only its holder may open the wallet
+    /// (`verify`, `createNew`) until `release`.
+    struct Reservation: Sendable, Equatable {
         fileprivate let id: UUID
     }
 
@@ -66,12 +83,16 @@ actor WalletSession {
     private let location: WalletDataLocation
     private let opener: Opener
     private var state = State.closed
+    private var runningCalls = 0
+    private var drainWaiters: [CheckedContinuation<Void, Never>] = []
 
     init(variant: AppVariant = .current, location: WalletDataLocation? = nil, opener: Opener? = nil) {
         self.variant = variant
         self.location = location ?? WalletDataLocation(variant: variant)
         self.opener = opener ?? Self.sdkOpener(variant: variant)
     }
+
+    // MARK: Lifecycle
 
     /// Opens the wallet the React Native app (or a previous native run)
     /// created. Refuses to run if the database is absent, is not a bark
@@ -80,7 +101,128 @@ actor WalletSession {
         guard case .closed = state else { throw OpenError.busy }
         guard !location.restorePending else { throw OpenError.restorePending }
         try checkExistingDatabase()
-        try await open(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion, create: false)
+        let opener = self.opener
+        let datadir = location.directory.path
+        let attempt = Task { try await opener(mnemonic, datadir, runDaemon, appVersion, false) }
+        state = .opening(attempt)
+        do {
+            state = .open(try await attempt.value)
+        } catch {
+            state = .closed
+            throw error
+        }
+    }
+
+    /// Opens the existing wallet unless it is already open (RN's
+    /// `loadWalletIfNeeded`). Still rejects overlapping open/close.
+    /// Waits for an open already in progress instead of failing.
+    func ensureOpen(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
+        switch state {
+        case .open:
+            return
+        case .opening(let inFlight):
+            _ = try await inFlight.value
+        case .closing, .reserved:
+            throw OpenError.busy
+        case .closed:
+            try await openExisting(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion)
+        }
+    }
+
+    /// Stops new wallet calls, waits for the running ones, then stops the
+    /// daemon. Only then is the session closed.
+    func close() async throws {
+        switch state {
+        case .closed:
+            return
+        case .opening, .closing, .reserved:
+            throw OpenError.busy
+        case .open(let handles):
+            state = .closing
+            await callsDrained()
+            do {
+                try await Task { try await handles.wallet.stopDaemonWait() }.value
+            } catch {
+                state = .open(handles)
+                throw error
+            }
+            state = .closed
+        }
+    }
+
+    var isOpen: Bool {
+        if case .open = state { true } else { false }
+    }
+
+    /// Reserves the closed session. Opens, closes, wallet calls and other
+    /// reservations fail (or see no wallet) until `release`.
+    func reserve() throws -> Reservation {
+        guard case .closed = state else { throw OpenError.busy }
+        let reservation = Reservation(id: UUID())
+        state = .reserved(reservation.id)
+        return reservation
+    }
+
+    func release(_ reservation: Reservation) {
+        guard case .reserved(let id) = state, id == reservation.id else { return }
+        state = .closed
+    }
+
+    /// Opens the datadir's wallet with `mnemonic`, without the daemon, and
+    /// shuts it again: proof a restored wallet is usable before its seed is
+    /// committed. Finishes even if the caller is cancelled, so the files are
+    /// never swapped back while bark is still on them.
+    func verify(_ reservation: Reservation, mnemonic: String, appVersion: String) async throws {
+        try checkHeld(reservation)
+        try checkExistingDatabase()
+        let opener = self.opener
+        let datadir = location.directory.path
+        try await Task {
+            let handles = try await opener(mnemonic, datadir, false, appVersion, false)
+            try await handles.wallet.stopDaemonWait()
+        }.value
+    }
+
+    /// Creates a new wallet in an empty datadir and leaves it open, which
+    /// ends the reservation. If it fails, the reservation is still held and
+    /// nothing is running on the files, so the caller can remove what the
+    /// attempt created before anyone else gets in.
+    func createNew(_ reservation: Reservation, mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
+        try checkHeld(reservation)
+        guard !location.restorePending else { throw OpenError.restorePending }
+        guard !location.databaseExists else { throw OpenError.walletDatabaseExists }
+        try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
+        let opener = self.opener
+        let datadir = location.directory.path
+        let handles = try await Task { try await opener(mnemonic, datadir, runDaemon, appVersion, true) }.value
+        do {
+            // RN creation persists key 0 before peeking its registration address.
+            _ = try await Task { try await handles.wallet.deriveStoreNextKeypair() }.value
+        } catch {
+            do {
+                try await Task { try await handles.wallet.stopDaemonWait() }.value
+            } catch {
+                state = .open(handles)
+                throw OpenError.teardownFailed
+            }
+            throw error
+        }
+        state = .open(handles)
+    }
+
+    /// `createNew` under its own reservation (integration tests).
+    func createNew(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
+        let reservation = try reserve()
+        do {
+            try await createNew(reservation, mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion)
+        } catch {
+            release(reservation)
+            throw error
+        }
+    }
+
+    private func checkHeld(_ reservation: Reservation) throws {
+        guard case .reserved(let id) = state, id == reservation.id else { throw OpenError.busy }
     }
 
     /// Read-only checks before bark touches the database.
@@ -98,175 +240,104 @@ actor WalletSession {
         }
     }
 
-    /// Reserves the closed session for a restore. Opens, closes and wallet
-    /// calls from anyone else fail (or see no wallet) until `endReplacement`.
-    func beginReplacement() throws -> Replacement {
-        guard case .closed = state else { throw OpenError.busy }
-        let replacement = Replacement(id: UUID())
-        state = .replacing(replacement.id)
-        return replacement
+    // MARK: Wallet calls
+
+    /// Runs `body` on the open wallet as a counted call: `close` waits for
+    /// it, and it finishes even if the caller is cancelled. Long-lived
+    /// observers must not use this, or `close` would wait for them forever.
+    func withOpenWallet<T: Sendable>(_ body: @escaping @Sendable (Handles) async throws -> T) async throws -> T {
+        guard case .open(let handles) = state else { throw SessionError.notOpen }
+        runningCalls += 1
+        defer { callFinished() }
+        return try await Task { try await body(handles) }.value
     }
 
-    /// Opens the swapped-in files with `mnemonic`, without the daemon, and
-    /// closes them again: proof the restore is usable before the seed is
-    /// committed. Nothing else can reach this wallet in between.
-    func verifyReplacement(_ replacement: Replacement, mnemonic: String, appVersion: String) async throws {
-        guard case .replacing(let id) = state, id == replacement.id else { throw OpenError.busy }
-        try checkExistingDatabase()
-        let handles = try await opener(mnemonic, location.directory.path, false, appVersion, false)
-        try await handles.wallet.stopDaemonWait()
+    private func callFinished() {
+        runningCalls -= 1
+        guard runningCalls == 0 else { return }
+        let waiters = drainWaiters
+        drainWaiters = []
+        waiters.forEach { $0.resume() }
     }
 
-    func endReplacement(_ replacement: Replacement) {
-        guard case .replacing(let id) = state, id == replacement.id else { return }
-        state = .closed
-    }
-
-    /// Opens the existing wallet unless it is already open (RN's
-    /// `loadWalletIfNeeded`). Still rejects overlapping open/close.
-    /// Waits for an open already in progress instead of failing.
-    func ensureOpen(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
-        switch state {
-        case .open:
-            return
-        case .opening(let inFlight):
-            _ = try await inFlight.value
-        case .closing, .replacing:
-            throw OpenError.busy
-        case .closed:
-            try await openExisting(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion)
-        }
-    }
-
-    /// Creates a new wallet. Only valid when no database exists yet.
-    func createNew(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
-        guard case .closed = state else { throw OpenError.busy }
-        guard !location.restorePending else { throw OpenError.restorePending }
-        guard !location.databaseExists else { throw OpenError.walletDatabaseExists }
-        try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
-        try await open(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion, create: true)
-        // RN creation persists key 0 before peeking its registration address.
-        // On failure the creator closes this session before rolling back its files.
-        guard case .open(let handles) = state else { throw OpenError.busy }
-        _ = try await handles.wallet.deriveStoreNextKeypair()
-    }
-
-    private func open(mnemonic: String, runDaemon: Bool, appVersion: String, create: Bool) async throws {
-        let opener = self.opener
-        let datadir = location.directory.path
-        let attempt = Task { try await opener(mnemonic, datadir, runDaemon, appVersion, create) }
-        state = .opening(attempt)
-        do {
-            state = .open(try await attempt.value)
-        } catch {
-            state = .closed
-            throw error
-        }
-    }
-
-    var isOpen: Bool {
-        if case .open = state { true } else { false }
+    private func callsDrained() async {
+        guard runningCalls > 0 else { return }
+        await withCheckedContinuation { drainWaiters.append($0) }
     }
 
     func peekPublicKey(index: UInt32) async throws -> String {
-        guard case .open(let handles) = state else { throw OpenError.walletDatabaseMissing }
-        return try await handles.wallet.peekPublicKey(index: index)
+        try await withOpenWallet { try await $0.wallet.peekPublicKey(index: index) }
     }
 
     /// Stable registration address; never advances the wallet's address index.
     func peekAddress(index: UInt32) async throws -> String {
-        guard case .open(let handles) = state else { throw OpenError.walletDatabaseMissing }
-        return try await handles.wallet.peekAddress(index: index)
+        try await withOpenWallet { try await $0.wallet.peekAddress(index: index) }
     }
 
     func summary() async throws -> Summary? {
-        guard case .open(let handles) = state else { return nil }
-        let wallet = handles.wallet
-        let onchain = handles.onchain
-        let ark = try await wallet.balance()
-        let chain = try await onchain.balance()
-        return Summary(
-            network: try await wallet.network(),
-            fingerprint: wallet.fingerprint(),
-            balance: WalletBalance(
-                // bark-bolt-ffi 0.2.0 drops needs_refresh, pending_arkoor_send
-                // and pending_offboard from bark's Balance; they read as 0
-                // until the SDK exposes them (FFI handoff item 12).
-                ark: .init(
-                    spendable: ark.spendableSats,
-                    needsRefresh: 0,
-                    pendingLightningSend: ark.pendingLightningSendSats,
-                    claimableLightningReceive: ark.claimableLightningReceiveSats,
-                    pendingInRound: ark.pendingInRoundSats,
-                    pendingExit: ark.pendingExitSats,
-                    pendingBoard: ark.pendingBoardSats,
-                    pendingArkoorSend: 0,
-                    pendingOffboard: 0),
-                onchain: .init(confirmed: chain.confirmedSats, pending: chain.pendingSats, total: chain.totalSats)),
-            movementCount: try await wallet.history().count)
-    }
-
-    enum SessionError: Error, Equatable {
-        case notOpen
+        guard isOpen else { return nil }
+        return try await withOpenWallet { handles in
+            let wallet = handles.wallet
+            let ark = try await wallet.balance()
+            let chain = try await handles.onchain.balance()
+            return Summary(
+                network: try await wallet.network(),
+                fingerprint: wallet.fingerprint(),
+                balance: WalletBalance(
+                    // bark-bolt-ffi 0.2.0 drops needs_refresh, pending_arkoor_send
+                    // and pending_offboard from bark's Balance; they read as 0
+                    // until the SDK exposes them (FFI handoff item 12).
+                    ark: .init(
+                        spendable: ark.spendableSats,
+                        needsRefresh: 0,
+                        pendingLightningSend: ark.pendingLightningSendSats,
+                        claimableLightningReceive: ark.claimableLightningReceiveSats,
+                        pendingInRound: ark.pendingInRoundSats,
+                        pendingExit: ark.pendingExitSats,
+                        pendingBoard: ark.pendingBoardSats,
+                        pendingArkoorSend: 0,
+                        pendingOffboard: 0),
+                    onchain: .init(confirmed: chain.confirmedSats, pending: chain.pendingSats, total: chain.totalSats)),
+                movementCount: try await wallet.history().count)
+        }
     }
 
     /// Consistent plaintext SQLite export of the open wallet (backups).
     func createSnapshot(at destination: URL) async throws -> WalletSnapshotInfo {
-        guard case .open(let handles) = state else { throw SessionError.notOpen }
-        return try await handles.wallet.createSnapshot(destinationPath: destination.path)
-    }
-
-    private func openHandles() throws -> Handles {
-        guard case .open(let handles) = state else { throw SessionError.notOpen }
-        return handles
+        try await withOpenWallet { try await $0.wallet.createSnapshot(destinationPath: destination.path) }
     }
 
     /// Background maintenance the server asks for (`maintenanceDelegated`).
     func maintenanceDelegated() async throws {
-        try await openHandles().wallet.maintenanceDelegated()
+        try await withOpenWallet { try await $0.wallet.maintenanceDelegated() }
     }
 
     /// BOLT11 invoice for a forwarded Lightning address payment.
     func bolt11Invoice(amountSats: UInt64) async throws -> String {
-        try await openHandles().wallet.bolt11Invoice(amountSats: amountSats, description: nil).invoice
+        try await withOpenWallet { try await $0.wallet.bolt11Invoice(amountSats: amountSats, description: nil).invoice }
     }
 
     /// Claims pending Lightning receives without waiting (RN `wait: false`).
     func claimLightningReceives() async throws {
-        _ = try await openHandles().wallet.tryClaimAllLightningReceives(wait: false)
+        try await withOpenWallet { _ = try await $0.wallet.tryClaimAllLightningReceives(wait: false) }
     }
 
     /// Blocks until the soonest VTXO expiry, as the widget shows it.
     func closestExpiryBlocks() async throws -> Int? {
-        let handles = try openHandles()
-        let vtxos = try await handles.wallet.vtxos()
-        guard !vtxos.isEmpty else { return nil }
-        let tip = Int(try await handles.onchain.tipHeight())
-        return vtxos.map { Int($0.expiryHeight) - tip }.min()
+        try await withOpenWallet { handles in
+            let vtxos = try await handles.wallet.vtxos()
+            guard !vtxos.isEmpty else { return nil }
+            let tip = Int(try await handles.onchain.tipHeight())
+            return vtxos.map { Int($0.expiryHeight) - tip }.min()
+        }
     }
 
     /// Syncs onchain then Ark state, like `syncWallet` minus Lightning claims.
     func sync() async throws {
-        guard case .open(let handles) = state else { return }
-        _ = try await handles.onchain.sync()
-        try await handles.wallet.sync()
-    }
-
-    func close() async throws {
-        switch state {
-        case .closed:
-            return
-        case .opening, .closing, .replacing:
-            throw OpenError.busy
-        case .open(let handles):
-            state = .closing
-            do {
-                try await handles.wallet.stopDaemonWait()
-            } catch {
-                state = .open(handles)
-                throw error
-            }
-            state = .closed
+        guard isOpen else { return }
+        try await withOpenWallet { handles in
+            _ = try await handles.onchain.sync()
+            try await handles.wallet.sync()
         }
     }
 

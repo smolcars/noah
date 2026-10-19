@@ -38,7 +38,6 @@ struct WalletRestorer: Sendable {
     let seed: any SecretItem
     /// Authenticated client for `mnemonic` whose token is never persisted.
     let makeClient: @Sendable (_ mnemonic: String) -> Client
-    var downloadSession: URLSession = .shared
 
     struct Outcome: Equatable, Sendable {
         let backupId: String?
@@ -50,13 +49,13 @@ struct WalletRestorer: Sendable {
     /// Restores into a closed session and leaves it closed; open the wallet
     /// afterwards as usual.
     func restore(mnemonic: String, progress: @Sendable (Step) -> Void = { _ in }) async throws -> Outcome {
-        let replacement = try await session.beginReplacement()
+        let reservation = try await session.reserve()
         do {
-            let outcome = try await restore(mnemonic: mnemonic, holding: replacement, progress: progress)
-            await session.endReplacement(replacement)
+            let outcome = try await restore(mnemonic: mnemonic, holding: reservation, progress: progress)
+            await session.release(reservation)
             return outcome
         } catch {
-            await session.endReplacement(replacement)
+            await session.release(reservation)
             throw error
         }
     }
@@ -66,14 +65,21 @@ struct WalletRestorer: Sendable {
     static func recoverInterruptedRestore(
         session: WalletSession, location: WalletDataLocation, seed: any SecretItem
     ) async throws -> RestoreTransaction.Recovery {
-        let replacement = try await session.beginReplacement()
+        let reservation: WalletSession.Reservation
+        do {
+            reservation = try await session.reserve()
+        } catch WalletSession.OpenError.busy where !location.restorePending {
+            // Already opened (e.g. by a silent push before the UI started):
+            // nothing can be pending, since opening refuses while it is.
+            return .nothingPending
+        }
         let result = Result { try RestoreTransaction(location: location).recover(seed: seed) }
-        await session.endReplacement(replacement)
+        await session.release(reservation)
         return try result.get()
     }
 
     private func restore(
-        mnemonic: String, holding replacement: WalletSession.Replacement, progress: @Sendable (Step) -> Void
+        mnemonic: String, holding reservation: WalletSession.Reservation, progress: @Sendable (Step) -> Void
     ) async throws -> Outcome {
         let transaction = RestoreTransaction(location: location)
         if try transaction.recover(seed: seed) == .waitingForKeychain { throw Failure.secureStorageUnavailable }
@@ -85,7 +91,7 @@ struct WalletRestorer: Sendable {
             do {
                 try transaction.begin(seed: mnemonic)
                 progress(.loading)
-                try await session.verifyReplacement(replacement, mnemonic: mnemonic, appVersion: "restore")
+                try await session.verify(reservation, mnemonic: mnemonic, appVersion: "restore")
                 progress(.finalizing)
                 try transaction.markCommitting()
             } catch {
@@ -178,7 +184,7 @@ struct WalletRestorer: Sendable {
         }
         let encrypted = transaction.work.appending(path: "backup.noahbackup")
         let unpacked = transaction.work.appending(path: "unpacked", directoryHint: .isDirectory)
-        try await downloadFile(download.downloadUrl, to: encrypted)
+        try await downloadFile(download.downloadUrl, to: encrypted, limit: download.backup.encryptedSize)
         let data = try Data(contentsOf: encrypted, options: .alwaysMapped)
         guard Int64(data.count) == download.backup.encryptedSize,
             BackupArchive.sha256Hex(data) == download.backup.encryptedSha256.lowercased()
@@ -208,21 +214,19 @@ struct WalletRestorer: Sendable {
     private func stageLegacy(mnemonic: String, client: Client, transaction: RestoreTransaction) async throws -> Outcome {
         let download = try await client.getDownloadUrl(body: .json(.init(backupVersion: nil))).ok.body.json
         let base64File = transaction.work.appending(path: "legacy-backup.txt")
-        try await downloadFile(download.downloadUrl, to: base64File)
+        // base64 text of an envelope no larger than the server's object cap.
+        try await downloadFile(download.downloadUrl, to: base64File, limit: Self.maxEncryptedBytes / 3 * 4 + 1024)
         let text = try Data(contentsOf: base64File, options: .alwaysMapped)
-        // base64 of an envelope no larger than the server's object cap.
-        guard text.count <= Self.maxEncryptedBytes / 3 * 4 + 1024 else { throw Failure.downloadMismatch }
         try BackupArchive.openLegacy(base64: text, mnemonic: mnemonic, variant: variant, into: transaction.staged)
         return Outcome(backupId: nil, snapshotSha256: nil)
     }
 
-    private func downloadFile(_ url: String, to destination: URL) async throws {
+    private func downloadFile(_ url: String, to destination: URL, limit: Int64) async throws {
         guard let source = URL(string: url) else { throw URLError(.badURL) }
-        let (temporary, response) = try await downloadSession.download(for: URLRequest(url: source, timeoutInterval: 60))
-        defer { try? FileManager.default.removeItem(at: temporary) }
-        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            throw URLError(.badServerResponse)
+        do {
+            try await BoundedDownload.fetch(URLRequest(url: source, timeoutInterval: 60), to: destination, limit: limit)
+        } catch is BoundedDownload.TooLarge {
+            throw Failure.downloadMismatch
         }
-        try FileManager.default.moveItem(at: temporary, to: destination)
     }
 }

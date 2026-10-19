@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 import SQLite3
 import Testing
@@ -90,6 +91,62 @@ struct WalletSessionTests {
         while await gate.calls < 2 { await Task.yield() }
         await gate.release()
         await #expect(throws: OpenerFailed.self) { try await second.value }
+    }
+
+    /// Real bark wallet, created without a server so the test runs offline.
+    private func offlineSession() -> WalletSession {
+        WalletSession(variant: .regtest, location: location) { mnemonic, datadir, _, _, create in
+            let config = WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "test")
+            let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
+            let wallet = try await Wallet.openWithOnchain(
+                network: .regtest, mnemonicOrSeed: mnemonic, config: config,
+                args: WalletOpenArgs(
+                    runDaemon: false, datadir: datadir, createIfNotExists: create,
+                    createWithoutServer: true, skipRecovery: true),
+                onchain: onchain)
+            return WalletSession.Handles(wallet: wallet, onchain: onchain)
+        }
+    }
+
+    @Test func closeWaitsForWalletCallsStillRunning() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let session = offlineSession()
+        try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
+        let gate = Gate()
+        let call = Task { try await session.withOpenWallet { _ in await gate.enter() } }
+        while await gate.calls == 0 { await Task.yield() }
+        // The caller gives up; like Rust work under BoltFFI, the call goes on.
+        call.cancel()
+
+        let closing = Task { try await session.close() }
+        for _ in 0..<50 { await Task.yield() }
+        await #expect(throws: WalletSession.SessionError.notOpen) { try await session.peekAddress(index: 0) }
+        await #expect(throws: WalletSession.OpenError.busy) { try await session.reserve() }
+
+        await gate.release()
+        try await closing.value
+        let reservation = try await session.reserve()
+        await session.release(reservation)
+    }
+
+    @Test func reservationKeepsEveryoneElseOut() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        try writeBarkProperties(network: "regtest")
+        let gate = Gate()
+        let session = session(gate: gate)
+        let reservation = try await session.reserve()
+        await #expect(throws: WalletSession.OpenError.busy) {
+            try await session.ensureOpen(mnemonic: "unused", runDaemon: false, appVersion: "test")
+        }
+        await #expect(throws: WalletSession.OpenError.busy) { try await session.reserve() }
+        await #expect(throws: WalletSession.OpenError.busy) { try await session.close() }
+        #expect(await gate.calls == 0)
+
+        await session.release(reservation)
+        let open = Task { try await session.ensureOpen(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+        while await gate.calls == 0 { await Task.yield() }
+        await gate.release()
+        await #expect(throws: OpenerFailed.self) { try await open.value }
     }
 
     @Test func ensureOpenWaitsForAnOpenInProgress() async throws {

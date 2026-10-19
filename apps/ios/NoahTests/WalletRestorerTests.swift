@@ -2,6 +2,7 @@ import BarkBoltFFI
 import Foundation
 import HTTPTypes
 import OpenAPIRuntime
+import SQLite3
 import Testing
 
 @testable import Noah
@@ -19,12 +20,13 @@ struct WalletRestorerTests {
         let backupId: String
         let encrypted: URL
         var reportedSha256: String?
+        var reportedSize: Int?
 
         func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
             let data = try Data(contentsOf: encrypted)
             let info: [String: Any] = [
                 "backup_id": backupId, "created_at": "2026-10-19T00:00:00Z",
-                "encrypted_sha256": reportedSha256 ?? BackupArchive.sha256Hex(data), "encrypted_size": data.count,
+                "encrypted_sha256": reportedSha256 ?? BackupArchive.sha256Hex(data), "encrypted_size": reportedSize ?? data.count,
                 "format_version": 2,
             ]
             let json: Any
@@ -89,7 +91,7 @@ struct WalletRestorerTests {
 
     /// Device B already has a wallet; returns a restorer for it.
     private func setUp(
-        seed: FakeSeed, session: WalletSession? = nil, reportedSha256: String? = nil
+        seed: FakeSeed, session: WalletSession? = nil, reportedSha256: String? = nil, reportedSize: Int? = nil
     ) async throws -> (restorer: WalletRestorer, mnemonic: String) {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let mnemonic = try generateMnemonic()
@@ -101,7 +103,8 @@ struct WalletRestorerTests {
             location: deviceB, seed: seed,
             makeClient: { _ in
                 Client(serverURL: URL(string: "http://fake")!,
-                       transport: FakeServer(backupId: "b1", encrypted: backup, reportedSha256: reportedSha256))
+                       transport: FakeServer(
+                           backupId: "b1", encrypted: backup, reportedSha256: reportedSha256, reportedSize: reportedSize))
             })
         return (restorer, mnemonic)
     }
@@ -149,7 +152,7 @@ struct WalletRestorerTests {
         await #expect(throws: WalletSession.OpenError.busy) {
             try await session.ensureOpen(mnemonic: "previous seed", runDaemon: false, appVersion: "test")
         }
-        await #expect(throws: WalletSession.OpenError.busy) { try await session.beginReplacement() }
+        await #expect(throws: WalletSession.OpenError.busy) { try await session.reserve() }
         await #expect(throws: WalletSession.OpenError.busy) { try await session.close() }
         #expect(try await session.summary() == nil)
         await #expect(throws: WalletSession.OpenError.busy) { try await restorer.restore(mnemonic: mnemonic) }
@@ -158,6 +161,72 @@ struct WalletRestorerTests {
         await #expect(throws: OpenRefused.self) { try await restore.value }
         try expectPreviousWalletBack(seed)
         #expect(await !session.isOpen)
+    }
+
+    @Test func cancellingDuringTheOpenCheckWaitsForTheNativeWork() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let seed = FakeSeed("previous seed")
+        let gate = Gate()
+        // Like BoltFFI: the Rust work goes on regardless of Swift cancellation.
+        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in
+            await gate.enter()
+            throw OpenRefused()
+        }
+        let (restorer, mnemonic) = try await setUp(seed: seed, session: session)
+
+        let restore = Task { try await restorer.restore(mnemonic: mnemonic) }
+        await gate.waitUntilEntered()
+        restore.cancel()
+        for _ in 0..<50 { await Task.yield() }
+        // Still mid-check: nothing was swapped back underneath the opener.
+        #expect(deviceBWallet != "previous wallet")
+        #expect(deviceB.restorePending)
+        await #expect(throws: WalletSession.OpenError.busy) { try await session.reserve() }
+
+        await gate.release()
+        await #expect(throws: OpenRefused.self) { try await restore.value }
+        try expectPreviousWalletBack(seed)
+    }
+
+    @Test func downloadLargerThanTheServerRecordIsCutOff() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let seed = FakeSeed("previous seed")
+        let (restorer, mnemonic) = try await setUp(seed: seed, reportedSize: 64)
+
+        await #expect(throws: WalletRestorer.Failure.downloadMismatch) { try await restorer.restore(mnemonic: mnemonic) }
+        try expectPreviousWalletBack(seed)
+    }
+
+    @Test func launchRecoveryWithTheWalletAlreadyOpeningIsNotAFailure() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let seed = FakeSeed("previous seed")
+        let gate = Gate()
+        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in
+            await gate.enter()
+            throw OpenRefused()
+        }
+        _ = try await setUp(seed: seed, session: session)
+        try makeBarkProperties(at: deviceB)
+
+        // A silent push started opening the wallet before the UI launched.
+        let pushOpen = Task { try await session.ensureOpen(mnemonic: "previous seed", runDaemon: false, appVersion: "test") }
+        await gate.waitUntilEntered()
+        #expect(try await WalletRestorer.recoverInterruptedRestore(session: session, location: deviceB, seed: seed) == .nothingPending)
+        await gate.release()
+        _ = try? await pushOpen.value
+    }
+
+    /// Enough of a bark database to pass the session's read-only preflight.
+    private func makeBarkProperties(at location: WalletDataLocation) throws {
+        try? FileManager.default.removeItem(at: location.database)
+        var db: OpaquePointer?
+        guard sqlite3_open(location.database.path, &db) == SQLITE_OK else { throw OpenRefused() }
+        defer { sqlite3_close(db) }
+        let sql = """
+            CREATE TABLE bark_properties (id TEXT PRIMARY KEY, network TEXT NOT NULL, fingerprint TEXT NOT NULL);
+            INSERT INTO bark_properties (id, network, fingerprint) VALUES ('1', 'regtest', 'abcd1234');
+            """
+        guard sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK else { throw OpenRefused() }
     }
 
     @Test func restoreCommitsTheSeedAndLeavesTheSessionReopenable() async throws {

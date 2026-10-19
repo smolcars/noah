@@ -31,6 +31,7 @@ final class AppModel {
     private let settings = SettingsStorage.shared
     private let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
     @ObservationIgnored private let creator: WalletCreator
+    @ObservationIgnored private var started = false
 
     init() {
         server = ServerRegistration(variant: .current, client: AppServices.shared.client)
@@ -43,6 +44,9 @@ final class AppModel {
     }
 
     func start() async {
+        // `.task` can run again if the root view is rebuilt; launch once.
+        guard !started else { return }
+        started = true
         // An interrupted restore must be settled before the datadir and seed
         // say anything about which wallet this is.
         do {

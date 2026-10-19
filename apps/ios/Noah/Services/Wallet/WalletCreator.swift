@@ -8,7 +8,10 @@ import Foundation
 /// - only one of them present, or the Keychain unreadable: stop, touch nothing;
 /// - neither: create a fresh wallet; if that attempt fails, undo only what
 ///   it created so the next attempt can retry;
-/// - overlapping calls share one attempt.
+/// - overlapping calls share one attempt;
+/// - a fresh attempt holds a `WalletSession.Reservation` from its final
+///   check through seed write, creation and any cleanup, so a restore or
+///   recovery can't run in between and its files are never removed.
 ///
 /// Unlike the RN app the seed is saved before the wallet files are created,
 /// so a crash in between leaves a restorable seed rather than wallet data
@@ -33,8 +36,16 @@ actor WalletCreator {
         var removeAttemptFiles: @Sendable (_ datadirExisted: Bool) -> Bool
         var generateMnemonic: @Sendable () throws -> String
         var openExisting: @Sendable (_ mnemonic: String) async throws -> Void
-        var createNew: @Sendable (_ mnemonic: String) async throws -> Void
-        var close: @Sendable () async -> Void
+        var reserve: @Sendable () async throws -> WalletSession.Reservation
+        var release: @Sendable (WalletSession.Reservation) async -> Void
+        /// Leaves the wallet open (ending the reservation) or fails with the
+        /// reservation still held and nothing running on the files.
+        var createNew: @Sendable (WalletSession.Reservation, _ mnemonic: String) async throws -> Void
+    }
+
+    private enum Plan: Equatable {
+        case resume(seed: String)
+        case fresh
     }
 
     private let dependencies: Dependencies
@@ -55,6 +66,21 @@ actor WalletCreator {
     }
 
     private func run() async throws {
+        if case .resume(let seed) = try plan() {
+            try await dependencies.openExisting(seed)
+            return
+        }
+        let reservation = try await dependencies.reserve()
+        do {
+            try await createFresh(holding: reservation)
+        } catch {
+            // No-op once the new wallet is open.
+            await dependencies.release(reservation)
+            throw error
+        }
+    }
+
+    private func plan() throws -> Plan {
         let seed: String?
         switch dependencies.readSeed() {
         case .unavailable(let status):
@@ -64,24 +90,26 @@ actor WalletCreator {
         case .found, .notFound:
             seed = nil
         }
-
         switch (seed, dependencies.walletDataExists()) {
-        case (let seed?, true):
-            try await dependencies.openExisting(seed)
-            return
-        case (_?, false), (nil, true):
-            throw Failure.incompleteExistingData
-        case (nil, false):
-            break
+        case (let seed?, true): return .resume(seed: seed)
+        case (_?, false), (nil, true): throw Failure.incompleteExistingData
+        case (nil, false): return .fresh
         }
+    }
 
+    private func createFresh(holding reservation: WalletSession.Reservation) async throws {
+        // Checked again under the reservation: a restore may have finished
+        // since the first look.
+        guard try plan() == .fresh else { throw WalletSession.OpenError.busy }
         let datadirExisted = dependencies.datadirExists()
         let mnemonic = try dependencies.generateMnemonic()
         try dependencies.saveSeed(mnemonic)
         do {
-            try await dependencies.createNew(mnemonic)
+            try await dependencies.createNew(reservation, mnemonic)
+        } catch WalletSession.OpenError.teardownFailed {
+            // The wallet is still open on its files: they and the seed stay.
+            throw WalletSession.OpenError.teardownFailed
         } catch {
-            await dependencies.close()
             // Only drop the new seed once its wallet files are really gone;
             // otherwise keep it so the leftover data stays recoverable.
             if dependencies.removeAttemptFiles(datadirExisted) {
@@ -121,7 +149,8 @@ extension WalletCreator.Dependencies {
             },
             generateMnemonic: { try BarkBoltFFI.generateMnemonic() },
             openExisting: { try await session.ensureOpen(mnemonic: $0, runDaemon: true, appVersion: appVersion) },
-            createNew: { try await session.createNew(mnemonic: $0, runDaemon: true, appVersion: appVersion) },
-            close: { try? await session.close() })
+            reserve: { try await session.reserve() },
+            release: { await session.release($0) },
+            createNew: { try await session.createNew($0, mnemonic: $1, runDaemon: true, appVersion: appVersion) })
     }
 }
