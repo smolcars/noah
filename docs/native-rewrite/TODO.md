@@ -35,7 +35,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Esplora override from `esplora-storage`; Android config mapping
 - [ ] `WalletCoordinator`: single owner of wallet lifetime; serializes load/close/replace and operations for UI, push, background tasks, backups, App Intents
 - [x] Open existing wallet: preflight `db.sqlite`, `createIfNotExists=false`, original network — iOS (`WalletSession`)
-- [ ] `runDaemon` policy + full `WalletCoordinator` (ownership for push/background/backups)
+- [x] One `WalletSession.shared` per process (bark locks the datadir); `ensureOpen` joins an open in progress — iOS
+- [ ] `runDaemon` policy + coordination rules for push/background/backups on the shared session
 - [ ] Notification loop (movement events) + receive subscriptions with cancellation
 
 ### 0.4 Server API contract

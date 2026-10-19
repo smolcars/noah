@@ -22,7 +22,7 @@ final class AppModel {
     private(set) var amountUnit: BitcoinAmountUnit
 
     let variant = AppVariant.current
-    let session = WalletSession()
+    let session = WalletSession.shared
     private let log = AppLog("app")
     private let settings = SettingsStorage.shared
     private let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"

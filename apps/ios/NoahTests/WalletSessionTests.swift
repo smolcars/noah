@@ -91,4 +91,20 @@ struct WalletSessionTests {
         await gate.release()
         await #expect(throws: OpenerFailed.self) { try await second.value }
     }
+
+    @Test func ensureOpenWaitsForAnOpenInProgress() async throws {
+        try writeBarkProperties(network: "regtest")
+        let gate = Gate()
+        let session = session(gate: gate)
+        let first = Task { try await session.openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+        while await gate.calls == 0 { await Task.yield() }
+
+        // Joins the in-flight open (and its failure) instead of reporting busy.
+        let joined = Task { try await session.ensureOpen(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+        for _ in 0..<50 { await Task.yield() }
+        await gate.release()
+        await #expect(throws: OpenerFailed.self) { try await first.value }
+        await #expect(throws: OpenerFailed.self) { try await joined.value }
+        #expect(await gate.calls == 1)
+    }
 }

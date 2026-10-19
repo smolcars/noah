@@ -36,10 +36,11 @@ extension UpgradeCompatibilityTests {
             Issue.record("seed not readable")
             return
         }
-        let session = WalletSession()
-        try await session.openExisting(mnemonic: mnemonic, runDaemon: false, appVersion: "upgrade-test")
+        // The test runs inside the app, which already opens the wallet at
+        // launch; use its session (a second one would hit bark's datadir lock).
+        let session = WalletSession.shared
+        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: true, appVersion: "upgrade-test")
         let summary = try #require(try await session.summary())
-        try await session.close()
 
         #expect(summary.network == .regtest)
         #expect(!summary.fingerprint.isEmpty)

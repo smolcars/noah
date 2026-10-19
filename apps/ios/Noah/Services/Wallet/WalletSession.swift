@@ -32,8 +32,16 @@ actor WalletSession {
     }
 
     private enum State {
-        case closed, opening, open(Handles), closing
+        case closed
+        case opening(Task<Handles, Error>)
+        case open(Handles)
+        case closing
     }
+
+    /// The one session per app process. bark-bolt-ffi locks the datadir, so a
+    /// second session on the same wallet would fail; UI, push handlers,
+    /// background tasks and App Intents all share this one.
+    static let shared = WalletSession()
 
     struct Summary: Equatable, Sendable {
         let network: Network
@@ -77,9 +85,18 @@ actor WalletSession {
 
     /// Opens the existing wallet unless it is already open (RN's
     /// `loadWalletIfNeeded`). Still rejects overlapping open/close.
+    /// Waits for an open already in progress instead of failing.
     func ensureOpen(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
-        if case .open = state { return }
-        try await openExisting(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion)
+        switch state {
+        case .open:
+            return
+        case .opening(let inFlight):
+            _ = try await inFlight.value
+        case .closing:
+            throw OpenError.busy
+        case .closed:
+            try await openExisting(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion)
+        }
     }
 
     /// Creates a new wallet. Only valid when no database exists yet.
@@ -91,10 +108,12 @@ actor WalletSession {
     }
 
     private func open(mnemonic: String, runDaemon: Bool, appVersion: String, create: Bool) async throws {
-        state = .opening
+        let opener = self.opener
+        let datadir = location.directory.path
+        let attempt = Task { try await opener(mnemonic, datadir, runDaemon, appVersion, create) }
+        state = .opening(attempt)
         do {
-            let handles = try await opener(mnemonic, location.directory.path, runDaemon, appVersion, create)
-            state = .open(handles)
+            state = .open(try await attempt.value)
         } catch {
             state = .closed
             throw error
