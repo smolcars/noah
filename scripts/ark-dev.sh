@@ -423,7 +423,8 @@ case "$COMMAND" in
 
     bark)
         echo "Running command on bark: bark $@"
-        dcr run --rm "$BARK_SERVICE" "bark" "$@"
+        # --no-deps: a CLI call must never recreate the running stack.
+        dcr run --rm --no-deps "$BARK_SERVICE" "bark" "$@"
         ;;
 
     bcli)

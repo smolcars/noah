@@ -29,13 +29,15 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 ### 0.3 Wallet SDK integration
 - [x] FFI gaps P0+P1 shipped in bark-bolt-ffi v0.2.0 (iOS pinned to 0.2.0)
 - [ ] FFI item 11 (no-write open of an existing wallet) — not in 0.2.0; Noah keeps its read-only `bark_properties` preflight
-- [ ] Android pinned to bark-bolt-ffi 0.2.0
+- [x] Android pinned to bark-bolt-ffi 0.2.0
 - [ ] `WalletService` protocol/interface over bark-bolt-ffi (Swift + Kotlin), with a fake for UI work
 - [x] Config mapping per variant with **fee units: sat/kvB → sat/kwu** — iOS
-- [ ] Esplora override from `esplora-storage`; Android config mapping
+- [x] Config mapping — Android (sat/kwu; regtest via `10.0.2.2`)
+- [ ] Esplora override from `esplora-storage`
 - [ ] `WalletCoordinator`: single owner of wallet lifetime; serializes load/close/replace and operations for UI, push, background tasks, backups, App Intents
 - [x] Open existing wallet: preflight `db.sqlite`, `createIfNotExists=false`, original network — iOS (`WalletSession`)
 - [x] One `WalletSession.shared` per process (bark locks the datadir); `ensureOpen` joins an open in progress — iOS
+- [x] Shared session, preflight open, safe create-or-resume, bark balance accounting — Android (overlapping closes rejected, native handles disposed explicitly)
 - [ ] `runDaemon` policy + coordination rules for push/background/backups on the shared session
 - [ ] Notification loop (movement events) + receive subscriptions with cancellation
 
@@ -52,7 +54,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 ### 0.5 Upgrade compatibility (gate before any funded-wallet milestone)
 - [x] iOS seed reader: keychain service `com.noah.mnemonic.<variant>`, account `noah` (read + in-place save, RN attributes)
 - [x] Android seed reader: `RN_KEYCHAIN` DataStore (+ legacy SharedPreferences), cipher from `:c` (AES-GCM / AES-CBC); fallback `noah_native_secrets`; new Keystore-backed store; legacy kept
-- [ ] Android RN→native upgrade test run on an emulator (harness committed, run interrupted)
+- [x] Android RN→native upgrade test run on an emulator
 - [x] Launch decision (`apps/fixtures/launch-state.json`): never auto-delete seed; seed-without-DB and DB-without-seed states — iOS
 - [x] Launch decision — Android
 - [ ] BIP39 validation of the stored seed; conflict handling
@@ -69,12 +71,12 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Upgrade test iOS (`apps/ios/UpgradeTests/run.sh`): RN regtest creates wallet via Maestro → native installed over it → seed, DB, MMKV readable, launch = existingWallet, RN DB opens with new bark (same file, not recreated)
 - [x] Funded upgrade test iOS (`FUNDED=1`): RN receives 100k + sends 5k → native sees same fingerprint, 2 movements, 95,000 spendable
 - [ ] Extend funded upgrade test: onchain funds, recurring rule, settings values, Expo token
-- [ ] Upgrade test Android (emulator)
+- [x] Upgrade test Android (emulator), funded: same fingerprint, 2 movements, 95,000 spendable (RN install had no Expo ID, so ID continuity is still unverified)
 - [ ] Upgrade test also checks launcher shortcut + placed widget survive (Android) and widget kind/bundle ID (iOS)
 
 ### 0.6 Platform services
 - [x] Redacting logger (file-backed, rotating, exportable) — iOS (`AppLog`, same `Caches/noah_logs` layout as RN)
-- [ ] Redacting logger — Android
+- [x] Redacting logger — Android
 - [ ] Route bark-bolt-ffi `BarkLogger` callbacks into the app log
 - [ ] Sentry (cocoa / android), disabled in debug + regtest like RN
 - [ ] HTTP clients (URLSession / OkHttp) incl. upload/download
