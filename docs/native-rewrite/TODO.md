@@ -27,7 +27,9 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] CI: build + unit tests for both apps (all three variants compile)
 
 ### 0.3 Wallet SDK integration
-- [ ] FFI gaps — implemented in a separate thread ([ffi-handoff-prompt.md](ffi-handoff-prompt.md)); track releases here
+- [x] FFI gaps P0+P1 shipped in bark-bolt-ffi v0.2.0 (iOS pinned to 0.2.0)
+- [ ] FFI item 11 (no-write open of an existing wallet) — not in 0.2.0; Noah keeps its read-only `bark_properties` preflight
+- [ ] Android pinned to bark-bolt-ffi 0.2.0
 - [ ] `WalletService` protocol/interface over bark-bolt-ffi (Swift + Kotlin), with a fake for UI work
 - [x] Config mapping per variant with **fee units: sat/kvB → sat/kwu** — iOS
 - [ ] Esplora override from `esplora-storage`; Android config mapping
@@ -74,7 +76,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Route bark-bolt-ffi `BarkLogger` callbacks into the app log
 - [ ] Sentry (cocoa / android), disabled in debug + regtest like RN
 - [ ] HTTP clients (URLSession / OkHttp) incl. upload/download
-- [ ] Server auth: `/v0/getk1` → sign (offline key `m/350/0`) → `/v0/auth/login` → JWT; refresh near expiry; retry once
+- [x] Server auth: `/v0/getk1` → sign (offline key `m/350/0`) → `/v0/auth/login` → JWT; refresh near expiry; retry once — iOS (live-tested on regtest)
+- [ ] Server auth — Android
 - [ ] Server registration + last-login + device info
 - [ ] Push: iOS APNs + Expo token; Android FirebaseMessagingService + Expo token; all 6 `NotificationData` types; job status + heartbeat reporting
 - [ ] UnifiedPush (Android, non-GMS) in pure Kotlin

@@ -75,6 +75,12 @@ struct KeychainPassword: Sendable {
         return SecItemDelete(baseQuery as CFDictionary) == errSecSuccess
     }
 
+    /// Removes the item. Only for replaceable values such as the server
+    /// token; never call this on the seed item.
+    func remove() {
+        SecItemDelete(baseQuery as CFDictionary)
+    }
+
     private var baseQuery: [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,

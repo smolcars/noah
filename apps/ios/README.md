@@ -34,6 +34,10 @@ Team `AT26Z24V2Q`. The app entitlements list all three app groups, as in the RN 
 
 [bark-bolt-ffi](https://github.com/smolcars/bark-bolt-ffi) via Swift Package Manager, pinned with `exactVersion` in `project.yml`.
 
+## Live server test
+
+With the regtest stack up, `TEST_RUNNER_NOAH_SERVER_IT=1 xcodebuild … -only-testing:NoahTests/ServerIntegrationTests test` logs in with a throwaway mnemonic (k1 signed through bark-bolt-ffi), registers, calls a gated endpoint and checks the one-retry path after a rejected token.
+
 ## Simulators
 
 Don't install native builds onto a simulator that holds an RN Noah install you care about: the bundle IDs are the same, so the native build replaces it (that is the upgrade path, use it deliberately).
