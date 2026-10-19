@@ -53,4 +53,21 @@ struct ExpoInstallationIDTests {
         #expect(SecItemAdd(attributes as CFDictionary, nil) == errSecSuccess)
         #expect(try ExpoInstallationID.getOrCreate(bundleIdentifier: bundleID, defaults: defaults) == existing)
     }
+
+    @Test func concurrentFirstUseAgreesOnOneID() async throws {
+        defer { deleteItem() }
+        let bundleID = self.bundleID
+        let suite = "com.noah.tests.expo.\(UUID().uuidString)"
+        let ids = try await withThrowingTaskGroup(of: String.self) { group in
+            for _ in 0..<8 {
+                group.addTask {
+                    try ExpoInstallationID.getOrCreate(
+                        bundleIdentifier: bundleID, defaults: UserDefaults(suiteName: suite)!)
+                }
+            }
+            return try await group.reduce(into: Set<String>()) { $0.insert($1) }
+        }
+        #expect(ids.count == 1)
+        #expect(try ExpoInstallationID.getOrCreate(bundleIdentifier: bundleID, defaults: defaults) == ids.first)
+    }
 }

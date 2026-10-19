@@ -9,7 +9,26 @@ actor WalletSession {
         /// No `db.sqlite` in the datadir. Opening would create a new wallet,
         /// which must never happen implicitly.
         case walletDatabaseMissing
-        case alreadyOpen
+        /// The database is not a bark wallet (checked read-only before bark
+        /// touches it).
+        case notABarkWallet
+        /// The database belongs to another network than this build variant.
+        case networkMismatch(found: String)
+        /// Another open or close is in progress, or a wallet is already open.
+        case busy
+    }
+
+    /// Opener seam so lifecycle rules can be tested without the SDK.
+    typealias Opener = @Sendable (_ mnemonic: String, _ datadir: String, _ runDaemon: Bool, _ appVersion: String)
+        async throws -> Handles
+
+    struct Handles: @unchecked Sendable {
+        let wallet: Wallet
+        let onchain: OnchainWallet
+    }
+
+    private enum State {
+        case closed, opening, open(Handles), closing
     }
 
     struct Summary: Equatable, Sendable {
@@ -22,39 +41,46 @@ actor WalletSession {
 
     private let variant: AppVariant
     private let location: WalletDataLocation
-    private var wallet: Wallet?
-    private var onchain: OnchainWallet?
+    private let opener: Opener
+    private var state = State.closed
 
-    init(variant: AppVariant = .current, location: WalletDataLocation? = nil) {
+    init(variant: AppVariant = .current, location: WalletDataLocation? = nil, opener: Opener? = nil) {
         self.variant = variant
         self.location = location ?? WalletDataLocation(variant: variant)
+        self.opener = opener ?? Self.sdkOpener(variant: variant)
     }
 
     /// Opens the wallet the React Native app (or a previous native run)
-    /// created. Refuses to run if the database is absent.
+    /// created. Refuses to run if the database is absent, is not a bark
+    /// wallet, or belongs to another network.
     func openExisting(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
-        guard wallet == nil else { throw OpenError.alreadyOpen }
+        guard case .closed = state else { throw OpenError.busy }
         guard location.databaseExists else { throw OpenError.walletDatabaseMissing }
+        let properties: WalletDatabase.Properties
+        do {
+            properties = try WalletDatabase.properties(at: location.database)
+        } catch {
+            throw OpenError.notABarkWallet
+        }
+        let expectedNetwork = WalletConfiguration.base(for: variant).networkName
+        guard properties.network == expectedNetwork else {
+            throw OpenError.networkMismatch(found: properties.network)
+        }
 
-        let configuration = WalletConfiguration.base(for: variant)
-        let config = configuration.sdkConfig(
-            userAgent: WalletConfiguration.userAgent(variant: variant, version: appVersion))
-        let datadir = location.directory.path
-
-        let onchain = try await OnchainWallet.default(
-            network: configuration.network, mnemonic: mnemonic, config: config, datadir: datadir)
-        let wallet = try await Wallet.openWithOnchain(
-            network: configuration.network,
-            mnemonicOrSeed: mnemonic,
-            config: config,
-            args: WalletOpenArgs(runDaemon: runDaemon, datadir: datadir, createIfNotExists: false),
-            onchain: onchain)
-        self.onchain = onchain
-        self.wallet = wallet
+        state = .opening
+        do {
+            let handles = try await opener(mnemonic, location.directory.path, runDaemon, appVersion)
+            state = .open(handles)
+        } catch {
+            state = .closed
+            throw error
+        }
     }
 
     func summary() async throws -> Summary? {
-        guard let wallet, let onchain else { return nil }
+        guard case .open(let handles) = state else { return nil }
+        let wallet = handles.wallet
+        let onchain = handles.onchain
         return Summary(
             network: try await wallet.network(),
             fingerprint: wallet.fingerprint(),
@@ -64,9 +90,37 @@ actor WalletSession {
     }
 
     func close() async throws {
-        guard let wallet else { return }
-        try await wallet.stopDaemonWait()
-        self.wallet = nil
-        onchain = nil
+        switch state {
+        case .closed:
+            return
+        case .opening, .closing:
+            throw OpenError.busy
+        case .open(let handles):
+            state = .closing
+            do {
+                try await handles.wallet.stopDaemonWait()
+            } catch {
+                state = .open(handles)
+                throw error
+            }
+            state = .closed
+        }
+    }
+
+    private static func sdkOpener(variant: AppVariant) -> Opener {
+        { mnemonic, datadir, runDaemon, appVersion in
+            let configuration = WalletConfiguration.base(for: variant)
+            let config = configuration.sdkConfig(
+                userAgent: WalletConfiguration.userAgent(variant: variant, version: appVersion))
+            let onchain = try await OnchainWallet.default(
+                network: configuration.network, mnemonic: mnemonic, config: config, datadir: datadir)
+            let wallet = try await Wallet.openWithOnchain(
+                network: configuration.network,
+                mnemonicOrSeed: mnemonic,
+                config: config,
+                args: WalletOpenArgs(runDaemon: runDaemon, datadir: datadir, createIfNotExists: false),
+                onchain: onchain)
+            return Handles(wallet: wallet, onchain: onchain)
+        }
     }
 }

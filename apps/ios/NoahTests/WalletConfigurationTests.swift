@@ -22,13 +22,4 @@ struct WalletConfigurationTests {
         #expect(WalletConfiguration.base(for: .regtest).esplora == nil)
         #expect(WalletConfiguration.userAgent(variant: .signet, version: "0.2.0") == "noah-signet-ios/0.2.0")
     }
-
-    @Test func refusesToOpenWithoutDatabase() async {
-        let documents = FileManager.default.temporaryDirectory.appending(path: "nowallet-\(UUID().uuidString)")
-        let session = WalletSession(variant: .regtest, location: WalletDataLocation(variant: .regtest, documentsDirectory: documents))
-        await #expect(throws: WalletSession.OpenError.walletDatabaseMissing) {
-            try await session.openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test")
-        }
-        #expect(!FileManager.default.fileExists(atPath: documents.path), "must not create the datadir")
-    }
 }

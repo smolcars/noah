@@ -3,7 +3,12 @@ import Testing
 
 @testable import Noah
 
+@MainActor
 struct SettingsStorageTests {
+    init() {
+        SettingsStorage.bootstrap()
+    }
+
     private let rootPath = FileManager.default.temporaryDirectory
         .appending(path: "mmkv-tests-\(UUID().uuidString)").path
 

@@ -92,6 +92,8 @@ Nitro polls `PRAGMA data_version` every 750 ms on an independent read-only conne
     - The parsed user pubkey and Ark ID for new addresses, or a `parseArkAddress(address)`.
     - The Lightning send/receive details Nitro returned, where cheap: invoice, amount, HTLC IDs and movement ID.
 
+11. **No-write open of an existing wallet:** `OnchainWallet.default` currently opens `db.sqlite`, runs SQLite migrations and creates BDK tables before `Wallet.openWithOnchain` checks `bark_properties` and the seed fingerprint. So a wrong mnemonic, the wrong network or an empty file all get written to before the open fails. Provide an opener, or make `createIfNotExists = false` behave this way, that validates properties, network and fingerprint read-only first and never creates or migrates the database when those checks fail. Noah currently works around this with its own read-only `bark_properties` check.
+
 ## P2: optional, needs a product decision
 
 - Onchain balance split into trusted and untrusted pending.

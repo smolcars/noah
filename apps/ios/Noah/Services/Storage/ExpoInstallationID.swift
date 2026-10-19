@@ -10,12 +10,16 @@ import Security
 /// Keychain generic password, service = bundle ID, account and generic =
 /// UTF-8 "EXDeviceInstallationUUIDKey", `AfterFirstUnlockThisDeviceOnly`,
 /// with a legacy `UserDefaults.standard` fallback under the same key.
+/// Reads are identical to Expo; creation is serialized and never replaces
+/// an existing ID.
 enum ExpoInstallationID {
     enum Failure: Error, Equatable {
         case keychain(OSStatus)
     }
 
     static let key = "EXDeviceInstallationUUIDKey"
+
+    private static let lock = NSLock()
 
     /// Returns the stored ID, migrating the legacy UserDefaults value or
     /// creating a new one exactly like Expo does. Throws instead of creating a
@@ -24,17 +28,18 @@ enum ExpoInstallationID {
         bundleIdentifier: String = Bundle.main.bundleIdentifier ?? "",
         defaults: UserDefaults = .standard
     ) throws(Failure) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+
         if let existing = try read(bundleIdentifier: bundleIdentifier) {
             return existing
         }
         if let legacy = defaults.string(forKey: key) {
-            try store(legacy, bundleIdentifier: bundleIdentifier)
+            let stored = try addIfAbsent(legacy, bundleIdentifier: bundleIdentifier)
             defaults.removeObject(forKey: key)
-            return legacy
+            return stored
         }
-        let created = UUID().uuidString
-        try store(created, bundleIdentifier: bundleIdentifier)
-        return created
+        return try addIfAbsent(UUID().uuidString, bundleIdentifier: bundleIdentifier)
     }
 
     private static func read(bundleIdentifier: String) throws(Failure) -> String? {
@@ -55,14 +60,25 @@ enum ExpoInstallationID {
         }
     }
 
-    private static func store(_ value: String, bundleIdentifier: String) throws(Failure) {
-        let search = searchQuery(bundleIdentifier: bundleIdentifier)
-        SecItemDelete(search as CFDictionary)
-        var attributes = search
+    /// Adds the ID unless one already exists, and returns whichever is
+    /// stored. Unlike Expo (delete + add) this never replaces an ID another
+    /// caller may already have registered.
+    private static func addIfAbsent(_ value: String, bundleIdentifier: String) throws(Failure) -> String {
+        var attributes = searchQuery(bundleIdentifier: bundleIdentifier)
         attributes[kSecValueData as String] = Data(value.utf8)
         attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         let status = SecItemAdd(attributes as CFDictionary, nil)
-        guard status == errSecSuccess else { throw .keychain(status) }
+        switch status {
+        case errSecSuccess:
+            return value
+        case errSecDuplicateItem:
+            guard let existing = try read(bundleIdentifier: bundleIdentifier) else {
+                throw .keychain(status)
+            }
+            return existing
+        default:
+            throw .keychain(status)
+        }
     }
 
     private static func searchQuery(bundleIdentifier: String) -> [String: Any] {

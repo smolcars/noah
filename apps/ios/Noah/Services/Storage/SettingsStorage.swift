@@ -18,6 +18,7 @@ final class SettingsStorage: @unchecked Sendable {
         URL.documentsDirectory.appending(path: "mmkv", directoryHint: .isDirectory).path
     }
 
+    /// Opened after `bootstrap()`; first access must come after launch.
     static let shared: SettingsStorage = {
         do {
             return try SettingsStorage(rootPath: defaultRootPath)
@@ -28,10 +29,24 @@ final class SettingsStorage: @unchecked Sendable {
 
     struct OpenError: Error {}
 
+    nonisolated(unsafe) private static var isBootstrapped = false
+
+    /// MMKV must be initialized once, on the main thread, before any instance
+    /// is opened. Call from `application(_:didFinishLaunchingWithOptions:)`,
+    /// which also runs for background (push) launches.
+    @MainActor
+    static func bootstrap() {
+        guard !isBootstrapped else { return }
+        try? FileManager.default.createDirectory(
+            atPath: defaultRootPath, withIntermediateDirectories: true)
+        MMKV.initialize(rootDir: defaultRootPath)
+        isBootstrapped = true
+    }
+
     init(rootPath: String, instanceID: String = SettingsStorage.instanceID) throws {
+        precondition(Self.isBootstrapped, "SettingsStorage.bootstrap() must run first")
         try FileManager.default.createDirectory(
             atPath: rootPath, withIntermediateDirectories: true)
-        MMKV.initialize(rootDir: rootPath)
         guard let mmkv = MMKV(mmapID: instanceID, rootPath: rootPath) else {
             throw OpenError()
         }

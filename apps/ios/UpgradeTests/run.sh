@@ -48,12 +48,18 @@ echo "RN install ready: wallet DB present, MMKV files: $(ls "$container/Document
 # Ground truth straight from the RN-written database (copied, with any WAL).
 snapshot="$(mktemp -d)"
 cp "$container/Documents/noah-data-regtest/"db.sqlite* "$snapshot/"
-query() { sqlite3 "$snapshot/db.sqlite" "$1"; }
-export TEST_RUNNER_NOAH_UPGRADE_EXPECT_FINGERPRINT="$(query 'select fingerprint from bark_properties')"
-export TEST_RUNNER_NOAH_UPGRADE_EXPECT_MOVEMENTS="$(query 'select count(*) from bark_movements')"
-export TEST_RUNNER_NOAH_UPGRADE_EXPECT_SPENDABLE="$(query "select coalesce(sum(amount_sat), 0) from vtxo_view where state_kind = 'Spendable'")"
-echo "RN DB: movements=$TEST_RUNNER_NOAH_UPGRADE_EXPECT_MOVEMENTS spendable=$TEST_RUNNER_NOAH_UPGRADE_EXPECT_SPENDABLE"
+query() { sqlite3 -bail "$snapshot/db.sqlite" "$1"; }
+# Assigned separately so a failing query stops the script (export would mask it).
+fingerprint="$(query 'select fingerprint from bark_properties')"
+movements="$(query 'select count(*) from bark_movements')"
+spendable="$(query "select coalesce(sum(amount_sat), 0) from vtxo_view where state_kind = 'Spendable'")"
 rm -rf "$snapshot"
+[[ -n "$fingerprint" && "$movements" =~ ^[0-9]+$ && "$spendable" =~ ^[0-9]+$ ]] \
+  || { echo "could not read expectations from the RN database"; exit 1; }
+export TEST_RUNNER_NOAH_UPGRADE_EXPECT_FINGERPRINT="$fingerprint"
+export TEST_RUNNER_NOAH_UPGRADE_EXPECT_MOVEMENTS="$movements"
+export TEST_RUNNER_NOAH_UPGRADE_EXPECT_SPENDABLE="$spendable"
+echo "RN DB: movements=$movements spendable=$spendable"
 
 cd "$IOS"
 xcodegen generate >/dev/null

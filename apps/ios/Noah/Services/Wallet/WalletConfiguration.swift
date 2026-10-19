@@ -19,6 +19,16 @@ struct WalletConfiguration: Equatable, Sendable {
     var vtxoExitMargin: UInt16
     var roundTxRequiredConfirmations: UInt32
 
+    /// Network name bark stores in `bark_properties.network`.
+    var networkName: String {
+        switch network {
+        case .bitcoin: "bitcoin"
+        case .testnet: "testnet"
+        case .signet: "signet"
+        case .regtest: "regtest"
+        }
+    }
+
     /// sat/kvB → sat/kwu.
     var fallbackFeeRateSatPerKwu: UInt64 { fallbackFeeRateSatPerKvb / 4 }
 
