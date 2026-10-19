@@ -68,6 +68,10 @@ struct HistoryFixtureTests {
         var movements: [HistoryTransaction]?
         var onchain: JSON?
         var transactions: [HistoryTransaction]?
+        var routeMethod: String?
+        var comment: String?
+        var existingMovementIds: [UInt32]?
+        var rawMovements: [MovementInput]?
     }
 
     // JSON equality preserves omitted fields and catches extra/wrong fields,
@@ -109,7 +113,7 @@ struct HistoryFixtureTests {
             let result: JSON
             switch input.operation {
             case "metadata": result = try .value(HistoryMetadata.parse(#require(input.metadataJson)))
-            case "transactionID": result = try .value(HistoryMapping.transactionID(#require(input.movement).sdk, metadata: #require(input.metadata).decode(HistoryMetadata.self), outgoing: #require(input.outgoing)))
+            case "transactionID": result = try .value(HistoryMapping.transactionID(#require(input.movement).sdk, metadata: #require(input.metadata).decode(HistoryMetadata.self), outgoing: #require((input.outgoing))))
             case "boardAmount": result = try .value(HistoryMapping.boardAmount(#require(input.movement).sdk))
             case "resolveRepeat":
                 result = try .value(RepeatPayment.resolve(metadata: input.metadata?.decode(RepeatPayment.self), destination: input.destination, paymentMethod: input.paymentMethod, amountSat: #require(input.amountSat)))
@@ -126,6 +130,9 @@ struct HistoryFixtureTests {
             case "onchain":
                 let chain = try #require(input.onchain).decode(ChainInput.self).sdk
                 result = try .object(["included": .value(chain.balanceChangeSats != 0), "transaction": .value(HistoryMapping.transaction(chain))])
+            case "repeatRoute": result = try .value(RepeatPayment.usesDirectArkRoute(method: #require(input.routeMethod), comment: input.comment))
+            case "newMovement":
+                result = try .value(RepeatPayment.newArkoorMovementID(existing: Set(#require(input.existingMovementIds)), movements: #require(input.rawMovements).map(\.sdk), destination: #require(input.destination), amountSat: #require(input.amountSat)))
             case "sort": result = try .value(#require(input.transactions).sorted(by: HistoryRules.precedes).map(\.id))
             default: Issue.record("Unknown fixture operation: \(input.operation)"); continue
             }

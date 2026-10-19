@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 
 /// RN's `noah.repeat_payment` v1 envelope. Keep the entered fiat text and
@@ -51,6 +52,20 @@ struct RepeatPayment: Codable, Equatable, Sendable {
         guard let destination, !destination.isEmpty else { return nil }
         return Self(destination: destination, comment: "", amountMode: "SATS",
                     amountInput: String(amountSat), amountSat: amountSat)
+    }
+
+    /// Preserves a comment by routing through LNURL instead of the direct Ark shortcut.
+    static func usesDirectArkRoute(method: String, comment: String?) -> Bool {
+        method == "ark" && (comment == nil || comment == "")
+    }
+
+    /// Associates RN repeat metadata with the newly committed Ark-routed send.
+    static func newArkoorMovementID(existing: Set<UInt32>, movements: [Movement], destination: String, amountSat: Int64) -> UInt32? {
+        movements.filter {
+            !existing.contains($0.id) && $0.status == "successful"
+                && $0.subsystemName.lowercased() == "bark.arkoor" && $0.subsystemKind.lowercased() == "send"
+                && $0.sentToAddresses.contains { $0.paymentMethod.value == destination && Int64($0.amountSats) == amountSat }
+        }.map(\.id).max()
     }
 
     struct Prefill: Codable, Equatable {

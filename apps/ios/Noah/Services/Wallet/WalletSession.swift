@@ -335,6 +335,15 @@ actor WalletSession {
         }
     }
 
+    /// Both reads stay counted until completion; no observer holds a wallet call open.
+    func transactionHistory() async throws -> [HistoryTransaction] {
+        try await withOpenWallet { handles in
+            let movements = try await handles.wallet.history().filter(HistoryMapping.include).map { HistoryMapping.transaction($0) }
+            let chain = try await handles.onchain.transactions().filter { $0.balanceChangeSats != 0 }.map { HistoryMapping.transaction($0) }
+            return movements + chain
+        }
+    }
+
     /// Consistent plaintext SQLite export of the open wallet (backups).
     func createSnapshot(at destination: URL) async throws -> WalletSnapshotInfo {
         try await withOpenWallet { try await $0.wallet.createSnapshot(destinationPath: destination.path) }

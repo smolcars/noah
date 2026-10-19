@@ -66,7 +66,7 @@ enum HistoryMapping {
         let type: String
         if metadata.repeatPayment != nil || first?.methodType == "lightning-address" { type = "Lnurl" }
         else if kind == "lightning-receive" { type = "Bolt11" }
-        else if destinations.contains(where: { $0.paymentMethod.methodType == "onchain" }) { type = "Onchain" }
+        else if destinations.contains(where: { $0.paymentMethod.methodType == "bitcoin" }) { type = "Onchain" }
         else if kind == "arkoor-receive" || subsystem == "bark.arkoor:send" { type = "Arkoor" }
         else if subsystem == "bark.lightning_send:send" { type = "Bolt11" }
         else if ["onboard", "offboard", "send-onchain", "exit"].contains(kind) { type = "Onchain" }
@@ -104,16 +104,5 @@ enum HistoryMapping {
             onchainFeeSat: chain.onchainFeeSats.map(Int64.init), balanceChangeSat: chain.balanceChangeSats,
             hasOnchainFee: chain.onchainFeeSats != nil, hasConfirmation: chain.confirmation != nil,
             confirmationHeight: chain.confirmation?.height, confirmationHash: chain.confirmation?.hash)
-    }
-}
-
-extension WalletSession {
-    /// Both reads stay counted until completion; no observer holds a wallet call open.
-    func transactionHistory() async throws -> [HistoryTransaction] {
-        try await withOpenWallet { handles in
-            let movements = try await handles.wallet.history().filter(HistoryMapping.include).map { HistoryMapping.transaction($0) }
-            let chain = try await handles.onchain.transactions().filter { $0.balanceChangeSats != 0 }.map { HistoryMapping.transaction($0) }
-            return movements + chain
-        }
     }
 }

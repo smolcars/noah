@@ -4307,6 +4307,189 @@
       }
     },
     {
+      "name": "bitcoin destination overrides Ark subsystem",
+      "input": {
+        "operation": "movement",
+        "movement": {
+          "id": 7,
+          "status": "successful",
+          "subsystem": {
+            "name": "bark.arkoor",
+            "kind": "send"
+          },
+          "intended_balance_sat": 50000,
+          "effective_balance_sat": 49500,
+          "offchain_fee_sat": 500,
+          "metadata_json": "{}",
+          "sent_to": [
+            {
+              "destination": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+              "amount_sat": 1000,
+              "payment_method": "bitcoin"
+            }
+          ],
+          "received_on": [],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": {
+        "included": true,
+        "transaction": {
+          "id": "movement-7",
+          "txid": "movement-7",
+          "amount": 1000,
+          "date": "2026-07-15T12:00:00.000Z",
+          "sortTimestamp": 1784116800000,
+          "direction": "outgoing",
+          "type": "Onchain",
+          "source": "ark",
+          "destination": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+          "movementId": 7,
+          "movementStatus": "successful",
+          "subsystemName": "bark.arkoor",
+          "subsystemKind": "send",
+          "metadataJson": "{}",
+          "intendedBalanceSat": 50000,
+          "effectiveBalanceSat": 49500,
+          "offchainFeeSat": 500,
+          "sentTo": [
+            {
+              "destination": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+              "amount_sat": 1000,
+              "paymentMethod": "bitcoin"
+            }
+          ],
+          "receivedOn": [],
+          "inputVtxos": [],
+          "outputVtxos": [],
+          "exitedVtxos": []
+        }
+      }
+    },
+    {
+      "name": "lightning address metadata overrides Ark route",
+      "input": {
+        "operation": "movement",
+        "movement": {
+          "id": 7,
+          "status": "successful",
+          "subsystem": {
+            "name": "bark.arkoor",
+            "kind": "send"
+          },
+          "intended_balance_sat": 50000,
+          "effective_balance_sat": 49500,
+          "offchain_fee_sat": 500,
+          "metadata_json": "{\"noah\":{\"repeat_payment\":{\"version\":1,\"destination\":\"merchant@example.com\",\"comment\":\"Order 307\",\"amount_mode\":\"fiat\",\"amount_value\":\"12.50\",\"fiat_currency\":\"USD\"}}}",
+          "sent_to": [
+            {
+              "destination": "tark1recipient",
+              "amount_sat": 10000,
+              "payment_method": "ark"
+            }
+          ],
+          "received_on": [],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": {
+        "included": true,
+        "transaction": {
+          "id": "movement-7",
+          "txid": "movement-7",
+          "amount": 10000,
+          "date": "2026-07-15T12:00:00.000Z",
+          "sortTimestamp": 1784116800000,
+          "direction": "outgoing",
+          "type": "Lnurl",
+          "source": "ark",
+          "destination": "merchant@example.com",
+          "movementId": 7,
+          "movementStatus": "successful",
+          "subsystemName": "bark.arkoor",
+          "subsystemKind": "send",
+          "metadataJson": "{\"noah\":{\"repeat_payment\":{\"version\":1,\"destination\":\"merchant@example.com\",\"comment\":\"Order 307\",\"amount_mode\":\"fiat\",\"amount_value\":\"12.50\",\"fiat_currency\":\"USD\"}}}",
+          "intendedBalanceSat": 50000,
+          "effectiveBalanceSat": 49500,
+          "offchainFeeSat": 500,
+          "sentTo": [
+            {
+              "destination": "tark1recipient",
+              "amount_sat": 10000,
+              "paymentMethod": "ark"
+            }
+          ],
+          "receivedOn": [],
+          "inputVtxos": [],
+          "outputVtxos": [],
+          "exitedVtxos": [],
+          "repeatPayment": {
+            "destination": "merchant@example.com",
+            "comment": "Order 307",
+            "amountMode": "FIAT",
+            "amountInput": "12.50",
+            "fiatCurrency": "USD",
+            "amountSat": 10000
+          }
+        }
+      }
+    },
+    {
+      "name": "zero change maintenance excluded",
+      "input": {
+        "operation": "movement",
+        "movement": {
+          "id": 7,
+          "status": "successful",
+          "subsystem": {
+            "name": "bark.round",
+            "kind": "refresh"
+          },
+          "intended_balance_sat": 0,
+          "effective_balance_sat": 0,
+          "offchain_fee_sat": 500,
+          "metadata_json": "{}",
+          "sent_to": [],
+          "received_on": [],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": {
+        "included": false,
+        "transaction": {
+          "id": "movement-7",
+          "txid": "movement-7",
+          "amount": 0,
+          "date": "2026-07-15T12:00:00.000Z",
+          "sortTimestamp": 1784116800000,
+          "direction": "incoming",
+          "type": "Onchain",
+          "source": "ark",
+          "destination": "",
+          "movementId": 7,
+          "movementStatus": "successful",
+          "metadataJson": "{}",
+          "intendedBalanceSat": 0,
+          "effectiveBalanceSat": 0,
+          "offchainFeeSat": 500,
+          "sentTo": [],
+          "receivedOn": [],
+          "inputVtxos": [],
+          "outputVtxos": [],
+          "exitedVtxos": []
+        }
+      }
+    },
+    {
       "name": "onchain true 21000",
       "input": {
         "operation": "onchain",
@@ -4575,6 +4758,109 @@
         "movement-7",
         "confirmed-no-time"
       ]
+    },
+    {
+      "name": "comment routing ark null",
+      "input": {
+        "operation": "repeatRoute",
+        "routeMethod": "ark",
+        "comment": null
+      },
+      "expected": true
+    },
+    {
+      "name": "comment routing ark Order 307",
+      "input": {
+        "operation": "repeatRoute",
+        "routeMethod": "ark",
+        "comment": "Order 307"
+      },
+      "expected": false
+    },
+    {
+      "name": "comment routing lightning null",
+      "input": {
+        "operation": "repeatRoute",
+        "routeMethod": "lightning",
+        "comment": null
+      },
+      "expected": false
+    },
+    {
+      "name": "find new matching Ark movement 8",
+      "input": {
+        "operation": "newMovement",
+        "existingMovementIds": [
+          8
+        ],
+        "destination": "tark-destination",
+        "amountSat": 3000,
+        "rawMovements": [
+          {
+            "id": 9,
+            "status": "successful",
+            "subsystem": {
+              "name": "bark.arkoor",
+              "kind": "send"
+            },
+            "intended_balance_sat": 50000,
+            "effective_balance_sat": 49500,
+            "offchain_fee_sat": 500,
+            "metadata_json": "{}",
+            "sent_to": [
+              {
+                "destination": "tark-destination",
+                "payment_method": "ark",
+                "amount_sat": 3000
+              }
+            ],
+            "received_on": [],
+            "input_vtxos": [],
+            "output_vtxos": [],
+            "exited_vtxos": [],
+            "created_at": "2026-07-15T12:00:00.000Z"
+          }
+        ]
+      },
+      "expected": 9
+    },
+    {
+      "name": "find new matching Ark movement 9",
+      "input": {
+        "operation": "newMovement",
+        "existingMovementIds": [
+          9
+        ],
+        "destination": "tark-destination",
+        "amountSat": 3000,
+        "rawMovements": [
+          {
+            "id": 9,
+            "status": "successful",
+            "subsystem": {
+              "name": "bark.arkoor",
+              "kind": "send"
+            },
+            "intended_balance_sat": 50000,
+            "effective_balance_sat": 49500,
+            "offchain_fee_sat": 500,
+            "metadata_json": "{}",
+            "sent_to": [
+              {
+                "destination": "tark-destination",
+                "payment_method": "ark",
+                "amount_sat": 3000
+              }
+            ],
+            "received_on": [],
+            "input_vtxos": [],
+            "output_vtxos": [],
+            "exited_vtxos": [],
+            "created_at": "2026-07-15T12:00:00.000Z"
+          }
+        ]
+      },
+      "expected": null
     }
   ]
 }

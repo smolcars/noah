@@ -101,6 +101,15 @@ for (const subsystem of [...subsystemCases, { name: "BARK.ARKOOR", kind: "RECEIV
     add(`${subsystem.name}:${subsystem.kind} ${status}`, "movement", { movement: m }, { included: transforms.shouldIncludeMovement(m), transaction: mapped });
   }
 }
+for (const [name, fields] of [
+  ["bitcoin destination overrides Ark subsystem", { subsystem: { name: "bark.arkoor", kind: "send" }, sent_to: [{ destination: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", amount_sat: 1000, payment_method: "bitcoin" }] }],
+  ["lightning address metadata overrides Ark route", { subsystem: { name: "bark.arkoor", kind: "send" }, metadata_json: repeat.buildRepeatPaymentMetadataPatch(fiat), sent_to: [{ destination: "tark1recipient", amount_sat: 10000, payment_method: "ark" }] }],
+  ["zero change maintenance excluded", { subsystem: { name: "bark.round", kind: "refresh" }, intended_balance_sat: 0, effective_balance_sat: 0 }],
+] as const) {
+  const m = movement(fields);
+  const mapped = await transforms.transformMovementToTransaction(m, "USD"); delete mapped.description;
+  add(name, "movement", { movement: m }, { included: transforms.shouldIncludeMovement(m), transaction: mapped });
+}
 for (const has_confirmation of [true, false]) for (const balance_change_sat of [21000, -21000, 0]) {
   const onchain = { txid: "chain-tx", tx_hex: "deadbeef", balance_change_sat, has_onchain_fee: true, onchain_fee_sat: 500,
     has_confirmation, confirmation_height: 42, confirmation_hash: "block-hash" };
@@ -110,6 +119,14 @@ for (const has_confirmation of [true, false]) for (const balance_change_sat of [
 const sorted = [board, chain, tx({ id: "confirmed-no-time", source: "onchain-wallet", hasConfirmation: true, sortHeight: 4, date: "1970-01-01T00:00:00.000Z" }),
   tx({ id: "new", sortTimestamp: Date.parse("2026-07-16T12:00:00.000Z") })];
 add("pending onchain first then dated then height", "sort", { transactions: sorted }, [...sorted].sort(transforms.compareTransactions).map(t => t.id));
+for (const [routeMethod, comment] of [["ark", null], ["ark", "Order 307"], ["lightning", null]] as const)
+  add(`comment routing ${routeMethod} ${comment}`, "repeatRoute", { routeMethod, comment }, repeat.shouldUseArkDirectLightningAddressRoute(routeMethod, comment));
+for (const existingMovementIds of [[8], [9]]) {
+  const movements = [movement({ id: 9, subsystem: { name: "bark.arkoor", kind: "send" }, sent_to: [{ destination: "tark-destination", payment_method: "ark", amount_sat: 3000 }] })];
+  const input = { existingMovementIds, movements, destination: "tark-destination", amountSat: 3000 };
+  add(`find new matching Ark movement ${existingMovementIds}`, "newMovement", { ...input, rawMovements: movements, movements: undefined },
+    repeat.findNewArkoorMovementId({ ...input, existingMovementIds: new Set(existingMovementIds) }) ?? null);
+}
 const barkCases = ["failed", "canceled", "pending", "successful"].map(status => ({
   name: `${status} terminal failure`, input: { status }, expected: bark.isFailedOrCanceledMovement({ status }),
 }));
