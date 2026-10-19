@@ -110,8 +110,10 @@ struct RestoreTransaction: Sendable {
         try Self.fullSync(directory)
         try write(journal)
 
+        // Each rename is durable before the next.
         if journal.hadPreviousData {
             try FileManager.default.moveItem(at: datadir, to: previous)
+            try syncBothSides()
         }
         try FileManager.default.moveItem(at: staged, to: datadir)
         try syncBothSides()

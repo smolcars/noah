@@ -45,9 +45,20 @@ final class AppServices: Sendable {
 
     /// Opens the wallet if needed (RN `loadWalletIfNeeded`), never while the
     /// user has suspended it.
+    struct RestoreNotSettled: Error {}
+
     func ensureWalletOpen() async throws {
         let wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
         guard wallet?.isWalletSuspended != true else { throw WalletSuspended() }
+        // A background (push) launch never runs AppModel.start: settle an interrupted
+        // restore here too, instead of failing every job until the app is opened.
+        let location = WalletDataLocation(variant: variant)
+        if location.restorePending,
+            try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: seed)
+                == .waitingForKeychain
+        {
+            throw RestoreNotSettled()
+        }
         try await session.ensureOpen(mnemonic: readMnemonic(), runDaemon: true, appVersion: appVersion)
     }
 
