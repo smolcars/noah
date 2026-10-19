@@ -29,9 +29,11 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 ### 0.3 Wallet SDK integration
 - [ ] FFI gaps — implemented in a separate thread ([ffi-handoff-prompt.md](ffi-handoff-prompt.md)); track releases here
 - [ ] `WalletService` protocol/interface over bark-bolt-ffi (Swift + Kotlin), with a fake for UI work
-- [ ] Config mapping (Ark/Esplora/bitcoind per variant, Esplora override, **fee units: sat/kvB → sat/kwu**)
+- [x] Config mapping per variant with **fee units: sat/kvB → sat/kwu** — iOS
+- [ ] Esplora override from `esplora-storage`; Android config mapping
 - [ ] `WalletCoordinator`: single owner of wallet lifetime; serializes load/close/replace and operations for UI, push, background tasks, backups, App Intents
-- [ ] Open existing wallet: preflight `db.sqlite`, `createIfNotExists=false`, original network, `runDaemon` policy
+- [x] Open existing wallet: preflight `db.sqlite`, `createIfNotExists=false`, original network — iOS (`WalletSession`)
+- [ ] `runDaemon` policy + full `WalletCoordinator` (ownership for push/background/backups)
 - [ ] Notification loop (movement events) + receive subscriptions with cancellation
 
 ### 0.4 Server API contract
@@ -51,13 +53,15 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] MMKV: open `noah-wallet-storage` + zustand envelope codec, `wallet-storage` decoded — iOS
 - [ ] MMKV — Android
 - [ ] Remaining 7 store shapes (decode as their screens land)
-- [ ] Verify against a real RN-written MMKV file (in the upgrade test)
+- [x] Verify against a real RN-written MMKV file (in the upgrade test) — iOS
 - [x] GT locale reader (`generaltranslation.locale`) — iOS
 - [ ] GT locale reader (`gt_store`) — Android
 - [x] Expo installation UUID reuse — iOS (keychain `EXDeviceInstallationUUIDKey`)
 - [ ] Expo installation UUID reuse — Android (`noBackupFilesDir/expo_notifications_installation_uuid.txt`)
 - [ ] UnifiedPush connector storage + instance names preserved
-- [ ] Automated upgrade test (simulator + emulator): RN regtest build → create/fund wallet, set settings, recurring rule → install native over it → assert seed, identity, balance, history, settings, Expo token
+- [x] Upgrade test iOS (`apps/ios/UpgradeTests/run.sh`): RN regtest creates wallet via Maestro → native installed over it → seed, DB, MMKV readable, launch = existingWallet, RN DB opens with new bark (same file, not recreated)
+- [ ] Upgrade test with a **funded** RN wallet (VTXOs, onchain, history, recurring rule) asserting balances/history match
+- [ ] Upgrade test Android (emulator)
 - [ ] Upgrade test also checks launcher shortcut + placed widget survive (Android) and widget kind/bundle ID (iOS)
 
 ### 0.6 Platform services

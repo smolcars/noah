@@ -1,0 +1,10 @@
+# Creates a fresh wallet in the React Native regtest app so the native app
+# can be installed over it. Uses the RN app's own onboarding subflows.
+appId: com.noahwallet.regtest
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- runFlow: ../../../client/.maestro/subflows/start-wallet-onboarding.yml
+- runFlow: ../../../client/.maestro/subflows/complete-wallet-onboarding-without-email.yml
+- stopApp

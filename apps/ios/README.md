@@ -37,3 +37,13 @@ Team `AT26Z24V2Q`. The app entitlements list all three app groups, as in the RN 
 ## Simulators
 
 Don't install native builds onto a simulator that holds an RN Noah install you care about: the bundle IDs are the same, so the native build replaces it (that is the upgrade path, use it deliberately).
+
+## Upgrade test (React Native → native)
+
+Needs the regtest stack (`just setup-everything`), Maestro, and a Release simulator build of the RN app (`client/`, scheme `Noah-Regtest`):
+
+```sh
+apps/ios/UpgradeTests/run.sh <dedicated-simulator-udid> /path/to/Noah-Regtest.app
+```
+
+It wipes that simulator's Noah regtest app, creates a wallet in the RN app with the RN Maestro onboarding flows, installs the native build over it, and runs `UpgradeCompatibilityTests` inside the upgraded app's sandbox (seed, MMKV, wallet DB, opening the DB with bark-bolt-ffi).
