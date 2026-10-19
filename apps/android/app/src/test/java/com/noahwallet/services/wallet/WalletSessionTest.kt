@@ -12,6 +12,10 @@ import org.junit.Test
 class WalletSessionTest {
     private class Boom : Exception()
     private class Handles : WalletSession.Handles {
+        var initialized = false
+        var initializationFails = false
+        override suspend fun initializeAddress() { if (initializationFails) throw Boom(); initialized = true }
+        override suspend fun peekPublicKey(index: UInt): String { check(initialized); return "public-key-0" }
         override suspend fun peekAddress(index: UInt) = "ark-test"
         var closed = false
         var stopFails = false
@@ -75,9 +79,34 @@ class WalletSessionTest {
             assertEquals(0, calls); assertEquals("fake", location.database.readText())
             location.database.delete()
             session.createNew("unused", false, "test"); assertEquals(1, calls)
+            assertTrue(handles.initialized)
+            assertEquals("public-key-0", session.peekPublicKey(0u))
             session.close(); assertTrue(handles.closed)
         }
     }
+    @Test fun failedKeyDerivationStopsAndClosesBeforeCreationFails() = runBlocking {
+        withLocation { location ->
+            val handles = Handles().apply { initializationFails = true }
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            assertTrue(runCatching { session.createNew("unused", false, "test") }.exceptionOrNull() is Boom)
+            assertTrue(handles.closed)
+            assertFalse(session.isOpen)
+        }
+    }
+
+    @Test fun failedDerivationAndStopRetainHandlesUntilSuccessfulClose() = runBlocking {
+        withLocation { location ->
+            val handles = Handles().apply { initializationFails = true; stopFails = true }
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            assertTrue(runCatching { session.createNew("unused", false, "test") }.exceptionOrNull() is Boom)
+            assertFalse(handles.closed)
+            assertTrue(session.isOpen)
+            handles.stopFails = false
+            session.close()
+            assertTrue(handles.closed)
+        }
+    }
+
     @Test fun joinsOpeningRejectsConflictsAndRecoversAfterFailure() = runBlocking {
         withLocation { location ->
             bark(location)

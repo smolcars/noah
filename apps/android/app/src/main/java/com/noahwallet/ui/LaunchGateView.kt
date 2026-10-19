@@ -1,5 +1,7 @@
 package com.noahwallet.ui
 
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.safeDrawing
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -40,15 +42,14 @@ import kotlinx.coroutines.withContext
 fun LaunchGateView() {
     val context = LocalContext.current.applicationContext
     val lifecycleOwner = LocalLifecycleOwner.current
-    var state by remember { mutableStateOf<LaunchState?>(null) }
-    var walletOpen by remember { mutableStateOf(false) }
-    var openFailed by remember { mutableStateOf(false) }
+    val model: AppModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val state = model.launchState
     var permissionRequested by rememberSaveable { mutableStateOf(false) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         PushWork.register(context)
     }
-    LaunchedEffect(walletOpen) {
-        if (walletOpen && AppServices.shared(context).isOnboarded()) {
+    LaunchedEffect(model.onboarded) {
+        if (model.onboarded) {
             PushNotifications.ensureChannels(context)
             if (Build.VERSION.SDK_INT >= 33 && !permissionRequested && !PushNotifications.permissionGranted(context)) {
                 permissionRequested = true
@@ -56,32 +57,30 @@ fun LaunchGateView() {
             }
         }
     }
-    LaunchedEffect(context, lifecycleOwner) {
+    LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            if (state == null || state == LaunchState.secureStorageUnavailable) {
-                state = withContext(Dispatchers.IO) { LaunchState.current(context) }
-            }
-            if (state == LaunchState.existingWallet && !walletOpen) {
-                openFailed = false
-                try {
-                    withContext(Dispatchers.IO) {
-                        AppServices.shared(context).ensureWalletOpen()
-                    }
-                    walletOpen = true
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (_: Exception) {
-                    AppLog(context, "launch").e("Existing wallet could not be opened")
-                    openFailed = true
-                }
-            }
-            if (walletOpen) AppServices.shared(context).startServerServices()
+            model.start()
+            if (model.open) model.services.startServerServices()
         }
     }
-    if (state == LaunchState.existingWallet && walletOpen) {
-        NoahApp()
-        return
+    androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.background) {
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().then(Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing))) {
+            when {
+                model.open && model.onboarded -> NoahApp(model)
+                state == LaunchState.onboarding || (model.open && !model.onboarded) -> Onboarding(model)
+                else -> LaunchMessage(state, model.error != null, model::start)
+            }
+        }
     }
+    model.error?.let { message ->
+        androidx.compose.material3.AlertDialog(onDismissRequest = { model.error = null },
+            title = { Text("Please try again") }, text = { Text(message) },
+            confirmButton = { androidx.compose.material3.TextButton({ model.error = null }) { Text("OK") } })
+    }
+}
+
+@Composable
+private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () -> Unit) {
     val message = when (state) {
         null -> R.string.launch_loading to R.string.launch_loading_message
         LaunchState.existingWallet -> if (openFailed) {
@@ -99,5 +98,6 @@ fun LaunchGateView() {
     ) {
         Text(stringResource(message.first), style = MaterialTheme.typography.headlineMedium)
         Text(stringResource(message.second), textAlign = TextAlign.Center)
+        if (state != null) NoahButton("Try again", onClick = retry)
     }
 }

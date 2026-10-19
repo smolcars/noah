@@ -139,6 +139,11 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Banners: backup status, auto-boarding, pending round, email verification, update warning
 - [ ] App version check
 
+- [x] Launch gating (including unfinished onboarding), Navigation 3 tabs, create/beta/secure mnemonic, emergency email and Lightning identity — Android
+- [x] Derive key 0 before fresh-wallet registration and persist `staticVtxoPubkey` — Android
+- [x] Home first pass: full balance, persisted unit/privacy, pull-to-sync, variant and email banner; Inter/light/dark theme — Android
+- [x] Notification permission and existing push registration after onboarding — Android
+
 ## M2 — Receive
 - [x] ReceiveScreen (BIP-321 unified QR, amount/description sheet, copy sheet, share, completion subscriptions) — iOS
 - [x] ReceiveSuccessScreen + animation — iOS

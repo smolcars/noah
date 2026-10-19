@@ -25,6 +25,8 @@ class WalletSession internal constructor(
     }
 
     internal interface Handles {
+        suspend fun initializeAddress()
+        suspend fun peekPublicKey(index: UInt): String
         suspend fun peekAddress(index: UInt): String
         suspend fun summary(): Summary
         suspend fun sync()
@@ -88,9 +90,22 @@ class WalletSession internal constructor(
             val attempt = scope.async(start = CoroutineStart.LAZY) {
                 try {
                     val handles = opener(mnemonic, location.directory.path, runDaemon, appVersion, create)
+                    if (create) {
+                        try { handles.initializeAddress() }
+                        catch (failure: Throwable) {
+                            // Retain ownership if stop fails; the creator must not remove live files.
+                            try { handles.stopDaemonWait() }
+                            catch (stopFailure: Throwable) {
+                                synchronized(lock) { state = State.Open(handles) }
+                                throw stopFailure
+                            }
+                            handles.close()
+                            throw failure
+                        }
+                    }
                     synchronized(lock) { state = State.Open(handles) }
                 } catch (failure: Throwable) {
-                    synchronized(lock) { state = State.Closed }
+                    synchronized(lock) { if (state !is State.Open) state = State.Closed }
                     throw failure
                 }
             }
@@ -113,6 +128,8 @@ class WalletSession internal constructor(
         val handles = synchronized(lock) { (state as? State.Open)?.handles } ?: throw SessionError()
         handles.peekAddress(index)
     }
+
+    suspend fun peekPublicKey(index: UInt): String = withOpen { it.peekPublicKey(index) }
 
     suspend fun maintenanceDelegated() = withOpen { it.maintenanceDelegated() }
     suspend fun bolt11Invoice(amountSats: ULong): String = withOpen { it.bolt11Invoice(amountSats) }
@@ -183,6 +200,8 @@ class WalletSession internal constructor(
     }
 
     private class SdkHandles(val wallet: Wallet, val onchain: OnchainWallet) : Handles {
+        override suspend fun initializeAddress() { wallet.deriveStoreNextKeypair() }
+        override suspend fun peekPublicKey(index: UInt) = wallet.peekPublicKey(index)
         override suspend fun peekAddress(index: UInt): String = wallet.peekAddress(index)
         override suspend fun summary(): Summary {
             val ark = wallet.balance()

@@ -33,7 +33,7 @@ enum class Destination(val title: Int, val icon: Int) : NavKey {
 }
 
 @Composable
-fun NoahApp() {
+fun NoahApp(model: AppModel) {
     val backStack = rememberNavBackStack(Destination.Home)
     Scaffold(
         bottomBar = {
@@ -59,7 +59,7 @@ fun NoahApp() {
             onBack = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) },
             entryProvider = entryProvider {
                 entry<Destination> { destination ->
-                    Column(
+                    if (destination == Destination.Home) HomeScreen(model) else Column(
                         modifier = Modifier.fillMaxSize().padding(24.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
                         horizontalAlignment = Alignment.CenterHorizontally,
