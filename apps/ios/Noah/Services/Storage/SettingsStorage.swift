@@ -61,6 +61,11 @@ final class SettingsStorage: @unchecked Sendable {
         mmkv.set(value, forKey: key)
     }
 
+    /// Every store, as RN's wallet deletion wiped `Documents/mmkv`.
+    func removeAll() {
+        mmkv.clearAll()
+    }
+
     /// Reads a zustand-persisted store. Returns `nil` when the key is absent
     /// or does not decode; callers fall back to their defaults.
     func persistedState<State: Decodable>(_ type: State.Type, key: String) -> State? {

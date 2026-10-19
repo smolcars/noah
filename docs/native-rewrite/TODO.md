@@ -170,6 +170,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 ## M5 — Settings & recovery
 - [ ] SettingsScreen (biometrics, auto-board, mailbox, suspend/resume, delete wallet, re-register, version/debug unlock)
+- [x] Suspend/resume, delete wallet (files before seed, under a reservation; refused while a restore is pending), re-register: model layer + suspended Home — iOS (Settings rows wire in with the Settings screen)
 - [ ] ProfileScreen
 - [ ] LanguageSettingsScreen, CurrencySettingsScreen, BitcoinUnitSettingsScreen
 - [ ] EsploraSettingsScreen (coordinated wallet reload)

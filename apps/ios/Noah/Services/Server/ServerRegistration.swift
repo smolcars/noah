@@ -106,6 +106,28 @@ final class ServerRegistration {
         }
     }
 
+    /// RN `resetRegistration`: forget the server identity so the next
+    /// `ensureRegistered` registers again (Settings → re-register).
+    func resetRegistration() throws {
+        try update {
+            $0.isRegisteredWithServer = false
+            $0.lightningAddress = nil
+            $0.nostrPubkey = nil
+            $0.isBackupEnabled = false
+            $0.emailAddress = nil
+            $0.isEmailVerified = false
+            $0.isEmailPromptDismissed = false
+            $0.mailboxAuthorizationExpiry = nil
+            $0.lastReportedDeviceFingerprint = nil
+            $0.lastDeviceReportAt = nil
+        }
+    }
+
+    /// Re-reads `server-storage` (after the wallet was deleted).
+    func reload() {
+        state = settings.persistedState(PersistedServerState.self, key: PersistedServerState.key) ?? .init()
+    }
+
     func dismissEmailPrompt() {
         do { try update { $0.isEmailPromptDismissed = true } }
         catch { log.w("Failed to save email prompt dismissal") }

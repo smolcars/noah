@@ -81,6 +81,13 @@ struct KeychainPassword: Sendable {
         SecItemDelete(baseQuery as CFDictionary)
     }
 
+    /// The one place the seed is deleted on purpose: the user deleting the
+    /// wallet in Settings (`WalletLifecycle.delete`), after its files.
+    func deleteWalletSeed() throws(WriteError) {
+        let status = SecItemDelete(baseQuery as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else { throw WriteError(status: status) }
+    }
+
     private var baseQuery: [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,

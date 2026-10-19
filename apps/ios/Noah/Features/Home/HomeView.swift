@@ -17,11 +17,16 @@ struct HomeView: View {
                         }
                     }
 
-                    BalanceHeader(
-                        sats: model.summary.map { Int64($0.balance.totalSats) },
-                        unit: model.amountUnit,
-                        isHidden: $model.isBalanceHidden)
-                        .padding(.top, 24)
+                    if model.isWalletSuspended {
+                        SuspendedWalletCard()
+                            .padding(.top, 24)
+                    } else {
+                        BalanceHeader(
+                            sats: model.summary.map { Int64($0.balance.totalSats) },
+                            unit: model.amountUnit,
+                            isHidden: $model.isBalanceHidden)
+                            .padding(.top, 24)
+                    }
 
                     if model.server.state.isEmailVerified != true && model.server.state.isEmailPromptDismissed != true {
                         NoahCard {
@@ -157,5 +162,30 @@ struct VariantBadge: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .background(color, in: Capsule())
+    }
+}
+
+/// RN Home's suspended state: every wallet operation is off until resumed.
+private struct SuspendedWalletCard: View {
+    var body: some View {
+        NoahCard {
+            VStack(spacing: 12) {
+                Image(systemName: "pause.circle")
+                    .font(.system(size: 44))
+                    .foregroundStyle(NoahColor.destructive)
+                Text("Wallet Suspended")
+                    .font(NoahFont.title)
+                    .foregroundStyle(NoahColor.foreground)
+                Text("Your wallet is currently suspended. All wallet operations are disabled.")
+                    .font(NoahFont.body)
+                    .foregroundStyle(NoahColor.mutedForeground)
+                    .multilineTextAlignment(.center)
+                Text("Go to Settings → Danger Zone to resume your wallet.")
+                    .font(NoahFont.footnote)
+                    .foregroundStyle(NoahColor.mutedForeground)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+        }
     }
 }

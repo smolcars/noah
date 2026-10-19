@@ -24,6 +24,8 @@ final class AppModel {
     }
     private(set) var amountUnit: BitcoinAmountUnit
     private(set) var preferredCurrency: String
+    /// Settings → suspend: nothing opens the wallet until it is resumed.
+    private(set) var isWalletSuspended: Bool
 
     let variant = AppVariant.current
     let session = WalletSession.shared
@@ -34,6 +36,7 @@ final class AppModel {
     @ObservationIgnored private let creator: WalletCreator
     @ObservationIgnored private var started = false
     @ObservationIgnored private var backupTriggers: (id: UUID, task: Task<Void, Never>)?
+    @ObservationIgnored private let lifecycle = WalletLifecycle(dependencies: .live())
 
     init() {
         server = ServerRegistration(variant: .current, client: AppServices.shared.client)
@@ -45,6 +48,8 @@ final class AppModel {
         preferredCurrency = FiatCurrency.supported.contains(currency) ? currency : "USD"
         amountUnit = settings.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?
             .amountUnit ?? .bip177
+        isWalletSuspended = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?
+            .isWalletSuspended == true
     }
 
     func start() async {
@@ -143,6 +148,7 @@ final class AppModel {
     }
 
     private func openExistingWallet() async {
+        guard !isWalletSuspended else { return }
         guard case .found(let mnemonic) = KeychainPassword.mnemonic(for: variant).read() else {
             phase = .blocked(.secureStorageUnavailable)
             return
@@ -162,11 +168,52 @@ final class AppModel {
         await startServerServices()
     }
 
+    // MARK: Danger zone (Settings)
+
+    /// RN `useSuspendWallet(true)`.
+    func suspendWallet() async throws {
+        try await lifecycle.suspend()
+        isWalletSuspended = true
+        summary = nil
+        await reconcileBackupTriggers()
+    }
+
+    /// RN `useSuspendWallet(false)`.
+    func resumeWallet() async throws {
+        try lifecycle.resume()
+        isWalletSuspended = false
+        await openExistingWallet()
+    }
+
+    /// RN `useDeleteWallet`: back to onboarding with nothing left behind.
+    func deleteWallet() async throws {
+        if let running = backupTriggers {
+            running.task.cancel()
+            backupTriggers = nil
+        }
+        await AppServices.shared.backupCoordinator.cancelScheduled()
+        try await lifecycle.delete()
+        summary = nil
+        walletError = nil
+        isWalletSuspended = false
+        resumeOnboarding = false
+        server.reload()
+        phase = .onboarding
+    }
+
+    /// RN `resetAndReRegisterWithServer`.
+    func reRegisterWithServer() async throws {
+        try server.resetRegistration()
+        try await server.ensureRegistered()
+        await reconcileBackupTriggers()
+        await registerPush()
+    }
+
     // MARK: Backups (RN `useBackupCoordinator`)
 
     /// In the wallet, backups switched on, initialized and not suspended.
     private var canCoordinateBackups: Bool {
-        guard phase == .wallet, server.state.isBackupEnabled == true else { return false }
+        guard phase == .wallet, !isWalletSuspended, server.state.isBackupEnabled == true else { return false }
         let wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
         return wallet?.isInitialized == true && wallet?.isWalletSuspended != true
     }

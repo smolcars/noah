@@ -41,8 +41,13 @@ final class AppServices: Sendable {
         return mnemonic
     }
 
-    /// Opens the wallet if needed (RN `loadWalletIfNeeded`).
+    struct WalletSuspended: Error {}
+
+    /// Opens the wallet if needed (RN `loadWalletIfNeeded`), never while the
+    /// user has suspended it.
     func ensureWalletOpen() async throws {
+        let wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
+        guard wallet?.isWalletSuspended != true else { throw WalletSuspended() }
         try await session.ensureOpen(mnemonic: readMnemonic(), runDaemon: true, appVersion: appVersion)
     }
 
