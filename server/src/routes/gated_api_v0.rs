@@ -97,6 +97,22 @@ fn has_blocked_suggestion_prefix(username: &str) -> bool {
 ///
 /// This endpoint associates a push token with a user's public key, allowing
 /// the server to send push notifications to the user's device.
+#[utoipa::path(
+    post, path = "/v0/register_push_token",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = RegisterPushToken,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn register_push_token(
     State(app_state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -142,6 +158,22 @@ pub async fn register_push_token(
 }
 
 /// Creates a Zoho Desk support ticket from in-app user feedback.
+#[utoipa::path(
+    post, path = "/v0/support/ticket",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = SubmitSupportTicketPayload,
+    responses(
+        (status = 200, description = "Success", body = SubmitSupportTicketResponse),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn submit_support_ticket(
     State(app_state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -160,6 +192,22 @@ pub async fn submit_support_ticket(
 }
 
 /// Stores or refreshes mailbox authorization for a user.
+#[utoipa::path(
+    post, path = "/v0/mailbox/authorize",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = AuthorizeMailboxPayload,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn authorize_mailbox(
     State(app_state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -203,6 +251,17 @@ pub async fn authorize_mailbox(
 }
 
 /// Revokes mailbox authorization for a user.
+#[utoipa::path(
+    post, path = "/v0/mailbox/revoke",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn revoke_mailbox_authorization(
     State(app_state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -222,6 +281,22 @@ pub async fn revoke_mailbox_authorization(
 ///
 /// After a user generates an invoice in response to a push notification,
 /// this endpoint receives it and forwards it to the waiting payer.
+#[utoipa::path(
+    post, path = "/v0/lnurlp/submit_invoice",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = SubmitInvoicePayload,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Malformed JSON", body = String, content_type = "text/plain"),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn submit_invoice(
     State(state): State<AppState>,
     Extension(_auth_payload): Extension<AuthenticatedUser>,
@@ -245,6 +320,22 @@ pub async fn submit_invoice(
 }
 
 /// Returns autocomplete suggestions for a partial lightning address query.
+#[utoipa::path(
+    post, path = "/v0/ln_address_suggestions",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = LightningAddressSuggestionsPayload,
+    responses(
+        (status = 200, description = "Success", body = LightningAddressSuggestionsResponse),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn ln_address_suggestions(
     State(state): State<AppState>,
     Extension(_auth_payload): Extension<AuthenticatedUser>,
@@ -300,6 +391,18 @@ pub async fn ln_address_suggestions(
 /// Retrieves the user's information.
 ///
 /// This endpoint returns the user's lightning address.
+#[utoipa::path(
+    post, path = "/v0/user_info",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    responses(
+        (status = 200, description = "Success", body = UserInfoResponse),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 404, description = "Resource not found", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn get_user_info(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -327,6 +430,22 @@ pub async fn get_user_info(
 /// The sole supported identity-update endpoint.
 ///
 /// Atomically configures a user's hosted Lightning address and optional NIP-05 public key.
+#[utoipa::path(
+    post, path = "/v0/update_lightning_identity",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = UpdateLightningIdentityPayload,
+    responses(
+        (status = 200, description = "Success", body = LightningIdentityResponse),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn update_lightning_identity(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -373,6 +492,22 @@ pub async fn update_lightning_identity(
 }
 
 /// Updates a user's profile fields.
+#[utoipa::path(
+    post, path = "/v0/update_profile",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = UpdateProfilePayload,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn update_profile(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -390,6 +525,22 @@ pub async fn update_profile(
     Ok(Json(DefaultSuccessPayload { success: true }))
 }
 
+#[utoipa::path(
+    post, path = "/v0/backup/upload_url",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = GetUploadUrlPayload,
+    responses(
+        (status = 200, description = "Success", body = UploadUrlResponse),
+        (status = 400, description = "Malformed JSON", body = String, content_type = "text/plain"),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn get_upload_url(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -407,6 +558,22 @@ pub async fn get_upload_url(
     Ok(Json(UploadUrlResponse { upload_url, s3_key }))
 }
 
+#[utoipa::path(
+    post, path = "/v0/backup/v2/upload",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = InitiateBackupUploadPayload,
+    responses(
+        (status = 200, description = "Success", body = InitiateBackupUploadResponse),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "Backup reservation limit (ApiError), or IP rate limit (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn initiate_backup_object_upload(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -477,6 +644,24 @@ pub async fn initiate_backup_object_upload(
     }))
 }
 
+#[utoipa::path(
+    post, path = "/v0/backup/v2/complete",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = CompleteBackupUploadPayload,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 404, description = "Resource not found", body = crate::types::ApiErrorResponse),
+        (status = 409, description = "Conflicting resource state", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn complete_backup_object_upload(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -541,6 +726,17 @@ pub async fn complete_backup_object_upload(
     Ok(Json(DefaultSuccessPayload { success: true }))
 }
 
+#[utoipa::path(
+    post, path = "/v0/backup/v2/list",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    responses(
+        (status = 200, description = "Success", body = [BackupObjectInfo]),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn list_backup_objects(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -552,6 +748,23 @@ pub async fn list_backup_objects(
     ))
 }
 
+#[utoipa::path(
+    post, path = "/v0/backup/v2/download",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = GetBackupObjectDownloadPayload,
+    responses(
+        (status = 200, description = "Success", body = BackupObjectDownloadResponse),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 404, description = "Resource not found", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn get_backup_object_download_url(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -586,6 +799,23 @@ pub async fn get_backup_object_download_url(
     }))
 }
 
+#[utoipa::path(
+    post, path = "/v0/backup/v2/delete",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = DeleteBackupObjectPayload,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 404, description = "Resource not found", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn delete_backup_object(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -609,6 +839,22 @@ fn parse_backup_id(value: &str) -> Result<Uuid, ApiError> {
     Uuid::parse_str(value).map_err(|_| ApiError::InvalidArgument("Invalid backup ID".to_string()))
 }
 
+#[utoipa::path(
+    post, path = "/v0/backup/complete_upload",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = CompleteUploadPayload,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn complete_upload(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -639,6 +885,17 @@ pub async fn complete_upload(
     Ok(Json(DefaultSuccessPayload { success: true }))
 }
 
+#[utoipa::path(
+    post, path = "/v0/backup/list",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    responses(
+        (status = 200, description = "Success", body = [BackupInfo]),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn list_backups(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -648,6 +905,23 @@ pub async fn list_backups(
     Ok(Json(backups))
 }
 
+#[utoipa::path(
+    post, path = "/v0/backup/download_url",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = GetDownloadUrlPayload,
+    responses(
+        (status = 200, description = "Success", body = DownloadUrlResponse),
+        (status = 400, description = "Malformed JSON", body = String, content_type = "text/plain"),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 404, description = "Resource not found", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn get_download_url(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -683,6 +957,23 @@ pub async fn get_download_url(
     }))
 }
 
+#[utoipa::path(
+    post, path = "/v0/backup/delete",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = DeleteBackupPayload,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Malformed JSON", body = String, content_type = "text/plain"),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 404, description = "Resource not found", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn delete_backup(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -711,6 +1002,23 @@ pub async fn delete_backup(
     Ok(Json(DefaultSuccessPayload { success: true }))
 }
 
+#[utoipa::path(
+    post, path = "/v0/report_job_status",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = ReportJobStatusPayload,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 404, description = "Resource not found", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn report_job_status(
     State(app_state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -757,6 +1065,22 @@ pub async fn report_job_status(
     Ok(Json(DefaultSuccessPayload { success: true }))
 }
 
+#[utoipa::path(
+    post, path = "/v0/backup/settings",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = BackupSettingsPayload,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Malformed JSON", body = String, content_type = "text/plain"),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn update_backup_settings(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -770,6 +1094,17 @@ pub async fn update_backup_settings(
     Ok(Json(DefaultSuccessPayload { success: true }))
 }
 
+#[utoipa::path(
+    post, path = "/v0/deregister",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn deregister(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -795,6 +1130,23 @@ pub async fn deregister(
     Ok(Json(DefaultSuccessPayload { success: true }))
 }
 
+#[utoipa::path(
+    post, path = "/v0/heartbeat_response",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = HeartbeatResponsePayload,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Malformed JSON", body = String, content_type = "text/plain"),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 404, description = "Resource not found", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn heartbeat_response(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -825,6 +1177,22 @@ pub async fn heartbeat_response(
     Ok(Json(DefaultSuccessPayload { success: true }))
 }
 
+#[utoipa::path(
+    post, path = "/v0/report_last_login",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = ReportLastLoginPayload,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Malformed JSON", body = String, content_type = "text/plain"),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn report_last_login(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,
@@ -855,6 +1223,22 @@ fn is_valid_recurring_schedule_id(value: &str) -> bool {
 /// Recurring payments are executed and signed on the device. The server only
 /// stores opaque schedule ids and due times so it can send a silent push when a
 /// payment is due. It never learns amounts or recipients and cannot move funds.
+#[utoipa::path(
+    post, path = "/v0/recurring_payments/sync",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = SyncRecurringPaymentsPayload,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
 pub async fn sync_recurring_payments(
     State(state): State<AppState>,
     Extension(auth_payload): Extension<AuthenticatedUser>,

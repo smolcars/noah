@@ -38,6 +38,7 @@ aws-config = "1.9.0"
 aws-sdk-s3 = "1.138.0"
 aws-sdk-sesv2 = "1.124.0"
 ts-rs = "12.0.1"
+utoipa = { version = "5.5", features = ["non_strict_integers"] }
 sentry = { version = "0.48.5", features = ["tracing", "logs", "tower-axum-matched-path"] }
 tower = "0.5.3"
 uuid = { version = "1.24.0", features = ["v4"] }
@@ -60,6 +61,7 @@ expo_push_notification_client = "2.0.2"
 jsonwebtoken = { version = "10.4.0", features = ["aws_lc_rs"] }
 
 [dev-dependencies]
+syn = { version = "2", features = ["full", "visit"] }
 tower = { version = "0.5.3", features = ["full"] }
 tracing-test = "0.2.6"
 once_cell = "1.21.4"
