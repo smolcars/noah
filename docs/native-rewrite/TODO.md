@@ -19,6 +19,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] iOS App Intents ported from `client/ios/SharedAppIntents` onto `WalletService` (needs 0.3)
 - [ ] iOS `processing` background mode + `BGTaskSchedulerPermittedIdentifiers` (with 0.6 background tasks)
 - [ ] `apps/android`: Gradle KTS, version catalog, flavors `mainnet`/`signet`/`regtest`, same applicationIds, signing config, `google-services.json` per flavor, minSdk 24
+- [ ] Android component names unchanged: launcher `com.noahwallet.MainActivity`, widget receivers `com.noahwallet.widgets.NoahWidget{Mainnet,Signet,Regtest}Provider` (+ same `@xml/noah_widget_*_info`)
 - [ ] Android widgets reused from `client/android/app/src/main/java/com/noahwallet/widgets`
 - [ ] `apps/fixtures/` shared JSON fixtures + XCTest/JUnit loaders
 - [x] `justfile` recipes: `ios-native-*`
@@ -57,6 +58,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Expo installation UUID reuse — Android (`noBackupFilesDir/expo_notifications_installation_uuid.txt`)
 - [ ] UnifiedPush connector storage + instance names preserved
 - [ ] Automated upgrade test (simulator + emulator): RN regtest build → create/fund wallet, set settings, recurring rule → install native over it → assert seed, identity, balance, history, settings, Expo token
+- [ ] Upgrade test also checks launcher shortcut + placed widget survive (Android) and widget kind/bundle ID (iOS)
 
 ### 0.6 Platform services
 - [ ] Redacting logger (file-backed, rotating, exportable) — iOS OSLog + file, Android Log + file

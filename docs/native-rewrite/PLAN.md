@@ -15,6 +15,7 @@ The native apps ship as an in-place update of the existing apps. On first launch
 | Expo push identity | iOS Keychain svc=bundleId acct `EXDeviceInstallationUUIDKey`; Android `noBackupFilesDir/expo_notifications_installation_uuid.txt` | Reuse UUID, call `exp.host/--/api/v2/push/getExpoPushToken` → same Expo token. |
 | UnifiedPush | connector 3.1.2 SQLite `unifiedpush-connector` + `noah_unified_push` prefs, instances `noah-<variant>` | Same connector version line, same instance names. |
 | Widgets | app-group UserDefaults `widgetBalance`; Android per-variant SharedPreferences | Keep widget code, replace only the writers. |
+| Android components | launcher `com.noahwallet.MainActivity`; widget receivers `com.noahwallet.widgets.NoahWidget{Mainnet,Signet,Regtest}Provider` | Keep the exact class names (or an activity-alias), or launchers drop home-screen icons and placed widgets break. |
 | Language | GT: iOS defaults `generaltranslation.locale`, Android `gt_store` | One-time read → native locale setting. |
 
 Hard rules:
