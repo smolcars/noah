@@ -390,6 +390,7 @@ pub struct LnurlpInvoiceResponse {
 /// Schema for the query-dependent JSON returned by `lnurlp_request`.
 #[derive(Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(untagged)]
+#[cfg_attr(not(test), expect(dead_code, reason = "used only by the offline OpenAPI exporter"))]
 pub enum LnurlpResponse {
     Parameters(LnurlpDefaultResponse),
     Invoice(LnurlpInvoiceResponse),
@@ -410,9 +411,7 @@ async fn negotiated_ark_address(
     query: &LnurlpRequestQuery,
     ark_address: Option<&String>,
 ) -> Option<String> {
-    let Some(ark_address) = ark_address else {
-        return None;
-    };
+    let ark_address = ark_address?;
 
     if let Some(requested_server_pubkey) = query.ark.as_deref() {
         let configured_server_pubkey = state.ark_server_pubkey.read().await;

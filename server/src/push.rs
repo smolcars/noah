@@ -83,7 +83,7 @@ fn endpoint_has_userinfo(endpoint: &str) -> bool {
         return false;
     };
     let authority_end = after_scheme
-        .find(|character| matches!(character, '/' | '?' | '#'))
+        .find(['/', '?', '#'])
         .unwrap_or(after_scheme.len());
     after_scheme[..authority_end].contains('@')
 }
