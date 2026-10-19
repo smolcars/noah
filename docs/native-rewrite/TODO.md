@@ -51,19 +51,20 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 ### 0.5 Upgrade compatibility (gate before any funded-wallet milestone)
 - [x] iOS seed reader: keychain service `com.noah.mnemonic.<variant>`, account `noah` (read + in-place save, RN attributes)
-- [ ] Android seed reader: `RN_KEYCHAIN` DataStore (+ legacy SharedPreferences), cipher from `:c` (AES-GCM / AES-CBC); fallback `noah_native_secrets`; new Keystore-backed store; legacy kept
+- [x] Android seed reader: `RN_KEYCHAIN` DataStore (+ legacy SharedPreferences), cipher from `:c` (AES-GCM / AES-CBC); fallback `noah_native_secrets`; new Keystore-backed store; legacy kept
+- [ ] Android RN→native upgrade test run on an emulator (harness committed, run interrupted)
 - [x] Launch decision (`apps/fixtures/launch-state.json`): never auto-delete seed; seed-without-DB and DB-without-seed states — iOS
-- [ ] Launch decision — Android
+- [x] Launch decision — Android
 - [ ] BIP39 validation of the stored seed; conflict handling
 - [x] Server auth token reader (`com.noah.auth-token.<variant>`) — iOS
 - [x] MMKV: open `noah-wallet-storage` + zustand envelope codec, `wallet-storage` decoded — iOS
-- [ ] MMKV — Android
+- [x] MMKV — Android
 - [ ] Remaining 7 store shapes (decode as their screens land)
 - [x] Verify against a real RN-written MMKV file (in the upgrade test) — iOS
 - [x] GT locale reader (`generaltranslation.locale`) — iOS
-- [ ] GT locale reader (`gt_store`) — Android
+- [x] GT locale reader (`gt_store`) — Android
 - [x] Expo installation UUID reuse — iOS (keychain `EXDeviceInstallationUUIDKey`)
-- [ ] Expo installation UUID reuse — Android (`noBackupFilesDir/expo_notifications_installation_uuid.txt`)
+- [x] Expo installation UUID reuse — Android (`noBackupFilesDir/expo_notifications_installation_uuid.txt`)
 - [ ] UnifiedPush connector storage + instance names preserved
 - [x] Upgrade test iOS (`apps/ios/UpgradeTests/run.sh`): RN regtest creates wallet via Maestro → native installed over it → seed, DB, MMKV readable, launch = existingWallet, RN DB opens with new bark (same file, not recreated)
 - [x] Funded upgrade test iOS (`FUNDED=1`): RN receives 100k + sends 5k → native sees same fingerprint, 2 movements, 95,000 spendable
@@ -87,7 +88,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 ### 0.7 Backups
 - [x] Envelope crypto v1/v2 (salt16 | nonce12 | AES-256-GCM; PBKDF2-SHA256 600k) with Node-generated vectors (`apps/fixtures/backup-crypto.json`) — iOS
-- [ ] Envelope crypto — Android (same vectors)
+- [x] Envelope crypto — Android (same vectors + unicode vectors)
 - [x] v2 archive: manifest.json + db.sqlite zip (strict manifest, only those two entries extracted, no-overwrite writes) — iOS
 - [ ] v2 archive — Android
 - [ ] v1 legacy restore
