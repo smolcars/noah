@@ -1,0 +1,346 @@
+import SwiftUI
+
+struct SendView: View {
+    @Environment(AppModel.self) private var app
+    @State private var model = SendModel()
+    @State private var scanner = false
+    @FocusState private var focus: Field?
+    private enum Field { case recipient, note }
+    var body: some View {
+        Group {
+            if model.controller.locked && !model.showReview {
+                SendOutcomeView(controller: model.controller) {
+                    model.reset()
+                    Task {
+                        await app.refresh()
+                        await model.load()
+                    }
+                }
+            } else {
+                composer
+            }
+        }
+        .navigationTitle("Send").background(NoahColor.background.ignoresSafeArea())
+        .task {
+            model.fiatCurrency = app.preferredCurrency
+            await model.load()
+            if let response = try? await AppServices.shared.client.fiatPrices(.init(body: .json(.init()))).ok.body.json
+            {
+                model.btcPrice = response.rates.additionalProperties[app.preferredCurrency]
+            }
+        }
+        .onChange(of: model.stage) { _, _ in focus = nil }
+        .onChange(of: model.controller.state) { _, state in if state != .ready { focus = nil } }
+        .sheet(isPresented: $model.showReview) {
+            if let payment = model.payment, let quote = model.quote {
+                SendConfirmation(
+                    payment: payment, quote: quote, controller: model.controller,
+                    cancel: {
+                        model.showReview = false
+                        model.stage = model.isMax ? .source : .recipient
+                    }
+                ) {
+                    model.showReview = false
+                    model.reset()
+                    Task {
+                        await app.refresh()
+                        await model.load()
+                    }
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $scanner) {
+            SendScanner { value in
+                scanner = false
+                Task { await model.importRecipient(value) }
+            }
+        }
+    }
+    private var composer: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                if model.stage == .amount { amountComposer }
+                if model.stage == .recipient { recipientComposer }
+                if model.stage == .method {
+                    Text("Choose payment method").font(NoahFont.title)
+                    ForEach(model.rails, id: \.self) { rail in
+                        choice(
+                            rail.label, selected: model.progress.selectedRail == rail,
+                            enabled: model.availability[rail.rawValue] == true
+                        ) {
+                            model.progress.selectedRail = rail
+                            model.progress.railConfirmed = true
+                        }
+                    }
+                }
+                if model.stage == .source {
+                    Text("Choose balance").font(NoahFont.title)
+                    ForEach(SendSource.allCases, id: \.self) { source in
+                        choice(
+                            "\(source.label) · \(source == .offchain ? model.arkBalance : model.onchainBalance) sats",
+                            selected: model.source == source, enabled: model.sources.contains(source)
+                        ) { model.source = source }
+                    }
+                }
+                if let error = model.error {
+                    Text(error).foregroundStyle(NoahColor.destructive).accessibilityIdentifier("send-error")
+                }
+            }.padding(24)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom) {
+            NoahButton(title: "Continue", isLoading: model.busy || model.resolvingRecipient) {
+                focus = nil
+                Task { await model.continueStage() }
+            }.accessibilityIdentifier("send-continue").padding().background(NoahColor.background)
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                if model.stage != .amount {
+                    Button("Start over") {
+                        focus = nil
+                        model.reset()
+                    }.disabled(model.busy)
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Scan", systemImage: "qrcode.viewfinder") {
+                    focus = nil
+                    scanner = true
+                }.disabled(model.busy)
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { focus = nil }
+            }
+        }
+        .disabled(model.busy || model.controller.locked)
+    }
+    private var amountComposer: some View {
+        VStack(spacing: 24) {
+            Text("How much?").font(NoahFont.title)
+            Text(model.amount.isEmpty ? "0" : model.amount)
+                .font(NoahFont.inter(52, .bold, relativeTo: .largeTitle)).lineLimit(1).minimumScaleFactor(0.35)
+                .accessibilityIdentifier("send-amount")
+            Button(model.useFiat ? app.preferredCurrency : "sats") { model.toggleCurrency() }
+                .disabled(model.btcPrice == nil).accessibilityLabel("Switch amount currency")
+            Text("\(model.arkBalance) sats available in Ark").foregroundStyle(NoahColor.mutedForeground)
+            if !model.parsed.isAmountEditable { Text("Amount set by payment request") }
+            if focus == nil {
+                AmountKeypad(amount: $model.amount, decimal: model.useFiat).disabled(!model.parsed.isAmountEditable)
+            }
+            HStack {
+                Button("MAX") { model.maxSend() }.disabled(
+                    !model.parsed.isAmountEditable
+                        || (!model.destination.isEmpty
+                            && !SendFlow.canMax(type: model.parsed.destinationType, request: model.parsed.bip321))
+                        || (model.arkBalance == 0 && model.onchainBalance == 0))
+                Spacer()
+                Button("Choose recipient first") { model.recipientFirst() }
+            }
+            PasteButton(payloadType: String.self) { values in
+                if let value = values.first { Task { await model.importRecipient(value) } }
+            }
+        }
+    }
+    private var recipientComposer: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Who are you paying?").font(NoahFont.title)
+            TextField("Address, invoice, or payment request", text: $model.destination, axis: .vertical)
+                .textInputAutocapitalization(.never).autocorrectionDisabled().lineLimit(2...5)
+                .textFieldStyle(.roundedBorder).focused($focus, equals: .recipient).accessibilityIdentifier(
+                    "send-recipient"
+                )
+                .onChange(of: model.destination) { _, _ in
+                    model.progress.recipientConfirmed = false
+                    model.progress.railConfirmed = false
+                    if !model.isMax {
+                        model.progress.sourceConfirmed = false
+                        model.source = nil
+                    }
+                    model.quote = nil
+                    model.route = nil
+                }
+                .task(id: model.destination) {
+                    async let suggestions: Void = loadSuggestions()
+                    await model.previewRecipient()
+                    await suggestions
+                }
+            HStack {
+                PasteButton(payloadType: String.self) { values in
+                    if let value = values.first {
+                        focus = nil
+                        Task { await model.importRecipient(value) }
+                    }
+                }
+                Button("Scan QR") {
+                    focus = nil
+                    scanner = true
+                }
+            }
+            if let route = model.route {
+                Text("Recipient verified").foregroundStyle(NoahColor.success)
+                if route.commentAllowed > 0 {
+                    TextField("Add a note", text: $model.comment, axis: .vertical)
+                        .textFieldStyle(.roundedBorder).focused($focus, equals: .note)
+                    Text("\(model.comment.utf16.count)/\(route.commentAllowed)").font(.caption)
+                    if !model.comment.isEmpty && route.arkAddress != nil {
+                        Text("Adding a note uses Lightning.").font(.caption)
+                    }
+                }
+            }
+            ForEach(model.suggestions, id: \.self) { suggestion in
+                Button(suggestion) { model.destination = suggestion }.lineLimit(1)
+            }
+        }
+    }
+    private func choice(_ title: String, selected: Bool, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                Spacer()
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+            }
+            .padding(20).frame(maxWidth: .infinity).glassCompat(
+                in: RoundedRectangle(cornerRadius: 20), interactive: true)
+        }.disabled(!enabled)
+    }
+    private func loadSuggestions() async {
+        model.suggestions = []
+        guard
+            let query = SendRecipientService.suggestionQuery(
+                model.destination, domain: LightningIdentity.domain(for: .current))
+        else { return }
+        do {
+            try await Task.sleep(for: .milliseconds(200))
+            let result = try await AppServices.shared.client.lnAddressSuggestions(
+                .init(body: .json(.init(query: query)))
+            ).ok.body.json
+            guard !Task.isCancelled else { return }
+            let own = SettingsStorage.shared.persistedState(PersistedServerState.self, key: PersistedServerState.key)?
+                .lightningAddress?.lowercased()
+            model.suggestions = result.suggestions.filter { $0.lowercased() != own }
+        } catch { /* Suggestions are optional; never log the recipient. */  }
+    }
+}
+
+struct AmountKeypad: View {
+    @Binding var amount: String
+    var decimal = false
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
+            ForEach(["1", "2", "3", "4", "5", "6", "7", "8", "9", decimal ? "." : "", "0", "⌫"], id: \.self) { key in
+                Button {
+                    if key == "⌫" {
+                        if !amount.isEmpty { amount.removeLast() }
+                    } else if key == "." {
+                        if !amount.contains(".") { amount += amount.isEmpty ? "0." : "." }
+                    } else if !key.isEmpty && amount.count < 16 {
+                        amount = amount == "0" ? key : amount + key
+                    }
+                } label: {
+                    Text(key).font(NoahFont.inter(28, .medium, relativeTo: .title)).frame(
+                        maxWidth: .infinity, minHeight: 56)
+                }
+                .disabled(key.isEmpty).accessibilityLabel(key == "⌫" ? "Delete digit" : key)
+                .accessibilityIdentifier("send-key-\(key)")
+            }
+        }
+    }
+}
+
+struct SendConfirmation: View {
+    let payment: SendPayment
+    let quote: SendQuote
+    @Bindable var controller: SendPaymentController
+    let cancel: () -> Void
+    let done: () -> Void
+    var body: some View {
+        NavigationStack {
+            Group {
+                if controller.locked {
+                    SendOutcomeView(controller: controller, done: done)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
+                            Text("\(quote.amount) sats").font(NoahFont.largeTitle)
+                            Text(payment.destination).font(NoahFont.callout).textSelection(.enabled)
+                            LabeledContent(
+                                "Method",
+                                value: payment.method == "onchain"
+                                    ? (payment.source?.label ?? "On-chain")
+                                    : payment.method == "ark" ? "Ark" : "Lightning")
+                            LabeledContent(quote.approximate ? "Estimated fee" : "Fee", value: "\(quote.fee) sats")
+                            LabeledContent("Total", value: "\(quote.total) sats")
+                            if quote.approximate {
+                                Text("Estimate assumes two inputs and two outputs. The actual network fee may differ.")
+                                    .font(NoahFont.callout)
+                            }
+                            if !payment.comment.isEmpty { Text(payment.comment) }
+                            if let message = controller.message { Text(message).foregroundStyle(NoahColor.destructive) }
+                        }.padding(24)
+                    }.safeAreaInset(edge: .bottom) {
+                        NoahButton(title: "Confirm send") { controller.submit(payment, quote: quote) }
+                            .accessibilityIdentifier("send-confirm").padding()
+                    }
+                }
+            }
+            .navigationTitle("Review payment")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Back", action: cancel).disabled(controller.locked)
+                }
+            }
+        }
+        .interactiveDismissDisabled(controller.locked)
+    }
+}
+
+struct SendOutcomeView: View {
+    @Bindable var controller: SendPaymentController
+    let done: () -> Void
+    var body: some View {
+        VStack(spacing: 24) {
+            switch controller.state {
+            case .submitting:
+                ProgressView()
+                Text("Sending payment…").font(NoahFont.title)
+                Text("Keep Noah open while your payment completes.")
+            case .uncertain:
+                Image(systemName: "clock.badge.exclamationmark").font(.largeTitle)
+                Text("Payment may have been sent").font(NoahFont.title)
+                Text(
+                    "Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."
+                )
+                NoahButton(title: "Check payment status", isLoading: controller.checking) {
+                    Task { await controller.checkStatus() }
+                }
+            case .succeeded(let receipt):
+                Image(systemName: "checkmark.circle.fill").font(.system(size: 64)).foregroundStyle(NoahColor.success)
+                Text("Payment sent").font(NoahFont.title).accessibilityIdentifier("send-success")
+                Text("\(receipt.amountIsEstimated == true ? "About " : "")\(receipt.amount) sats").font(
+                    NoahFont.largeTitle)
+                if let txid = receipt.txid { Text(txid).font(.caption).textSelection(.enabled) }
+                NoahButton(title: "Done") {
+                    controller.acknowledge()
+                    done()
+                }
+            case .failed:
+                Text("Payment did not complete").font(NoahFont.title)
+                Text("Wallet history confirms this payment failed or was canceled.")
+                NoahButton(title: "Start a new payment") {
+                    controller.acknowledge()
+                    done()
+                }
+            case .storageBlocked:
+                Text("Payment status unavailable").font(NoahFont.title)
+                Text(
+                    "Noah could not read the saved payment attempt. Sending is disabled until its status can be recovered."
+                )
+            case .ready: EmptyView()
+            }
+            if let message = controller.message { Text(message).font(NoahFont.callout) }
+        }.padding(24).multilineTextAlignment(.center).frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
