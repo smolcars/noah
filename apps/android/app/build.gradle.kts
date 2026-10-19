@@ -113,6 +113,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     sourceSets.getByName("test").resources.directories += "../../fixtures"
+    sourceSets.getByName("test").resources.directories += "../../../api"
     sourceSets.getByName("androidTest").assets.directories += "../../fixtures"
 }
 
@@ -130,6 +131,10 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.okhttp)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization)
     implementation(libs.mmkv)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
@@ -140,6 +145,7 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.security.crypto)
     testImplementation(libs.junit)
+    testImplementation(libs.ktor.client.mock)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)
 }

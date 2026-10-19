@@ -143,6 +143,10 @@ generate-api-ios:
     rm -rf apps/ios/Noah/API/Generated && mkdir -p apps/ios/Noah/API/Generated
     swift run --package-path apps/ios/Tools/OpenAPIGenerator swift-openapi-generator generate --config apps/ios/Noah/API/openapi-generator-config.yaml --output-directory apps/ios/Noah/API/Generated api/openapi.json
 
+# Regenerate the Kotlin client with checksum-pinned Fabrikt
+generate-api-android:
+    python3 apps/android/tools/generate-api.py
+
 # Start ngrok tunnel to localhost:3000
 ngrok:
     ngrok http 3000 --domain $(cat .ngrok-domain)
