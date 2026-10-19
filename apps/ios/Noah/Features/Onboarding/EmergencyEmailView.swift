@@ -6,6 +6,7 @@ struct EmergencyEmailView: View {
 
     private enum Field: Hashable { case email, code }
     @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
     @FocusState private var focus: Field?
     @State private var email = ""
     @State private var code = ""
@@ -23,10 +24,6 @@ struct EmergencyEmailView: View {
                     Text("Emergency Email").font(NoahFont.title)
                     if model.server.isRegistering {
                         ProgressView("Setting up your account...")
-                    } else if registrationFailed {
-                        Text("Failed to register with server. Please try again.")
-                            .foregroundStyle(NoahColor.destructive)
-                        NoahButton(title: "Retry", kind: .secondary) { Task { await register() } }
                     }
                     if codeSent {
                         VStack(alignment: .leading, spacing: 8) {
@@ -132,7 +129,8 @@ struct EmergencyEmailView: View {
             .task { await register() }
             .alert(errorTitle, isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
                 Button("OK", role: .cancel) {
-                    if completeAfterAlert { onContinue() }
+                    if registrationFailed { dismiss() }
+                    else if completeAfterAlert { onContinue() }
                 }
             } message: { Text(errorMessage ?? "") }
         }
@@ -148,7 +146,11 @@ struct EmergencyEmailView: View {
     private func register() async {
         registrationFailed = false
         do { try await model.server.ensureRegistered() }
-        catch { registrationFailed = true }
+        catch {
+            registrationFailed = true
+            errorTitle = "Registration Error"
+            errorMessage = "Failed to register with server. Please try again."
+        }
     }
 
     private func send() {
