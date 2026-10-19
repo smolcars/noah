@@ -71,10 +71,14 @@ object ServerClient {
         return client
     }
 
+    /** The offline login key (`m/350/0`) the server puts in the token's `sub`. */
+    fun loginKey(variant: String, mnemonic: String): String =
+        derivePublicKeyFromMnemonic(mnemonic, WalletConfiguration.base(variant).network, 0u)
+
     suspend fun login(client: HttpClient, variant: String, mnemonic: String): String {
         val k1 = V0Getk1Client(client).getK1().value().k1
         val network = WalletConfiguration.base(variant).network
-        val key = derivePublicKeyFromMnemonic(mnemonic, network, 0u)
+        val key = loginKey(variant, mnemonic)
         val sig = signMessageWithMnemonic(k1, mnemonic, network, 0u)
         return V0AuthLoginClient(client).authLogin(AuthLoginPayload(k1 = k1, key = key, sig = sig)).value().accessToken
     }

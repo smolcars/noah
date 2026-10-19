@@ -57,6 +57,23 @@ class ServerAuthTest {
         assertThrows(IllegalArgumentException::class.java) { JWT.expiry("not-a-token") }
     }
 
+    /** After the seed changes, a still-valid token for the old wallet must not be reused. */
+    @Test fun tokenForAnotherWalletIsNeverReused() = runBlocking {
+        fun tokenFor(subject: String, suffix: String) = "e30.${Base64.getUrlEncoder().withoutPadding()
+            .encodeToString("{\"sub\":\"$subject\",\"exp\":${now / 1000 + 72 * 3600}}".toByteArray())}.$suffix"
+        var stored: String? = tokenFor("02previous", "old")
+        val logins = AtomicInteger()
+        val provider = AuthTokenProvider(
+            readToken = { stored }, saveToken = { stored = it }, clearToken = { stored = null },
+            readMnemonic = { "fixture" }, login = { logins.incrementAndGet(); tokenFor("02current", "new") },
+            now = { now }, loginKey = { "02current" },
+        )
+        assertEquals(tokenFor("02current", "new"), provider.token())
+        assertEquals(1, logins.get())
+        assertEquals(tokenFor("02current", "new"), provider.token())
+        assertEquals(1, logins.get())
+    }
+
     @Test fun freshTokenIsReused() = runBlocking {
         val fake = Fake(token())
         val provider = fake.provider()

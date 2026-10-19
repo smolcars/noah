@@ -24,6 +24,7 @@ class AppServices private constructor(private val context: Context) {
         clearToken = tokenItem::clearAuthToken,
         readMnemonic = { (seed.read() as? SecretResult.Found)?.value ?: throw ServerFailure("Wallet seed unavailable") },
         login = { ServerClient.login(publicClient, variant, it) },
+        loginKey = { ServerClient.loginKey(variant, it) },
     )
     val client = ServerClient.make(ServerEndpoint.baseURL(variant, BuildConfig.REGTEST_SERVER_URL), tokens)
     val registration = ServerRegistration(client, ServerStateStorage(SettingsStorage(context)),
