@@ -40,6 +40,11 @@ packages:
   BarkBoltFFI:
     url: https://github.com/smolcars/bark-bolt-ffi
     exactVersion: 0.1.0
+  # Same MMKV core line (2.4.x) as react-native-mmkv 4.3.2, so the native app
+  # opens the RN app's `noah-wallet-storage` file as-is.
+  MMKV:
+    url: https://github.com/Tencent/MMKV
+    exactVersion: 2.4.3
 
 targets:
   Noah:
@@ -58,6 +63,8 @@ targets:
       - target: NoahWidget
       - package: BarkBoltFFI
         product: BarkBoltFFI
+      - package: MMKV
+        product: MMKV
 
   NoahWidget:
     type: app-extension

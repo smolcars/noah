@@ -41,13 +41,20 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] `just generate-api`; CI drift gate (TS + schema + native)
 
 ### 0.5 Upgrade compatibility (gate before any funded-wallet milestone)
-- [ ] iOS seed reader: keychain service `com.noah.mnemonic.<variant>`, account `noah`
+- [x] iOS seed reader: keychain service `com.noah.mnemonic.<variant>`, account `noah` (read + in-place save, RN attributes)
 - [ ] Android seed reader: `RN_KEYCHAIN` DataStore (+ legacy SharedPreferences), cipher from `:c` (AES-GCM / AES-CBC); fallback `noah_native_secrets`; new Keystore-backed store; legacy kept
-- [ ] BIP39 validation; conflict handling; never auto-delete seed; "restore from saved phrase" when DB missing
-- [ ] Server auth token reader (`com.noah.auth-token.<variant>`) or re-login
-- [ ] MMKV: open `noah-wallet-storage` (iOS `Documents/mmkv`, Android `filesDir/mmkv`); decode zustand envelopes for all 8 stores
-- [ ] GT locale import (`generaltranslation.locale` / `gt_store`)
-- [ ] Expo installation UUID reuse (iOS keychain `EXDeviceInstallationUUIDKey`, Android `noBackupFilesDir/expo_notifications_installation_uuid.txt`)
+- [x] Launch decision (`apps/fixtures/launch-state.json`): never auto-delete seed; seed-without-DB and DB-without-seed states — iOS
+- [ ] Launch decision — Android
+- [ ] BIP39 validation of the stored seed; conflict handling
+- [x] Server auth token reader (`com.noah.auth-token.<variant>`) — iOS
+- [x] MMKV: open `noah-wallet-storage` + zustand envelope codec, `wallet-storage` decoded — iOS
+- [ ] MMKV — Android
+- [ ] Remaining 7 store shapes (decode as their screens land)
+- [ ] Verify against a real RN-written MMKV file (in the upgrade test)
+- [x] GT locale reader (`generaltranslation.locale`) — iOS
+- [ ] GT locale reader (`gt_store`) — Android
+- [x] Expo installation UUID reuse — iOS (keychain `EXDeviceInstallationUUIDKey`)
+- [ ] Expo installation UUID reuse — Android (`noBackupFilesDir/expo_notifications_installation_uuid.txt`)
 - [ ] UnifiedPush connector storage + instance names preserved
 - [ ] Automated upgrade test (simulator + emulator): RN regtest build → create/fund wallet, set settings, recurring rule → install native over it → assert seed, identity, balance, history, settings, Expo token
 

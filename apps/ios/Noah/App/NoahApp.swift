@@ -6,7 +6,7 @@ struct NoahApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            LaunchGateView()
         }
     }
 }

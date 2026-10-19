@@ -1,0 +1,82 @@
+import Foundation
+import Security
+import Testing
+
+@testable import Noah
+
+/// Uses throwaway service names; never touches the real seed items.
+@Suite(.serialized)
+struct KeychainPasswordTests {
+    private let item = KeychainPassword(service: "com.noah.tests.\(UUID().uuidString)", account: "noah")
+
+    /// Writes an item exactly like react-native-keychain 10
+    /// `setGenericPassword("noah", value, { service })` on iOS.
+    private func addLikeReactNativeKeychain(_ value: String) -> OSStatus {
+        let attributes: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: item.service,
+            kSecAttrAccount as String: "noah",
+            kSecAttrSynchronizable as String: kCFBooleanFalse!,
+            kSecValueData as String: Data(value.utf8),
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+        ]
+        return SecItemAdd(attributes as CFDictionary, nil)
+    }
+
+    private func deleteItem() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: item.service,
+            kSecUseDataProtectionKeychain as String: true,
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
+    private func accessibility() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: item.service,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecUseDataProtectionKeychain as String: true,
+        ]
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+            let attributes = result as? [String: Any]
+        else { return nil }
+        return attributes[kSecAttrAccessible as String] as? String
+    }
+
+    @Test func readsItemWrittenByReactNativeKeychain() throws {
+        defer { deleteItem() }
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+        #expect(addLikeReactNativeKeychain(mnemonic) == errSecSuccess)
+        #expect(item.read() == .found(mnemonic))
+    }
+
+    @Test func missingItemIsNotFound() {
+        #expect(item.read() == .notFound)
+    }
+
+    @Test func saveUpdatesInPlaceAndKeepsAttributes() throws {
+        defer { deleteItem() }
+        #expect(addLikeReactNativeKeychain("first") == errSecSuccess)
+        try item.save("second")
+        #expect(item.read() == .found("second"))
+        #expect(accessibility() == (kSecAttrAccessibleAfterFirstUnlock as String))
+    }
+
+    @Test func saveCreatesWithReactNativeAttributes() throws {
+        defer { deleteItem() }
+        try item.save("value")
+        #expect(item.read() == .found("value"))
+        #expect(accessibility() == (kSecAttrAccessibleAfterFirstUnlock as String))
+    }
+
+    @Test func variantServiceNamesMatchReactNative() {
+        #expect(KeychainPassword.mnemonic(for: .mainnet).service == "com.noah.mnemonic.mainnet")
+        #expect(KeychainPassword.mnemonic(for: .regtest).account == "noah")
+        #expect(KeychainPassword.serverAuthToken(for: .signet).service == "com.noah.auth-token.signet")
+    }
+}

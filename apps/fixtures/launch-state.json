@@ -1,0 +1,35 @@
+{
+  "description": "Launch decision from the seed (Keychain/Keystore) and the bark wallet database. Must never lead to deleting the seed or creating a wallet over existing data.",
+  "cases": [
+    {
+      "name": "existing wallet",
+      "input": { "seed": "present", "walletDatabaseExists": true },
+      "expected": "existingWallet"
+    },
+    {
+      "name": "fresh install",
+      "input": { "seed": "absent", "walletDatabaseExists": false },
+      "expected": "onboarding"
+    },
+    {
+      "name": "reinstall: seed survived, data did not",
+      "input": { "seed": "present", "walletDatabaseExists": false },
+      "expected": "seedWithoutWalletData"
+    },
+    {
+      "name": "data without seed: ask for recovery phrase",
+      "input": { "seed": "absent", "walletDatabaseExists": true },
+      "expected": "walletDataWithoutSeed"
+    },
+    {
+      "name": "keychain locked with data",
+      "input": { "seed": "unavailable", "walletDatabaseExists": true },
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "keychain locked without data",
+      "input": { "seed": "unavailable", "walletDatabaseExists": false },
+      "expected": "secureStorageUnavailable"
+    }
+  ]
+}
