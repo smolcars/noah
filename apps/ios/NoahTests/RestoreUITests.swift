@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import SwiftUI
 import UIKit
 import Foundation
@@ -143,6 +144,50 @@ struct RestoreCompletionTests {
 }
 
 struct RestoreIssueTests {
+    private let updateRequired = "This backup was created by a newer version of Noah. Update the app, then try restoring again."
+
+    @Test(arguments: [UInt8(3), 255])
+    func futureEnvelopeVersionsExplainUpdateRequired(_ version: UInt8) throws {
+        var bytes = Data(repeating: 0, count: 45)
+        bytes[0] = version
+        do {
+            _ = try BackupCrypto.decrypt(bytes, mnemonic: "unused", expecting: .snapshot)
+            Issue.record("A future envelope was accepted")
+        } catch {
+            #expect(error as? BackupCrypto.Failure == .newerVersion)
+            #expect(RestoreIssue.from(error) == RestoreIssue(message: updateRequired))
+        }
+    }
+
+    @Test func futureManifestVersionExplainsUpdateRequired() throws {
+        let manifest = BackupArchive.Manifest(formatVersion: 3, createdAt: "x", snapshotSha256: "sha",
+            network: "regtest", walletFingerprint: "abcd", serverPubkey: nil, mailboxPubkey: nil, barkSchemaVersion: 42)
+        do {
+            _ = try BackupArchive.parseManifest(BackupArchive.encode(manifest))
+            Issue.record("A future manifest was accepted")
+        } catch {
+            #expect(error as? BackupArchive.Failure == .newerVersion)
+            #expect(RestoreIssue.from(error) == RestoreIssue(message: updateRequired))
+        }
+    }
+
+    @Test func futureSchemaVersionExplainsUpdateRequired() {
+        let error = BarkError(message: "Snapshot schema version 9999 is newer than supported version 42")
+        #expect(RestoreIssue.from(error) == RestoreIssue(message: updateRequired))
+    }
+
+    @Test func wrongPhraseDamagedBackupAndUnrelatedDiagnosticsKeepTheirCopy() {
+        #expect(RestoreIssue.from(BackupCrypto.Failure.authenticationFailed).message ==
+            "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order.")
+        #expect(RestoreIssue.from(WalletRestorer.Failure.downloadMismatch).message ==
+            "The downloaded backup is incomplete or damaged. Check your connection and try again.")
+        for error: any Error in [BackupCrypto.Failure.unexpectedVersion(1), BackupArchive.Failure.invalidManifest,
+            BarkError(message: "snapshot is damaged"),
+            ServerFailure(message: "Snapshot schema version 9999 is newer than supported version 42")] {
+            #expect(RestoreIssue.from(error).message == "Noah couldn't restore your wallet. Please try again later.")
+        }
+    }
+
     @Test(arguments: [
         WalletRestorer.Failure.wrongNetwork, .identityMismatch, .noUsableBackup, .unsupportedFormat(9),
         .downloadMismatch, .secureStorageUnavailable, .rollbackFailed, .seedStateUnknown,

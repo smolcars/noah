@@ -32,6 +32,7 @@ enum BackupArchive {
         case destinationExists
         case snapshotMissing
         case unexpectedEntry(String)
+        case newerVersion
         case invalidManifest
         /// Inflates past the restore limits (headers can understate sizes).
         case tooLarge
@@ -169,7 +170,7 @@ enum BackupArchive {
     /// every field present, nullable keys present as string or null.
     static func parseManifest(_ data: Data) throws -> Manifest {
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            object["formatVersion"] as? Int == formatVersion,
+            let version = object["formatVersion"] as? Int,
             let createdAt = object["createdAt"] as? String,
             let snapshotSha256 = object["snapshotSha256"] as? String,
             let network = object["network"] as? String,
@@ -180,6 +181,8 @@ enum BackupArchive {
         else {
             throw Failure.invalidManifest
         }
+        guard version <= formatVersion else { throw Failure.newerVersion }
+        guard version == formatVersion else { throw Failure.invalidManifest }
         return Manifest(
             formatVersion: formatVersion, createdAt: createdAt, snapshotSha256: snapshotSha256,
             network: network, walletFingerprint: walletFingerprint,

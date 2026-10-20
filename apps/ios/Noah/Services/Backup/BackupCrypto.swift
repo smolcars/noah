@@ -21,6 +21,7 @@ enum BackupCrypto {
 
     enum Failure: Error, Equatable {
         case tooShort
+        case newerVersion
         case unexpectedVersion(UInt8)
         case keyDerivationFailed(Int32)
         /// Wrong mnemonic or corrupted data (GCM authentication failed).
@@ -58,6 +59,7 @@ enum BackupCrypto {
     static func decrypt(_ envelope: Data, mnemonic: String, expecting version: Version) throws -> Data {
         let bytes = Data(envelope)  // rebase indices to 0
         guard bytes.count >= headerLength + tagLength else { throw Failure.tooShort }
+        guard bytes[0] <= Version.snapshot.rawValue else { throw Failure.newerVersion }
         guard bytes[0] == version.rawValue else { throw Failure.unexpectedVersion(bytes[0]) }
 
         let salt = bytes[1..<(1 + saltLength)]

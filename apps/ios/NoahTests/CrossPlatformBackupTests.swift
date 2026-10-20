@@ -156,18 +156,16 @@ struct CrossPlatformBackupTests {
         let failure = try await refuseNewer(kind)
         switch kind {
         case "list": #expect(failure as? WalletRestorer.Failure == .unsupportedFormat(3))
-        case "manifest": #expect(failure as? BackupArchive.Failure == .invalidManifest)
-        case "envelope": #expect(failure as? BackupCrypto.Failure == .unexpectedVersion(3))
+        case "manifest": #expect(failure as? BackupArchive.Failure == .newerVersion)
+        case "envelope": #expect(failure as? BackupCrypto.Failure == .newerVersion)
         default: #expect((failure as? BarkError)?.message.contains("newer than supported version") == true)
         }
     }
 
-    /// Known restore UX bug; enable to reproduce a failing acceptance test without changing recovery code.
-    @Test(.enabled(if: ProcessInfo.processInfo.environment["NOAH_REQUIRE_FUTURE_BACKUP_COPY"] == "1"),
-          arguments: ["manifest", "envelope", "schema"])
+    @Test(arguments: ["manifest", "envelope", "schema"])
     func newerBackupsExplainUpdateRequired(_ kind: String) async throws {
         let failure = try await refuseNewer(kind)
-        #expect(RestoreIssue.from(failure).message.contains("Update the app before restoring"))
+        #expect(RestoreIssue.from(failure).message == "This backup was created by a newer version of Noah. Update the app, then try restoring again.")
     }
 
 }

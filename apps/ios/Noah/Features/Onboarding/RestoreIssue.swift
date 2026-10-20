@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 import OpenAPIRuntime
 
@@ -6,6 +7,7 @@ struct RestoreIssue: Equatable {
     let message: String
     var requiresRestart = false
 
+    static let newerBackup = Self(message: "This backup was created by a newer version of Noah. Update the app, then try restoring again.")
     static let invalidPhrase = Self(message: "Check your recovery phrase. Enter all 12 words in the correct order.")
     static let committed = Self(
         message: "Your backup was restored, but setup couldn't finish. Do not restore again. Close and restart Noah to continue.",
@@ -22,7 +24,7 @@ struct RestoreIssue: Equatable {
             case .noUsableBackup:
                 return Self(message: "No usable backup was found for this recovery phrase. Check the words and try again.")
             case .unsupportedFormat:
-                return Self(message: "This backup needs a newer version of Noah. Update the app before restoring.")
+                return newerBackup
             case .downloadMismatch:
                 return Self(message: "The downloaded backup is incomplete or damaged. Check your connection and try again.")
             case .secureStorageUnavailable:
@@ -35,6 +37,15 @@ struct RestoreIssue: Equatable {
         }
         if error is RestoreTransaction.Failure || error is RestoreCompletion.RestartRequired {
             return Self(message: "An earlier restore needs recovery. Do not retry. Close and restart Noah to continue safely.", requiresRestart: true)
+        }
+        if error as? BackupCrypto.Failure == .newerVersion || error as? BackupArchive.Failure == .newerVersion {
+            return newerBackup
+        }
+        // The SDK has no typed error code for a future snapshot schema yet.
+        if let error = error as? BarkError,
+            error.message.range(of: #"^Snapshot schema version [0-9]+ is newer than supported version [0-9]+$"#,
+                options: .regularExpression) != nil {
+            return newerBackup
         }
         if error as? BackupCrypto.Failure == .authenticationFailed {
             return Self(message: "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order.")
