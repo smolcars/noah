@@ -7,6 +7,7 @@ final class StoryPlayback {
     init(player: AVAudioPlayer) { self.player = player }
     deinit {
         player.stop()
+        player.currentTime = 0
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 }
