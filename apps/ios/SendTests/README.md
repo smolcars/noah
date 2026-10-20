@@ -1,5 +1,26 @@
 # Native Send verification
 
+## Round-6 broadcast recovery (2026-10-19)
+
+Crash recovery from a prepared/broadcasting journal treats an exact but
+unconfirmed cached transaction as **Submitted, awaiting broadcast** with
+`broadcastRetryPending: true`. It uses the same “Noah will keep retrying the
+broadcast” state as a returned `failed` outcome; Done and ordinary review cannot
+erase it. Confirmation clears the flag and enables Done. A missing transaction
+still stays uncertain with the existing explicit destructive override.
+
+Reconciliation now propagates onchain sync errors to the controller's visible
+status-check error and retains the attempt. It does not upgrade cached evidence
+after a failed sync. Even a successful sync plus an unconfirmed cached txid does
+not prove acceptance: the SDK's transaction record does not distinguish a stored
+spend awaiting retry from chain-source acceptance. See the
+[v0.4.0 prepared-send contract](https://github.com/smolcars/bark-bolt-ffi/blob/v0.4.0/docs/migration.md#prepared-onchain-sends-v040).
+
+Regression coverage includes a crash before receipt save, a failed-broadcast
+receipt write error, relaunch with a failed sync, unconfirmed exact-txid recovery,
+Done/override refusal, another restart and confirmation finally enabling Done.
+No recovery test can call payment submission.
+
 ## FFI 0.4.0 adoption (2026-10-19)
 
 This section supersedes the historical disabled-MAX and estimated-BDK-send notes
@@ -35,6 +56,8 @@ stays uncertain with the existing destructive override: canonical history can
 evict an unconfirmed transaction. Snapshot differences/possible matches apply
 only to older journals without this exact identity; all existing wallet-identity
 quarantine and outcome-provenance migrations remain conservative.
+Round 6 above adds the missing broadcast lock to unconfirmed crash recovery and
+requires successful sync before reconciliation can upgrade the evidence.
 
 Typed-error audit against the resolved **v0.4.0** sources:
 

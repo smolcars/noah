@@ -73,6 +73,7 @@ import Testing
             Issue.record("Exact prepared transaction must establish receipt"); return
         }
         #expect(receipt.amount == 1000 && receipt.fee == 143 && receipt.txid == "exact")
+        #expect(receipt.broadcastRetryPending == true)
         #expect(try SendReconciliation.onchain(attempt, transactions: []) == .uncertain)
         #expect(try SendReconciliation.onchain(attempt, transactions: [SendSafetyTests().transaction(id: "lookalike")]) == .uncertain)
         attempt.payment.max = true
@@ -80,5 +81,64 @@ import Testing
         attempt.receipt = receipt
         guard case .paid(let missing) = try SendReconciliation.onchain(attempt, transactions: []) else { return }
         #expect(missing.status == .unlocated)
+    }
+
+    @Test(arguments: [false, true])
+    func recoveredBroadcastStaysLockedUntilConfirmation(failedReceiptWrite: Bool) async throws {
+        let storage = SendPaymentTests.Storage()
+        let quote = Self.quote
+        if failedReceiptWrite {
+            storage.failReceiptWrite = true
+            let controller = SendPaymentController(dependencies: .init(
+                prepare: { _, _ in .init(movementIDs: []) },
+                pay: { _, _, _ in
+                    try SendOnchainSubmission.receipt(.init(txid: "exact", broadcast: .failed(reason: "rpc")), quote: quote)
+                }, reconcile: { _ in .uncertain },
+                read: { storage.attempt }, write: { try storage.write($0) }))
+            controller.submit(Self.payment, quote: quote)
+            try await SendPaymentTests.waitUntil { controller.state != .submitting }
+            #expect(controller.attempt?.receipt?.broadcastRetryPending == true)
+            #expect(controller.message?.contains("could not be saved") == true)
+        } else {
+            // Process died after the SDK recorded the transaction, before any receipt was saved.
+            storage.attempt = .init(broadcastingTxid: "exact", payment: Self.payment,
+                                    snapshot: .init(movementIDs: []), quote: quote)
+        }
+        #expect(storage.attempt?.broadcastingTxid == "exact" && storage.attempt?.receipt == nil)
+        storage.failReceiptWrite = false
+        let backend = SendPaymentTests.Backend()
+        let recovered = SendSafetyTests().controller(storage) { _ in
+            // A failed sync must propagate, even though cached history contains the exact txid.
+            if await backend.fail { throw URLError(.notConnectedToInternet) }
+            return await backend.reconcile()
+        }
+        await recovered.checkStatus()
+        #expect(recovered.state == .uncertain && recovered.locked)
+        #expect(recovered.message == "Unable to check payment status. It may have been sent. Do not pay again.")
+        recovered.acknowledge()
+        #expect(storage.attempt != nil)
+
+        await backend.succeed()
+        let pending = try SendReconciliation.onchain(try #require(storage.attempt),
+                                                     transactions: [SendSafetyTests().transaction(id: "exact")])
+        await backend.setResolution(pending)
+        await recovered.checkStatus()
+        #expect(recovered.attempt?.receipt?.broadcastRetryPending == true)
+        recovered.acknowledge()
+        recovered.startNewPaymentAfterHistoryCheck(confirmed: true)
+        #expect(recovered.locked && !recovered.canOverride && storage.attempt != nil)
+
+        let restarted = SendSafetyTests().controller(storage) { _ in await backend.reconcile() }
+        restarted.acknowledge()
+        #expect(restarted.locked)
+        let confirmed = try SendReconciliation.onchain(try #require(storage.attempt),
+                                                       transactions: [SendSafetyTests().transaction(id: "exact", confirmed: true)])
+        await backend.setResolution(confirmed)
+        await restarted.checkStatus()
+        #expect(restarted.attempt?.receipt?.status == .confirmed)
+        #expect(restarted.attempt?.receipt?.broadcastRetryPending == nil)
+        restarted.acknowledge()
+        #expect(!restarted.locked && storage.attempt == nil)
+        #expect(await backend.calls == 0)
     }
 }

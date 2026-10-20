@@ -135,7 +135,9 @@ enum SendReconciliation {
             guard let tx = transactions.first(where: { $0.txid == txid }) else { return .uncertain }
             return .paid(.init(amount: quote.amount, txid: txid,
                                status: tx.confirmation == nil ? .submitted : .confirmed,
-                               fee: quote.fee, proof: .preparedTxid))
+                               fee: quote.fee, proof: .preparedTxid,
+                               // BDK records the spend before submission; cached presence cannot prove acceptance.
+                               broadcastRetryPending: tx.confirmation == nil ? true : nil))
         }
         // Legacy journals have no exact pre-broadcast identity; retain their conservative evidence path.
         guard attempt.payment.method == "onchain", attempt.payment.source == .onchain, !attempt.payment.max,

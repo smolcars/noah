@@ -242,8 +242,8 @@ extension WalletSession {
                 return .paid(try checkpoint.receipt(status: status, movements: try await handles.wallet.history(), payment: payment, quote: quote))
             }
             if attempt.payment.method == "onchain", attempt.payment.source == .onchain || attempt.receipt?.txid != nil {
-                // Read even if sync fails: a persist error can leave the transaction only in BDK memory.
-                _ = try? await handles.onchain.sync()
+                // A failed sync cannot upgrade cached transaction evidence.
+                try await handles.onchain.sync()
                 let resolution = try SendReconciliation.onchain(attempt, transactions: try await handles.onchain.transactions())
                 if case .paid(let receipt) = resolution, attempt.payment.source == .offchain,
                    let movements = try? await handles.wallet.history() {
