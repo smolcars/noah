@@ -43,6 +43,11 @@ class RecurringRuntime private constructor(context: Context) {
     internal val foregroundRunner = RecurringForegroundRunner(scope, isOnboarded = services::isOnboarded) { budget ->
         executor.execute(budget = budget)
     }
+    /** Protected load overlays policy rollback and durable automation stops; no wallet opening. */
+    suspend fun hasDuePayments(now: Long = System.currentTimeMillis()): Boolean = withContext(Dispatchers.IO) {
+        requireAdmission(location, settings.persistedState(PersistedWalletState.key), services.recurringAutomationStorageFailed)
+        hasDuePayments(store.load(), now)
+    }
     fun foreground() { scope.launch { executor.execute() } }
     fun timeChanged() { scope.launch {
         if (!services.isOnboarded()) return@launch
@@ -50,6 +55,10 @@ class RecurringRuntime private constructor(context: Context) {
     } }
     suspend fun execute(budget: RecurringBudget = RecurringBudget()) = withContext(Dispatchers.Main) { executor.execute(budget = budget) }
     companion object {
+        internal fun hasDuePayments(state: RecurringStore.State, now: Long): Boolean = state.schedules.values.any {
+            it.status == "active" && !it.unsupportedStorage && it.validPolicy &&
+                it.nextRunAt?.let { due -> due <= now } == true && (it.retryNotBefore == null || it.retryNotBefore <= now)
+        }
         internal fun requireAdmission(location: WalletDataLocation, wallet: PersistedWalletState?, storageFailed: Boolean) {
             if (!location.databaseExists) throw RecurringExecutor.NoWallet()
             check(!storageFailed && !location.restorePending && !location.deletionMarker.exists() && wallet?.isInitialized != false && wallet?.isWalletSuspended != true) { "Wallet suspended or replacement pending. Sending is stopped." }

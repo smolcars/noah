@@ -12,7 +12,7 @@ internal class PeriodicRuntime(context: Context, services: AppServices) {
     private var expiry: Long? = null
     val jobs = PeriodicJobs(PeriodicJobs.Dependencies(
         eligible = services::backgroundWalletEligible,
-        recurringDue = { true },
+        recurringDue = { RecurringRuntime.shared(context).hasDuePayments() },
         ensureWalletOpen = { services.ensureWalletOpen() },
         sync = services.session::sync,
         recurring = { RecurringRuntime.shared(context).execute(it) },
