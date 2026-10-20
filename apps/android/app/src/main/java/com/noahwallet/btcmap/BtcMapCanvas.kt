@@ -102,6 +102,9 @@ private class MapCanvas(context: Context, private val model: BtcMapModel) {
                     moved = reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE
                 }
                 ready.addOnCameraIdleListener {
+                    val bounds = ready.projection.visibleRegion.latLngBounds
+                    model.visibleBounds = BtcMapBounds.fromCamera(bounds.longitudeWest, bounds.latitudeSouth,
+                        bounds.longitudeEast, bounds.latitudeNorth)
                     if (moved) {
                         val camera = ready.cameraPosition
                         camera.target?.let { model.record(BtcMapViewport(listOf(it.longitude, it.latitude), camera.zoom)) }

@@ -11,7 +11,7 @@ import java.util.Locale
 @RunWith(Parameterized::class)
 class BtcMapFixtureTest(private val name: String, private val domain: String, private val input: JsonObject, private val expected: JsonElement) {
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{0}") fun cases() = listOf("btc-map", "city-search").flatMap { domain ->
+        @JvmStatic @Parameterized.Parameters(name = "{0}") fun cases() = listOf("btc-map", "city-search", "btc-map-review").flatMap { domain ->
             SharedFixtures.load(domain).map { arrayOf(it.name, domain, it.input.jsonObject, it.expected) }
         }
         fun asset(name: String) = requireNotNull(BtcMapFixtureTest::class.java.getResourceAsStream("/$name"))
@@ -23,6 +23,9 @@ class BtcMapFixtureTest(private val name: String, private val domain: String, pr
     private inline fun <reified T> read(key: String): T = mapJson.decodeFromJsonElement(input.getValue(key))
     @Test fun matchesSharedReactNativeFixture() {
         val actual: JsonElement = when (read<String>("operation")) {
+            "web" -> value(BtcMapLinks.web(read("text")))
+            "phone" -> value(BtcMapLinks.phone(read("text")))
+            "bounds" -> value(read<BtcMapBounds>("bounds").contains(read("lon"), read("lat")))
             "syncTimestamp" -> value(btcMapTimestamp(read("epochMilliseconds")))
             "category" -> value(PlaceCategory.classify(read("icon")).name)
             "distance" -> {

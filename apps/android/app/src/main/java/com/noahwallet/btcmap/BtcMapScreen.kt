@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +47,7 @@ fun BtcMapScreen(onClose: () -> Unit) {
     var styleRevision by remember { mutableIntStateOf(0) }
     var cities by remember { mutableStateOf<List<CitySearchEntry>>(emptyList()) }
     var cityError by remember { mutableStateOf(false) }
+    var searchFocused by remember { mutableStateOf(false) }
     var results by remember { mutableStateOf(MapResults()) }
     val locate: () -> Unit = {
         if (!locating) {
@@ -70,10 +72,10 @@ fun BtcMapScreen(onClose: () -> Unit) {
         }
     }
     DisposableEffect(Unit) { onDispose { locationJob?.cancel() } }
-    LaunchedEffect(model.places, model.query, model.category, model.selectedCity, model.userLocation, model.viewport.center) {
+    LaunchedEffect(model.places, model.query, model.category, model.selectedCity, model.visibleBounds) {
         results = model.filter()
     }
-    LaunchedEffect(model.query, model.selectedCity) {
+    LaunchedEffect(model.query, model.selectedCity, model.viewport.center, searchFocused) {
         cities = emptyList(); cityError = false
         if (model.selectedCity == null && CitySearch.normalize(model.query).length >= 2) {
             delay(150)
@@ -91,7 +93,7 @@ fun BtcMapScreen(onClose: () -> Unit) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val wide = maxWidth >= 700.dp
             val detailHeight = maxHeight * 0.58f
-            val nearbyHeight = if (wide) maxHeight * 0.2f else 180.dp
+            val placesHeight = if (wide) maxHeight * 0.2f else 180.dp
             Row(Modifier.fillMaxSize()) {
                 Column(Modifier.weight(1f).fillMaxHeight()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -101,7 +103,8 @@ fun BtcMapScreen(onClose: () -> Unit) {
                             Text(if (model.syncing) "Syncing…" else "Refresh")
                         }
                     }
-                    OutlinedTextField(model.query, model::updateQuery, Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    OutlinedTextField(model.query, model::updateQuery, Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                        .onFocusChanged { searchFocused = it.isFocused },
                         label = { Text("Search cities or places") }, singleLine = true,
                         trailingIcon = { if (model.query.isNotEmpty()) TextButton({ model.updateQuery("") }) { Text("Clear") } })
                     LazyRow(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -135,8 +138,8 @@ fun BtcMapScreen(onClose: () -> Unit) {
                         BtcMapCanvas(model, results.filtered, isSystemInDarkTheme(), if (selected != null && !wide) sheetTop else null, styleRevision, Modifier.fillMaxSize())
                         if (model.loading) CircularProgressIndicator(Modifier.align(Alignment.Center))
                     }
-                    if (showPlaces) LazyColumn(Modifier.fillMaxWidth().heightIn(max = nearbyHeight)) {
-                        items(results.nearby, key = { it.id }) { place ->
+                    if (showPlaces) LazyColumn(Modifier.fillMaxWidth().heightIn(max = placesHeight)) {
+                        items(results.inView, key = { it.id }) { place ->
                             TextButton({ model.select(place); focus.clearFocus() }, Modifier.fillMaxWidth()) {
                                 Text(place.name, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 model.userLocation?.let { Text(BtcMapDistance.format(BtcMapDistance.kilometers(it, place.center)), style = MaterialTheme.typography.bodySmall) }
@@ -148,7 +151,7 @@ fun BtcMapScreen(onClose: () -> Unit) {
                             if (BtcMapLocation.hasPermission(context)) locate()
                             else permissions.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION))
                         }, enabled = !locating) { Text(if (locating) "Locating…" else "My location") }
-                        TextButton({ showPlaces = !showPlaces }) { Text(if (showPlaces) "Hide places" else "Places near map") }
+                        TextButton({ showPlaces = !showPlaces }) { Text(if (showPlaces) "Hide places" else "Places in view") }
                     }
                     Text(when {
                         model.basemapUnavailable -> "Street map unavailable · places and city search still work"

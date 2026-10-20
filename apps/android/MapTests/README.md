@@ -56,7 +56,9 @@ wallet data in verification artifacts.
 - Viewport JSON retains MMKV key `btc-map-viewport-v1` in the existing settings
   instance. Invalid values cannot reach the camera. City selection uses zoom 11,
   location 13, and merchant selection 15. Choosing a city does not filter merchants
-  by the city's display label. Search parsing and ranking run off the main thread.
+  by the city's display label. City suggestions re-rank when the viewport center
+  changes or the search field regains focus. Search parsing and ranking run off
+  the main thread.
 - OpenFreeMap liberty/dark styles, radius-46 clusters through zoom 14, merchant dots,
   cluster counts and cluster-tap expansion follow RN/iOS. The selected marker and
   optional user-location marker have separate layers. MapView receives lifecycle
@@ -64,9 +66,11 @@ wallet data in verification artifacts.
   public merchant data/search. Street tiles are **not bundled**; cluster glyphs may
   also be unavailable without cached fonts. Attribution remains accessible.
 - Material 3 replaces SwiftUI/RN controls. Details use a phone bottom sheet and a
-  340 dp side pane at 700 dp width. The selected merchant survives rotation. Nearby
-  list height is constrained in landscape and collapses on selection so the map
-  remains usable. A selectable places list provides an alternative to small dots.
+  340 dp side pane at 700 dp width. The selected merchant survives rotation.
+  **Places in view** lists every matching merchant inside the camera bounds,
+  including dateline crossings, sorted by name then ID. It uses a height-constrained
+  LazyColumn and collapses on selection; every row opens the same detail as a map
+  marker. A previous user-location fix does not bias this list after panning.
   Small map-control text uses the theme foreground for contrast.
 - Unlike the iOS/RN initial-location behavior, **no location request occurs on
   opening**. Only My location requests foreground coarse and fine together. Coarse

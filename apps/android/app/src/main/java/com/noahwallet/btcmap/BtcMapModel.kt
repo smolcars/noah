@@ -23,6 +23,7 @@ class BtcMapModel(
     var category by mutableStateOf(PlaceCategory.all)
     var selectedCity by mutableStateOf<CitySearchEntry?>(null); private set
     var userLocation by mutableStateOf<List<Double>?>(null); private set
+    var visibleBounds by mutableStateOf<BtcMapBounds?>(null)
     var loading by mutableStateOf(true); private set
     var syncing by mutableStateOf(false); private set
     var loadError by mutableStateOf(false); private set
@@ -58,7 +59,7 @@ class BtcMapModel(
 
     suspend fun filter(): MapResults {
         val current = places; val names = names; val category = category; val selectedCity = selectedCity
-        val query = CitySearch.normalize(query); val location = userLocation; val center = viewport.center
+        val query = CitySearch.normalize(query); val bounds = visibleBounds
         return withContext(Dispatchers.Default) {
             val matches = current.filter { category == PlaceCategory.all || it.category == category }
             val filtered = matches.filter { selectedCity != null || query.isEmpty() || names[it.id].orEmpty().contains(query) }
@@ -69,9 +70,9 @@ class BtcMapModel(
                 it to score
             }.sortedWith(compareBy<Pair<BtcMapPlace, Int>> { it.second }.thenComparator { a, b -> collator.compare(a.first.name, b.first.name) })
                 .take(3).map { it.first }
-            // Also gives TalkBack users a selectable alternative to small map markers.
-            val nearby = filtered.sortedBy { BtcMapDistance.kilometers(location ?: center, it.center) }.take(8)
-            MapResults(filtered, merchants, nearby)
+            val inView = filtered.filter { bounds?.contains(it.lon, it.lat) == true }
+                .sortedWith(compareBy<BtcMapPlace> { it.name }.thenBy { it.id })
+            MapResults(filtered, merchants, inView)
         }
     }
 
@@ -99,4 +100,4 @@ class BtcMapModel(
 }
 
 data class MapResults(val filtered: List<BtcMapPlace> = emptyList(), val merchants: List<BtcMapPlace> = emptyList(),
-    val nearby: List<BtcMapPlace> = emptyList())
+    val inView: List<BtcMapPlace> = emptyList())
