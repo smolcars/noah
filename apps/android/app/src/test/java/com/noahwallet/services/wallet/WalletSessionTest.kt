@@ -613,6 +613,70 @@ class WalletSessionTest {
             handles.stopGate!!.complete(Unit); closing.await(); assertTrue(handles.closed)
         }
     }
+    @Test fun esploraReloadRefusesInFlightMoneyOperations() = runBlocking {
+        withLocation { location ->
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> Handles() })
+            session.createNew("unused", false, "test")
+            for (operation in listOf("send", "board", "exit", "recurring")) {
+                val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
+                val work = launch {
+                    when (operation) {
+                        "send" -> session.withSendReservation { entered.complete(Unit); release.await() }
+                        "recurring" -> session.withRecurringReservation { entered.complete(Unit); release.await() }
+                        else -> session.withOpen { entered.complete(Unit); release.await() }
+                    }
+                }
+                entered.await()
+                assertTrue(runCatching { session.reserveForConfigurationChange() }.exceptionOrNull() is EsploraEndpoint.Failure)
+                assertTrue(session.isOpen)
+                release.complete(Unit); work.join()
+            }
+            session.release(session.reserveForConfigurationChange())
+        }
+    }
+
+    @Test fun esploraReopenKeepsReservationThroughDurableCommit() = runBlocking {
+        withLocation { location ->
+            bark(location)
+            val session = WalletSession("regtest", location, inspect = { WalletDatabase.Properties("regtest", "abcd") },
+                opener = { _, _, _, _, _ -> Handles() })
+            session.openExisting("unused", false, "test")
+            val reservation = session.reserveForConfigurationChange()
+            session.reopen(reservation, "unused", "test") {
+                assertFalse(session.isOpen)
+                assertFalse(session.unlessReserved { fail("commit released reservation") })
+            }
+            assertTrue(session.isOpen)
+            session.release(reservation)
+            assertTrue(session.isOpen)
+            session.close()
+        }
+    }
+
+    @Test fun esploraCommitFailureKeepsReservationOrQuarantinesFailedTeardown() = runBlocking {
+        for (teardownFails in listOf(false, true)) withLocation { location ->
+            bark(location)
+            var opened = 0
+            val session = WalletSession("regtest", location, inspect = { WalletDatabase.Properties("regtest", "abcd") },
+                opener = { _, _, _, _, _ -> Handles().also { it.stopFails = ++opened == 2 && teardownFails } })
+            session.openExisting("unused", false, "test")
+            val reservation = session.reserveForConfigurationChange()
+            val failure = runCatching { session.reopen(reservation, "unused", "test") { throw Boom() } }.exceptionOrNull()
+            assertFalse(session.isOpen)
+            if (teardownFails) {
+                assertEquals(WalletSession.OpenFailure.teardownFailed, (failure as WalletSession.OpenError).reason)
+                assertTrue(runCatching { session.reopen(reservation, "unused", "test") {} }.isFailure)
+                assertTrue(runCatching { session.close() }.isFailure)
+                assertFalse(session.isOpen)
+            } else {
+                assertTrue(failure is Boom)
+                assertFalse(session.unlessReserved { fail("rollback lost reservation") })
+                session.reopen(reservation, "unused", "test") {}
+                assertTrue(session.isOpen); session.close()
+            }
+        }
+    }
+
     @Test fun suspendedWalletPerformsNoM6Operations() = runBlocking {
         withLocation { location ->
             var suspended = false

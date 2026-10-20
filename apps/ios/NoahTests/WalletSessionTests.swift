@@ -153,6 +153,73 @@ struct WalletSessionTests {
         }
     }
 
+    @Test func esploraReloadRefusesInFlightMoneyOperations() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let session = offlineSession()
+        try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
+        for operation in ["send", "board", "exit", "recurring"] {
+            let gate = Gate()
+            let work = Task {
+                if operation == "send" || operation == "recurring" {
+                    try await session.withSendReservation({ await gate.enter() }, exclusive: operation == "recurring")
+                } else {
+                    try await session.withOpenWallet { _ in await gate.enter() }
+                }
+            }
+            while await gate.calls == 0 { await Task.yield() }
+            await #expect(throws: EsploraEndpoint.Failure.self) { try await session.reserveForConfigurationChange() }
+            #expect(await session.isOpen)
+            await gate.release(); try await work.value
+        }
+        let reservation = try await session.reserveForConfigurationChange()
+        await session.release(reservation)
+    }
+
+    @Test func backgroundWalletWaitsDuringEsploraReload() async throws {
+        let session = WalletSession(variant: .regtest, location: location)
+        let services = AppServices(variant: .regtest, session: session)
+        let gate = Gate()
+        let changing = Task { await AppServices.configurationAccess.withLock { await gate.enter() } }
+        while await gate.calls == 0 { await Task.yield() }
+        let background = Task { try await services.withBackgroundWallet { true } }
+        while await AppServices.configurationAccess.waitingCount == 0 { await Task.yield() }
+        #expect(await gate.calls == 1)
+        await gate.release(); await changing.value
+        #expect(try await background.value)
+    }
+
+    @Test func esploraReopenKeepsReservationThroughDurableCommit() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let session = offlineSession()
+        let mnemonic = try generateMnemonic()
+        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        let reservation = try await session.reserveForConfigurationChange()
+        let reopening = Task {
+            try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test", commit: {})
+        }
+        try await reopening.value
+        #expect(await session.isOpen)
+        await session.release(reservation)
+        #expect(await session.isOpen)
+        try await session.close()
+    }
+
+    @Test func esploraCommitFailureKeepsReservationForRollback() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let session = offlineSession()
+        let mnemonic = try generateMnemonic()
+        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        let reservation = try await session.reserveForConfigurationChange()
+        await #expect(throws: OpenerFailed.self) {
+            try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test") { throw OpenerFailed() }
+        }
+        #expect(await session.isOpen == false)
+        #expect(await session.unlessReserved {} == false)
+        try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test", commit: {})
+        #expect(await session.isOpen)
+        try await session.close()
+    }
+
     @Test func cancelledOrExpiredTasksCannotAdmitWalletCalls() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
