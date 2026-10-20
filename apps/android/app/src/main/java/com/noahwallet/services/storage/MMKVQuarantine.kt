@@ -11,13 +11,14 @@ internal class MMKVQuarantine(directory: File, private val store: String,
     val exists get() = file.exists()
     private val record get() = "1\n$store\n"
 
-    fun recordRecovery() {
+    fun recordRecovery(): Boolean {
         try {
             val pending = File(file.path + ".pending")
             FileOutputStream(pending).use { it.write(record.toByteArray()); it.fd.sync() }
             check(pending.renameTo(file))
             sync(file); sync(file.parentFile!!)
         } catch (_: Exception) { writeFailed = true }
+        return !writeFailed
     }
 
     fun requireDurable() {

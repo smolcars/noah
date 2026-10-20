@@ -25,10 +25,11 @@ class SettingsStorage private constructor(private val context: Context, acknowle
                     val recovery = RecoveryHandler(log, quarantine)
                     MMKV.initialize(context.applicationContext, rootPath, null, MMKVLogLevel.LevelWarning, recovery)
                     check(File(rootPath).isDirectory || File(rootPath).mkdirs())
+                    MMKVIntegrity.quarantineBeforeOpen(File(rootPath), instanceID, quarantine)
                     backup.prepare()
-                    quarantine.requireDurable()
+                    MMKVIntegrity.quarantineBeforeOpen(File(rootPath), instanceID, quarantine)
                     val retired = backup.retiredKeys
-                    val snapshot = if (retired == null) snapshotInventory(backup) else null
+                    val snapshot = if (retired == null) snapshotInventory(backup, quarantine) else null
                     recovery.didRecover = false
                     store = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, rootPath))
                     if (snapshot != null) {
@@ -37,6 +38,7 @@ class SettingsStorage private constructor(private val context: Context, acknowle
                             store.close(); store = null
                             check(!backup.restored)
                             backup.restore()
+                            MMKVIntegrity.quarantineBeforeOpen(File(rootPath), instanceID, quarantine)
                             log.w("Restoring pre-native settings backup after incomplete recovery")
                             store = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, rootPath))
                         }
@@ -105,9 +107,10 @@ class SettingsStorage private constructor(private val context: Context, acknowle
         private val recoveryRequired = mutableSetOf<String>()
         private fun rnKeys(store: MMKV) = RNStoreCodec.versions.keys.filter(store::containsKey)
         private data class SnapshotInventory(val keys: List<String>, val readable: Boolean)
-        private fun snapshotInventory(backup: MMKVUpgradeBackup): SnapshotInventory {
+        private fun snapshotInventory(backup: MMKVUpgradeBackup, quarantine: MMKVQuarantine): SnapshotInventory {
             if (!backup.hasContent) return SnapshotInventory(emptyList(), true)
             return backup.inspectSnapshot { root ->
+                MMKVIntegrity.quarantineBeforeOpen(root, instanceID, quarantine)
                 val snapshot = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, root.path))
                 try {
                     val keys = rnKeys(snapshot)

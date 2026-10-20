@@ -33,7 +33,10 @@ class MMKVRecoveryTest {
             }
             test(context, root)
         } finally {
-            MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)?.close()
+            // Do not reopen damaged files merely to clean up a launch that correctly refused mapping.
+            val field = SettingsStorage::class.java.getDeclaredField("opened").apply { isAccessible = true }
+            @Suppress("UNCHECKED_CAST")
+            (field.get(null) as MutableMap<String, MMKV?>).remove(root.path)?.close()
             check(parent.deleteRecursively())
         }
     }
@@ -74,6 +77,27 @@ class MMKVRecoveryTest {
             assertTrue(original.contentEquals(File(context.noBackupFilesDir, "mmkv.native-backup/$id").readBytes()))
         }
     }
+    @Test fun silentLastConfirmedRollbackRequiresContinue() {
+        for (mode in listOf("crc", "length")) fixture { context, root ->
+            val initial = SettingsStorage(context)
+            val metaFile = File(root, "$id.crc"); val before = metaFile.readBytes()
+            val wallet = initial.persistedState<PersistedWalletState>("wallet-storage")!!
+            initial.setPersistedState(wallet.copy(isWalletSuspended = true), "wallet-storage", 0); initial.sync()
+            closeForRestart(root)
+            val meta = metaFile.readBytes()
+            before.copyInto(meta, 32, 28, 32); before.copyInto(meta, 36, 0, 4)
+            if (mode == "crc") meta[0] = (meta[0].toInt() xor 255).toByte()
+            else for (offset in 28..31) meta[offset] = 255.toByte()
+            metaFile.writeBytes(meta)
+            val blocked = SettingsStorage(context)
+            assertTrue("silent $mode rollback must require Continue", blocked.recoveryNeedsAcknowledgement)
+            assertTrue(MMKVQuarantine(context.noBackupFilesDir, id).exists)
+            blocked.acknowledgeRecovery()
+            assertEquals(false, blocked.persistedState<PersistedWalletState>("wallet-storage")!!.isWalletSuspended)
+            assertFalse(MMKVUpgradeBackup(root, id, backupRoot = context.noBackupFilesDir).restored)
+        }
+    }
+
     @Test fun emptyRecoveryRestoresTheImmutableBackupOnce() = fixture { context, root ->
         val backup = MMKVUpgradeBackup(root, id, backupRoot = context.noBackupFilesDir); backup.prepare()
         val original = File(root, id).readBytes()
@@ -151,10 +175,12 @@ class MMKVRecoveryTest {
     @Test fun markerWriteFailureBlocksTheLaunch() = fixture { context, root ->
         SettingsStorage(context).validateStores(); closeForRestart(root)
         val marker = MMKVQuarantine(context.noBackupFilesDir, id).file
-        check(marker.mkdir()); corrupt(root, "crc")
+        check(File(marker.path + ".pending").mkdir()); corrupt(root, "crc")
+        val data = File(root, id).readBytes(); val meta = File(root, "$id.crc").readBytes()
         val store = SettingsStorage(context)
         assertFalse(store.recoveryNeedsAcknowledgement)
         assertTrue(runCatching { store.validateStores() }.isFailure)
+        assertArrayEquals(data, File(root, id).readBytes()); assertArrayEquals(meta, File(root, "$id.crc").readBytes())
     }
 
     @Test fun partialFirstOpenLossRestoresSnapshot() {
