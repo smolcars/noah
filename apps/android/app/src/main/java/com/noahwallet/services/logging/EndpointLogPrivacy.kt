@@ -45,12 +45,12 @@ internal object EndpointLogPrivacy {
         // Exported lines include a bounded tag and timestamp as well as the message.
         if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[oversized log message omitted]"
         responseStatus.find(text)?.let { return "HttpResponse { status: ${it.groupValues[1]} }" }
-        if (text.contains("HttpResponse")) return "HttpResponse"
-        val views = LogFile.decodedViews(text, percentEncoded = true) ?: return null
+        val views = LogFile.decodedViews(text, percentEncoded = true)
+            ?: return if (text.contains("HttpResponse")) "HttpResponse" else null
         for (view in views) {
             responseStatus.find(view)?.let { return "HttpResponse { status: ${it.groupValues[1]} }" }
-            if (view.contains("HttpResponse")) return "HttpResponse"
         }
+        if (views.any { it.contains("HttpResponse") }) return "HttpResponse"
         if (origins.isEmpty()) return text
         var result = text
         for ((index, view) in views.withIndex()) {
