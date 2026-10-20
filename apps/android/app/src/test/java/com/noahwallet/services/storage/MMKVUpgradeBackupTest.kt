@@ -62,6 +62,18 @@ class MMKVUpgradeBackupTest {
         assertArrayEquals(original, File(root, SettingsStorage.instanceID).readBytes())
         assertArrayEquals(original, File(b.directory, SettingsStorage.instanceID).readBytes())
     }
+    @Test fun inventoryInspectionNeverMutatesTheImmutablePair() = withRoot { root ->
+        seed(root); val b = backup(root); b.prepare()
+        val original = File(b.directory, SettingsStorage.instanceID).readBytes()
+        b.inspectSnapshot { inspection ->
+            File(inspection, SettingsStorage.instanceID).writeBytes(byteArrayOf(1))
+        }
+        assertArrayEquals(original, File(b.directory, SettingsStorage.instanceID).readBytes())
+        assertFalse(File(b.directory, "inspection").exists())
+        assertTrue(runCatching { b.inspectSnapshot { error("undecodable") } }.isFailure)
+        assertFalse(File(b.directory, "inspection").exists())
+    }
+
     @Test fun resetDeletesSnapshotButKeepsRetirementAcrossReonboarding() = withRoot { root ->
         seed(root); val b = backup(root); b.prepare(); assertTrue(b.hasContent)
         val staging = File(b.directory.path + ".pending").also { check(it.mkdir()) }

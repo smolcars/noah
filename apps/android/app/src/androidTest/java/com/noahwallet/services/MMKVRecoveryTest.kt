@@ -124,7 +124,8 @@ class MMKVRecoveryTest {
     }
     @Test fun recurringEnvelopeAndAdmittedKeyLossBlock() {
         for (mode in listOf("undecodable", "missing", "missingSchedules")) fixture { context, root ->
-            if (mode == "missing") SettingsStorage(context).validateStores() else MMKV.initialize(app, root.path)
+            if (mode == "missing") SettingsStorage(context).set("""{"state":{"schedules":{},"serverSyncPending":false},"version":0}""", "recurring-payment-storage")
+            else MMKV.initialize(app, root.path)
             val raw = MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!
             when (mode) {
                 "missing" -> raw.removeValueForKey("recurring-payment-storage")
@@ -154,6 +155,20 @@ class MMKVRecoveryTest {
         val store = SettingsStorage(context)
         assertFalse(store.recoveryNeedsAcknowledgement)
         assertTrue(runCatching { store.validateStores() }.isFailure)
+    }
+
+    @Test fun partialFirstOpenLossRestoresSnapshot() {
+        for (mode in listOf("missing", "undecodable")) fixture { context, root ->
+            val backup = MMKVUpgradeBackup(root, id, backupRoot = context.noBackupFilesDir); backup.prepare()
+            MMKV.initialize(app, root.path)
+            val raw = MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!
+            if (mode == "missing") raw.removeValueForKey("wallet-storage")
+            else raw.encode("wallet-storage", byteArrayOf(0xff.toByte()))
+            raw.sync(); raw.close()
+            val store = SettingsStorage(context); store.validateStores()
+            assertTrue(store.persistedState<PersistedWalletState>("wallet-storage")?.isInitialized == true)
+            assertTrue(backup.restored)
+        }
     }
 
     @Test fun laterCRCRecoveryBlocksEvenWhenRNKeysSurvive() = fixture { context, root ->
@@ -216,8 +231,24 @@ class MMKVRecoveryTest {
                 else -> raw.encode("wallet-storage", """{"state":{"isInitialized":${initial == "initialized"}},"version":0}""")
             }
             raw.sync(); raw.close()
+            if (vector.has("beforeNativeWallet")) {
+                MMKVUpgradeBackup(root, id, backupRoot = context.noBackupFilesDir).prepare()
+                val live = MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!
+                if (vector.getString("beforeNativeWallet") == "absent") live.removeValueForKey("wallet-storage")
+                else live.encode("wallet-storage", byteArrayOf(0xff.toByte()))
+                live.sync(); live.close()
+            }
             val outcome = runCatching {
-                val store = SettingsStorage(context)
+                var store = SettingsStorage(context)
+                if (vector.optBoolean("recoverAfterNative")) {
+                    store.validateStores(); closeForRestart(root); corrupt(root, "crc")
+                    store = SettingsStorage(context)
+                    repeat(vector.optInt("retries", 0)) {
+                        assertTrue(runCatching { store.validateStores() }.exceptionOrNull() is SettingsStorage.RecoveryRequired)
+                        closeForRestart(root); store = SettingsStorage(context)
+                    }
+                    if (vector.optBoolean("acknowledgeRecovery")) store.acknowledgeRecovery()
+                }
                 if (vector.has("afterNativeWallet")) {
                     val after = vector.getString("afterNativeWallet")
                     if (after == "absent" || after == "undecodable") {
@@ -229,7 +260,7 @@ class MMKVRecoveryTest {
                 }
                 store.validateStores()
                 if (store.persistedState<PersistedWalletState>("wallet-storage")?.isInitialized == true) "existingWallet" else "onboarding"
-            }.getOrElse { "incompatibleStorage" }
+            }.getOrElse { if (it is SettingsStorage.RecoveryRequired) "settingsRecovered" else "incompatibleStorage" }
             assertEquals(vector.getString("name"), vector.getString("expected"), outcome)
         }
     }

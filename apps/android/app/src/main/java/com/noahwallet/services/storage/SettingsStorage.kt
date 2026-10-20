@@ -27,17 +27,22 @@ class SettingsStorage private constructor(private val context: Context, acknowle
                     check(File(rootPath).isDirectory || File(rootPath).mkdirs())
                     backup.prepare()
                     quarantine.requireDurable()
-                    store = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, rootPath))
                     val retired = backup.retiredKeys
-                    if (retired == null && (quarantine.exists || backup.hasContent && !hasRNKeys(store))) {
-                        store.close(); store = null
-                        check(!backup.restored)
-                        backup.restore()
-                        log.w("Restoring pre-native settings backup after empty recovery")
-                        store = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, rootPath))
-                        check(hasRNKeys(store))
-                    }
-                    validate(store, retired.orEmpty())
+                    val snapshot = if (retired == null) snapshotInventory(backup) else null
+                    recovery.didRecover = false
+                    store = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, rootPath))
+                    if (snapshot != null) {
+                        val valid = runCatching { validate(store!!, snapshot.keys); check(snapshot.readable) }.isSuccess
+                        if (!valid || quarantine.exists && (!backup.restored || recovery.didRecover)) {
+                            store.close(); store = null
+                            check(!backup.restored)
+                            backup.restore()
+                            log.w("Restoring pre-native settings backup after incomplete recovery")
+                            store = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, rootPath))
+                        }
+                        validate(store, snapshot.keys)
+                        check(snapshot.readable)
+                    } else validate(store, retired.orEmpty())
                     quarantine.requireDurable()
                     if (retired != null && quarantine.exists && !acknowledgingRecovery) throw RecoveryRequired()
                     backup.retire(rnKeys(store))
@@ -99,9 +104,19 @@ class SettingsStorage private constructor(private val context: Context, acknowle
         private val opened = mutableMapOf<String, MMKV?>()
         private val recoveryRequired = mutableSetOf<String>()
         private fun rnKeys(store: MMKV) = RNStoreCodec.versions.keys.filter(store::containsKey)
-        private fun hasRNKeys(store: MMKV) = rnKeys(store).isNotEmpty()
+        private data class SnapshotInventory(val keys: List<String>, val readable: Boolean)
+        private fun snapshotInventory(backup: MMKVUpgradeBackup): SnapshotInventory {
+            if (!backup.hasContent) return SnapshotInventory(emptyList(), true)
+            return backup.inspectSnapshot { root ->
+                val snapshot = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, root.path))
+                try {
+                    val keys = rnKeys(snapshot)
+                    SnapshotInventory(keys, keys.isNotEmpty() && runCatching { validate(snapshot, keys) }.isSuccess)
+                } finally { snapshot.close() }
+            }
+        }
         private fun validate(store: MMKV, requiredKeys: List<String>) {
-            check(requiredKeys.all(store::containsKey)) { "Native settings lost persisted keys" }
+            if (!requiredKeys.all(store::containsKey)) throw Unavailable()
             RNStoreCodec.versions.keys.filter { it != "esplora-storage" }.forEach { key ->
                 RNStoreCodec.storedString(store.containsKey(key), store.decodeBytes(key))?.let { RNStoreCodec.validateStoredValue(key, it) }
             }
@@ -110,13 +125,16 @@ class SettingsStorage private constructor(private val context: Context, acknowle
 }
 
 private class RecoveryHandler(private val log: AppLog, private val quarantine: MMKVQuarantine) : MMKVHandler {
+    var didRecover = false
     override fun onMMKVCRCCheckFail(mmapID: String): MMKVRecoverStrategic {
         quarantine.recordRecovery()
+        didRecover = true
         log.w("CRC check failed; recovering settings")
         return MMKVRecoverStrategic.OnErrorRecover
     }
     override fun onMMKVFileLengthError(mmapID: String): MMKVRecoverStrategic {
         quarantine.recordRecovery()
+        didRecover = true
         log.w("File length check failed; recovering settings")
         return MMKVRecoverStrategic.OnErrorRecover
     }

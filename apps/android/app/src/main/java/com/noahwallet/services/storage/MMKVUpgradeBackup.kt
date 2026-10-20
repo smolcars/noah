@@ -90,6 +90,17 @@ internal class MMKVUpgradeBackup(private val root: File, private val id: String,
         sync(directory)
     }
 
+    /** Inspect a disposable copy: MMKV recovery must never rewrite the immutable snapshot. */
+    fun <T> inspectSnapshot(read: (File) -> T): T {
+        val inspection = File(directory, "inspection")
+        if (inspection.exists()) check(inspection.deleteRecursively())
+        check(inspection.mkdir())
+        try {
+            names.forEach { File(directory, it).copyTo(File(inspection, it)) }
+            return read(inspection)
+        } finally { check(inspection.deleteRecursively()) }
+    }
+
     /** Never resurrect a deliberately deleted wallet from the retained backup. */
     fun markReset() = retire(emptyList())
 
