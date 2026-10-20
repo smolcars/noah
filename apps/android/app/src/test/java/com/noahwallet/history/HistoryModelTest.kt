@@ -23,6 +23,28 @@ class HistoryModelTest {
             assertFalse(model.isLoading); assertFalse(model.isRefreshing)
         }
     }
+    @Test fun observationCanRestartAfterSuspensionAndClearCannotLeakTheDeletedWallet() = runBlocking {
+        val events = Channel<String>(Channel.UNLIMITED)
+        val reads = Channel<Unit>(Channel.UNLIMITED)
+        var id = "old-wallet"
+        val stalled = CompletableDeferred<Unit>()
+        val model = HistoryModel(dependencies().copy(
+            load = { reads.send(Unit); listOf(row(id)) }, changes = { events.receiveAsFlow() },
+            price = { _, _ -> stalled.complete(Unit); awaitCancellation() }))
+        val first = launch { model.observe("USD") }
+        withTimeout(2000) { reads.receive(); stalled.await() }
+        first.cancelAndJoin(); model.clear()
+        assertTrue(model.transactions.isEmpty())
+        val resumed = launch { model.observe("USD") }
+        withTimeout(2000) { reads.receive() }
+        yield(); assertEquals("old-wallet", model.transactions.single().id)
+        resumed.cancelAndJoin(); model.clear(); id = "new-wallet"
+        assertTrue(model.transactions.isEmpty())
+        model.refresh("USD")
+        assertEquals("new-wallet", model.transactions.single().id)
+        model.clear(); yield(); assertTrue(model.transactions.isEmpty())
+    }
+
     @Test fun usesHistoricalTimestampAndCurrency() = runBlocking {
         val model = HistoryModel(dependencies().copy(price = { timestamp, currency ->
             assertEquals(1784116800, timestamp); assertEquals("EUR", currency); 85000.0

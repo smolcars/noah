@@ -45,8 +45,9 @@ enum class Destination(val title: Int, val icon: Int) : NavKey {
 fun NoahApp(model: AppModel) {
     val backStack = rememberNavBackStack(Destination.Home)
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(model, model.preferredCurrency, lifecycle) {
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.history.observe(model.preferredCurrency) }
+    val walletAvailable = model.open && !model.isWalletSuspended
+    LaunchedEffect(model, model.preferredCurrency, lifecycle, walletAvailable) {
+        if (walletAvailable) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.history.observe(model.preferredCurrency) }
     }
     val repeat: (com.noahwallet.history.RepeatPayment) -> Unit = {
         model.repeatPayment = it

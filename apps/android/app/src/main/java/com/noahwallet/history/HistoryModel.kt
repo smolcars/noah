@@ -78,6 +78,13 @@ class HistoryModel(private val dependencies: Dependencies) {
     private var enrichment: Job? = null
     private val enrichmentLock = Mutex()
 
+    fun clear() {
+        generation++
+        enrichment?.cancel()
+        transactions = emptyList(); error = null; isLoading = true; isRefreshing = false
+        blockTimes.clear(); prices.clear()
+    }
+
     internal suspend fun awaitEnrichment() { enrichment?.join() }
 
     suspend fun observe(currency: String) {

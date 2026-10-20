@@ -61,6 +61,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
 
     suspend fun suspendWallet() {
         services.lifecycle.suspend()
+        history.clear()
         isWalletSuspended = true; open = false; summary = null
     }
 
@@ -77,9 +78,10 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         catch (failure: Exception) {
             isWalletSuspended = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
             open = session.isOpen
-            if (!open) summary = null
+            if (!open) { summary = null; history.clear() }
             throw failure
         }
+        history.clear(); repeatPayment = null
         walletLock.reset()
         open = false; onboarded = false; isWalletSuspended = false; summary = null
         hidden = false; amountUnit = BitcoinAmountUnit.bip177; preferredCurrency = "USD"; localeIdentifier = "en"
