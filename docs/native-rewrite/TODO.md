@@ -115,11 +115,11 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
   - [x] Android device pass: placed widget ID 2/provider/host/metadata and controlled pinned MainActivity shortcut survived `install -r` — `apps/android/UpgradeTests/DEVICE.md`.
 
 ### 0.6 Platform services
-- [x] Redacting logger (file-backed, rotating, exportable) — iOS (`AppLog`, bounded async writer/overflow markers, secret and address privacy; 67 shared vectors)
-- [x] Redacting logger — Android (same secret/address detector contract; 67 shared vectors)
+- [x] Redacting logger (file-backed, rotating, exportable) — iOS (`AppLog`, bounded async writer/overflow markers, prefixed secrets, NFKD mnemonics, URL userinfo and address privacy; 99 shared vectors; bounded lifecycle drains)
+- [x] Redacting logger — Android (same secret/address detector contract, including Unicode and URL userinfo; 99 shared vectors)
 - [x] Route bark-bolt-ffi `BarkLogger` callbacks into the app log — iOS (ordered bounded async admission, no disk waits in Rust callbacks, RN Debug verbosity)
 - [ ] Route bark-bolt-ffi `BarkLogger` callbacks into the app log — Android
-- [x] Sentry (cocoa), disabled in debug + regtest like RN — iOS (production DSN; recursive secret/address scrubbing and fail-closed guard; archive dSYMs require CI credentials)
+- [x] Sentry (cocoa), disabled in debug + regtest like RN — iOS (production DSN; recursive secret/address and aggregate mnemonic-leaf scrubbing with fail-closed guard; archive dSYMs require CI credentials)
 - [ ] Sentry (android), disabled in debug + regtest like RN
 - [ ] HTTP clients (URLSession / OkHttp) incl. upload/download
 - [x] Server auth: `/v0/getk1` → sign (offline key `m/350/0`) → `/v0/auth/login` → JWT; refresh near expiry; retry once — iOS (live-tested on regtest)
@@ -127,13 +127,13 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Server registration + last-login + device info (shared token provider/client) — iOS
 - [x] App-version check — iOS (existing server client, process-cached fail-open Home warning; M1)
 - [x] Server registration + last-login + device info, app-version check, email and Lightning identity services — Android
-- [x] Push iOS: permission, APNs token → Expo token (RN installation ID, provisioning aps-environment), `register_push_token`, silent-push handler with 25 s budget, jobs for maintenance / invoice / claim / backup / heartbeat with job-status reports, widget refresh; expiry checks between stages and before native admission
+- [x] Push iOS: permission, APNs token → Expo token (RN installation ID, provisioning aps-environment), `register_push_token`, silent-push handler with 25 s budget, jobs for maintenance / invoice / claim / backup / heartbeat with job-status reports, widget refresh; expiry checks between stages, at wallet-open admission and immediately before native opening; bounded completion log drain
 - [x] Push iOS: register the push token after server registration once onboarding is done (RN `usePushNotifications` gating)
 - [ ] Push iOS: recurring_payment_due (M7); verify real delivery on a device (simctl push does not run the background handler)
-- [x] FirebaseMessagingService + Expo token, onboarding/permission/server gates, expedited push work, maintenance/invoice/claim + status/heartbeat — Android (real Expo heartbeat + maintenance delivered; backup/recurring log-only pending their ports)
+- [x] FirebaseMessagingService + Expo token, onboarding/permission/server gates, expedited push work, maintenance/invoice/claim + status/heartbeat — Android (real Expo heartbeat + maintenance delivered; backup/recurring log-only pending their ports; background entry checks cancellation and detached recurring work checks budget before opening)
 - [x] UnifiedPush (Android, non-GMS) in pure Kotlin — Android (shared jobs, preserved endpoint/connector storage; live distributor test pending)
 - [ ] Background tasks: BGTaskScheduler / WorkManager (maintenance, recurring)
-  - [x] iOS: 15-minute opportunistic app refresh (sync/recurring/widget), 6-hour network processing (also maintenance/enabled backup), shared push deadline/submission budget, expiration/foreground revocation, stage/admission checks and session settlement; `apps/ios/PlatformTests/README.md`
+  - [x] iOS: 15-minute opportunistic app refresh (sync/recurring/widget), 6-hour network processing (also maintenance/enabled backup), shared push deadline/submission budget, expiration/foreground revocation, stage/open-admission checks, bounded completion log drains and session settlement; `apps/ios/PlatformTests/README.md`
 - [x] Widget data writer — iOS (`widgetBalance`, same keys, expiry from VTXOs and onchain tip)
 - [x] Widget data writer — Android (provider Long keys, expiry sentinel, explicit update broadcast; refreshed by real push)
 

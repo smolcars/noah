@@ -2,15 +2,15 @@
 
 Bark 0.5.0's generated `BarkLogger.log(level:target:message:)` is called synchronously by Rust's `log` bridge on arbitrary worker threads (`src/ffi/logger.rs`). `BarkLog` never calls Bark from a callback. File admission orders concurrent callbacks under a short lock; callbacks never wait for the filesystem queue. The bundled BIP39 dictionary is loaded before registering the sink. The SDK retains the registered sink. Like nitro-ark 0.0.144's `bark-cpp/src/lib.rs::init_logger`, all variants use Debug (Trace maps to verbose but is filtered out). RN forwards these to OSLog under `com.nitro.ark` and collects them during log export; native writes them directly through AppLog.
 
-AppLog redacts before OSLog and at file admission. The shared detector covers case-insensitive BIP39 word runs across punctuation/JSON/newlines, credential labels with prefixes/suffixes, Bearer credentials/JWTs, Expo tokens, extended/WIF private keys, labelled hex keys/signatures, presigned URL parameters and email/Lightning addresses. Oversized messages are omitted before regex processing. Unlabelled txids/hashes, ordinary prose, amounts and Ark addresses remain available for diagnostics; URL queries remain conservatively omitted.
+AppLog redacts before OSLog and at file admission. The shared detector covers NFKD/case-folded BIP39 word runs across punctuation/JSON/newlines (omitting the whole message when original offsets are uncertain), credential labels with prefixes/suffixes and punctuation/quote/whitespace separators, URL userinfo on any scheme, Bearer credentials/JWTs, Expo tokens, extended/WIF private keys, labelled hex keys/signatures, presigned URL parameters and email/Lightning addresses. Oversized messages are omitted before regex processing. Unlabelled txids/hashes, ordinary prose, amounts and Ark addresses remain available for diagnostics; URL queries remain conservatively omitted.
 
-The iOS writer admits at most 256 pending records, writes in admission order on a serial queue, and emits `[dropped N log records]` on overflow. Disk work holds no admission lock. Export awaits `flushAsync()` and reads through `linesForExport()`. Files remain `Caches/noah_logs/noah.log` plus `.1`–`.4`, each at most 512 KiB; export keeps the newest 4,000 lines.
+The iOS writer admits at most 256 pending records, writes in admission order on a serial queue, and emits `[dropped N log records]` on overflow. Disk work holds no admission lock. Export awaits `flushAsync()` and reads through `linesForExport()`. Active/background lifecycle callbacks and SwiftUI scene notifications drain accepted records for at most 200 ms while execution time remains. Push/BGTask completion uses an asynchronous bounded drain capped by the original deadline; expiry still completes immediately and exactly once. SDK/Rust callbacks only enqueue and never wait on disk. Files remain `Caches/noah_logs/noah.log` plus `.1`–`.4`, each at most 512 KiB; export keeps the newest 4,000 lines.
 
 ## RN Sentry parity
 
 `client/App.tsx` disables Sentry for `__DEV__` and regtest, sets `sendDefaultPii: true`, enables MetricKit and disables the deprecated app-hang detector. It has a committed DSN, not an environment-backed DSN. It does not configure sampling, release, environment, custom breadcrumbs or scrub hooks. Its RN 8.28.0 podspec pins Cocoa 9.29.0; this target uses the same version via SPM.
 
-Native preserves error sampling 1, tracing disabled, production environment and the SDK's `bundleID@version+build` release format (distribution is the build number). The bundle ID distinguishes variants, with an additional `app.variant` tag. Automatic Cocoa breadcrumbs remain enabled. Shared AppLog redaction scrubs breadcrumb messages/data and event messages, parameters, exceptions, tags, contexts and extras recursively, including sensitive dictionary fields. A final serialized-event check drops events with remaining secret-shaped data in other SDK fields. This may discard some diagnostics to protect wallet material. No AppLog files, screenshots, view hierarchies or raw MetricKit payloads are attached; SDK Logs stays disabled.
+Native preserves error sampling 1, tracing disabled, production environment and the SDK's `bundleID@version+build` release format (distribution is the build number). The bundle ID distinguishes variants, with an additional `app.variant` tag. Automatic Cocoa breadcrumbs remain enabled. Shared AppLog redaction scrubs breadcrumb messages/data and event messages, parameters, exceptions, tags, contexts and extras recursively, including sensitive dictionary fields. String leaves are collected across nested arrays/dictionaries and the whole event, including breadcrumbs, contexts, extras, tags and exceptions. Mnemonic-bearing containers are redacted; unhandled aggregate phrases, unknown objects and graphs deeper than 32 levels fail closed. Dictionary order is undefined, so independent word fragments are checked conservatively even when metadata separates them. The typed SDK severity is excluded from mnemonic aggregation. A final serialized-event check drops events with remaining secret-shaped data in other SDK fields. This may discard some diagnostics to protect wallet material. No AppLog files, screenshots, view hierarchies or raw MetricKit payloads are attached; SDK Logs stays disabled.
 
 ## Local and CI configuration
 
@@ -236,3 +236,112 @@ Owned `/private/tmp/noah-privacy-0c29/dd` and all four owned `.xcresult` bundles
 were removed after summary export. Text logs and summary JSON remain under that
 prefix. Protected/shared devices, Android emulators, physical devices and Docker
 were untouched.
+
+
+### Round-2 privacy and expiry fixes (base 172446b6, 2026-10-20)
+
+The shared logger fixture now has **99 cases**: the original **67 are unchanged**,
+plus 32 public/synthetic regressions and negatives. Both platforms load the same
+file and assert exact redaction and persisted output, with no platform-specific
+case exclusions. Added coverage includes prefixed/camelCase secret labels,
+whitespace/quote/JSON separators, fullwidth/mathematical/circled BIP39 phrases,
+mixed-script negatives, scheme-independent URL userinfo (IPv4/IPv6/localhost),
+and real-format Bitcoin/Ark addresses and BOLT11 invoices.
+
+Permanent probe-derived coverage:
+
+- `AppLogTests.sharedSecretRedactionVectors` and Android `AppLogTest` cover the
+  label, Unicode and URL probes. `normalizedWalletPhraseCannotReachLogs` also
+  verifies that the fullwidth public vector is accepted by `StoredSeed`.
+  `sharedSecretsAreScrubbedAtEveryTelemetryBoundary` checks each fixture in
+  messages, exceptions, contexts and breadcrumbs, plus the serialized-event guard.
+  Boundaries are tested independently: repeating an 11-word excerpt across an
+  event now intentionally triggers aggregate detection.
+- `AppTelemetryTests.nestedWordObjectsMustNotReachTelemetry` retains the exact
+  nested word-object probe. `detectsMnemonicLeavesAcrossNestedContainers` adds
+  contexts, tags, breadcrumbs, exception values and a phrase split across extra
+  and context; unknown-object/request-header rejection remains covered.
+- `HeadlessWalletTests.expiredShieldedTaskCannotStartWalletOpen` covers revoked
+  budgets, elapsed deadlines and cancellation for both `ensureOpen` and
+  `openExisting` (six cases). No opener runs, and a later reservation succeeds.
+  Open admission is checked again immediately before the native opener; caller
+  cancellation revokes admission without cancelling already-started native work.
+  Existing real-handle settlement/close/reopen tests still pass. Android checks
+  cancelled WorkManager/push entry and revoked detached recurring budgets before
+  wallet opening; its session and `RecurringExecutor` were not modified.
+- `AppDelegatePushTests.backgroundCompletionDrainsAcceptedRecords` replaces the
+  probe's permanently suspended writer with a writer released inside the budget,
+  proving both push and BGTask completion wait for accepted records. Separate
+  tests cover active/background callbacks, bounded stalled-writer draining with
+  ordered overflow markers, and exactly-once completion when expiry interrupts
+  a drain. Expiry never waits for disk; timed-out drains remain best effort.
+
+Verification evidence is retained as text/JSON under
+`/private/tmp/noah-privacy-r2-9499/`:
+
+- Before fixes, the iOS targeted baseline executed 23 Swift Testing functions
+  and recorded **90 assertion issues**, including the nested objects, native
+  open after revocation and both missing completion drains. Android's expanded
+  baseline executed **23 tests / 6 failures**, including the three redaction
+  probes and both background-admission regressions.
+- The combined focused Android run passed **23 tests** (10 logger, 10 push, three
+  deadline), and the requested full test/build command ran **once** and passed:
+  **2,916 tests / 89 suites / zero failures or skips**, plus regtest APK assembly.
+- The focused iOS run passed 78 of 79 functions; the remaining test duplicated a
+  short mnemonic excerpt across fields. After separating boundary checks and
+  excluding the typed SDK severity from aggregation, the complete telemetry
+  suite passed **11 / 11**. All logger vectors, six wallet-open expiry cases,
+  lifecycle drains, native settlement and exactly-once completion passed.
+- Sentry symbol/project checks: **5 passed / zero failures**. One intermediate
+  build encountered a stale initializer link while the test seam was changing;
+  rebuilding its affected module resolved it. The baseline's Xcode finalizer
+  stalled collecting simulator diagnostics after tests had finished; its stack
+  sample and complete console results were retained before stopping that owned
+  process. Later runs used `-collect-test-diagnostics never`.
+
+- Full `NoahTests` ran **once**, with no suite exclusions: **611 total / 587
+  passed / 23 existing opt-in skips / one failure**, 122 suites. All privacy,
+  wallet-open expiry and log-drain regressions passed. The single failure was a
+  host crash in the existing
+  `WalletSessionTests.closeStopsReceiveObserversAndWaitsForThem()` test: the
+  pinned Rust SDK panicked in Tokio `oneshot.rs:1291` with `called after complete`.
+  Xcode restarted the host and completed the remaining tests; the original
+  failure is retained. That test passed in the earlier focused run and again
+  in a final isolated run (**1 / 1 passed**, 0.255 seconds). Its root cause was
+  not established; no SDK or receive-observer implementation changes were made,
+  and no second full suite was run.
+- iOS used Xcode 27.1 / iOS 27.0, XcodeGen, normal ad hoc simulator signing,
+  `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, no parallel testing and
+  `-packageAuthorizationProvider netrc`, through Nix. Android used the exact
+  requested Nix/Gradle command with `--max-workers=2`.
+
+No release archive, live Sentry ingestion, real silent-push delivery or physical
+BGTask scheduling was attempted. The production DSN and debug/regtest gates are
+unchanged. The bounded drain can time out on a stalled disk; expiry completion
+and SDK/Rust callbacks still never wait for that disk work.
+
+Owned simulator **Noah Privacy R2 9499**, iPhone 17 / iOS 27.0,
+`037EB7C8-5110-4861-A796-F83C0F560FB9`, was identified by name/UDID, shut down,
+verified `Shutdown`, deleted and verified absent. The owned DerivedData and all
+**seven** owned `.xcresult` bundles were deleted after exporting summaries.
+`cleanup.json`, test summaries and text logs remain under the evidence prefix.
+Protected/shared simulators, Android emulators, physical devices and Docker were
+untouched. `client/`, server, recurring executors and MMKV recovery code were not
+changed.
+
+A final audit retained the older space-separated `seed phrase` label grammar and
+added a 99th shared regression. Before this correction the standalone Swift
+harness failed exactly that case; afterward all **99** passed exact, idempotence
+and persistence checks. The final focused Android logger suite passed **10 / 10**
+with all 99 vectors. This correction followed the one full-suite run; that run
+used the earlier 98-vector fixture and is not represented as testing this final
+spelling. The final native iOS logger/telemetry run passed **20 / 20 tests**, with all
+99 cases passing exact, idempotence and persisted-output checks.
+
+That final native run used a second owned iPhone 17 / iOS 27.0 simulator,
+**Noah Privacy R2 Final 9499**, `50A53815-AD20-4E29-AA38-5E788882C1A0`.
+Its name/UDID and `Shutdown` state were confirmed before deletion; absence was
+verified afterward. Its separate `dd-final` and result bundle were removed.
+Across both owned devices, **two DerivedData directories and eight result
+bundles** were removed. Temporary standalone harness sources/binaries were also
+removed; their before/after result logs and native summaries remain.
