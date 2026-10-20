@@ -15,11 +15,15 @@ DD="${UPGRADE_DERIVED_DATA:-$(mktemp -d /private/tmp/noah-upgrade-dd.XXXXXX)}"
 DEBUG="$(mktemp -d /private/tmp/noah-upgrade-maestro.XXXXXX)"
 snapshot="$(mktemp -d /private/tmp/noah-upgrade-db.XXXXXX)"
 cleanup() {
+  if [[ -n "${writer_pid:-}" ]]; then kill "$writer_pid" 2>/dev/null || true; wait "$writer_pid" 2>/dev/null || true; fi
   rm -rf "$snapshot" "$DEBUG"
   if [[ -z "${UPGRADE_DERIVED_DATA:-}" ]]; then rm -rf "$DD"; fi
   if [[ -n "${container:-}" ]]; then
     container="$(xcrun simctl get_app_container "$SIM" "$BUNDLE" data 2>/dev/null || printf '%s' "$container")"
-    rm -rf "$container/Documents/noah-upgrade-rn-mmkv" "$container/Documents/noah-upgrade-check.json"
+    rm -rf "$container/Documents/noah-upgrade-rn-mmkv" \
+      "$container/Documents/noah-upgrade-rn-mmkv.native-backup" \
+      "$container/Documents/noah-upgrade-rn-mmkv.native-backup.pending" \
+      "$container/Documents/noah-upgrade-check.json"
   fi
 }
 trap cleanup EXIT
@@ -100,9 +104,28 @@ print('RN baseline: movements=%d Ark=%d confirmed onchain=%d' % (len(result['mov
 PY
 cd "$IOS"
 xcodegen generate >/dev/null
+xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest \
+  -destination "id=$SIM" -derivedDataPath "$DD" ARCHS=arm64 ONLY_ACTIVE_ARCH=YES build-for-testing
+if [[ "${INSTALL_WHILE_RUNNING:-1}" == 1 ]]; then
+  before="$(shasum -a 256 "$container/Documents/mmkv/noah-wallet-storage")"
+  maestro --device "$SIM" test --debug-output "$DEBUG/writer" "$HERE/rn-write-during-install.yml" > "$DEBUG/writer.log" 2>&1 &
+  writer_pid=$!
+  changed=0
+  for attempt in {1..60}; do
+    if grep -q 'currency-option-EUR.*COMPLETED' "$DEBUG/writer.log" &&
+       [[ "$before" != "$(shasum -a 256 "$container/Documents/mmkv/noah-wallet-storage")" ]] && kill -0 "$writer_pid" 2>/dev/null; then changed=1; break; fi
+    kill -0 "$writer_pid" 2>/dev/null || break
+    sleep 1
+  done
+  [[ "$changed" == 1 ]] || { echo 'RN did not write MMKV before replacement'; exit 1; }
+  echo 'Replacing RN while running and writing MMKV'
+fi
+# Explicitly replace the running RN process; the test runner must not terminate it first.
+xcrun simctl install "$SIM" "$DD/Build/Products/Debug-Regtest-iphonesimulator/Noah.app"
+if [[ -n "${writer_pid:-}" ]]; then kill "$writer_pid" 2>/dev/null || true; wait "$writer_pid" 2>/dev/null || true; unset writer_pid; fi
 TEST_RUNNER_NOAH_UPGRADE_CHECK=1 xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest \
   -destination "id=$SIM" -derivedDataPath "$DD" ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
-  -parallel-testing-enabled NO -only-testing:NoahTests/UpgradeCompatibilityTests test
+  -parallel-testing-enabled NO -only-testing:NoahTests/UpgradeCompatibilityTests test-without-building
 python3 "$HERE/check-widgets.py" "$RN_APP" "$DD/Build/Products/Debug-Regtest-iphonesimulator/Noah.app"
 if [[ "${FUNDED:-0}" == 1 ]]; then
   flow "$HERE/native-recurring.yml"

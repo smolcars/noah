@@ -43,6 +43,10 @@ struct UpgradeCompatibilityTests {
         #expect(WalletDataLocation(variant: .current).databaseExists)
         #expect(LaunchState.current() == .existingWallet)
         #expect(SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true)
+        let before = try rnSettings()
+        let keys = RNStoreCodec.schemas.keys.filter { before.string(forKey: $0) != nil }
+        #expect(!keys.isEmpty)
+        for key in keys { #expect(SettingsStorage.shared.string(forKey: key) != nil) }
     }
 
     @Test func existingWalletOpensWithNewBark() async throws {

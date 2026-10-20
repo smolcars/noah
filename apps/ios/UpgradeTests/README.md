@@ -301,3 +301,83 @@ passed. The owned `Noah Migration Safety f0e0adc0` simulator was confirmed shut
 down, deleted and verified absent; its DerivedData and all `.xcresult`
 bundles were removed. No protected/shared device or Docker was touched. The
 funded RN-to-native device procedure was not repeated in this seed/storage pass.
+
+## MMKV interrupted-update safety (2026-10-20)
+
+`SettingsStorage` installs CRC/length **recover** callbacks as part of MMKV
+initialization, before any instance is opened. Warnings/errors go to `AppLog`
+with fixed diagnostics: MMKV's raw messages, keys and values are never forwarded.
+Before the first native open, the data/CRC pair is copied byte-for-byte into
+`Documents/mmkv.native-backup`, outside MMKV. Files, manifest and directory
+entries are synced before opening. The published directory is the native-only
+marker and is never replaced; the backup is retained even after wallet deletion.
+An incomplete pair, copy failure or sync failure blocks storage access and
+retries on the next app launch. No MMKV writable instance is opened on that path.
+
+If the recorded header/current/last-confirmed size indicates content but no RN
+keys survive open, the instance is closed, the original pair is restored once,
+and MMKV is reopened with recovery enabled. A durable pending marker resumes
+an interrupted two-file restore before either file is mapped. Empty recovery
+again blocks with `STORAGE_UNSUPPORTED`, preserving the backup. Explicit wallet
+deletion durably marks the backup ineligible for restoration before clearing
+settings, so a later launch cannot resurrect the deleted wallet's settings.
+
+A DB and seed with **missing `wallet-storage` block** in both foreground and
+headless opens. They do not imply completed onboarding: RN only writes
+`isInitialized=true` at its final onboarding step. A present, compatible store
+with `isInitialized=false` still resumes onboarding. Neither condition is
+silently repaired by writing defaults. Recurring execution requires healthy
+storage; its independent journal retains consumed-payment evidence when MMKV
+recovers an older policy.
+
+The runner now defaults to `INSTALL_WHILE_RUNNING=1`: it takes a stopped RN
+baseline, builds native, relaunches RN, and repeatedly selects EUR through RN
+controls. It waits for an observed MMKV byte change, then explicitly installs
+native while that writer is still running, before invoking the test runner.
+`INSTALL_WHILE_RUNNING=0` retains the stopped-app comparison. Run **both modes**
+for upgrade acceptance. The running mode intentionally permits RN writes between
+the earlier snapshot and replacement; all existing funded preference/rule checks
+remain enabled. English and the funded Swedish locale are supported by the
+writer flow. Do not print writer logs or upload Maestro artifacts.
+
+The shared binary fixture and deterministic corruption procedure are documented
+in `../../fixtures/rn-mmkv/README.md`. CRC, file-length, truncated-write,
+unrecoverable-data, interrupted-restore, immutable-backup and deletion tests run
+without network or a wallet daemon. The discard demonstration is opt-in and
+runs alone because it replaces the process-global handler.
+
+Verification for this change (base `37ab2125`, branch `t3/mmkv-upgrade-recovery`):
+
+- Full `NoahTests` ran **once: 562 total / 539 passed / 23 opt-in skipped /
+  zero failures**, 117 suites. XcodeGen, arm64 only, active architecture only,
+  code signing enabled; DerivedData under `/private/tmp`. The 23 skips include
+  the isolated discard demonstration, which passed separately (**1 passed**).
+- All corruption/backup tests passed, including all three CRC/length/truncation
+  cases. The recurring test recovered a CRC-damaged file containing an older
+  policy, retained its newer independent journal, waited for the storage/launch
+  gate and made **no duplicate payment**.
+- Real RN 0.1.14 regtest on owned iOS 27.0 simulator `Noah MMKV Recovery t3-79e4`
+  completed onboarding via the existing Maestro flows (email/name skipped,
+  unfunded). The final running-install procedure required a completed RN EUR
+  selection and changed MMKV bytes; RN had entered the next loop iteration when
+  `simctl install` replaced it. No termination was issued between those writes
+  and replacement. Native upgrade checks: **4 passed / 1 physical-Expo skip**.
+  Seed, existing DB/fingerprint, initialized wallet and native SDK open survived.
+  Widget bundle/kind identity checks passed. A further focused assertion against
+  an isolated copy of the immutable first-open backup verified that **every RN
+  store key present before native opened remains readable** (**1 passed**).
+- **Natural silent discard was not reproduced** in that simulator replacement;
+  the native log had zero CRC/length recovery callbacks. Deterministically
+  damaging the real RN file reproduced data loss with the prior discard
+  strategy, and recovery/backup/restore or blocking behavior with the fix.
+- The first runner attempt accepted a launch-time write before the UI loop;
+  that gap was fixed in both runners and the stricter iOS procedure repeated
+  successfully. Stopped mode remains available but was not rerun in this pass.
+  Funded, verified-email, real push and physical-device cases were not repeated.
+  No shared/protected device or Docker container was touched.
+
+Cleanup: confirmed the owned simulator's exact name/UDID and **Shutdown** state,
+deleted it, then verified its UDID absent. Removed task-owned DerivedData,
+`.xcresult` bundles, Maestro home/debug artifacts, logs, checkpoint and screenshot.
+The cached RN build was preserved. The only retained binary evidence is the
+non-secret RN fixture committed under `apps/fixtures/rn-mmkv`.
