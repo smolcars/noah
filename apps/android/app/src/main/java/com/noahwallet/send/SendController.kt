@@ -47,7 +47,7 @@ class SendController(private val dependencies: Dependencies,
                 }
                 message = saved.failureMessage
             }
-        } catch (_: Exception) { state = State.storageBlocked }
+        } catch (_: Exception) { message = "Unable to load saved payment status. Restart Noah to try again."; state = State.storageBlocked }
     }
     /** Must be invoked on Main: take the lock before launching any coroutine. */
     fun submit(payment: SendPayment, quote: SendQuote) {

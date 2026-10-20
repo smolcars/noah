@@ -19,6 +19,13 @@ class SendRecipientTest {
         val gate = CompletableDeferred<Unit>(); val m = model(this, resolve = { gate.await(); route(it) })
         m.setRecipient("a@example.com"); val job = launch { m.previewRecipient() }; yield(); m.setRecipient("b@example.com"); gate.complete(Unit); job.join(); assertNull(m.route)
     }
+    @Test fun backgroundDuringRecipientResolutionCannotStartPreparation() = runBlocking {
+        val gate = CompletableDeferred<Unit>(); var quotes = 0
+        val m = model(this, resolve = { gate.await(); route(it) }, quote = { quotes++; chainQuote })
+        m.amount = "1000"; m.arkBalance = 10000; m.setRecipient("a@example.com")
+        val job = launch { m.acceptRecipient() }; yield(); m.discardReview(); gate.complete(Unit); job.join()
+        assertEquals(0, quotes); assertNull(m.quote); assertFalse(m.showReview)
+    }
     @Test fun nonLnurlCannotReusePreviouslyResolvedArkRoute() = runBlocking {
         var reviewed: SendPayment? = null
         val m = model(this, quote = { reviewed = it; FakeSendWallet.quote }); m.amount = "1000"; m.arkBalance = 10000

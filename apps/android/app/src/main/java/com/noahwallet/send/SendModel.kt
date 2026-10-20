@@ -77,7 +77,7 @@ class SendModel(val controller: SendController, private val network: String,
     suspend fun acceptRecipient() {
         if (busy || controller.locked) return
         busy = true; error = null
-        val revision = recipientRevision
+        val revision = recipientRevision; val reviewAtStart = reviewGeneration
         try {
             parsed = SendDestination.parse(destination, network)
             requireSend(parsed.destinationType != null && parsed.error == null)
@@ -90,7 +90,7 @@ class SendModel(val controller: SendController, private val network: String,
             }
             if (parsed.destinationType == "lnurl" && matchingRoute == null) {
                 val resolved = resolveRecipient(SendDestination.cleaned(destination).lowercase())
-                if (revision != recipientRevision) return
+                if (revision != recipientRevision || reviewAtStart != reviewGeneration) return
                 route = resolved; requireSend(matchingRoute != null)
             }
             progress = progress.copy(recipientConfirmed = true, amountConfirmed = progress.amountConfirmed || sats > 0,
@@ -99,7 +99,7 @@ class SendModel(val controller: SendController, private val network: String,
             if (revision == recipientRevision) error = parsed.error ?: "Unable to resolve this recipient. Please check the address."
             return
         } finally { busy = false }
-        if (revision == recipientRevision) advance()
+        if (revision == recipientRevision && reviewAtStart == reviewGeneration) advance()
     }
     suspend fun continueStage() {
         if (busy || controller.locked) return

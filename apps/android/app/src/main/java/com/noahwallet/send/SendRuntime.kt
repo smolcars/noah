@@ -13,13 +13,17 @@ class SendRuntime private constructor(context: Context) {
     private val session = WalletSession.shared(context)
     private val journal = SendJournal(File(WalletDataLocation(context.filesDir, BuildConfig.APP_VARIANT).directory, "noah-send-attempt.json"))
     val controller = SendController(SendController.Dependencies(journal::read, journal::write) { body -> session.withSendReservation(body) })
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    // Defer startup until Compose has applied state created by remember.
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     init {
         controller.invalidateForWalletChange()
         scope.launch {
             session.walletChanges.collectLatest {
                 controller.invalidateForWalletChange()
-                if (session.isOpen) controller.reloadForWalletChange()
+                if (session.isOpen) {
+                    controller.reloadForWalletChange()
+                    controller.checkStatus()
+                }
             }
         }
     }

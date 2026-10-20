@@ -70,7 +70,8 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
     LaunchedEffect(model.stage, controller.state) { focus.clearFocus() }
     DisposableEffect(model, lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE && !controller.locked) { model.discardReview(); scanner = false }
+            if (event == Lifecycle.Event.ON_PAUSE && !controller.locked) model.discardReview()
+            if (event == Lifecycle.Event.ON_STOP) scanner = false
         }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer); if (!controller.locked) model.discardReview() }
@@ -139,6 +140,7 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
                 SendStage.review -> Text("Review payment", style = MaterialTheme.typography.headlineMedium)
             }
             model.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            controller.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Spacer(Modifier.height(8.dp))
         }
         Box(Modifier.padding(16.dp)) { NoahButton(if (model.busy || model.resolvingRecipient) "Preparing…" else "Continue", !model.busy && !model.resolvingRecipient) { focus.clearFocus(); scope.launch { model.continueStage() } } }
@@ -159,7 +161,7 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
                 if (!quote.vtxoIDs.isNullOrEmpty()) Text("The exact amount depends on the network fee when sent. The total is exactly the reviewed coins.", style = MaterialTheme.typography.bodySmall)
                 ReviewRow(if (quote.approximate) "Estimated fee" else "Fee", "${quote.fee} sats")
                 ReviewRow(if (quote.approximate && quote.vtxoIDs.isNullOrEmpty()) "Estimated total" else "Total", "${quote.total} sats")
-                quote.prepared?.let { ReviewRow("Transaction size", "${it.vsize} vB · ${it.inputCount} inputs") }
+                quote.prepared?.let { ReviewRow("Transaction size", "${it.vsize} vB · ${it.inputCount} ${if (it.inputCount == 1) "input" else "inputs"}") }
                 quote.feeRate?.let { ReviewRow("Fee rate", "$it sat/vB") }
                 payment.source?.let { ReviewRow("From", it.label) }
                 if (payment.comment.isNotEmpty()) ReviewRow("Note", payment.comment)
