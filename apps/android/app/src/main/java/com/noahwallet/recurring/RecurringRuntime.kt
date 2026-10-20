@@ -40,8 +40,9 @@ class RecurringRuntime private constructor(context: Context) {
                 com.noahwallet.services.push.WidgetDataWriter.write(context, it.balance, null, BuildConfig.APP_VARIANT)
             }
         }, withWalletMutation = { services.lifecycle.withWalletMutation(it) }), scope)
+    internal val syncForegroundAdmission = com.noahwallet.services.wallet.ForegroundSyncAdmission()
     internal val foregroundRunner = RecurringForegroundRunner(scope, isOnboarded = services::isOnboarded) { budget ->
-        services.syncInForeground(budget)
+        syncForegroundAdmission.run { services.syncInForeground(it) }
         if (budget.available) executor.execute(budget = budget)
     }
     /** Protected load overlays policy rollback and durable automation stops; no wallet opening. */

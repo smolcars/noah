@@ -103,6 +103,7 @@ class MainActivity : FragmentActivity() {
             if (intent.getBooleanExtra("recurring", false)) current.recurringNotification = true
             if (current.walletLock.enabled) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             val recurring = withContext(Dispatchers.IO) { com.noahwallet.recurring.RecurringRuntime.shared(this@MainActivity) }
+            lifecycle.addObserver(recurring.syncForegroundAdmission)
             lifecycle.addObserver(recurring.foregroundRunner)
             setContent { com.noahwallet.localization.LocalizedContent(current.localeIdentifier) { NoahTheme { LaunchGateView(current) } } }
         }
