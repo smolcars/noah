@@ -1,6 +1,8 @@
 # Custom Esplora log privacy
 
-Base: `feat/native-rewrite` at `a5866b02`. All test credentials are fake.
+Round-4 base: `feat/native-rewrite` at `a5866b02`; review: `54b44dc5`.
+Round-5 work starts at the supplied `be132094` HEAD, after the lifecycle merge.
+All test credentials are fake.
 
 A custom endpoint's entire identity is private, including scheme, hostname,
 port, and path. `EndpointLogPrivacy.sanitize` is the shared native boundary.
@@ -19,8 +21,11 @@ uncertain decoding omits the text. Unsupported named HTML entities fail closed
 rather than passing an undecoded hostname through; numeric entities also support
 the optional semicolon accepted by HTML. Encoded matches omit the whole message because
 decoding changes source offsets. URLs belonging to other origins are excluded
-from relative-path matching. Known authorities also match before trailing log
-delimiters, with explicit default-port spellings and DNS root dots normalized.
+from relative-path matching. Authorities are extracted before URL parsing, so
+trailing log delimiters never enter host canonicalization. Registrations and every raw/decoded token use the
+same canonical origin: lowercase scheme/host, IDNA ASCII, no DNS root dot or
+explicit default port, and compressed lowercase IPv6. There is no literal-prefix
+fallback or alternate-spelling registry.
 Host/port continuations cannot match another origin by prefix; adjacent log text
 cannot hide the beginning of the URL. A relative reference matching a registered base
 path has no independent origin, so its whole record is conservatively omitted.
@@ -44,6 +49,19 @@ one durable write. Preparing a switch protects both candidates before Rust is
 opened; the production opener also requires durable protection before SDK use.
 Startup restores history before installing Bark/Sentry. A history decoding
 failure closes the logging boundary instead of admitting unknown endpoint text.
+An unreadable native store (including a damaged checksum) falls back with
+`native-esplora-history-unavailable=1` in the existing settings values. Every
+fallback write preserves this marker, and reset/deletion retains it alongside
+any surviving endpoint registrations. `restoreLogPrivacy` throws when it is
+present, reaching the existing startup `failClosed` catch even if the fallback
+has become otherwise healthy. Unknown history is never reclassified as a known
+empty set by a successful write or a new endpoint selection.
+
+The marker never clears automatically, even after rotation. Logs rotate by size
+without an age deadline, and the settings layer cannot prove that every older
+file/export is gone. It remains for the installation lifetime; uninstall removes
+both the marker and local app logs. While marked, the existing fail-closed
+boundary replaces records with `[custom-esplora]`.
 
 Replacement, rollback, pending-change recovery, resetting to default, and wallet
 settings deletion preserve history. Deletion clears the active/pending selection
@@ -60,6 +78,20 @@ and after it rotates out. This trades a growing, small local settings set for
 avoiding unsafe lifetime inference. Uninstall removes the store and app logs.
 Already-retired endpoints from before this change cannot be reconstructed if
 neither their registration nor selection survives in settings.
+
+## System-log guarantee and CFNetwork limitation
+
+The guarantee covers Noah's app-owned OSLog/Logcat messages, including SDK
+callbacks routed through AppLog, files/export, Sentry, and sanitized UI error
+text. It does not intercept Apple-owned `com.apple.CFNetwork` diagnostics.
+The round-5 review observed a timed-out local request's full URL in
+`NSErrorFailingURLStringKey` with XCTest-enabled system logging. An optimized
+standalone build emitted `<private>` and a hash instead, so the probe did not
+demonstrate a release leak. That observation is not a guarantee for every OS,
+build, diagnostic profile, or logging configuration. Debug/test launches with
+private framework diagnostics enabled can expose request URLs outside Noah's
+boundary; do not share those raw system logs as sanitized app exports. No
+release logging configuration was changed to suppress this test-only finding.
 
 ## Normalization decisions
 
@@ -80,7 +112,7 @@ eight genesis cases, and four height cases (48 total).
 No EsploraOpenWait behavior, recurring source files, RN source, or server source
 is changed. Validation uses local fakes; it never calls a public Esplora server.
 
-## Regression evidence
+## Round-4 regression evidence
 
 The review probes are permanent `EndpointPrivacyTests` / `EndpointPrivacyTest`
 and the retired-endpoint test in `EsploraTests` / `EsploraTest`.
@@ -143,22 +175,24 @@ simulator, and DerivedData under `/private/tmp`. No active owned build remains.
 
 ## Rule locations
 
-1. Whole endpoint identity: iOS `EndpointLogPrivacy.swift:35`; Android
-   `EndpointLogPrivacy.kt:28`. HTML decoding: iOS `AppLog.swift:241`; Android
-   `AppLog.kt:189`.
-2. Shared provider boundary: iOS `EndpointLogPrivacy.swift:67` and
-   `AppLog.swift:232`; Android `EndpointLogPrivacy.kt:59` and `AppLog.kt:180`.
-   Historical records: iOS `EndpointLogPrivacy.swift:36`; Android `:27`.
+1. Whole endpoint identity/canonical authority: iOS `EndpointLogPrivacy.swift:27`;
+   Android `EndpointLogPrivacy.kt:16`. HTML decoding: iOS `AppLog.swift:241`;
+   Android `AppLog.kt:189`.
+2. Shared provider boundary: iOS `EndpointLogPrivacy.swift:61` and
+   `AppLog.swift:232`; Android `EndpointLogPrivacy.kt:51` and `AppLog.kt:180`.
+   Historical records: iOS `EndpointLogPrivacy.swift:46`; Android `:35`.
    Error display: iOS `EsploraSettingsScreen.swift:72`; Android `:45`.
-3. Durable history: iOS `EsploraSettings.swift:34`; Android `EsploraSettings.kt:18`.
-   Startup: iOS `AppDelegate.swift:26`; Android `NoahApplication.kt:10`.
-   Reset retention: iOS `SettingsStorage.swift:165`; Android `:100`.
-4. Other-origin exclusion: iOS `EndpointLogPrivacy.swift:91`; Android
-   `EndpointLogPrivacy.kt:75`.
+3. Durable history: iOS `EsploraSettings.swift:37`; Android `EsploraSettings.kt:18`.
+   Unknown-history marker: iOS `SettingsStorage.swift:104` /
+   `EsploraSettings.swift:43`; Android `SettingsStorage.kt:58` /
+   `EsploraSettings.kt:23`. Startup: iOS `AppDelegate.swift:25`; Android
+   `NoahApplication.kt:10`. Reset retention: both `retainingLogPrivacy` helpers.
+4. Other-origin exclusion: iOS `EndpointLogPrivacy.swift:84`; Android `:66`.
 5. Normalization: iOS `EsploraEndpoint.swift:10`; Android `EsploraEndpoint.kt:13`.
-   Shared cases: `apps/fixtures/esplora.json`.
+   Shared cases: `apps/fixtures/esplora.json`; authority cases:
+   `apps/fixtures/esplora-log-authorities.json`.
 
-## Implementation commits
+## Round-4 implementation commits
 
 - `bbb34d92` test(native): reproduce custom Esplora privacy regressions
 - `91f3c43d` fix(android): remove entire registered Esplora identities
@@ -181,3 +215,74 @@ simulator, and DerivedData under `/private/tmp`. No active owned build remains.
 - `b1685a26` fix(ios): omit unsupported HTML entities at the privacy boundary
 - `9907eb48` fix(ios): recognize custom authorities before log delimiters
 - `efc312b2` fix(android): recognize custom authorities before log delimiters
+
+## Round-5 changes
+
+Authority extraction uses the same bracket-aware delimiter grammar on both
+platforms. iOS uses Foundation's IDNA ASCII host plus the existing
+`EsploraEndpoint.canonicalHost` IPv6 routine; Android uses OkHttp's local
+`HttpUrl` canonicalizer. Both strip root dots/default ports and look up the
+canonical origin in the registration set. This removes the source of the
+mismatch rather than expanding a list of spellings. Other origins, including
+both default Esplora servers and Noah's production/signet URLs, remain visible.
+Ark Info still displays/copies the full endpoint and never logs it.
+
+`apps/fixtures/esplora-log-authorities.json` supplies 135 shared cases: Unicode
+and ASCII IDNA, expanded/compressed IPv6, case, root dots, default/nondefault
+ports, all reviewed delimiters, decoded forms, and unrelated/public origins.
+Both platform tests exercise file/export, app/system logging, Sentry message,
+exception and breadcrumb boundaries; iOS also exercises SafeErrorDescription.
+The authority fixture and damaged-checksum restart/reset regressions failed on
+the original round-4 implementation and pass with these fixes.
+
+The iOS `unknownHistoryStartupProtectsHistoricalExport()` integration test runs
+alone with `TEST_RUNNER_NOAH_TEST_LOST_HISTORY=1`, because `failClosed` is
+intentionally process-lifetime state. The ordinary full suite still runs the
+damaged-store, durable-marker, fallback-write, restart and reset assertions
+without changing process-global privacy state. Android runs its export/startup
+probe in an isolated Robolectric sandbox using real SettingsStorage and native
+files; only filesystem sync is injected because Robolectric does not implement
+that host operation.
+
+Scaling retains the 1/16-KiB, 64x-plus-20-ms and two-second assertions, now with
+1,000 registered endpoints and additional registered/unrelated URL input
+families. The 147-case redaction fixture and 48-case normalization/network/tip
+fixture remain unchanged. EsploraOpenWait, recurring, lifecycle/lock, RN, and
+server source were not changed.
+
+The first full iOS run exposed one legacy expectation that damaged import must
+produce an empty settings map (759 passed, 26 skipped, one failed). It now
+requires exactly the unknown-history marker and no imported values; Android's
+two corresponding instrumentation assertions use the same expectation. Both
+affected iOS tests pass in a focused run. The final full suite is run after
+that test-only correction.
+
+Final signed arm64 iOS verification: **786 tests / 156 suites**, **760 passed,
+26 opt-in skipped, zero failed**. The full suite ran once after the final test
+change, with `xcodegen generate` first, normal signing, `ARCHS=arm64`,
+`ONLY_ACTIVE_ARCH=YES`, Nix, and DerivedData at
+`/private/tmp/noah-esplora-r5-dd`. Focused verification passed 68 distinct tests
+across the privacy/logging/settings suites, including the isolated startup/export
+probe and two corrected import expectations. All 135 authority cases, the
+unchanged 147 redaction cases, and 48 normalization/network/tip cases pass.
+
+Before deletion, the owned simulator's exact name, UDID and shutdown state were
+confirmed: `Noah Esplora R5 t3-5e1892bb`
+(`5F6731A7-CBE0-4C1F-83EE-9D29F1D43031`, `Shutdown`). It, its DerivedData and all
+seven owned result bundles were removed before the final Android build started.
+No shared simulator, emulator, physical device or Docker instance was used.
+
+Final Android verification: **3,574 JVM tests / 136 suites**, zero
+failures/errors/skips; regtest APK assembled and instrumentation Kotlin compiled.
+The 69-test focused run (six suites) also passed. The required full command ran
+once after the last code/test change, with all owned iOS resources already gone:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
+```
+
+Every round-5 commit passed the repository pre-commit checks (lint, React
+Compiler: 202 files, 148 JS unit tests, TypeScript, Rust formatting). Native
+translation `--check` is clean; no UI strings/catalogs changed. Device
+instrumentation was compiled rather than run. All runtime probes used local
+fakes; no public network requests were made. No owned build remains active.
