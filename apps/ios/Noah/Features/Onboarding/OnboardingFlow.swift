@@ -136,6 +136,7 @@ struct MnemonicView: View {
     @Environment(WalletLock.self) private var lock
     @Environment(\.scenePhase) private var scenePhase
     @State private var authenticated = false
+    @State private var warningGeneration: Int?
 
     @Environment(AppModel.self) private var model
     @State private var words: [String] = []
@@ -185,21 +186,41 @@ struct MnemonicView: View {
         .navigationTitle("Your Recovery Phrase")
         .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(onContinue != nil)
+        .alert("No screen lock", isPresented: Binding(get: { warningGeneration != nil }, set: { if !$0 { warningGeneration = nil } })) {
+            Button("Cancel", role: .cancel) { warningGeneration = nil }
+            Button("Show recovery phrase") {
+                let generation = warningGeneration
+                warningGeneration = nil
+                guard generation == lock.policy.generation, scenePhase == .active else { return }
+                if WalletLock.hasNoScreenLock { showWords() }
+                else { Task { await reveal() } }
+            }
+        } message: {
+            Text("This device has no screen lock. Anyone with access to it can view your recovery phrase. Set a screen lock in device settings to protect your wallet.")
+        }
         .task { await reveal() }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .background { words = []; authenticated = false; copied = false }
+            if phase == .background { words = []; authenticated = false; copied = false; warningGeneration = nil }
             if phase == .active && onContinue != nil && words.isEmpty { Task { await reveal() } }
         }
-        .onDisappear { words = []; authenticated = false }
+        .onDisappear { words = []; authenticated = false; warningGeneration = nil }
     }
 
     private func reveal() async {
-        let allowed = onContinue != nil ? true : await lock.authenticate(L10n.text("Authenticate to view your seed phrase", locale: locale.identifier))
-        if allowed {
-            guard scenePhase != .background else { return }
-            authenticated = true
-            words = model.currentMnemonicWords()
+        let generation = lock.policy.generation
+        let result = onContinue != nil ? RecoveryPhraseAuthentication.authenticated
+            : await lock.authenticateRecoveryPhrase(L10n.text("Authenticate to view your seed phrase", locale: locale.identifier))
+        guard generation == lock.policy.generation, scenePhase != .background else { return }
+        switch result {
+        case .authenticated: showWords()
+        case .noScreenLock: warningGeneration = generation
+        case .denied: break
         }
+    }
+
+    private func showWords() {
+        authenticated = true
+        words = model.currentMnemonicWords()
     }
 
     /// Local-only pasteboard item that expires, so the phrase does not sync

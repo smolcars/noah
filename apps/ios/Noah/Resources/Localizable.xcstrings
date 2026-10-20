@@ -28153,6 +28153,18 @@
         }
       }
     },
+    "No screen lock": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No screen lock"
+          }
+        }
+      }
+    },
     "No supported wallet backup was found": {
       "comment": "GT 58174ca24f231826; arguments: none",
       "extractionState": "manual",
@@ -40033,6 +40045,18 @@
         }
       }
     },
+    "Show recovery phrase": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show recovery phrase"
+          }
+        }
+      }
+    },
     "Show wallet balance": {
       "comment": "GT cbea045106afb449; arguments: none",
       "extractionState": "manual",
@@ -43785,6 +43809,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Det här skapar en krypterad säkerhetskopia av plånbokens aktuella tillstånd. Förvara filen säkert, eftersom den kan användas för att återställa din plånbok."
+          }
+        }
+      }
+    },
+    "This device has no screen lock. Anyone with access to it can view your recovery phrase. Set a screen lock in device settings to protect your wallet.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device has no screen lock. Anyone with access to it can view your recovery phrase. Set a screen lock in device settings to protect your wallet."
           }
         }
       }

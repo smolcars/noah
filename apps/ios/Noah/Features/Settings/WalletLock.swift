@@ -23,6 +23,15 @@ struct BiometricLockPolicy: Equatable {
     }
 }
 
+enum RecoveryPhraseAuthentication: Equatable {
+    case authenticated, noScreenLock, denied
+
+    static func unavailable(_ error: NSError?) -> Self {
+        error?.domain == LAError.errorDomain && error?.code == LAError.passcodeNotSet.rawValue
+            ? .noScreenLock : .denied
+    }
+}
+
 @MainActor
 @Observable
 final class WalletLock {
@@ -40,18 +49,32 @@ final class WalletLock {
         LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: nil)
     }
 
+    static var hasNoScreenLock: Bool {
+        var error: NSError?
+        return !LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
+            && RecoveryPhraseAuthentication.unavailable(error) == .noScreenLock
+    }
+
     func authenticate(_ reason: String) async -> Bool {
-        guard !authenticating else { return false }
+        await authenticateRecoveryPhrase(reason) == .authenticated
+    }
+
+    func authenticateRecoveryPhrase(_ reason: String) async -> RecoveryPhraseAuthentication {
+        guard !authenticating else { return .denied }
         authenticating = true
         error = nil
         let context = LAContext()
         self.context = context
         defer { authenticating = false; self.context = nil; context.invalidate() }
+        var unavailable: NSError?
+        if !context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &unavailable),
+           RecoveryPhraseAuthentication.unavailable(unavailable) == .noScreenLock { return .noScreenLock }
         do {
-            return try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)
+            return try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason) ? .authenticated : .denied
         } catch {
+            if RecoveryPhraseAuthentication.unavailable(error as NSError) == .noScreenLock { return .noScreenLock }
             self.error = L10n.text("Authentication failed. Please try again.")
-            return false
+            return .denied
         }
     }
 

@@ -1,10 +1,23 @@
 import Foundation
+import LocalAuthentication
 import HTTPTypes
 import OpenAPIRuntime
 import Testing
 @testable import Noah
 
 struct BiometricLockPolicyTests {
+    @Test func onlyMissingPasscodeAllowsRecoveryPhraseWarning() {
+        #expect(RecoveryPhraseAuthentication.unavailable(NSError(domain: LAError.errorDomain,
+            code: LAError.passcodeNotSet.rawValue)) == .noScreenLock)
+        for code in [LAError.authenticationFailed, .userCancel, .systemCancel, .appCancel,
+                     .biometryNotAvailable, .biometryNotEnrolled, .biometryLockout, .notInteractive] {
+            #expect(RecoveryPhraseAuthentication.unavailable(NSError(domain: LAError.errorDomain,
+                code: code.rawValue)) == .denied)
+        }
+        #expect(RecoveryPhraseAuthentication.unavailable(nil) == .denied)
+        #expect(RecoveryPhraseAuthentication.unavailable(NSError(domain: "other", code: LAError.passcodeNotSet.rawValue)) == .denied)
+    }
+
     @Test func launchBackgroundAndStaleAuthentication() {
         var policy = BiometricLockPolicy(enabled: true)
         #expect(policy.locked)
