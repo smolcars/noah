@@ -1324,5 +1324,119 @@
     "input": "9-https://unknown-review-r6.example/api",
     "redacted": true,
     "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://noahwallet.io/https://fake-review-r5.example/api",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://mempool.space/api/http://2130706433",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://noahwallet.io/https%3A%2F%2Ffake-review-r5.example/api",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://noahwallet.io/https%253A%252F%252Ffake-review-r5.example/api",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://noahwallet.io/https:\\/\\/fake-review-r5.example/api",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://noahwallet.io/https&#58;&#47;&#47;fake-review-r5.example/api",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r6/api",
+    "input": "fake-review-r6:8443",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r6/api",
+    "input": "fake-review-r6",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r6/api",
+    "input": "FAKE-REVIEW-R6",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r6/api",
+    "input": "ｆａｋｅ－ｒｅｖｉｅｗ－ｒ６",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://noahwallet.io/v0/fake-review-r5.example",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://noahwallet.io/v0/health;endpoint=fake-review-r5.example:invalid",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://noahwallet.io/v0/user@fake-review-r5.example",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://noahwallet.io/v0/fake%2Dreview-r5.example",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r6/api",
+    "input": "[fake-review-r6:8443]",
+    "redacted": true,
+    "expected": "[[custom-esplora]]"
+  },
+  {
+    "endpoint": "https://fake-review-r6/api",
+    "input": "[\"fake-review-r6:8443\"]",
+    "redacted": true,
+    "expected": "[\"[custom-esplora]\"]"
+  },
+  {
+    "endpoint": "https://fake-review-r6/api",
+    "input": "HTTP 503 FakeEndpointError [fake-review-r6:invalid]",
+    "redacted": true,
+    "expected": "HTTP 503 FakeEndpointError [[custom-esplora]]"
+  },
+  {
+    "endpoint": "http://[fe80::1]/api",
+    "input": "[fe80::1%25en0]:8443",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r6/api",
+    "input": "fake-review-r6%zz",
+    "redacted": true,
+    "expected": "[custom-esplora]"
   }
 ]
