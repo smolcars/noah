@@ -17,6 +17,7 @@ class SendController(private val dependencies: Dependencies,
     var message by mutableStateOf<String?>(null); private set
     var checking by mutableStateOf(false); private set
     @Volatile private var generation = 0
+    private var journalIdentity: SendIdentity? = null
     private var unboundJournal: SendAttempt? = null
     private var unreadableJournal = false
     val locked get() = state != State.ready
@@ -24,7 +25,7 @@ class SendController(private val dependencies: Dependencies,
         attempt != null && (state in listOf(State.uncertain, State.storageBlocked) || state == State.succeeded && attempt?.receipt?.broadcastRetryPending == true))
 
     fun invalidateForWalletChange() {
-        generation++; checking = false; attempt = null; message = null; unboundJournal = null; unreadableJournal = false; state = State.storageBlocked
+        generation++; journalIdentity = null; checking = false; attempt = null; message = null; unboundJournal = null; unreadableJournal = false; state = State.storageBlocked
     }
     suspend fun reloadForWalletChange() {
         loadAttempt(null)
@@ -34,10 +35,15 @@ class SendController(private val dependencies: Dependencies,
         var loadedAttempt = retained
         var loadedUnbound: SendAttempt? = null
         var loadedUnreadable = false
+        var loadedIdentity: SendIdentity? = null
         var loadedState = State.storageBlocked
         var loadedMessage: String? = null
         try {
             dependencies.reservation { wallet ->
+                if (current != generation) return@reservation
+                val identity = wallet.identity()
+                if (current != generation) return@reservation
+                loadedIdentity = identity
                 val loaded = retained ?: try { dependencies.read() } catch (failure: Exception) { loadedUnreadable = true; throw failure }
                 if (current != generation) return@reservation
                 var saved = loaded ?: run { loadedState = State.ready; return@reservation }
@@ -46,8 +52,6 @@ class SendController(private val dependencies: Dependencies,
                     loadedMessage = "This legacy payment has no wallet identity. Check your history and recipient before discarding it."
                     return@reservation
                 }
-                val identity = wallet.identity()
-                if (current != generation) return@reservation
                 if (saved.walletIdentity != identity) { dependencies.write(null); loadedAttempt = null; loadedState = State.ready; return@reservation }
                 // Retain the original read-only evidence until migration is durable.
                 loadedAttempt = saved
@@ -73,6 +77,7 @@ class SendController(private val dependencies: Dependencies,
         } catch (_: Exception) { loadedMessage = "Unable to load saved payment status. Check your history and recipient before forgetting this attempt."; loadedState = State.storageBlocked }
         finally {
             if (current == generation) {
+                journalIdentity = loadedIdentity
                 attempt = loadedAttempt; unboundJournal = loadedUnbound; unreadableJournal = loadedUnreadable
                 state = loadedState; message = loadedMessage; checking = false
             }
@@ -90,6 +95,7 @@ class SendController(private val dependencies: Dependencies,
                     if (current != generation) return@reserve
                     try {
                         val identity = wallet.identity()
+                        if (current != generation) { wallet.discard(quote, includingClaimed = true); return@reserve }
                         requireSend(identity == quote.walletIdentity, SendFailure.Reason.unresolved)
                         beforeSubmit?.invoke()
                         if (payment.method in listOf("lightning", "lnurl")) {
@@ -97,11 +103,13 @@ class SendController(private val dependencies: Dependencies,
                             dependencies.write(marker); attempt = marker
                         }
                         val snapshot = wallet.prepare(payment, quote)
+                        if (current != generation) { wallet.discard(quote, includingClaimed = true); return@reserve }
                         if (recurringKey != null && snapshot.checkpoint != null) throw SendFailure(SendFailure.Reason.lightningInProgress)
                         val pending = SendAttempt(walletIdentity = identity, recurringOccurrenceKey = recurringKey, broadcastingTxid = quote.prepared?.txid, payment = payment,
                             snapshot = snapshot, paymentHash = PaymentEncoding.invoice(snapshot.resolvedInvoice ?: if (payment.method == "lightning") payment.destination else "")?.hash, quote = quote)
                         dependencies.write(pending); attempt = pending
                     } catch (failure: Exception) {
+                        if (current != generation) return@reserve
                         if (failure is SendNotSubmitted && recurringKey != null && attempt == null) {
                             val stopped = SendAttempt(walletIdentity = quote.walletIdentity, recurringOccurrenceKey = recurringKey,
                                 payment = payment, quote = quote, failed = true, failureMessage = failure.reason.message)
@@ -116,15 +124,21 @@ class SendController(private val dependencies: Dependencies,
                     try {
                         val receipt = if (beforeSubmit == null) wallet.pay(payment, quote, attempt!!.snapshot)
                             else wallet.payGuarded(payment, quote, attempt!!.snapshot, beforeSubmit)
+                        if (current != generation) return@reserve
                         if (finish(SendResolution.Paid(receipt)) && receipt.txid != null) {
-                            try { finish(SendResolution.Paid(wallet.refreshReceipt(payment, receipt))) }
-                            catch (_: Exception) { showRefreshFailure() }
+                            try {
+                                val refreshed = wallet.refreshReceipt(payment, receipt)
+                                if (current == generation) finish(SendResolution.Paid(refreshed))
+                            }
+                            catch (_: Exception) { if (current == generation) showRefreshFailure() }
                         }
-                    } catch (failure: SendAlreadyPaid) { finish(SendResolution.AlreadyPaid(failure.receipt))
-                    } catch (failure: SendExistingLightning) { finish(SendResolution.InProgress(failure.progress))
+                    } catch (failure: SendAlreadyPaid) { if (current == generation) finish(SendResolution.AlreadyPaid(failure.receipt))
+                    } catch (failure: SendExistingLightning) { if (current == generation) finish(SendResolution.InProgress(failure.progress))
                     } catch (failure: SendNotSubmitted) {
+                        if (current != generation) return@reserve
                         attempt = attempt?.copy(failureMessage = failure.reason.message); message = failure.reason.message; finish(SendResolution.Failed)
                     } catch (failure: Exception) {
+                        if (current != generation) return@reserve
                         if (failure is SendFailure && failure.reason == SendFailure.Reason.lightningInProgress) {
                             attempt = attempt?.copy(failureMessage = failure.message); message = failure.message; finish(SendResolution.Uncertain)
                         } else { state = State.uncertain; reconcile(wallet) }
@@ -188,26 +202,38 @@ class SendController(private val dependencies: Dependencies,
         val quarantine = unreadableJournal
         val status = state.name
         val statusMessage = message
-        val current = generation
-        checking = true
-        try { withContext(NonCancellable + Dispatchers.IO) {
+        clear {
             if (quarantine) dependencies.quarantineUnreadable()
             dependencies.auditOverride(SendOverrideAudit(txid = evidence?.receipt?.txid ?: evidence?.alreadyPaid?.txid ?: evidence?.broadcastingTxid,
                 walletIdentity = evidence?.walletIdentity, ownershipUnverified = evidence?.walletIdentity == null,
                 candidates = evidence?.candidates.orEmpty(), possibleTxids = evidence?.possibleTxids.orEmpty(),
                 originalEvidence = evidence, warning = warning, confirmation = confirmation, status = status, statusMessage = statusMessage))
-        } } catch (_: Exception) { if (current == generation) message = "Unable to save the override confirmation. Sending remains locked."; return }
-        finally { if (current == generation) checking = false }
-        if (current == generation) clear()
+        }
     }
-    private suspend fun clear() {
+    private suspend fun clear(beforeRemove: (() -> Unit)? = null) {
         if (checking) return
         val current = generation
+        val identity = journalIdentity ?: attempt?.walletIdentity
         checking = true
+        var removed = false
+        var audited = beforeRemove == null
         try {
-            withContext(NonCancellable + Dispatchers.IO) { dependencies.write(null) }
-            if (current == generation) { attempt = null; unboundJournal = null; unreadableJournal = false; state = State.ready; message = null }
-        } catch (_: Exception) { if (current == generation) message = "Unable to save payment status." }
+            withContext(NonCancellable + Dispatchers.IO) {
+                dependencies.reservation { wallet ->
+                    if (current != generation) return@reservation
+                    val owner = wallet.identity()
+                    if (current != generation || identity == null || owner != identity) return@reservation
+                    // The counted reservation prevents replacement until audit and removal are durable.
+                    beforeRemove?.invoke()
+                    audited = true
+                    dependencies.write(null)
+                    removed = true
+                }
+            }
+            if (removed && current == generation) { attempt = null; unboundJournal = null; unreadableJournal = false; state = State.ready; message = null }
+        } catch (_: Exception) {
+            if (current == generation) message = if (!audited) "Unable to save the override confirmation. Sending remains locked." else "Unable to save payment status."
+        }
         finally { if (current == generation) checking = false }
     }
     companion object { const val journalVersion = 2 }
