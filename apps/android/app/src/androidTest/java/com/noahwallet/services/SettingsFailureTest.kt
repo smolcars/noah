@@ -18,6 +18,33 @@ class SettingsFailureTest {
             it.isAccessible = true; it.newInstance(context)
         }
 
+    @Test fun backgroundRejectsUnpersistedFallbackBeforeReadingSeed() = runBlocking {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(app.cacheDir, "background-settings-${UUID.randomUUID()}").apply { check(mkdir()) }
+        val context = object : ContextWrapper(app) {
+            override fun getFilesDir() = root
+            override fun getNoBackupFilesDir() = root
+        }
+        val settings = SettingsStorage(context)
+        settings.setPersistedState(PersistedWalletState(isInitialized = true, isWalletSuspended = true), PersistedWalletState.key, 0)
+        val location = WalletDataLocation(root, "regtest")
+        location.directory.mkdir(); location.database.writeText("unchanged")
+        val services = isolatedServices(context)
+        val file = File(root, "settings.native.json")
+        Os.chmod(file.path, 0); Os.chmod(root.path, 320)
+        try {
+            assertNull(settings.persistedState<PersistedWalletState>(PersistedWalletState.key))
+            services.ensureWalletOpen()
+            fail("Background opened unpersisted fallback")
+        } catch (failure: Exception) {
+            assertTrue("Background must reject unhealthy settings before reading the seed: ${failure.javaClass.simpleName}", failure is SettingsStorage.Unavailable)
+            assertEquals("unchanged", location.database.readText())
+            assertFalse(services.session.isOpen)
+        } finally {
+            Os.chmod(root.path, 448); Os.chmod(file.path, 384); check(root.deleteRecursively())
+        }
+    }
+
     @Test fun interruptedRestoreSettlesWhileSettingsFailAtEveryBoundary() = runBlocking {
         val app = InstrumentationRegistry.getInstrumentation().targetContext
         val arguments = InstrumentationRegistry.getArguments()

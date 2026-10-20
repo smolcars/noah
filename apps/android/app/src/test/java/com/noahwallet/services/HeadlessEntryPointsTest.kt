@@ -13,6 +13,7 @@ class HeadlessEntryPointsTest {
         assertTrue(app.contains("if (!foreground) requireBackgroundWallet()"))
         assertTrue(app.indexOf("if (!foreground) requireBackgroundWallet()") < app.indexOf("if (foreground && recoverRestore(walletMutationHeld)"))
         assertTrue(app.contains("else walletOpener.ensureOpen()"))
+        assertTrue(app.contains("private suspend fun requireBackgroundWallet() {\n        settings.requireHealthy()"))
         assertTrue(source("services/storage/StoredWalletOpener").contains("walletState()?.isInitialized == false"))
         assertTrue(source("services/push/PushRuntime").contains("ensureWalletOpen = services::ensureWalletOpen"))
     }

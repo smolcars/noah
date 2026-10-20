@@ -192,12 +192,14 @@ class AppServices private constructor(private val context: Context) {
         if (!walletMutationHeld) { lifecycle.withWalletMutation { openWallet(walletMutationHeld = true, foreground) }; return@withContext }
         settings.validateStores()
         if (!foreground) requireBackgroundWallet()
+        val location = WalletDataLocation(context.filesDir, variant)
         if (foreground && recoverRestore(walletMutationHeld) == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
         if (foreground) RestoreTransaction(location).completeSettings(settings)
         if (settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
             throw WalletSuspended()
         }
         settings.validateStores()
+        if (!foreground) settings.requireHealthy()
         if (foreground) walletOpener.openInForeground() else walletOpener.ensureOpen()
     }
 
