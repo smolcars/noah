@@ -51,7 +51,6 @@ fun NoahApp(model: AppModel) {
     }
     val repeat: (com.noahwallet.history.RepeatPayment) -> Unit = {
         model.repeatPayment = it
-        // TODO(M3): consume repeatPayment in Send using prefill(preferredCurrency), then clear it.
         backStack.clear(); backStack.add(Destination.Home); backStack.add(Destination.Send)
     }
     Scaffold(
@@ -103,17 +102,8 @@ fun NoahApp(model: AppModel) {
                     else if (destination == Destination.History) TransactionsScreen(model, repeat)
                     else if (destination == Destination.Receive) ReceiveScreen(model) {
                         backStack.clear(); backStack.add(Destination.Home)
-                    } else Column(
-                        modifier = Modifier.fillMaxSize().padding(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(stringResource(destination.title), style = MaterialTheme.typography.headlineMedium)
-                        Text(stringResource(R.string.placeholder))
-                        Text(
-                            stringResource(R.string.build_variant, BuildConfig.APP_VARIANT),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
+                    } else SendScreen(model) {
+                        backStack.clear(); backStack.add(Destination.Home)
                     }
                 }
             },
