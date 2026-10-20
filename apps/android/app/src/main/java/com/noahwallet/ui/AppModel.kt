@@ -25,6 +25,9 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     var onboarded by mutableStateOf(false); private set
     var step by mutableStateOf("welcome")
     var busy by mutableStateOf(false); private set
+    var customServerUnresponsive by mutableStateOf(false); private set
+    var switchingToDefaultServer by mutableStateOf(false); private set
+    private var customOpenWait: EsploraOpenWait? = null
     var error by mutableStateOf<String?>(null)
     var summary by mutableStateOf<WalletSession.Summary?>(null); private set
     var hidden by mutableStateOf((state("privacy-storage")["isHomeBalanceHidden"] as? JsonPrimitive)?.booleanOrNull ?: false)
@@ -192,7 +195,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     } ?: JsonObject(emptyMap())
 
     fun start() {
-        if (starting || busy || !restore.canLeave || open || (isWalletSuspended && onboarded)) return
+        if (starting || busy || customServerUnresponsive || !restore.canLeave || open || (isWalletSuspended && onboarded)) return
         starting = true
         viewModelScope.launch {
             var recovering = true
@@ -214,7 +217,20 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                         if (launchState == LaunchState.existingWallet) {
                             onboarded = services.isOnboarded()
                             if (isWalletSuspended) return@withWalletMutation
-                            withContext(Dispatchers.IO) { services.openWalletInForeground(walletMutationHeld = true) }
+                            withContext(Dispatchers.IO) {
+                                val wait = EsploraOpenWait(); customOpenWait = wait
+                                services.openWalletInForeground(walletMutationHeld = true, customWait = wait, lateCompletion = { success ->
+                                    withContext(Dispatchers.Main) {
+                                        customServerUnresponsive = false; switchingToDefaultServer = false; customOpenWait = null
+                                        if (success) {
+                                            open = true; onboarded = services.isOnboarded()
+                                            if (!onboarded) step = "mnemonic"
+                                            refresh(); services.startServerServices()
+                                        } else { error = "Couldn't open your wallet. Please try again." }
+                                    }
+                                })
+                                customOpenWait = null
+                            }
                             open = true
                             onboarded = services.isOnboarded()
                             if (!onboarded) step = "mnemonic"
@@ -223,13 +239,26 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                         }
                     }
                 }
+            } catch (_: EsploraOpenWait.Timeout) {
+                customServerUnresponsive = customOpenWait != null
+                if (customServerUnresponsive) error = null
             } catch (failure: Exception) {
+                customOpenWait = null
                 if (recovering) launchState = LaunchState.restoreIncomplete
                 else if (launchState == LaunchState.existingWallet) launchState = LaunchState.openFailure(failure)
                 error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage) failure.message else if (recovering) "Couldn't finish wallet recovery. Your wallet files have been kept. Please try again."
                     else "Couldn't open your wallet. Please try again."
             }
             finally { withContext(Dispatchers.IO) { refreshRecoveryFiles() }; starting = false }
+        }
+    }
+
+    fun useDefaultEsploraServer() {
+        switchingToDefaultServer = true
+        viewModelScope.launch(Dispatchers.IO) {
+            // Persist now so restart can recover even if native never returns.
+            settings.useDefaultEsplora(BuildConfig.APP_VARIANT)
+            customOpenWait?.chooseDefault()
         }
     }
 

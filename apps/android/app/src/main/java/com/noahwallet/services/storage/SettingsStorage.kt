@@ -73,6 +73,13 @@ class SettingsStorage(context: Context) {
         try { persist(state.copy(values = state.values + (key to preserved))) }
         catch (failure: Exception) { fallback = state; throw failure }
     }
+    /** User-selected safe fallback stays effective in foreground when disk writes fail. */
+    fun useDefaultEsplora(variant: String) = synchronized(openLock) {
+        val record = com.noahwallet.services.wallet.EsploraSettings.Record(
+            com.noahwallet.services.wallet.EsploraSettings.Selection(variant = variant))
+        val state = load().let { it.copy(values = it.values + (com.noahwallet.services.wallet.EsploraSettings.key to Json.encodeToString(record))) }
+        try { persist(state) } catch (_: Exception) { fallback = state }
+    }
     fun validateStores() { synchronized(openLock) { load() } }
     // set() commits synchronously; retain this API for automation callers.
     fun sync() = requireHealthy()

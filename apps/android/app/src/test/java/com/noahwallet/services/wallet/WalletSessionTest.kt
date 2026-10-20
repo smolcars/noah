@@ -613,6 +613,96 @@ class WalletSessionTest {
             handles.stopGate!!.complete(Unit); closing.await(); assertTrue(handles.closed)
         }
     }
+    @Test fun silentEsploraReleasesUIGateButKeepsReservationUntilRollback() = runBlocking {
+        for (lateSuccess in listOf(false, true)) withLocation { location ->
+            bark(location)
+            java.net.ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
+                val connected = CompletableDeferred<java.net.Socket>()
+                val accepting = launch(Dispatchers.IO) { connected.complete(server.accept()) }
+                val previous = EsploraSettings.Selection(variant = "signet")
+                val candidate = EsploraSettings.Selection("http://127.0.0.1:${server.localPort}", "signet")
+                var opens = 0
+                val allHandles = mutableListOf<Handles>()
+                val session = WalletSession("regtest", location, inspect = { WalletDatabase.Properties("regtest", "abcd") },
+                    opener = { _, _, _, _, _ ->
+                        if (++opens == 2) withContext(NonCancellable + Dispatchers.IO) {
+                            java.net.Socket("127.0.0.1", server.localPort).use { it.getInputStream().read() }
+                            if (!lateSuccess) throw Boom()
+                        }
+                        Handles().also { allHandles += it }
+                    })
+                session.openExisting("unused", false, "test")
+                val values = mutableMapOf<String, String>()
+                val store = EsploraSettings(values::get) { key, value -> values[key] = value }
+                store.save(EsploraSettings.Record(previous))
+                val prepared = store.prepare(candidate)
+                val reservation = session.reserveForConfigurationChange()
+                val gate = kotlinx.coroutines.sync.Mutex()
+                val wait = EsploraOpenWait(); val finished = CompletableDeferred<Boolean>()
+                assertTrue(runCatching {
+                    gate.lock()
+                    try {
+                        wait.run(timeoutMillis = 100, lateCompletion = { finished.complete(it) }) { attempt ->
+                            try {
+                                store.change(candidate, prepared, attempt::commit) { _, commit -> session.reopen(reservation, "unused", "test", commit) }
+                            } finally { session.release(reservation) }
+                        }
+                    } finally { gate.unlock() }
+                }.exceptionOrNull() is EsploraOpenWait.Timeout)
+                assertTrue(gate.tryLock()); gate.unlock()
+                assertFalse(session.unlessReserved { fail("native open lost its reservation") })
+                assertFailure(WalletSession.OpenFailure.busy, runCatching { session.ensureOpen("unused", false, "test") })
+                withTimeout(5_000) { connected.await() }.close(); accepting.join()
+                assertFalse(withTimeout(5_000) { finished.await() })
+                assertTrue(session.isOpen)
+                assertEquals(previous, store.record()!!.active)
+                assertEquals(3, opens)
+                assertTrue(allHandles.dropLast(1).all { it.closed })
+                session.close()
+            }
+        }
+    }
+
+    @Test fun launchDefaultWaitsForNativeAndReopensDespiteStorageFailure() = runBlocking {
+        withLocation { location ->
+            bark(location)
+            val native = CompletableDeferred<Unit>()
+            var opens = 0
+            val session = WalletSession("regtest", location, inspect = { WalletDatabase.Properties("regtest", "abcd") },
+                opener = { _, _, _, _, _ ->
+                    if (++opens == 2) { native.await(); throw Boom() }
+                    Handles()
+                })
+            session.openExisting("unused", false, "test"); session.close()
+            val reservation = session.reserve()
+            val wait = EsploraOpenWait(); val finished = CompletableDeferred<Boolean>()
+            val storage = EsploraSettings({ null }) { _, _ -> throw java.io.IOException("disk full") }
+            assertTrue(runCatching {
+                wait.run(timeoutMillis = 100, lateCompletion = { finished.complete(it) }) { attempt ->
+                    try {
+                        try { session.reopen(reservation, "unused", "test") { attempt.commit {} } }
+                        catch (failure: Exception) {
+                            if (!attempt.timedOut) throw failure
+                            attempt.waitForDefault()
+                            runCatching { storage.save(EsploraSettings.Record(EsploraSettings.Selection(variant = "signet"))) }
+                            session.reopen(reservation, "unused", "test") {}
+                        }
+                    } finally { session.release(reservation) }
+                }
+            }.exceptionOrNull() is EsploraOpenWait.Timeout)
+            wait.chooseDefault()
+            assertFalse(session.isOpen)
+            assertFalse(session.unlessReserved { fail("default opened over pending native work") })
+            assertEquals(2, opens)
+            native.complete(Unit)
+            assertTrue(withTimeout(5_000) { finished.await() })
+            assertTrue(session.isOpen)
+            assertTrue(location.database.exists())
+            assertEquals(3, opens)
+            session.close()
+        }
+    }
+
     @Test fun esploraReloadRefusesInFlightMoneyOperations() = runBlocking {
         withLocation { location ->
             val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> Handles() })

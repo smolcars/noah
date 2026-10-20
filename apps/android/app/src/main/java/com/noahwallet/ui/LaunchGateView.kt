@@ -121,6 +121,10 @@ fun LaunchGateView(model: AppModel) {
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().then(Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing))) {
             when {
                 model.walletLock.locked -> Unit // Keep wallet content out of the composition until authentication.
+                model.customServerUnresponsive -> NoahForm("The custom server isn't responding.") {
+                    if (model.switchingToDefaultServer) Text(tr("The server isn't responding; switching back…"))
+                    NoahButton("Use default server", !model.switchingToDefaultServer) { model.useDefaultEsploraServer() }
+                }
                 state == LaunchState.seedWithoutWalletData -> RestoreWalletScreen(model, useStoredSeed = true)
                 !PlatformGateRules.launchResolved(state) -> LaunchMessage(state, model.error != null, model::start, model)
                 !gatesReady -> LaunchMessage(null, false, model::start, model)

@@ -183,13 +183,17 @@ class AppServices private constructor(private val context: Context) {
 
     suspend fun ensureWalletOpen(walletMutationHeld: Boolean = false) = openWallet(walletMutationHeld, foreground = false)
 
-    suspend fun openWalletInForeground(walletMutationHeld: Boolean = false) {
+    internal suspend fun openWalletInForeground(walletMutationHeld: Boolean = false,
+        customWait: com.noahwallet.services.wallet.EsploraOpenWait? = null,
+        lateCompletion: suspend (Boolean) -> Unit = {}) {
         if (!walletMutationHeld) com.noahwallet.services.background.PeriodicExecution.awaitIdle()
-        openWallet(walletMutationHeld, foreground = true)
+        openWallet(walletMutationHeld, foreground = true, customWait, lateCompletion)
     }
 
-    private suspend fun openWallet(walletMutationHeld: Boolean, foreground: Boolean): Unit = withContext(Dispatchers.IO) {
-        if (!walletMutationHeld) { lifecycle.withWalletMutation { openWallet(walletMutationHeld = true, foreground) }; return@withContext }
+    private suspend fun openWallet(walletMutationHeld: Boolean, foreground: Boolean,
+        customWait: com.noahwallet.services.wallet.EsploraOpenWait? = null,
+        lateCompletion: suspend (Boolean) -> Unit = {}): Unit = withContext(Dispatchers.IO) {
+        if (!walletMutationHeld) { lifecycle.withWalletMutation { openWallet(walletMutationHeld = true, foreground, customWait, lateCompletion) }; return@withContext }
         settings.validateStores()
         if (!foreground) requireBackgroundWallet()
         val location = WalletDataLocation(context.filesDir, variant)
@@ -200,7 +204,31 @@ class AppServices private constructor(private val context: Context) {
         }
         settings.validateStores()
         if (!foreground) settings.requireHealthy()
-        if (foreground) walletOpener.openInForeground() else walletOpener.ensureOpen()
+        val store = com.noahwallet.services.wallet.EsploraSettings(settings)
+        val endpoint = if (foreground && customWait != null && variant != "regtest" && !session.isOpen) store.resolve(variant) else null
+        if (endpoint != null && customWait != null) {
+            val mnemonic = (seed.read() as? SecretResult.Found)?.value ?: throw SeedItem.Unavailable()
+            val selection = com.noahwallet.services.wallet.EsploraSettings.Selection(endpoint, variant)
+            val reservation = session.reserve()
+            customWait.run(lateCompletion = lateCompletion) { wait ->
+                try {
+                    try {
+                        withContext(com.noahwallet.services.wallet.EsploraOpening(selection)) {
+                            session.reopen(reservation, mnemonic, BuildConfig.VERSION_NAME) { wait.commit {} }
+                        }
+                    } catch (failure: Exception) {
+                        if (!wait.timedOut) throw failure
+                        wait.waitForDefault()
+                        val fallback = com.noahwallet.services.wallet.EsploraSettings.Selection(variant = variant)
+                        settings.useDefaultEsplora(variant)
+                        withContext(com.noahwallet.services.wallet.EsploraOpening(fallback)) {
+                            session.reopen(reservation, mnemonic, BuildConfig.VERSION_NAME) {}
+                        }
+                    }
+                    check(seed.save(mnemonic) is SecretResult.Found) { "Wallet seed migration unavailable" }
+                } finally { session.release(reservation) }
+            }
+        } else if (foreground) walletOpener.openInForeground() else walletOpener.ensureOpen()
     }
 
     suspend fun switchEsploraEndpoint(input: String?) {
@@ -224,13 +252,17 @@ class AppServices private constructor(private val context: Context) {
                     val prepared = store.prepare(candidate)
                     val reservation = session.reserveForConfigurationChange()
                     backupObserver?.cancelAndJoin(); backupObserver = null
-                    try {
-                        store.change(candidate, prepared) { selection, commit ->
-                            withContext(com.noahwallet.services.wallet.EsploraOpening(selection)) {
-                                session.reopen(reservation, mnemonic, BuildConfig.VERSION_NAME, commit)
+                    com.noahwallet.services.wallet.EsploraOpenWait().run(lateCompletion = {
+                        reconcileBackupTriggers(); startServerServices()
+                    }) { wait ->
+                        try {
+                            store.change(candidate, prepared, wait::commit) { selection, commit ->
+                                withContext(com.noahwallet.services.wallet.EsploraOpening(selection)) {
+                                    session.reopen(reservation, mnemonic, BuildConfig.VERSION_NAME, commit)
+                                }
                             }
-                        }
-                    } finally { session.release(reservation) }
+                        } finally { session.release(reservation) }
+                    }
                 }
             }
         }

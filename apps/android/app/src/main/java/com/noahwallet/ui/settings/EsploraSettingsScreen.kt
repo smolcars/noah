@@ -1,5 +1,6 @@
 package com.noahwallet.ui.settings
 
+import com.noahwallet.localization.tr
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -23,6 +24,13 @@ fun EsploraSettingsScreen(model: AppModel) {
     var input by remember { mutableStateOf(selection.input ?: effectiveEndpoint) }
     var message by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    val sessionRevision by model.session.walletChanges.collectAsState()
+    LaunchedEffect(sessionRevision) {
+        if (model.session.isOpen && error == "The server isn't responding; switching back…") {
+            selection = store.selection(BuildConfig.APP_VARIANT)
+            error = "Endpoint not changed. The wallet is using the previous endpoint."
+        }
+    }
     val editable = !model.busy && BuildConfig.APP_VARIANT != "regtest"
     fun apply(value: String?) {
         message = null; error = null
@@ -34,6 +42,7 @@ fun EsploraSettingsScreen(model: AppModel) {
                 message = if (selection.endpoint == null) "The wallet is now using Noah's default Esplora endpoint." else "The wallet is now using the new Esplora endpoint."
                 model.services.startServerServices()
             } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: com.noahwallet.services.wallet.EsploraOpenWait.Timeout) { error = "The server isn't responding; switching back…" }
             catch (failure: Exception) { error = failure.message ?: "Endpoint not changed" }
             finally {
                 selection = store.selection(BuildConfig.APP_VARIANT)
@@ -52,10 +61,10 @@ fun EsploraSettingsScreen(model: AppModel) {
             singleLine = true, enabled = editable, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false),
             modifier = Modifier.fillMaxWidth().testTag("esplora-endpoint-input"))
         Text("Noah will test /block-height/0 and verify the Bitcoin network before changing the wallet configuration. You may also paste the full test or tip URL.")
-        selection.attention?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        selection.attention?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
         if (model.busy) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Testing Endpoint...") }
         message?.let { Text("Endpoint updated"); Text(it) }
-        error?.let { Text("Endpoint not changed"); Text(it, color = MaterialTheme.colorScheme.error) }
+        error?.let { Text("Endpoint not changed"); Text(tr(it), color = MaterialTheme.colorScheme.error) }
         NoahButton("Test & Save Endpoint", editable && input.isNotBlank()) { apply(input) }
         NoahButton("Reset to Noah Default", editable && (selection.endpoint != null || selection.input != null), secondary = true) { apply(null) }
         SectionTitle("Default endpoint")
