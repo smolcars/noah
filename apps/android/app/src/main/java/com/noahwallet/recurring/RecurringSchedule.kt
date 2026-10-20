@@ -18,7 +18,10 @@ import java.util.TimeZone
     val retryNotBefore: Long? = null, val inFlight: InFlight? = null, val runs: List<Run> = emptyList(),
     val createdAt: Long, val updatedAt: Long,
     @kotlinx.serialization.Transient val unsupportedStorage: Boolean = false,
+    @kotlinx.serialization.Transient val stopReason: StopReason? = null,
 ) {
+    enum class StopReason { policyEvidence, automationStopped }
+    val requiresPolicyApproval get() = stopReason == StopReason.policyEvidence
     companion object {
         const val unsupportedMessage = "Noah can't safely read this schedule. Cancel it and explicitly approve a new recurring payment."
         const val maximumAmount = 2_100_000_000_000_000L

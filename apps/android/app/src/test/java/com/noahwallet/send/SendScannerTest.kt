@@ -18,6 +18,6 @@ class SendScannerTest {
     @Test fun keypadNeverIntroducesInvalidAmountSyntax() {
         assertEquals("1", keypadInput("0", "1", false)); assertEquals("0.", keypadInput("", ".", true))
         assertEquals("1.2", keypadInput("1.2", ".", true)); assertEquals("", keypadInput("", ".", false))
-        assertEquals("10", keypadInput("100", "Delete", false)); assertEquals("100", keypadInput("100", "garbage", false))
+        assertEquals("10", keypadInput("100", null, false)); assertEquals("100", keypadInput("100", "garbage", false))
     }
 }

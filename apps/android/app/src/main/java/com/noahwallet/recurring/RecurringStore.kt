@@ -34,7 +34,8 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         }.getOrElse { policyWarning(); state.schedules.keys }
         val automationStopped = owner != null && automationOverlay && automation?.allowed() == false
         return state.copy(schedules = state.schedules.mapValues { (id, schedule) ->
-            if ((id in stopped || automationStopped) && !schedule.unsupportedStorage) schedule.copy(status = "needs_attention", lastError = if (id in stopped) RecurringPolicyLedger.message else RecurringAutomationAuthority.message) else schedule
+            if ((id in stopped || automationStopped) && !schedule.unsupportedStorage) schedule.copy(status = "needs_attention", lastError = if (id in stopped) RecurringPolicyLedger.message else RecurringAutomationAuthority.message,
+                stopReason = if (id in stopped) RecurringPayment.StopReason.policyEvidence else RecurringPayment.StopReason.automationStopped) else schedule
         })
     }
     internal fun automationGeneration(): String? = synchronized(lock) { automation?.generation() }

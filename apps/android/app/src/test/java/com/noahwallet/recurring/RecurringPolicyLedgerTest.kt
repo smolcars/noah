@@ -34,7 +34,11 @@ class RecurringPolicyLedgerTest {
         assertArrayEquals(first, w.file.readBytes()); assertArrayEquals(marker, w.marker.readBytes())
         // An unknown row injected after bootstrap must never be imported a second time.
         w.store(false).upsert(w.policy.copy(id = "resurrected"))
-        assertEquals("needs_attention", w.store().load().schedules.getValue("resurrected").status)
+        val stopped = w.store().load().schedules.getValue("resurrected")
+        assertEquals("needs_attention", stopped.status)
+        assertTrue(stopped.requiresPolicyApproval)
+        assertTrue(stopped.copy(lastError = "Translated or revised display copy").requiresPolicyApproval)
+        assertFalse(stopped.copy(stopReason = null).requiresPolicyApproval)
         assertArrayEquals(first, w.file.readBytes())
     }
     @Test fun missingCorruptLedgerOrMarkerCannotReseedOrMutate() {

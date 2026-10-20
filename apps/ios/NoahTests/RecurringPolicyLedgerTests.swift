@@ -37,7 +37,13 @@ import Testing
         #expect(try Data(contentsOf: w.marker) == marker)
         var unknown = w.policy; unknown.id = "resurrected"
         try w.store(protected: false).upsert(unknown)
-        #expect(try w.store().load().schedules[unknown.id]?.status == "needs_attention")
+        var stopped = try #require(w.store().load().schedules[unknown.id])
+        #expect(stopped.status == "needs_attention")
+        #expect(stopped.requiresPolicyApproval)
+        stopped.lastError = "Translated or revised display copy"
+        #expect(stopped.requiresPolicyApproval)
+        stopped.stopReason = nil
+        #expect(!stopped.requiresPolicyApproval)
         #expect(try Data(contentsOf: w.file) == bytes)
     }
     @Test(arguments: ["missing", "corrupt", "marker-missing", "marker-corrupt"])

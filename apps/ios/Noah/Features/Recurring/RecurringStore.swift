@@ -50,6 +50,7 @@ final class RecurringStore: @unchecked Sendable {
         for id in state.schedules.keys where (stopped.contains(id) || automationStopped) && visible.schedules[id]?.unsupportedStorage == false {
             visible.schedules[id]?.status = "needs_attention"
             visible.schedules[id]?.lastError = stopped.contains(id) ? RecurringPolicyLedger.message : RecurringAutomationAuthority.message
+            visible.schedules[id]?.stopReason = stopped.contains(id) ? .policyEvidence : .automationStopped
         }
         return visible
     }

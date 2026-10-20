@@ -44,6 +44,10 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
     var createdAt: Double
     var updatedAt: Double
     var unsupportedStorage = false
+    // Derived from the policy authority on load, never persisted with the RN schedule.
+    enum StopReason: Sendable { case policyEvidence, automationStopped }
+    var stopReason: StopReason?
+    var requiresPolicyApproval: Bool { stopReason == .policyEvidence }
 
     enum CodingKeys: String, CodingKey {
         case id, label, destination, destinationType, amountSat, comment, interval, startAt, endAt, maxOccurrences, nativeRevision

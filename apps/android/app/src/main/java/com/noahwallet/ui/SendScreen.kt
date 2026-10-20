@@ -215,19 +215,19 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
 }
 @Composable internal fun AmountKeypad(amount: String, decimal: Boolean, enabled: Boolean, onChange: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf(if (decimal) "." else "", "0", "Delete")).forEach { row ->
+        listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf(if (decimal) "." else "", "0", null)).forEach { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { key ->
-                    TextButton(onClick = { onChange(keypadInput(amount, key, decimal)) }, enabled = enabled && key.isNotEmpty(), modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
-                        Text(tr(key), style = if (key == "Delete") MaterialTheme.typography.labelMedium else MaterialTheme.typography.headlineMedium)
+                    TextButton(onClick = { onChange(keypadInput(amount, key, decimal)) }, enabled = enabled && key != "", modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
+                        Text(if (key == null) tr("Delete") else tr(key), style = if (key == null) MaterialTheme.typography.labelMedium else MaterialTheme.typography.headlineMedium)
                     }
                 }
             }
         }
     }
 }
-internal fun keypadInput(amount: String, key: String, decimal: Boolean): String = when {
-    key == "Delete" -> amount.dropLast(1)
+internal fun keypadInput(amount: String, key: String?, decimal: Boolean): String = when {
+    key == null -> amount.dropLast(1)
     key == "." -> if (decimal && '.' !in amount) amount.ifEmpty { "0" } + "." else amount
     key.length == 1 && key[0] in '0'..'9' && amount.length < 18 -> if (amount == "0") key else amount + key
     else -> amount
