@@ -83,7 +83,7 @@ final class RecurringStore: @unchecked Sendable {
         else { throw RecurringError.message("Recurring payment data couldn't be read. Your saved schedules have been preserved. Sending is stopped.") }
         return value
     }
-    private static func payment(id: String, raw: String) -> RecurringPayment {
+    private static func payment(id: String, raw: String, migrateIssue: Bool = true) -> RecurringPayment {
         let decoded = try? { () throws -> RecurringPayment in
             try RawObject.requireUniqueProperties(raw)
             try Self.requireNumericTokens(raw)
@@ -93,7 +93,7 @@ final class RecurringStore: @unchecked Sendable {
         if let decoded, let fields = try? RawObject(raw), requiredRNFields.allSatisfy({ fields.fields[$0] != nil }),
            decoded.id == id, decoded.validPolicy {
             schedule = decoded
-            schedule.decodeLegacyIssue()
+            if migrateIssue { schedule.decodeLegacyIssue() }
         } else {
             let fields = (try? JSONSerialization.jsonObject(with: Data(raw.utf8))) as? [String: Any]
             // Display only: the original row remains authoritative and is never encoded from this placeholder.
@@ -151,13 +151,13 @@ final class RecurringStore: @unchecked Sendable {
             try numbers(run.fields, 1, safeInteger, ["amountSat"])
         }
     }
-    private func rawState() throws -> State {
+    private func rawState(migrateIssue: Bool = true) throws -> State {
         try settings.requireHealthy()
         return try lock.withLock {
             guard !writeFailed else { throw RecurringError.message("Recurring payment storage failed. Restart Noah; sending is stopped.") }
             let state = try RawObject(envelope().fields["state"]!)
             let rows = try RawObject(state.fields["schedules"]!)
-            let schedules = Dictionary(uniqueKeysWithValues: rows.fields.map { (id, raw) in (id, Self.payment(id: id, raw: raw)) })
+            let schedules = Dictionary(uniqueKeysWithValues: rows.fields.map { (id, raw) in (id, Self.payment(id: id, raw: raw, migrateIssue: migrateIssue)) })
             let binding = try state.fields["nativeWalletBinding"].map {
                 try JSONDecoder().decode(Binding.self, from: Data($0.utf8))
             }
@@ -169,24 +169,32 @@ final class RecurringStore: @unchecked Sendable {
     /// Record submitted money against policy authority, without a temporary wallet display overlay.
     func settlementState() throws -> State { try lock.withLock { try recoverSettlements(); return protected(try rawState(), automationOverlay: false) } }
     private func recoverSettlements() throws {
-        guard let ledger = policyLedger, ledger.hasPending else { return }
-        let before = try rawState(), owner = try policyBinding!()
-        guard before.binding == nil || before.binding == owner else { throw RecurringError.message(RecurringPolicyLedger.message) }
-        let pending = try ledger.pending(binding: before.binding ?? owner, schedules: before.schedules)
-        guard !pending.isEmpty else { return }
-        var envelope = try envelope(), state = try RawObject(envelope.fields["state"]!)
-        var rows = try RawObject(state.fields["schedules"]!)
-        for row in pending {
-            var value = try RawObject(rows.fields[row.id]!)
-            let encoded = try RawObject(String(decoding: JSONEncoder().encode(row), as: UTF8.self))
-            for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "issue", "retryNotBefore", "inFlight", "nativeRevision"] { value.fields[key] = "null" }
-            value.fields.merge(encoded.fields) { _, new in new }
-            rows.fields[row.id] = try value.json()
+        guard let ledger = policyLedger else { return }
+        func replay() throws {
+            guard ledger.hasPending else { return }
+            let before = try rawState(migrateIssue: false), owner = try policyBinding!()
+            guard before.binding == nil || before.binding == owner else { throw RecurringError.message(RecurringPolicyLedger.message) }
+            let pending = try ledger.pending(binding: before.binding ?? owner, schedules: before.schedules)
+            guard !pending.isEmpty else { return }
+            var envelope = try envelope(), state = try RawObject(envelope.fields["state"]!)
+            var rows = try RawObject(state.fields["schedules"]!)
+            for row in pending {
+                var value = try RawObject(rows.fields[row.id]!)
+                let encoded = try RawObject(String(decoding: JSONEncoder().encode(row), as: UTF8.self))
+                for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "issue", "retryNotBefore", "inFlight", "nativeRevision"] { value.fields[key] = "null" }
+                value.fields.merge(encoded.fields) { _, new in new }
+                rows.fields[row.id] = try value.json()
+            }
+            state.fields["schedules"] = try rows.json(); state.fields["serverSyncPending"] = "true"
+            envelope.fields["state"] = try state.json()
+            do { try write(envelope.json()) } catch { writeFailed = true; throw error }
+            try ledger.finish(binding: before.binding ?? owner, schedules: rawState(migrateIssue: false).schedules)
         }
-        state.fields["schedules"] = try rows.json(); state.fields["serverSyncPending"] = "true"
-        envelope.fields["state"] = try state.json()
-        do { try write(envelope.json()) } catch { writeFailed = true; throw error }
-        try ledger.finish(binding: before.binding ?? owner, schedules: rawState().schedules)
+        try replay()
+        // Validate and finish original records before reason codes change their representation.
+        let before = try rawState(migrateIssue: false)
+        guard let owner = try? policyBinding!(), before.binding == nil || before.binding == owner else { return }
+        if try ledger.migrate(binding: before.binding ?? owner, schedules: before.schedules) { try replay() }
     }
     func settlementApplied(_ id: String, token: String) throws -> Bool {
         try lock.withLock {
