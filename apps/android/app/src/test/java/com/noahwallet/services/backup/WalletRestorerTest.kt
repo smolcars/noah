@@ -103,7 +103,8 @@ class WalletRestorerTest {
     }
     private suspend fun world(block: suspend World.() -> Unit) {
         val world = World()
-        try { withTimeout(10000) { world.block() } } finally { world.root.deleteRecursively() }
+        // Each restore runs PBKDF2 (600k iterations) to seal and open; 10 s timed out on a loaded machine.
+        try { withTimeout(60_000) { world.block() } } finally { world.root.deleteRecursively() }
     }
     @Test fun legacyUsesSameReservedTransactionAndSeedCommit() = runBlocking { world {
         legacy = true
