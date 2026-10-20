@@ -11,7 +11,7 @@ struct AppLogTests {
             where !fixture.name.hasPrefix("address-") {
             #expect(LogFile.redact(fixture.input) == fixture.expected, "\(fixture.name)")
             #expect(LogFile.redact(fixture.expected) == fixture.expected, "idempotent \(fixture.name)")
-            let file = LogFile(directory: directory)
+            let file = LogFile(directory: directory, capacity: 5000)
             file.append(level: .info, tag: "fixture", message: fixture.input)
             #expect(file.lines().last?.hasSuffix(fixture.expected.replacingOccurrences(of: "\n", with: "\n  ")) == true,
                     "persistence \(fixture.name)")
@@ -22,14 +22,32 @@ struct AppLogTests {
         for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
             where fixture.name.hasPrefix("address-") {
             #expect(LogFile.redact(fixture.input) == fixture.expected, "\(fixture.name)")
-            let file = LogFile(directory: directory)
+            let file = LogFile(directory: directory, capacity: 5000)
             file.append(level: .info, tag: "fixture", message: fixture.input)
             #expect(file.lines().last?.hasSuffix(fixture.expected) == true, "persistence \(fixture.name)")
         }
     }
 
+    @Test func boundedWriterDoesNotWaitForDiskAndReportsOverflowInOrder() async throws {
+        let queue = DispatchQueue(label: "test.blocked-log-writer")
+        queue.suspend()
+        let file = LogFile(directory: directory, capacity: 2, queue: queue)
+        for index in 0..<5 { file.append(level: .info, tag: "test", message: "record \(index)") }
+        // All appends returned even though the filesystem queue has not run.
+        #expect(!FileManager.default.fileExists(atPath: directory.path))
+        queue.resume()
+        let lines = await file.linesForExport()
+        #expect(lines.count == 3)
+        #expect(lines[0].hasSuffix("record 0"))
+        #expect(lines[1].hasSuffix("record 1"))
+        #expect(lines[2].hasSuffix("[dropped 3 log records]"))
+        file.append(level: .info, tag: "test", message: "recovered")
+        await file.flushAsync()
+        #expect(file.lines().last?.hasSuffix("recovered") == true)
+    }
+
     @Test func writesReactNativeLineFormat() throws {
-        let file = LogFile(directory: directory)
+        let file = LogFile(directory: directory, capacity: 5000)
         let date = Date(timeIntervalSince1970: 0)
         file.append(level: .warn, tag: "sync", message: "  first\nsecond  ", date: date)
         file.flush()
@@ -40,7 +58,7 @@ struct AppLogTests {
     }
 
     @Test func rotatesIntoAtMostFourOldFiles() throws {
-        let file = LogFile(directory: directory)
+        let file = LogFile(directory: directory, capacity: 5000)
         let padding = String(repeating: "x", count: 1000)
         let count = LogFile.maxFileSizeBytes / 1000 * 6
         for index in 0..<count {
@@ -55,7 +73,7 @@ struct AppLogTests {
     }
 
     @Test func exportsAtMostTheNewestLines() {
-        let file = LogFile(directory: directory)
+        let file = LogFile(directory: directory, capacity: 5000)
         for index in 0..<(LogFile.maxLines + 100) {
             file.append(level: .info, tag: "t", message: "line \(index)")
         }

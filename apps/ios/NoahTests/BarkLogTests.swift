@@ -10,6 +10,22 @@ struct BarkLogTests {
         #expect(LogLevel.allCases.map(BarkLog.appLevel) == [.error, .warn, .info, .debug, .verbose])
     }
 
+    @Test func rustCallbacksReturnWhileTheDiskQueueIsBlocked() async {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let queue = DispatchQueue(label: "test.blocked-bark-writer")
+        queue.suspend()
+        let file = LogFile(directory: directory, capacity: 1, queue: queue)
+        let sink = BarkLog(file: file)
+        DispatchQueue.concurrentPerform(iterations: 20) { _ in
+            sink.log(level: .info, target: "test", message: "callback")
+        }
+        queue.resume()
+        let lines = await file.linesForExport()
+        #expect(lines.count == 2)
+        #expect(lines.last?.hasSuffix("[dropped 19 log records]") == true)
+    }
+
     @Test func workerCallbacksAreSerializedAndRedacted() throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -59,6 +75,7 @@ struct BarkLogTests {
         for _ in 0..<200 {
             sink.log(level: .debug, target: "wallet", message: String(repeating: "z", count: 16_000))
         }
+        file.flush()
         let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.fileSizeKey])
         #expect(files.count == 5)
         for url in files {

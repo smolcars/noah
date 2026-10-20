@@ -63,7 +63,12 @@ final class LogFile: @unchecked Sendable {
     static let maxMessageBytes = 16 * 1024
 
     private let directory: URL
-    private let queue = DispatchQueue(label: "com.noahwallet.log-file")
+    private let queue: DispatchQueue
+    private let lock = NSLock()
+    private let capacity: Int
+    private var pending = 0
+    private var dropped = 0
+    static let maxPendingRecords = 256
     private let formatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -71,41 +76,88 @@ final class LogFile: @unchecked Sendable {
         return formatter
     }()
 
-    init(directory: URL) {
+    init(directory: URL, capacity: Int = LogFile.maxPendingRecords,
+         queue: DispatchQueue = DispatchQueue(label: "com.noahwallet.log-file")) {
+        precondition(capacity > 0)
         self.directory = directory
+        self.capacity = capacity
+        self.queue = queue
     }
 
     func append(level: AppLog.Level, tag: String, message: String, date: Date = Date()) {
-        // Backpressure native worker callbacks instead of queuing unlimited messages.
-        queue.sync { [self] in
-            let cleaned = Self.redact(message).trimmingCharacters(in: .whitespacesAndNewlines)
-                .replacingOccurrences(of: "\n", with: "\n  ")
-            let line = "\(formatter.string(from: date)) \(level.symbol) [\(Self.redact(tag))] \(cleaned)\n"
-            try? write(Data(line.utf8))
+        let cleaned = Self.redact(message).trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\n", with: "\n  ")
+        let tag = Self.redact(tag)
+        // Admission and queue ordering only. Rust callbacks never wait for filesystem work.
+        lock.withLock {
+            guard pending < capacity else { dropped += 1; return }
+            enqueueDroppedMarker()
+            pending += 1
+            queue.async { [self] in
+                persist(level: level, tag: tag, message: cleaned, date: date)
+                lock.withLock {
+                    pending -= 1
+                    if pending == 0 { enqueueDroppedMarker() }
+                }
+            }
         }
+    }
+
+    // Caller holds lock. A marker follows all records admitted before the overflow.
+    private func enqueueDroppedMarker() {
+        guard dropped > 0 else { return }
+        let count = dropped
+        dropped = 0
+        queue.async { [self] in
+            persist(level: .warn, tag: "logging", message: "[dropped \(count) log records]", date: Date())
+        }
+    }
+
+    private func persist(level: AppLog.Level, tag: String, message: String, date: Date) {
+        let line = "\(formatter.string(from: date)) \(level.symbol) [\(tag)] \(message)\n"
+        try? write(Data(line.utf8))
     }
 
     /// The newest `maxLines` lines across all files, oldest first.
     func lines() -> [String] {
-        queue.sync {
-            let files = (try? FileManager.default.contentsOfDirectory(
-                at: directory, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)) ?? []
-            // noah.log.4 is oldest, noah.log newest.
-            let ordered = files
-                .filter { $0.lastPathComponent.hasPrefix(Self.fileName) }
-                .sorted { Self.age(of: $0) > Self.age(of: $1) }
-            var lines: [String] = []
-            for url in ordered {
-                guard let contents = try? String(contentsOf: url, encoding: .utf8) else { continue }
-                lines.append(contentsOf: contents.split(whereSeparator: \.isNewline).map(String.init))
+        flush()
+        return queue.sync { readLines() }
+    }
+
+    private func readLines() -> [String] {
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: directory, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)) ?? []
+        let ordered = files
+            .filter { $0.lastPathComponent.hasPrefix(Self.fileName) }
+            .sorted { Self.age(of: $0) > Self.age(of: $1) }
+        var lines: [String] = []
+        for url in ordered {
+            guard let contents = try? String(contentsOf: url, encoding: .utf8) else { continue }
+            lines.append(contentsOf: contents.split(whereSeparator: \.isNewline).map(String.init))
+        }
+        return Array(lines.suffix(Self.maxLines))
+    }
+
+    /// Snapshot/export barriers also emit any outstanding overflow count.
+    func flush() {
+        lock.withLock { enqueueDroppedMarker() }
+        queue.sync {}
+    }
+
+    func flushAsync() async {
+        await withCheckedContinuation { continuation in
+            lock.withLock {
+                enqueueDroppedMarker()
+                queue.async { continuation.resume() }
             }
-            return Array(lines.suffix(Self.maxLines))
         }
     }
 
-    /// Waits for pending writes. For tests and before exporting.
-    func flush() {
-        queue.sync {}
+    func linesForExport() async -> [String] {
+        await flushAsync()
+        return await withCheckedContinuation { continuation in
+            queue.async { continuation.resume(returning: self.readLines()) }
+        }
     }
 
     private static func age(of url: URL) -> Int {
@@ -175,6 +227,12 @@ final class LogFile: @unchecked Sendable {
         let key = field.lowercased().filter(\.isLetter)
         return key == "key" || ["mnemonic", "seed", "privatekey", "privkey", "secret", "signature",
             "preimage", "authorization", "password", "token", "xamz", "email", "lightningaddress"].contains { key.contains($0) }
+    }
+
+    static func prepareRedaction() {
+        _ = bip39
+        _ = wordPattern
+        _ = sensitivePatterns
     }
 
     private static let bip39: Set<String> = {

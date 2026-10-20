@@ -71,8 +71,8 @@ struct LogView: View {
             }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
         }
         .settingsStyle("Logs")
-        .task { lines = LogFile.shared.lines() }
-        .refreshable { lines = LogFile.shared.lines() }
+        .task { lines = await LogFile.shared.linesForExport() }
+        .refreshable { lines = await LogFile.shared.linesForExport() }
         .toolbar { Button("Share Logs", systemImage: "square.and.arrow.up", action: share) }
         .sheet(isPresented: $sharing, onDismiss: { file?.discard(); file = nil }) {
             if let file { FileShareSheet(file: file) }
@@ -86,7 +86,7 @@ struct LogView: View {
                     do {
                         let url = folder.appending(path: "noah.log")
                         // Snapshot the redacted rotating files, so sharing cannot race rotation.
-                        try LogFile.shared.lines().joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+                        try await LogFile.shared.linesForExport().joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
                         return SharedFile(url: url, folder: folder)
                     } catch { ScratchSpace.shared.discard(folder); throw error }
                 }

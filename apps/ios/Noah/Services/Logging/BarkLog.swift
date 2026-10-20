@@ -4,10 +4,13 @@ import Foundation
 /// Rust invokes this synchronously on arbitrary worker threads (Send + Sync).
 /// Never call a Bark API from the callback: it may recursively emit logs.
 final class BarkLog: BarkLogger, @unchecked Sendable {
-    private let lock = NSLock()
     private let file: LogFile
 
-    init(file: LogFile = .shared) { self.file = file }
+    init(file: LogFile = .shared) {
+        // Load the bundled word list before Rust can invoke a callback.
+        LogFile.prepareRedaction()
+        self.file = file
+    }
 
     // nitro-ark 0.0.144's init_logger uses Debug for every build/variant.
     static let maxLevel: LogLevel = .debug
@@ -18,8 +21,6 @@ final class BarkLog: BarkLogger, @unchecked Sendable {
     }
 
     func log(level: LogLevel, target: String, message: String) {
-        lock.lock()
-        defer { lock.unlock() }
         AppLog("bark:\(target)", file: file).log(Self.appLevel(level), message)
     }
 
