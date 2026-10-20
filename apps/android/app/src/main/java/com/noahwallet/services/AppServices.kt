@@ -221,10 +221,11 @@ class AppServices private constructor(private val context: Context) {
                 val mnemonic = (seed.read() as? SecretResult.Found)?.value ?: throw SeedItem.Unavailable()
                 // The detached interval owns both settings and handles until success or rollback.
                 withContext(NonCancellable + Dispatchers.IO) {
+                    val prepared = store.prepare(candidate)
                     val reservation = session.reserveForConfigurationChange()
                     backupObserver?.cancelAndJoin(); backupObserver = null
                     try {
-                        store.change(candidate) { selection, commit ->
+                        store.change(candidate, prepared) { selection, commit ->
                             withContext(com.noahwallet.services.wallet.EsploraOpening(selection)) {
                                 session.reopen(reservation, mnemonic, BuildConfig.VERSION_NAME, commit)
                             }

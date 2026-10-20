@@ -125,10 +125,25 @@ class EsploraTest {
             assertTrue(runCatching {
                 faulty.change(candidate) { selection, commit -> calls += selection.endpoint; commit() }
             }.exceptionOrNull() is EsploraEndpoint.Failure)
-            assertEquals(previous.endpoint, calls.last())
+            assertEquals(if (phase == "pending") emptyList<String?>() else listOf(candidate.endpoint, previous.endpoint), calls)
             assertEquals(EsploraSettings.Record(previous), memory.store.record())
         }
     }
+    @Test fun persistentStorageFailureStillReopensPreviousAndResolvesPending() = runBlocking {
+        val memory = Memory(); memory.store.save(EsploraSettings.Record(previous))
+        var writes = 0
+        val faulty = EsploraSettings(memory.values::get) { key, value ->
+            if (++writes > 1) throw java.io.IOException("disk full")
+            memory.values[key] = value
+        }
+        val calls = mutableListOf<EsploraSettings.Selection>()
+        assertTrue(runCatching {
+            faulty.change(candidate) { selection, commit -> calls += selection; commit() }
+        }.isFailure)
+        assertEquals(listOf(candidate, previous), calls)
+        assertEquals(previous.endpoint, faulty.resolve("signet"))
+    }
+
     @Test fun backgroundWalletWaitsDuringEsploraReload() = runBlocking {
         val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
         val changing = launch { WalletBackgroundActivity.withExclusiveAccess { entered.complete(Unit); release.await() } }

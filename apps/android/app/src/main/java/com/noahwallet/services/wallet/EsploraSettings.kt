@@ -21,7 +21,7 @@ class EsploraSettings(private val read: (String) -> String?, private val write: 
 
     suspend fun resolve(variant: String, fetch: suspend (String) -> String = EsploraEndpoint::fetch): String? {
         record()?.let {
-            if (it.pending != null) save(Record(it.active))
+            if (it.pending != null) runCatching { save(Record(it.active)) }
             return it.active.endpoint?.takeIf { _ -> it.active.variant == variant && variant != "regtest" }
                 ?.let { value -> runCatching { EsploraEndpoint.normalize(value) }.getOrNull() }
         }
@@ -31,18 +31,19 @@ class EsploraSettings(private val read: (String) -> String?, private val write: 
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
             catch (_: Exception) { selection.copy(input = input, attention = importedAttention) }
         }
-        save(Record(selection))
+        try { save(Record(selection)) } catch (_: Exception) { return null }
         return selection.endpoint
     }
+    /** Write ahead before closing handles; a failed write leaves the live wallet alone. */
+    fun prepare(candidate: Selection): Record = Record(selection(candidate.variant), candidate).also(::save)
     /** The caller owns the lifecycle gate and a closed-session reservation across both attempts. */
-    suspend fun change(candidate: Selection, reopen: suspend (Selection, () -> Unit) -> Unit) {
-        val previous = selection(candidate.variant)
+    suspend fun change(candidate: Selection, prepared: Record? = null, reopen: suspend (Selection, () -> Unit) -> Unit) {
+        val previous = (prepared ?: prepare(candidate)).active
         try {
-            save(Record(previous, candidate))
             reopen(candidate) { save(Record(candidate)) }
         }
         catch (failure: Exception) {
-            save(Record(previous))
+            runCatching { save(Record(previous)) }
             try { reopen(previous) {} }
             catch (_: Exception) { throw EsploraEndpoint.Failure("Endpoint not changed. Restart Noah to reopen the previous endpoint.") }
             throw EsploraEndpoint.Failure("Endpoint not changed. The wallet is using the previous endpoint.")
