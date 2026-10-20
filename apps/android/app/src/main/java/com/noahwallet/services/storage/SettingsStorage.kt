@@ -10,7 +10,7 @@ import java.io.File
 
 class SettingsStorage(context: Context) {
     private val mmkv: MMKV?
-    private val backup = MMKVUpgradeBackup(File(context.filesDir, "mmkv"), instanceID)
+    private val backup = MMKVUpgradeBackup(File(context.filesDir, "mmkv"), instanceID, backupRoot = context.noBackupFilesDir)
 
     init {
         val rootPath = File(context.filesDir, "mmkv").absolutePath
@@ -68,7 +68,7 @@ class SettingsStorage(context: Context) {
         // Losing an admitted key later blocks above.
     }
     fun sync() { requireHealthy(); mmkv!!.sync() }
-    fun removeAll() = synchronized(openLock) { requireHealthy(); backup.markReset(); mmkv!!.clearAll(); mmkv.sync() }
+    fun removeAll() = synchronized(openLock) { requireHealthy(); backup.markReset(); mmkv!!.clearAll(); mmkv.sync(); backup.deleteSnapshot() }
     inline fun <reified State> persistedState(key: String): State? =
         string(key)?.let { PersistedStateCodec.decode<State>(it) }
     inline fun <reified State> setPersistedState(state: State, key: String, version: Int) =

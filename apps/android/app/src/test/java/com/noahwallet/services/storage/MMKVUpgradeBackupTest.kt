@@ -62,10 +62,17 @@ class MMKVUpgradeBackupTest {
         assertArrayEquals(original, File(root, SettingsStorage.instanceID).readBytes())
         assertArrayEquals(original, File(b.directory, SettingsStorage.instanceID).readBytes())
     }
-    @Test fun resetKeepsBackupButDisablesAutomaticResurrection() = withRoot { root ->
+    @Test fun resetDeletesSnapshotButKeepsRetirementAcrossReonboarding() = withRoot { root ->
         seed(root); val b = backup(root); b.prepare(); assertTrue(b.hasContent)
-        b.markReset(); assertFalse(backup(root).hasContent)
-        assertTrue(File(b.directory, SettingsStorage.instanceID).exists())
+        val staging = File(b.directory.path + ".pending").also { check(it.mkdir()) }
+        File(staging, "old").writeText("old")
+        b.markReset(); b.deleteSnapshot()
+        assertFalse(b.hasContent); assertFalse(b.directory.exists()); assertFalse(staging.exists())
+        assertEquals(emptyList<String>(), b.retiredKeys)
+        val restarted = backup(root); restarted.prepare()
+        assertFalse(restarted.directory.exists())
+        seed(root); restarted.retire(listOf("wallet-storage")); restarted.prepare()
+        assertFalse(restarted.directory.exists()); assertTrue(runCatching { restarted.restore() }.isFailure)
     }
     @Test fun retirementSurvivesRestartAndRefusesAutomaticRestore() = withRoot { root ->
         seed(root); val b = backup(root); b.prepare()
@@ -94,6 +101,15 @@ class MMKVUpgradeBackupTest {
         File(root, SettingsStorage.instanceID).writeBytes(byteArrayOf(7))
         b.prepare()
         assertArrayEquals(byteArrayOf(7), File(root, SettingsStorage.instanceID).readBytes())
+    }
+
+    @Test fun backupAndRetirementUseTheProvidedNoBackupDirectory() = withRoot { root ->
+        seed(root)
+        val noBackup = File(root.parentFile, "no-backup").also { check(it.mkdir()) }
+        val b = MMKVUpgradeBackup(root, SettingsStorage.instanceID, {}, noBackup)
+        b.prepare(); b.retire(listOf("wallet-storage"))
+        assertEquals(noBackup, b.directory.parentFile); assertEquals(noBackup, b.retirementFile.parentFile)
+        assertFalse(File(root.path + ".native-backup").exists())
     }
 
     @Test fun lastConfirmedSizeAlsoCountsAsContent() = withRoot { root ->

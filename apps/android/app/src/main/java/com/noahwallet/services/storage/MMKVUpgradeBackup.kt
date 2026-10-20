@@ -5,11 +5,12 @@ import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-/** Immutable pre-native bytes; this sibling directory is the native-only first-open marker. */
+/** Immutable pre-native bytes; a separate retirement record governs automatic restoration. */
 internal class MMKVUpgradeBackup(private val root: File, private val id: String,
-    private val sync: (File) -> Unit = ::syncDirectory) {
-    val directory = File(root.path + ".native-backup")
-    val retirementFile = File(root.path + ".native-retired")
+    private val sync: (File) -> Unit = ::syncDirectory,
+    private val backupRoot: File = root.parentFile!!) {
+    val directory = File(backupRoot, root.name + ".native-backup")
+    val retirementFile = File(backupRoot, root.name + ".native-retired")
     val retiredKeys: List<String>? get() {
         if (!retirementFile.exists()) return null
         val lines = retirementFile.readText().split('\n')
@@ -70,7 +71,7 @@ internal class MMKVUpgradeBackup(private val root: File, private val id: String,
         if (File(directory, "restore-pending").exists()) restore()
     }
 
-    val hasContent get() = recordedSize() > 4 && !File(directory, "reset").exists()
+    val hasContent get() = retiredKeys == null && recordedSize() > 4 && !File(directory, "reset").exists()
     val restored get() = File(directory, "restored").exists()
 
     fun restore() {
@@ -90,7 +91,13 @@ internal class MMKVUpgradeBackup(private val root: File, private val id: String,
     }
 
     /** Never resurrect a deliberately deleted wallet from the retained backup. */
-    fun markReset() { retire(emptyList()); mark("reset") }
+    fun markReset() = retire(emptyList())
+
+    /** Called after local wallet deletion clears and syncs live settings. Keep retirement. */
+    fun deleteSnapshot() {
+        listOf(directory, File(directory.path + ".pending")).forEach { check(!it.exists() || it.deleteRecursively()) }
+        sync(backupRoot)
+    }
 
     private fun recordedSize(): Long {
         val lines = manifest.readLines()

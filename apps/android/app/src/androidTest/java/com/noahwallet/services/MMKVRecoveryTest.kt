@@ -23,7 +23,10 @@ class MMKVRecoveryTest {
     private fun fixture(test: (Context, File) -> Unit) {
         val parent = File(app.cacheDir, "mmkv-recovery-${UUID.randomUUID()}").also { check(it.mkdir()) }
         val root = File(parent, "mmkv").also { check(it.mkdir()) }
-        val context = object : ContextWrapper(app) { override fun getFilesDir() = parent }
+        val context = object : ContextWrapper(app) {
+            override fun getFilesDir() = parent
+            override fun getNoBackupFilesDir() = File(parent, "no-backup").also { check(it.isDirectory || it.mkdir()) }
+        }
         try {
             listOf(id, "$id.crc").forEach { name ->
                 instrumentation.context.assets.open("rn-mmkv/$name").use { input -> File(root, name).outputStream().use { input.copyTo(it) } }
@@ -68,11 +71,11 @@ class MMKVRecoveryTest {
                 assertTrue(RNStoreCodec.versions.keys.any { store.string(it) != null })
                 assertNotNull(store.string("wallet-storage"))
             }
-            assertTrue(original.contentEquals(File(root.path + ".native-backup/$id").readBytes()))
+            assertTrue(original.contentEquals(File(context.noBackupFilesDir, "mmkv.native-backup/$id").readBytes()))
         }
     }
     @Test fun emptyRecoveryRestoresTheImmutableBackupOnce() = fixture { context, root ->
-        val backup = MMKVUpgradeBackup(root, id); backup.prepare()
+        val backup = MMKVUpgradeBackup(root, id, backupRoot = context.noBackupFilesDir); backup.prepare()
         val original = File(root, id).readBytes()
         corrupt(root, "empty")
         val store = SettingsStorage(context); store.requireHealthy()
@@ -84,7 +87,7 @@ class MMKVRecoveryTest {
         val store = SettingsStorage(context)
         assertTrue(runCatching { store.validateStores() }.exceptionOrNull() is SettingsStorage.Unavailable)
         assertTrue(runCatching { store.set("{}", "server-storage") }.isFailure)
-        assertTrue(MMKVUpgradeBackup(root, id).restored)
+        assertTrue(MMKVUpgradeBackup(root, id, backupRoot = context.noBackupFilesDir).restored)
     }
     @Test fun incompleteBackupPreventsOpenAndDoesNotCreateTheMissingCRC() = fixture { context, root ->
         val crc = File(root, "$id.crc"); check(crc.delete())
@@ -104,7 +107,7 @@ class MMKVRecoveryTest {
         store.setPersistedState(wallet.copy(isWalletSuspended = true), "wallet-storage", 0); store.sync()
         closeForRestart(root); corrupt(root, "empty")
         assertTrue(runCatching { SettingsStorage(context).validateStores() }.isFailure)
-        assertFalse(MMKVUpgradeBackup(root, id).restored)
+        assertFalse(MMKVUpgradeBackup(root, id, backupRoot = context.noBackupFilesDir).restored)
     }
     @Test fun laterCRCRecoveryBlocksEvenWhenRNKeysSurvive() = fixture { context, root ->
         SettingsStorage(context).validateStores(); closeForRestart(root); corrupt(root, "crc")
@@ -132,6 +135,25 @@ class MMKVRecoveryTest {
         store.set(raw, "profile-storage")
         val native = MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!
         assertArrayEquals(store.string("profile-storage")!!.toByteArray(), native.decodeBytes("profile-storage"))
+    }
+
+    @Test fun backupUsesNoBackupStorageAndDeletionNeverResurrectsTheSnapshot() = fixture { context, root ->
+        val store = SettingsStorage(context)
+        val backup = MMKVUpgradeBackup(root, id, backupRoot = context.noBackupFilesDir)
+        assertEquals(context.noBackupFilesDir, backup.directory.parentFile)
+        assertTrue(File(backup.directory, id).isFile)
+        val staging = File(backup.directory.path + ".pending").also { check(it.mkdir()) }
+        File(staging, "old").writeText("old")
+        store.removeAll()
+        assertFalse(backup.directory.exists()); assertFalse(staging.exists())
+        assertTrue(backup.retirementFile.isFile)
+        closeForRestart(root)
+        val restarted = SettingsStorage(context); restarted.validateStores()
+        assertNull(restarted.string("wallet-storage")); assertFalse(backup.directory.exists())
+        restarted.set("""{"state":{"isInitialized":true},"version":0}""", "wallet-storage")
+        closeForRestart(root)
+        assertTrue(SettingsStorage(context).persistedState<PersistedWalletState>("wallet-storage")!!.isInitialized == true)
+        assertFalse(backup.directory.exists())
     }
 
     @Test fun existingDatabaseWithMissingWalletStoreResumesOnboardingInsteadOfBlocking() = fixture { context, root ->
