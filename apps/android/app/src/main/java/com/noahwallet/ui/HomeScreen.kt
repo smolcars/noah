@@ -22,11 +22,16 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatPayment) -> Unit, settings: () -> Unit) {
     var selectedID by rememberSaveable { mutableStateOf<String?>(null) }
+    var map by rememberSaveable { mutableStateOf(false) }
     var email by remember { mutableStateOf(false) }
     var dismissed by remember { mutableStateOf(model.server.state.isEmailPromptDismissed == true) }
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { model.refresh() }
+    if (map) {
+        com.noahwallet.btcmap.BtcMapScreen { map = false }
+        return
+    }
     if (email) {
         BackHandler { if (!model.busy) email = false }
         EmergencyEmailScreen(model) { email = false }
@@ -38,8 +43,9 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
         }) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(28.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Noah", style = MaterialTheme.typography.headlineMedium)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Text("Noah", Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
+                    if (!model.isWalletSuspended) TextButton({ map = true }) { Text("Bitcoin Map") }
                     TextButton(settings) { Text("Settings") }
                 }
                 // Like RN, a suspended wallet shows only the suspended card.

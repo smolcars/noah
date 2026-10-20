@@ -15,9 +15,11 @@ data class CitySearchEntry(
 }
 
 object CitySearch {
+    private val combiningMarks = Regex("[\\u0300-\\u036f]")
+    private val nonLetters = Regex("[^\\p{L}\\p{N}]+")
     fun normalize(text: String): String = Normalizer.normalize(text, Normalizer.Form.NFKD)
-        .replace(Regex("[\\u0300-\\u036f]"), "").lowercase(Locale.ROOT)
-        .replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+        .replace(combiningMarks, "").lowercase(Locale.ROOT)
+        .replace(nonLetters, " ").trim()
 
     fun parse(text: String): List<CitySearchEntry> {
         val raw = mapJson.parseToJsonElement(text).jsonObject
