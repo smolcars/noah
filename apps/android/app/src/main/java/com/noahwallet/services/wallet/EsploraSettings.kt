@@ -1,0 +1,58 @@
+package com.noahwallet.services.wallet
+
+import com.noahwallet.services.storage.SettingsStorage
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.*
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
+
+/** One durable write-ahead value: ordinary/cold opens always use active, never pending. */
+class EsploraSettings(private val read: (String) -> String?, private val write: (String, String) -> Unit) {
+    constructor(storage: SettingsStorage) : this(storage::string, { key, value -> storage.set(value, key) })
+    @Serializable data class Selection(val endpoint: String? = null, val variant: String, val input: String? = null, val attention: String? = null)
+    @Serializable data class Record(val active: Selection, val pending: Selection? = null)
+    fun record(): Record? = read(key)?.let { Json.decodeFromString<Record>(it) }
+    fun save(record: Record) = write(key, Json.encodeToString(record))
+    val importedInput: String? get() = read("esplora-storage")?.let { raw ->
+        runCatching { Json.parseToJsonElement(raw).jsonObject["state"]?.jsonObject?.get("endpointOverride")?.jsonPrimitive?.contentOrNull }.getOrNull()
+    }
+    fun selection(variant: String): Selection = runCatching { record()?.active?.takeIf { it.variant == variant } }.getOrNull()
+        ?: Selection(variant = variant, input = importedInput, attention = importedInput?.let { importedAttention })
+
+    suspend fun resolve(variant: String, fetch: suspend (String) -> String = EsploraEndpoint::fetch): String? {
+        record()?.let {
+            if (it.pending != null) save(Record(it.active))
+            return it.active.endpoint?.takeIf { _ -> it.active.variant == variant && variant != "regtest" }
+                ?.let { value -> runCatching { EsploraEndpoint.normalize(value) }.getOrNull() }
+        }
+        var selection = Selection(variant = variant)
+        importedInput?.let { input ->
+            selection = try { selection.copy(input = input, endpoint = EsploraEndpoint.validate(input, variant, fetch)) }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { selection.copy(input = input, attention = importedAttention) }
+        }
+        save(Record(selection))
+        return selection.endpoint
+    }
+    /** The caller owns the lifecycle gate and a closed-session reservation across both attempts. */
+    suspend fun change(candidate: Selection, reopen: suspend (Selection, () -> Unit) -> Unit) {
+        val previous = selection(candidate.variant)
+        save(Record(previous, candidate))
+        try { reopen(candidate) { save(Record(candidate)) } }
+        catch (failure: Exception) {
+            save(Record(previous))
+            try { reopen(previous) {} }
+            catch (_: Exception) { throw EsploraEndpoint.Failure("Endpoint not changed. Restart Noah to reopen the previous endpoint.") }
+            throw EsploraEndpoint.Failure("Endpoint not changed. The wallet is using the previous endpoint.")
+        }
+    }
+    companion object {
+        const val key = "native-esplora-selection"
+        const val importedAttention = "This imported endpoint needs attention. Test and save it before use."
+    }
+}
+
+/** Only the reservation holder may open a pending candidate. */
+internal class EsploraOpening(val selection: EsploraSettings.Selection) : AbstractCoroutineContextElement(Key) {
+    companion object Key : CoroutineContext.Key<EsploraOpening>
+}

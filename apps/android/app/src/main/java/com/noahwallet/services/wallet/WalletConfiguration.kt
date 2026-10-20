@@ -44,6 +44,12 @@ data class WalletConfiguration(
             else -> error("Unknown app variant")
         }
 
+        fun effective(variant: String, endpoint: String?): WalletConfiguration {
+            val config = base(variant)
+            val normalized = endpoint?.let { runCatching { EsploraEndpoint.normalize(it) }.getOrNull() }
+            return if (variant != "regtest" && normalized != null) config.copy(esplora = normalized) else config
+        }
+
         fun userAgent(variant: String, version: String) = "noah-$variant-android/$version"
     }
 }

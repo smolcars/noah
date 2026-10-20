@@ -505,6 +505,8 @@ class WalletSession internal constructor(
             instance ?: WalletSession(BuildConfig.APP_VARIANT,
                 WalletDataLocation(context.applicationContext.filesDir, BuildConfig.APP_VARIANT),
                 sendWarn = com.noahwallet.services.logging.AppLog(context, "send")::w,
+                opener = sdkOpener(BuildConfig.APP_VARIANT, com.noahwallet.services.logging.AppLog(context, "send")::w,
+                    EsploraSettings(com.noahwallet.services.storage.SettingsStorage(context))),
                 isSuspended = {
                     com.noahwallet.services.storage.SettingsStorage(context).persistedState<com.noahwallet.services.storage.PersistedWalletState>(
                         com.noahwallet.services.storage.PersistedWalletState.key)?.isWalletSuspended == true
@@ -512,7 +514,7 @@ class WalletSession internal constructor(
                 .also { instance = it }
         }
 
-        internal fun sdkOpener(variant: String, warn: (String) -> Unit,
+        internal fun sdkOpener(variant: String, warn: (String) -> Unit, settings: EsploraSettings? = null,
             openOnchain: suspend (Network, String, Config, String, Boolean) -> OnchainWallet = { network, mnemonic, config, datadir, create ->
                 if (create) OnchainWallet.default(network, mnemonic, config, datadir)
                 else OnchainWallet.openExisting(network, mnemonic, config, datadir)
@@ -520,7 +522,9 @@ class WalletSession internal constructor(
             { inputMnemonic, datadir, runDaemon, appVersion, create ->
                 val mnemonic = com.noahwallet.services.storage.StoredMnemonic.normalize(inputMnemonic)
                     ?: throw com.noahwallet.services.storage.SeedItem.Unavailable()
-                val configuration = WalletConfiguration.base(variant)
+                val opening = currentCoroutineContext()[EsploraOpening]
+                val endpoint = if (opening != null) opening.selection.endpoint else settings?.resolve(variant)
+                val configuration = WalletConfiguration.effective(variant, endpoint)
                 val config = configuration.sdkConfig(WalletConfiguration.userAgent(variant, appVersion))
                 // Existing wallets go through the SDK's read-only identity check (properties,
                 // network, seed fingerprint) before anything writes; only creation may use default.
