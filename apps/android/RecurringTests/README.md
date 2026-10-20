@@ -3,6 +3,136 @@
 Initial implementation base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
 Kotlin / Compose, API 24 minimum, bark-bolt-ffi **0.4.0**.
 
+## Round-2 money-path fixes (2026-10-20)
+
+Base: `feat/native-rewrite` at `4f7228c5`; bark-bolt-ffi **0.5.0**.
+These changes retain revision-bound settlement, the independent policy ledger,
+strict/lossless RN rows, journal quarantine and cross-revision consumption.
+They do not depend on acknowledgement of MMKV recovery quarantine.
+
+The wallet datadir now also contains `.noah-recurring-automation.json` and its
+`.initialized` marker. Both are version-1 JSON. The marker stores an `instance`
+UUID; the authority stores that same UUID, an independent UUID `generation`
+epoch, and required `suspended` / `stopped` booleans. Epochs rotate on stop,
+suspension changes and explicit wallet resume; they are equality tokens, not
+numeric counters. Existing MMKV stop-generation checks remain in addition.
+Wallet binding/instance and datadir checks still independently gate execution.
+
+Bootstrap writes the marker before the authority. Every document uses temporary
+file → file fsync → atomic rename → directory fsync. Lifecycle stop/suspension
+writes precede the MMKV callback and UI success. Only explicit wallet resume
+clears `stopped`; failed suspension rollback does not. A failed MMKV resume write
+restores a durable stop. Missing/corrupt authority or marker, interrupted writes
+and missing required fields stop execution without importing MMKV again. An
+in-process failure latch also defeats an already-admitted final guard. Production
+wallet deletion removes the files with the datadir and clears that path's latch
+only after removing the data. MMKV recovery acknowledgement cannot clear it.
+
+Protected reads overlay a visible stopped row without changing RN bytes. Each
+execution captures the durable epoch before opening; policy checks and the final
+synchronous Send guard reread it. A stop followed by resume still invalidates
+work admitted under an earlier epoch, even when MMKV is rolled back.
+
+Terminal journal entries now store `policyApplied` with resolution/consumption,
+before policy-ledger/MMKV advancement and receipt acknowledgement. This is a
+write-ahead application claim: interruption may leave advancement stopped, but
+cannot apply success/history/notifications twice. Repeated status checks only
+acknowledge the exact retained receipt. Already-consumed pre-marker receipts are
+upgraded without applying them again. Durable consumption/application remains
+acknowledgeable even when a policy write latches storage failure or a recovered
+row mismatches the policy ledger; that row stays visibly stopped. Wallet/binding
+replacement still prevents settling another wallet's entry.
+
+A healthy ledger-ahead mismatch can now be explicitly reapproved through Edit or
+**Approve and resume**. Reapproval requires a resolved journal and unlocked Send,
+writes a fresh revision under the current ledger generation, and skips already-due
+occurrences. It never removes consumption timestamps/indices or legacy-uncertainty
+evidence; corrupt evidence and ambiguous attempts remain blocked. The destructive
+history override cannot silently adopt a rolled-back policy.
+
+Android-specific fixes:
+
+- `RecurringNotifications.kt:75` attaches policy/automation protection before the
+  reminder worker reads a schedule. Failed pause/cancel MMKV writes cannot
+  advertise the older active row.
+- `RecurringExecutor.kt:72` checks budget and caller cancellation before wallet
+  open, server reporting, widget refresh and reminder refresh, including after
+  suspended reads. The final Send guard checks the caller too. Already-admitted
+  native calls still settle and consume money after cancellation/revocation.
+- Ledger file fsync is injectable at `RecurringStore.kt:118`; directory syncing
+  remains injectable. `RecurringWorld` skips both for fast unit tests, and the
+  existing real-session reservation fixture uses its lifecycle sync hook.
+  Dedicated authority tests execute real file fsync and pin temp/rename/directory
+  ordering and interrupted boundaries.
+
+Implementation (relative to `apps/android/app/src/main/java/com/noahwallet/`):
+`recurring/RecurringAutomationAuthority.kt:9`,
+`services/wallet/WalletLifecycle.kt:103`, `recurring/RecurringStore.kt:28`,
+`recurring/RecurringExecutor.kt:81` / `:124` (authority), `:186` (idempotence),
+`:213` / `:216` (acknowledgement), `:237` / `:261` (reapproval),
+`recurring/RecurringPolicyLedger.kt:64` (new approval revision).
+
+Permanent regression files under `app/src/test/java/com/noahwallet/recurring/`:
+`RecurringMoneyPathTest`, `RecurringSettlementRepeatTest`,
+`RecurringSettlementRollbackTest`, `RecurringReapprovalTest`,
+`RecurringReminderProtectionTest`, `RecurringStageBudgetTest`, and
+`RecurringAutomationAuthorityTest`.
+
+The three supplied money-path probes failed before their fixes (**3/3**). The
+reapproval and stage-budget probes also failed before (**2/2**). Removing only the
+reminder protection reproduced its regression; restoring it passed. A second
+pre-marker upgrade probe failed before / passes after. Repeated checks pin the
+entire applied row and notices, one submission, consumption and unlocked Send.
+Additional cases cover terminal acknowledgement with latched policy storage,
+durable stop+resume during final preparation, required fields, unavailable
+control files and both fsync boundaries.
+
+Final targeted recurring/lifecycle run: **1,511 tests / 23 suites / zero
+failures/errors/skips**. Real-session/restore fixture check: **46 tests / 2 suites /
+zero failures/errors/skips**. Final full JVM/APK result: **2,968 tests / 99 suites / zero failures/errors/skips; regtest APK assembly succeeded** in the same **1m 22s** completed run.
+
+Remaining excluded integration: `services/AppServices.kt:107` also writes the
+MMKV stop generation when preparing restore, independently of WalletLifecycle.
+That file was explicitly excluded because another agent owns its headless work.
+Its owner must durably stop the authority inside the existing `try`, before
+`settings.set(generation, …)`. The unapplied, unverified wiring patch is
+`/private/tmp/noah-money-appservices-owner.patch`:
+
+```kotlin
+val directory = WalletDataLocation(context.filesDir, variant).directory
+if (directory.isDirectory) com.noahwallet.recurring.RecurringAutomationAuthority(directory).stop()
+```
+
+This is a remaining finding-1 boundary; the lifecycle suspension/deletion fixes
+and their rollback probes are implemented and tested. No AppServices file was
+modified here.
+
+No emulator, physical device, Docker, funded payment or real power cut was used.
+One early full-command attempt was stopped during unrelated PBKDF2 tests after
+inspection found the existing real-session test needed the new sync injection;
+it is not counted as a completed full run. The final completed run follows that
+fixture correction. An earlier overlap of two targeted Gradle runs caused report
+file collisions; subsequent platform runs were serialized.
+
+Code commits:
+
+```text
+80170e37 test(android): inject recurring ledger file sync in executor tests
+b84d738a fix(android): apply each recurring settlement at most once
+73bc9f91 fix(android): acknowledge paid receipts despite policy rollback
+20132ff5 fix(android): persist wallet automation stops outside MMKV
+7f07a6e2 fix(android): gate every recurring background stage on its budget
+e0cee1b3 fix(android): allow explicit reapproval after policy rollback
+99beda75 fix(android): protect recurring reminders with policy authority
+19373aa8 fix(android): release consumed receipts despite latched policy storage
+e8118c97 test(android): pin idempotent recurring history and notifications
+eb6402cf fix(android): retain automation failure latches through recovery
+a271ca0f fix(android): preserve idempotence for pre-marker consumed receipts
+4825166a fix(android): observe caller cancellation between recurring stages
+c1ade935 fix(android): label recurring rollback reapproval explicitly
+ad6f318a test(android): inject lifecycle sync in recurring reservation test
+```
+
 ## MMKV policy rollback safety (2026-10-20)
 
 Base: `feat/native-rewrite` at `fce8f757`, retaining revision-bound settlement

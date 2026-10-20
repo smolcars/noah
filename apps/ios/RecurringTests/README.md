@@ -3,6 +3,123 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Round-2 money-path fixes (2026-10-20)
+
+Base: `feat/native-rewrite` at `4f7228c5`; bark-bolt-ffi **0.5.0**.
+These changes retain revision-bound settlement, the independent policy ledger,
+strict/lossless RN rows, journal quarantine and cross-revision consumption.
+They do not depend on acknowledgement of MMKV recovery quarantine.
+
+The wallet datadir now also contains `.noah-recurring-automation.json` and its
+`.initialized` marker. Both are version-1 JSON. The marker stores an `instance`
+UUID; the authority stores that same UUID, an independent UUID `generation`
+epoch, and required `suspended` / `stopped` booleans. Epochs rotate on stop,
+suspension changes and explicit wallet resume; they are equality tokens, not
+numeric counters. Existing MMKV stop-generation checks remain in addition.
+Wallet binding/instance and datadir checks still independently gate execution.
+
+Bootstrap writes the marker before the authority. Every document uses temporary
+file → file fsync → atomic rename → directory fsync. Lifecycle stop/suspension
+writes precede the MMKV callback and UI success. Only explicit wallet resume
+clears `stopped`; failed suspension rollback does not. A failed MMKV resume write
+restores a durable stop. Missing/corrupt authority or marker, interrupted writes
+and missing required fields stop execution without importing MMKV again. An
+in-process failure latch also defeats an already-admitted final guard. Production
+wallet deletion removes the files with the datadir and clears that path's latch
+only after removing the data. MMKV recovery acknowledgement cannot clear it.
+
+Protected reads overlay a visible stopped row without changing RN bytes. Each
+execution captures the durable epoch before opening; policy checks and the final
+synchronous Send guard reread it. A stop followed by resume still invalidates
+work admitted under an earlier epoch, even when MMKV is rolled back.
+
+Terminal journal entries now store `policyApplied` with resolution/consumption,
+before policy-ledger/MMKV advancement and receipt acknowledgement. This is a
+write-ahead application claim: interruption may leave advancement stopped, but
+cannot apply success/history/notifications twice. Repeated status checks only
+acknowledge the exact retained receipt. Already-consumed pre-marker receipts are
+upgraded without applying them again. Durable consumption/application remains
+acknowledgeable even when a policy write latches storage failure or a recovered
+row mismatches the policy ledger; that row stays visibly stopped. Wallet/binding
+replacement still prevents settling another wallet's entry.
+
+A healthy ledger-ahead mismatch can now be explicitly reapproved through Edit or
+**Approve and resume**. Reapproval requires a resolved journal and unlocked Send,
+writes a fresh revision under the current ledger generation, and skips already-due
+occurrences. It never removes consumption timestamps/indices or legacy-uncertainty
+evidence; corrupt evidence and ambiguous attempts remain blocked. The destructive
+history override cannot silently adopt a rolled-back policy.
+
+iOS implementation (relative to `apps/ios/Noah/`):
+
+- Authority: `Features/Recurring/RecurringAutomationAuthority.swift:5` and
+  `Services/Wallet/WalletLifecycle.swift:143`; protected display/read at
+  `Features/Recurring/RecurringStore.swift:29`, entry at
+  `Features/Recurring/RecurringExecutor.swift:112`, final guard at `:181`.
+- Idempotence: `Features/Recurring/RecurringExecutor.swift:235`, journal field at
+  `Features/Recurring/RecurringJournal.swift:13`; terminal acknowledgement and
+  status checks at executor `:273` / `:276`.
+- Explicit reapproval: `Features/Recurring/RecurringPolicyLedger.swift:83`,
+  executor `:298` / `:323`, and `Features/Recurring/RecurringPaymentsView.swift:60`.
+- `RecurringStore.swift:23` / `:177` inject syncing into the ledger; the executor
+  harness skips ledger/authority fsync. Dedicated authority tests still execute
+  real file/directory syncs and assert their ordering. Production defaults keep
+  full syncing and backup exclusion.
+
+Permanent tests: `NoahTests/RecurringMoneyPathTests.swift`,
+`RecurringSettlementRepeatTests.swift`, `RecurringSettlementRollbackTests.swift`,
+`RecurringReapprovalTests.swift`, and `RecurringAutomationAuthorityTests.swift`.
+The three supplied probes failed before (**3 definitions / 3 failed / 0 skipped**).
+Edit/resume reapproval failed before in both parameter cases. A pre-marker
+consumed-receipt case separately failed with duplicate history/notifications
+before its upgrade fix. Additional assertions pin the entire row and notices,
+consumption/application, Send unlocking with latched policy storage, and durable
+generation changes during final preparation. Interrupted file/directory writes,
+missing files/marker and missing required fields stay stopped.
+
+Final focused run: **81 definitions / 155 expanded passes / 8 suites**, zero
+failures/skips. The full **NoahTests suite ran once after the last iOS code change**:
+**643 total / 620 passed / 23 opt-in skipped / 0 failed**, **128 suites**;
+**913 expanded passes / 23 skipped**. Summaries and test trees were exported under
+`/private/tmp/noah-money-*`. An initial missing `xcodegen` on the Nix PATH was
+resolved with its installed absolute path; test-fixture compile/expectation
+failures were corrected before these final passing runs.
+
+All Xcode runs used Nix, generated project files, ordinary code signing,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, disabled parallel testing and
+DerivedData under `/private/tmp`. Targeted selectors chose whole suites; the
+individual test IDs in this repository require a trailing `()`.
+
+Owned simulator **Noah MoneyPath Sol 7f3854cd**, iPhone 17 / iOS 27.0,
+UDID **DFE1E1B4-83FB-4080-B9B5-09FAD0CC8B5D**: exact identity and **Shutdown**
+state confirmed before deletion; absence verified afterward. The native Device
+panel did not discover the newly created simulator, so Xcode drove only that
+owned UDID. Cleanup receipt: `/private/tmp/noah-money-device-cleanup.json`.
+All nine owned `.xcresult` bundles and `/private/tmp/noah-money-sol-dd` DerivedData
+were deleted after exporting summaries/test trees; absence verified. Artifact
+receipt: `/private/tmp/noah-money-artifact-cleanup.json`. Build/test logs and
+exported JSON remain under the owned `/private/tmp/noah-money-*` prefix.
+
+No protected/shared simulator, Android emulator, physical device, Docker, server,
+RN client, SettingsStorage/MMKV opening/quarantine, AppServices, or logging/
+telemetry implementation was changed. Tests use deterministic failures/rollback;
+no funded payment, physical push, or real power cut is claimed.
+
+Code commits:
+
+```text
+e5b06e0c test(ios): inject recurring ledger sync in executor harness
+140ebde4 fix(ios): apply each recurring settlement at most once
+77535f7d fix(ios): acknowledge paid receipts despite policy rollback
+fdcf09f5 fix(ios): persist wallet automation stops outside MMKV
+6e8669f4 fix(ios): allow explicit reapproval after policy rollback
+ee0efb2a fix(ios): release consumed receipts despite latched policy storage
+0094f156 test(ios): pin idempotent recurring history and notifications
+13f0c6cc fix(ios): retain automation failure latches through recovery
+d71c0750 fix(ios): label recurring rollback reapproval explicitly
+9b82c5c7 fix(ios): preserve idempotence for pre-marker consumed receipts
+```
+
 ## MMKV policy rollback safety (2026-10-20)
 
 Base: `feat/native-rewrite` at `fce8f757`, retaining revision-bound settlement
