@@ -198,3 +198,23 @@ class RestoreFlowTest {
         }
     }
 }
+
+class RestoreClipboardTest {
+    @Test fun clearsOnlyTheAcceptedContentIncludingOnBackgroundOrLeave() {
+        var content: String? = "accepted phrase"
+        var clears = 0
+        val clipboard = RestoreClipboard({ content }, { content = null; clears++ })
+        clipboard.accepted("accepted phrase")
+        assertNull(content); assertEquals(1, clears)
+        content = "unrelated replacement"
+        clipboard.clearIfUnchanged(); assertEquals("unrelated replacement", content)
+        content = "accepted phrase"
+        clipboard.clearIfUnchanged(); assertNull(content); assertEquals(2, clears)
+    }
+    @Test fun clipboardReplacedBeforeAcceptanceIsPreserved() {
+        var content: String? = "replacement"
+        val clipboard = RestoreClipboard({ content }, { content = null })
+        clipboard.accepted("accepted phrase"); assertEquals("replacement", content)
+        content = null; clipboard.clearIfUnchanged(); assertNull(content)
+    }
+}

@@ -23,6 +23,16 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 @Composable
 fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
     val activity = LocalContext.current as Activity
+    val clipboard = remember {
+        val manager = activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        RestoreClipboard(
+            read = { manager.primaryClip?.takeIf { it.itemCount == 1 }?.getItemAt(0)?.text?.toString() },
+            clear = {
+                if (android.os.Build.VERSION.SDK_INT >= 28) manager.clearPrimaryClip()
+                else manager.setPrimaryClip(android.content.ClipData.newPlainText("", ""))
+            },
+        )
+    }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val focus = LocalFocusManager.current
     val input = remember { RecoveryPhraseInput() }
@@ -33,7 +43,7 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
     val requesters = remember { List(12) { FocusRequester() } }
     val flow = model.restore
     val blocked = model.busy || !flow.canLeave
-    fun clear() { focus.clearFocus(); input.clear(); focused = null; revision++; clearGeneration++ }
+    fun clear() { clipboard.clearIfUnchanged(); focus.clearFocus(); input.clear(); focused = null; revision++; clearGeneration++ }
     fun leave() { clear(); flow.clearIssue(); model.step = "welcome" }
     BackHandler { if (!blocked && !useStoredSeed) leave() }
     DisposableEffect(activity, lifecycle) {
@@ -60,7 +70,9 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
                         repeat(2) { column ->
                             val index = row * 2 + column
                             RecoveryWordField(words[index], index, {
-                                input.update(it, index); revision++; flow.clearIssue()
+                                input.update(it, index)
+                                if (!input.wrongWordCount && RecoveryPhraseInput.normalizedWords(it).size == 12) clipboard.accepted(it)
+                                revision++; flow.clearIssue()
                             }, onFocus = { focused = index },
                                 onNext = { if (index < 11) requesters[index + 1].requestFocus() },
                                 modifier = Modifier.weight(1f).focusRequester(requesters[index])
