@@ -9,7 +9,8 @@ struct EndpointPrivacyTests {
     @Test func hostCredentialsAndEncodedIdentitiesNeverReachSinks() throws {
         let origin = "https://fakehostcredential73.example.com:8443"
         EndpointLogPrivacy.register(origin + "/api")
-        let inputs = [origin, origin + "/api/blocks/tip/height", origin.uppercased(),
+        EndpointLogPrivacy.register("https://fakepunctcredential92.example.com/api")
+        let inputs = ["https://fakepunctcredential92.example.com:443)", origin, origin + "/api/blocks/tip/height", origin.uppercased(), origin + ")", origin + ",", origin + ".",
             origin.replacingOccurrences(of: "fake", with: #"\u0066ake"#),
             origin.replacingOccurrences(of: ":", with: "%3A").replacingOccurrences(of: "/", with: "%2F"),
             origin.replacingOccurrences(of: "/", with: "%2F"),
@@ -24,6 +25,7 @@ struct EndpointPrivacyTests {
             event.releaseName = input
             #expect(AppTelemetry.scrub(event) == nil)
         }
+        #expect(LogFile.redact("prefix" + origin) == "prefix[custom-esplora]")
     }
 
     @Test func unknownHTMLEntitiesAndUnterminatedNumericEntitiesCannotExposeHosts() {
@@ -59,7 +61,7 @@ struct EndpointPrivacyTests {
 
     @Test func routeOnlyEndpointsPreserveOtherOriginsAndDiagnostics() {
         EndpointLogPrivacy.register("https://route-privacy.example/api")
-        for input in ["https://mempool.space/api/blocks/tip/height", "HTTP 404: /blocks/tip/height failed", "API v1 request completed"] {
+        for input in ["https://mempool.space/api/blocks/tip/height", "HTTP 404: /blocks/tip/height failed", "API v1 request completed", "https://.", "https://route-privacy.example.other/api", "https://route-privacy.example:8443/api"] {
             #expect(LogFile.redact(input) == input)
         }
     }

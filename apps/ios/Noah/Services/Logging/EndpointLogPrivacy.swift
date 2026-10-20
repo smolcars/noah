@@ -7,7 +7,7 @@ enum EndpointLogPrivacy {
     static func failClosed() { lock.withLock { unavailable = true } }
     nonisolated(unsafe) private static var origins = Set<String>()
     nonisolated(unsafe) private static var paths = Set<String>()
-    private static let urls = try! NSRegularExpression(pattern: #"(?i)\bhttps?://[^\s<>"']*"#)
+    private static let urls = try! NSRegularExpression(pattern: #"(?i)https?://[^\s<>"']*"#)
     // Admit only the SDK error type/status, never provider-controlled response text.
     private static let responseStatus = try! NSRegularExpression(
         pattern: #"HttpResponse(?:\s*\{\s*status:\s*|\()([0-9]{3})\b"#)
@@ -19,14 +19,30 @@ enum EndpointLogPrivacy {
             let trimmed = path.replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
             if !trimmed.isEmpty { sensitive.insert(trimmed) }
         }
-        lock.withLock { paths.formUnion(sensitive); origins.insert(origin) }
+        var spellings: Set<String> = [origin]
+        if let url = URLComponents(string: origin), url.port == nil {
+            spellings.insert(origin + (url.scheme == "http" ? ":80" : ":443"))
+        }
+        lock.withLock { paths.formUnion(sensitive); origins.formUnion(spellings) }
     }
     private static func origin(_ value: String) -> String? {
         guard var url = URLComponents(string: value), url.host != nil else { return nil }
-        url.scheme = url.scheme?.lowercased(); url.host = url.host?.lowercased()
+        url.scheme = url.scheme?.lowercased(); url.host = url.host?.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
         if url.port == (url.scheme == "http" ? 80 : 443) { url.port = nil }
         url.path = ""; url.query = nil; url.fragment = nil; url.user = nil; url.password = nil
         return url.string
+    }
+    private static func matches(_ value: String, registered: Set<String>) -> Bool {
+        if let origin = origin(value), registered.contains(origin) { return true }
+        // A log delimiter can make the complete URL token unparsable. Match the known
+        // authority at its boundary, never a prefix of another host or port.
+        let lower = value.lowercased()
+        return registered.contains { origin in
+            guard lower.hasPrefix(origin) else { return false }
+            let suffix = lower.dropFirst(origin.count).drop(while: { $0 == "." })
+            guard let next = suffix.first else { return true }
+            return !next.isLetter && !next.isNumber && !"-_%:@".contains(next)
+        }
     }
     static func redact(_ text: String) -> String { sanitize(text) ?? "[redacted]" }
 
@@ -68,8 +84,7 @@ enum EndpointLogPrivacy {
         for (index, view) in views.enumerated() {
             var clean = view
             for match in urls.matches(in: view, range: NSRange(view.startIndex..., in: view)).reversed() {
-                guard let range = Range(match.range, in: clean), let origin = origin(String(clean[range])),
-                      registered.contains(origin) else { continue }
+                guard let range = Range(match.range, in: clean), matches(String(clean[range]), registered: registered) else { continue }
                 clean.replaceSubrange(range, with: "[custom-esplora]")
             }
             // Inspect relative references separately: another origin never inherits our paths.
