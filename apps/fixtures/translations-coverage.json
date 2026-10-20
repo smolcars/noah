@@ -9,8 +9,8 @@
   "catalogEntries": 1287,
   "coverage": {
     "ios": {
-      "rnTranslated": 600,
-      "nativeOnlyEnglish": 410,
+      "rnTranslated": 601,
+      "nativeOnlyEnglish": 407,
       "nativeOnly": [
         "#{nativeValue1} · {nativeValue2} · {nativeValue3} sats",
         "6-digit code",
@@ -35,7 +35,6 @@
         "Ark fee",
         "Ark receives",
         "Ark server info is unavailable. Pull to refresh.",
-        "Ark's published Lightning fees for this amount can reach {fee} sats, above your automatic limit of {cap} sats. Review it to pay manually.",
         "Ark's published Lightning fees for this amount can reach {nativeValue1} sats, above your automatic limit of {nativeValue2} sats. Review it to pay manually.",
         "ArkInfo unavailable; using the published Lightning fee schedule",
         "Ask to board to Ark when onchain balance can cover {nativeValue1} sats plus fees while leaving at least 5,000 sats onchain. Confirm the exact fees and reserve before boarding.",
@@ -325,7 +324,6 @@
         "The exact amount depends on the network fee when sent. The total is exactly the reviewed coins.",
         "The fee and total are estimates based on two inputs and two outputs. The final fee and total may be higher if more coins are needed.",
         "The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually.",
-        "The fee for this payment ({fee} sats) is above your automatic limit of {cap} sats. Review it to pay manually.",
         "The fee for this payment ({nativeValue1} sats) is above your automatic limit of {nativeValue2} sats. Review it to pay manually.",
         "The invoice must request whole satoshis.",
         "The operation may have been submitted. Check its status before repeating it. Other recovery operations remain available.",
@@ -358,7 +356,6 @@
         "This legacy payment has no wallet identity. Check your history and recipient before discarding it.",
         "This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process. Fees are paid from your onchain balance. Cancellation is possible only before the final exit transaction is broadcast.",
         "This operation overlaps an unresolved attempt. Check its status before repeating it.",
-        "This payment could not be prepared. No payment was submitted.",
         "This payment is no longer due.",
         "This payment may have been sent. Check its status before making another payment.",
         "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order.",
@@ -1001,6 +998,7 @@
         "Your feedback was sent to the Noah team.",
         "Your wallet has been backed up successfully.",
         "Your wallet is currently suspended. All wallet operations are disabled.",
+        "blocks",
         "e.g. Rent, Donation, VPN",
         "fiatjaf",
         "https://mempool.space/api",
@@ -1027,8 +1025,8 @@
       ]
     },
     "android": {
-      "rnTranslated": 517,
-      "nativeOnlyEnglish": 501,
+      "rnTranslated": 518,
+      "nativeOnlyEnglish": 499,
       "nativeOnly": [
         "6-digit code",
         "A payment of {nativeValue1} sats for this invoice is already in progress. Do not pay again.",
@@ -1061,7 +1059,6 @@
         "Ark receives",
         "Ark server info is unavailable. Try refreshing.",
         "Ark server, wallet, and explorer configuration",
-        "Ark's published Lightning fees for this amount can reach {fee} sats, above your automatic limit of {cap} sats. Review it to pay manually.",
         "Ark's published Lightning fees for this amount can reach {nativeValue1} sats, above your automatic limit of {nativeValue2} sats. Review it to pay manually.",
         "Ask to board when onchain funds cover {nativeValue1} sats, fees, and a 5,000 sats reserve.",
         "Audit unavailable",
@@ -1423,7 +1420,6 @@
         "The downloaded backup is incomplete or damaged. Check your connection and try again.",
         "The exact amount depends on the network fee when sent. The total is exactly the reviewed coins.",
         "The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually.",
-        "The fee for this payment ({fee} sats) is above your automatic limit of {cap} sats. Review it to pay manually.",
         "The fee for this payment ({nativeValue1} sats) is above your automatic limit of {nativeValue2} sats. Review it to pay manually.",
         "The fee is an estimate. The final fee may change before submission.",
         "The map position could not be saved.",
@@ -2036,6 +2032,7 @@
         "Your Recovery Phrase",
         "Your feedback was sent to the Noah team.",
         "Your wallet has been backed up successfully.",
+        "blocks",
         "e.g. Rent, Donation, VPN",
         "https://mempool.space/api",
         "name@domain.com, ark1… or lno1…",
