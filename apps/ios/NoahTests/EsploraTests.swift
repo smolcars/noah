@@ -86,6 +86,50 @@ struct EsploraTests {
         #expect(endpoint == "https://custom.example/api")
         #expect(memory.store.selection(for: .signet).attention == nil)
     }
+    @Test func unreadableSettingsKeepUnknownHistoryAcrossRestartAndReset() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "lost-history-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let path = root.appending(path: "mmkv").path
+        let original = try SettingsStorage(rootPath: path)
+        let raw = #"{"active":{"variant":"signet"},"logEndpoints":["https://fakeR4LostHistory.example/retiredFakeR4"]}"#
+        try original.setDurably(raw, forKey: EsploraSettings.key)
+        // Damage the checksum, with no registration in this process.
+        var bytes = try String(contentsOf: original.nativeFile.file, encoding: .utf8)
+        bytes = bytes.replacingOccurrences(of: "retiredFakeR4", with: "damagedFakeR4")
+        try bytes.write(to: original.nativeFile.file, atomically: true, encoding: .utf8)
+        let fallback = try SettingsStorage(rootPath: path)
+        #expect(throws: (any Error).self) { try EsploraSettings(storage: fallback).restoreLogPrivacy() }
+        try fallback.setDurably("fake fallback write", forKey: "fake-test-setting")
+        fallback.useDefaultEsplora(for: .signet)
+        _ = try fallback.takeUpgradeNotices()
+        // A fresh instance reads the committed generation, not the process fallback.
+        let restarted = try SettingsStorage(rootPath: path)
+        #expect(throws: (any Error).self) { try EsploraSettings(storage: restarted).restoreLogPrivacy() }
+        try restarted.removeAllDurably()
+        let reset = try SettingsStorage(rootPath: path)
+        #expect(throws: (any Error).self) { try EsploraSettings(storage: reset).restoreLogPrivacy() }
+        #expect(try reset.nativeFile.load().values["native-esplora-history-unavailable"] == "1")
+    }
+
+    // failClosed is installation-lifetime global state; run this integration probe alone.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["NOAH_TEST_LOST_HISTORY"] == "1"))
+    func unknownHistoryStartupProtectsHistoricalExport() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "unknown-export-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try "HTTP failure https://fakeR4LostHistory.example/retiredFakeR4".write(to: root.appending(path: "noah.log.1"), atomically: true, encoding: .utf8)
+        let path = root.appending(path: "mmkv").path
+        let file = try SettingsStorage(rootPath: path).nativeFile
+        try "damaged checksum".write(to: file.file, atomically: true, encoding: .utf8)
+        for _ in 0..<2 {
+            let storage = try SettingsStorage(rootPath: path)
+            do { try EsploraSettings(storage: storage).restoreLogPrivacy() }
+            catch { EndpointLogPrivacy.failClosed() }
+            #expect(!LogFile(directory: root).lines().joined().contains("fakeR4LostHistory"))
+            try storage.setDurably("fallback", forKey: "fake-test-setting")
+        }
+    }
+
     @Test func retiredEndpointsAreDurableBeforeAndAfterSimulatedRestart() throws {
         let root = FileManager.default.temporaryDirectory.appending(path: "privacy-settings-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }

@@ -4,6 +4,9 @@ import Foundation
 /// launch uses active (the previous working selection), never the pending candidate.
 struct EsploraSettings: Sendable {
     static let key = "native-esplora-selection"
+    // Unknown history stays unknown for the installation lifetime, including resets.
+    static let historyUnavailableKey = "native-esplora-history-unavailable"
+    struct HistoryUnavailable: Error {}
     struct Selection: Codable, Equatable, Sendable {
         var endpoint: String?
         var variant: String
@@ -37,7 +40,10 @@ struct EsploraSettings: Sendable {
         try write(Self.key, String(decoding: JSONEncoder().encode(protected), as: UTF8.self))
         endpoints(protected).forEach(EndpointLogPrivacy.register)
     }
-    func restoreLogPrivacy() throws { endpoints(try record()).forEach(EndpointLogPrivacy.register) }
+    func restoreLogPrivacy() throws {
+        guard read(Self.historyUnavailableKey) == nil else { throw HistoryUnavailable() }
+        endpoints(try record()).forEach(EndpointLogPrivacy.register)
+    }
     func protectLogPrivacy(_ endpoint: String?) throws {
         guard let endpoint else { return }
         guard var record = try record() else { throw SettingsStorage.OpenError() }
@@ -49,11 +55,14 @@ struct EsploraSettings: Sendable {
     }
     /// Reset the selection while retaining protection for every retained log generation.
     static func retainingLogPrivacy(_ values: [String: String]) throws -> [String: String] {
-        guard let raw = values[key] else { return [:] }
+        var retained: [String: String] = [:]
+        retained[historyUnavailableKey] = values[historyUnavailableKey]
+        guard let raw = values[key] else { return retained }
         let old = try JSONDecoder().decode(Record.self, from: Data(raw.utf8))
         let history = Set((old.logEndpoints ?? []) + [old.active.endpoint, old.pending?.endpoint].compactMap { $0 })
         let record = Record(active: Selection(variant: old.active.variant), logEndpoints: history.sorted())
-        return [key: String(decoding: try JSONEncoder().encode(record), as: UTF8.self)]
+        retained[key] = String(decoding: try JSONEncoder().encode(record), as: UTF8.self)
+        return retained
     }
     var importedInput: String? {
         struct State: Decodable { var endpointOverride: String? }

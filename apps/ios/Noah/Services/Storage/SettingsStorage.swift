@@ -46,14 +46,14 @@ final class SettingsStorage: @unchecked Sendable {
                             ($0, snapshot.string(forKey: $0))
                         }))
                     } : .init()
-                } catch { state = .init(settingsNoticePending: true) }
+                } catch { state = .init(values: [EsploraSettings.historyUnavailableKey: "1"], settingsNoticePending: true) }
                 fallback = state
                 try persist(state)
             }
             if fallback != nil { try persist(load()) }
             try finishCleanup()
         } catch {
-            if fallback == nil { fallback = .init(settingsNoticePending: true) }
+            if fallback == nil { fallback = .init(values: [EsploraSettings.historyUnavailableKey: "1"], settingsNoticePending: true) }
         }
     }
 
@@ -101,7 +101,7 @@ final class SettingsStorage: @unchecked Sendable {
         if let fallback { return fallback }
         do { return try nativeFile.load() }
         catch {
-            let defaults = NativeSettingsFile.State(settingsNoticePending: true)
+            let defaults = NativeSettingsFile.State(values: [EsploraSettings.historyUnavailableKey: "1"], settingsNoticePending: true)
             fallback = defaults
             try? persist(defaults)
             return defaults
