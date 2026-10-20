@@ -716,9 +716,11 @@ separately and bounded to 16 KiB, with a nesting limit of 32.
 
 ### Sentry configuration and event coverage
 
-The pinned Sentry Android **8.57.0 core** dependency includes neither NDK nor replay
-artifacts; both core artifacts have independently checked Maven Central SHA-256
-pins. Auto-init and performance providers are removed from the manifest.
+Sentry Android core and NDK are pinned together at **8.57.0**, with the NDK's
+transitive native runtime pinned by its metadata at **0.16.6**. All four Sentry
+artifacts have independently downloaded Maven Central SHA-256 pins. Replay is
+not a dependency. Auto-init, performance and native preload providers are removed
+from the manifest; native scope sync remains disabled.
 `AppTelemetry` starts only in mainnet/signet release builds with a nonblank DSN.
 The production public DSN matches RN/iOS and lives in `Config/sentry.properties`,
 compiled into `BuildConfig.SENTRY_DSN`; `NOAH_SENTRY_DSN` in the environment, then
@@ -758,11 +760,12 @@ server name, modules, arbitrary debug images, message templates/parameters,
 mechanism payloads and new/unknown SDK fields have no admission path. Every
 remaining serialized string and key passes the shared redactor and final guard.
 Attachments are cleared from all hint slots; their size allowance is zero.
-Screenshots, hierarchy, NDK/tombstone capture, app-start/performance tracing,
-profiling, replay and feedback UI are disabled. Live/historical **ANR errors and
-JVM crashes/handled errors** pass through the same event hook; ANR raw thread dumps
-and profiling attachments are disabled. Separate log/metric channels are disabled
-and have explicit drop callbacks. Transaction/replay/feedback callbacks also drop.
+Screenshots, hierarchy, tombstone capture, app-start/performance tracing,
+profiling, replay and feedback UI are disabled. Live/historical **ANR errors,
+JVM crashes/handled errors and NDK signal crashes** pass through the same event
+hook; ANR raw thread dumps and profiling attachments are disabled. Separate
+log/metric channels are disabled and have explicit drop callbacks.
+Transaction/replay/feedback callbacks also drop.
 
 A final transport filter covers cached envelopes and SDK APIs that bypass
 `beforeSend`, including deprecated user feedback. It admits only rescrubbed error
@@ -770,10 +773,28 @@ events and minimal **Release Health sessions**. All other envelope types (includ
 attachments, both feedback paths, spans/transactions, profiles/profile chunks,
 replay, logs, metrics, check-ins, client reports and unknown types) are dropped.
 Envelope headers are rebuilt without arbitrary fields or trace context.
+Items are filtered independently: a malformed session or event cannot discard
+valid errors/crashes in the same envelope. Deliberate drops complete submission
+and applicable crash-flush hints as consumed, with retries disabled, so cached
+rejections do not wait for the SDK's 15-second timeout or block later outbox items.
 Automatic session tracking stays **ON**, per the 2026-10-20 product decision.
-Sessions keep canonical random session/install UUIDs, init/start/timestamp/status,
+Sessions accept strictly validated SDK 32-hex IDs and canonical UUID strings for
+random session/install IDs, and keep init/start/timestamp/status,
 sequence/error count/duration and release/environment; IP, user-agent and arbitrary
 attributes are removed. Their remaining strings also pass the final guard.
+
+The Android NDK signal handler writes JSON envelopes to the SDK outbox; Java's
+[`OutboxSender`](https://github.com/getsentry/sentry-java/blob/8.57.0/sentry/src/main/java/io/sentry/OutboxSender.java)
+replays native events through `captureEvent()`, `beforeSend` and the transport gate.
+SIGSEGV/abort in `libbark_bolt_ffi.so` therefore uses the same allowlist above:
+exception/signal type, module/thread ID, redacted value and mechanism
+type/handled/synthetic; thread ID/name/current/crashed/main; and frames containing
+only function/module/filename/line. Thread names must pass the final string guard
+or the entire event is rejected. Registers, variables, memory payloads, arbitrary
+contexts, raw tombstones and minidump attachments have no admission path.
+Native symbolication is a follow-up: instruction/image addresses and incoming
+native debug images remain dropped. The generated Java ProGuard mapping exception
+above is unchanged.
 
 ### R8 mappings and CI
 
@@ -831,8 +852,36 @@ left untouched.
 
 Run focused tests with `./gradlew --max-workers=2 :app:testRegtestDebugUnitTest
 --tests com.noahwallet.services.BarkLogTest --tests
-com.noahwallet.services.AppTelemetryTest` from `apps/android`; run upload checks
+com.noahwallet.services.AppTelemetryTest --tests
+com.noahwallet.services.TelemetryTransportTest --tests
+com.noahwallet.services.PlatformStartupTest` from `apps/android`; run upload checks
 with `python3 apps/android/PlatformTests/test_sentry_mapping.py -v` from the root.
+
+### Crash reporting verification (2026-10-20, base 9f760f88)
+
+The permanent review-probe regressions reproduced **seven session/capture
+failures**, the **disabled-NDK assertion**, and **three pending-hint failures**
+before their respective fixes. Native payload scrubbing and Rust error-chain
+redaction already passed; those probes are now permanent too. Focused coverage
+passes **40 tests**: 22 telemetry, 12 transport, five Bark logger and one startup.
+Transport tests use SDK-generated sessions, real `SentryClient` captures for
+handled errors/crashes/ANRs, next-launch `EnvelopeSender` cache replay, and native
+SIGSEGV/SIGABRT outbox replay with attachments before and after the event. Native
+fixtures verify the exact frame/mechanism allowlist and rejection of secret-bearing
+thread names. Hint regressions have two-second bounds against the SDK's 15-second
+waits; the rejected-cache batch additionally requires completion within 500 ms.
+
+The requested final command ran once through Nix with `--max-workers=2`:
+`:app:testRegtestDebugUnitTest :app:assembleRegtestDebug`. All **3,209 tests / 119
+suites passed**, with **zero failures, errors or skips**, and regtest debug assembly
+passed. Unsigned mainnet release assembly (`-PnoahUnsignedRelease=true`, two
+workers) and release vital lint passed; CI mapping upload was disabled for this
+local verification. APK, R8 mapping and seed inspection confirmed unchanged
+Sentry/Bark JNI class names and packaged `libbark_bolt_ffi.so`, `libsentry-android.so`
+and `libsentry.so` for both configured ABIs (`arm64-v8a`, `x86_64`). The release
+APK is unsigned and its merged manifest contains none of the three Sentry startup
+providers. Evidence is under `/tmp/noah-android-telemetry-fix/`; build processes
+completed without stopping shared daemons.
 
 No live Sentry ingestion, credentialed mapping upload or physical/device crash/ANR
 was attempted. These require the team's CI credentials or an owned test device.

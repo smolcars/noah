@@ -24,7 +24,7 @@ androidx-test-runner = "1.6.2"
 androidx-test-junit = "1.2.1"
 
 [libraries]
-# Core only: no native crash or replay artifact can bypass the JVM event filter.
+# NDK outbox replay passes through the JVM event filter; replay is excluded.
 sentry-android-core = { module = "io.sentry:sentry-android-core", version.ref = "sentry" }
 sentry-android-ndk = { module = "io.sentry:sentry-android-ndk", version.ref = "sentry" }
 camera-core = { module = "androidx.camera:camera-core", version = "1.4.2" }
