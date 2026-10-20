@@ -24,6 +24,27 @@ class RecurringForegroundRunnerTest {
         suspend fun tick() { withTimeout(2000) { ticks.send(Unit) } }
         fun noTimerWaiting() = !ticks.trySend(Unit).isSuccess
     }
+    @Test fun foregroundReadinessLoadsOffMainAndBackgroundRevokesPendingTick() = runBlocking {
+        val activity = Activity(); val minutes = Minutes()
+        val entered = CompletableDeferred<Thread>()
+        val release = java.util.concurrent.CountDownLatch(1)
+        var executions = 0
+        val caller = Thread.currentThread()
+        activity.lifecycle.addObserver(RecurringForegroundRunner(this, minutes::sleep, isOnboarded = {
+            entered.complete(Thread.currentThread())
+            check(release.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            true
+        }) { executions++ })
+        try {
+            activity.start(); minutes.waiting(); minutes.tick()
+            assertNotSame(caller, withTimeout(5000) { entered.await() })
+            assertEquals(0, executions)
+            activity.stop(); release.countDown(); yield()
+            assertEquals(0, executions)
+            assertTrue(minutes.noTimerWaiting())
+        } finally { release.countDown(); activity.stop() }
+    }
+
     @Test fun paysWhenDueWhileStartedAndStopsUntilRestarted() = runBlocking {
         val w = RecurringWorld(this); w.add(61_000)
         val activity = Activity(); val minutes = Minutes()

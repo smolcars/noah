@@ -1,0 +1,12 @@
+{
+  "serial": "emulator-5590",
+  "expectedAvd": "NoahMainThreadIO5590",
+  "identityBeforeShutdown": "NoahMainThreadIO5590\nOK",
+  "shutdownConfirmed": true,
+  "deleted": true,
+  "serialAbsent": true,
+  "consolePortClosed": true,
+  "adbPortClosed": true,
+  "avdDirectoryAbsent": true,
+  "avdIniAbsent": true
+}

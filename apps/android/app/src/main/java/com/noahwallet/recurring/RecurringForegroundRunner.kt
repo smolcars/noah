@@ -7,6 +7,7 @@ import kotlinx.coroutines.*
 /** The activity owns the timer; the shared executor owns payment settlement. */
 internal class RecurringForegroundRunner(private val scope: CoroutineScope,
     private val sleep: suspend (Long) -> Unit = { delay(it) },
+    private val isOnboarded: () -> Boolean = { true },
     private val execute: suspend (RecurringBudget) -> Unit) : DefaultLifecycleObserver {
     private var task: Job? = null
     private var budget: RecurringBudget? = null
@@ -19,7 +20,7 @@ internal class RecurringForegroundRunner(private val scope: CoroutineScope,
                 ensureActive()
                 val tick = RecurringBudget()
                 budget = tick
-                try { execute(tick) }
+                try { if (withContext(Dispatchers.IO) { isOnboarded() } && tick.available) execute(tick) }
                 finally { tick.revoke(); if (budget === tick) budget = null }
             }
         }

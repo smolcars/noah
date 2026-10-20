@@ -1,0 +1,133 @@
+{
+  "base": "37ab21256c1ae8997d3ff13ed08c8bb26957aca1",
+  "avd": "NoahMainThreadIO5590",
+  "serial": "emulator-5590",
+  "apkSha256": "f247dce337d81c315b0174308546fa8bf69c7ef6cb80135b6a69b97ea0ae2f7e",
+  "funding": {
+    "onchainSats": 100000,
+    "transaction": "d0ccdbd87d5b6d1361f935a005639c7a6abcd62d55a5025bb70cbc8783705361",
+    "fundingBlocks": 1,
+    "boardingBlocks": 3,
+    "outgoingSendPayments": 0,
+    "boardingRequestedSats": 30000
+  },
+  "strictMode": [
+    {
+      "phase": "before",
+      "flow": "launch",
+      "seconds": 15,
+      "reads": 41,
+      "writes": 7,
+      "network": 0,
+      "total": 48,
+      "pid": 5341
+    },
+    {
+      "phase": "before",
+      "flow": "foreground",
+      "seconds": 75,
+      "reads": 66,
+      "writes": 6,
+      "network": 0,
+      "total": 72,
+      "pid": 5341
+    },
+    {
+      "phase": "before",
+      "flow": "home",
+      "seconds": 15,
+      "reads": 0,
+      "writes": 0,
+      "network": 0,
+      "total": 0,
+      "pid": 5341
+    },
+    {
+      "phase": "before",
+      "flow": "send",
+      "seconds": 15,
+      "reads": 2,
+      "writes": 0,
+      "network": 0,
+      "total": 2,
+      "pid": 5341
+    },
+    {
+      "phase": "before",
+      "flow": "recurring",
+      "seconds": 15,
+      "reads": 30,
+      "writes": 3,
+      "network": 0,
+      "total": 33,
+      "pid": 5341
+    },
+    {
+      "phase": "after",
+      "flow": "launch",
+      "seconds": 15,
+      "reads": 0,
+      "writes": 0,
+      "network": 0,
+      "total": 0,
+      "pid": 6098
+    },
+    {
+      "phase": "after",
+      "flow": "home",
+      "seconds": 15,
+      "reads": 0,
+      "writes": 0,
+      "network": 0,
+      "total": 0,
+      "pid": 6098
+    },
+    {
+      "phase": "after",
+      "flow": "send",
+      "seconds": 15,
+      "reads": 0,
+      "writes": 0,
+      "network": 0,
+      "total": 0,
+      "pid": 6098
+    },
+    {
+      "phase": "after",
+      "flow": "recurring",
+      "seconds": 15,
+      "reads": 0,
+      "writes": 0,
+      "network": 0,
+      "total": 0,
+      "pid": 6098
+    },
+    {
+      "phase": "after",
+      "flow": "foreground",
+      "seconds": 75,
+      "reads": 0,
+      "writes": 0,
+      "network": 0,
+      "total": 0,
+      "pid": 6098
+    }
+  ],
+  "junit": {
+    "tests": 2891,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": 84
+  },
+  "device": "Android 15 / API 35 / ARM64 / Pixel 6 AVD",
+  "measurement": "Main-process PID and TID must match; count StrictMode policy violation headers in 15-second flow windows, 75 seconds for foreground including the 60-second timer. Policies retain detectDiskReads/detectDiskWrites/detectNetwork and penaltyLog.",
+  "instrumentation": {
+    "privateSetupPassed": 1,
+    "fundingPassed": 1,
+    "fundingTimedOutBeforeConfirmation": 1,
+    "widgetChecksPassed": 2,
+    "widgetFailures": 0
+  },
+  "observedHomeTotalSatsAfterVerification": 99515
+}

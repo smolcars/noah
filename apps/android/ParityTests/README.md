@@ -171,3 +171,98 @@ StrictMode findings and remaining scope:
 - Actual distributor endpoint delivery, physical notification gating, funded
   rounds/boarding and ANR performance profiling were not repeated. No iOS,
   Send/Recurring/Onchain internals, scan-lock behavior or EAN-13 support changed.
+
+## Initialized-wallet main-thread I/O (base `37ab2125`)
+
+Completed on **NoahMainThreadIO5590**, explicitly launched with `-port 5590`
+(`emulator-5590`, Pixel 6 AVD, API 35 ARM64). The same initialized regtest wallet
+was used before/after: funded once with **100,000 onchain sats**, then a **30,000-sat
+boarding request** through the production session. `just bcli` mined one funding
+block and the required three boarding blocks. The device harness verified at least
+20,000 spendable Ark sats. No Send or recurring payment was submitted on the live
+wallet. No other emulator, physical device, simulator or Docker lifecycle/config
+was operated; stack access used only the explicitly authorized `just bcli` wrapper.
+
+StrictMode **disk reads / disk writes / network**, before → after:
+
+- Cold initialized launch: **41 / 7 / 0 → 0 / 0 / 0** (48 → 0 total).
+- Foreground from the Recurring screen, including a 60-second timer tick:
+  **66 / 6 / 0 → 0 / 0 / 0** (72 → 0 total).
+- Opening Home from Send: **0 / 0 / 0 → 0 / 0 / 0**.
+- Opening Send from Home: **2 / 0 / 0 → 0 / 0 / 0**.
+- Opening Recurring from Settings: **30 / 3 / 0 → 0 / 0 / 0** (33 → 0 total).
+
+Each sample clears the owned device's logcat, performs the named action, waits
+15 seconds (75 for foreground), verifies the app PID is alive, then dumps logcat.
+Only `StrictMode` lines whose PID and TID both equal that app PID are retained;
+counts use `StrictMode policy violation` headers, never stack-line counts. Debug
+thread disk-read/write/network detection and `penaltyLog()` remain enabled;
+no policy exemptions or suppression were added. Baseline PID **5341**, changed
+APK PID **6098**. Counts vary with StrictMode's stack deduplication and workload;
+the earlier 37-violation sample above is historical, not this funded baseline.
+
+[Per-flow logs and numeric results](evidence/main-thread-io/results.json),
+[complete IO call-site inventory with file and line](evidence/main-thread-io/call-sites.json).
+Empty after-log files contain one newline; the results retain their live PID and
+sampling window. The installed APK SHA-256 matched the assembled APK:
+`f247dce337d81c315b0174308546fa8bf69c7ef6cb80135b6a69b97ea0ae2f7e`.
+
+Safety and threading:
+
+- Send: `WalletSession.kt:322` moves the suspension check and counted acquisition
+  into the existing non-cancellable IO interval, retaining the monitor, send mutex
+  and drain ordering. `SendController.kt:32` keeps journal reload blocked until its
+  entire reservation returns, then publishes only for the current generation.
+  `SendController.kt:192` awaits quarantine/audit; `:207` awaits journal removal.
+  The synchronous submission lock and journal-before-payment sequence are unchanged.
+  Pending read, stale-generation result, pending removal and pending failed audit
+  tests retain locks and original evidence; no payment can start on unloaded state.
+- Recurring: `RecurringExecutor.kt:29` awaits storage on IO, without a readiness or
+  journal cache. Generation (`:72`), wallet/database binding (`:41`), complete
+  journal recovery (`:50`) and all policy/mutation/sync reads and writes are awaited.
+  Original store/journal locks remain inside IO blocks. The final synchronous guard
+  still rereads current generation, identity, policy, quarantine/consumption and
+  budget inside the session reservation before the SDK payment. Pending/failed
+  read tests cover generation, binding, policy and journal; delayed occurrence,
+  in-flight and consumption writes prove payment/acknowledgement order. Existing
+  stop/replacement, rollback, quarantine, pause/cancel and fee tests still pass.
+- Widgets: `WidgetDataWriter.kt:24` and `:35` await preferences clear/write on IO;
+  commit still precedes broadcast. `NoahWidgetProvider.kt:57` retains the broadcast
+  with `goAsync()` through serialized IO rendering, including the preference read
+  at `:72`. Values, formatting, RemoteViews and click actions are unchanged.
+  The device storage test holds both write/clear reads pending, proves Main remains
+  responsive and no broadcast occurs early, and checks committed values.
+- Foreground: `RecurringForegroundRunner.kt:23` awaits the initialized-wallet
+  readiness read on IO; a stopped/backgrounded tick cannot execute afterward.
+  Launch/seed/recovery precedence and seed internals are unchanged. Background
+  seed-opening behavior retains its existing read-only eligibility decisions.
+
+The exact required full command ran **once after all production/test changes**:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**2,891 tests / 84 suites passed**, zero failures/errors/skips; APK assembly passed
+in the same **56-second** Gradle run. [Full log](evidence/main-thread-io/gradle-final.log),
+[JUnit totals](evidence/main-thread-io/junit-summary.json). Targeted iteration:
+596 Send/session cases; 2,050 payment cases; 2,053 payment/widget-value cases;
+then all 15 pending-load/write/foreground cases, each with zero failures/errors/skips.
+All Gradle invocations used `--max-workers=2`; Android-test APK assembly also passed.
+
+Device checks: private seed-free setup **1 pass**, funded/boarded wallet verification
+**1 pass**, and held widget IO + provider-key compatibility **2 passes / zero
+failures/skips** ([widget log](evidence/main-thread-io/widget-device.log)). The first
+funding harness timed out waiting for confirmation before any boarding marker or
+outgoing payment existed. Funding was inspected, confirmed once, and setup resumed
+on the same wallet; no funding transaction or board was repeated.
+
+No live Send/recurring payment, induced power loss, ANR performance profiling,
+physical phone or launcher-hosted widget layout test is claimed. Payment safety
+faults and pending IO use the deterministic tests; widget persisted values are
+checked on device. Nothing remains open in the requested main-thread-IO scope.
+
+Cleanup: immediately before shutdown, `adb -s emulator-5590 emu avd name` returned
+**NoahMainThreadIO5590**. The Device panel shut down that AVD; its serial was absent
+and both ports **5590/5591** were closed before `avdmanager delete avd`. Its `.avd`
+directory and `.ini` were then confirmed absent. [Cleanup checks](evidence/main-thread-io/device-cleanup.json).

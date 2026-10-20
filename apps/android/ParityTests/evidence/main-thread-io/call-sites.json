@@ -1,0 +1,217 @@
+[
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/services/wallet/WalletSession.kt",
+    "line": 322,
+    "code": "internal suspend fun <T> withOpen(block: suspend (Handles) -> T): T = withContext(NonCancellable + Dispatchers.IO) {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/services/wallet/WalletSession.kt",
+    "line": 324,
+    "code": "if (isSuspended()) throw OpenError(OpenFailure.suspended)"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/send/SendController.kt",
+    "line": 41,
+    "code": "val loaded = retained ?: try { dependencies.read() } catch (failure: Exception) { loadedUnreadable = true; throw failure }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/send/SendController.kt",
+    "line": 193,
+    "code": "if (quarantine) dependencies.quarantineUnreadable()"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/send/SendController.kt",
+    "line": 194,
+    "code": "dependencies.auditOverride(SendOverrideAudit(txid = evidence?.receipt?.txid ?: evidence?.alreadyPaid?.txid ?: evidence?.broadcastingTxid,"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/send/SendController.kt",
+    "line": 207,
+    "code": "withContext(NonCancellable + Dispatchers.IO) { dependencies.write(null) }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 30,
+    "code": "suspend fun reload() {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 31,
+    "code": "try { val state = storage { d.store.load() }; schedules = state.schedules.values.sortedBy { it.nextRunAt ?: Long.MAX_VALUE }; syncPending = state.pending }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 41,
+    "code": "private suspend fun boundState(): RecurringStore.State = storage { boundStateNow() }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 50,
+    "code": "private suspend fun recoverMarkers(state: RecurringStore.State) = storage {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 72,
+    "code": "val generation = storage { d.automationGeneration() }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 83,
+    "code": "storage { d.store.updateIf(schedule, schedule.copy(status = \"needs_attention\", lastError = \"This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment.\")) }; continue"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 85,
+    "code": "if (plan.kind == \"complete\") { storage { d.store.updateIf(schedule, schedule.copy(status = \"completed\", nextRunAt = null)) }; continue }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 97,
+    "code": "if (storage { d.store.updateIf(schedule, stopped) }) d.notify(emptyList(), stopped)"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 102,
+    "code": "storage { check(!d.journal.consumed(state.binding, id, plan.scheduledFor!!, schedule.nativeRevision, plan.occurrenceIndex)) }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 104,
+    "code": "storage { d.journal.save(entry) }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 106,
+    "code": "if (!storage { d.store.updateIf(schedule, marked) }) { storage { d.journal.save(entry.copy(resolved = true)) }; continue }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 122,
+    "code": "val entry = storage { d.journal.load()[id] }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 126,
+    "code": "if (storage { d.store.updateIf(schedule, result) } && result.status == \"active\" && (result.consecutiveFailures == 1 || manual)) d.notify(emptyList(), result)"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 132,
+    "code": "finally { try { reload(); d.notify(storage { runCatching { d.store.load().schedules.values.toList() }.getOrDefault(emptyList()) }, null) } finally { running = false } }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 134,
+    "code": "private suspend fun markUncertain(id: String) = storage {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 142,
+    "code": "if (controller.attempt?.recurringOccurrenceKey != entry.key || storage { d.binding() } != entry.binding) return"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 148,
+    "code": "storage {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 169,
+    "code": "val entry = storage { d.journal.load()[id] } ?: return"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 170,
+    "code": "val schedule = storage { d.store.load().schedules[id] } ?: return"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 187,
+    "code": "storage { synchronized(RecurringStore.lock) {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 202,
+    "code": "storage { synchronized(RecurringStore.lock) {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 209,
+    "code": "storage { synchronized(RecurringStore.lock) {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 220,
+    "code": "suspend fun cancel(id: String) { storage { d.store.remove(id) }; changed() }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 224,
+    "code": "val schedule = storage { d.store.load().schedules[id] } ?: return"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 227,
+    "code": "val entry = storage { d.journal.load()[id] }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 230,
+    "code": "storage { d.audit(schedule, entry, overrideWarning, overrideConfirmation) }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 235,
+    "code": "storage {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 241,
+    "code": "private suspend fun rejectLegacyUncertainty(id: String) = storage {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 244,
+    "code": "private suspend fun refreshDates() = storage {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 260,
+    "code": "storage { d.store.setPending(true) }; d.sync(entries); refreshDates()"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringExecutor.kt",
+    "line": 261,
+    "code": "val synced = storage { synchronized(RecurringStore.lock) {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/recurring/RecurringForegroundRunner.kt",
+    "line": 23,
+    "code": "try { if (withContext(Dispatchers.IO) { isOnboarded() } && tick.available) execute(tick) }"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/services/push/WidgetDataWriter.kt",
+    "line": 24,
+    "code": "suspend fun clear(context: Context, variant: String): Unit = withContext(NonCancellable + Dispatchers.IO) {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/services/push/WidgetDataWriter.kt",
+    "line": 35,
+    "code": "suspend fun write(context: Context, balance: WalletBalance, closestExpiryBlocks: Long?, variant: String): Unit = withContext(NonCancellable + Dispatchers.IO) {"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/widgets/NoahWidgetProvider.kt",
+    "line": 57,
+    "code": "val pending = goAsync()"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/widgets/NoahWidgetProvider.kt",
+    "line": 61,
+    "code": "for (appWidgetId in appWidgetIds) updateWidget(context, appWidgetManager, appWidgetId)"
+  },
+  {
+    "file": "apps/android/app/src/main/java/com/noahwallet/widgets/NoahWidgetProvider.kt",
+    "line": 72,
+    "code": "val prefs = context.getSharedPreferences(appGroup, Context.MODE_PRIVATE)"
+  }
+]
