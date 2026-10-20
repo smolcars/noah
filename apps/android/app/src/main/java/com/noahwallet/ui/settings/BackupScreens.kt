@@ -101,27 +101,28 @@ private class SharedFile(val file: File, val discard: () -> Unit)
 
 /** The model retains bounded exports across rotation; chooser return does not end a receiver's read. */
 @Composable
-private fun ShareFileButton(model: AppModel, title: String, mime: String, produce: suspend () -> SharedFile) {
+private fun ShareFileButton(model: AppModel, title: String, mime: String, onShared: () -> Unit = {}, produce: suspend () -> SharedFile) {
     val context = LocalContext.current
+    val shareCompletion = rememberShareCompletion(onShared)
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
     NoahButton(title, !model.busy && !model.isWalletSuspended) {
         model.action("Couldn't prepare the file for sharing. Please try again.") {
-            val file = withContext(Dispatchers.IO) {
+            val (file, displayName) = withContext(Dispatchers.IO) {
                 model.services.scratch.withOperation {
                     val staged = produce()
-                    try { model.settingsShares.retain(staged.file) }
+                    try { model.settingsShares.retain(staged.file) to staged.file.name }
                     finally { staged.discard() }
                 }
             }
             try {
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file, displayName)
                 val send = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri)
                     .apply { clipData = ClipData.newRawUri(file.name, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
                 androidx.work.WorkManager.getInstance(context).enqueue(
                     androidx.work.OneTimeWorkRequestBuilder<com.noahwallet.services.sharing.SettingsShareCleanup>()
                         .setInitialDelay(com.noahwallet.services.sharing.SettingsShareFiles.retentionMillis,
                             java.util.concurrent.TimeUnit.MILLISECONDS).build())
-                launcher.launch(Intent.createChooser(send, title))
+                launcher.launch(Intent.createChooser(send, title, shareCompletion))
             } catch (failure: Exception) { model.settingsShares.discard(file); throw failure }
         }
     }
@@ -129,16 +130,20 @@ private fun ShareFileButton(model: AppModel, title: String, mime: String, produc
 
 @Composable
 fun ExportScreen(model: AppModel) {
+    var exported by remember { mutableStateOf(false) }
     SettingsColumn {
         Text(tr("Create an encrypted backup file containing your wallet database."))
         Text(tr("You will need your seed phrase to restore this backup. Keep it safe and never share it."))
-        ShareFileButton(model, "Export Database", "application/octet-stream") {
+        ShareFileButton(model, "Export Database", "application/octet-stream", onShared = { exported = true }) {
             // Only the encrypted archive is retained; the service's staging folder is discarded immediately.
-            val export = model.services.backupService.exportEncryptedBackup("noah-${BuildConfig.APP_VARIANT}.noahbackup")
+            val export = model.services.backupService.exportEncryptedBackup(ExportFilename.database())
             SharedFile(export.archive.file) { export.discard() }
         }
         if (model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     }
+    if (exported) WalletAlertDialog(onDismissRequest = { exported = false }, title = { Text(tr("Export Complete")) },
+        text = { Text(tr("Your encrypted database backup was exported.")) },
+        confirmButton = { TextButton({ exported = false }) { Text(tr("OK")) } })
 }
 
 @Composable
@@ -162,7 +167,7 @@ fun LogScreen(model: AppModel) {
         }
         if (snapshot.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         snapshot.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
-        snapshot.updatedAt?.let { Text(tr("Updated at {time}", "time" to DateFormat.getTimeInstance().format(Date(it)))) }
+        snapshot.updatedAt?.let { Text(tr("Updated at {time}", DateFormat.getTimeInstance().format(Date(it)))) }
         if (!snapshot.loading && snapshot.error == null && snapshot.lines.isEmpty()) Text(tr("No logs found."))
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listState) {
             items(snapshot.lines) { line ->
