@@ -370,6 +370,134 @@ struct WalletLifecycleTests {
         #expect(!FileManager.default.fileExists(atPath: location.directory.path))
     }
 
+    @Test(arguments: ["installing", "rollback", "committed"])
+    func restoreJournalSettlesBeforeMatchingStaleDeletionMarker(phase: String) async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try writeBarkDatabase()
+        let settings = try makeSettings()
+        settings.set("retained", forKey: "sentinel")
+        let (seed, token) = items()
+        defer { seed.remove(); token.remove() }
+        try seed.save("wallet A"); try token.save("token")
+        let transaction = RestoreTransaction(location: location)
+        try transaction.prepare()
+        try FileManager.default.createDirectory(at: transaction.staged, withIntermediateDirectories: false)
+        try Data("wallet B data".utf8).write(to: transaction.staged.appending(path: "db.sqlite"))
+        try Data("plaintext".utf8).write(to: transaction.work.appending(path: "snapshot.sqlite"))
+        try transaction.begin(seed: "wallet B")
+        if phase != "installing" { try transaction.markCommitting() }
+        if phase == "committed" { try seed.save("wallet B") }
+        // Matching both live instance and current seed used to enter deletion and throw
+        // restorePending forever, before the journal got a chance to settle.
+        try location.writeDeletionIdentity(seed: seed.read())
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let mutation = WalletMutationGate()
+        let lifecycle = lifecycle(session: session, settings: settings, seed: seed, token: token, mutation: mutation)
+        let location = location
+        let recovery = RestoreRecovery(mutation: mutation) {
+            try await lifecycle.recoverRestoreAndDeletionLocked {
+                try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: seed)
+            }
+        }
+        let first = Task { try await recovery.settle() }
+        let headless = Task { try await recovery.settle() }
+        let results = try await [first.value, headless.value]
+        #expect(results.contains(phase == "committed" ? .completed : .rolledBack))
+        #expect(results.contains(.nothingPending))
+        if phase == "committed" {
+            #expect(try Data(contentsOf: location.database) == Data("wallet B data".utf8))
+            #expect(seed.read() == .found("wallet B"))
+        } else {
+            #expect(try WalletDatabase.properties(at: location.database).network == "regtest")
+            #expect(seed.read() == .found("wallet A"))
+        }
+        #expect(token.read() == .found("token"))
+        #expect(settings.string(forKey: "sentinel") == "retained")
+        #expect(suspended(settings) != true)
+        #expect(!location.restorePending)
+        #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
+        #expect(!FileManager.default.fileExists(atPath: transaction.previous.path))
+        #expect(!FileManager.default.fileExists(atPath: transaction.work.path))
+        let hold = try await session.reserve()
+        await session.release(hold)
+        try await lifecycle.delete() // Still explicitly deletable.
+        #expect(seed.read() == .notFound)
+    }
+
+    @Test func restoreWaitingForKeychainDiscardsStaleMarkerWithoutDeletingWallet() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try writeBarkDatabase()
+        let settings = try makeSettings()
+        let (seed, token) = items()
+        defer { seed.remove(); token.remove() }
+        try seed.save("wallet B")
+        let transaction = RestoreTransaction(location: location)
+        try transaction.prepare()
+        try FileManager.default.createDirectory(at: transaction.staged, withIntermediateDirectories: false)
+        try Data("wallet B data".utf8).write(to: transaction.staged.appending(path: "db.sqlite"))
+        try transaction.begin(seed: "wallet B")
+        try transaction.markCommitting()
+        try location.writeDeletionIdentity(seed: seed.read())
+        let secret = FakeSeed("wallet B")
+        secret.makeUnavailable()
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let mutation = WalletMutationGate()
+        let lifecycle = lifecycle(session: session, settings: settings, seed: seed, token: token, mutation: mutation)
+        let location = location
+        let recovery = RestoreRecovery(mutation: mutation) {
+            try await lifecycle.recoverRestoreAndDeletionLocked {
+                try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: secret)
+            }
+        }
+        #expect(try await recovery.settle() == .waitingForKeychain)
+        #expect(location.restorePending)
+        #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
+        #expect(suspended(settings) != true)
+        #expect(seed.read() == .found("wallet B"))
+        secret.makeUnavailable(false)
+        #expect(try await recovery.settle() == .completed)
+        #expect(!location.restorePending)
+        #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
+        #expect(try Data(contentsOf: location.database) == Data("wallet B data".utf8))
+        #expect(seed.read() == .found("wallet B"))
+    }
+
+    @Test func interruptionAfterRollbackCannotReauthorizeStaleDeletion() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try writeBarkDatabase()
+        let settings = try makeSettings()
+        let (seed, token) = items()
+        defer { seed.remove(); token.remove() }
+        try seed.save("wallet A")
+        try location.writeDeletionIdentity(seed: seed.read())
+        let transaction = RestoreTransaction(location: location)
+        try transaction.prepare()
+        try FileManager.default.createDirectory(at: transaction.staged, withIntermediateDirectories: false)
+        try Data("wallet B data".utf8).write(to: transaction.staged.appending(path: "db.sqlite"))
+        try transaction.begin(seed: "wallet B")
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let mutation = WalletMutationGate()
+        let lifecycle = lifecycle(session: session, settings: settings, seed: seed, token: token, mutation: mutation)
+        let location = location
+        let interrupted = RestoreRecovery(mutation: mutation) {
+            try await lifecycle.recoverRestoreAndDeletionLocked {
+                #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
+                #expect(try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: seed) == .rolledBack)
+                throw Unreachable() // Interruption after the journal has gone.
+            }
+        }
+        await #expect(throws: Unreachable.self) { try await interrupted.settle() }
+        let relaunched = RestoreRecovery(mutation: mutation) {
+            try await lifecycle.recoverRestoreAndDeletionLocked {
+                try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: seed)
+            }
+        }
+        #expect(try await relaunched.settle() == .nothingPending)
+        #expect(seed.read() == .found("wallet A"))
+        #expect(try WalletDatabase.properties(at: location.database).network == "regtest")
+        #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
+    }
+
     @Test func deleteGoesAheadWhenDeregistrationFails() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try writeBarkDatabase()

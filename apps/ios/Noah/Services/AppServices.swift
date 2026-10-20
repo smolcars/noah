@@ -39,8 +39,9 @@ final class AppServices: Sendable {
             deregister: { _ = try await client.deregister().ok },
             settleBackground: { try await coordinator.settleForDeletion(timeout: $0) }))
         restoreRecovery = RestoreRecovery {
-            try await lifecycle.recoverDeletionLocked()
-            return try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: seed)
+            try await lifecycle.recoverRestoreAndDeletionLocked {
+                try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: seed)
+            }
         }
     }
 

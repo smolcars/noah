@@ -60,17 +60,44 @@ struct WalletLifecycle: Sendable {
         try await dependencies.mutation.withLock { try await recoverDeletionLocked() }
     }
 
+    /// Called by launch and push recovery while RestoreRecovery owns the mutation gate.
+    func recoverRestoreAndDeletionLocked(
+        recoverRestore: @Sendable () async throws -> RestoreTransaction.Recovery
+    ) async throws -> RestoreTransaction.Recovery {
+        // Deletion refuses a restore journal, and restore refuses a deletion marker.
+        // Coexistence proves the marker is stale, even if its seed tag matches.
+        // Drop it durably before restore removes its journal: a crash after rollback
+        // must not reauthorize deletion of the previous wallet on the next launch.
+        if dependencies.location.restorePending {
+            if FileManager.default.fileExists(atPath: dependencies.location.deletionMarker.path) {
+                try discardDeletionMarker()
+            } else {
+                // Retry a prior marker unlink whose directory sync failed.
+                try RestoreTransaction.fullSync(dependencies.location.directory.deletingLastPathComponent())
+            }
+        }
+        let result = try await recoverRestore()
+        guard result != .waitingForKeychain else { return result }
+        try await recoverDeletionLocked()
+        return result
+    }
+
     /// Called by RestoreRecovery while it owns the same mutation gate.
     func recoverDeletionLocked() async throws {
         let location = dependencies.location
         guard FileManager.default.fileExists(atPath: location.deletionMarker.path) else { return }
         guard try location.deletionMatchesWallet(seed: dependencies.seed.read()) else {
-            AppLog("walletLifecycle").w("Discarding deletion marker for a different or unidentifiable wallet")
-            try FileManager.default.removeItem(at: location.deletionMarker)
-            try RestoreTransaction.fullSync(location.directory.deletingLastPathComponent())
+            try discardDeletionMarker()
             return
         }
         try await deleteLocked()
+    }
+
+    private func discardDeletionMarker() throws {
+        AppLog("walletLifecycle").w("Discarding deletion marker for a different or unidentifiable wallet")
+        let location = dependencies.location
+        try FileManager.default.removeItem(at: location.deletionMarker)
+        try RestoreTransaction.fullSync(location.directory.deletingLastPathComponent())
     }
 
     /// Drain operations and clean temporary files before committing deletion.
