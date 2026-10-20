@@ -338,7 +338,11 @@ final class AppModel {
     }
 
     func appBecameActive() async {
-        if phase == .wallet { try? await server.refreshMailboxIfNeeded() }
+        if phase == .wallet {
+            try? await server.refreshMailboxIfNeeded()
+            await RecurringExecutor.shared.execute()
+            await refresh()
+        }
         await reconcileBackupTriggers()
         guard canCoordinateBackups else { return }
         await AppServices.shared.backupCoordinator.schedule(.appForeground, immediate: true)
@@ -357,6 +361,7 @@ final class AppModel {
         }
         await registerPush()
         startBackupTriggers()
+        await RecurringExecutor.shared.execute()
     }
 
     /// Like RN's `usePushNotifications`: only once onboarding is finished and

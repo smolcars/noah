@@ -23,6 +23,7 @@ struct PushJobs: Sendable {
         var heartbeat: @Sendable (_ notificationID: String) async throws -> Void
         var announceReceived: @Sendable (_ sats: Int64, _ usd: String?) async -> Void
         var refreshWidget: @Sendable () async -> Void
+        var recurring: @Sendable () async throws -> Void = {}
     }
 
     let dependencies: Dependencies
@@ -76,8 +77,9 @@ struct PushJobs: Sendable {
             }
 
         case .recurringPaymentDue:
-            // Recurring payments land in M7; the RN executor re-checks local schedules.
-            log.i("Recurring payment wake-up received; executor not ported yet")
+            try await d.ensureWalletOpen()
+            try await d.recurring()
+            await d.refreshWidget()
         }
     }
 
@@ -141,6 +143,7 @@ extension PushJobs.Dependencies {
                 guard let summary = try? await session.summary() else { return }
                 let expiry = try? await session.closestExpiryBlocks()
                 WidgetDataWriter.write(balance: summary.balance, closestExpiryBlocks: expiry ?? nil, variant: services.variant)
-            })
+            },
+            recurring: { await RecurringExecutor.shared.execute() })
     }
 }

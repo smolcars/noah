@@ -27,11 +27,18 @@ struct PushJobsTests {
             reportJob: { report, error, k1 in recorder.add("report \(report.rawValue) \(error == nil ? "success" : "failure") \(k1)") },
             heartbeat: { id in recorder.add("heartbeat \(id)"); if recorder.failHeartbeat { throw Boom() } },
             announceReceived: { sats, usd in recorder.add("announce \(sats) \(usd ?? "-")") },
-            refreshWidget: { recorder.add("widget") }))
+            refreshWidget: { recorder.add("widget") },
+            recurring: { recorder.add("recurring") }))
     }
 
     private func decode(_ json: String) throws -> PushPayload.NotificationData {
         try JSONDecoder().decode(PushPayload.NotificationData.self, from: Data(json.utf8))
+    }
+
+    @Test func recurringWakeOpensWalletThenRunsLocalPolicy() async throws {
+        let recorder = Recorder()
+        try await jobs(recorder).handle(decode(#"{"notification_type":"recurring_payment_due","due_count":4294967295}"#))
+        #expect(recorder.all == ["open", "recurring", "widget"])
     }
 
     @Test func maintenanceReportsAndRefreshesTheWidget() async throws {
