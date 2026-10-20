@@ -14,6 +14,7 @@ struct ArkInfoView: View {
             if loading { ProgressView() }
             if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
             if let info {
+                LabeledContent("Network", value: String(describing: info.network))
                 Section("Keys") {
                     CopySettingRow(title: "Server pubkey", value: info.serverPubkey)
                     CopySettingRow(title: "Mailbox pubkey", value: info.mailboxPubkey)
@@ -39,6 +40,7 @@ struct ArkInfoView: View {
                 NavigationLink("Esplora Settings") { EsploraSettingsScreen() }
             }
             Section("Explorer APIs") {
+                CopySettingRow(title: "Block height API", value: ArkInfoEndpoints.blockHeight(variant: .current, esploraOverride: selection.endpoint))
                 let prices = ServerEndpoint.priceURLs(base: ServerEndpoint.baseURL(for: .current))
                 CopySettingRow(title: "Mempool explorer", value: "https://mempool.space" + (AppVariant.current == .mainnet ? "" : "/signet"))
                 CopySettingRow(title: "Price API", value: prices.current.absoluteString)
