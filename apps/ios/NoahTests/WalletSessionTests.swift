@@ -203,6 +203,42 @@ struct WalletSessionTests {
         await session.release(reservation)
     }
 
+    @Test(.timeLimit(.minutes(1))) func repeatedReceiveObserverTeardown() async throws {
+        for _ in 0..<50 {
+            try await closeStopsReceiveObserversAndWaitsForThem()
+        }
+    }
+
+    @Test(.timeLimit(.minutes(1))) func repeatedPendingObserversStopOnCloseAndConsumerCancellation() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        for iteration in 0..<25 {
+            let session = offlineSession()
+            try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
+            let completions = try await session.receiveCompletions(for:
+                ReceiveRequest(arkAddress: "unused-ark-address", onchainAddress: "unused-onchain-address"))
+            let changes = try await session.stateChanges()
+            let receiveReader = Task {
+                do { for try await _ in completions {} }
+                catch is CancellationError {}
+            }
+            let changeReader = Task {
+                do { for try await _ in changes {} }
+                catch is CancellationError {}
+            }
+            // Exercise pending SDK waits as well as the immediate-close registration gap.
+            try await Task.sleep(for: .milliseconds(10))
+            if iteration.isMultiple(of: 2) { receiveReader.cancel(); changeReader.cancel() }
+            let closing = Task { try await session.close() }
+            if iteration.isMultiple(of: 3) { closing.cancel() }
+            try await closing.value
+            try await receiveReader.value
+            try await changeReader.value
+            let reservation = try await session.reserve()
+            await session.release(reservation)
+            try FileManager.default.removeItem(at: documents)
+        }
+    }
+
     @Test(.timeLimit(.minutes(1))) func closeStopsReceiveObserversAndWaitsForThem() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()

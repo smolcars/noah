@@ -99,8 +99,7 @@ actor WalletSession {
     /// calls: `close` stops them first, then waits for them to end.
     private struct Observer {
         let task: Task<Void, Never>
-        /// Releases the reader's pending native wait.
-        let stop: @Sendable () -> Void
+        let stop: WalletObserverStop
     }
 
     init(variant: AppVariant = .current, location: WalletDataLocation? = nil, opener: Opener? = nil) {
@@ -501,12 +500,13 @@ actor WalletSession {
         try checkAccess()
         guard case .open(let handles) = state else { throw SessionError.notOpen }
         let holder = handles.wallet.notifications()
+        let stop = WalletObserverStop { holder.cancelNextNotificationWait() }
         let id = UUID()
         let (stream, continuation) = AsyncThrowingStream<ReceiveCompletion, Error>.makeStream()
         let task = Task.detached { [weak self] in
             do {
                 var completion = try await Self.reconcileReceive(handles, request: request)
-                while completion == nil, !Task.isCancelled {
+                while completion == nil, !stop.isStopped {
                     guard let notification = try await holder.nextNotification() else { break }
                     switch notification {
                     case .movementCreated(let movement), .movementUpdated(let movement):
@@ -520,12 +520,13 @@ actor WalletSession {
             } catch {
                 continuation.finish(throwing: error)
             }
+            stop.finish()
             await self?.observerEnded(id)
         }
-        observers[id] = Observer(task: task, stop: { holder.cancelNextNotificationWait() })
+        observers[id] = Observer(task: task, stop: stop)
         continuation.onTermination = { _ in
-            task.cancel()
-            holder.cancelNextNotificationWait()
+            stop.requestStop()
+            Task.detached { await stop.stop() }
         }
         return stream
     }
@@ -537,11 +538,12 @@ actor WalletSession {
         try checkAccess()
         guard case .open(let handles) = state else { throw SessionError.notOpen }
         let subscription = try handles.wallet.stateChanges()
+        let stop = WalletObserverStop { subscription.stop(); subscription.cancelNextChangeWait() }
         let id = UUID()
         let (stream, continuation) = AsyncThrowingStream<StateChangeEvent, Error>.makeStream()
         let task = Task.detached { [weak self] in
             do {
-                while !Task.isCancelled, let event = try await subscription.nextChange() {
+                while !stop.isStopped, let event = try await subscription.nextChange() {
                     continuation.yield(event)
                 }
                 continuation.finish()
@@ -549,12 +551,13 @@ actor WalletSession {
                 continuation.finish(throwing: error)
             }
             subscription.stop()
+            stop.finish()
             await self?.observerEnded(id)
         }
-        observers[id] = Observer(task: task, stop: { subscription.stop() })
+        observers[id] = Observer(task: task, stop: stop)
         continuation.onTermination = { _ in
-            task.cancel()
-            subscription.stop()
+            stop.requestStop()
+            Task.detached { await stop.stop() }
         }
         return stream
     }
@@ -571,11 +574,11 @@ actor WalletSession {
 
     private func stopObservers() async {
         let running = Array(observers.values)
+        for observer in running { observer.stop.requestStop() }
         for observer in running {
-            observer.task.cancel()
-            observer.stop()
+            await observer.stop.stop()
+            await observer.task.value
         }
-        for observer in running { await observer.task.value }
     }
 
     /// Syncs onchain then Ark state, like `syncWallet` minus Lightning claims.
