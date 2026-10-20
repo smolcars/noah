@@ -5,9 +5,6 @@ enum EndpointLogPrivacy {
     private static let lock = NSLock()
     nonisolated(unsafe) private static var origins = Set<String>()
     nonisolated(unsafe) private static var paths = Set<String>()
-    private static let routes: Set<String> = ["api", "tx", "txs", "raw", "hex", "status", "outspend", "outspends", "address",
-        "scripthash", "utxo", "chain", "mempool", "block", "blocks", "block-height", "tip", "height", "hash",
-        "header", "txids", "txid", "merkle-proof", "merkleblock-proof", "fee-estimates", "recent"]
     private static let urls = try! NSRegularExpression(pattern: #"(?i)\bhttps?://[^\s<>"']*"#)
     // Admit only the SDK error type/status, never provider-controlled response text.
     private static let responseStatus = try! NSRegularExpression(
@@ -19,7 +16,6 @@ enum EndpointLogPrivacy {
         for path in LogFile.decodedViews(url.percentEncodedPath, percentEncoded: true) ?? [url.percentEncodedPath] {
             let trimmed = path.replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
             if !trimmed.isEmpty { sensitive.insert(trimmed) }
-            sensitive.formUnion(path.split(separator: "/").map(String.init).filter { !routes.contains($0) })
         }
         lock.withLock { paths.formUnion(sensitive); origins.insert(origin) }
     }
@@ -47,8 +43,9 @@ enum EndpointLogPrivacy {
                       registered.contains(origin) else { continue }
                 clean.replaceSubrange(range, with: "[custom-esplora]")
             }
-            // Decoding loses offsets; omit the message when any relative path or segment matches.
-            if sensitive.contains(where: { clean.contains($0) }) { return "[redacted]" }
+            // Inspect relative references separately: another origin never inherits our paths.
+            let relative = urls.stringByReplacingMatches(in: clean, range: NSRange(clean.startIndex..., in: clean), withTemplate: "")
+            if sensitive.contains(where: { relative.contains($0) }) { return "[custom-esplora]" }
             if index > 0 && clean != view { return "[custom-esplora]" }
             if index == 0 { result = clean }
         }
