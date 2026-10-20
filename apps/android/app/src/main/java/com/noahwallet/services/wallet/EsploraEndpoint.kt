@@ -19,7 +19,23 @@ object EsploraEndpoint {
         if (url.query != null || url.fragment != null) throw Failure("The Esplora endpoint cannot include a query string or fragment.")
         var path = url.encodedPath.trimEnd('/')
         listOf("/blocks/tip/height", "/blocks/tip/hash", "/block-height/0").firstOrNull { path.endsWith(it) }?.let { path = path.dropLast(it.length) }
-        return url.newBuilder().encodedPath(path.ifEmpty { "/" }).build().toString().trimEnd('/')
+        return url.newBuilder().host(ipv4Host(url.host)).encodedPath(path.ifEmpty { "/" }).build().toString().trimEnd('/')
+    }
+    /** WHATWG IPv4 numbers include shortened, hex and octal forms. */
+    private fun ipv4Host(host: String): String {
+        val parts = host.removeSuffix(".").split('.')
+        fun number(part: String): Long? = when {
+            part.startsWith("0x", ignoreCase = true) -> part.drop(2).ifEmpty { "0" }.toLongOrNull(16)
+            part.length > 1 && part.startsWith('0') -> part.drop(1).toLongOrNull(8)
+            else -> part.toLongOrNull()
+        }?.takeIf { it >= 0 }
+        if (number(parts.last()) == null && !Regex("[0-9]+").matches(parts.last())) return host
+        val numbers = parts.mapNotNull(::number)
+        if (numbers.size != parts.size || numbers.size !in 1..4 || numbers.dropLast(1).any { it > 255 } ||
+            numbers.last() >= (1L shl (8 * (5 - numbers.size)))) throw Failure("Enter a valid Esplora API URL.")
+        var address = numbers.last()
+        numbers.dropLast(1).forEachIndexed { index, value -> address += value shl (8 * (3 - index)) }
+        return listOf(24, 16, 8, 0).joinToString(".") { ((address shr it) and 255).toString() }
     }
     fun validateGenesis(value: String, variant: String) {
         if (variant == "regtest") throw Failure("Regtest wallets use Bitcoin Core instead of Esplora.")
