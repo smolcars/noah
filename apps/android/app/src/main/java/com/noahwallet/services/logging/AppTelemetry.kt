@@ -111,7 +111,9 @@ object AppTelemetry {
         setBeforeBreadcrumb { breadcrumb, _ -> scrub(breadcrumb) }
         setBeforeSend { event, hint ->
             clearAttachments(hint)
-            scrub(event, proguardUuid, release)
+            scrub(event, proguardUuid, release).also { clean ->
+                if (clean == null) TelemetrySubmission.drop(hint, event.eventId, flushTimeoutMillis)
+            }
         }
     }
 

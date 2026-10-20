@@ -81,6 +81,37 @@ class TelemetryOutboxTest {
         }
     }
 
+    @Test fun rejectedNativeEventCompletesWithoutWaitingForTimeout() {
+        val rejected = SentryEnvelopeItem.fromEvent(serializer, event(rejected = true))
+        Replay(listOf(rejected)).use { replay ->
+            replay.awaitFinished()
+            assertFalse(replay.cached.exists())
+            assertTrue(replay.transport.pending.isEmpty())
+        }
+    }
+
+    @Test fun rejectedEventBeforeAcceptedSessionDoesNotCompleteItsUpload() = pendingUpload(listOf(
+        SentryEnvelopeItem.fromEvent(serializer, event(rejected = true)), sessionItem()), acceptedTypes = listOf(SentryItemType.Session))
+
+    @Test fun acceptedSessionBeforeRejectedEventDoesNotWaitForTimeout() {
+        Replay(listOf(sessionItem(), SentryEnvelopeItem.fromEvent(serializer, event(rejected = true)))).use { replay ->
+            replay.transport.take().result.setResult(true)
+            replay.awaitFinished()
+            assertFalse(replay.cached.exists())
+            assertTrue(replay.transport.pending.isEmpty())
+        }
+    }
+
+    @Test(timeout = 2_000) fun rejectedNativeEventCompletesCrashFlushWithoutTimeout() {
+        val event = event(rejected = true)
+        val callback = UncaughtExceptionHandlerIntegration.UncaughtExceptionHint(1_000, NoOpLogger.getInstance())
+        callback.setFlushable(event.eventId!!)
+        val started = System.nanoTime()
+        assertNull(options().beforeSend!!.execute(event, HintUtils.createWithTypeCheckHint(callback)))
+        assertTrue(callback.waitFlush())
+        assertTrue("Rejected crash flush must finish in under 500ms", System.nanoTime() - started < 500_000_000)
+    }
+
     @Test fun timedOutUploadKeepsOutboxFile() {
         Replay(listOf(attachment(), eventItem())).use { replay ->
             replay.transport.take()

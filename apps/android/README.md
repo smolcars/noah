@@ -778,6 +778,7 @@ valid errors/crashes in the same envelope. Deliberate drops complete submission
 and applicable crash-flush hints as consumed, with retries disabled, so cached
 rejections do not wait for the SDK's 15-second timeout or block later outbox items.
 Cached directory replay uses resettable per-item waits and retains the outbox file while an accepted upload is unresolved.
+Final-guard rejections complete the same submission/crash-flush hints before returning from `beforeSend`.
 Automatic session tracking stays **ON**, per the 2026-10-20 product decision.
 Sessions accept strictly validated SDK 32-hex IDs and canonical UUID strings for
 random session/install IDs, and keep init/start/timestamp/status,
