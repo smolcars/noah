@@ -8,6 +8,8 @@ final class AppServices: Sendable {
 
     static let configurationAccess = WalletMutationGate()
 
+    private let foregroundSync = ForegroundWalletSync()
+
     let variant: AppVariant
     let session: WalletSession
     let tokens: AuthTokenProvider
@@ -92,19 +94,17 @@ final class AppServices: Sendable {
     /// Called by the app-wide foreground timer; never opens or recovers a wallet.
     func syncInForeground() async {
         do {
-            try await Self.configurationAccess.withLock { [self] in
-                try await WalletMutationGate.shared.withLock { [self] in
-                    try BackgroundExecution.checkActive()
-                    let location = WalletDataLocation(variant: variant)
-                    let wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
-                    guard wallet?.isInitialized != false, wallet?.isWalletSuspended != true,
-                          !location.restorePending, !FileManager.default.fileExists(atPath: location.deletionMarker.path),
-                          await session.isOpen else { return }
-                    await WalletBackgroundActivity.shared.begin()
-                    do { try await session.sync(includingLightningClaims: true) }
-                    catch { await WalletBackgroundActivity.shared.end(); throw error }
-                    await WalletBackgroundActivity.shared.end()
-                }
+            try await foregroundSync.run { [self] in
+                try BackgroundExecution.checkActive()
+                let location = WalletDataLocation(variant: variant)
+                let wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
+                guard wallet?.isInitialized != false, wallet?.isWalletSuspended != true,
+                      !location.restorePending, !FileManager.default.fileExists(atPath: location.deletionMarker.path),
+                      await session.isOpen else { return }
+                await WalletBackgroundActivity.shared.begin()
+                do { try await session.sync(includingLightningClaims: true) }
+                catch { await WalletBackgroundActivity.shared.end(); throw error }
+                await WalletBackgroundActivity.shared.end()
             }
         } catch { /* A later foreground tick retries; no secrets or provider errors are logged. */ }
     }
