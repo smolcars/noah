@@ -48,7 +48,7 @@ PY_DISK
 # Maestro may capture the recovery screen on failure; keep artifacts private
 # and remove them on exit. Do not upload these artifacts to CI.
 ARTIFACTS="$(mktemp -d)"
-trap 'rm -r "$ARTIFACTS"' EXIT
+trap 'if [[ -n "${writer_pid:-}" ]]; then kill "$writer_pid" 2>/dev/null || true; wait "$writer_pid" 2>/dev/null || true; fi; rm -r "$ARTIFACTS"' EXIT
 check_disk
 if [[ $# -lt 2 ]]; then
     if ! (cd "$ROOT" && bun install --frozen-lockfile > "$ARTIFACTS/install.log" 2>&1); then
@@ -185,8 +185,25 @@ echo 'RN Expo ID captured (SHA-256 only)'
 mmkv_hash="$("$ADB" -s "$SERIAL" shell sha256sum "/data/user/0/$BUNDLE/files/mmkv/noah-wallet-storage" | awk '{print $1}')"
 "$ADB" -s "$SERIAL" shell dumpsys appwidget > "$ARTIFACTS/widgets-before.txt"
 "$ADB" -s "$SERIAL" shell dumpsys shortcut > "$ARTIFACTS/shortcuts-before.txt"
+if [[ "${INSTALL_WHILE_RUNNING:-1}" == 1 ]]; then
+    maestro --device "$SERIAL" test --debug-output "$ARTIFACTS/writer" "$HERE/rn-write-during-install.yml" > "$ARTIFACTS/writer.log" 2>&1 &
+    writer_pid=$!
+    changed=0
+    for attempt in {1..60}; do
+        current="$("$ADB" -s "$SERIAL" shell sha256sum "/data/user/0/$BUNDLE/files/mmkv/noah-wallet-storage" | awk '{print $1}')"
+        if grep -q 'currency-option-EUR.*COMPLETED' "$ARTIFACTS/writer.log" &&
+           [[ "$mmkv_hash" != "$current" ]] && kill -0 "$writer_pid" 2>/dev/null; then changed=1; break; fi
+        kill -0 "$writer_pid" 2>/dev/null || break
+        sleep 1
+    done
+    [[ "$changed" == 1 ]] || { echo 'RN did not write MMKV before replacement'; exit 1; }
+    echo 'Replacing RN while running and writing MMKV'
+fi
 "$ADB" -s "$SERIAL" install -r "$NATIVE_APK"
-[[ "$mmkv_hash" == "$("$ADB" -s "$SERIAL" shell sha256sum "/data/user/0/$BUNDLE/files/mmkv/noah-wallet-storage" | awk '{print $1}')" ]] || { echo 'RN MMKV bytes changed during replacement'; exit 1; }
+if [[ -n "${writer_pid:-}" ]]; then kill "$writer_pid" 2>/dev/null || true; wait "$writer_pid" 2>/dev/null || true; unset writer_pid; fi
+if [[ "${INSTALL_WHILE_RUNNING:-1}" != 1 ]]; then
+    [[ "$mmkv_hash" == "$("$ADB" -s "$SERIAL" shell sha256sum "/data/user/0/$BUNDLE/files/mmkv/noah-wallet-storage" | awk '{print $1}')" ]] || { echo 'RN MMKV bytes changed during replacement'; exit 1; }
+fi
 "$ADB" -s "$SERIAL" shell dumpsys appwidget > "$ARTIFACTS/widgets-after.txt"
 "$ADB" -s "$SERIAL" shell dumpsys shortcut > "$ARTIFACTS/shortcuts-after.txt"
 python3 "$HERE/check-launcher.py" "$BUNDLE" "$ARTIFACTS"

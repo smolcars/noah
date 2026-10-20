@@ -1,0 +1,18 @@
+# Keep issuing real RN MMKV writes until replacement kills the process.
+# Re-selecting EUR preserves the funded baseline's preference.
+appId: com.noahwallet.regtest
+---
+- launchApp
+- tapOn: "Home|Hem"
+- tapOn: "Open settings|Öppna inställningar"
+- tapOn:
+    id: "settings-currency"
+- tapOn:
+    id: "currency-option-EUR"
+- repeat:
+    times: 1000
+    commands:
+      - tapOn:
+          id: "settings-currency"
+      - tapOn:
+          id: "currency-option-EUR"

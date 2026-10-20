@@ -397,3 +397,60 @@ Before cleanup, `adb -s emulator-5604 emu avd name` returned
 and QEMU-process absence were checked before deleting this AVD. Both owned AVDs
 and their private artifacts were removed. Reserved emulators and the physical
 Pixel 6 were left untouched.
+
+## MMKV interrupted-update safety (2026-10-20)
+
+Native now registers CRC and length **OnErrorRecover** callbacks through MMKV's
+initialization handler. Warning/error callbacks send fixed diagnostics through
+the redacting `AppLog`; MMKV messages and stored values are not forwarded.
+The first open is serialized across all `SettingsStorage` callers. Before
+mapping `files/mmkv/noah-wallet-storage`, native durably copies it and its CRC
+to the immutable sibling `files/mmkv.native-backup`. A synced manifest outside
+MMKV records first-open completion and the original actual sizes. Copy/sync
+failure leaves storage unavailable, suppresses writes and retries next process
+launch. The backup is retained and never replaced.
+
+If backup metadata records content but no RN keys survive, native closes MMKV,
+restores the original pair once and reopens with recovery enabled. A durable
+pending marker resumes a crashed restore before mapping either file. If RN data
+is still absent, startup and headless wallet opens block with a selectable,
+copy-safe `STORAGE_UNSUPPORTED` support state. Existing DB/seed with missing
+`wallet-storage` also block: absence cannot prove RN's final `isInitialized=true`
+step happened. An explicit false flag still resumes unfinished onboarding.
+Wallet deletion marks the retained backup ineligible before clearing settings.
+Recurring storage checks health before reading policies; the separate recurring
+journal prevents replay when MMKV returns an older confirmed policy.
+
+`run.sh` now defaults to `INSTALL_WHILE_RUNNING=1`. After a stopped baseline it
+relaunches RN and repeatedly selects EUR through real RN controls, confirms an
+MMKV byte change, then runs `adb install -r` while the writer remains active.
+No force-stop occurs between the writer and replacement. The prior stopped
+hash comparison remains available with `INSTALL_WHILE_RUNNING=0`; run **both**
+for acceptance. In running mode a pre-install hash cannot equal the final file
+by contract because RN is writing, so continuity is checked by the existing
+native wallet/preferences/recurring assertions instead. Writer/flow artifacts
+stay private and are removed on exit. Only use an owned emulator at port >=5590.
+
+The shared, actual RN mmap fixture is in `../../fixtures/rn-mmkv/README.md`.
+`MMKVRecoveryTest` runs real JNI corruption checks on device: former discard
+behavior loses the same CRC-damaged bytes that recovery retains; length and
+truncated-write recovery, exact backup bytes, one-time restore, failed backup,
+unrecoverable storage and missing-wallet-state gates are exercised. JVM backup
+tests cover fsync failures/restart retry, interrupted restoration, immutable
+publication, last-confirmed sizes and deletion markers.
+
+Verification for this change (base `37ab2125`, branch `t3/mmkv-upgrade-recovery`):
+
+- Required full command ran once, inside Nix, with `--max-workers=2`:
+  `:app:testRegtestDebugUnitTest :app:assembleRegtestDebug` — **2,890 tests /
+  83 suites / zero failures, errors or skips**; APK assembled successfully.
+- Targeted backup tests: **8 passed**. Targeted executor rollback test passed.
+- Real Android 15/API 35 instrumentation on owned `NoahMMKV79e4`,
+  **emulator-5590: 5 passed** (`MMKVRecoveryTest`), including the real native
+  discard/recovery comparison. Instrumentation APK compiled successfully.
+- Confirmed the emulator's AVD name, shut it down, verified serial/process
+  absence and its exact AVD path, then deleted only that AVD and verified removal.
+- A full running-RN Android replacement was not repeated: this checkout has no
+  built RN APK or installed RN JavaScript dependencies. The actual RN-byte JNI
+  checks passed; the running replacement procedure was exercised on iOS.
+  No physical device, other agent's emulator, or Docker container was touched.
