@@ -68,3 +68,131 @@ Two dedicated read-only safety review rounds found and closed Android late-modal
 Owned simulator: **Noah Parity Lifecycle 1020**, iPhone 17 / iOS 27.0, UDID `5E02D714-F99B-4F08-A9BE-0622A13FE4C2`. The Device panel returned “No device … on host local” twice; it was driven only by its explicit simctl UDID. DerivedData: `/private/tmp/noah-parity-lifecycle-dd`. Explicit results: `/private/tmp/noah-parity-lifecycle-focused.xcresult`, `...-focused-2.xcresult`, `...-final.xcresult`.
 
 Cleanup completed: the exact simulator name/UDID was checked, shutdown completed, its **Shutdown** state was confirmed by UDID, then it was deleted and absence rechecked. The requested DerivedData and all three explicit result bundles above were removed and absence checked. No owned Xcode/Gradle build invocation remains; shared idle daemons and unrelated builds/devices were left alone. One owned heavy build ran at a time. Small text logs/count summaries remain under `/private/tmp/noah-parity-*`; the committed report preserves the results after bundle removal.
+
+
+## Round 2 — lifecycle review fixes
+
+Implementation base: `be132094`, checkout `t3/native-lifecycle-round2-fixes`.
+No `client/` or `server/` source changes. No Send, recurring executor/runner,
+restore or Esplora execution changes.
+
+### Suspension and close admission (iOS)
+
+`apps/ios/Noah/Services/Wallet/WalletLifecycle.swift:62` persists suspension inside
+`WalletSession.closeSettled(beforeClose:)` (`WalletSession.swift:272`). The session
+actor increments a pending-close admission hold before that synchronous callback
+or any opening/closing await. Every sync stage reenters the session actor and
+requires an open session with no pending close (`WalletSession.swift:639`). Direct
+`close()` also revokes admission by publishing its existing closing state before
+its first await. A count supports overlapping settled-close requests without an
+out-of-order completion restoring admission prematurely; failure releases only
+that request's hold. The whole pass remains one counted `withOpenWallet` call,
+so admitted native work settles before daemon teardown or a replacement reservation.
+No lifecycle gate is acquired from inside another gate. Commit: `43a8036a`.
+
+`WalletSyncTests.swift:7` uses a temporary real SDK session, synthetic counted
+stages and the production suspension path. Both suspension and direct close are
+started during stage one; persistence, rejected reservation, unfinished close,
+settled native work and omission of stages two/three are asserted. The injectable
+stages use the same counted orchestration as production onchain/Ark/claim stages.
+
+### Pause admission (Android)
+
+`apps/android/app/src/main/java/com/noahwallet/services/wallet/ForegroundSyncAdmission.kt:15`
+admits minute sync only after ON_RESUME and revokes its independent budget on
+ON_PAUSE. `MainActivity.kt:106` attaches that observer, and
+`recurring/RecurringRuntime.kt:43` routes only sync through it. The existing
+STARTED/ON_STOP minute runner and recurring execution budget remain intact.
+A pause-revoked sync cancellation is consumed only while the caller job remains
+active; cancellation of the runner still propagates. This allows recurring work
+to proceed after sync's admitted native stage drains. The existing session and
+background-activity accounting remain held until settlement. Commit: `bcb4cb86`.
+
+`ForegroundSyncAdmissionTest.kt:18` drives a real LifecycleRegistry and the existing
+minute runner, pauses during the first sync stage, checks background ownership
+until settlement, rejects later stages and paused ticks, and checks that recurring
+continues while STARTED and sync restarts after resume.
+
+### Overlap dropping before outer gates (both platforms)
+
+`apps/ios/Noah/Services/Wallet/ForegroundWalletSync.swift:14` claims an actor-owned
+slot before configuration/background access and the lifecycle mutation gate.
+`apps/android/app/src/main/java/com/noahwallet/services/wallet/ForegroundWalletSync.kt:9`
+uses a nonblocking mutex slot before background access and the lifecycle gate.
+AppServices routes foreground reentry and minute requests through these helpers;
+all existing eligibility checks and the per-session sync flight remain inside.
+The slot is retained through admitted work's settlement and released on every
+exit. Lock order stays background access → lifecycle gate → RestoreRecovery →
+session reservation; none becomes reentrant. Commits: iOS `c63ad293`, Android
+`bf79846d`.
+
+`ForegroundWalletSyncTests.swift:6` and `ForegroundWalletSyncTest.kt:10` hold each
+outer gate in turn, overlap minute/reentry requests before the session flight,
+and require one pass plus a successful later independent request. This catches
+queuing at the outer gates, beyond the round-1 per-session overlap tests.
+
+### Explicit window restoration fixture (iOS)
+
+`apps/ios/NoahTests/WalletContentProtectionTests.swift:46` explicitly sets both
+starting accessibility/interaction flags before covering the unattached hidden
+window. Restoration no longer depends on UIKit's initial accessibility state.
+Commit: `22be336a`.
+
+### Round-2 verification and cleanup
+
+Before the fixes, the two iOS regressions failed with **eight assertion issues**:
+both direct close and suspension admitted all three stages, and both outer-gate
+cases queued a second pass. The Android regressions both failed: the paused pass
+ran two later stages, and the overlapped request ran a second pass. These regressions
+are permanent. Focused runs after the fixes passed **10 iOS tests / four suites**
+and **13 Android JVM tests / four suites**, with zero failures/skips. The Android
+subset includes all seven existing recurring minute-runner tests. iOS function
+selectors used trailing `()`.
+
+The exact requested full Android command ran once after the final Android code
+change: **3,574 JVM tests / 137 suites / zero failures, errors or skips**. Regtest
+debug APK assembly and instrumentation Kotlin compilation passed; Gradle completed
+in **2m 39s**.
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
+```
+
+Full NoahTests ran **once after the final iOS code/test change**, with XcodeGen
+regeneration first: **785 definitions / 157 suites / 760 passed / 25 opt-in skipped /
+zero failed** (Swift Testing execution **315.252 seconds**). The xcresult summary
+independently reports the same 785 total, 760 passed and 25 skipped.
+
+```sh
+xcodegen generate --spec apps/ios/project.yml
+xcodebuild -project apps/ios/Noah.xcodeproj -scheme Noah-Regtest \
+  -destination 'platform=iOS Simulator,id=0AC6E859-0941-4805-BAFA-4759C10DC6F6' \
+  -derivedDataPath /private/tmp/noah-lifecycle-r2-dd \
+  -disableAutomaticPackageResolution -skipPackageUpdates -collect-test-diagnostics never \
+  -resultBundlePath /private/tmp/noah-lifecycle-r2-ios-full.xcresult \
+  -jobs 2 ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -parallel-testing-enabled NO \
+  -only-testing:NoahTests test
+```
+
+`bun apps/tools/translations.mjs --check` is clean. Each commit has the requested
+Claude co-author trailer and completed the repository hook (RN lint, compiler
+checks, 148 RN unit tests, TypeScript and Rust formatting). Missing ignored Husky
+files were installed through locked dependencies before the first commit.
+
+Owned simulator **Noah Lifecycle R2 1020**, iPhone 17 / iOS 27.0, UDID
+`0AC6E859-0941-4805-BAFA-4759C10DC6F6`, was identity-checked by UDID, name and
+device type. Its **Shutdown** state was confirmed by UDID before deletion, then
+absence was verified. `/private/tmp/noah-lifecycle-r2-dd` and all three created
+`noah-lifecycle-r2-*.xcresult` bundles were removed and absence checked. No owned
+Xcode/Gradle build or package resolver remains. Small text logs and count summaries
+remain under `/private/tmp/noah-lifecycle-r2-*`; shared idle daemons were untouched.
+
+The Device panel twice returned “No device 0AC6E859-0941-4805-BAFA-4759C10DC6F6 on
+host local”, so Xcode/simctl used only the owned simulator's explicit UDID. An
+initial MMKV submodule fetch stalled; owned resolver processes were stopped and
+existing local package checkouts copied into the owned DerivedData. The expected
+failing run triggered slow simulator diagnostics; only that owned diagnostics
+process was stopped after assertions completed (Xcode exited 65). Subsequent runs
+disabled automatic diagnostics. No protected device, physical device, Android
+emulator or Docker was used. One owned heavy build ran at a time. No live funded
+wallet or physical-device lifecycle acceptance was attempted.
