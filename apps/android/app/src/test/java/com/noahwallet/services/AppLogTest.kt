@@ -16,19 +16,25 @@ import kotlinx.coroutines.runBlocking
 
 class AppLogTest {
     @Test fun redactionPerformance() {
-        LogFile.redact("warmup")
-        var slowest = 0L
-        for ((name, unit) in performanceInputs) for (size in listOf(1024, 4096, 16384)) {
-            val input = unit.repeat((size + unit.length - 1) / unit.length).take(size)
-            val elapsed = List(3) {
+        for ((name, unit) in performanceInputs) assertRedactionScales(name, unit)
+    }
+
+    private fun assertRedactionScales(name: String, unit: String) {
+        val inputs = listOf(1024, 16384).map { size -> unit.repeat((size + unit.length - 1) / unit.length).take(size) }
+        inputs.forEach { LogFile.redact(it) } // Warm regexes, dictionaries and the JIT before sampling.
+        val samples = inputs.map { mutableListOf<Long>() }
+        repeat(5) {
+            inputs.forEachIndexed { index, input ->
                 val start = System.nanoTime()
                 LogFile.redact(input)
-                System.nanoTime() - start
-            }.sorted()[1]
-            println("REDACTION $name $size ${elapsed / 1e6} ms")
-            slowest = maxOf(slowest, elapsed)
+                samples[index] += System.nanoTime() - start
+            }
         }
-        assertTrue("slowest redaction ${slowest / 1e6} ms exceeds 100 ms CI budget", slowest < 100_000_000)
+        val (small, large) = samples.map { it.sorted()[2] }
+        println("REDACTION $name 1 KiB ${small / 1e6} ms; 16 KiB ${large / 1e6} ms")
+        // Linear work grows 16x; quadratic suffix rescans grow 256x. Allow scheduler/JIT noise.
+        assertTrue("$name scaling: $small -> $large ns", large < small * 64 + 20_000_000)
+        assertTrue("$name 16 KiB exceeds 2 s ceiling", large < 2_000_000_000)
     }
 
     private val performanceInputs = listOf(
@@ -84,13 +90,7 @@ class AppLogTest {
 
     @Test fun failedTokenCandidatesStayBounded() {
         for (unit in listOf("seed.", "http://", "ExpoPushToken[", "x@x.", "xprv", "\\u0078!")) {
-            val input = unit.repeat((16384 + unit.length - 1) / unit.length).take(16384)
-            val elapsed = List(3) {
-                val started = System.nanoTime()
-                LogFile.redact(input)
-                System.nanoTime() - started
-            }.sorted()[1]
-            assertTrue("failed candidate $unit: ${elapsed / 1e6} ms", elapsed < 100_000_000)
+            assertRedactionScales("failed candidate $unit", unit)
         }
     }
 
