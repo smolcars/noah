@@ -58,8 +58,12 @@ Other deliberate differences from RN:
   acknowledged; durable operation lookup for the pre-ID window remains FFI 19.
 - Claims compare the built PSBT's fee to the reviewed estimate before broadcasting.
   A changed fee releases the attempt without broadcasting. Unknown native failures
-  retain it. Exact outer construction errors clear the attempt (including a failed
-  claim PSBT build); nested/unknown errors remain uncertain. Cancellation is rechecked by Bark, and a refused cancellation remains
+  retain it. With FFI 0.4.0, only typed BDK `insufficientFunds`/`dust` errors from
+  boarding clear the attempt: construction precedes payment recording/broadcast.
+  Refresh/start/claim/cancel validation still returns `other` in this SDK; those
+  errors remain uncertain. Local claim-fee changes and explicit cancellation
+  refusals still clear safely. No diagnostic-prefix matching remains. Cancellation
+  is rechecked by Bark, and a refused cancellation remains
   visible as an error rather than being shown as successful.
 - No estimator-unavailable emergency fallback. No broadcasting `syncExits` call on
   screen appearance, pull-to-refresh, polling, or fee review. Status polling is

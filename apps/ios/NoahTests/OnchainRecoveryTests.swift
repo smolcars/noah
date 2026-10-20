@@ -57,35 +57,22 @@ struct OnchainRecoveryTests {
             }
         }
     }
-    @Test func narrowlyClassifiesPreBroadcastErrors() {
-        for (action, message) in [
-            (OnchainAction.claim, "Drain exits failed: no signable clause"),
-            (.claim, "Failed to get fee: missing input"),
-            (.claim, "invalid PSBT: invalid base64"),
-            (.claim, "Failed to extract transaction: missing witness"),
-            (.claim, "No claimable exits found"),
-            (.claim, "invalid bitcoin address: invalid checksum"),
-            (.board, "Board failed: error building tx: insufficient funds"),
-            (.board, "Board all failed: error building tx: insufficient funds"),
-            (.refresh, "invalid VTXO id: malformed"),
-            (.cancel, "invalid vtxo id: malformed")
-        ] {
-            #expect(OnchainSubmission.preBroadcast(BarkError(message: message), action: action) != nil)
-            #expect(OnchainSubmission.preBroadcast(BarkError(message: "broadcast failed: " + message), action: action) == nil)
+    @Test func narrowlyClassifiesTypedPreBroadcastErrors() {
+        for action in [OnchainAction.board, .claim, .refresh, .startExit, .cancel, .progress] {
+            for code in BarkErrorCode.allCases {
+                let result = OnchainSubmission.preBroadcast(BarkError(message: "diagnostic", code: code), action: action)
+                #expect((result != nil) == (action == .board && [.insufficientFunds, .dust].contains(code)))
+            }
         }
-        for message in ["unknown", "Board failed: database failed", "Progress exits failed: timeout",
-                        "Board failed: broadcast failed: error building tx: insufficient funds"] {
-            #expect(OnchainSubmission.preBroadcast(BarkError(message: message), action: .board) == nil)
-        }
-        #expect(OnchainSubmission.preBroadcast(BarkError(message: "Drain exits failed: failure"), action: .refresh) == nil)
+        #expect(OnchainSubmission.preBroadcast(BarkError(message: "Drain exits failed: failure"), action: .claim) == nil)
     }
     @Test func preBroadcastFailureClearsButUnknownSurvivesRelaunchAndAllowsRecovery() async throws {
         let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: file) }
         let journal = OnchainOperationJournal(file: file)
         let claim = quote(.claim)
-        await #expect(throws: OnchainFailure.constructionFailed) {
-            try await journal.perform(claim) { throw BarkError(message: "Drain exits failed: failure") }
+        await #expect(throws: OnchainFailure.claimFeeChanged) {
+            try await journal.perform(claim) { throw OnchainFailure.claimFeeChanged }
         }
         #expect(try await OnchainOperationJournal(file: file).loadAll().isEmpty)
         let board = quote(.board, [])
