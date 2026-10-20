@@ -167,9 +167,23 @@ enum SendReconciliation {
         return candidates.isEmpty ? .uncertain : .possibleTransactions(candidates.sorted())
     }
 
+    static func chainEvidence(
+        _ resolution: SendPaymentController.Resolution, source: SendSource?,
+        lookup: @Sendable (String) async throws -> ChainTransactionStatus
+    ) async -> SendPaymentController.Resolution {
+        guard case .paid(var receipt) = resolution, let txid = receipt.txid else { return resolution }
+        do { receipt = chainEvidence(try await lookup(txid), receipt: receipt, source: source) }
+        catch {
+            // Preserve newer BDK evidence even when the independent chain source is unavailable.
+            receipt.chainStatusError = "Couldn't check network status. Showing the last known network status."
+        }
+        return .paid(receipt)
+    }
+
     static func chainEvidence(_ status: ChainTransactionStatus, receipt: SendReceipt, source: SendSource?) -> SendReceipt {
         var result = receipt
         result.chainStatus = status
+        result.chainStatusError = nil
         // BDK's reorg/competing-spend rules still own its lock and receipt state.
         if source == .offchain, result.status != .conflicted {
             if case .confirmed = status { result.status = .confirmed }

@@ -260,14 +260,12 @@ extension WalletSession {
                     resolution = .paid(SendReconciliation.offboardReceipt(receipt, payment: attempt.payment,
                                                                          movements: try await handles.wallet.history()))
                 } else { return .uncertain }
-                if case .paid(var receipt) = resolution, let txid = receipt.txid {
+                return await SendReconciliation.chainEvidence(resolution, source: attempt.payment.source) { txid in
                     let status = attempt.payment.source == .onchain
                         ? try await handles.onchain.transactionStatus(txid: txid)
                         : try await handles.wallet.transactionStatus(txid: txid)
-                    receipt = SendReconciliation.chainEvidence(.init(status), receipt: receipt, source: attempt.payment.source)
-                    return .paid(receipt)
+                    return .init(status)
                 }
-                return resolution
             }
             if ["lightning", "lnurl"].contains(attempt.payment.method), let hash = attempt.paymentHash {
                 // Status checks must not drive an inherited checkpoint with an unreviewed amount.

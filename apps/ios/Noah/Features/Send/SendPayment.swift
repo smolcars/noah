@@ -49,6 +49,7 @@ struct SendReceipt: Codable, Equatable, Sendable {
     var broadcastRetryPending: Bool?
     var confirmedConflictTxid: String?
     var chainStatus: ChainTransactionStatus?
+    var chainStatusError: String?
     enum Proof: String, Codable, Sendable { case preparedTxid, submitReturnedTxid, actualMovement, submitReturnedArkSuccess }
     enum Status: String, Codable, Sendable { case submitted, confirmed, unlocated, conflicted }
     var isUnresolved: Bool { status == .unlocated || status == .conflicted }
@@ -244,7 +245,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                 state = saved.alreadyPaid.map(State.alreadyPaid)
                     ?? saved.receipt.map { $0.isUnresolved ? .uncertain : .succeeded($0) }
                     ?? (saved.failed ? .failed : .uncertain)
-                message = saved.failureMessage
+                message = saved.failureMessage ?? saved.receipt?.chainStatusError
             }
         } catch {
             state = .storageBlocked
@@ -388,6 +389,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
             state = .uncertain
         case .paid(let receipt):
             attempt.receipt = receipt
+            message = receipt.chainStatusError
             state = receipt.isUnresolved ? .uncertain : .succeeded(receipt)
         case .alreadyPaid(let receipt):
             attempt.alreadyPaid = receipt

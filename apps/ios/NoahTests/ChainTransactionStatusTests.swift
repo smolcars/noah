@@ -41,6 +41,60 @@ import Testing
         #expect(controller.attempt?.receipt == saved.receipt && controller.locked)
         #expect(controller.message?.contains("last known status") == true)
     }
+    @Test(arguments: [false, true], [false, true])
+    func bdkDowngradeSurvivesStatusErrorInEitherRefreshOrder(conflict: Bool, errorFirst: Bool) async throws {
+        let fixtures = SendSafetyTests()
+        let original = try fixtures.transaction(id: "exact", confirmed: true)
+        let competitor = try fixtures.transaction(id: "competitor", confirmed: true)
+        var quote = SendPreparedTests.quote
+        quote.prepared?.inputs = try SendTransaction.parse(hex: original.txHex).inputs
+        var saved = fixtures.attempt("onchain", source: .onchain)
+        saved.quote = quote
+        saved.receipt = .init(amount: 1000, txid: "exact", status: .confirmed, fee: 100,
+                             proof: .preparedTxid, chainStatus: .confirmed(100))
+        let storage = SendPaymentTests.Storage()
+        storage.attempt = saved
+        if errorFirst {
+            let before = fixtures.controller(storage) { attempt in
+                try await SendReconciliation.chainEvidence(
+                    SendReconciliation.onchain(attempt, transactions: [original]), source: .onchain,
+                    lookup: { _ in throw URLError(.notConnectedToInternet) })
+            }
+            await before.checkStatus()
+            #expect(before.attempt?.receipt?.status == .confirmed)
+            #expect(before.message != nil)
+        }
+        let transactions = conflict ? [competitor] : []
+        let controller = fixtures.controller(storage) { attempt in
+            try await SendReconciliation.chainEvidence(
+                SendReconciliation.onchain(attempt, transactions: transactions), source: .onchain,
+                lookup: { txid in
+                    #expect(txid == "exact")
+                    if !errorFirst { throw URLError(.notConnectedToInternet) }
+                    return .confirmed(100) // Even stale confirmation cannot defeat BDK's downgrade.
+                })
+        }
+        await controller.checkStatus()
+        #expect(controller.attempt?.receipt?.status == (conflict ? .conflicted : .unlocated))
+        #expect(controller.attempt?.receipt?.chainStatus == .confirmed(100))
+        #expect(controller.attempt?.receipt?.confirmedConflictTxid == (conflict ? "competitor" : nil))
+        #expect((controller.attempt?.receipt?.chainStatusError != nil) == !errorFirst)
+        #expect(controller.message == controller.attempt?.receipt?.chainStatusError)
+        #expect(controller.state == .uncertain)
+        controller.acknowledge()
+        #expect(controller.locked)
+        storage.attempt = try fixtures.roundTrip(#require(storage.attempt))
+        let restarted = fixtures.controller(storage) { attempt in
+            try await SendReconciliation.chainEvidence(
+                SendReconciliation.onchain(attempt, transactions: transactions), source: .onchain,
+                lookup: { _ in throw URLError(.notConnectedToInternet) })
+        }
+        #expect(restarted.message == storage.attempt?.receipt?.chainStatusError)
+        await restarted.checkStatus()
+        #expect(restarted.state == .uncertain && restarted.message != nil)
+        restarted.acknowledge()
+        #expect(restarted.locked)
+    }
     @Test(arguments: [false, true]) func crashRecoveryUsesExactNetworkTxidAndNotFoundNeverResolves(known: Bool) async throws {
         let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: file) }
