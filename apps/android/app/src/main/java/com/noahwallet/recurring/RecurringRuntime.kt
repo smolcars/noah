@@ -71,7 +71,7 @@ object RecurringRecipient {
     fun resolve(raw: String, network: String = BuildConfig.APP_VARIANT): Pair<String, String> {
         val clean = SendDestination.cleaned(raw)
         val parsed = SendDestination.parse(clean, network)
-        require(parsed.error == null) { parsed.error ?: "Unsupported recipient" }
+        parsed.error?.let { throw it }
         return when (parsed.destinationType) {
             "ark", "offer" -> clean to parsed.destinationType
             "lnurl" -> clean.lowercase() to "lnurl"

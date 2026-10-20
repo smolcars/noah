@@ -160,7 +160,7 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
                 }
                 SendStage.review -> Text(tr("Review payment"), style = MaterialTheme.typography.headlineMedium)
             }
-            model.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+            model.error?.let { Text(model.destinationError?.localized(androidx.compose.ui.platform.LocalContext.current) ?: tr(it), color = MaterialTheme.colorScheme.error) }
             controller.message?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
             Spacer(Modifier.height(8.dp))
         }

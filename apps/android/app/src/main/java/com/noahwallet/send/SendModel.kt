@@ -28,7 +28,11 @@ class SendModel(val controller: SendController, private val network: String,
     var arkBalance by mutableLongStateOf(0)
     var onchainBalance by mutableLongStateOf(0)
     var suggestions by mutableStateOf<List<String>>(emptyList())
-    var error by mutableStateOf<String?>(null)
+    var destinationError by mutableStateOf<SendDestinationError?>(null)
+    private var errorSource by mutableStateOf<String?>(null)
+    var error: String?
+        get() = destinationError?.message ?: errorSource
+        set(value) { destinationError = null; errorSource = value }
     var busy by mutableStateOf(false)
     var resolvingRecipient by mutableStateOf(false)
     var quote by mutableStateOf<SendQuote?>(null); private set
@@ -96,7 +100,10 @@ class SendModel(val controller: SendController, private val network: String,
             progress = progress.copy(recipientConfirmed = true, amountConfirmed = progress.amountConfirmed || sats > 0,
                 selectedRail = if (isMax) SendRail.onchain else SendFlow.recommend(rails, availability))
         } catch (_: Exception) {
-            if (revision == recipientRevision) error = parsed.error ?: "Unable to resolve this recipient. Please check the address."
+            if (revision == recipientRevision) {
+                error = "Unable to resolve this recipient. Please check the address."
+                destinationError = parsed.error
+            }
             return
         } finally { busy = false }
         if (revision == recipientRevision && reviewAtStart == reviewGeneration) advance()

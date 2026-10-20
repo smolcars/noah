@@ -20,6 +20,23 @@ class TranslationsTest {
     @Before fun reset() { context.getSharedPreferences("gt_store", 0).edit().clear().commit() }
     private fun language(code: String) { context.getSharedPreferences("gt_store", 0).edit().putString(LegacyLocale.key, code).commit() }
 
+    @Test fun mixedNetworkURIIsRejectedInEveryLanguageAndErrorsRerender() {
+        val invoice = SharedFixtures.load("send-utils").first { it.name == "destination 5" }.input.jsonObject.getValue("destination").jsonPrimitive.content
+        val uri = "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?lightning=$invoice"
+        val expected = com.noahwallet.send.SendDestinationError.InvalidMethods(listOf(com.noahwallet.send.SendDestinationError.NetworkMismatch("mainnet", "testnet")))
+        for (locale in LegacyLocale.supported) {
+            language(locale)
+            val parsed = com.noahwallet.send.SendDestination.parse(uri, "mainnet")
+            assertNull(parsed.destinationType); assertNull(parsed.bip321); assertEquals(expected, parsed.error)
+            val cached = com.noahwallet.send.SendDestination.parse(invoice, "mainnet").error!!
+            language("en")
+            assertEquals("Network mismatch: expected mainnet, got testnet", cached.localized(context))
+            language(locale)
+            assertEquals(L10n.text(context, "Network mismatch: expected {expected}, got {actual}", "mainnet", "testnet"), cached.localized(context))
+            if (locale != "en") assertNotEquals("Network mismatch: expected mainnet, got testnet", cached.localized(context))
+        }
+    }
+
     @Test fun everyUsedRNKeyResolvesInEveryLocale() {
         val document = SharedFixtures.document("translations-coverage").jsonObject
         val sources = document.getValue("coverage").jsonObject.getValue("android").jsonObject.getValue("used").jsonArray
