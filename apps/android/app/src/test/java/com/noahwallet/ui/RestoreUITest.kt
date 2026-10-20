@@ -118,7 +118,7 @@ class RestoreCompletionTest {
     @Test fun savesFlagsSeedsBackupRecoversThenOpens() = runBlocking {
         val fake = Fake()
         fake.completion.finish(WalletRestorer.Outcome("b1", "hash", true))
-        assertEquals(listOf("flags", "seed", "recover", "open"), fake.events)
+        assertEquals(listOf("recover", "flags", "seed", "open"), fake.events)
         assertEquals(true, fake.state.isInitialized); assertEquals(true, fake.state.isWalletLoaded)
         assertEquals("keep", fake.state.staticVtxoPubkey); assertEquals("hash" to "b1", fake.seeded)
     }
@@ -145,13 +145,13 @@ class RestoreCompletionTest {
             try { fake.completion.finish(WalletRestorer.Outcome("b1", "hash", true)); fail("Must stop") }
             catch (_: IllegalStateException) { }
             assertFalse(fake.events.contains("open"))
-            if (save) assertTrue(fake.events.isEmpty())
+            if (save) assertEquals(listOf("recover"), fake.events)
         }
     }
     @Test fun alreadySettledCleanupOpens() = runBlocking {
         val fake = Fake(); fake.recovery = RestoreTransaction.Recovery.nothingPending
         fake.completion.finish(WalletRestorer.Outcome(null, null, true))
-        assertEquals(listOf("flags", "recover", "open"), fake.events)
+        assertEquals(listOf("recover", "flags", "open"), fake.events)
     }
 }
 
@@ -239,6 +239,30 @@ class RestoreClipboardTest {
 }
 
 class RestoreCompletionReplayTest {
+    @Test fun failedSettingsStillSettleWalletAndOpenWhileReceiptRetries() = runBlocking {
+        val root = java.nio.file.Files.createTempDirectory("restore-settings-replay").toFile()
+        try {
+            val location = com.noahwallet.services.storage.WalletDataLocation(root, "regtest")
+            location.directory.mkdirs(); location.database.writeText("committed")
+            val journal = RestoreCompletionJournal(location) {}
+            var unavailable = true
+            var state = PersistedWalletState(isInitialized = false)
+            val events = mutableListOf<String>()
+            val completion = RestoreCompletion({ state }, {
+                events += "flags"; if (unavailable) error("settings write failed"); state = it
+            }, { _, _ -> events += "backup" },
+                { events += "recover"; RestoreTransaction.Recovery.completed }, { events += "open" }, journal,
+                { events += "token" }, settingsUnavailable = { unavailable })
+            completion.finish(WalletRestorer.Outcome("backup", "snapshot", true))
+            assertEquals(listOf("recover", "token", "flags", "open"), events)
+            assertTrue(journal.pending)
+            unavailable = false; events.clear()
+            completion.replay(RestoreTransaction.Recovery.nothingPending, true)
+            assertEquals(listOf("recover", "token", "flags", "backup", "open"), events)
+            assertTrue(state.isInitialized == true); assertFalse(journal.pending)
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun restartReplaysEveryPostcommitCrashPointIncludingBeforeEngineReturn() = runBlocking {
         for (boundary in listOf("engineReturn", "flags", "seed", "recover", "token", "open", "clear")) {
             val root = java.nio.file.Files.createTempDirectory("restore-completion").toFile()

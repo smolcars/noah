@@ -4,6 +4,7 @@ import androidx.compose.runtime.*
 import com.noahwallet.services.backup.RestoreTransaction
 import com.noahwallet.services.backup.WalletRestorer
 import com.noahwallet.services.storage.PersistedWalletState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
@@ -24,6 +25,7 @@ class RestoreCompletion(
     private val openWallet: suspend () -> Unit,
     private val journal: RestoreCompletionJournal? = null,
     private val clearToken: suspend () -> Unit = {},
+    private val settingsUnavailable: () -> Boolean = { false },
 ) {
     class RestartRequired : Exception()
     suspend fun replay(recovery: RestoreTransaction.Recovery, hasDatabase: Boolean) {
@@ -35,13 +37,19 @@ class RestoreCompletion(
 
     suspend fun finish(outcome: WalletRestorer.Outcome) {
         journal?.write(outcome)
-        val wallet = loadState()
-        saveState(wallet.copy(isInitialized = true, isWalletLoaded = true))
-        outcome.snapshotSha256?.let { seedRestored(it, outcome.backupId) }
         if (outcome.cleanupPending && recover() !in setOf(RestoreTransaction.Recovery.completed, RestoreTransaction.Recovery.nothingPending)) {
             throw RestartRequired()
         }
         clearToken()
+        try {
+            val wallet = loadState()
+            saveState(wallet.copy(isInitialized = true, isWalletLoaded = true))
+            outcome.snapshotSha256?.let { seedRestored(it, outcome.backupId) }
+        } catch (failure: Exception) {
+            if (failure is CancellationException || !settingsUnavailable()) throw failure
+            openWallet() // The durable receipt retries preferences; the wallet is already committed.
+            return
+        }
         openWallet()
         journal?.clear()
     }

@@ -24,7 +24,7 @@ internal class FakeSeed(var value: String?) : SecretItem {
     }
 }
 internal fun transaction(location: WalletDataLocation, sync: (File) -> Unit = {}): RestoreTransaction =
-    RestoreTransaction(location, sync) { from, to -> Files.move(from.toPath(), to.toPath(), StandardCopyOption.REPLACE_EXISTING); Unit }
+    RestoreTransaction(location, sync, { from, to -> Files.move(from.toPath(), to.toPath(), StandardCopyOption.REPLACE_EXISTING); Unit }, {})
 
 class RestoreTransactionTest {
     private class World {

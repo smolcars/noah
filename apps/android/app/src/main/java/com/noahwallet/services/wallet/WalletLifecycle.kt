@@ -111,6 +111,7 @@ class WalletLifecycle(
 
     suspend fun resume() = withContext(NonCancellable + Dispatchers.IO) {
         mutation.withLock {
+            check(!RestoreTransaction(location).settingsPending) { "Restore settings completion is pending" }
             authority()?.resume()
             try { setSuspended(false) } catch (failure: Exception) { authority()?.stop(); throw failure }
         }

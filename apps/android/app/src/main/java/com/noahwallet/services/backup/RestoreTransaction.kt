@@ -19,6 +19,7 @@ class RestoreTransaction(
     private val location: WalletDataLocation,
     private val sync: (File) -> Unit = ::syncFileOrDirectory,
     private val rename: (File, File) -> Unit = ::renameFile,
+    private val stopAutomation: (File) -> Unit = { com.noahwallet.recurring.RecurringAutomationAuthority(it).stop() },
 ) {
     enum class Phase { installing, committing }
     @Serializable data class Journal(val version: Int = 1, val id: String, val phase: Phase,
@@ -53,7 +54,15 @@ class RestoreTransaction(
         rename(staged, datadir); syncBothSides()
     }
     fun markCommitting() = write(readJournal().copy(phase = Phase.committing))
+    val settingsCompletion = File(directory, "settings-pending")
+    val settingsPending get() = settingsCompletion.exists()
+    fun completeSettings(settings: SettingsStorage) {
+        if (!settingsPending || !settings.completeRestore()) return
+        runCatching { check(settingsCompletion.delete()); sync(directory) }
+    }
     fun finish() {
+        settingsCompletion.writeBytes(byteArrayOf()); sync(settingsCompletion); sync(directory)
+        stopAutomation(datadir)
         val marker = File(datadir, markerName)
         if (marker.exists()) { remove(marker); sync(datadir) }
         remove(previous); removeScratch(); sync(directory); removeJournal()

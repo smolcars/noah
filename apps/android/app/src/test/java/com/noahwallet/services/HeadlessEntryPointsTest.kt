@@ -19,8 +19,9 @@ class HeadlessEntryPointsTest {
     @Test fun headlessDeletionRecoveryCannotDeleteASeed() {
         val code = source("services/AppServices")
         val gate = "if (!foreground) requireBackgroundWallet()"
+        assertTrue(code.contains("RestoreTransaction(location).settingsPending"))
         assertTrue(code.contains(gate))
-        assertTrue(code.contains("location.restorePending, location.deletionMarker.exists()"))
+        assertTrue(code.contains("location.restorePending ||"))
         assertTrue(source("services/background/BackgroundWalletAdmission").contains("!restorePending && !deletionPending"))
         assertTrue(code.indexOf(gate) < code.indexOf("if (foreground && recoverRestore(walletMutationHeld)"))
     }

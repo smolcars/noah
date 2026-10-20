@@ -42,12 +42,13 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     private val restoreCompletionJournal = RestoreCompletionJournal(restoreLocation)
     private fun restoreCompletion(openWallet: suspend () -> Unit) = RestoreCompletion(
         loadState = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState() },
-        saveState = { settings.setPersistedState(it, PersistedWalletState.key, 0); settings.sync() },
+        saveState = { if (!settings.completeRestore()) throw SettingsStorage.Unavailable() },
         seedRestored = { hash, id -> services.backupCoordinator.seedRestored(hash, id); settings.sync() },
         recover = { services.recoverRestore(walletMutationHeld = true) },
         openWallet = openWallet,
         journal = restoreCompletionJournal,
         clearToken = services.tokens::clear,
+        settingsUnavailable = { runCatching { settings.requireHealthy() }.isFailure },
     )
 
     val restore = RestoreFlow(
@@ -68,7 +69,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             restoreCompletion {
                 withContext(Dispatchers.IO) { services.openWalletInForeground(walletMutationHeld = true) }
                 open = true; onboarded = true; launchState = LaunchState.existingWallet
-                refresh(); services.startServerServices()
+                refresh(walletMutationHeld = true); services.startServerServices()
             }.finish(outcome)
         },
     )
@@ -200,13 +201,9 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                             launchState = LaunchState.secureStorageUnavailable
                             return@withWalletMutation
                         }
+                        RestoreTransaction(restoreLocation).completeSettings(settings)
                         restoreCompletion {}.replay(recovered, restoreLocation.databaseExists)
-                        if (recovered == RestoreTransaction.Recovery.completed) {
-                            val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
-                            settings.setPersistedState(wallet.copy(isInitialized = true, isWalletLoaded = true), PersistedWalletState.key, 0)
-                            settings.sync()
-                            services.tokens.clear()
-                        }
+                        if (recovered == RestoreTransaction.Recovery.completed) services.tokens.clear()
                         recovering = false
                         isWalletSuspended = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
                         launchState = withContext(Dispatchers.IO) { LaunchState.current(getApplication()) }
@@ -217,7 +214,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                             open = true
                             onboarded = services.isOnboarded()
                             if (!onboarded) step = "mnemonic"
-                            refresh()
+                            refresh(walletMutationHeld = true)
                             services.startServerServices()
                         }
                     }
@@ -269,7 +266,14 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         refresh()
     }
 
-    suspend fun refresh(sync: Boolean = false): Unit = withContext(Dispatchers.IO) {
+    suspend fun refresh(sync: Boolean = false, walletMutationHeld: Boolean = false): Unit = withContext(Dispatchers.IO) {
+        if (open && (RestoreTransaction(restoreLocation).settingsPending || restoreCompletionJournal.pending)) {
+            suspend fun retry() {
+                RestoreTransaction(restoreLocation).completeSettings(settings)
+                restoreCompletion {}.replay(RestoreTransaction.Recovery.nothingPending, restoreLocation.databaseExists)
+            }
+            if (walletMutationHeld) retry() else services.lifecycle.withWalletMutation { retry() }
+        }
         if (isWalletSuspended || settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) return@withContext
         try {
             if (sync) session.sync()

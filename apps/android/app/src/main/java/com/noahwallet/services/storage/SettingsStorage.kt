@@ -99,6 +99,14 @@ class SettingsStorage(context: Context) {
         MMKVUpgradeBackup(root, instanceID, backupRoot = backupRoot).deleteSnapshot()
         persist(NativeSettingsFile.State()) // Keep the marker through re-onboarding.
     }
+    /** Committed wallet recovery may publish flags in memory; durable completion retries later. */
+    fun completeRestore(): Boolean = synchronized(openLock) {
+        val state = load()
+        val wallet = persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
+        val raw = PersistedStateCodec.encode(wallet.copy(isInitialized = true, isWalletLoaded = true), 0)
+        val completed = state.copy(values = state.values + (PersistedWalletState.key to RNStoreCodec.merge(PersistedWalletState.key, state.values[PersistedWalletState.key], raw)))
+        try { persist(completed); true } catch (_: Exception) { fallback = completed; false }
+    }
     fun beginOnboarding() {
         val wallet = persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
         setPersistedState(wallet.copy(isInitialized = false), PersistedWalletState.key, 0)

@@ -13,6 +13,93 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SettingsFailureTest {
+    private fun isolatedServices(context: android.content.Context): AppServices =
+        AppServices::class.java.getDeclaredConstructor(android.content.Context::class.java).let {
+            it.isAccessible = true; it.newInstance(context)
+        }
+
+    @Test fun interruptedRestoreSettlesWhileSettingsFailAtEveryBoundary() = runBlocking {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext
+        val arguments = InstrumentationRegistry.getArguments()
+        val boundary = arguments.getString("restoreStep")
+        val mode = arguments.getString("restoreMode")
+        for (step in boundary?.let(::listOf) ?: listOf("journal", "previousMoved", "installed", "committing", "seed", "markerRemoved", "previousRemoved", "journalRemoved", "flags")) {
+            val root = File(app.cacheDir, if (boundary != null) "restore-settings-process" else "restore-settings-${UUID.randomUUID()}")
+            val world = RestoreWorld(app, root)
+            if (mode == "stage") {
+                world.stage(step)
+                File(root, "ready").writeText(step)
+                awaitCancellation() // The host force-stops this process with settings still failing.
+            }
+            try {
+                if (mode != "recover") world.stage(step)
+                world.recover(step)
+            } finally { world.cleanup() }
+        }
+    }
+
+    private inner class RestoreWorld(app: android.content.Context, val root: File) {
+        val preferences = File(root, "preferences")
+        val context = object : ContextWrapper(app) {
+            override fun getFilesDir() = root
+            override fun getNoBackupFilesDir() = preferences
+        }
+        val location = WalletDataLocation(root, "regtest")
+        val tx = com.noahwallet.services.backup.RestoreTransaction(location)
+        val file = File(preferences, "settings.native.json")
+        val phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+        fun committed(step: String) = step in listOf("seed", "markerRemoved", "previousRemoved", "journalRemoved", "flags")
+        suspend fun stage(step: String) {
+            check(root.mkdirs()); check(preferences.mkdir())
+            SettingsStorage(context).beginOnboarding()
+            location.directory.mkdir(); location.database.writeText("old")
+            tx.prepare(); tx.staged.mkdir(); File(tx.staged, "db.sqlite").writeText("committed")
+            tx.begin(phrase)
+            if (step in listOf("journal", "previousMoved")) {
+                check(location.directory.renameTo(tx.staged))
+                if (step == "journal") check(tx.previous.renameTo(location.directory))
+            }
+            if (step !in listOf("journal", "previousMoved", "installed")) tx.markCommitting()
+            if (committed(step)) check(SeedStorage(context, "regtest").save(phrase) is SecretResult.Found)
+            if (step in listOf("markerRemoved", "previousRemoved")) {
+                check(File(location.directory, com.noahwallet.services.backup.RestoreTransaction.markerName).delete())
+                if (step == "previousRemoved") check(tx.previous.deleteRecursively())
+            }
+            if (step == "journalRemoved" || step == "flags") tx.finish()
+            if (step != "flags") { file.writeText("damaged"); Os.chmod(file.path, 0) }
+            Os.chmod(preferences.path, 320)
+        }
+        suspend fun recover(step: String) {
+            val settings = SettingsStorage(context)
+            val services = isolatedServices(context)
+            val recovery = services.recoverRestore()
+            val expected = if (step in listOf("journalRemoved", "flags")) com.noahwallet.services.backup.RestoreTransaction.Recovery.nothingPending
+                else if (committed(step)) com.noahwallet.services.backup.RestoreTransaction.Recovery.completed
+                else com.noahwallet.services.backup.RestoreTransaction.Recovery.rolledBack
+            assertEquals(step, expected, recovery)
+            tx.completeSettings(settings)
+            assertFalse(step, location.restorePending)
+            assertEquals(step, if (committed(step)) "committed" else "old", location.database.readText())
+            if (committed(step)) {
+                assertEquals(step, true, settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isInitialized)
+                assertTrue(tx.settingsPending)
+                assertFalse(RecurringAutomationAuthority(location.directory).allowed())
+                assertTrue(runCatching { services.ensureWalletOpen() }.exceptionOrNull() is SettingsStorage.Unavailable)
+                if (step != "flags") assertEquals(listOf(SettingsStorage.settingsNotice), settings.takeUpgradeNotices())
+                assertTrue(settings.takeUpgradeNotices().isEmpty())
+                Os.chmod(preferences.path, 448); Os.chmod(file.path, 384)
+                val reopened = SettingsStorage(context)
+                tx.completeSettings(reopened)
+                assertFalse(tx.settingsPending)
+                reopened.requireHealthy()
+                assertEquals(true, reopened.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isInitialized)
+            }
+        }
+        fun cleanup() {
+            Os.chmod(preferences.path, 448); Os.chmod(file.path, 384); check(root.deleteRecursively())
+        }
+    }
+
     @Test fun recurringSubmissionStopsWhenSettingsCannotPersist() = runBlocking {
         val app = InstrumentationRegistry.getInstrumentation().targetContext
         val directory = File(app.cacheDir, "settings-money-${UUID.randomUUID()}").apply { check(mkdir()) }

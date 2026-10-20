@@ -80,7 +80,6 @@ class AppServices private constructor(private val context: Context) {
 
     private val restoreRecovery = RestoreRecovery {
         val location = WalletDataLocation(context.filesDir, variant)
-        if (location.restorePending) { stopRecurringAutomation(); com.noahwallet.recurring.RecurringStore(settings).protectLegacyBeforeReplacement() }
         WalletRestorer.recoverInterruptedRestore(session, WalletDataLocation(context.filesDir, variant), SeedItem(seed))
     }
     /**
@@ -170,7 +169,9 @@ class AppServices private constructor(private val context: Context) {
         val location = WalletDataLocation(context.filesDir, variant)
         check(com.noahwallet.services.background.BackgroundWalletAdmission.allowed(
             LaunchState.current(context, variant), settings.persistedState(PersistedWalletState.key), isOnboarded(),
-            location.restorePending, location.deletionMarker.exists(), recurringAutomationStorageFailed,
+            location.restorePending || RestoreTransaction(location).settingsPending ||
+                com.noahwallet.ui.RestoreCompletionJournal(location).pending,
+            location.deletionMarker.exists(), recurringAutomationStorageFailed,
         )) { "Wallet is not eligible for background work" }
     }
 
@@ -192,6 +193,7 @@ class AppServices private constructor(private val context: Context) {
         settings.validateStores()
         if (!foreground) requireBackgroundWallet()
         if (foreground && recoverRestore(walletMutationHeld) == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
+        if (foreground) RestoreTransaction(location).completeSettings(settings)
         if (settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
             throw WalletSuspended()
         }

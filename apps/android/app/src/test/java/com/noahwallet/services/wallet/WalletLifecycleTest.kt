@@ -349,7 +349,7 @@ class WalletLifecycleTest {
             val world = World()
             try {
                 world.files(); world.location.database.writeText("wallet A data")
-                val tx = RestoreTransaction(world.location, sync = {}, rename = { from, to -> check(from.renameTo(to)) })
+                val tx = RestoreTransaction(world.location, sync = {}, rename = { from, to -> check(from.renameTo(to)) }, stopAutomation = {})
                 tx.prepare(); check(tx.staged.mkdir()); File(tx.staged, "db.sqlite").writeText("wallet B data")
                 File(tx.work, "snapshot.sqlite").writeText("plaintext")
                 tx.begin("wallet B")
@@ -411,7 +411,7 @@ class WalletLifecycleTest {
         val world = World()
         try {
             world.files()
-            val tx = RestoreTransaction(world.location, sync = {}, rename = { from, to -> check(from.renameTo(to)) })
+            val tx = RestoreTransaction(world.location, sync = {}, rename = { from, to -> check(from.renameTo(to)) }, stopAutomation = {})
             tx.prepare(); check(tx.staged.mkdir()); File(tx.staged, "db.sqlite").writeText("wallet B data")
             tx.begin("wallet B"); tx.markCommitting()
             world.location.writeDeletionIdentity(SecretResult.Found("wallet B")) {}
@@ -439,7 +439,7 @@ class WalletLifecycleTest {
         val world = World()
         try {
             world.files()
-            val tx = RestoreTransaction(world.location, sync = {}, rename = { from, to -> check(from.renameTo(to)) })
+            val tx = RestoreTransaction(world.location, sync = {}, rename = { from, to -> check(from.renameTo(to)) }, stopAutomation = {})
             tx.prepare(); check(tx.staged.mkdir()); File(tx.staged, "db.sqlite").writeText("wallet B data")
             tx.begin("wallet B")
             world.location.writeDeletionIdentity(SecretResult.Found(world.seedValue)) {}
