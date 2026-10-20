@@ -1028,7 +1028,7 @@
   <string name="gt_dddb35f1243054c4">"Usar fondos confirmados en cadena"</string>
   <string name="gt_8e8252533cde7bc4">"Disponible para gastar"</string>
   <plurals name="gt_6580a33a8647ac57">
-    <item quantity="other">"Gastando %1$d VTXO"</item>
+    <item quantity="other">"Gastando %1$s VTXO"</item>
     <item quantity="one">"Gastando un VTXO"</item>
   </plurals>
   <string name="gt_679652fd13c58c93">"Gastado"</string>
@@ -1271,11 +1271,11 @@
   <string name="gt_e8fd16d62fe0b616">"%1$s por pago, más las comisiones de red"</string>
   <string name="gt_36a686e41706282d">"%1$s seleccionados"</string>
   <plurals name="gt_0339522c6cfc9440">
-    <item quantity="other">"%1$d salidas están por detrás de la altura actual de la cadena. Usa Avanzar para consultar la cadena; esta opción también permite difundir transacciones de salida."</item>
+    <item quantity="other">"%1$s salidas están por detrás de la altura actual de la cadena. Usa Avanzar para consultar la cadena; esta opción también permite difundir transacciones de salida."</item>
     <item quantity="one">"Una salida está por detrás de la altura actual de la cadena. Usa Avanzar para consultar la cadena; esta opción también permite difundir transacciones de salida."</item>
   </plurals>
   <plurals name="gt_605cb36be5d371ea">
-    <item quantity="other">"%1$d lugares%2$s"</item>
+    <item quantity="other">"%1$s lugares%2$s"</item>
     <item quantity="one">"Un lugar%2$s"</item>
   </plurals>
   <string name="gt_07af0226de4cedc3">"%1$s disponible en Ark"</string>

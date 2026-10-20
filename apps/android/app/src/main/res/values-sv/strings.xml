@@ -1028,7 +1028,7 @@
   <string name="gt_dddb35f1243054c4">"Använd bekräftade medel på blockkedjan"</string>
   <string name="gt_8e8252533cde7bc4">"Kan användas"</string>
   <plurals name="gt_6580a33a8647ac57">
-    <item quantity="other">"Spenderar %1$d VTXO:er"</item>
+    <item quantity="other">"Spenderar %1$s VTXO:er"</item>
     <item quantity="one">"Spenderar en VTXO"</item>
   </plurals>
   <string name="gt_679652fd13c58c93">"Förbrukad"</string>
@@ -1271,11 +1271,11 @@
   <string name="gt_e8fd16d62fe0b616">"%1$s per betalning, plus nätverksavgifter"</string>
   <string name="gt_36a686e41706282d">"%1$s valda"</string>
   <plurals name="gt_0339522c6cfc9440">
-    <item quantity="other">"%1$d nöduttag ligger efter den aktuella kedjehöjden. Använd Gå vidare för att kontrollera blockkedjan. Det kan även innebära att nöduttagstransaktioner sänds."</item>
+    <item quantity="other">"%1$s nöduttag ligger efter den aktuella kedjehöjden. Använd Gå vidare för att kontrollera blockkedjan. Det kan även innebära att nöduttagstransaktioner sänds."</item>
     <item quantity="one">"Ett nöduttag ligger efter den aktuella blockhöjden. Använd Gå vidare för att kontrollera blockkedjan. Det kan även innebära att nöduttagstransaktioner sänds."</item>
   </plurals>
   <plurals name="gt_605cb36be5d371ea">
-    <item quantity="other">"%1$d platser%2$s"</item>
+    <item quantity="other">"%1$s platser%2$s"</item>
     <item quantity="one">"En plats%2$s"</item>
   </plurals>
   <string name="gt_07af0226de4cedc3">"%1$s tillgängligt i Ark"</string>

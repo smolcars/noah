@@ -1028,7 +1028,7 @@
   <string name="gt_dddb35f1243054c4">"확정된 온체인 자금 사용"</string>
   <string name="gt_8e8252533cde7bc4">"사용 가능"</string>
   <plurals name="gt_6580a33a8647ac57">
-    <item quantity="other">"VTXO %1$d개 사용 중"</item>
+    <item quantity="other">"VTXO %1$s개 사용 중"</item>
     <item quantity="one">"VTXO 1개 사용 중"</item>
   </plurals>
   <string name="gt_679652fd13c58c93">"사용됨"</string>
@@ -1271,11 +1271,11 @@
   <string name="gt_e8fd16d62fe0b616">"결제당 %1$s, 네트워크 수수료 별도"</string>
   <string name="gt_36a686e41706282d">"%1$s개 선택됨"</string>
   <plurals name="gt_0339522c6cfc9440">
-    <item quantity="other">"%1$d건의 출금이 현재 체인 높이보다 뒤처져 있습니다. 진행하기를 눌러 블록체인 상태를 확인하세요. 이 과정에서 출금 거래가 전파될 수도 있습니다."</item>
+    <item quantity="other">"%1$s건의 출금이 현재 체인 높이보다 뒤처져 있습니다. 진행하기를 눌러 블록체인 상태를 확인하세요. 이 과정에서 출금 거래가 전파될 수도 있습니다."</item>
     <item quantity="one">"출금 1건이 현재 체인 높이보다 뒤처져 있습니다. 진행하기를 눌러 블록체인 상태를 확인하세요. 이 과정에서 출금 거래가 전파될 수도 있습니다."</item>
   </plurals>
   <plurals name="gt_605cb36be5d371ea">
-    <item quantity="other">"%1$d곳%2$s"</item>
+    <item quantity="other">"%1$s곳%2$s"</item>
     <item quantity="one">"한 곳%2$s"</item>
   </plurals>
   <string name="gt_07af0226de4cedc3">"Ark에서 %1$s 사용 가능"</string>

@@ -1028,7 +1028,7 @@
   <string name="gt_dddb35f1243054c4">"承認済みのオンチェーン資金を使用"</string>
   <string name="gt_8e8252533cde7bc4">"使用可能"</string>
   <plurals name="gt_6580a33a8647ac57">
-    <item quantity="other">"%1$d 個の VTXO を使用中"</item>
+    <item quantity="other">"%1$s 個の VTXO を使用中"</item>
     <item quantity="one">"1件のVTXOを使用中"</item>
   </plurals>
   <string name="gt_679652fd13c58c93">"使用済み"</string>
@@ -1271,11 +1271,11 @@
   <string name="gt_e8fd16d62fe0b616">"1回の支払いにつき%1$s＋ネットワーク手数料"</string>
   <string name="gt_36a686e41706282d">"%1$s件選択中"</string>
   <plurals name="gt_0339522c6cfc9440">
-    <item quantity="other">"%1$d 件の退出が現在のチェーンの高さより遅れています。 「出金処理を進める」でブロックチェーンの状態を確認してください。出金トランザクションがブロードキャストされる場合もあります。"</item>
+    <item quantity="other">"%1$s 件の退出が現在のチェーンの高さより遅れています。 「出金処理を進める」でブロックチェーンの状態を確認してください。出金トランザクションがブロードキャストされる場合もあります。"</item>
     <item quantity="one">"1件の出金が現在のチェーンの高さより遅れています。 「出金処理を進める」でブロックチェーンの状態を確認してください。出金トランザクションがブロードキャストされる場合もあります。"</item>
   </plurals>
   <plurals name="gt_605cb36be5d371ea">
-    <item quantity="other">"%1$d か所%2$s"</item>
+    <item quantity="other">"%1$s か所%2$s"</item>
     <item quantity="one">"1か所%2$s"</item>
   </plurals>
   <string name="gt_07af0226de4cedc3">"Arkで%1$sを利用可能"</string>

@@ -421,6 +421,18 @@
         }
       }
     },
+    "A payment of {amount} sats for this invoice is already in progress. Do not pay again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A payment of %1$@ sats for this invoice is already in progress. Do not pay again."
+          }
+        }
+      }
+    },
     "A payment of {nativeValue1} sats for this invoice is already in progress. Do not pay again.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -1045,18 +1057,6 @@
         }
       }
     },
-    "Adding a note uses Lightning.": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adding a note uses Lightning."
-          }
-        }
-      }
-    },
     "Adding a note will send this payment over Lightning.": {
       "comment": "GT 552c0d792c8e5a77; arguments: none",
       "extractionState": "manual",
@@ -1285,7 +1285,7 @@
         }
       }
     },
-    "Address network mismatch for {nativeValue1} parameter": {
+    "Address network mismatch for {parameter} parameter": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
       "localizations": {
@@ -3337,18 +3337,6 @@
         }
       }
     },
-    "Authenticate to view seed phrase": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Authenticate to view seed phrase"
-          }
-        }
-      }
-    },
     "Authenticate to view your seed phrase": {
       "comment": "GT 3af81d0d0292d555; arguments: none",
       "extractionState": "manual",
@@ -4273,18 +4261,6 @@
         }
       }
     },
-    "Backing up...": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Backing up..."
-          }
-        }
-      }
-    },
     "Backup": {
       "comment": "GT d9eee8f65bf7fa7d; arguments: none",
       "extractionState": "manual",
@@ -4533,18 +4509,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Säkerhetskopian tillhör ett annat Bitcoin-nätverk"
-          }
-        }
-      }
-    },
-    "Backup complete": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Backup complete"
           }
         }
       }
@@ -9553,18 +9517,6 @@
         }
       }
     },
-    "Confirm send": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirm send"
-          }
-        }
-      }
-    },
     "Confirmation": {
       "comment": "GT ddd84d32743a1119; arguments: none",
       "extractionState": "manual",
@@ -10905,18 +10857,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn't load a deposit address. Close and try again when the wallet is ready."
-          }
-        }
-      }
-    },
-    "Couldn't load transactions": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't load transactions"
           }
         }
       }
@@ -24517,18 +24457,6 @@
         }
       }
     },
-    "Loading wallet…": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Loading wallet…"
-          }
-        }
-      }
-    },
     "Loading...": {
       "comment": "GT 2139f3a924c1e3f9; arguments: none",
       "extractionState": "manual",
@@ -26293,7 +26221,7 @@
         }
       }
     },
-    "Multiple {nativeValue1} parameters not allowed": {
+    "Multiple {parameter} parameters not allowed": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
       "localizations": {
@@ -26721,18 +26649,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nätverk"
-          }
-        }
-      }
-    },
-    "Network mismatch": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Network mismatch"
           }
         }
       }
@@ -27625,18 +27541,6 @@
         }
       }
     },
-    "No emergency email": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No emergency email"
-          }
-        }
-      }
-    },
     "No emergency email set": {
       "comment": "GT be64f9c3aaa9a154; arguments: none",
       "extractionState": "manual",
@@ -27933,18 +27837,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inga låsta VTXO:er hittades"
-          }
-        }
-      }
-    },
-    "No logs found": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No logs found"
           }
         }
       }
@@ -31881,18 +31773,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Payment may have been sent"
-          }
-        }
-      }
-    },
-    "Payment method ": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Payment method "
           }
         }
       }
@@ -39109,18 +38989,6 @@
         }
       }
     },
-    "Sending payment…": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sending payment…"
-          }
-        }
-      }
-    },
     "Sending {amount} to {recipient} failed: {error}. It has been paused.": {
       "comment": "GT 5b5205040c527fbe; arguments: amount, recipient, error",
       "extractionState": "manual",
@@ -39729,18 +39597,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dela"
-          }
-        }
-      }
-    },
-    "Share Logs": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Share Logs"
           }
         }
       }
@@ -40977,18 +40833,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Startar återställning..."
-          }
-        }
-      }
-    },
-    "Starting restore…": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Starting restore…"
           }
         }
       }
@@ -45685,7 +45529,7 @@
         }
       }
     },
-    "Unknown required parameter: {nativeValue1}": {
+    "Unknown required parameter: {key}": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
       "localizations": {
@@ -47289,18 +47133,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Visa programloggar för felsökning"
-          }
-        }
-      }
-    },
-    "View in block explorer": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "View in block explorer"
           }
         }
       }
@@ -49425,18 +49257,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Din krypterade säkerhetskopia av databasen har exporterats."
-          }
-        }
-      }
-    },
-    "Your feedback has been sent to the Noah team.": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your feedback has been sent to the Noah team."
           }
         }
       }
