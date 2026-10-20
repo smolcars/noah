@@ -21,9 +21,7 @@ struct RootView: View {
             case .onboarding:
                 OnboardingFlow()
             case .wallet:
-                if lock.policy.locked {
-                    WalletLockView()
-                } else if model.pushPermission.blocksWallet(initialized: true) {
+                if model.pushPermission.blocksWallet(initialized: true) {
                     PushNotificationsRequiredView()
                 } else {
                     WalletTabs()
@@ -58,10 +56,11 @@ struct RootView: View {
             }
         }
         .sheet(isPresented: $showingDelete) { DeleteWalletSheet() }
-        .accessibilityHidden(model.phase == .wallet && lock.policy.locked)
+        .modifier(WalletContentProtection(covered: model.phase == .wallet && lock.policy.locked))
         .environment(lock)
         .environment(\.locale, Locale(identifier: model.localeIdentifier))
-        .background(WalletLockOverlay(lock: lock, visible: model.phase == .wallet && lock.policy.locked))
+        .background(WalletLockOverlay(lock: lock, visible: model.phase == .wallet && lock.policy.locked,
+                                      protectOnBackground: model.phase == .wallet && lock.policy.enabled))
         .task {
             await model.start()
             if model.phase == .wallet && lock.policy.locked && scenePhase == .active { await lock.unlock() }

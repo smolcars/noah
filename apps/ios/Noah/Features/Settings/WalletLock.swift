@@ -110,6 +110,17 @@ final class WalletLock {
     }
 }
 
+/// Always retain the subtree, including navigation paths and drafts, while covering it.
+struct WalletContentProtection: ViewModifier {
+    let covered: Bool
+    func body(content: Content) -> some View {
+        content
+            .opacity(covered ? 0 : 1)
+            .allowsHitTesting(!covered)
+            .accessibilityHidden(covered)
+    }
+}
+
 struct WalletLockView: View {
     @Environment(WalletLock.self) private var lock
     var body: some View {
@@ -130,32 +141,89 @@ struct WalletLockView: View {
 struct WalletLockOverlay: UIViewRepresentable {
     let lock: WalletLock
     let visible: Bool
+    var protectOnBackground = false
 
-    func makeUIView(context: Context) -> UIView { UIView() }
+    func makeUIView(context: Context) -> SourceView {
+        let view = SourceView()
+        view.onWindow = { [weak coordinator = context.coordinator, weak view] in
+            coordinator?.update(source: view?.window)
+        }
+        return view
+    }
     func makeCoordinator() -> Coordinator { Coordinator() }
-    func updateUIView(_ view: UIView, context: Context) {
-        let coordinator = context.coordinator
-        // The representable joins its window after its first update.
-        DispatchQueue.main.async {
-            guard let scene = view.window?.windowScene else { return }
-            if visible {
-                if coordinator.window == nil {
-                    let window = UIWindow(windowScene: scene)
-                    window.windowLevel = .alert + 1
-                    window.rootViewController = UIHostingController(rootView: WalletLockView().environment(lock))
-                    window.rootViewController?.view.accessibilityViewIsModal = true
-                    coordinator.window = window
-                }
-                coordinator.window?.isHidden = false
-            } else {
-                coordinator.window?.isHidden = true
-                coordinator.window = nil
+    func updateUIView(_ view: SourceView, context: Context) {
+        context.coordinator.lock = lock
+        context.coordinator.visible = visible
+        context.coordinator.protectOnBackground = protectOnBackground
+        context.coordinator.update(source: view.window)
+    }
+    static func dismantleUIView(_ uiView: SourceView, coordinator: Coordinator) { coordinator.uncover() }
+
+    final class SourceView: UIView {
+        var onWindow: (() -> Void)?
+        override func didMoveToWindow() { super.didMoveToWindow(); onWindow?() }
+    }
+
+    @MainActor final class Coordinator: NSObject {
+        var window: UIWindow?
+        var lock: WalletLock?
+        var visible = false
+        var protectOnBackground = false
+        private weak var source: UIWindow?
+        private weak var coveredWindow: UIWindow?
+        private var wasAccessibilityHidden = false
+        private var wasInteractive = true
+
+        override init() {
+            super.init()
+            NotificationCenter.default.addObserver(self, selector: #selector(background), name: UIScene.didEnterBackgroundNotification, object: nil)
+        }
+
+        @objc private func background(_ notification: Notification) {
+            guard protectOnBackground, let scene = notification.object as? UIWindowScene,
+                  scene === source?.windowScene else { return }
+            // Cover synchronously before UIKit takes its app-switcher snapshot.
+            show()
+        }
+
+        func update(source: UIWindow?) {
+            self.source = source
+            if visible { show() } else { uncover() }
+        }
+
+        private func show() {
+            guard let source, let scene = source.windowScene, let lock else { return }
+            cover(source)
+            let newlyShown = window == nil
+            if window == nil {
+                source.endEditing(true)
+                let window = UIWindow(windowScene: scene)
+                window.windowLevel = .alert + 1
+                window.backgroundColor = UIColor(NoahColor.background)
+                window.isOpaque = true
+                window.rootViewController = UIHostingController(rootView: WalletLockView().environment(lock))
+                window.rootViewController?.view.accessibilityViewIsModal = true
+                self.window = window
             }
+            window?.isHidden = false
+            if newlyShown { UIAccessibility.post(notification: .screenChanged, argument: window?.rootViewController?.view) }
+        }
+
+        func cover(_ source: UIWindow?) {
+            guard coveredWindow == nil, let source else { return }
+            coveredWindow = source
+            wasAccessibilityHidden = source.accessibilityElementsHidden
+            wasInteractive = source.isUserInteractionEnabled
+            source.accessibilityElementsHidden = true
+            source.isUserInteractionEnabled = false
+        }
+
+        func uncover() {
+            window?.isHidden = true
+            window = nil
+            coveredWindow?.accessibilityElementsHidden = wasAccessibilityHidden
+            coveredWindow?.isUserInteractionEnabled = wasInteractive
+            coveredWindow = nil
         }
     }
-    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
-        coordinator.window?.isHidden = true
-        coordinator.window = nil
-    }
-    @MainActor final class Coordinator { var window: UIWindow? }
 }
