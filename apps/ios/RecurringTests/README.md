@@ -3,6 +3,76 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Startup journal ownership and reason-format recovery (2026-10-20)
+
+Base `feat/native-rewrite` at `a5866b02`. These are native test-device formats;
+no native app has shipped and RN schedules are never imported.
+
+Unfinished policy records now validate the **original** pending row and its exact
+predecessor before reason conversion. Recovery writes that original paid row to
+settings and finishes its ledger record first. Format migration then uses a new
+write-ahead record: migration intent → converted settings → ledger completion.
+A restart can replay either unfinished transaction. The original settlement key,
+paid count, run history and journal v3 consumption/history/release flags survive.
+This changes no payment submission or normal Send behavior.
+
+New ledger entries carry `digestVersion` and unfinished records also retain
+`predecessorVersion`. Version 1 freezes the pre-issue policy fields; version 2
+freezes those fields plus `issue`. Nested interval, in-flight, run and issue fields
+are frozen too. Existing unversioned records must match an exact known digest
+before their version is inferred. Unknown versions, damaged pending rows, changed
+predecessors, different wallets and later completed-record rollback fail closed.
+Only matching authority can migrate. Pause/cancel, wallet binding, lifecycle,
+stop/failure/storage gates and explicit reapproval rules remain in force.
+
+The permanent reason-upgrade suites preserve the review probes and inject death
+at all five durable writes: original settings replay, original ledger completion,
+format-migration intent, migrated settings and migration completion. Each boundary
+reopens fresh stores three times, checks one paid count and one success run,
+verifies that a later settings rollback stays stopped, then cancels successfully.
+Four additional damaged-evidence cases verify no settings write. These are
+deterministic persistence faults and fresh-object recovery, not real power cuts.
+
+iOS already serializes separate journal values with one process-wide recursive
+lock: `RecurringJournal.swift:5` declares it; `:200` locks loading (and thus
+`:145` migration); `:178`, `:204` and `:218` lock handoff, consumption and saving.
+`RecurringJournalMigrationRaceTests` holds an executor migration before its file
+replacement and races a separate Send journal. Handoff waits, proof survives and
+submission count stays one. No journal ownership change was needed on iOS.
+
+Locations for the reason fix: `RecurringPolicyLedger.swift:39` freezes digests,
+`:139` validates original pending/predecessor evidence, `:161` starts migration;
+`RecurringStore.swift:171` replays original records before format conversion.
+The original pending-paid reason probe failed before the fix and now passes.
+New coverage is **6 definitions / 13 expanded cases** across the race and upgrade
+suites. Focused checks passed **28 definitions / 91 expanded cases in 5 suites**,
+zero failures or skips. One earlier focused build caught Swift 6's prohibition on
+blocking waits inside async test functions; the race wait now lives in a synchronous
+helper and all focused tests pass.
+
+The full **NoahTests** suite ran once after the final source/test change, with
+no exclusions: **764 definitions / 153 suites; 739 passed / 25 gated skips /
+zero failed**. Expanded execution: **1,567 passed / 25 skipped**. Swift Testing
+completed in **284.959 seconds**. All runs used Nix, XcodeGen, normal signing,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, two Xcode jobs, disabled parallel testing,
+and owned `/private/tmp/noah-r10-7a01-dd` DerivedData. Translation check is clean.
+The five-suite focused pass and full run used suite selectors; individual method
+selectors, when used, require their trailing `()`.
+
+Owned iPhone 17 / iOS 27.0 **Noah R10 Migration Sol 7a01**,
+`71CA5FC5-A0E5-47C8-BF5D-4AAF65F9484F`: exact identity/runtime and **Shutdown**
+state confirmed before deletion; absence verified afterward. The Device panel
+rejected this new UDID twice as unknown, so Xcode targeted only that verified
+owned device. Exported result summaries and test trees before removing its
+DerivedData and all **four** owned result bundles. Logs/JSON and cleanup receipt
+remain under `/private/tmp/noah-r10-7a01-*`. No active owned build/test process
+remains; shared idle daemons are untouched. No physical device, protected/shared
+simulator, funded payment or Docker was used. Server, RN and logging/privacy
+sources are unchanged.
+
+Commits: `321a16cc` (existing process-lock regression), `b0f1b32f` (original-format
+replay and versioned digests). Both carry the requested GPT-6.1 Sol co-author trailer.
+
 ## Audited resume settles repaired proof (2026-10-20)
 
 Base `88abe06f`. Audited resume reloads the occurrence after clearing Send, because

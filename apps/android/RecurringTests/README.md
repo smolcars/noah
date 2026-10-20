@@ -3,6 +3,73 @@
 Initial implementation base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
 Kotlin / Compose, API 24 minimum, bark-bolt-ffi **0.4.0**.
 
+## Startup journal ownership and reason-format recovery (2026-10-20)
+
+Base `feat/native-rewrite` at `a5866b02`. These are native test-device formats;
+no native app has shipped and RN schedules are never imported.
+
+Unfinished policy records now validate the **original** pending row and its exact
+predecessor before reason conversion. Recovery writes that original paid row to
+settings and finishes its ledger record first. Format migration then uses a new
+write-ahead record: migration intent → converted settings → ledger completion.
+A restart can replay either unfinished transaction. The original settlement key,
+paid count, run history and journal v3 consumption/history/release flags survive.
+This changes no payment submission or normal Send behavior.
+
+New ledger entries carry `digestVersion` and unfinished records also retain
+`predecessorVersion`. Version 1 freezes the pre-issue policy fields; version 2
+freezes those fields plus `issue`. Nested interval, in-flight, run and issue fields
+are frozen too. Existing unversioned records must match an exact known digest
+before their version is inferred. Unknown versions, damaged pending rows, changed
+predecessors, different wallets and later completed-record rollback fail closed.
+Only matching authority can migrate. Pause/cancel, wallet binding, lifecycle,
+stop/failure/storage gates and explicit reapproval rules remain in force.
+
+The permanent reason-upgrade suites preserve the review probes and inject death
+at all five durable writes: original settings replay, original ledger completion,
+format-migration intent, migrated settings and migration completion. Each boundary
+reopens fresh stores three times, checks one paid count and one success run,
+verifies that a later settings rollback stays stopped, then cancels successfully.
+Four additional damaged-evidence cases verify no settings write. These are
+deterministic persistence faults and fresh-object recovery, not real power cuts.
+
+Android now routes both `SendRuntime`'s cold-start handoff and the executor's
+runtime through `RecurringJournal.shared`. Its process-wide canonical-path
+registry retains one journal and therefore one reentrant transaction monitor per
+file. The active wallet-instance binding is updated under that same monitor after
+lifecycle admission; same-path replacement retains the monitor and clears only
+the previous binding's in-memory failure state. Reads, writes and v2→v3 migration
+all enter the monitor, so migration persists once before another caller proceeds.
+Workers, push, reminders and UI already share the recurring runtime.
+
+Locations: `RecurringJournal.kt:47`, `:65`, `:133`, `:164`;
+`SendRuntime.kt:21`, `RecurringRuntime.kt:24`, `RecurringExecutor.kt:52`;
+`RecurringPolicyLedger.kt:20`, `:98`, `:115`, `RecurringStore.kt:55`.
+The separate-entry-point startup probe erased proven receipt evidence before the
+fix. `RecurringJournalMigrationRaceTest` now checks concurrent migration/handoff,
+canonical aliases, shared failure latching and a same-path new wallet binding.
+The original pending-paid reason probe also failed before the fix and now passes.
+New regression coverage is **7 JUnit tests in 2 suites** (five migration boundaries
+and four damage cases run inside those tests). Focused recurring + Send checks
+passed **2,518 tests / 54 suites**, followed by the final seven-test check.
+
+The required final command ran once after the last Android source/test change:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**3,554 tests / 131 suites passed**, zero failures/errors/skips; regtest APK
+assembly passed in the same **2m 55s** invocation. Translation check is clean.
+All Android invocations used Nix and at most two Gradle workers. Logs, focused
+XML and final summary are under `/private/tmp/noah-r10-7a01-*`.
+No Android device, physical phone or Docker was used. Server, RN and
+logging/privacy sources are unchanged.
+
+Commits: `0eabb8e6` (shared journal), `1462abfc` (original-format replay and
+versioned digests), `da749ebc` (shared failure-latch regression). All carry the
+requested GPT-6.1 Sol co-author trailer.
+
 ## Audited resume settles repaired proof (2026-10-20)
 
 Base `88abe06f`. Send cleanup may repair an initially failed recurring handoff.
