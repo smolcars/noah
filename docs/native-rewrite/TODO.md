@@ -293,6 +293,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 
 ## M6 — Onchain & exits
+- [x] Claim-destination regression strengthening — both platforms: deferred/failing prefill and retry, empty-destination rejection, exact reviewed/SDK-drain/journal destination, and zero submissions on either ownership flip, ownership errors or invalid/wrong-network addresses; Android targeted 23/full 1,358 passed, iOS targeted 9/full 432 total (414 passed, 18 gated skips), both full suites once with zero failures; no bug found, owned iOS simulator/build artifacts deleted
 - [x] Claim destination safety — both platforms preserve external/cold-storage sweeps; fresh Noah-address prefill/restore action, native ownership warning in field/review, address/network/ownership revalidation at execution and regression tests
 - [x] Android VTXO monetary selections — one toggleable checkbox node per row, spoken shortened ID/amount/status/checked state, disabled/checked semantics tests
 - [x] Android Auto-Board review — estimated onchain reserve = confirmed − boarding amount − chain fee, matching iOS

@@ -236,3 +236,5 @@ No emulator or physical device was used; no Docker command or funded live
 broadcast was run. Task-owned temporary logs/build scratch outside the worktree
 were deleted. TalkBack/device UI and external destinations were not exercised
 with live funds; ownership/execution use production seams with fake-wallet tests.
+
+2026-10-20 claim-destination regressions (base `1aa9a618`): deferred prefill success/failure preserves edits, failed-fetch retry and empty-review/execution rejection, exact reviewed/drained/journaled destinations, and zero drain/broadcast calls for both ownership flips, ownership errors and invalid/wrong-network addresses; targeted **23 passed** per run (3 runs), full JVM suite once **1,358 passed in 61 suites**, zero failures/errors/skips; no application bug or live-funded claim.

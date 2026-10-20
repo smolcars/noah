@@ -533,3 +533,5 @@ absence was verified. [Cleanup evidence](evidence/m6-fix-device-cleanup.json).
 Task-owned DerivedData, result bundles and build/log scratch outside the worktree
 were deleted after retaining these summaries. No other device or Docker command
 was used.
+
+2026-10-20 claim-destination regressions (base `1aa9a618`): deferred prefill success/failure preserves edits, failed-fetch retry and empty-review/execution rejection, exact reviewed/drained/journaled destinations, and zero drain/broadcast calls for both ownership flips, ownership errors and invalid/wrong-network addresses through a shared production claim seam; targeted **9 passed**, full NoahTests once **432 total / 414 passed / 18 gated skips / 0 failures** (552 expanded passes, 93 suites), signed arm64 after XcodeGen; no application bug or live-funded claim; owned simulator `85C94113-EB93-409A-A6B0-D7F9C36A9776` verified Shutdown then deleted, with its DerivedData/result bundles removed.
