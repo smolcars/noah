@@ -11,6 +11,8 @@ import io.sentry.util.HintUtils
 import java.io.ByteArrayInputStream
 import java.io.StringReader
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -130,7 +132,7 @@ class TelemetryTransportTest {
     }
 
     @Test fun nativeOutboxReplayKeepsOnlyAllowlistedSignalThreadAndFrameFields() {
-        for (signal in listOf("SIGSEGV", "SIGABRT")) {
+        for (signal in listOf("SIGSEGV", "SIGABRT")) for (attachmentFirst in listOf(false, true)) {
             val outbox = Files.createTempDirectory("noah-native-outbox").toFile()
             val options = options()
             val received = RecordingTransport()
@@ -143,8 +145,9 @@ class TelemetryTransportTest {
                 val event = nativeEvent().apply { exceptions!!.single().type = signal }
                 val attachment = item(SentryItemType.Attachment, "synthetic-sensitive-minidump")
                 val cached = outbox.resolve("native-crash")
+                val eventItem = SentryEnvelopeItem.fromEvent(serializer, event)
                 cached.outputStream().use { serializer.serialize(SentryEnvelope(SentryEnvelopeHeader(event.eventId),
-                    listOf(SentryEnvelopeItem.fromEvent(serializer, event), attachment)), it) }
+                    if (attachmentFirst) listOf(attachment, eventItem) else listOf(eventItem, attachment)), it) }
                 val scopes = Scopes(Scope(options).apply { bindClient(client) }, Scope(options), Scope(options), "native-test")
                 OutboxSender(scopes, options.envelopeReader, serializer, NoOpLogger.getInstance(), 100, 10).processDirectory(outbox)
                 assertEquals(1, hookCalls)
@@ -177,6 +180,53 @@ class TelemetryTransportTest {
             assertNull(options().beforeSend!!.execute(event, Hint()))
             assertNull(TelemetryTransport.filter(SentryEnvelope.from(serializer, event, null)))
         }
+    }
+
+    @Test(timeout = 2000) fun droppedCachedEnvelopeCompletesSubmissionAndDisablesRetry() {
+        val callback = object : Cached, SubmissionResult, Retryable, Flushable {
+            val submitted = CountDownLatch(1)
+            var succeeded = false
+            var retryable = true
+            override fun setResult(success: Boolean) { succeeded = success; submitted.countDown() }
+            override fun isSuccess() = succeeded
+            override fun setRetry(retry: Boolean) { retryable = retry }
+            override fun isRetry() = retryable
+            override fun waitFlush() = submitted.await(15_000, TimeUnit.MILLISECONDS)
+        }
+        TelemetryTransport(RecordingTransport(), options()).send(
+            SentryEnvelope(SentryEnvelopeHeader(), listOf(item(SentryItemType.Attachment, "{}"))),
+            HintUtils.createWithTypeCheckHint(callback))
+        assertTrue(callback.waitFlush())
+        assertTrue(callback.isSuccess())
+        assertFalse(callback.isRetry())
+    }
+
+    @Test(timeout = 2000) fun droppedCrashEnvelopeCompletesSDKDiskFlushHint() {
+        val event = failure("UncaughtExceptionHandler", false).apply { release = "preimage=fake-token" }
+        val callback = UncaughtExceptionHandlerIntegration.UncaughtExceptionHint(15_000, NoOpLogger.getInstance())
+        callback.setFlushable(event.eventId!!)
+        TelemetryTransport(RecordingTransport(), options()).send(SentryEnvelope.from(serializer, event, null),
+            HintUtils.createWithTypeCheckHint(callback))
+        assertTrue(callback.waitFlush())
+    }
+
+    @Test(timeout = 2000) fun rejectedCacheBatchDoesNotWaitForSDKDefaultTimeoutOrReachDelegate() {
+        val cache = Files.createTempDirectory("noah-rejected-cache").toFile()
+        val options = options()
+        val received = RecordingTransport()
+        options.setTransportFactory { configured, _ -> TelemetryTransport(received, configured) }
+        val client = SentryClient(options)
+        try {
+            repeat(3) { index -> cache.resolve("rejected-$index.envelope").outputStream().use {
+                serializer.serialize(SentryEnvelope(SentryEnvelopeHeader(), listOf(item(SentryItemType.Attachment, "{}"))), it)
+            } }
+            val scopes = Scopes(Scope(options).apply { bindClient(client) }, Scope(options), Scope(options), "drop-test")
+            val started = System.nanoTime()
+            EnvelopeSender(scopes, serializer, NoOpLogger.getInstance(), 15_000, 10).processDirectory(cache)
+            assertTrue("Three deliberate drops must finish in under 500 ms", System.nanoTime() - started < 500_000_000)
+            assertTrue(received.envelopes.isEmpty())
+            assertTrue(cache.listFiles()!!.isEmpty())
+        } finally { client.close(); cache.deleteRecursively() }
     }
 
     private class RecordingTransport : ITransport {
