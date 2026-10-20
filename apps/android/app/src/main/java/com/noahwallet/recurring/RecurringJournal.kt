@@ -1,6 +1,7 @@
 package com.noahwallet.recurring
 
 import com.noahwallet.services.storage.syncDirectory
+import com.noahwallet.send.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import java.io.File
@@ -11,9 +12,15 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
     private val write: (String) -> Unit = { durableRecurringWrite(file, it.toByteArray(), ::syncDirectory) },
     private val quarantine: (ByteArray) -> Unit = { durableRecurringWrite(File("${file.path}.quarantine"), it) }) {
     @Serializable data class Entry(val binding: RecurringStore.Binding, val scheduleID: String, val plan: RecurringPayment.Plan,
-        val markedAt: Long, val policyRevision: String? = null, val resolved: Boolean = false, val consumed: Boolean = false, val policyApplied: Boolean = false) {
+        val markedAt: Long, val policyRevision: String? = null, val resolved: Boolean = false, val consumed: Boolean = false, val policyApplied: Boolean = false,
+        val terminal: TerminalEvidence? = null, val historyApplied: Boolean = false, val released: Boolean = false) {
         val key get() = "$scheduleID:${plan.occurrenceIndex}"
     }
+    @Serializable data class TerminalEvidence(val attempt: SendAttempt, val generation: Int, val walletGeneration: Int,
+        val outcome: Outcome, val message: String?, val recordedAt: Long) {
+        val paid get() = outcome == Outcome.succeeded || outcome == Outcome.alreadyPaid
+    }
+    @Serializable enum class Outcome { succeeded, alreadyPaid, failed, uncertain }
     @Serializable data class Scope(val binding: RecurringStore.Binding, val scheduleID: String)
     @Serializable data class Watermark(val binding: RecurringStore.Binding, val scheduleID: String, val through: Long)
     @Serializable data class ConsumedIndices(val binding: RecurringStore.Binding, val scheduleID: String,
@@ -22,7 +29,7 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
         val policyRevision: String? = null, val throughIndex: Int)
     @Serializable private data class V1(val attempts: Map<String, Entry>, val consumed: List<Watermark>,
         val revisions: List<RevisionWatermark> = emptyList())
-    @Serializable private data class State(val version: Int = 2, val attempts: Map<String, Entry> = emptyMap(),
+    @Serializable private data class State(val version: Int = 3, val attempts: Map<String, Entry> = emptyMap(),
         val consumed: List<Watermark> = emptyList(), val consumedIndices: List<ConsumedIndices> = emptyList(),
         val legacyUncertainty: List<Scope> = emptyList()) {
         fun remember(entry: Entry): State {
@@ -55,9 +62,14 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
         val version = root["version"]?.jsonPrimitive
         require(version == null || !version.isString && version.intOrNull != null)
         var migrated = when (version?.int) {
-            2 -> {
+            3 -> {
                 require(root.keys.containsAll(listOf("attempts", "consumed", "consumedIndices", "legacyUncertainty")))
                 return json.decodeFromJsonElement<State>(root).also(::validate)
+            }
+            2 -> {
+                val old = json.decodeFromJsonElement<State>(root)
+                old.copy(version = 3, legacyUncertainty = (old.legacyUncertainty + old.attempts.values
+                    .filter { it.consumed || it.policyApplied }.map { Scope(it.binding, it.scheduleID) }).distinct())
             }
             1 -> {
                 val old = json.decodeFromJsonElement<V1>(root)
@@ -89,6 +101,14 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
             scope(e.binding, id)
             e.policyRevision?.let(::uuid)
             require(id == e.scheduleID && e.plan.kind == "pay" && e.plan.occurrenceIndex != null && e.plan.occurrenceIndex >= 0 && e.plan.scheduledFor != null && (!e.consumed || e.resolved) && (!e.policyApplied || e.resolved))
+            e.terminal?.let { terminal ->
+                require(terminal.attempt.recurringOccurrenceKey == e.key && terminal.attempt.walletIdentity == e.binding.wallet && terminal.generation >= 0 && terminal.walletGeneration >= 0)
+                if (terminal.outcome == Outcome.succeeded) require(terminal.attempt.receipt?.let { !it.isUnresolved && !it.broadcastRetryPending && it.isProven(terminal.attempt.payment, terminal.attempt.paymentHash) } == true)
+                if (terminal.outcome == Outcome.alreadyPaid) require(terminal.attempt.alreadyPaid?.isProven(terminal.attempt.payment, terminal.attempt.paymentHash, true) == true)
+                require(terminal.outcome != Outcome.failed || terminal.attempt.failed)
+            }
+            require(!e.historyApplied || e.terminal != null && e.resolved)
+            require(!e.released || e.historyApplied)
             if (complete && e.consumed) {
                 require(state.consumed.any { sameScope(it.binding, it.scheduleID, e.binding, id) && it.through >= e.plan.scheduledFor } &&
                     state.consumedIndices.any { sameScope(it.binding, it.scheduleID, e.binding, id) && sameRevision(it.policyRevision, e.policyRevision) && e.plan.occurrenceIndex in it.indices })
@@ -101,6 +121,13 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
             require(it.indices.isNotEmpty() && it.indices.all { index -> index >= 0 } && it.indices == it.indices.distinct().sorted())
         }
         state.legacyUncertainty.forEach { scope(it.binding, it.scheduleID) }
+    }
+    /** Runs inside Send's wallet reservation before its terminal outcome is published. */
+    @Synchronized fun record(attempt: SendAttempt, generation: Int, walletGeneration: Int, outcome: Outcome, message: String?, binding: RecurringStore.Binding) {
+        val entry = state().attempts.values.firstOrNull { it.key == attempt.recurringOccurrenceKey && it.binding == binding }
+        check(entry != null && attempt.walletIdentity == binding.wallet) { invalidMessage }
+        if (entry.terminal?.outcome != null && entry.terminal.outcome != Outcome.uncertain) return
+        save(entry.copy(terminal = TerminalEvidence(attempt, generation, walletGeneration, outcome, message, System.currentTimeMillis())))
     }
     @Synchronized fun load() = state().attempts
     @Synchronized fun legacyUncertain(binding: RecurringStore.Binding, id: String) = state().legacyUncertainty.any { sameScope(it.binding, it.scheduleID, binding, id) }
