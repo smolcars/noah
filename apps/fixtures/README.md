@@ -32,18 +32,35 @@ with the published fallback schedule when ArkInfo is unavailable. The descriptio
 states the formula. The regtest cases use captaind's local schedule
 (`scripts/captaind.toml`) and include the two BOLT11 quotes verified on the Pixel.
 
-M7 RN numeric storage: `recurring-rn-range.json` is the exact 11-row RN-written
-Zustand v0 envelope from Android commit `a4ea8f0e`. iOS `RecurringRangeTests` now
-reads this shared copy; Android's original `app/src/test/resources/recurring-rn-range.json`
-is deliberately retained byte-for-byte, with no Android changes. Counts include
-3e9, MAX_SAFE_INTEGER, the integer token `9223372036854775000`, 2^63 (RN writes
-`9223372036854776000`), 1e100 and Number.MAX_VALUE. Fractional timestamps and
-out-of-range starts are also included. RN's real `validateRecurringPaymentInput`,
-`createRecurringPayment`, and `useRecurringPaymentStore.upsertSchedule` through
-Zustand `persist` / `createJSONStorage` produced these bytes; only MMKV, logging,
-translation and unused React hooks were mocked. Re-running the original writer
-script from `/tmp/noah-android-recurring-r3-rn.ts` with output redirected to
-`/private/tmp/noah-recurring-range-sol-24fa25b5-rn.json` reproduced the shared and
-Android copies exactly. The script uses Bun with `--tsconfig-override client/tsconfig.json`;
-this worktree used the main checkout's installed dependencies via `NODE_PATH`.
+M7 RN numeric storage: `recurring-rn-range.json` retains the exact 11 RN-written
+schedule rows and numeric tokens from Android commit `a4ea8f0e`, with a native-only
+`expectedClassifications` map added at envelope level. Both platforms assert its
+classification for every row; the reason documents the boundary being exercised.
+The four representable count rows are active. Counts beyond signed 64-bit range,
+fractional timestamps and starts beyond JavaScript Date range are stopped-unsupported:
+visible as Needs attention, never executed or rounded, and cancellable.
+Android's historical local resource is unchanged; tests use the shared expectations.
+
+RN's real `validateRecurringPaymentInput`, `createRecurringPayment`, and
+`useRecurringPaymentStore.upsertSchedule` through Zustand `persist` /
+`createJSONStorage` produced the original rows. Only MMKV, logging, translation
+and unused React hooks were mocked. The original writer script remains at
+`/tmp/noah-android-recurring-r3-rn.ts` and uses Bun with
+`--tsconfig-override client/tsconfig.json` and installed dependencies via `NODE_PATH`.
+The pre-expectations shared/Android copies had SHA-256
+`c96c5f940008ac97f3f0757b79cef276381a56ac8e9fcca4a8d1cd27b23954b3`.
 The fixture contains no wallet secrets.
+
+RN's store does not configure a persistence version. Zustand defaults to numeric
+0 and `createJSONStorage` uses `JSON.stringify`, producing only the token `0`.
+Native accepts that exact token or an absent legacy version. `1e-400`, `0.0`,
+`-0`, `0e5`, `"0"`, `1`, and `1e400` all make the entire store unavailable;
+original bytes survive and execution/mutation stop. Whitespace around `0` is JSON
+formatting and remains accepted. Even `JSON.stringify(-0)` produces `0`.
+
+Normal RN timestamps come from `Date.now()`, the editor's local `Date` constructor
+(with seconds/milliseconds zero), and calendar `Date.getTime()`; retries add whole
+millisecond delays. Thus normal writes have whole-millisecond start/end/next-run,
+created/updated, retry, in-flight and run-history times. The factory/validator can
+accept synthetic fractional inputs (as these range rows demonstrate), but native
+classifies any fractional time field as an unsupported row and preserves its values.

@@ -1,4 +1,50 @@
 {
+  "expectedClassifications": {
+    "count-0": {
+      "classification": "active",
+      "reason": "whole-millisecond timestamps and representable count"
+    },
+    "count-1": {
+      "classification": "active",
+      "reason": "whole-millisecond timestamps and representable count"
+    },
+    "count-2": {
+      "classification": "active",
+      "reason": "whole-millisecond timestamps and representable count"
+    },
+    "count-3": {
+      "classification": "active",
+      "reason": "whole-millisecond timestamps and representable count"
+    },
+    "count-4": {
+      "classification": "stopped-unsupported",
+      "reason": "maxOccurrences exceeds signed 64-bit integer range"
+    },
+    "count-5": {
+      "classification": "stopped-unsupported",
+      "reason": "maxOccurrences exceeds signed 64-bit integer range"
+    },
+    "count-6": {
+      "classification": "stopped-unsupported",
+      "reason": "maxOccurrences exceeds signed 64-bit integer range"
+    },
+    "start-0": {
+      "classification": "stopped-unsupported",
+      "reason": "fractional startAt and nextRunAt"
+    },
+    "start-1": {
+      "classification": "stopped-unsupported",
+      "reason": "startAt exceeds JavaScript Date range"
+    },
+    "start-2": {
+      "classification": "stopped-unsupported",
+      "reason": "startAt exceeds JavaScript Date range"
+    },
+    "end-fraction": {
+      "classification": "stopped-unsupported",
+      "reason": "fractional endAt"
+    }
+  },
   "state": {
     "schedules": {
       "count-0": {
