@@ -27,13 +27,10 @@ class SettingsFeaturesTest {
         policy.credentialFinished(); policy.authenticated(started)
         assertFalse(policy.locked)
         policy.stopped(); assertTrue(policy.locked)
-        for (leaving in listOf("Home", "Recents", "screen off", "switch apps")) {
-            val request = policy.generation
-            policy.credentialStarted(); policy.stopped()
-            policy.background(); policy.credentialFinished(); policy.authenticated(request)
-            assertTrue(leaving, policy.locked)
-            assertFalse(policy.confirmingCredential)
-        }
+        val request = policy.generation
+        policy.credentialStarted(); policy.stopped()
+        policy.background(); policy.credentialFinished(); policy.authenticated(request)
+        assertTrue(policy.locked); assertFalse(policy.confirmingCredential)
         policy.authenticated(policy.generation); assertFalse(policy.locked)
     }
 

@@ -75,6 +75,9 @@ class WalletLock(private val settings: SettingsStorage) {
         val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
         settings.setPersistedState(wallet.copy(isBiometricsEnabled = value), PersistedWalletState.key, 0)
         settings.sync()
+        // Apply protection synchronously with the preference, before the next Compose frame/background event.
+        if (value) activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        else activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         policy.setEnabled(value); enabled = value; locked = false
     }
 

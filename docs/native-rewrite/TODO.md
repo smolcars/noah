@@ -229,8 +229,9 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 - [x] M5 review A1/A6: identify AndroidX's API 24–28 credential activity hop, preserve its generation across stop, invalidate on real background/system-dialog dismissal or screen-off; secure the authenticated Activity before rendering/backgrounding (RN source searched; no Android secure-screen hook found)
 
-
 - [x] M5 review A7: model-owned encrypted/log exports survive configuration changes and asynchronous receivers, with scheduled/startup 24-hour expiry and exact URI revocation; plaintext staging is discarded immediately
+
+- [x] M5 review verification: 385 Android JVM tests; regtest APK + instrumentation compilation; two API 28 device privacy/onboarding cases; full iOS NoahTests (247 passed, 10 opt-in skipped) — evidence in `apps/android/SettingsTests/README.md`
 
 ## M6 — Onchain & exits
 - [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt (prepared boarding awaits FFI 18, same priority as 14)
