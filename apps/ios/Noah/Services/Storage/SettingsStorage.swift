@@ -61,6 +61,13 @@ final class SettingsStorage: @unchecked Sendable {
         mmkv.set(value, forKey: key)
     }
 
+    /// Financial automation must observe write failures and flush the before-send marker.
+    func setDurably(_ value: String, forKey key: String) throws {
+        guard mmkv.set(value, forKey: key) else { throw OpenError() }
+        mmkv.sync()
+        guard mmkv.string(forKey: key) == value else { throw OpenError() }
+    }
+
     func remove(forKey key: String) {
         mmkv.removeValue(forKey: key)
     }

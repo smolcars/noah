@@ -1,0 +1,54 @@
+import Foundation
+import Testing
+@testable import Noah
+
+@MainActor struct RecurringStoreTests {
+    private func settings() throws -> SettingsStorage {
+        SettingsStorage.bootstrap()
+        return try .init(rootPath: FileManager.default.temporaryDirectory.appending(path: "recurring-mmkv-\(UUID())").path, instanceID: UUID().uuidString)
+    }
+    @Test func rnUpgradeAndUnknownFieldsRoundTrip() throws {
+        let settings = try settings()
+        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().appending(path: "fixtures/recurring-storage.json")
+        var envelope = try JSONSerialization.jsonObject(with: Data(contentsOf: fixture)) as! [String: Any]
+        var state = envelope["state"] as! [String: Any]
+        var schedules = state["schedules"] as! [String: Any]
+        var rent = schedules["rent"] as! [String: Any]
+        rent["futureField"] = "preserve me"; schedules["rent"] = rent
+        state["schedules"] = schedules; state["futureState"] = true
+        envelope["state"] = state; envelope["futureEnvelope"] = 123
+        settings.set(String(decoding: try JSONSerialization.data(withJSONObject: envelope), as: UTF8.self), forKey: RecurringStore.key)
+        let store = RecurringStore(settings: settings)
+        var payment = try #require(store.load().schedules["rent"])
+        #expect(payment.label == "Rent" && payment.amountSat == 50_000)
+        payment.inFlight = .init(occurrenceIndex: 0, startedAt: 1)
+        try store.upsert(payment)
+        payment.inFlight = nil; payment.status = "paused"
+        try store.upsert(payment)
+        let raw = try #require(settings.string(forKey: RecurringStore.key))
+        #expect(raw.contains("futureField") && raw.contains("futureState") && raw.contains("futureEnvelope"))
+        #expect(try store.load().schedules["rent"]?.inFlight == nil)
+        #expect(try store.load().schedules["rent"]?.status == "paused")
+    }
+    @Test func unreadableAndFutureVersionsNeverBecomeEmpty() throws {
+        let settings = try settings()
+        let store = RecurringStore(settings: settings)
+        for raw in ["not JSON", #"{"version":1,"state":{"schedules":{}}}"#, #"{"version":0,"state":{"schedules":{"broken":{"amountSat":1}}}}"#] {
+            settings.set(raw, forKey: RecurringStore.key)
+            #expect(throws: (any Error).self) { try store.load() }
+            #expect(throws: (any Error).self) { try store.upsert(RecurringScheduleTests.schedule()) }
+            #expect(settings.string(forKey: RecurringStore.key) == raw)
+        }
+    }
+    @Test func realMMKVReopenRetainsBeforeSendMarker() throws {
+        SettingsStorage.bootstrap()
+        let path = FileManager.default.temporaryDirectory.appending(path: "recurring-reopen-\(UUID())").path
+        let id = UUID().uuidString
+        let store = RecurringStore(settings: try .init(rootPath: path, instanceID: id))
+        var schedule = RecurringScheduleTests.schedule()
+        schedule.inFlight = .init(occurrenceIndex: 4, startedAt: 12345)
+        try store.upsert(schedule)
+        let reopened = RecurringStore(settings: try .init(rootPath: path, instanceID: id))
+        #expect(try reopened.load().schedules[schedule.id] == schedule)
+    }
+}

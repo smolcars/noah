@@ -63,6 +63,7 @@ struct WalletRestorer: Sendable {
         guard !FileManager.default.fileExists(atPath: location.deletionMarker.path) else {
             throw WalletSession.OpenError.restorePending
         }
+        if session === WalletSession.shared { try RecurringStore().protectLegacyBeforeReplacement() }
         let reservation = try await session.reserve()
         do {
             let outcome = try await restore(mnemonic: mnemonic, holding: reservation, progress: progress)
@@ -89,6 +90,7 @@ struct WalletRestorer: Sendable {
             try await session.unlessReserved { try transaction.removeScratch() }
             return .nothingPending
         }
+        if session === WalletSession.shared { try RecurringStore().protectLegacyBeforeReplacement() }
         let reservation: WalletSession.Reservation
         do {
             reservation = try await session.reserve()

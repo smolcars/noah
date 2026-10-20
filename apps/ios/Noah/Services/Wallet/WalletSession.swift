@@ -230,6 +230,7 @@ actor WalletSession {
         guard !location.restorePending else { throw OpenError.restorePending }
         guard !location.databaseExists else { throw OpenError.walletDatabaseExists }
         try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
+        if self === WalletSession.shared { try RecurringStore().protectLegacyBeforeReplacement() }
         let opener = self.opener
         let datadir = location.directory.path
         let handles = try await Task { try await opener(mnemonic, datadir, runDaemon, appVersion, true) }.value
