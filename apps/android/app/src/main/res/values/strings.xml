@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="launch_settings_recovery">Wallet settings need recovery</string>
-    <string name="launch_settings_recovery_message">Support code: STORAGE_UNSUPPORTED. Noah could not safely read your saved settings. Keep this app installed. Restart Noah to retry, or contact support at github.com/smolcars/noah. Never share your recovery phrase, private keys, wallet database, or settings backup.</string>
   <string name="widget_regtest_description">View your Bitcoin balance on regtest</string>
   <string name="widget_signet_description">View your Bitcoin balance on signet</string>
   <string name="widget_mainnet_description">View your Bitcoin balance</string>
@@ -25,6 +23,4 @@
     <string name="launch_loading_message">Please wait while Noah loads your wallet.</string>
     <string name="launch_open_failed">Unable to open wallet</string>
     <string name="launch_open_failed_message">Noah could not verify this wallet against the saved recovery phrase. Keep Noah installed and contact support if retrying fails. Never share your recovery phrase. Your saved data has been kept.</string>
-    <string name="launch_settings_recovered">Review recovered settings</string>
-    <string name="launch_settings_recovered_message">Support code: SETTINGS_RECOVERED. Settings were recovered from an older state. Review biometrics, wallet suspension, balance hiding, and backup settings after continuing. Background work stays stopped until you choose Continue. Recurring payments remain subject to their independent safety checks. Keep Noah installed; contact github.com/smolcars/noah if you need help. Never share your recovery phrase, private keys, or wallet database.</string>
 </resources>

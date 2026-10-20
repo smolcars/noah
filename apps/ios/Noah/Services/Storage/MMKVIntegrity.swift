@@ -28,10 +28,4 @@ enum MMKVIntegrity {
         return digest == u32(meta, 0)
     }
 
-    static func quarantineBeforeOpen(root: URL, store: String, quarantine: MMKVQuarantine) throws {
-        if !verifies(root: root, store: store) {
-            guard quarantine.recordRecovery() else { throw SettingsStorage.OpenError() }
-        }
-        try quarantine.requireDurable()
-    }
 }

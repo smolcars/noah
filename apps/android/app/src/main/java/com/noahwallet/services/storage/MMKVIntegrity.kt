@@ -26,8 +26,4 @@ internal object MMKVIntegrity {
         return crc == u32(meta, 0)
     }
 
-    fun quarantineBeforeOpen(root: File, store: String, quarantine: MMKVQuarantine) {
-        if (!verifies(root, store)) check(quarantine.recordRecovery())
-        quarantine.requireDurable()
-    }
 }
