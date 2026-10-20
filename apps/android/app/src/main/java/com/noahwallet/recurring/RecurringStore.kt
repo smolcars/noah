@@ -95,7 +95,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     }
     private fun requireNumericTokens(row: JsonObject) {
         fun number(value: JsonElement, minimum: Long, maximum: Long) {
-            require(value is JsonPrimitive && !value.isString)
+            require(value is JsonPrimitive && !value.isString && integerToken.matches(value.content))
             // Parse the original integer token: kotlinx longOrNull can wrap overflowing literals.
             val exact = value.content.toBigIntegerOrNull() ?: error("Expected an integer token")
             require(exact >= minimum.toBigInteger() && exact <= maximum.toBigInteger())
@@ -154,6 +154,8 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     }
     companion object {
         // createRecurringPayment in client/src/lib/recurringSchedule.ts (retryNotBefore is optional).
+        // All policy numbers are integer literals; RFC 8259 forbids leading zeros and a plus sign.
+        private val integerToken = Regex("-?(0|[1-9][0-9]*)")
         private val requiredRNFields = setOf("id", "label", "destination", "destinationType", "amountSat", "comment",
             "interval", "startAt", "endAt", "maxOccurrences", "status", "nextOccurrenceIndex", "nextRunAt",
             "occurrencesPaid", "consecutiveFailures", "lastError", "inFlight", "runs", "createdAt", "updatedAt")
