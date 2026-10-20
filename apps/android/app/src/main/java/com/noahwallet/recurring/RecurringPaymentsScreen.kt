@@ -15,6 +15,7 @@ import java.text.DateFormat
 import java.util.Date
 
 internal fun recurringDate(at: Long): String = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(at))
+internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(at))
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun RecurringPaymentsScreen(app: AppModel) {
     val context = LocalContext.current
@@ -47,7 +48,7 @@ internal fun recurringDate(at: Long): String = DateFormat.getDateTimeInstance(Da
             Text("${s.amountSat} sats", style = MaterialTheme.typography.headlineMedium)
             Text("${s.interval.description} · ${s.occurrencesPaid} paid" + (s.maxOccurrences?.let { " of $it" } ?: ""))
             if (s.status == "active") s.nextRunAt?.let { Text("Next payment: ${recurringDate(it)}") }
-            s.endAt?.let { Text("Ends: ${recurringDate(it)}") }
+            s.endAt?.let { Text("Ends: ${recurringDay(it)}") }
             s.runs.firstOrNull()?.let { Text("Last attempt: ${recurringDate(it.attemptedAt)} (${when (it.status) { "success" -> "Successful"; "skipped" -> "Skipped"; else -> "Failed" }})", style = MaterialTheme.typography.bodySmall) }
             s.lastError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (s.status == "needs_approval") NoahButton("Review and pay manually", !executor.running && !executor.controller.locked && !app.isWalletSuspended) { act { review = executor.review(s.id) } }

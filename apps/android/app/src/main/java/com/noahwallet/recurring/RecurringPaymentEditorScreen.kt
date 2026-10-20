@@ -93,5 +93,5 @@ import java.util.UUID
             if (time) TimePickerDialog(context, { _, hour, minute -> calendar.set(Calendar.HOUR_OF_DAY, hour); calendar.set(Calendar.MINUTE, minute); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0); change(calendar.timeInMillis) }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), android.text.format.DateFormat.is24HourFormat(context)).show()
             else change(calendar.timeInMillis)
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
-    }, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text("$label: ${recurringDate(value)}") }
+    }, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text("$label: ${if (time) recurringDate(value) else recurringDay(value)}") }
 }
