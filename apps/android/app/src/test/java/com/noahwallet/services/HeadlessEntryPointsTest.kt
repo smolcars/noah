@@ -10,16 +10,18 @@ class HeadlessEntryPointsTest {
     private fun source(path: String) = File("src/main/java/com/noahwallet/$path.kt").readText()
     private fun walletGate() {
         val app = source("services/AppServices")
-        assertTrue(app.contains("if (!foreground) walletOpener.requireHeadlessAdmission()"))
-        assertTrue(app.indexOf("if (!foreground) walletOpener.requireHeadlessAdmission()") < app.indexOf("if (foreground && recoverRestore(walletMutationHeld)"))
+        assertTrue(app.contains("if (!foreground) requireBackgroundWallet()"))
+        assertTrue(app.indexOf("if (!foreground) requireBackgroundWallet()") < app.indexOf("if (foreground && recoverRestore(walletMutationHeld)"))
         assertTrue(app.contains("else walletOpener.ensureOpen()"))
         assertTrue(source("services/storage/StoredWalletOpener").contains("walletState()?.isInitialized == false"))
         assertTrue(source("services/push/PushRuntime").contains("ensureWalletOpen = services::ensureWalletOpen"))
     }
     @Test fun headlessDeletionRecoveryCannotDeleteASeed() {
         val code = source("services/AppServices")
-        val gate = "if (!foreground && (location.restorePending || location.deletionMarker.exists())) throw RestoreNotSettled()"
+        val gate = "if (!foreground) requireBackgroundWallet()"
         assertTrue(code.contains(gate))
+        assertTrue(code.contains("location.restorePending, location.deletionMarker.exists()"))
+        assertTrue(source("services/background/BackgroundWalletAdmission").contains("!restorePending && !deletionPending"))
         assertTrue(code.indexOf(gate) < code.indexOf("if (foreground && recoverRestore(walletMutationHeld)"))
     }
     @Test fun firebaseServiceRoutesThroughTheGatedWorker() {

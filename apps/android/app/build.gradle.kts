@@ -40,7 +40,10 @@ gradle.taskGraph.whenReady {
 
 android {
     // Map limit tests build caches near the 32 MiB cap; Gradle's default 512 MiB worker can run out.
-    testOptions { unitTests.all { it.maxHeapSize = "2g" } }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all { it.maxHeapSize = "2g" }
+    }
     namespace = "com.noahwallet"
     compileSdk = 37
 
@@ -168,6 +171,9 @@ dependencies {
     implementation("${libs.bark.bolt.get()}@aar")
     implementation(libs.datastore.preferences)
     implementation(libs.security.crypto)
+    testImplementation(libs.work.testing)
+    testImplementation(libs.robolectric)
+    androidTestImplementation(libs.work.testing)
     testImplementation(libs.junit)
     testImplementation(libs.ktor.client.mock)
     androidTestImplementation(libs.androidx.test.runner)

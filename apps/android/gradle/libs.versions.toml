@@ -52,6 +52,8 @@ ktor-serialization = { module = "io.ktor:ktor-serialization-kotlinx-json", versi
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 mmkv = { module = "com.tencent:mmkv", version.ref = "mmkv" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
+work-testing = { module = "androidx.work:work-testing", version.ref = "work" }
+robolectric = { module = "org.robolectric:robolectric", version = "4.17" }
 work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 unifiedpush = { module = "org.unifiedpush.android:connector", version.ref = "unifiedpush" }

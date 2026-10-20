@@ -346,5 +346,10 @@
             <sha256 value="9b4881e451330fad587833dd57da275084a8a1032f9429c364c2d9641426b123" origin="Google Maven artifact, independently downloaded"/>
          </artifact>
       </component>
+      <component group="androidx.work" name="work-testing" version="2.9.1">
+         <artifact name="work-testing-2.9.1.aar">
+            <sha256 value="e9f7f54d8907f58912cb2020319351c43ea34e34c6f5eabd2433c531e9cde329" origin="Google Maven artifact, independently downloaded"/>
+         </artifact>
+      </component>
    </components>
 </verification-metadata>
