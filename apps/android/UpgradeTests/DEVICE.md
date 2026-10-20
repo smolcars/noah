@@ -405,10 +405,11 @@ initialization handler. Warning/error callbacks send fixed diagnostics through
 the redacting `AppLog`; MMKV messages and stored values are not forwarded.
 The first open is serialized across all `SettingsStorage` callers. Before
 mapping `files/mmkv/noah-wallet-storage`, native durably copies it and its CRC
-to the immutable sibling `files/mmkv.native-backup`. A synced manifest outside
+to immutable `noBackupFilesDir/mmkv.native-backup` (excluded from cloud backup
+and device transfer). A synced manifest outside
 MMKV records first-open completion and the original actual sizes. Copy/sync
 failure leaves storage unavailable, suppresses writes and retries next process
-launch. The backup is retained and never replaced.
+launch. The backup is never replaced and is retained until wallet deletion.
 
 If backup metadata records content but no RN keys survive, native closes MMKV,
 restores the original pair once and reopens with recovery enabled. A durable
@@ -419,7 +420,16 @@ copy-safe `STORAGE_UNSUPPORTED` support state. Existing DB/seed with a missing
 unlinks the MMKV folder while it's open, so a wallet re-created in that session
 never persisted its stores; blocking would lock users out of a valid wallet. An
 explicit false flag also resumes unfinished onboarding.
-Wallet deletion marks the retained backup ineligible before clearing settings.
+After the first successful open and validation, a separate
+`noBackupFilesDir/mmkv.native-retired` file atomically records admitted RN key
+names and is fsynced together with its parent directory before any native
+mutation. Newly introduced RN keys join that record before being written.
+Subsequent CRC/length recovery or loss of an admitted key blocks instead of
+restoring or restarting onboarding. Snapshot restoration is then disabled;
+the original pair remains for explicit/support recovery only. Wallet deletion
+retires with no required keys, clears/syncs live settings and deletes both
+published and staging snapshots after local wallet/seed deletion. The retirement
+record survives deletion → re-onboarding; no deleted snapshot is recreated.
 Recurring storage checks health before reading policies; the separate recurring
 journal prevents replay when MMKV returns an older confirmed policy.
 
@@ -456,3 +466,50 @@ Verification for this change (base `37ab2125`, branch `t3/mmkv-upgrade-recovery`
   built RN APK or installed RN JavaScript dependencies. The actual RN-byte JNI
   checks passed; the running replacement procedure was exercised on iOS.
   No physical device, other agent's emulator, or Docker container was touched.
+
+## MMKV recovery review fixes (2026-10-20; base `172446b6`)
+
+`SettingsStorage` distinguishes absent keys from undecodable stored values and
+uses the MMKV byte getter with a strict UTF-8 decoder; JNI string replacement
+characters cannot disguise damaged bytes. Both initial validation and every
+native mutation check consumed stores and admitted-key presence.
+
+Every `AppServices.ensureWalletOpen` requires `isInitialized == true` before
+recovery and again in `StoredWalletOpener.ensureOpen`. Foreground onboarding can
+reuse the existing seed+DB. Committed deletion recovery waits for foreground so
+a headless path cannot delete a seed. Interrupted restore recovery remains
+seed-read-only; native seed migration still occurs only after a verified
+foreground SDK open.
+
+Audited entry classes: `NoahFirebaseMessagingService`, `NoahUnifiedPushService`,
+`PushWorker`, `PushRegistrationWorker`, `RecurringRuntime`,
+`RecurringTimeReceiver`, `RecurringForegroundRunner`, `RecurringReminderWorker`,
+`NoahWidgetProvider` and its mainnet/signet/regtest subclasses. FCM/UnifiedPush
+queue `PushWorker`, whose wallet jobs use the shared opener. Registration has
+its own onboarding gate. Recurring execution uses the shared opener; reminders
+also require initialization. Widgets only render cached preferences. Cleanup
+workers (`HistoryExportCleanup`, `SettingsShareCleanup`) do not open wallets.
+
+`StoredWalletOpenerTest` exercises all five wallet push types with absent,
+missing-flag and false initialization states, asserting no open and no seed
+writes, then checks foreground reuse and initialized headless success.
+`HeadlessEntryPointsTest` adds one source-wiring contract per entry class plus
+a deletion-recovery ordering check; framework callbacks themselves are not run
+in the plain JVM. `MMKVRecoveryTest` adds real-JNI suspension/key-loss/UTF-8,
+post-retirement CRC, no-backup, deletion and nine shared launch-vector checks.
+
+A negative-control run reinstating the old restore, headless and forgiving
+UTF-8 behavior produced **11 failures / 30 tests**. Restoring the fixes passed
+all 30; the final targeted backup/admission/UTF-8 set passed 32 checks (including
+the added no-backup/deletion-order tests across the targeted runs).
+No Android emulator, physical device or Docker was used. Real-JNI regression
+probes are compiled only in this review, pending an authorized device run.
+
+Required final command ran once inside Nix with `--max-workers=2`:
+`:app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin`
+— **2,933 tests / 91 suites / zero failures, errors or skips**; regtest APK
+assembly and instrumentation Kotlin compilation both succeeded. All 12
+`MMKVRecoveryTest` JNI methods compile; they were not executed on a device.
+The nine shared storage vectors passed in the equivalent real-MMKV iOS tests.
+Durable pause/cancel tombstones remain a separate task; no `RecurringExecutor`
+or `RecurringStore` implementation was changed.

@@ -136,3 +136,10 @@ USD/bip177 fallback for future or null preferences without repairing the stored
 values. Recurring fixtures go through the existing recurring codecs, whose
 financial-policy tests remain in `recurring-storage.json` and
 `recurring-rn-range.json`. Esplora remains inactive until a native consumer lands.
+
+`mmkv-launch-state.json` adds nine storage-layer launch vectors with an existing
+seed+DB. Both `MMKVRecoveryTests` (iOS) and `MMKVRecoveryTest` (Android JNI)
+consume the same first-open/after-native values. They distinguish RN's initially
+missing wallet-storage (resume onboarding), explicit unfinished onboarding,
+present undecodable values (block), and later loss of an admitted wallet key
+(block). The original source-level seed/DB launch fixtures remain unchanged.

@@ -310,7 +310,8 @@ with fixed diagnostics: MMKV's raw messages, keys and values are never forwarded
 Before the first native open, the data/CRC pair is copied byte-for-byte into
 `Documents/mmkv.native-backup`, outside MMKV. Files, manifest and directory
 entries are synced before opening. The published directory is the native-only
-marker and is never replaced; the backup is retained even after wallet deletion.
+first-open marker and is never replaced. Both staging and published backup
+directories have `isExcludedFromBackup=true`; tests read the resource values.
 An incomplete pair, copy failure or sync failure blocks storage access and
 retries on the next app launch. No MMKV writable instance is opened on that path.
 
@@ -318,18 +319,30 @@ If the recorded header/current/last-confirmed size indicates content but no RN
 keys survive open, the instance is closed, the original pair is restored once,
 and MMKV is reopened with recovery enabled. A durable pending marker resumes
 an interrupted two-file restore before either file is mapped. Empty recovery
-again blocks with `STORAGE_UNSUPPORTED`, preserving the backup. Explicit wallet
-deletion durably marks the backup ineligible for restoration before clearing
-settings, so a later launch cannot resurrect the deleted wallet's settings.
+again blocks with `STORAGE_UNSUPPORTED`, preserving the backup.
 
-A DB and seed with a **missing `wallet-storage` resume onboarding** in the
-foreground (user decision, 2026-10-20). RN's Delete Wallet unlinks the MMKV
+After the first successful open and consumed-store validation (including the
+one permitted restore), `Documents/mmkv.native-retired` is atomically written
+and fsynced, followed by its parent directory, before admitting native mutations.
+This external record lists admitted RN key names, adding newly written keys
+before mutation. Subsequent CRC/length recovery or loss of an admitted RN key
+blocks; the original snapshot can never override later native state. The
+immutable snapshot remains for explicit/support recovery only. A bad retirement
+record or failed sync blocks writes and is retried on next launch. Wallet
+deletion durably retires with no required keys, clears/syncs settings, and removes
+both published and staging snapshots after local wallet/seed deletion. The
+retirement record survives deletion and re-onboarding; a new snapshot is never
+created from the deleted wallet.
+
+A DB and seed with **`wallet-storage` already missing on first native open
+resume onboarding** in the foreground (user decision, 2026-10-20). RN's Delete Wallet unlinks the MMKV
 folder while it's open, so a wallet re-created in the same RN session never
 persists its stores. Blocking would lock those users out of a valid wallet.
 Headless opens still refuse until onboarding finishes (`isInitialized` must be
 true). A present, compatible store with `isInitialized=false` resumes onboarding
-as before. Neither condition is
-silently repaired by writing defaults. Recurring execution requires healthy
+as before. A present but undecodable value (including invalid UTF-8) blocks through
+`contains(key:)` plus decoding checks. Neither condition is silently repaired
+by writing defaults. Recurring execution requires healthy
 storage; its independent journal retains consumed-payment evidence when MMKV
 recovers an older policy.
 
@@ -384,3 +397,44 @@ deleted it, then verified its UDID absent. Removed task-owned DerivedData,
 `.xcresult` bundles, Maestro home/debug artifacts, logs, checkpoint and screenshot.
 The cached RN build was preserved. The only retained binary evidence is the
 non-secret RN fixture committed under `apps/fixtures/rn-mmkv`.
+
+## MMKV recovery review fixes (2026-10-20; base `172446b6`)
+
+Permanent `MMKVRecoveryTests` probes reproduced suspension rollback, later
+wallet-key loss, present-but-undecodable RN bytes and missing system-backup
+exclusions on the unfixed code. All four failed before their fixes. A further
+CRC probe caught MMKV's lazy loading: post-retirement recovery is checked after
+validation forces the mmap read, even if every RN key survives.
+
+The shared `../../fixtures/mmkv-launch-state.json` has nine seed+DB storage
+vectors consumed by both native suites: first-open absence/unfinished state
+resumes onboarding, a present unreadable value blocks, and later key loss
+blocks. Additional tests cover retirement-write failure without MMKV mutation,
+exact immutable snapshot bytes, interrupted restore, staging/published exclusion
+resource values, snapshot removal, and deletion → re-onboarding without restore.
+
+Verification: XcodeGen, arm64/active architecture only, code signing enabled,
+two build jobs, owned DerivedData under `/private/tmp`. The full `NoahTests`
+suite ran **once: 609 tests / 122 suites / 584 passed / 23 opt-in skipped /
+2 failed test functions**. Both failures were test assumptions invalidated by
+the new boundary: the 196-case codec harness reused stores after injecting
+corrupt values, and the truncation probe expected startup to accept a partial
+JSON envelope. Isolating each RN vector and asserting blocking for truncation
+fixed those tests; the exact two functions then **passed** (all 196 RN vectors
+and all three corruption arguments). No production change followed the full
+run, and the full suite was not repeated. All new regression functions passed
+in the full run and/or their focused runs, including nine shared launch vectors.
+
+Android's old-behavior negative control failed 11 of 30 targeted tests; restored
+fixes passed. Android's final command passed 2,933 JVM tests and compiled all
+JNI probes. No Android device, protected simulator, physical device or Docker
+was used. Funded/running-RN replacement and real push acceptance were not
+repeated in this review. Durable recurring pause/cancel tombstones remain out
+of scope, and no `WalletSession`, `RecurringExecutor` or `RecurringStore`
+implementation was changed.
+
+Owned simulator `Noah MMKV Safety t3-4176`
+(`165E6CEA-DFFA-4980-A6E8-17B0ABC0CBA2`) was closed through T3, confirmed by
+exact name/UDID in Shutdown state, deleted and verified absent. Removed its
+`/private/tmp/noah-mmkv-safety-4176-dd` DerivedData (including all result bundles)
+and all owned transient scripts/logs. Shared/protected devices were untouched.

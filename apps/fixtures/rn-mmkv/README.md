@@ -38,3 +38,10 @@ TEST_RUNNER_NOAH_MMKV_DISCARD_DEMO=1 xcodebuild ... \
 
 It is skipped in the ordinary full suite. Do not collect real user MMKV files
 as fixtures or ask users to share their settings backup.
+
+The recovery review also damages UTF-8 in the final real `wallet-storage` value
+while retaining its MMKV key. Present-but-undecodable values must block. After a
+successful native validation, suspension writes followed by empty/CRC recovery
+and admitted-key removal must block without restoring the initial snapshot.
+A separate fsynced retirement record survives snapshot deletion and re-onboarding.
+The nine shared launch decisions are in `../mmkv-launch-state.json`.

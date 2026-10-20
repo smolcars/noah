@@ -83,3 +83,15 @@ byte-identical (SHA-256
 The funded RN-to-native device procedure was not repeated; Android SDK argument
 boundaries are checked in JVM tests, and real offline SDK open/auth is covered
 on iOS with the identical public normalization vectors.
+
+MMKV recovery review (2026-10-20, base `172446b6`): automatic restoration retires
+at the first successful validated open using a fsynced record outside MMKV.
+Previously admitted RN key loss or any later CRC/length recovery blocks.
+The backup and retirement file live in `noBackupFilesDir`; wallet deletion
+removes published/staging snapshots while preserving retirement through
+re-onboarding. Absent keys may use defaults only when never admitted; present
+values with invalid UTF-8 or no decodable bytes block, using strict byte decoding
+before JSON validation. Existing seed+DB with wallet-storage already missing at
+first native open still resumes foreground onboarding. Every headless opener
+requires explicit initialization, and committed deletion waits for foreground.
+See `DEVICE.md` and shared `../../fixtures/mmkv-launch-state.json` (nine vectors).
