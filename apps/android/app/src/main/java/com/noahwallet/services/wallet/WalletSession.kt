@@ -260,36 +260,42 @@ class WalletSession internal constructor(
 
     private suspend fun beginOpen(
         mnemonic: String, runDaemon: Boolean, appVersion: String, create: Boolean, join: Boolean,
-    ): Deferred<Unit>? = withContext(Dispatchers.IO) {
-        synchronized(lock) {
-            if (isSuspended()) throw OpenError(OpenFailure.suspended)
-            when (val current = state) {
-                is State.Open -> if (join) {
-                    if (openingSeedDigest?.contentEquals(seedDigest(mnemonic)) != true) throw OpenError(OpenFailure.seedConflict)
-                    return@synchronized null
-                } else throw OpenError(OpenFailure.busy)
-                is State.Opening -> if (join) {
-                    if (openingSeedDigest?.contentEquals(seedDigest(mnemonic)) != true) throw OpenError(OpenFailure.seedConflict)
-                    return@synchronized current.attempt
-                } else throw OpenError(OpenFailure.busy)
-                State.Closed -> Unit
-                else -> throw OpenError(OpenFailure.busy)
-            }
-            if (location.restorePending) throw OpenError(OpenFailure.restorePending)
-            checkExistingDatabase()
-            val attempt = scope.async(start = CoroutineStart.LAZY) {
-                try {
-                    val handles = opener(mnemonic, location.directory.path, runDaemon, appVersion, create)
-                    synchronized(lock) { state = State.Open(handles); walletChanged() }
-                } catch (failure: Throwable) {
-                    synchronized(lock) { state = State.Closed }
-                    throw failure
+    ): Deferred<Unit>? {
+        val caller = currentCoroutineContext()
+        caller.checkWalletAdmission()
+        return withContext(Dispatchers.IO) {
+            synchronized(lock) {
+                if (isSuspended()) throw OpenError(OpenFailure.suspended)
+                when (val current = state) {
+                    is State.Open -> if (join) {
+                        if (openingSeedDigest?.contentEquals(seedDigest(mnemonic)) != true) throw OpenError(OpenFailure.seedConflict)
+                        return@synchronized null
+                    } else throw OpenError(OpenFailure.busy)
+                    is State.Opening -> if (join) {
+                        if (openingSeedDigest?.contentEquals(seedDigest(mnemonic)) != true) throw OpenError(OpenFailure.seedConflict)
+                        return@synchronized current.attempt
+                    } else throw OpenError(OpenFailure.busy)
+                    State.Closed -> Unit
+                    else -> throw OpenError(OpenFailure.busy)
                 }
+                if (location.restorePending) throw OpenError(OpenFailure.restorePending)
+                checkExistingDatabase()
+                caller.checkWalletAdmission()
+                val attempt = scope.async(start = CoroutineStart.LAZY) {
+                    try {
+                        caller.checkWalletAdmission()
+                        val handles = opener(mnemonic, location.directory.path, runDaemon, appVersion, create)
+                        synchronized(lock) { state = State.Open(handles); walletChanged() }
+                    } catch (failure: Throwable) {
+                        synchronized(lock) { state = State.Closed }
+                        throw failure
+                    }
+                }
+                openingSeedDigest = seedDigest(mnemonic)
+                state = State.Opening(attempt)
+                attempt.start()
+                attempt
             }
-            openingSeedDigest = seedDigest(mnemonic)
-            state = State.Opening(attempt)
-            attempt.start()
-            attempt
         }
     }
 
@@ -320,16 +326,24 @@ class WalletSession internal constructor(
     suspend fun claimLightningReceives() = withOpen { it.claimLightningReceives() }
     suspend fun closestExpiryBlocks(): Long? = withOpen { it.closestExpiryBlocks() }
 
-    internal suspend fun <T> withOpen(block: suspend (Handles) -> T): T = withContext(NonCancellable + Dispatchers.IO) {
-        val handles = synchronized(lock) {
-            if (isSuspended()) throw OpenError(OpenFailure.suspended)
-            if (exclusiveSend) throw OpenError(OpenFailure.busy)
-            val handles = (state as? State.Open)?.handles ?: throw SessionError()
-            if (runningCalls++ == 0) drained = CompletableDeferred()
-            handles
+    internal suspend fun <T> withOpen(block: suspend (Handles) -> T): T {
+        val caller = currentCoroutineContext()
+        caller.checkWalletAdmission()
+        return withContext(NonCancellable + Dispatchers.IO) {
+            val handles = synchronized(lock) {
+                if (isSuspended()) throw OpenError(OpenFailure.suspended)
+                if (exclusiveSend) throw OpenError(OpenFailure.busy)
+                val handles = (state as? State.Open)?.handles ?: throw SessionError()
+                if (runningCalls++ == 0) drained = CompletableDeferred()
+                handles
+            }
+            try {
+                caller.checkWalletAdmission()
+                handles.retrySendDiscards()
+                caller.checkWalletAdmission()
+                block(handles)
+            } finally { synchronized(lock) { if (--runningCalls == 0) drained.complete(Unit) } }
         }
-        try { handles.retrySendDiscards(); block(handles) }
-        finally { synchronized(lock) { if (--runningCalls == 0) drained.complete(Unit) } }
     }
 
     private suspend fun <T> withM6(block: suspend (Handles) -> T): T = withOpen {

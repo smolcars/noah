@@ -11,6 +11,65 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WalletSessionTest {
+    @Test fun cancelledCallerCannotAdmitNewNativeRead() = runBlocking {
+        withLocation { location ->
+            val handles = Handles()
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("public-test-input", false, "test")
+            var nativeStarted = false
+            val work = launch(Dispatchers.IO) {
+                currentCoroutineContext().cancel()
+                runCatching { session.withOpen { nativeStarted = true } }
+            }
+            work.join()
+            session.close()
+            assertFalse("New native body ran after caller cancellation", nativeStarted)
+        }
+    }
+    @Test fun cancelledAdmissionCannotStartDelayedOpener() = runBlocking {
+        for (cancelCaller in listOf(true, false)) withLocation { location ->
+            bark(location)
+            val entered = java.util.concurrent.CountDownLatch(1)
+            val release = java.util.concurrent.CountDownLatch(1)
+            val opened = CompletableDeferred<Unit>()
+            val budget = com.noahwallet.recurring.RecurringBudget()
+            val session = WalletSession("regtest", location,
+                isSuspended = { entered.countDown(); check(release.await(5, java.util.concurrent.TimeUnit.SECONDS)); false },
+                inspect = { WalletDatabase.Properties("regtest", "abcd") },
+                opener = { _, _, _, _, _ -> opened.complete(Unit); throw Boom() })
+            val work = launch(Dispatchers.IO + WalletExecutionBudget(budget)) {
+                runCatching { session.ensureOpen("unused", false, "test") }
+            }
+            assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            if (cancelCaller) work.cancel() else budget.revoke()
+            release.countDown(); work.join()
+            session.closeSettled()
+            assertFalse("Opener ran after cancellation/revocation during admission", opened.isCompleted)
+            val reservation = session.reserve(); session.release(reservation)
+        }
+    }
+
+    @Test fun revokedAdmissionCannotStartNativeBodyAfterCleanup() = runBlocking {
+        for (cancelCaller in listOf(true, false)) withLocation { location ->
+            val entered = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            val handles = Handles().apply { beforeRetry = { entered.complete(Unit); release.await() } }
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("public-test-input", false, "test")
+            val budget = com.noahwallet.recurring.RecurringBudget()
+            var nativeStarted = false
+            val work = launch(Dispatchers.IO + WalletExecutionBudget(budget)) {
+                runCatching { session.withOpen { nativeStarted = true } }
+            }
+            entered.await()
+            if (cancelCaller) work.cancel() else budget.revoke()
+            release.complete(Unit); work.join()
+            session.close()
+            val reservation = session.reserve(); session.release(reservation)
+            assertFalse("New body ran after cancellation/revocation during cleanup", nativeStarted)
+        }
+    }
+
     @Test fun aReusedSessionCannotAuthorizeMigrationOfAnotherCredential() = runBlocking {
         withLocation { location ->
             val handles = Handles()
@@ -61,7 +120,8 @@ class WalletSessionTest {
     private class Handles : WalletSession.Handles {
         override val send = com.noahwallet.send.FakeSendWallet()
         var preparations: com.noahwallet.send.SendPreparations? = null
-        override suspend fun retrySendDiscards() { preparations?.retryDiscards() }
+        var beforeRetry: suspend () -> Unit = {}
+        override suspend fun retrySendDiscards() { beforeRetry(); preparations?.retryDiscards() }
         var sendReviewsDiscarded = false
         override suspend fun discardSendReviews() { preparations?.discardAll(); sendReviewsDiscarded = true }
         val subscribed = CompletableDeferred<Unit>()
