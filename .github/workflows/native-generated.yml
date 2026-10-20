@@ -1,0 +1,83 @@
+name: Native API drift
+
+on:
+  pull_request:
+    paths:
+      - "apps/**"
+      - "api/**"
+      - "server/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "justfile"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/native-generated.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NIX_CONFIG: |
+    post-build-hook =
+    extra-substituters =
+    substituters = https://cache.nixos.org/
+
+jobs:
+  server-contract:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev protobuf-compiler
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
+
+      # These exports are offline tests; no Postgres, Redis or wallet stack is needed.
+      - name: Regenerate server contract and notification fixtures
+        run: UPDATE_OPENAPI=1 cargo test -p server --bin server openapi::export
+
+      - name: Check server contract drift
+        run: |
+          git diff --exit-code -- api/openapi.json apps/fixtures/server-notification-data.json
+          test -z "$(git ls-files --others --exclude-standard -- api/openapi.json apps/fixtures/server-notification-data.json)"
+
+  native-clients:
+    needs: server-contract
+    runs-on: blacksmith-6vcpu-macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check runner default Swift
+        run: |
+          echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
+          swift --version
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Restore Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-native-api-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-native-api-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Cache Swift generator
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: apps/ios/Tools/OpenAPIGenerator/.build
+          key: native-api-swift-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/ios/Tools/OpenAPIGenerator/Package.*') }}
+
+      - name: Regenerate native clients
+        run: nix develop .#android-ci --command just generate-api-ios generate-api-android
+
+      - name: Check native client drift
+        run: |
+          git diff --exit-code -- apps/ios/Noah/API/Generated apps/android/app/src/main/java/com/noahwallet/api/generated
+          test -z "$(git ls-files --others --exclude-standard -- apps/ios/Noah/API/Generated apps/android/app/src/main/java/com/noahwallet/api/generated)"
