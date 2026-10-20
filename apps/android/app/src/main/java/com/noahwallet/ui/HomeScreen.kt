@@ -45,7 +45,7 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
                 verticalArrangement = Arrangement.spacedBy(28.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Text("Noah", Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
-                    if (!model.isWalletSuspended) TextButton({ map = true }) { Text("Bitcoin Map") }
+                    TextButton({ map = true }) { Text("Bitcoin Map") }
                     TextButton(settings) { Text("Settings") }
                 }
                 // Like RN, a suspended wallet shows only the suspended card.
