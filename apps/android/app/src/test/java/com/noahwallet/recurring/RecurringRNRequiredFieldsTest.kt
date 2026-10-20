@@ -11,7 +11,7 @@ import org.junit.runners.Parameterized
 @RunWith(Parameterized::class)
 class RecurringRNRequiredFieldsTest(private val name: String, private val row: String, private val classification: String) {
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{0}") fun cases() = listOf("recurring-rn-required-fields", "recurring-rn-numeric-types", "recurring-rn-numeric-ranges").flatMap { fixture ->
+        @JvmStatic @Parameterized.Parameters(name = "{0}") fun cases() = listOf("recurring-rn-required-fields", "recurring-rn-numeric-types", "recurring-rn-numeric-ranges", "recurring-rn-duplicate-keys").flatMap { fixture ->
             SharedFixtures.document(fixture).jsonObject.getValue("cases").jsonArray.map { it.jsonObject.let { c -> arrayOf(c.getValue("name").jsonPrimitive.content,
                 c.getValue("rowJSON").jsonPrimitive.content, c.getValue("classification").jsonPrimitive.content) } } }
     }
