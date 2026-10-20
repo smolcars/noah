@@ -76,21 +76,18 @@ import Testing
                 reconcile: reconcile, read: { storage.attempt }, write: { try storage.write($0) }))
     }
 
-    @Test func onchainMaxRequiresOnlyConfirmedAndUnchangedBalance() throws {
-        #expect(throws: SendFailure.pendingOnchain) {
-            try SendMaxValidation.onchain(
-                .init(confirmedSats: 30000, pendingSats: 70000, totalSats: 100000))
+    @Test func onchainMaxCannotReachWalletOrDrain() async throws {
+        let payment = attempt("onchain", source: .onchain, max: true).payment
+        #expect(throws: SendFailure.onchainMaxUnavailable) { try SendMaxValidation.available(payment) }
+        // A closed session would throw notOpen if the submission guard reached the SDK.
+        let session = WalletSession(variant: .regtest)
+        do {
+            _ = try await session.submitSend(payment, quote: quote, snapshot: .init(movementIDs: []))
+            Issue.record("Onchain MAX must never submit")
+        } catch let error as SendNotSubmitted {
+            #expect(error.reason == .onchainMaxUnavailable)
         }
-        #expect(throws: SendFailure.pendingOnchain) {
-            try SendMaxValidation.onchain(
-                .init(confirmedSats: 0, pendingSats: 1208, totalSats: 1208), reviewedTotal: 1208)
-        }
-        #expect(throws: SendFailure.fundsChanged) {
-            try SendMaxValidation.onchain(
-                .init(confirmedSats: 1500, pendingSats: 0, totalSats: 1500), reviewedTotal: 1208)
-        }
-        try SendMaxValidation.onchain(
-            .init(confirmedSats: 1208, pendingSats: 0, totalSats: 1208), reviewedTotal: 1208)
+        try SendMaxValidation.available(attempt("onchain", source: .offchain, max: true).payment)
     }
 
     @Test func offchainMaxRequiresExactReviewedVtxos() throws {
@@ -110,16 +107,16 @@ import Testing
         let subject = SendPaymentController(
             dependencies: .init(
                 prepare: { _, _ in .init(movementIDs: [], bdkTxids: []) },
-                pay: { _, _, _ in throw SendNotSubmitted(reason: .pendingOnchain) },
+                pay: { _, _, _ in throw SendNotSubmitted(reason: .onchainMaxUnavailable) },
                 reconcile: { _ in
                     Issue.record("No SDK submission occurred")
                     return .uncertain
                 },
                 read: { storage.attempt }, write: { try storage.write($0) }))
         subject.submit(attempt("onchain", source: .onchain, max: true).payment, quote: quote)
-        for _ in 0..<100 where subject.state == .submitting { await Task.yield() }
+        try await SendPaymentTests.waitUntil { subject.state != .submitting }
         #expect(subject.state == .failed)
-        #expect(subject.message == "Wait for pending onchain funds to confirm.")
+        #expect(subject.message == SendFailure.onchainMaxUnavailable.errorDescription)
         storage.attempt = try roundTrip(#require(storage.attempt))
         let restarted = controller(storage) { _ in .uncertain }
         #expect(restarted.state == .failed)

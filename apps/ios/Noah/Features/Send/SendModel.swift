@@ -83,7 +83,7 @@ import Observation
     var sources: [SendSource] {
         SendSource.allCases.filter {
             let balance = $0 == .offchain ? arkBalance : onchainBalance
-            return isMax ? ($0 == .onchain ? onchainTotal : balance) > 0 : sats > 0 && balance >= sats
+            return isMax ? $0 == .offchain && balance > 0 : sats > 0 && balance >= sats
         }
     }
     func load() async {
@@ -213,12 +213,12 @@ import Observation
             }
             progress.railConfirmed = true
         case .source:
-            guard let source, sources.contains(source) else {
-                error = "Choose a balance with sufficient funds."
+            if isMax, source == .onchain {
+                error = SendFailure.onchainMaxUnavailable.errorDescription
                 return
             }
-            if isMax, source == .onchain, onchainTotal != onchainBalance {
-                error = SendFailure.pendingOnchain.errorDescription
+            guard let source, sources.contains(source) else {
+                error = "Choose a balance with sufficient funds."
                 return
             }
             progress.sourceConfirmed = true
@@ -270,6 +270,7 @@ import Observation
                     destination: destination, comment: comment, amount: amount,
                     fiatCurrency: useFiat ? fiatCurrency : nil)
             }
+            try SendMaxValidation.available(payment)
             let reviewed = try await quotePayment(payment)
             guard revision == recipientRevision else { return }
             quote = reviewed

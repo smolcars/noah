@@ -81,15 +81,15 @@ import Testing
         #expect(model.route == nil)
     }
 
-    @Test func pendingOnlyOnchainMaxExplainsWhyItIsRefused() async {
+    @Test func onchainMaxExplainsWhyItIsUnavailable() async {
         let model = SendModel(controller: freshController())
         model.onchainBalance = 0
         model.onchainTotal = 24900
         model.maxSend()
         model.source = .onchain
-        #expect(model.sources.contains(.onchain))
+        #expect(!model.sources.contains(.onchain))
         await model.continueStage()
-        #expect(model.error == "Wait for pending onchain funds to confirm.")
+        #expect(model.error == SendFailure.onchainMaxUnavailable.errorDescription)
         #expect(!model.progress.sourceConfirmed && !model.showReview)
     }
 }

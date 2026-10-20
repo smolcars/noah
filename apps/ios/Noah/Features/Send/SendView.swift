@@ -81,9 +81,9 @@ struct SendView: View {
                             selected: model.source == source, enabled: model.sources.contains(source)
                         ) { model.source = source }
                     }
-                    if model.onchainTotal != model.onchainBalance {
-                        Text("Wait for pending onchain funds to confirm before using onchain MAX.")
-                            .font(NoahFont.callout)
+                    if model.isMax {
+                        Text(SendFailure.onchainMaxUnavailable.errorDescription!)
+                            .font(NoahFont.callout).accessibilityIdentifier("send-onchain-max-unavailable")
                     }
                 }
                 if let error = model.error {

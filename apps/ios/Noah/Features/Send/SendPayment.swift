@@ -43,10 +43,10 @@ struct SendSnapshot: Codable, Sendable {
     var bdkTxids: Set<String>?
 }
 enum SendFailure: LocalizedError {
-    case invalid, insufficient, expired, ownAddress, feeChanged, unresolved, pendingOnchain, fundsChanged
+    case invalid, insufficient, expired, ownAddress, feeChanged, unresolved, onchainMaxUnavailable, fundsChanged
     var errorDescription: String? {
         switch self {
-        case .pendingOnchain: "Wait for pending onchain funds to confirm."
+        case .onchainMaxUnavailable: "Sending your entire onchain balance isn’t available yet. Enter an amount instead."
         case .fundsChanged: "The available funds changed. Review the payment again."
         case .invalid: "Enter a valid destination and a whole-satoshi amount greater than zero."
         case .insufficient: "The selected balance cannot cover this payment and its fee."

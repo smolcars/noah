@@ -170,7 +170,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Submission lock, persisted attempt, cancellation-shielded wallet calls, sync/history reconciliation without automatic retry — iOS
 - [x] Live Ark, BOLT11, Ark-to-onchain, onchain MAX, forced FFI failure/relaunch verification — iOS; evidence and limits in `apps/ios/SendTests/README.md`
 - [x] Send safety: recipient-bound routes, reviewed MAX funds/VTXOs, rail-specific durable reconciliation, explicit uncertain override, submitted/confirmed status — iOS; regression and live evidence in `apps/ios/SendTests/README.md`
-- [ ] Replace conservative MAX checks with prepared transactions (FFI 14); expose broadcast/chain status for offboards (FFI 15); replace weak history correlation with durable operation IDs (FFI 16)
+- [x] Disable onchain-wallet MAX at UI/review/submission boundaries; explain entering an amount; offchain MAX retains reviewed VTXO IDs — iOS
+- [ ] Restore onchain MAX only with prepared sends / coin control (FFI 14); expose broadcast/chain status for offboards (FFI 15); replace weak history correlation with durable operation IDs (FFI 16)
 - [ ] External LNURL/BOLT12 provider acceptance and camera hardware verification — iOS
 
 ## M4 — History

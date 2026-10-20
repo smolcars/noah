@@ -6,6 +6,7 @@ extension WalletSession {
         try await withOpenWallet { handles in try await Self.quote(payment, handles: handles) }
     }
     private static func quote(_ payment: SendPayment, handles: Handles) async throws -> SendQuote {
+        try SendMaxValidation.available(payment)
         guard payment.amount > 0 || payment.max else { throw SendFailure.invalid }
         guard payment.amount <= 2_100_000_000_000_000 else { throw SendFailure.invalid }
         let parsed = SendDestination.parse(payment.destination)
@@ -32,11 +33,10 @@ extension WalletSession {
             ? try await handles.onchain.balance().confirmedSats : try await handles.wallet.balance().spendableSats
         let quote: SendQuote
         if payment.method == "onchain", payment.source == .onchain {
-            if payment.max { try SendMaxValidation.onchain(try await handles.onchain.balance()) }
             let rate = SendFlow.sdkFeeRate(satsPerKwu: try await handles.onchain.feeRates().regularSatPerKwu)
             let (fee, overflow) = rate.multipliedReportingOverflow(by: 208)  // RN's 2-input, 2-output estimate.
             guard !overflow, fee < available else { throw SendFailure.insufficient }
-            let amount = payment.max ? available - fee : payment.amount
+            let amount = payment.amount
             guard amount <= available - fee else { throw SendFailure.insufficient }
             quote = SendQuote(amount: amount, fee: fee, total: amount + fee, feeRate: rate, approximate: true)
         } else {
@@ -73,7 +73,9 @@ extension WalletSession {
         }
     }
     func submitSend(_ payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot) async throws -> SendReceipt {
-        try await withOpenWallet { handles in
+        do { try SendMaxValidation.available(payment) }
+        catch let error as SendFailure { throw SendNotSubmitted(reason: error) }
+        return try await withOpenWallet { handles in
             var receipt = SendReceipt(amount: quote.amount)
             var lightning: LightningSendStatus?
             switch payment.method {
@@ -97,24 +99,9 @@ extension WalletSession {
                 }
             case "onchain":
                 if payment.source == .onchain {
-                    if payment.max {
-                        do { try SendMaxValidation.onchain(try await handles.onchain.balance(), reviewedTotal: quote.total) }
-                        catch let error as SendFailure { throw SendNotSubmitted(reason: error) }
-                    }
                     receipt.status = .submitted
-                    receipt.amountIsEstimated = payment.max
-                    receipt.txid =
-                        payment.max
-                        ? try await handles.onchain.drain(address: payment.destination, feeRateSatPerVb: quote.feeRate)
-                        : try await handles.onchain.send(
-                            address: payment.destination, amountSats: payment.amount, feeRateSatPerVb: quote.feeRate!)
-                    if payment.max,
-                        let tx = try? await handles.onchain.transactions().first(where: { $0.txid == receipt.txid }),
-                        tx.balanceChangeSats < 0, let fee = tx.onchainFeeSats, tx.balanceChangeSats.magnitude >= fee
-                    {
-                        receipt.amount = tx.balanceChangeSats.magnitude - fee
-                        receipt.amountIsEstimated = false
-                    }
+                    receipt.txid = try await handles.onchain.send(
+                        address: payment.destination, amountSats: payment.amount, feeRateSatPerVb: quote.feeRate!)
                 } else {
                     receipt.status = .submitted
                     if payment.max {
@@ -174,11 +161,10 @@ extension WalletSession {
     }
 }
 
-/// FFI item 14 will replace this conservative MAX gate with a prepared transaction.
+/// BDK drain cannot bind coin selection to a reviewed balance (FFI handoff item 14).
 enum SendMaxValidation {
-    static func onchain(_ balance: OnchainBalance, reviewedTotal: UInt64? = nil) throws {
-        guard balance.totalSats == balance.confirmedSats else { throw SendFailure.pendingOnchain }
-        if let reviewedTotal, balance.confirmedSats != reviewedTotal { throw SendFailure.fundsChanged }
+    static func available(_ payment: SendPayment) throws {
+        guard !(payment.max && payment.source == .onchain) else { throw SendFailure.onchainMaxUnavailable }
     }
     static func offchain(currentIDs: [String], reviewedIDs: [String]?) throws {
         guard let reviewedIDs, !reviewedIDs.isEmpty, Set(currentIDs) == Set(reviewedIDs) else {
