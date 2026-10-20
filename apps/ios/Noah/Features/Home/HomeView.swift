@@ -33,6 +33,8 @@ struct HomeView: View {
                             .padding(.top, 24)
                     }
 
+                    if !model.isWalletSuspended { AutoBoardingService() }
+
                     // Like RN, a suspended wallet shows only the suspended card.
                     if !model.isWalletSuspended && model.server.state.isEmailVerified != true
                         && model.server.state.isEmailPromptDismissed != true

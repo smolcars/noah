@@ -51,7 +51,7 @@ struct OnchainJournalTests {
         let journal = OnchainOperationJournal(file: file)
         #expect(try await journal.perform(Self.quote) { "submitted txid" } == "submitted txid")
         let restarted = OnchainOperationJournal(file: file)
-        #expect(try await restarted.load()?.receipt == "submitted txid")
+        #expect(try await restarted.load()?.receipt?.message == "submitted txid")
         try await restarted.acknowledge()
         #expect(try await restarted.load() == nil)
     }

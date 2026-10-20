@@ -31,11 +31,11 @@ struct SettingsView: View {
             }
             Section("Wallet") {
                 row("Show Seed Phrase", "Never share your seed phrase with anyone. It is important to keep it safe and secure.") { MnemonicView() }
-                comingSoon("Show VTXOs", "VTXOs are to Ark like UTXOs are to Bitcoin")
-                comingSoon("Emergency Exit", "Recover funds if the Ark server is unavailable.")
+                row("Show VTXOs", "VTXOs are to Ark like UTXOs are to Bitcoin") { VtxosView() }
+                row("Emergency Exit", "Recover funds if the Ark server is unavailable.") { UnilateralExitView() }
                 comingSoon("Recurring Payments", "Schedule automatic weekly or monthly payments, and pause or cancel them.")
                 row("Backup & Restore", "Automatically or manually backup your wallet after encrypting it.") { BackupSettingsView() }
-                comingSoon("Board to Ark", "Manually move onchain bitcoin into Ark.")
+                row("Board to Ark", "Manually move onchain bitcoin into Ark.") { BoardArkView() }
                 Toggle(isOn: Binding(get: { transaction.isAutoBoardingEnabled }, set: setAutoBoard)) {
                     SettingsLabel(title: "Auto-Board to Ark", detail: threshold.map {
                         "Ask to board to Ark when onchain balance can cover \(max($0, 20_000)) sats, estimated fees, and a 5,000 sats reserve."
@@ -117,7 +117,7 @@ struct SettingsView: View {
             guard taps > 0 else { return }
             do { try await Task.sleep(for: .seconds(2)); taps = 0 } catch {}
         }
-        .task { threshold = try? await model.session.withOpenWallet { try await $0.wallet.arkInfo()?.minBoardAmountSats } }
+        .task { threshold = try? await model.session.boardingMinimum() }
     }
 
     private func row<Content: View>(_ title: String, _ detail: String, @ViewBuilder destination: () -> Content) -> some View {

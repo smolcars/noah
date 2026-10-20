@@ -117,3 +117,22 @@ enum OnchainFailure: LocalizedError {
         }
     }
 }
+
+struct OnchainReceipt: Codable, Sendable, ExpressibleByStringLiteral {
+    var message: String
+    var txid: String?
+    init(message: String, txid: String? = nil) {
+        self.message = message
+        self.txid = txid
+    }
+    init(stringLiteral value: String) { message = value }
+    init(from decoder: Decoder) throws {
+        if let message = try? decoder.singleValueContainer().decode(String.self) {
+            self.message = message
+        } else {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            message = try values.decode(String.self, forKey: .message)
+            txid = try values.decodeIfPresent(String.self, forKey: .txid)
+        }
+    }
+}

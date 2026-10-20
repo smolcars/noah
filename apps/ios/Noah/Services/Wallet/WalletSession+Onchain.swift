@@ -192,12 +192,14 @@ extension WalletSession {
                 switch quote.action {
                 case .board:
                     let board = try await handles.wallet.boardAmount(amountSats: quote.amount)
-                    return
-                        "Boarding submitted. Funding transaction: \(board.txid). Funds become spendable after the board completes."
+                    return OnchainReceipt(
+                        message: "Boarding submitted. Funds become spendable after the board completes.",
+                        txid: board.txid)
                 case .refresh:
                     let round = try await handles.wallet.refreshVtxosDelegated(vtxoIds: quote.ids)
-                    return round.map { "Refresh submitted to delegated round \($0.id)." }
-                        ?? "No refresh round was needed."
+                    return OnchainReceipt(
+                        message: round.map { "Refresh submitted to delegated round \($0.id)." }
+                            ?? "No refresh round was needed.")
                 case .startExit, .progress:
                     throw OnchainFailure.exitProgressUnavailable
                 case .claim:
@@ -206,7 +208,7 @@ extension WalletSession {
                     guard claim.feeSats == quote.fee else { throw OnchainFailure.claimFeeChanged }
                     let tx = try extractTxFromPsbt(psbtBase64: claim.psbtBase64)
                     let txid = try await handles.wallet.broadcastTx(txHex: tx)
-                    return "Claim submitted: \(txid). Refresh to check confirmation."
+                    return OnchainReceipt(message: "Claim submitted. Refresh to check confirmation.", txid: txid)
                 case .cancel:
                     let result = try await handles.wallet.cancelExit(vtxoId: quote.ids[0])
                     guard result.canceled else { throw OnchainFailure.cancellationRefused }

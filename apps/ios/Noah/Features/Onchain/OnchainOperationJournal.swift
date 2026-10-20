@@ -4,7 +4,7 @@ import Foundation
 actor OnchainOperationJournal {
     struct Attempt: Codable, Sendable {
         var quote: OnchainQuote
-        var receipt: String?
+        var receipt: OnchainReceipt?
     }
     static let shared = OnchainOperationJournal(
         file: WalletDataLocation(variant: .current).directory.appending(
@@ -25,7 +25,7 @@ actor OnchainOperationJournal {
         values.isExcludedFromBackup = true
         try url.setResourceValues(values)
     }
-    func perform(_ quote: OnchainQuote, action: @Sendable () async throws -> String) async throws
+    func perform(_ quote: OnchainQuote, action: @Sendable () async throws -> OnchainReceipt) async throws
         -> String
     {
         guard !running, try load() == nil else { throw OnchainFailure.busy }
@@ -35,7 +35,7 @@ actor OnchainOperationJournal {
         do {
             let receipt = try await action()
             try save(.init(quote: quote, receipt: receipt))
-            return receipt
+            return receipt.message
         } catch OnchainFailure.claimFeeChanged {
             // drainExits only constructs a PSBT; this path is known not to broadcast.
             try FileManager.default.removeItem(at: file)

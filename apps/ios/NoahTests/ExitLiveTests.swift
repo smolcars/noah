@@ -73,6 +73,13 @@ struct ExitLiveTests {
                 "exitsBefore": "\(before.exits.count)", "exitsAfter": "\(after.exits.count)",
             ]).write(
                 to: URL.documentsDirectory.appending(path: "m6-live-estimate.json"), options: .atomic)
+            let fees = try await session.withOpenWallet { handles in
+                try await handles.onchain.transactions().map {
+                    ["txid": $0.txid, "fee": $0.onchainFeeSats.map(String.init) ?? "unknown"]
+                }
+            }
+            try JSONEncoder().encode(fees).write(
+                to: URL.documentsDirectory.appending(path: "m6-live-onchain-fees.json"), options: .atomic)
         } else {
             throw OnchainFailure.invalid
         }
