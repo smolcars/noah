@@ -12,7 +12,7 @@ internal object EndpointLogPrivacy {
     // Admit only the SDK error type/status, never provider-controlled response text.
     private val responseStatus = Regex("""HttpResponse(?:\s*\{\s*status:\s*|\()([0-9]{3})\b""")
     // Extract before parsing: log punctuation is not part of a URL authority.
-    private val authority = Regex("""(?i)^https?://(?:\[[^\]\s]+\](?::[^/\\?#\s<>"'()\[\],]*)?|[^/\\?#\s<>"'()\[\],]+)""")
+    private val authority = Regex("""(?i)^https?://(?:\[[^\]\s]+\](?::[^/\\?#\s<>"'()\[\],;{}!$&*+=^`|]*)?|[^/\\?#\s<>"'()\[\],;{}!$&*+=^`|]+)""")
     private fun origin(value: String): String? {
         val token = authority.find(value)?.value?.trimEnd('.') ?: return null
         // HttpUrl canonicalizes IDNA, IPv6, case and default ports without DNS/network IO.

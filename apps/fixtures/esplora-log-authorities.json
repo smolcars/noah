@@ -533,5 +533,145 @@
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://esplora.signet.2nd.dev/blocks/tip/height",
     "redacted": false
+  },
+  {
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "https://b%C3%BCcher.example)",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "https://b\\u00fccher.example)",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "https://b&#252;cher.example)",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "https://b&#xFC;cher.example)",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "https://bücher.example;",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "https://bücher.example}",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "https://bücher.example!",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "HTTPS://BÜCHER.EXAMPLE.:443;",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "HTTPS://BÜCHER.EXAMPLE.:443}",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "HTTPS://BÜCHER.EXAMPLE.:443!",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "https://xn--bcher-kva.example;",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "https://xn--bcher-kva.example}",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "https://xn--bcher-kva.example!",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://[::1]:8443/api",
+    "input": "https://[0:0::1]:8443;",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://[::1]:8443/api",
+    "input": "https://[0:0::1]:8443}",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://[::1]:8443/api",
+    "input": "https://[0:0::1]:8443!",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://[::1]:8443/api",
+    "input": "https://[0:0:0:0:0:0:0:1]:8443;",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://[::1]:8443/api",
+    "input": "https://[0:0:0:0:0:0:0:1]:8443}",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://[::1]:8443/api",
+    "input": "https://[0:0:0:0:0:0:0:1]:8443!",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://[::1]:8443/api",
+    "input": "https://[::1]:8443/other;",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://[::1]:8443/api",
+    "input": "https://[::1]:8443/other}",
+    "redacted": true
+  },
+  {
+    "endpoint": "https://[::1]:8443/api",
+    "input": "https://[::1]:8443/other!",
+    "redacted": true
+  },
+  {
+    "endpoint": "http://[2001:db8::abcd]/api",
+    "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80;",
+    "redacted": true
+  },
+  {
+    "endpoint": "http://[2001:db8::abcd]/api",
+    "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80}",
+    "redacted": true
+  },
+  {
+    "endpoint": "http://[2001:db8::abcd]/api",
+    "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80!",
+    "redacted": true
+  },
+  {
+    "endpoint": "http://[2001:db8::abcd]/api",
+    "input": "http://[2001:db8::ABCD];",
+    "redacted": true
+  },
+  {
+    "endpoint": "http://[2001:db8::abcd]/api",
+    "input": "http://[2001:db8::ABCD]}",
+    "redacted": true
+  },
+  {
+    "endpoint": "http://[2001:db8::abcd]/api",
+    "input": "http://[2001:db8::ABCD]!",
+    "redacted": true
   }
 ]
