@@ -33,7 +33,7 @@ struct SettingsView: View {
                 row("Show Seed Phrase", "Never share your seed phrase with anyone. It is important to keep it safe and secure.") { MnemonicView() }
                 row("Show VTXOs", "VTXOs are to Ark like UTXOs are to Bitcoin") { VtxosView() }
                 row("Emergency Exit", "Recover funds if the Ark server is unavailable.") { UnilateralExitView() }
-                comingSoon("Recurring Payments", "Schedule automatic weekly or monthly payments, and pause or cancel them.")
+                row("Recurring Payments", "Schedule automatic weekly or monthly payments, and pause or cancel them.") { RecurringPaymentsView() }
                 row("Backup & Restore", "Automatically or manually backup your wallet after encrypting it.") { BackupSettingsView() }
                 row("Board to Ark", "Manually move onchain bitcoin into Ark.") { BoardArkView() }
                 Toggle(isOn: Binding(get: { transaction.isAutoBoardingEnabled }, set: setAutoBoard)) {

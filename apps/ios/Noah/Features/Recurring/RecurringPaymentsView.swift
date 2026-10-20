@@ -1,0 +1,93 @@
+import SwiftUI
+
+struct RecurringPaymentsView: View {
+    @State private var executor = RecurringExecutor.shared
+    @State private var cancelling: RecurringPayment?
+    @State private var overriding: RecurringPayment?
+    @State private var actionError: String?
+    var body: some View {
+        List {
+            Section {
+                Text("Automatic payments from your Ark balance. Keep notifications enabled so payments can go through while the app is closed.")
+                    .foregroundStyle(NoahColor.mutedForeground)
+                NavigationLink("New recurring payment") { RecurringPaymentEditorView(executor: executor) }
+                    .accessibilityIdentifier("recurring-new-button")
+            }
+            if executor.schedules.isEmpty {
+                Section {
+                    Text("No recurring payments yet. Schedule rent, subscriptions, allowances or donations to an Ark address, Lightning address or BOLT12 offer.")
+                        .foregroundStyle(NoahColor.mutedForeground)
+                }
+            }
+            ForEach(executor.schedules) { schedule in
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(schedule.label).font(NoahFont.headline)
+                            Spacer()
+                            Text(status(schedule)).font(NoahFont.footnote)
+                                .foregroundStyle(schedule.status == "needs_attention" ? NoahColor.destructive : NoahColor.mutedForeground)
+                        }
+                        Text(schedule.destination).font(NoahFont.footnote).textSelection(.enabled)
+                        Text("\(schedule.amountSat.formatted()) sats").font(NoahFont.title)
+                        Text("\(schedule.interval.description) · \(schedule.occurrencesPaid) paid" + (schedule.maxOccurrences.map { " of \($0)" } ?? ""))
+                            .foregroundStyle(NoahColor.mutedForeground)
+                        if schedule.status == "active", let next = schedule.nextRunAt {
+                            Text("Next payment: \(Date(timeIntervalSince1970: next / 1000).formatted())")
+                        }
+                        if let end = schedule.endAt { Text("Ends: \(Date(timeIntervalSince1970: end / 1000).formatted(date: .abbreviated, time: .omitted))") }
+                        if let run = schedule.runs.first {
+                            Text("Last attempt: \(Date(timeIntervalSince1970: run.attemptedAt / 1000).formatted()) (\(run.status == "success" ? "Successful" : run.status == "skipped" ? "Skipped" : "Failed"))")
+                                .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+                        }
+                        if let error = schedule.lastError { Text(error).font(NoahFont.footnote).foregroundStyle(NoahColor.destructive) }
+                    }.accessibilityIdentifier("recurring-payment-\(schedule.id)")
+                    if schedule.status == "needs_attention" || schedule.inFlight != nil {
+                        Button("Check payment status") { Task { await executor.checkStatus(schedule.id) } }
+                        Button("Resume after checking history…", role: .destructive) { overriding = schedule }.disabled(executor.running)
+                    } else if schedule.status != "completed" {
+                        NavigationLink("Edit payment") { RecurringPaymentEditorView(executor: executor, schedule: schedule) }
+                        Button(schedule.status == "active" ? "Pause" : "Resume") {
+                            run { schedule.status == "active" ? try await executor.pause(schedule.id) : try await executor.resume(schedule.id) }
+                        }.accessibilityIdentifier("recurring-toggle-\(schedule.id)")
+                    }
+                    Button(schedule.status == "completed" ? "Remove" : "Cancel", role: .destructive) { cancelling = schedule }
+                        .accessibilityIdentifier("recurring-cancel-\(schedule.id)")
+                }
+            }
+            if executor.schedules.contains(where: { $0.status == "active" }) {
+                Section {
+                    Button { Task { await executor.execute(manual: true) } } label: {
+                        HStack { Text("Run due payments now"); if executor.running { Spacer(); ProgressView() } }
+                    }.disabled(executor.running).accessibilityIdentifier("recurring-run-now-button")
+                }
+            }
+            if executor.syncPending { Text("Wake-up schedule hasn't synced yet. Noah will retry when opened.").font(NoahFont.footnote) }
+            if let error = actionError ?? executor.error { Text(error).foregroundStyle(NoahColor.destructive) }
+        }
+        .settingsStyle("Recurring payments")
+        .task { executor.reload(); await executor.execute() }
+        .alert("Cancel recurring payment?", isPresented: Binding(get: { cancelling != nil }, set: { if !$0 { cancelling = nil } })) {
+            Button("Keep payment", role: .cancel) { cancelling = nil }
+            Button("Cancel payment", role: .destructive) {
+                if let schedule = cancelling { run { try await executor.cancel(schedule.id) } }
+                cancelling = nil
+            }
+        } message: { Text("No more payments will be sent. Payments already sent can't be undone. An in-progress payment may still complete.") }
+        .alert(SendOverrideAudit.titleText, isPresented: Binding(get: { overriding != nil }, set: { if !$0 { overriding = nil } })) {
+            Button("Keep stopped", role: .cancel) { overriding = nil }
+            Button(RecurringExecutor.overrideConfirmation, role: .destructive) {
+                if let schedule = overriding { run { try await executor.overrideAndResume(schedule.id, confirmed: true) } }
+                overriding = nil
+            }
+        } message: { Text(RecurringExecutor.overrideWarning) }
+    }
+    private func status(_ schedule: RecurringPayment) -> String {
+        if schedule.inFlight != nil && executor.running { return "Sending" }
+        return ["active": "Active", "paused": "Paused", "needs_attention": "Needs attention", "completed": "Completed"][schedule.status] ?? "Needs attention"
+    }
+    private func run(_ work: @escaping @MainActor () async throws -> Void) {
+        actionError = nil
+        Task { do { try await work() } catch { actionError = error.localizedDescription } }
+    }
+}
