@@ -1,4 +1,5 @@
-// Supply the RN project's DSN through an untracked override or CI build setting.
+// Same public DSN the RN app ships in client/App.tsx (DSNs are embedded in every app build).
+// An untracked Sentry.local.xcconfig or CI build setting can still override it.
 // In xcconfig files spell the URL https:/$()/… so // is not treated as a comment.
-NOAH_SENTRY_DSN =
+NOAH_SENTRY_DSN = https:/$()/ac229acf494dda7d1d84eebcc14f7769@o4509731937648640.ingest.us.sentry.io/4509731938435072
 #include? "Sentry.local.xcconfig"
