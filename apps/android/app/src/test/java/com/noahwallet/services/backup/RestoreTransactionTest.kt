@@ -43,6 +43,39 @@ class RestoreTransactionTest {
     private inline fun world(body: World.() -> Unit) {
         val w = World(); try { w.body() } finally { w.root.deleteRecursively() }
     }
+    @Test fun committedRestoreRepairsPartialAuthorityAsStopped() = runBlocking {
+        for (damage in listOf("markerOnly", "stateOnly", "corrupt", "mismatched", "stopped")) world {
+            begin(); tx.markCommitting()
+            fun authority() = com.noahwallet.recurring.RecurringAutomationAuthority(location.directory) { file, bytes ->
+                com.noahwallet.recurring.durableRecurringWrite(file, bytes) {}
+            }
+            authority().stop()
+            when (damage) {
+                "markerOnly" -> authority().file.delete()
+                "stateOnly" -> authority().marker.delete()
+                "corrupt" -> authority().file.writeText("{")
+                "mismatched" -> authority().marker.writeText("{\"version\":1,\"instance\":\"${java.util.UUID.randomUUID()}\"}")
+            }
+            assertFalse(authority().allowed())
+            val realStop = RestoreTransaction(location, {}, { from, to -> Files.move(from.toPath(), to.toPath(), StandardCopyOption.REPLACE_EXISTING); Unit })
+            assertEquals(RestoreTransaction.Recovery.completed, realStop.recover(FakeSeed("new seed")))
+            settled(); assertEquals("new", read()); assertTrue(tx.settingsPending)
+            assertFalse(authority().allowed())
+            authority().suspension(false); assertFalse(authority().allowed())
+        }
+    }
+    @Test fun authorityInitializationPersistsStateBeforeMarker() = world {
+        write(location.directory, "wallet")
+        val authority = com.noahwallet.recurring.RecurringAutomationAuthority(location.directory) { file, bytes ->
+            com.noahwallet.recurring.durableRecurringWrite(file, bytes, {
+                val state = File(location.directory, ".noah-recurring-automation.json")
+                if (File("${state.path}.initialized").exists()) {
+                    assertTrue(state.exists()); assertTrue(state.readText().contains("generation"))
+                }
+            })
+        }
+        authority.generation()
+    }
     @Test fun swapKeepsPreviousAndJournalContainsOnlySeedTag() = world {
         begin(); assertEquals("new", read()); assertEquals("old", read(tx.previous))
         assertEquals(RestoreTransaction.Phase.installing, tx.readJournal().phase)

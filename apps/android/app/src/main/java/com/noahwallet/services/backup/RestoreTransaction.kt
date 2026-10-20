@@ -13,13 +13,15 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /** Journal is durable before renames; seed write is the sole commit point; journal is removed last. */
 class RestoreTransaction(
     private val location: WalletDataLocation,
     private val sync: (File) -> Unit = ::syncFileOrDirectory,
     private val rename: (File, File) -> Unit = ::renameFile,
-    private val stopAutomation: (File) -> Unit = { com.noahwallet.recurring.RecurringAutomationAuthority(it).stop() },
+    private val stopAutomation: ((File) -> Unit)? = null,
 ) {
     enum class Phase { installing, committing }
     @Serializable data class Journal(val version: Int = 1, val id: String, val phase: Phase,
@@ -62,7 +64,7 @@ class RestoreTransaction(
     }
     fun finish() {
         settingsCompletion.writeBytes(byteArrayOf()); sync(settingsCompletion); sync(directory)
-        stopAutomation(datadir)
+        if (stopAutomation != null) stopAutomation.invoke(datadir) else establishStoppedAutomation()
         val marker = File(datadir, markerName)
         if (marker.exists()) { remove(marker); sync(datadir) }
         remove(previous); removeScratch(); sync(directory); removeJournal()
@@ -105,11 +107,24 @@ class RestoreTransaction(
     }
     private fun write(journal: Journal) {
         ensureWorkspace()
-        val temporary = File(directory, ".journal-${UUID.randomUUID()}")
+        writeDurably(Json.encodeToString(journal), journalFile)
+    }
+    private fun writeDurably(raw: String, file: File) {
+        val temporary = File(file.parentFile, ".restore-${UUID.randomUUID()}")
         try {
-            temporary.writeText(Json.encodeToString(journal)); sync(temporary)
-            rename(temporary, journalFile); sync(directory)
+            temporary.writeText(raw); sync(temporary)
+            rename(temporary, file); sync(file.parentFile!!)
         } finally { temporary.delete() }
+    }
+    /** Only committed restore settlement may repair authority, always stopped, state before marker. */
+    private fun establishStoppedAutomation() {
+        val authority = com.noahwallet.recurring.RecurringAutomationAuthority(datadir)
+        val instance = UUID.randomUUID().toString()
+        val state = com.noahwallet.recurring.RecurringAutomationAuthority.State(
+            instance = instance, generation = UUID.randomUUID().toString(), stopped = true)
+        writeDurably(com.noahwallet.recurring.RecurringStore.json.encodeToString(state), authority.file)
+        writeDurably(buildJsonObject { put("version", 1); put("instance", instance) }.toString(), authority.marker)
+        com.noahwallet.recurring.RecurringAutomationAuthority.deleted(datadir)
     }
     private fun removeJournal() { remove(journalFile); sync(directory) }
     private fun syncBothSides() { sync(datadir.parentFile!!); sync(directory) }

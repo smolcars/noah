@@ -13,6 +13,9 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SettingsFailureTest {
+    private val restoreSteps = listOf("journal", "previousMoved", "installed", "committing", "seed", "markerRemoved", "previousRemoved", "journalRemoved", "flags", "markerOnly", "stateOnly", "corrupt") +
+        (1..6).map { "initializing$it" } + (1..9).map { "settling$it" }
+
     private fun isolatedServices(context: android.content.Context): AppServices =
         AppServices::class.java.getDeclaredConstructor(android.content.Context::class.java).let {
             it.isAccessible = true; it.newInstance(context)
@@ -50,11 +53,11 @@ class SettingsFailureTest {
         val arguments = InstrumentationRegistry.getArguments()
         val boundary = arguments.getString("restoreStep")
         val mode = arguments.getString("restoreMode")
-        for (step in boundary?.let(::listOf) ?: listOf("journal", "previousMoved", "installed", "committing", "seed", "markerRemoved", "previousRemoved", "journalRemoved", "flags")) {
+        for (step in boundary?.let(::listOf) ?: restoreSteps) {
             val root = File(app.cacheDir, if (boundary != null) "restore-settings-process" else "restore-settings-${UUID.randomUUID()}")
             val world = RestoreWorld(app, root)
             if (mode == "stage") {
-                world.stage(step)
+                world.stage(step, mode)
                 File(root, "ready").writeText(step)
                 awaitCancellation() // The host force-stops this process with settings still failing.
             }
@@ -75,8 +78,16 @@ class SettingsFailureTest {
         val tx = com.noahwallet.services.backup.RestoreTransaction(location)
         val file = File(preferences, "settings.native.json")
         val phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
-        fun committed(step: String) = step in listOf("seed", "markerRemoved", "previousRemoved", "journalRemoved", "flags")
-        suspend fun stage(step: String) {
+        fun committed(step: String) = step !in listOf("journal", "previousMoved", "installed", "committing")
+        fun checkpoint(step: String, mode: String?, count: Int, boundary: Int) {
+            if (count != boundary) return
+            if (mode == "stage") {
+                File(root, "ready").writeText(step)
+                while (true) Thread.sleep(1000) // Host kills the process at the actual durable-write boundary.
+            }
+            error("Simulated process death")
+        }
+        suspend fun stage(step: String, mode: String? = null) {
             check(root.mkdirs()); check(preferences.mkdir())
             SettingsStorage(context).beginOnboarding()
             location.directory.mkdir(); location.database.writeText("old")
@@ -95,12 +106,46 @@ class SettingsFailureTest {
             if (step == "journalRemoved" || step == "flags") tx.finish()
             if (step != "flags") { file.writeText("damaged"); Os.chmod(file.path, 0) }
             Os.chmod(preferences.path, 320)
+            if (step in listOf("markerOnly", "stateOnly", "corrupt")) {
+                val authority = RecurringAutomationAuthority(location.directory)
+                authority.stop()
+                when (step) {
+                    "markerOnly" -> check(authority.file.delete())
+                    "stateOnly" -> check(authority.marker.delete())
+                    else -> authority.file.writeText("{")
+                }
+            }
+            if (step.startsWith("initializing")) {
+                var count = 0
+                val boundary = step.removePrefix("initializing").toInt()
+                runCatching {
+                    RecurringAutomationAuthority(location.directory) { file, bytes ->
+                        durableRecurringWrite(file, bytes, {
+                            syncDirectory(it); checkpoint(step, mode, ++count, boundary)
+                        }, {
+                            it.sync(); checkpoint(step, mode, ++count, boundary)
+                        })
+                    }.stop()
+                }
+                assertEquals(boundary, count)
+            }
+            if (step.startsWith("settling")) {
+                var count = 0
+                val boundary = step.removePrefix("settling").toInt()
+                runCatching {
+                    com.noahwallet.services.backup.RestoreTransaction(location, sync = {
+                        com.noahwallet.services.backup.RestoreTransaction.syncFileOrDirectory(it)
+                        checkpoint(step, mode, ++count, boundary)
+                    }).finish()
+                }
+                assertEquals(boundary, count)
+            }
         }
         suspend fun recover(step: String) {
             val settings = SettingsStorage(context)
             val services = isolatedServices(context)
             val recovery = services.recoverRestore()
-            val expected = if (step in listOf("journalRemoved", "flags")) com.noahwallet.services.backup.RestoreTransaction.Recovery.nothingPending
+            val expected = if (step in listOf("journalRemoved", "flags", "settling9")) com.noahwallet.services.backup.RestoreTransaction.Recovery.nothingPending
                 else if (committed(step)) com.noahwallet.services.backup.RestoreTransaction.Recovery.completed
                 else com.noahwallet.services.backup.RestoreTransaction.Recovery.rolledBack
             assertEquals(step, expected, recovery)
@@ -110,7 +155,10 @@ class SettingsFailureTest {
             if (committed(step)) {
                 assertEquals(step, true, settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isInitialized)
                 assertTrue(tx.settingsPending)
-                assertFalse(RecurringAutomationAuthority(location.directory).allowed())
+                val authority = RecurringAutomationAuthority(location.directory)
+                assertFalse(authority.allowed())
+                authority.suspension(false) // Valid STOPPED state, rather than a corrupt file rejecting execution.
+                assertFalse(authority.allowed())
                 assertTrue(runCatching { services.ensureWalletOpen() }.exceptionOrNull() is SettingsStorage.Unavailable)
                 if (step != "flags") assertEquals(listOf(SettingsStorage.settingsNotice), settings.takeUpgradeNotices())
                 assertTrue(settings.takeUpgradeNotices().isEmpty())
@@ -118,6 +166,7 @@ class SettingsFailureTest {
                 val reopened = SettingsStorage(context)
                 tx.completeSettings(reopened)
                 assertFalse(tx.settingsPending)
+                assertFalse(RecurringAutomationAuthority(location.directory).allowed())
                 reopened.requireHealthy()
                 assertEquals(true, reopened.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isInitialized)
             }

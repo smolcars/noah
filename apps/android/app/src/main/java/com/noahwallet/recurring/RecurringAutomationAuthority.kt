@@ -18,8 +18,8 @@ internal class RecurringAutomationAuthority(directory: File,
         try {
             if (!file.exists() && !marker.exists()) {
                 val instance = UUID.randomUUID().toString()
-                write(marker, RecurringStore.json.encodeToString(Marker(instance = instance)).toByteArray())
                 write(file, RecurringStore.json.encodeToString(State(instance = instance, generation = UUID.randomUUID().toString())).toByteArray())
+                write(marker, RecurringStore.json.encodeToString(Marker(instance = instance)).toByteArray())
             }
             val marker = RecurringStore.json.decodeFromString<Marker>(marker.readText())
             val raw = file.readText()
