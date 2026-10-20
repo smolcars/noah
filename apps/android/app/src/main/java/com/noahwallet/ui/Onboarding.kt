@@ -60,6 +60,7 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
     val activity = context as Activity
     var words by remember { mutableStateOf<List<String>>(emptyList()) }
     var copied by remember { mutableStateOf(false) }
+    var warningGeneration by remember { mutableStateOf<Int?>(null) }
     val clipboard = remember { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
     val handler = remember { Handler(Looper.getMainLooper()) }
     val label = remember { "noah-recovery-${java.util.UUID.randomUUID()}" }
@@ -79,7 +80,7 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
     }
     val scope = rememberCoroutineScope()
     val generation = model.walletLock.generation
-    LaunchedEffect(generation) { words = emptyList(); copied = false; clear.run() }
+    LaunchedEffect(generation) { words = emptyList(); copied = false; warningGeneration = null; clear.run() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val resumed = lifecycle.currentStateAsState().value.isAtLeast(Lifecycle.State.RESUMED)
     LaunchedEffect(model, generation, resumed) {
@@ -88,12 +89,34 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
             if (generation == model.walletLock.generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) words = loaded
         }
     }
-    LaunchedEffect(model) {
-        if (fromSettings && model.walletLock.authenticate(activity as androidx.fragment.app.FragmentActivity, "View your seed phrase")) {
+    suspend fun reveal() {
+        val started = model.walletLock.generation
+        val fragment = activity as androidx.fragment.app.FragmentActivity
+        if (com.noahwallet.ui.settings.WalletLock.hasNoScreenLock(fragment)) {
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) warningGeneration = started
+        } else if (model.walletLock.authenticate(fragment, "View your seed phrase")) {
             val loaded = model.mnemonic()
-            if (generation == model.walletLock.generation) words = loaded
+            if (started == model.walletLock.generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) words = loaded
         }
     }
+    LaunchedEffect(model) { if (fromSettings) reveal() }
+    if (warningGeneration != null) AlertDialog(
+        onDismissRequest = { warningGeneration = null },
+        title = { Text(tr("No screen lock")) },
+        text = { Text(tr("This device has no screen lock. Anyone with access to it can view your recovery phrase. Set a screen lock in device settings to protect your wallet.")) },
+        dismissButton = { TextButton({ warningGeneration = null }) { Text(tr("Cancel")) } },
+        confirmButton = { TextButton({
+            val started = warningGeneration
+            warningGeneration = null
+            scope.launch {
+                if (started != model.walletLock.generation || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@launch
+                if (com.noahwallet.ui.settings.WalletLock.hasNoScreenLock(activity as androidx.fragment.app.FragmentActivity)) {
+                    val loaded = model.mnemonic()
+                    if (started == model.walletLock.generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) words = loaded
+                } else reveal()
+            }
+        }) { Text(tr("Show recovery phrase")) } },
+    )
     NoahForm("Your Recovery Phrase") {
         Text(tr("Write down these ${words.size} words in order and store them in a safe place. This is the only way to recover your wallet."))
         Card {
@@ -116,11 +139,7 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
             model.walletLock.error?.let { Text(tr(it)) }
             NoahButton("Authenticate to view your seed phrase", !model.walletLock.authenticating) {
                 scope.launch {
-                    val started = model.walletLock.generation
-                    if (model.walletLock.authenticate(activity as androidx.fragment.app.FragmentActivity, "View your seed phrase")) {
-                        val loaded = model.mnemonic()
-                        if (started == model.walletLock.generation) words = loaded
-                    }
+                    reveal()
                 }
             }
         }

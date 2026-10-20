@@ -95,6 +95,8 @@ class WalletLock(private val settings: SettingsStorage) {
 
     companion object {
         const val authenticators = BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        fun hasNoScreenLock(activity: FragmentActivity): Boolean =
+            !(activity.getSystemService(android.content.Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isDeviceSecure
         fun available(activity: FragmentActivity) = BiometricManager.from(activity).canAuthenticate(authenticators) == BiometricManager.BIOMETRIC_SUCCESS
     }
 }

@@ -1557,6 +1557,7 @@
   <string name="gt_66e0a8d59d77f285">"No more payments will be sent. Payments already sent can\'t be undone. An in-progress payment may still complete."</string>
   <string name="gt_e36d3c06c3e6c1cd">"No payment was submitted."</string>
   <string name="gt_459617bcef74ad21">"No refresh round was needed."</string>
+  <string name="gt_0ce6b8df87b210a5">"No screen lock"</string>
   <string name="gt_f57ecc027388ea64">"No usable backup was found for this recovery phrase. Check the words and try again."</string>
   <string name="gt_678202b3c0c345ef">"Noah"</string>
   <string name="gt_c6d29584a2c5564a">"Noah Android %1$s (%2$s): "</string>
@@ -1660,6 +1661,7 @@
   <string name="gt_d85115a66447b600">"Share payment request"</string>
   <string name="gt_483ffbdd70c9c49f">"Share place"</string>
   <string name="gt_193124aa28317067">"Show balance details"</string>
+  <string name="gt_93749012e2444865">"Show recovery phrase"</string>
   <string name="gt_6e65049bf16d9dc9">"Signed transaction size"</string>
   <string name="gt_b8ea39497aef1a93">"Snapshot schema version [0-9]+ is newer than supported version [0-9]+"</string>
   <string name="gt_d65d3a6d1c27a19c">"Start a new payment after checking history"</string>
@@ -1713,6 +1715,7 @@
   <string name="gt_14eec81c84b44811">"This backup belongs to a different Bitcoin network. Use the matching version of Noah."</string>
   <string name="gt_f8225bade85a4f12">"This backup was created by a newer version of Noah. Update the app, then try restoring again."</string>
   <string name="gt_42336142cf45ba47">"This broadcasts the claim transaction. Earlier broadcast fees are not deducted again."</string>
+  <string name="gt_ac257bcd97ce86b9">"This device has no screen lock. Anyone with access to it can view your recovery phrase. Set a screen lock in device settings to protect your wallet."</string>
   <string name="gt_9e3a6e3e9bd56700">"This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs."</string>
   <string name="gt_f2faa6b386bacbee">"This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status."</string>
   <string name="gt_5ed0c20bff01c0ca">"This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming."</string>
