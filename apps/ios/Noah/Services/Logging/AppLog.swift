@@ -215,6 +215,37 @@ final class LogFile: @unchecked Sendable {
     /// Shared by persistence and telemetry. Unlabelled hashes/txids remain useful diagnostics.
     static func redact(_ message: String) -> String {
         guard message.utf8.count <= maxMessageBytes else { return "[oversized log message omitted]" }
+        return redactForTelemetry(message) ?? "[redacted]"
+    }
+
+    /// Nil means inspection was uncertain; telemetry must omit the message.
+    static func redactForTelemetry(_ message: String) -> String? {
+        guard message.utf8.count <= maxMessageBytes, let views = decodedViews(message) else { return nil }
+        for view in views.dropFirst() where redactPlain(view) != view { return "[redacted]" }
+        return redactPlain(message)
+    }
+
+    // Decoding loses source offsets, so a hit in any decoded view omits the entire message.
+    private static func decodedViews(_ message: String) -> [String]? {
+        var views = [message]
+        for _ in 0..<4 {
+            let source = views.last!
+            let matches = jsonEscapes.matches(in: source, range: NSRange(source.startIndex..., in: source))
+            if matches.isEmpty { return views }
+            let decoded = NSMutableString(string: source)
+            for match in matches.reversed() {
+                let token = (source as NSString).substring(with: match.range)
+                guard let value = try? JSONDecoder().decode(String.self, from: Data(("\"" + token + "\"").utf8)) else { return nil }
+                decoded.replaceCharacters(in: match.range, with: value)
+            }
+            views.append(decoded as String)
+        }
+        let last = views.last!
+        guard jsonEscapes.firstMatch(in: last, range: NSRange(last.startIndex..., in: last)) == nil else { return nil }
+        return views
+    }
+
+    private static func redactPlain(_ message: String) -> String {
         var result = urlUserinfo.stringByReplacingMatches(in: message,
             range: NSRange(message.startIndex..., in: message), withTemplate: "$1[redacted]@")
         for pattern in sensitivePatterns {
@@ -265,7 +296,8 @@ final class LogFile: @unchecked Sendable {
     static func containsMnemonic(in leaves: [String]) -> Bool {
         let joined = leaves.joined(separator: " ")
         guard joined.utf8.count <= maxMessageBytes else { return true }
-        if !mnemonicRanges(in: normalizeMnemonic(joined)).isEmpty { return true }
+        guard let views = decodedViews(joined) else { return true }
+        if views.contains(where: { !mnemonicRanges(in: normalizeMnemonic($0)).isEmpty }) { return true }
         var count = 0
         for leaf in leaves {
             let normalized = normalizeMnemonic(leaf)
@@ -297,6 +329,7 @@ final class LogFile: @unchecked Sendable {
         }
         return Set(text.split(whereSeparator: \.isWhitespace).map(String.init))
     }()
+    private static let jsonEscapes = try! NSRegularExpression(pattern: #"(?:\\u[0-9a-fA-F]{4})+|\\["\\/bfnrt]"#)
     private static let wordPattern = try! NSRegularExpression(pattern: #"[\p{L}\p{M}]+"#)
     private static let urlUserinfo = try! NSRegularExpression(
         pattern: #"(?i)(\b[a-z][a-z0-9+.-]*://)[^\s/@<>"']+@"#)

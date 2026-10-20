@@ -18,6 +18,13 @@ struct AppLogTests {
         }
     }
 
+    @Test func escapedCredentialsAreRedacted() throws {
+        for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
+            where fixture.name.hasPrefix("r3-escaped-") {
+            #expect(LogFile.redact(fixture.input) == fixture.expected, "\(fixture.name)")
+        }
+    }
+
     @Test func sharedAddressRedactionVectors() throws {
         for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
             where fixture.name.hasPrefix("address-") {

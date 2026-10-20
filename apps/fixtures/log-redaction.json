@@ -495,6 +495,146 @@
       "name": "r2-negative-invoice",
       "input": "lnbc1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq50gw7z",
       "expected": "lnbc1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq50gw7z"
+    },
+    {
+      "name": "r3-escaped-probe-0",
+      "input": "paymentPreimage\\\" : \\\"abababababababababababababababababababababababababababababababab",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-probe-1",
+      "input": "paymentPreimage\\u0022:\\u0022abababababababababababababababababababababababababababababababab",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-probe-2",
+      "input": "PRIV-KEY\\\" : \\\"abababababababababababababababababababababababababababababababab",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-probe-3",
+      "input": "PRIV-KEY\\u0022:\\u0022abababababababababababababababababababababababababababababababab",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-probe-4",
+      "input": "preimage\\\" : \\\"abababababababababababababababababababababababababababababababab",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-probe-5",
+      "input": "preimage\\u0022:\\u0022abababababababababababababababababababababababababababababababab",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-probe-6",
+      "input": "wallet_private_key\\\" : \\\"abababababababababababababababababababababababababababababababab",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-probe-7",
+      "input": "wallet_private_key\\u0022:\\u0022abababababababababababababababababababababababababababababababab",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-probe-8",
+      "input": "priv_key\\\" : \\\"abababababababababababababababababababababababababababababababab",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-probe-9",
+      "input": "priv_key\\u0022:\\u0022abababababababababababababababababababababababababababababababab",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-probe-10",
+      "input": "\"{\\\"preimage\\\": \\\"abababababababababababababababababababababababababababababababab\\\"}\"",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-json-1",
+      "input": "\"{\\\"preimage\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}\"",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-json-2",
+      "input": "\"\\\"{\\\\\\\"preimage\\\\\\\":\\\\\\\"abababababababababababababababababababababababababababababababab\\\\\\\"}\\\"\"",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-json-3",
+      "input": "\"\\\"\\\\\\\"{\\\\\\\\\\\\\\\"preimage\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"abababababababababababababababababababababababababababababababab\\\\\\\\\\\\\\\"}\\\\\\\"\\\"\"",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-unicode-preimage",
+      "input": "{\\\"\\u0070\\u0072\\u0065\\u0069\\u006d\\u0061\\u0067\\u0065\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-unicode-authorization",
+      "input": "{\\\"\\u0061\\u0075\\u0074\\u0068\\u006f\\u0072\\u0069\\u007a\\u0061\\u0074\\u0069\\u006f\\u006e\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-unicode-private_key",
+      "input": "{\\\"\\u0070\\u0072\\u0069\\u0076\\u0061\\u0074\\u0065\\u005f\\u006b\\u0065\\u0079\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-unicode-signature",
+      "input": "{\\\"\\u0073\\u0069\\u0067\\u006e\\u0061\\u0074\\u0075\\u0072\\u0065\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-unicode-access_token",
+      "input": "{\\\"\\u0061\\u0063\\u0063\\u0065\\u0073\\u0073\\u005f\\u0074\\u006f\\u006b\\u0065\\u006e\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-unicode-password",
+      "input": "{\\\"\\u0070\\u0061\\u0073\\u0073\\u0077\\u006f\\u0072\\u0064\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-unicode-mnemonic",
+      "input": "{\\\"\\u006d\\u006e\\u0065\\u006d\\u006f\\u006e\\u0069\\u0063\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-unicode-seed_phrase",
+      "input": "{\\\"\\u0073\\u0065\\u0065\\u0064\\u005f\\u0070\\u0068\\u0072\\u0061\\u0073\\u0065\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-unicode-email",
+      "input": "{\\\"\\u0065\\u006d\\u0061\\u0069\\u006c\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-unicode-lightning_address",
+      "input": "{\\\"\\u006c\\u0069\\u0067\\u0068\\u0074\\u006e\\u0069\\u006e\\u0067\\u005f\\u0061\\u0064\\u0064\\u0072\\u0065\\u0073\\u0073\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-unicode-x-amz-signature",
+      "input": "{\\\"\\u0078\\u002d\\u0061\\u006d\\u007a\\u002d\\u0073\\u0069\\u0067\\u006e\\u0061\\u0074\\u0075\\u0072\\u0065\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-escaped-negative-25",
+      "input": "path C:\\wallet\\cache",
+      "expected": "path C:\\wallet\\cache"
+    },
+    {
+      "name": "r3-escaped-negative-26",
+      "input": "\"{\\\"status\\\": \\\"synced\\\", \\\"amount\\\": 12345}\"",
+      "expected": "\"{\\\"status\\\": \\\"synced\\\", \\\"amount\\\": 12345}\""
+    },
+    {
+      "name": "r3-escaped-negative-27",
+      "input": "{\\\"txid\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}",
+      "expected": "{\\\"txid\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}"
     }
   ]
 }

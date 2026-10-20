@@ -56,6 +56,31 @@ struct AppTelemetryTests {
         #expect(!json.contains("payload") && !json.contains("personal"))
     }
 
+    @Test func escapedJSONMustNotReachTelemetry() throws {
+        let value = String(repeating: "ab", count: 32)
+        let object = try JSONSerialization.data(withJSONObject: ["preimage": value])
+        let wrapped = try JSONSerialization.data(withJSONObject: [String(decoding: object, as: UTF8.self)])
+        let event = Event(level: .error)
+        event.message = SentryMessage(formatted: String(decoding: wrapped, as: UTF8.self))
+        let clean = try #require(AppTelemetry.scrub(event))
+        #expect(clean.message?.formatted == "[redacted]")
+    }
+
+    @Test func uncertainMessagesAreOmitted() throws {
+        let event = Event(level: .error)
+        let uncertain = "invalid escape: \\uD800"
+        event.message = SentryMessage(formatted: uncertain)
+        event.exceptions = [Exception(value: uncertain, type: "WalletError")]
+        let crumb = Breadcrumb(level: .info, category: "diagnostics")
+        crumb.message = uncertain
+        event.breadcrumbs = [crumb]
+        let clean = try #require(AppTelemetry.scrub(event))
+        #expect(clean.message == nil)
+        #expect(clean.exceptions?.first?.value == nil)
+        #expect(clean.breadcrumbs?.first?.message == nil)
+        #expect(LogFile.redact(uncertain) == "[redacted]")
+    }
+
     private var info: [String: Any] {
         ["NoahSentryDSN": "https://public@example.invalid/1",
          "CFBundleIdentifier": "com.noahwallet.signet",

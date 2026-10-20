@@ -53,7 +53,9 @@ enum AppTelemetry {
         clean.releaseName = event.releaseName
         clean.dist = event.dist
         clean.environment = event.environment
-        clean.message = event.message.map { SentryMessage(formatted: LogFile.redact($0.formatted)) }
+        clean.message = event.message.flatMap { message in
+            LogFile.redactForTelemetry(message.formatted).map { SentryMessage(formatted: $0) }
+        }
         clean.sdk = event.sdk.map { sdk in
             var result = scalars(sdk, keys: ["name", "version"])
             for key in ["integrations", "features"] {
@@ -84,8 +86,10 @@ enum AppTelemetry {
             result.stacktrace = thread.stacktrace.map(stacktrace)
             return result
         }
-        clean.exceptions = event.exceptions?.map { exception in
-            let result = Exception(value: exception.value.map(LogFile.redact), type: exception.type)
+        clean.exceptions = event.exceptions?.compactMap { exception in
+            let value = exception.value.flatMap(LogFile.redactForTelemetry)
+            guard value != nil || exception.type != nil else { return nil }
+            let result = Exception(value: value, type: exception.type)
             result.module = exception.module
             result.threadId = exception.threadId
             result.stacktrace = exception.stacktrace.map(stacktrace)
@@ -105,7 +109,7 @@ enum AppTelemetry {
     static func scrub(_ breadcrumb: Breadcrumb) -> Breadcrumb? {
         let clean = Breadcrumb(level: breadcrumb.level, category: breadcrumb.category)
         clean.timestamp = breadcrumb.timestamp
-        clean.message = breadcrumb.message.map(LogFile.redact)
+        clean.message = breadcrumb.message.flatMap(LogFile.redactForTelemetry)
         guard isSafePayload(clean.serialize()) else { return nil }
         return clean
     }
