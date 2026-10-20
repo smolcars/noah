@@ -51,6 +51,9 @@ final class RecurringStore: @unchecked Sendable {
 
     private func envelope() throws -> RawObject {
         let raw = settings.string(forKey: Self.key) ?? #"{"version":0,"state":{"schedules":{},"serverSyncPending":false}}"#
+        return try Self.decodeEnvelope(raw)
+    }
+    static func decodeEnvelope(_ raw: String) throws -> RawObject {
         let value = try RawObject(raw)
         let version = value.fields["version"]?.trimmingCharacters(in: .whitespacesAndNewlines)
         guard version == nil || version == "0",

@@ -80,16 +80,17 @@ final class SettingsStorage: @unchecked Sendable {
     }
 
     private static func rnKeys(_ store: MMKV) -> [String] {
-        RNStoreCodec.schemas.keys.filter { store.contains(key: $0) }
+        RNStoreCodec.storeKeys.filter { store.contains(key: $0) }
     }
     private static func hasRNKeys(_ store: MMKV) -> Bool { !rnKeys(store).isEmpty }
 
     private static func validate(_ store: MMKV, requiredKeys: [String]) throws {
         guard requiredKeys.allSatisfy({ store.contains(key: $0) }) else { throw OpenError() }
-        for key in RNStoreCodec.schemas.keys where key != PersistedEsploraState.key {
+        for key in RNStoreCodec.storeKeys where key != PersistedEsploraState.key {
             if store.contains(key: key) {
                 guard let raw = store.string(forKey: key) else { throw OpenError() }
-                _ = try RNStoreCodec.decode(raw, key: key)
+                if key == RecurringStore.key { _ = try RecurringStore.decodeEnvelope(raw) }
+                else { _ = try RNStoreCodec.decode(raw, key: key) }
             }
         }
     }
@@ -98,11 +99,15 @@ final class SettingsStorage: @unchecked Sendable {
         try requireCompatibleRNStores()
         guard let mmkv else { throw OpenError() }
         var keys = Self.rnKeys(mmkv)
-        if let key, RNStoreCodec.schemas[key] != nil, !keys.contains(key) { keys.append(key) }
+        if let key, RNStoreCodec.storeKeys.contains(key), !keys.contains(key) { keys.append(key) }
         try backup?.retire(keys: keys)
     }
 
-    func requireHealthy() throws { guard mmkv != nil else { throw OpenError() } }
+    func requireHealthy() throws {
+        Self.access.lock(); defer { Self.access.unlock() }
+        guard let mmkv else { throw OpenError() }
+        try Self.validate(mmkv, requiredKeys: backup?.retiredKeys ?? [])
+    }
 
     func string(forKey key: String) -> String? {
         mmkv?.string(forKey: key)

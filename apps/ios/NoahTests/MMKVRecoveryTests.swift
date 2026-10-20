@@ -114,6 +114,31 @@ struct MMKVRecoveryTests {
         #expect(!MMKVUpgradeBackup(root: root, instanceID: Self.id).restored)
     }
 
+    @Test(arguments: ["undecodable", "missing"])
+    func recurringEnvelopeAndAdmittedKeyLossBlock(mode: String) throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        if mode == "missing" {
+            let store = try SettingsStorage(rootPath: root.path)
+            try store.setDurably(#"{"state":{"schedules":{},"serverSyncPending":false},"version":0}"#, forKey: RecurringStore.key)
+        }
+        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
+        if mode == "missing" { raw.removeValue(forKey: RecurringStore.key) }
+        else { raw.set(Data([0xff]), forKey: RecurringStore.key) }
+        raw.sync(); raw.close()
+        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path).requireCompatibleRNStores() }
+    }
+
+    @Test func unsupportedRecurringRowsRemainVisibleAndStopped() throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
+        raw.set(#"{"state":{"schedules":{"future":{"label":"Saved rule","amountSat":1e99}},"serverSyncPending":false},"version":0}"#, forKey: RecurringStore.key)
+        raw.sync(); raw.close()
+        let store = try SettingsStorage(rootPath: root.path)
+        try store.requireCompatibleRNStores()
+        let row = try #require(RecurringStore(settings: store).load().schedules["future"])
+        #expect(row.unsupportedStorage && row.status == "needs_attention")
+    }
+
     @Test func laterCRCRecoveryBlocksEvenWhenRNKeysSurvive() throws {
         let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
         _ = try SettingsStorage(rootPath: root.path)

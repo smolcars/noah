@@ -10,6 +10,7 @@ enum RNStoreCodec {
         var version = 0
         var fields: [String: Kind]
     }
+    static var storeKeys: [String] { Array(schemas.keys) + [RecurringStore.key] }
     static let schemas: [String: Schema] = [
         "wallet-storage": .init(fields: ["isInitialized": .bool, "isWalletLoaded": .bool,
             "staticVtxoPubkey": .string, "isBiometricsEnabled": .bool, "isDebugModeEnabled": .bool,
