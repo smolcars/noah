@@ -11,8 +11,16 @@ class OnchainOperationsTest {
     private class Wallet : OnchainWalletAccess {
         override val walletID = "wallet"
         var mine = true
-        var validDestination = true
-        override suspend fun destinationIsMine(address: String): Boolean { if (!validDestination) fail(OnchainFailure.invalid); return mine }
+        var ownershipError = false
+        var network: String? = null
+        val ownershipChecks = mutableListOf<String>()
+        val drainDestinations = mutableListOf<String>()
+        override suspend fun destinationIsMine(address: String): Boolean {
+            ownershipChecks.add(address)
+            network?.let { validateClaimDestination(address, it) }
+            if (ownershipError) error("ownership unavailable")
+            return mine
+        }
         var balance = 100_000L
         var fee = 330L
         var chainRate = 250L
@@ -49,7 +57,7 @@ class OnchainOperationsTest {
         }
         override suspend fun start(ids: List<String>) { calls.add("start"); ids.forEach { states[it] = ExitState.Start(100u) } }
         override suspend fun cancel(id: String): Boolean { calls.add("cancel"); return false }
-        override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction { calls.add("drain"); return ExitClaimTransaction("psbt", claimFee.toULong()) }
+        override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction { drainDestinations.add(destination); calls.add("drain"); return ExitClaimTransaction("psbt", claimFee.toULong()) }
         override suspend fun broadcastClaim(psbt: String): String { calls.add("broadcast"); broadcastError?.let { throw it }; return "claim-tx" }
         companion object {
             fun vtxo(id: String, amount: ULong = 30_000u) = Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), id, amount, 500u, "pubkey", VtxoState.Spendable, 1u, 500u, true)
@@ -139,23 +147,56 @@ class OnchainOperationsTest {
         assertEquals(listOf("legacy"), history.ids("wallet"))
         assertTrue(wallet.calls.isEmpty())
     } }
-    @Test fun externalClaimsAreAllowedAndDestinationOwnershipIsRecheckedBeforeSubmission() = runBlocking { fixture { wallet, ops, journal, _ ->
+    @Test fun reviewedDestinationIsDrainedAndJournaledForOwnAndExternalClaims() = runBlocking {
+        for (mine in listOf(true, false)) fixture { wallet, ops, journal, _ ->
+            wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))
+            wallet.mine = mine
+            wallet.network = "regtest"
+            val destination = if (mine) "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202" else "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn"
+            val reviewed = ops.quote(OnchainAction.claim, listOf("a"), destination = destination)
+            assertEquals(mine, reviewed.destinationIsMine)
+            assertEquals(if (mine) null else "This address isn't in your Noah wallet. The claimed funds will be sent there.", reviewed.externalDestinationWarning)
+            ops.execute(reviewed)
+            assertEquals(listOf(destination, destination), wallet.ownershipChecks)
+            assertEquals(listOf(reviewed.destination), wallet.drainDestinations)
+            assertEquals(listOf("drain", "broadcast"), wallet.calls)
+            val saved = journal.loadAll().single()
+            assertEquals(wallet.drainDestinations.single(), saved.quote.destination)
+            assertEquals("claim-tx", saved.receipt!!.txid)
+        }
+    }
+
+    @Test fun executionOwnershipChangesAndFailuresPreventClaimConstructionAndSubmission() = runBlocking {
+        for (change in listOf("own-external", "external-own", "throws", "invalid", "wrong-network")) fixture { wallet, ops, journal, _ ->
+            wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))
+            wallet.mine = change != "external-own"
+            wallet.network = "regtest"
+            var reviewed = ops.quote(OnchainAction.claim, listOf("a"), destination = "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202")
+            when (change) {
+                "own-external", "external-own" -> wallet.mine = !wallet.mine
+                "throws" -> wallet.ownershipError = true
+                "invalid" -> reviewed = reviewed.copy(destination = "invalid")
+                "wrong-network" -> reviewed = reviewed.copy(destination = "1BoatSLRHtKNngkdXEeobR76b53LETtpyT")
+            }
+            val failure = runCatching { ops.execute(reviewed) }.exceptionOrNull()
+            assertNotNull(change, failure)
+            if (change != "throws") assertEquals(if (change == "own-external" || change == "external-own") OnchainFailure.changed else OnchainFailure.invalid,
+                (failure as OnchainException).reason)
+            assertEquals(listOf("bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202", reviewed.destination), wallet.ownershipChecks)
+            assertTrue(change, wallet.drainDestinations.isEmpty())
+            assertTrue(change, wallet.calls.isEmpty())
+            assertTrue(change, journal.loadAll().isEmpty())
+        }
+    }
+
+    @Test fun emptyDestinationCannotBeReviewedOrExecuted() = runBlocking { fixture { wallet, ops, journal, _ ->
         wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))
-        val own = ops.quote(OnchainAction.claim, listOf("a"), destination = "own-address")
-        assertEquals(true, own.destinationIsMine); assertNull(own.externalDestinationWarning)
-        wallet.mine = false
-        assertEquals(OnchainFailure.changed, (runCatching { ops.execute(own) }.exceptionOrNull() as OnchainException).reason)
-        assertTrue(wallet.calls.isEmpty()); assertTrue(journal.loadAll().isEmpty())
-        val external = ops.quote(OnchainAction.claim, listOf("a"), destination = "cold-storage")
-        assertEquals(false, external.destinationIsMine)
-        assertEquals("This address isn't in your Noah wallet. The claimed funds will be sent there.", external.externalDestinationWarning)
-        wallet.validDestination = false
-        assertTrue(runCatching { ops.execute(external) }.isFailure)
-        assertTrue(wallet.calls.isEmpty()); assertTrue(journal.loadAll().isEmpty())
-        wallet.validDestination = true
-        ops.execute(external)
-        assertEquals(listOf("drain", "broadcast"), wallet.calls)
-        assertEquals("cold-storage", journal.loadAll().single().quote.destination)
+        val reviewed = ops.quote(OnchainAction.claim, listOf("a"), destination = "address")
+        for (destination in listOf("", "  ")) {
+            assertTrue(runCatching { ops.quote(OnchainAction.claim, listOf("a"), destination = destination) }.isFailure)
+            assertTrue(runCatching { ops.execute(reviewed.copy(destination = destination)) }.isFailure)
+        }
+        assertTrue(wallet.drainDestinations.isEmpty()); assertTrue(wallet.calls.isEmpty()); assertTrue(journal.loadAll().isEmpty())
     } }
     @Test fun destinationValidationRejectsMalformedWrongNetworkAndPaymentURIs() {
         val mainnet = "1BoatSLRHtKNngkdXEeobR76b53LETtpyT"

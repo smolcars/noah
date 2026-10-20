@@ -101,4 +101,61 @@ class OnchainModelTest {
         f.ready = false; m.checkClaimDestination(); assertNull(m.claimDestinationIsMine); assertNotNull(m.claimDestinationError)
     }
 
+    @Test fun delayedClaimAddressDoesNotOverwriteUserEdit() = runBlocking {
+        withTimeout(5_000) {
+            for (fails in listOf(false, true)) {
+                val fetched = CompletableDeferred<String>()
+                val entered = CompletableDeferred<Unit>()
+                val f = Fake()
+                val m = OnchainModel(claimDependencies(f, { entered.complete(Unit); fetched.await() }))
+                val pending = launch { m.useWalletClaimAddress() }
+                entered.await()
+                m.editClaimDestination("cold-storage")
+                if (fails) fetched.completeExceptionally(IllegalStateException("address fetch failed"))
+                else fetched.complete("fresh-wallet-address")
+                pending.join()
+                assertEquals("cold-storage", m.claimDestination)
+                assertEquals(fails, m.claimDestinationError != null)
+                assertEquals(0, f.calls)
+            }
+        }
+    }
+
+    @Test fun failedClaimAddressPreservesInputBlocksEmptyReviewAndRetries() = runBlocking {
+        for (typed in listOf("", "cold-storage")) {
+            val f = Fake()
+            var fetches = 0
+            val m = OnchainModel(claimDependencies(f, {
+                fetches++
+                if (fetches <= 2) error("address fetch failed")
+                "fresh-wallet-address"
+            }))
+            m.editClaimDestination(typed)
+            repeat(2) {
+                m.useWalletClaimAddress()
+                assertEquals(typed, m.claimDestination)
+                assertEquals("Couldn't load a Noah wallet address. Try again when the wallet is ready.", m.claimDestinationError)
+                assertNull(m.quote)
+                m.confirm()
+                assertEquals(0, f.calls)
+            }
+            if (typed.isEmpty()) {
+                m.review(OnchainAction.claim, listOf("a"), destination = m.claimDestination)
+                assertNull(m.quote); assertNotNull(m.error)
+                m.confirm(); assertEquals(0, f.calls)
+            }
+            m.useWalletClaimAddress()
+            assertEquals(3, fetches)
+            assertEquals("fresh-wallet-address", m.claimDestination)
+            assertNull(m.claimDestinationError)
+        }
+    }
+
+    private fun claimDependencies(f: Fake, address: suspend () -> String) = OnchainModel.Dependencies(
+        { f.ready }, { f.overview }, { action, ids, _, destination ->
+            if (destination.isNullOrBlank()) fail(OnchainFailure.invalid)
+            OnchainQuote(action, "wallet", ids, destination)
+        }, { f.calls++; "submitted" }, { emptyList() }, {}, { false }, {}, { null }, {},
+        claimAddress = address, claimOwnership = { false })
+
 }
