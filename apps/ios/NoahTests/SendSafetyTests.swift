@@ -84,7 +84,7 @@ import Testing
     @Test func bdkRecoveryRequiresOneExactAmount() throws {
         let saved = attempt("onchain", source: .onchain)
         #expect(try SendReconciliation.onchain(saved, transactions: [transaction(amount: 999)]) == .uncertain)
-        #expect(try SendReconciliation.onchain(saved, transactions: [transaction(), transaction(id: "second")]) == .uncertain)
+        #expect(try SendReconciliation.onchain(saved, transactions: [transaction(), transaction(id: "second")]) == .possibleTransactions(["new", "second"]))
     }
 
     @Test func onchainMaxCannotReachWalletOrDrain() async throws {
@@ -182,30 +182,35 @@ import Testing
         #expect(restarted.state == .ready)
     }
 
-    @Test func bdkRecordedTxAfterThrowRemainsSubmittedAcrossRelaunch() async throws {
+    @Test(arguments: [false, true])
+    func rediscoveredHistoricalBdkTransactionIsOnlyPossibleEvidence(confirmed: Bool) async throws {
         let saved = try roundTrip(attempt("onchain", source: .onchain))
-        let tx = try transaction()
+        let tx = try transaction(confirmed: confirmed)
         let storage = SendPaymentTests.Storage()
         storage.attempt = saved
         let subject = controller(storage) { try SendReconciliation.onchain($0, transactions: [tx]) }
         await subject.checkStatus()
-        let receipt = SendReceipt(amount: 1000, txid: "new", status: .submitted)
-        #expect(subject.state == .succeeded(receipt))
-        #expect(!subject.canOverride)
+        #expect(subject.state == .uncertain && subject.canOverride)
+        #expect(subject.attempt?.receipt == nil)
+        #expect(subject.attempt?.possibleTxids == ["new"])
+        subject.acknowledge()
+        #expect(subject.locked)
         storage.attempt = try roundTrip(#require(storage.attempt))
-        let confirmed = try transaction(confirmed: true)
-        let restarted = controller(storage) {
-            try SendReconciliation.onchain($0, transactions: [confirmed])
-        }
-        #expect(restarted.state == .succeeded(receipt))
+        let restarted = controller(storage) { try SendReconciliation.onchain($0, transactions: [tx]) }
         await restarted.checkStatus()
-        #expect(restarted.state == .succeeded(.init(amount: 1000, txid: "new", status: .confirmed, fee: 100)))
+        #expect(restarted.state == .uncertain && restarted.canOverride)
+        #expect(restarted.attempt?.receipt == nil)
+        #expect(restarted.attempt?.possibleTxids == ["new"])
+        restarted.startNewPaymentAfterHistoryCheck(confirmed: false)
+        #expect(restarted.locked)
+        restarted.startNewPaymentAfterHistoryCheck(confirmed: true)
+        #expect(!restarted.locked)
     }
 
     @Test func submittedBdkReceiptUsesActualFeeEvenAboveEstimate() throws {
         var saved = attempt("onchain", source: .onchain)
         saved.quote = quote
-        saved.receipt = .init(amount: 1000, txid: "new", status: .submitted)
+        saved.receipt = .init(amount: 1000, txid: "new", status: .submitted, proof: .submitReturnedTxid)
         var tx = try transaction()
         tx.onchainFeeSats = 500
         guard case .paid(let receipt) = try SendReconciliation.onchain(saved, transactions: [tx]) else {
@@ -305,13 +310,13 @@ import Testing
 
     @Test func confirmedReceiptRevalidatesThroughReorgAndMissingHistory() async throws {
         var saved = attempt("onchain", source: .onchain)
-        saved.receipt = .init(amount: 1000, txid: "new", status: .confirmed, fee: 100)
+        saved.receipt = .init(amount: 1000, txid: "new", status: .confirmed, fee: 100, proof: .submitReturnedTxid)
         let storage = SendPaymentTests.Storage()
         storage.attempt = try roundTrip(saved)
         let pending = try transaction()
         let subject = controller(storage) { try SendReconciliation.onchain($0, transactions: [pending]) }
         await subject.checkStatus()
-        #expect(subject.state == .succeeded(.init(amount: 1000, txid: "new", status: .submitted, fee: 100)))
+        #expect(subject.state == .succeeded(.init(amount: 1000, txid: "new", status: .submitted, fee: 100, proof: .submitReturnedTxid)))
         storage.attempt = try roundTrip(#require(storage.attempt))
         let missing = controller(storage) { try SendReconciliation.onchain($0, transactions: []) }
         await missing.checkStatus()
@@ -401,7 +406,7 @@ import Testing
 
     @Test func offboardTxidIsOnlySubmissionEvenAfterRestartAndMissingHistory() async throws {
         var saved = attempt("onchain", source: .offchain)
-        saved.receipt = .init(amount: 1000, txid: "offboard", status: .submitted)
+        saved.receipt = .init(amount: 1000, txid: "offboard", status: .submitted, proof: .submitReturnedTxid)
         let storage = SendPaymentTests.Storage()
         storage.attempt = try roundTrip(saved)
         let subject = controller(storage) { try SendReconciliation.onchain($0, transactions: []) }
@@ -412,7 +417,7 @@ import Testing
 
     @Test func submittedReceiptCannotBeDowngradedByFailure() async throws {
         var saved = attempt("onchain", source: .onchain)
-        saved.receipt = .init(amount: 1000, txid: "recorded", status: .submitted)
+        saved.receipt = .init(amount: 1000, txid: "recorded", status: .submitted, proof: .submitReturnedTxid)
         let storage = SendPaymentTests.Storage()
         storage.attempt = try roundTrip(saved)
         let subject = controller(storage) { _ in .failed }

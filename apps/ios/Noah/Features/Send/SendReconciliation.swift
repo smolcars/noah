@@ -96,7 +96,7 @@ enum SendReconciliation {
         throws
         -> SendPaymentController.Resolution
     {
-        if var receipt = attempt.receipt, let txid = receipt.txid {
+        if var receipt = attempt.receipt, receipt.proof == .submitReturnedTxid, let txid = receipt.txid {
             if let tx = transactions.first(where: { $0.txid == txid }) {
                 receipt.status = tx.confirmation == nil ? .submitted : .confirmed
                 receipt.fee = tx.onchainFeeSats ?? receipt.fee
@@ -109,17 +109,14 @@ enum SendReconciliation {
         guard attempt.payment.method == "onchain", attempt.payment.source == .onchain, !attempt.payment.max,
             let previous = attempt.snapshot.bdkTxids
         else { return .uncertain }
-        var candidates: [(WalletTransaction, UInt64)] = []
+        var candidates: [String] = []
         for tx in transactions where !previous.contains(tx.txid) && tx.balanceChangeSats < 0 {
             let amount = try SendTransaction.amount(to: attempt.payment.destination, hex: tx.txHex)
-            if amount > 0, amount == attempt.payment.amount { candidates.append((tx, amount)) }
+            if amount > 0, amount == attempt.payment.amount { candidates.append(tx.txid) }
         }
-        // Canonical BDK history can evict a broadcast transaction. Absence never proves non-submission.
-        guard candidates.count == 1, let (tx, amount) = candidates.first else { return .uncertain }
-        return .paid(
-            SendReceipt(
-                amount: amount, txid: tx.txid,
-                status: tx.confirmation == nil ? .submitted : .confirmed))
+        // A previously evicted or unsynced historical payment can reappear after submission.
+        // Only a txid returned by submit binds a BDK transaction to this attempt (FFI item 16).
+        return candidates.isEmpty ? .uncertain : .possibleTransactions(candidates.sorted())
     }
 
     private static func timestamp(_ value: String) -> Date? {

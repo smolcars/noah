@@ -334,6 +334,10 @@ struct SendOutcomeView: View {
                             }
                         }
                     }
+                    ForEach(controller.attempt?.possibleTxids ?? [], id: \.self) { txid in
+                        Text("This transaction may be your payment: \(txid)")
+                            .textSelection(.enabled)
+                    }
                     if controller.canOverride {
                         Button("I've checked my history, start a new payment") { confirmOverride = true }
                             .accessibilityIdentifier("send-override")

@@ -141,6 +141,7 @@ extension WalletSession {
                 default: throw SendFailure.unresolved
                 }
             }
+            if receipt.txid != nil { receipt.proof = .submitReturnedTxid }
             if payment.source == .onchain, let txid = receipt.txid,
                let transactions = try? await handles.onchain.transactions(),
                let tx = transactions.first(where: { $0.txid == txid }) {

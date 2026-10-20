@@ -34,6 +34,12 @@ wrong-destination-amount assertions; both pass after the fix.
 
 ## Round-3 payment safety (2026-10-19)
 
+- Only a txid returned directly from submission, with its provenance persisted,
+  binds an onchain transaction to the attempt. Snapshot differences (including a
+  rediscovered old same-address/amount transaction) display “This transaction may
+  be your payment: <txid>” and remain uncertain/locked across refresh and restart.
+  Only the explicit destructive history-check override permits a fresh attempt.
+
 - Entered-amount onchain-wallet sends remain enabled by user decision. Review
   labels both fee and total as estimates and explicitly warns that more input
   coins may raise the final fee/total. Receipts show the actual BDK fee when
@@ -56,9 +62,8 @@ wrong-destination-amount assertions; both pass after the fix.
   the reviewed VTXO IDs.
 - Empty canonical BDK history never proves non-submission. No matches, mismatched
   amounts, multiple exact matches, old MAX attempts without receipts, malformed
-  evidence and missing snapshots remain locked. A single new outgoing transaction
-  paying exactly the reviewed amount can establish Submitted; only confirmation
-  establishes Confirmed.
+  evidence and missing snapshots remain locked. Round 3 supersedes the old
+  single-new-transaction rule: a snapshot difference is only possible evidence.
 - The pinned FFI exposes a message-only `BarkError`, not typed error variants.
   Only the exact outer address/network, fee-validation and transaction-building
   contexts from `OnchainWallet.send` prove pre-recording failure. Source links
@@ -194,8 +199,8 @@ Reconciliation follows the rail and strength of identity:
 
 - Onchain-wallet sends use only BDK transactions, never Ark movements. Both Ark
   movement IDs and BDK txids are snapshotted before submission. A new outgoing
-  transaction paying exactly the reviewed amount establishes submission only
-  when it is the sole exact candidate. Missing BDK evidence stays uncertain:
+  transaction paying exactly the reviewed amount is only a possible match,
+  even if confirmed; it never establishes submission. Missing BDK evidence stays uncertain:
   canonical history can evict a transaction that was already broadcast.
   Malformed/unreadable evidence and old journals without a BDK snapshot stay locked. A persist error can leave the transaction in BDK
   memory, so reconciliation reads transactions even if sync fails.

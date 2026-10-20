@@ -37,6 +37,8 @@ struct SendReceipt: Codable, Equatable, Sendable {
     var amountIsEstimated: Bool?
     var status: Status?
     var fee: UInt64?
+    var proof: Proof?
+    enum Proof: String, Codable, Sendable { case submitReturnedTxid, actualMovement }
     enum Status: String, Codable, Sendable { case submitted, confirmed, unlocated }
     var isSubmitted: Bool { txid != nil && status != .confirmed }
 }
@@ -93,6 +95,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         var candidates: [SendCandidate]?
         var failureMessage: String?
         var existingLightning: SendLightningProgress?
+        var possibleTxids: [String]?
     }
     struct Dependencies {
         var prepare: @Sendable (SendPayment, SendQuote) async throws -> SendSnapshot
@@ -107,6 +110,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         case alreadyPaid(SendReceipt)
         case candidates([SendCandidate])
         case inProgress(SendLightningProgress)
+        case possibleTransactions([String])
         case failed
     }
     static let shared = SendPaymentController(dependencies: .live())
@@ -193,6 +197,9 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         switch resolution {
         case .uncertain:
             if attempt.receipt?.txid != nil { attempt.receipt?.status = .unlocated }
+            state = .uncertain
+        case .possibleTransactions(let txids):
+            attempt.possibleTxids = Array(Set((attempt.possibleTxids ?? []) + txids)).sorted()
             state = .uncertain
         case .inProgress(let progress):
             attempt.existingLightning = progress
