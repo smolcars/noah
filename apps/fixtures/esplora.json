@@ -1,0 +1,112 @@
+{
+  "normalization": [
+    {
+      "input": " mempool.space/api/ ",
+      "endpoint": "https://mempool.space/api"
+    },
+    {
+      "input": "https://mempool.space/api/blocks/tip/height",
+      "endpoint": "https://mempool.space/api"
+    },
+    {
+      "input": "https://mempool.space/api/blocks/tip/hash",
+      "endpoint": "https://mempool.space/api"
+    },
+    {
+      "input": "https://mempool.space/api/block-height/0",
+      "endpoint": "https://mempool.space/api"
+    },
+    {
+      "input": "https://user:pass@example.com/api",
+      "endpoint": null
+    },
+    {
+      "input": "https://example.com/api?token=secret",
+      "endpoint": null
+    },
+    {
+      "input": "https://example.com/api#fragment",
+      "endpoint": null
+    },
+    {
+      "input": "",
+      "endpoint": null
+    },
+    {
+      "input": "https://",
+      "endpoint": null
+    },
+    {
+      "input": "https://bad host/api",
+      "endpoint": null
+    },
+    {
+      "input": "HTTP://LOCALHOST:8080/api///",
+      "endpoint": "http://localhost:8080/api"
+    },
+    {
+      "input": "https://EXAMPLE.com:443/",
+      "endpoint": "https://example.com"
+    }
+  ],
+  "genesis": [
+    {
+      "value": " 00000008819873E925422C1FF0F99F7CC9BBB232AF63A077A480A3633BEE1EF6\n",
+      "variant": "signet",
+      "valid": true
+    },
+    {
+      "value": "not-a-hash",
+      "variant": "signet",
+      "valid": false
+    },
+    {
+      "value": "000000000000000000000000000000000000000000000000000000000000000",
+      "variant": "signet",
+      "valid": false
+    },
+    {
+      "value": "00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6",
+      "variant": "signet",
+      "valid": true
+    },
+    {
+      "value": "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+      "variant": "signet",
+      "valid": false
+    },
+    {
+      "value": "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+      "variant": "mainnet",
+      "valid": true
+    },
+    {
+      "value": "00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6",
+      "variant": "mainnet",
+      "valid": false
+    },
+    {
+      "value": "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+      "variant": "regtest",
+      "valid": false
+    }
+  ],
+  "tipHeight": [
+    {
+      "value": " 123\n",
+      "valid": true
+    },
+    {
+      "value": "-1",
+      "valid": false
+    },
+    {
+      "value": "1.2",
+      "valid": false
+    },
+    {
+      "value": "<html>",
+      "valid": false
+    }
+  ]
+}
