@@ -89,7 +89,6 @@ final class HomeModel {
     private(set) var autoBoard: (netSats: UInt64, createdAt: Date)?
     private let dependencies: Dependencies
     private var quotes: [String: (price: Double, at: Date)] = [:]
-    private var currency: String?
     private var priceGeneration = 0
     private var loadingRounds = false
     private var nextRoundCheck: Date?
@@ -98,7 +97,6 @@ final class HomeModel {
     init(dependencies: Dependencies = .live) { self.dependencies = dependencies }
 
     func loadPrice(currency: String) async {
-        self.currency = currency
         priceGeneration += 1
         let generation = priceGeneration
         if let cached = quotes[currency], dependencies.now().timeIntervalSince(cached.at) < 300 {
@@ -129,6 +127,7 @@ final class HomeModel {
     /// Poll only presentation state; round progression stays at RN's 30 s cadence.
     func tick() async {
         backup = dependencies.backup()
+        let wasBackgroundRunning = backgroundRunning
         backgroundRunning = await dependencies.backgroundRunning()
         if let completed = try? await dependencies.autoBoards() {
             let ids = Set(completed.map(\.id))
@@ -138,7 +137,7 @@ final class HomeModel {
             seenAutoBoards = ids
         }
         if let autoBoard, dependencies.now().timeIntervalSince(autoBoard.createdAt) >= 5 { self.autoBoard = nil }
-        await refreshRounds()
+        await refreshRounds(force: wasBackgroundRunning && !backgroundRunning)
     }
 
     func refresh(currency: String) async {

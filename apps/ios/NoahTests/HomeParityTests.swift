@@ -101,6 +101,20 @@ struct HomeParityTests {
         #expect(calls == 4)
     }
 
+    @Test func roundsResumeAfterInitialBackgroundJob() async {
+        var background = true
+        var calls = 0
+        var deps = dependencies()
+        deps.backgroundRunning = { background }
+        deps.rounds = { calls += 1; return [] }
+        let model = HomeModel(dependencies: deps)
+        await model.refresh(currency: "USD")
+        #expect(calls == 0)
+        background = false
+        await model.tick()
+        #expect(calls == 1)
+    }
+
     @Test func autoBoardSuccessShowsNewReceiptsForFiveSecondsWithoutReplay() async {
         var now = Date(timeIntervalSince1970: 10_000)
         var completions = [HomeModel.AutoBoardCompletion(id: UUID(), netSats: 20_000)]
