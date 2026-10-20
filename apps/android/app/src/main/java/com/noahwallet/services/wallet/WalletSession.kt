@@ -14,6 +14,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import com.noahwallet.send.*
@@ -109,7 +110,7 @@ class WalletSession internal constructor(
             synchronized(lock) { stateObservers.remove(observer) }
             events.cancel()
         }
-    }
+    }.flowOn(Dispatchers.IO)
     private suspend fun stopStateObserver(observer: StateObserver) {
         synchronized(observer.holder) {
             if (!observer.closed) { observer.holder.stop(); observer.job.cancel() }
@@ -186,11 +187,11 @@ class WalletSession internal constructor(
     private var drained = CompletableDeferred<Unit>().apply { complete(Unit) }
     // A UI caller's cancellation must not abandon a native open and leak its datadir lock.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var state: State = State.Closed
+    @Volatile private var state: State = State.Closed
     // Bind a reused session to the exact credential that passed SDK fingerprint verification.
     private var openingSeedDigest: ByteArray? = null
     private fun seedDigest(value: String) = java.security.MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
-    val isOpen: Boolean get() = synchronized(lock) { state is State.Open }
+    val isOpen: Boolean get() = state is State.Open
 
     suspend fun openExisting(mnemonic: String, runDaemon: Boolean, appVersion: String) {
         beginOpen(mnemonic, runDaemon, appVersion, create = false, join = false)?.await()
@@ -229,7 +230,7 @@ class WalletSession internal constructor(
             }
         }
 
-    suspend fun createNew(mnemonic: String, runDaemon: Boolean, appVersion: String) {
+    suspend fun createNew(mnemonic: String, runDaemon: Boolean, appVersion: String) = withContext(NonCancellable + Dispatchers.IO) {
         val reservation = reserve()
         try { createNew(reservation, mnemonic, runDaemon, appVersion) }
         finally { release(reservation) }
@@ -373,7 +374,7 @@ class WalletSession internal constructor(
 
     /** Subscribe before history. This wait never owns the operations mutex. */
     @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
-    suspend fun receiveCompletion(request: ReceiveRequest): ReceiveCompletion? {
+    suspend fun receiveCompletion(request: ReceiveRequest): ReceiveCompletion? = withContext(Dispatchers.IO) {
         val observer = synchronized(lock) {
             val handles = (state as? State.Open)?.handles ?: throw SessionError()
             val holder = handles.notifications()
@@ -400,7 +401,7 @@ class WalletSession internal constructor(
             }
             observer.also { observers.add(it) }
         }
-        try { return observer.job.await() }
+        try { observer.job.await() }
         finally {
             withContext(NonCancellable) {
                 stopObserver(observer)
@@ -421,17 +422,17 @@ class WalletSession internal constructor(
         observer.job.join()
     }
 
-    suspend fun closeSettled() = withContext(NonCancellable) {
+    suspend fun closeSettled() = withContext(NonCancellable + Dispatchers.IO) {
         val opening = synchronized(lock) { (state as? State.Opening)?.attempt }
         try { opening?.await() } catch (_: Exception) { /* A failed open is already closed. */ }
         close()
     }
 
-    suspend fun close() {
+    suspend fun close() = withContext(NonCancellable + Dispatchers.IO) {
         val handles = synchronized(lock) {
             if (exclusiveSend) throw OpenError(OpenFailure.busy)
             when (val current = state) {
-                State.Closed -> return
+                State.Closed -> return@withContext
                 is State.Open -> current.handles.also { state = State.Closing }
                 is State.Quarantined -> current.handles.also { state = State.Closing }
                 else -> throw OpenError(OpenFailure.busy)
