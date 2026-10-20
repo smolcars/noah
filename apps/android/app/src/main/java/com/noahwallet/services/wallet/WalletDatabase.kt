@@ -16,6 +16,7 @@ object WalletDatabase {
     /** Plaintext copies live only here; every inspection empties it first (crash leftovers). */
     private val scratch = ScratchSpace(File(System.getProperty("java.io.tmpdir"), "noah-preflight"))
     fun sweepAbandoned() = scratch.sweepAbandoned()
+    fun sweepForWalletDeletion() = scratch.sweepForWalletDeletion()
 
     /** Callers (the session's open path) inspect one database at a time. */
     fun properties(database: File): Properties = try {

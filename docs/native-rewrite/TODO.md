@@ -221,7 +221,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 - [x] M5 review A2: Android mailbox authorization refresh at startup/resume and after re-registration, preserving opt-out and iOS's 60-day renewal / 89-day expiry; registration regression tests
 
-- [x] M5 review A3: checked scratch cleanup and directory durability before deleting secrets on both platforms; undeletable plaintext preserves seed/token/settings
+- [x] M5 review A3: checked scratch cleanup (including Android preflight copies) and directory durability before deleting secrets on both platforms; undeletable plaintext preserves seed/token/settings
 
 - [x] M5 review A4: Android history observation keys wallet availability; suspension/deletion clear cached rows and invalidate old enrichment before a replacement wallet
 
