@@ -263,13 +263,14 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         }
     }
 
-    fun action(fallback: String, block: suspend () -> Unit) {
+    fun action(fallback: String, useServerMessage: Boolean = false, block: suspend () -> Unit) {
         if (busy) return
         busy = true; error = null
         viewModelScope.launch {
             try { block() }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (failure: Exception) { error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage || failure is WalletLifecycle.RestoreSettingsUnavailable) failure.message else fallback }
+            catch (failure: Exception) { error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage || failure is WalletLifecycle.RestoreSettingsUnavailable) failure.message
+                else if (useServerMessage) com.noahwallet.services.server.ServerFailure.message(failure, fallback) else fallback }
             finally { busy = false }
         }
     }

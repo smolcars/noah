@@ -171,7 +171,7 @@ fun EmergencyEmailScreen(model: AppModel, onContinue: () -> Unit) {
             model.error = "Please enter a valid email address."; return
         }
         focus.clearFocus()
-        model.action("Failed to send verification code. Please try again.") {
+        model.action("Failed to send verification code. Please try again.", useServerMessage = true) {
             email = email.trim(); code = ""
             if (model.server.sendEmail(email)) onContinue() else sent = true
         }
@@ -184,7 +184,7 @@ fun EmergencyEmailScreen(model: AppModel, onContinue: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(), enabled = !model.busy, singleLine = true)
             NoahButton("Verify Email", code.length == 6 && !model.busy) {
                 focus.clearFocus()
-                model.action("Invalid or expired verification code. Please try again.") {
+                model.action("Invalid or expired verification code. Please try again.", useServerMessage = true) {
                     try { model.server.verifyEmail(code, email); onContinue() } finally { code = "" }
                 }
             }
@@ -225,7 +225,7 @@ fun LightningScreen(model: AppModel, onContinue: (suspend () -> Unit)? = null) {
             try { LightningIdentity.payload(username, npub) }
             catch (failure: IllegalArgumentException) { model.error = failure.message; return@NoahButton }
             focus.clearFocus()
-            model.action("Failed to update Lightning address. Please try again.") {
+            model.action("Failed to update Lightning address. Please try again.", useServerMessage = true) {
                 model.server.saveIdentity(username, npub); if (onContinue != null) onContinue() else model.finish()
             }
         }

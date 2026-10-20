@@ -18,8 +18,13 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
 class ServerFailure(message: String, val status: Int? = null, val code: String? = null,
-                    val kind: Kind = Kind.request) : Exception(message) {
+                    val kind: Kind = Kind.request, val serverMessage: String? = null) : Exception(message) {
     enum class Kind { request, connectivity }
+
+    companion object {
+        fun message(failure: Exception, fallback: String): String =
+            (failure as? ServerFailure)?.serverMessage?.takeIf { it.isNotBlank() } ?: fallback
+    }
 }
 
 object ServerEndpoint {
@@ -99,6 +104,6 @@ fun <T> NetworkResult<T>.value(): T = when (this) {
         if (error is NetworkError.Network) throw ServerFailure("Server connection failed", kind = ServerFailure.Kind.connectivity)
         val http = error as? NetworkError.Http
         val body = http?.body?.let { runCatching { ServerClient.json.decodeFromString<ApiErrorResponse>(it) }.getOrNull() }
-        throw ServerFailure(body?.message ?: "Server request failed", http?.statusCode, body?.code)
+        throw ServerFailure(body?.message ?: "Server request failed", http?.statusCode, body?.code, serverMessage = body?.message)
     }
 }
