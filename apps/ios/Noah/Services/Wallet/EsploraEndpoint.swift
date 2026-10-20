@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 /// RN's normalizeEsploraEndpoint and genesis validation, shared with Android via esplora.json.
@@ -7,17 +8,21 @@ enum EsploraEndpoint {
         var errorDescription: String? { message }
     }
     static func normalize(_ value: String) throws -> String {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).filter { $0 != "\t" && $0 != "\n" && $0 != "\r" }.replacingOccurrences(of: "\\", with: "/")
         guard !trimmed.isEmpty else { throw Failure(message: "Enter an Esplora API endpoint.") }
         let input = trimmed.range(of: "^https?://", options: [.regularExpression, .caseInsensitive]) == nil ? "https://" + trimmed : trimmed
+        guard input.range(of: "^https?://[^/]", options: [.regularExpression, .caseInsensitive]) != nil,
+              input.range(of: "%(?![0-9a-fA-F]{2})", options: .regularExpression) == nil else {
+            throw Failure(message: "Enter a valid Esplora API URL.")
+        }
         guard var url = URLComponents(string: input.replacingOccurrences(of: "\\", with: "/")), let host = url.host, !host.isEmpty,
               !host.contains(where: { $0.isWhitespace }), url.url != nil else {
             throw Failure(message: "Enter a valid Esplora API URL.")
         }
         guard url.user == nil, url.password == nil else { throw Failure(message: "The Esplora endpoint cannot include credentials.") }
-        guard url.query == nil, url.fragment == nil else { throw Failure(message: "The Esplora endpoint cannot include a query string or fragment.") }
+        guard (url.query ?? "").isEmpty, (url.fragment ?? "").isEmpty else { throw Failure(message: "The Esplora endpoint cannot include a query string or fragment.") }
         guard url.port.map({ (0...65535).contains($0) }) ?? true else { throw Failure(message: "Enter a valid Esplora API URL.") }
-        url.scheme = url.scheme?.lowercased(); url.host = try ipv4Host(host.lowercased())
+        url.scheme = url.scheme?.lowercased(); url.host = try canonicalHost(host.lowercased())
         if url.port == (url.scheme == "http" ? 80 : 443) { url.port = nil }
         // WHATWG special schemes treat backslashes as separators and recognize encoded dot segments.
         var segments: [String] = []
@@ -32,9 +37,22 @@ enum EsploraEndpoint {
         for suffix in ["/blocks/tip/height", "/blocks/tip/hash", "/block-height/0"] where path.hasSuffix(suffix) {
             path.removeLast(suffix.count); break
         }
+        if path.isEmpty, url.query != nil || url.fragment != nil { path = "/" }
         url.percentEncodedPath = path
         guard let result = url.string else { throw Failure(message: "Enter a valid Esplora API URL.") }
         return result.replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
+    }
+    private static func canonicalHost(_ host: String) throws -> String {
+        guard host.hasPrefix("["), host.hasSuffix("]") else { return try ipv4Host(host) }
+        var address = in6_addr()
+        guard String(host.dropFirst().dropLast()).withCString({ inet_pton(AF_INET6, $0, &address) }) == 1 else {
+            throw Failure(message: "Enter a valid Esplora API URL.")
+        }
+        var buffer = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
+        guard inet_ntop(AF_INET6, &address, &buffer, socklen_t(buffer.count)) != nil else {
+            throw Failure(message: "Enter a valid Esplora API URL.")
+        }
+        return "[" + String(cString: buffer) + "]"
     }
     /// WHATWG's IPv4 numbers allow fewer than four components (127.1), hex and octal.
     private static func ipv4Host(_ host: String) throws -> String {

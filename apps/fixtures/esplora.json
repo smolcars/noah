@@ -95,6 +95,54 @@
     {
       "input": "https://example.com/a//b/../api",
       "endpoint": "https://example.com/a//api"
+    },
+    {
+      "input": "https://example.com?",
+      "endpoint": "https://example.com/?"
+    },
+    {
+      "input": "https://example.com#",
+      "endpoint": "https://example.com/#"
+    },
+    {
+      "input": "https://@example.com/api",
+      "endpoint": null
+    },
+    {
+      "input": "https://:@example.com/api",
+      "endpoint": null
+    },
+    {
+      "input": "https:///example.com/api",
+      "endpoint": null
+    },
+    {
+      "input": "https:////example.com/api",
+      "endpoint": null
+    },
+    {
+      "input": "https://example.com/a\tb/api",
+      "endpoint": "https://example.com/ab/api"
+    },
+    {
+      "input": "https://example.com/a\nb/api",
+      "endpoint": "https://example.com/ab/api"
+    },
+    {
+      "input": "https://example.com/a\rb/api",
+      "endpoint": "https://example.com/ab/api"
+    },
+    {
+      "input": "https://example.com/a%zz/api",
+      "endpoint": null
+    },
+    {
+      "input": "https://example.com/a%b/api",
+      "endpoint": null
+    },
+    {
+      "input": "https://[0:0::1]/api",
+      "endpoint": "https://[::1]/api"
     }
   ],
   "genesis": [
