@@ -201,6 +201,8 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] ReceiveScreen: BIP-321 QR with Noah logo, amount/note/fiat sheet, copy/share, Ark and Lightning completion — Android
 - [x] ReceiveSuccessScreen with animation, settled status and refreshed balance — Android
 - [x] Shared receive-request (9 cases) and fiat-currency (48 cases) fixtures in JUnit; session observer cancellation/close regressions — Android
+- [x] QRHubScreen: literal Lightning-address QR/name/copy (1.8 s feedback), missing-address Profile action, scan/paste via existing CameraX/ZXing and Send importer, camera-permission denial and close/tab lifecycle reset — Android
+- [x] QR hub Compose device tests: decode rendered QR, copy exact address, missing-address Profile route, scanner close/paste; public-copy previews for launch/status evidence — Android
 
 ## M3 — Send
 - [x] Android Send round-1 review fixes: iOS rounds 7–8 audited destructive override for unresolved receipts; durable original/legacy evidence and corrupt journal/audit quarantine; retained, coalesced, bounded session-owned discard retries and failed-close ownership; last-known receipts after refresh errors; version-2 prepared input outpoints and confirmed competing-spend detection. Bounded Android/iOS Send amount parsing shares 90 adversarial vectors. Full suites once: Android 1,113 passed / 0 failed or skipped plus regtest APK; iOS 378 total / 362 passed / 16 opt-in skipped / 0 failed. Dedicated simulator/build cleanup complete. See `apps/android/SendTests/README.md`.

@@ -35,6 +35,9 @@ enum class Destination(val title: Int, val icon: Int) : NavKey {
     History(R.string.history, R.drawable.ic_history),
 }
 
+@Serializable
+data object QRDestination : NavKey
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoahApp(model: AppModel) {
@@ -63,7 +66,7 @@ fun NoahApp(model: AppModel) {
             if (backStack.last() !is SettingsDestination) NavigationBar {
                 Destination.entries.forEach { destination ->
                     NavigationBarItem(
-                        selected = backStack.last() == destination,
+                        selected = backStack.last() == destination || (destination == Destination.Home && backStack.last() == QRDestination),
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.onSurface,
                             selectedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -88,16 +91,27 @@ fun NoahApp(model: AppModel) {
             modifier = Modifier.padding(padding),
             onBack = { if (!model.busy && backStack.size > 1) backStack.removeAt(backStack.lastIndex) },
             entryProvider = entryProvider {
+                entry<QRDestination> {
+                    QRHubScreen(model.server.state.lightningAddress,
+                        com.noahwallet.services.storage.SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content } ?: "",
+                        onBack = { backStack.removeAt(backStack.lastIndex) },
+                        onProfile = { backStack.add(SettingsDestination.Profile) },
+                        onScan = { value ->
+                            model.scannedDestination = value
+                            backStack.clear(); backStack.add(Destination.Home); backStack.add(Destination.Send)
+                        })
+                }
                 entry<SettingsDestination> { destination ->
                     SettingsPage(model, destination) { next ->
-                        if (next == SettingsDestination.Profile && backStack.last() in listOf(SettingsDestination.Email, SettingsDestination.Lightning)) backStack.removeAt(backStack.lastIndex)
+                        if (next == SettingsDestination.Settings && backStack.last() == SettingsDestination.UnifiedPush) backStack.removeAt(backStack.lastIndex)
+                        else if (next == SettingsDestination.Profile && backStack.last() in listOf(SettingsDestination.Email, SettingsDestination.Lightning)) backStack.removeAt(backStack.lastIndex)
                         else backStack.add(next)
                     }
                 }
                 entry<Destination> { destination ->
                     if (destination == Destination.Home || model.isWalletSuspended) HomeScreen(model, onViewAll = {
                         backStack.add(Destination.History)
-                    }, onRepeatPayment = repeat) { backStack.add(SettingsDestination.Settings) }
+                    }, onRepeatPayment = repeat, onQR = { backStack.add(QRDestination) }) { backStack.add(SettingsDestination.Settings) }
                     else if (destination == Destination.History) TransactionsScreen(model, repeat)
                     else if (destination == Destination.Receive) ReceiveScreen(model) {
                         backStack.clear(); backStack.add(Destination.Home)

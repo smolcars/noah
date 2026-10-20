@@ -117,6 +117,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         warn = com.noahwallet.services.logging.AppLog(application, "history")::w,
     ))
     var recurringNotification by mutableStateOf(false)
+    var scannedDestination by mutableStateOf<String?>(null)
     var repeatPayment by mutableStateOf<com.noahwallet.history.RepeatPayment?>(null)
 
     fun preference(key: String, value: String) {
@@ -156,7 +157,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
             }
             throw failure
         }
-        history.clear(); repeatPayment = null
+        history.clear(); repeatPayment = null; scannedDestination = null
         walletLock.reset(); restore.reset()
         open = false; onboarded = false; isWalletSuspended = false; summary = null
         hidden = false; amountUnit = BitcoinAmountUnit.bip177; preferredCurrency = "USD"; localeIdentifier = "en"

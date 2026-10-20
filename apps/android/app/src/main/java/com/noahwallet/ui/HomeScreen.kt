@@ -23,7 +23,7 @@ import androidx.lifecycle.repeatOnLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatPayment) -> Unit, settings: () -> Unit) {
+fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatPayment) -> Unit, onQR: () -> Unit, settings: () -> Unit) {
     var selectedID by rememberSaveable { mutableStateOf<String?>(null) }
     var map by rememberSaveable { mutableStateOf(false) }
     var fact by remember { mutableStateOf(com.noahwallet.ui.home.bitcoinFacts.random()) }
@@ -70,6 +70,7 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(settings) { Text("Settings") }
                     TextButton({ map = true }) { Text("Bitcoin Map") }
+                    if (!model.isWalletSuspended) TextButton(onQR) { Text("QR Code") }
                 }
                 // Like RN, a suspended wallet shows only the suspended card.
                 if (model.isWalletSuspended) {

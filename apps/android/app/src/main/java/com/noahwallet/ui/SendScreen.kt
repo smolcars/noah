@@ -62,6 +62,11 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
     LaunchedEffect(controller.state, app.repeatPayment) {
         app.repeatPayment?.let { if (!controller.locked) { model.prefill(it, app.preferredCurrency); app.repeatPayment = null } }
     }
+    LaunchedEffect(controller.state, app.scannedDestination) {
+        app.scannedDestination?.let { if (!controller.locked) {
+            app.scannedDestination = null; model.reset(); model.importRecipient(it)
+        } }
+    }
     LaunchedEffect(model.destination) {
         val candidate = model.destination
         coroutineScope {
