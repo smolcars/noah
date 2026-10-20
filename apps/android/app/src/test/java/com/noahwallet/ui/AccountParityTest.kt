@@ -6,6 +6,9 @@ import com.noahwallet.ui.settings.limitedProfileName
 import com.noahwallet.ui.settings.preferenceName
 import com.noahwallet.ui.settings.preferenceDetail
 import com.noahwallet.ui.settings.SettingsDestination
+import com.noahwallet.ui.settings.preferenceSummary
+import com.noahwallet.ui.settings.walletSettingsRows
+import com.noahwallet.ui.settings.WalletSettingsRow
 import java.util.Locale
 import kotlinx.serialization.json.jsonPrimitive
 import com.noahwallet.services.storage.LegacyLocale
@@ -41,6 +44,23 @@ class AccountParityTest {
             assertEquals("1,234 sats", preferenceDetail(SettingsDestination.Unit, "sats", Locale.US))
             assertEquals("1234 sats", preferenceDetail(SettingsDestination.Unit, "sats", spanish))
         } finally { Locale.setDefault(previous) }
+    }
+
+    @Test fun settingsSummariesShowFullValues() {
+        assertEquals("Español", preferenceSummary(SettingsDestination.Language, "es", Locale.US))
+        assertEquals("EUR · Euro", preferenceSummary(SettingsDestination.Currency, "EUR", Locale.US))
+        assertEquals("Bitcoin (BIP-177) · ₿\u00a01,234", preferenceSummary(SettingsDestination.Unit, "bip177", Locale.US))
+        assertEquals("Satoshis · 1234 sats", preferenceSummary(SettingsDestination.Unit, "sats", Locale.forLanguageTag("es")))
+    }
+
+    @Test fun walletRowsFollowRNWithNativeBatterySettingsLast() {
+        val expected = listOf(WalletSettingsRow.Seed, WalletSettingsRow.Vtxos, WalletSettingsRow.Exits,
+            WalletSettingsRow.Recurring, WalletSettingsRow.Backup, WalletSettingsRow.UnifiedPush, WalletSettingsRow.Board,
+            WalletSettingsRow.AutoBoard, WalletSettingsRow.Biometrics, WalletSettingsRow.Mailbox, WalletSettingsRow.Battery)
+        assertEquals(expected, walletSettingsRows(true, true))
+        assertEquals(expected - WalletSettingsRow.UnifiedPush, walletSettingsRows(false, true))
+        assertEquals(expected - WalletSettingsRow.Biometrics, walletSettingsRows(true, false))
+        assertEquals(expected - setOf(WalletSettingsRow.UnifiedPush, WalletSettingsRow.Biometrics), walletSettingsRows(false, false))
     }
 
     @Test fun replacementKeepsOldAddressAndCannotSkip() {

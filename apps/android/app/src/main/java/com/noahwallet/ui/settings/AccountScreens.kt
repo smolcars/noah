@@ -79,6 +79,12 @@ internal fun preferenceDetail(kind: SettingsDestination, code: String, locale: L
     if (kind == SettingsDestination.Unit) com.noahwallet.formatting.BitcoinAmount.format(1234,
         com.noahwallet.formatting.BitcoinAmountUnit.valueOf(code), locale) else code.uppercase(Locale.ROOT)
 
+internal fun preferenceSummary(kind: SettingsDestination, code: String, locale: Locale): String = when (kind) {
+    SettingsDestination.Language -> preferenceName(kind, code, locale)
+    SettingsDestination.Currency -> "$code · ${preferenceName(kind, code, locale)}"
+    else -> "${preferenceName(kind, code, locale)} · ${preferenceDetail(kind, code, locale)}"
+}
+
 @Composable
 fun PreferenceScreen(model: AppModel, kind: SettingsDestination, onSelected: () -> Unit) {
     val locale = Locale.forLanguageTag(model.localeIdentifier)

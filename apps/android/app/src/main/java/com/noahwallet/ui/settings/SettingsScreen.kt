@@ -36,6 +36,12 @@ enum class SettingsDestination(val title: String) : NavKey {
     Email("Emergency Email"), Lightning("Lightning Address"), Battery("Battery Optimization"), UnifiedPush("UnifiedPush"),
 }
 
+internal enum class WalletSettingsRow { Seed, Vtxos, Exits, Recurring, Backup, UnifiedPush, Board, AutoBoard, Biometrics, Mailbox, Battery }
+
+internal fun walletSettingsRows(unifiedPush: Boolean, biometrics: Boolean) = WalletSettingsRow.entries.filter {
+    (it != WalletSettingsRow.UnifiedPush || unifiedPush) && (it != WalletSettingsRow.Biometrics || biometrics)
+}
+
 @Composable
 fun SettingsPage(model: AppModel, destination: SettingsDestination, onBack: () -> Unit, navigate: (SettingsDestination) -> Unit) {
     when (destination) {
@@ -112,37 +118,44 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
         SettingRow("Noah's Ark Story", "Listen to the story behind Noah") { navigate(SettingsDestination.Story) }
         SectionTitle("Account")
         SettingRow("Profile", "Name, Lightning address, emergency email, and public key") { navigate(SettingsDestination.Profile) }
-        SettingRow("Language", model.localeIdentifier.uppercase()) { navigate(SettingsDestination.Language) }
-        SettingRow("Currency", model.preferredCurrency) { navigate(SettingsDestination.Currency) }
-        SettingRow("Bitcoin Unit", if (model.amountUnit.name == "sats") "Satoshis" else "Bitcoin (BIP-177)") { navigate(SettingsDestination.Unit) }
+        SettingRow("Language", preferenceSummary(SettingsDestination.Language, model.localeIdentifier, java.util.Locale.forLanguageTag(model.localeIdentifier))) { navigate(SettingsDestination.Language) }
+        SettingRow("Currency", preferenceSummary(SettingsDestination.Currency, model.preferredCurrency, java.util.Locale.forLanguageTag(model.localeIdentifier))) { navigate(SettingsDestination.Currency) }
+        SettingRow("Bitcoin Unit", preferenceSummary(SettingsDestination.Unit, model.amountUnit.name, java.util.Locale.forLanguageTag(model.localeIdentifier))) { navigate(SettingsDestination.Unit) }
         SectionTitle("Info")
         SettingRow("Ark Info", "Ark server, wallet, and explorer configuration") { navigate(SettingsDestination.Ark) }
         SectionTitle("Wallet")
-        SettingRow("Show Seed Phrase", "Keep your recovery phrase safe. Never share it.") { navigate(SettingsDestination.Seed) }
-        SettingRow("Show VTXOs", "Inspect and refresh your Ark funds") { navigate(SettingsDestination.Vtxos) }
-        SettingRow("Board to Ark", "Move onchain bitcoin into Ark") { navigate(SettingsDestination.Board) }
-        SettingRow("Emergency Exit", "Recover Ark funds onchain") { navigate(SettingsDestination.Exits) }
-        SettingRow("Recurring Payments", "Automatic payments from your Ark balance") { navigate(SettingsDestination.Recurring) }
-        SettingRow("Backup & Restore", "Automatic and manual encrypted backups") { navigate(SettingsDestination.Backup) }
-        SettingToggle("Auto-Board to Ark", threshold?.let { "Ask to board when onchain funds cover ${maxOf(it, 20_000u)} sats, fees, and a 5,000 sats reserve." } ?: "Auto-board threshold unavailable",
-            autoBoard, !model.busy) { value ->
-            model.action("Couldn't save auto-board preference.") {
-                model.settings.set(SettingsPreferences.autoBoard(model.settings.string("transaction-storage"), value), "transaction-storage")
-                autoBoard = value
+        walletSettingsRows(com.noahwallet.ui.launch.PlatformAccess.unifiedPush(LocalContext.current),
+            WalletLock.available(activity) || model.walletLock.enabled).forEach { row ->
+            when (row) {
+                WalletSettingsRow.Seed -> SettingRow("Show Seed Phrase", "Keep your recovery phrase safe. Never share it.") { navigate(SettingsDestination.Seed) }
+                WalletSettingsRow.Vtxos -> SettingRow("Show VTXOs", "Inspect and refresh your Ark funds") { navigate(SettingsDestination.Vtxos) }
+                WalletSettingsRow.Exits -> SettingRow("Emergency Exit", "Recover Ark funds onchain") { navigate(SettingsDestination.Exits) }
+                WalletSettingsRow.Recurring -> SettingRow("Recurring Payments", "Automatic payments from your Ark balance") { navigate(SettingsDestination.Recurring) }
+                WalletSettingsRow.Backup -> SettingRow("Backup & Restore", "Automatic and manual encrypted backups") { navigate(SettingsDestination.Backup) }
+                WalletSettingsRow.UnifiedPush -> SettingRow("UnifiedPush", "Configure push notifications") { navigate(SettingsDestination.UnifiedPush) }
+                WalletSettingsRow.Board -> SettingRow("Board to Ark", "Move onchain bitcoin into Ark") { navigate(SettingsDestination.Board) }
+                WalletSettingsRow.AutoBoard -> SettingToggle("Auto-Board to Ark", threshold?.let { "Ask to board when onchain funds cover ${maxOf(it, 20_000u)} sats, fees, and a 5,000 sats reserve." } ?: "Auto-board threshold unavailable",
+                    autoBoard, !model.busy) { value ->
+                    model.action("Couldn't save auto-board preference.") {
+                        model.settings.set(SettingsPreferences.autoBoard(model.settings.string("transaction-storage"), value), "transaction-storage")
+                        autoBoard = value
+                    }
+                }
+                WalletSettingsRow.Biometrics -> {
+                    SettingToggle("Biometric Authentication", "Require authentication to unlock your wallet", model.walletLock.enabled, !model.walletLock.authenticating) {
+                        model.action("Couldn't save authentication preference.") { model.walletLock.setEnabled(activity, it) }
+                    }
+                    model.walletLock.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+                }
+                WalletSettingsRow.Mailbox -> SettingToggle("Mailbox Notifications", "Allow Noah to wake the app to claim incoming payments", server.isMailboxAuthorizationEnabled != false, !model.busy && !model.isWalletSuspended) {
+                    model.action("Couldn't update mailbox notifications.") {
+                        model.server.setMailboxEnabled(it)
+                        server = model.server.state
+                    }
+                }
+                WalletSettingsRow.Battery -> SettingRow("Battery Optimization", "Allow background wallet notifications") { navigate(SettingsDestination.Battery) }
             }
         }
-        if (WalletLock.available(activity) || model.walletLock.enabled) SettingToggle("Biometric Authentication", "Require authentication to unlock your wallet", model.walletLock.enabled, !model.walletLock.authenticating) {
-            model.action("Couldn't save authentication preference.") { model.walletLock.setEnabled(activity, it) }
-        }
-        model.walletLock.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
-        SettingToggle("Mailbox Notifications", "Allow Noah to wake the app to claim incoming payments", server.isMailboxAuthorizationEnabled != false, !model.busy && !model.isWalletSuspended) {
-            model.action("Couldn't update mailbox notifications.") {
-                model.server.setMailboxEnabled(it)
-                server = model.server.state
-            }
-        }
-        if (com.noahwallet.ui.launch.PlatformAccess.unifiedPush(LocalContext.current)) SettingRow("UnifiedPush", "Configure push notifications") { navigate(SettingsDestination.UnifiedPush) }
-        SettingRow("Battery Optimization", "Allow background wallet notifications") { navigate(SettingsDestination.Battery) }
         SectionTitle("Debug")
         SettingRow("Show Logs", "Application logs") { navigate(SettingsDestination.Logs) }
         SettingRow("Reset Server Registration", "Register this wallet and push notifications again", !model.busy && !model.isWalletSuspended) { confirmation = "reset" }
