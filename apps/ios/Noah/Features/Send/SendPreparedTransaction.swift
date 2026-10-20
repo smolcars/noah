@@ -19,4 +19,12 @@ struct SendPreparedTransaction: Codable, Equatable, Sendable {
         inputCount = transaction.inputs.count
         inputs = transaction.inputs.map { .init(txid: $0.txid, vout: $0.vout) }
     }
+
+    init(_ board: PreparedBoard) {
+        id = board.id
+        txid = board.txid
+        vsize = board.vsize
+        inputCount = board.inputs.count
+        inputs = board.inputs.map { .init(txid: $0.txid, vout: $0.vout) }
+    }
 }

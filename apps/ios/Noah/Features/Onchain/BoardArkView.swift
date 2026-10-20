@@ -44,6 +44,7 @@ struct AutoBoardingService: View {
     @Environment(AppModel.self) private var app
     @Environment(\.scenePhase) private var phase
     @State private var plan: OnchainQuote?
+    @State private var generation = UUID()
     @State private var message: String?
     @State private var checking = false
     @State private var busy = false
@@ -55,19 +56,29 @@ struct AutoBoardingService: View {
         }
         .task(id: app.summary?.balance.onchain.confirmed) { await check() }
         .onChange(of: phase) { _, value in
-            if value != .active { plan = nil } else { Task { await check() } }
+            if value != .active { invalidate() } else { Task { await check() } }
         }
-        .onChange(of: app.isWalletSuspended) { _, value in if value { plan = nil } }
-        .onDisappear { plan = nil }
+        .onChange(of: app.isWalletSuspended) { _, value in if value { invalidate() } }
+        .onChange(of: app.summary?.fingerprint) { _, _ in invalidate() }
+        .onDisappear { invalidate() }
+        .onChange(of: plan) { old, _ in
+            if let old, !busy { Task { await app.session.discardBoard(old) } }
+        }
+        .task(id: plan?.id) {
+            guard plan != nil else { return }
+            do { try await Task.sleep(for: .seconds(120)) } catch { return }
+            invalidate()
+        }
         .sheet(item: $plan, onDismiss: { markAttempted() }) { quote in
             OnchainReviewSheet(
                 quote: quote,
                 confirm: {
                     guard markAttempted() else { return }
-                    plan = nil
                     busy = true
+                    plan = nil
                     Task {
                         defer { busy = false }
+                        defer { Task { await app.session.discardBoard(quote) } }
                         do {
                             guard !app.isWalletSuspended, phase == .active,
                                 PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled,
@@ -100,6 +111,7 @@ struct AutoBoardingService: View {
             (app.summary?.balance.onchain.confirmed ?? 0) >= 20_000
         else { return }
         checking = true
+        let token = generation
         defer { checking = false }
         do {
             guard !(await WalletBackgroundActivity.shared.isRunning),
@@ -107,13 +119,21 @@ struct AutoBoardingService: View {
             else { return }
             let quote = try await app.session.autoBoardQuote()
             let latest = PersistedTransactionState.load(from: .shared)
-            guard phase == .active, !app.isWalletSuspended, latest.isAutoBoardingEnabled,
-                !latest.hasAttemptedAutoBoarding
-            else { return }
+            guard token == generation, !Task.isCancelled, phase == .active, !app.isWalletSuspended,
+                latest.isAutoBoardingEnabled, !latest.hasAttemptedAutoBoarding
+            else {
+                if let quote { await app.session.discardBoard(quote) }
+                return
+            }
             plan = quote
         } catch {
-            message = "Unable to estimate boarding fees. Use Settings → Board to Ark to try again."
+            message = "Unable to prepare boarding. Use Settings → Board to Ark to try again."
         }
+    }
+    private func invalidate() {
+        generation = UUID()
+        if let plan, !busy { Task { await app.session.discardBoard(plan) } }
+        plan = nil
     }
     @discardableResult
     private func markAttempted() -> Bool {

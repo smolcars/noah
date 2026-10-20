@@ -371,10 +371,9 @@ struct SendOutcomeView: View {
                     if receipt.broadcastRetryPending == true {
                         Text("Submitted, awaiting broadcast. Noah will keep retrying the broadcast. Do not send this payment again.")
                     } else if receipt.isSubmitted {
-                        Text(controller.attempt?.payment.source == .offchain
-                             ? "Noah can’t track this transaction’s confirmation in-app; check a block explorer. Do not send this payment again."
-                             : "Noah has not confirmed this transaction. If it was replaced, confirmation may not be trackable in-app; check a block explorer. Do not send this payment again.")
+                        Text(receipt.chainStatus?.message ?? "Submitted. Refresh to check network status. Do not send this payment again.")
                     }
+                    if receipt.status == .confirmed, let status = receipt.chainStatus { Text(status.message) }
                     if receipt.txid != nil {
                         NoahButton(title: "Refresh payment status", isLoading: controller.checking) {
                             Task { await controller.checkStatus() }

@@ -83,6 +83,7 @@ actor WalletSession {
     private let location: WalletDataLocation
     private let opener: Opener
     var sendPreparations: [String: SendPreparation] = [:]
+    var boardPreparations: [String: BoardPreparation] = [:]
     private var state = State.closed
     private var runningCalls = 0
     private var sendReserved = false
@@ -164,6 +165,7 @@ actor WalletSession {
             await callsDrained()
             do {
                 try await discardSendReviews()
+                try await discardBoardReviews()
                 try await Task { try await handles.wallet.stopDaemonWait() }.value
             } catch {
                 state = .open(handles)
@@ -293,6 +295,7 @@ actor WalletSession {
         runningCalls += 1
         defer { callFinished() }
         await retrySendDiscards()
+        await retryBoardDiscards()
         return try await Task { try await body(handles) }.value
     }
 

@@ -48,6 +48,7 @@ struct SendReceipt: Codable, Equatable, Sendable {
     var proof: Proof?
     var broadcastRetryPending: Bool?
     var confirmedConflictTxid: String?
+    var chainStatus: ChainTransactionStatus?
     enum Proof: String, Codable, Sendable { case preparedTxid, submitReturnedTxid, actualMovement, submitReturnedArkSuccess }
     enum Status: String, Codable, Sendable { case submitted, confirmed, unlocated, conflicted }
     var isUnresolved: Bool { status == .unlocated || status == .conflicted }

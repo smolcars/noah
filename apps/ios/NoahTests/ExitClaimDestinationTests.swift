@@ -236,9 +236,7 @@ struct ExitClaimExecutionTests {
             let reviewed = try await WalletSession.claimQuote(ids: ["a"], destination: destination, access: wallet.access())
             #expect(reviewed.destinationIsMine == mine)
             #expect((reviewed.externalDestinationWarning == nil) == mine)
-            _ = try await WalletSession.executeClaim(reviewed, journal: journal, access: wallet.access()) { ids, walletID in
-                #expect(ids == ["a"] && walletID == "wallet")
-            }
+            _ = try await WalletSession.executeClaim(reviewed, journal: journal, access: wallet.access())
             #expect(await wallet.ownershipChecks == [destination, destination])
             #expect(await wallet.drainDestinations == [reviewed.destination!])
             #expect(await wallet.broadcasts == ["claim-psbt"])
@@ -261,9 +259,7 @@ struct ExitClaimExecutionTests {
             if change == "wrong-network" { reviewed.destination = "1BoatSLRHtKNngkdXEeobR76b53LETtpyT" }
             let access = wallet.access()
             await #expect(throws: OnchainFailure.self) {
-                _ = try await WalletSession.executeClaim(reviewed, journal: journal, access: access) { _, _ in
-                    Issue.record("Rejected claims must not reach discovery writes")
-                }
+                _ = try await WalletSession.executeClaim(reviewed, journal: journal, access: access)
             }
             #expect(await wallet.ownershipChecks.count == (["invalid", "wrong-network"].contains(change) ? 1 : 2))
             #expect(await wallet.drainDestinations.isEmpty)
@@ -284,9 +280,7 @@ struct ExitClaimExecutionTests {
             }
             reviewed.destination = destination
             await #expect(throws: OnchainFailure.self) {
-                try await WalletSession.executeClaim(reviewed, journal: journal, access: wallet.access()) { _, _ in
-                    Issue.record("Empty claims must not reach discovery writes")
-                }
+                try await WalletSession.executeClaim(reviewed, journal: journal, access: wallet.access())
             }
         }
         #expect(await wallet.drainDestinations.isEmpty)

@@ -83,6 +83,11 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     var automatic = false
     // Optional so journals written before MAX used boardAll remain readable.
     var boardAll: Bool?
+    var prepared: SendPreparedTransaction?
+    var isCurrent: Bool {
+        prepared.map { $0.isCurrent && Date().timeIntervalSince(createdAt) < 120 }
+            ?? ExitRules.current(reviewedAt: createdAt)
+    }
     var externalDestinationWarning: String? {
         action == .claim && destinationIsMine == false
             ? "This address isn't in your Noah wallet. The claimed funds will be sent there." : nil
@@ -100,13 +105,20 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
         inputs.matches(other.inputs) && fee == other.fee
             && chainFee == other.chainFee && confirmed == other.confirmed && feeRate == other.feeRate
             && destinationIsMine == other.destinationIsMine && automatic == other.automatic && boardAll == other.boardAll
+            && prepared == other.prepared
     }
 }
 
 enum OnchainFailure: LocalizedError {
     case unavailable, changed, invalid, uncertain, busy, cancellationRefused, claimFeeChanged, constructionFailed
+    case belowMinimum, tooManyInputs, reservedInputs, notSynced, boardNotAttempted
     var errorDescription: String? {
         switch self {
+        case .belowMinimum: "The amount Ark receives is below its minimum. Increase the boarding amount."
+        case .tooManyInputs: "There are too many small coins for this board. Try a smaller amount."
+        case .reservedInputs: "These coins are unavailable or reserved by another payment in review. Close that review, then try again."
+        case .notSynced: "Sync the wallet once before preparing a board."
+        case .boardNotAttempted: "Boarding was not submitted. Review again when the wallet is ready."
         case .unavailable: "Wait for the wallet to be ready, then refresh."
         case .changed:
             "The wallet or fees changed, or the quote expired. Review again before confirming."
@@ -128,6 +140,9 @@ struct OnchainReceipt: Codable, Sendable, ExpressibleByStringLiteral {
     var message: String
     var txid: String?
     var onchainFee: UInt64?
+    var arkFee: UInt64?
+    var broadcastRetryPending: Bool?
+    var chainStatus: ChainTransactionStatus?
     init(message: String, txid: String? = nil, onchainFee: UInt64? = nil) {
         self.message = message
         self.txid = txid
@@ -146,6 +161,9 @@ struct OnchainReceipt: Codable, Sendable, ExpressibleByStringLiteral {
             message = try values.decode(String.self, forKey: .message)
             txid = try values.decodeIfPresent(String.self, forKey: .txid)
             onchainFee = try values.decodeIfPresent(UInt64.self, forKey: .onchainFee)
+            arkFee = try values.decodeIfPresent(UInt64.self, forKey: .arkFee)
+            broadcastRetryPending = try values.decodeIfPresent(Bool.self, forKey: .broadcastRetryPending)
+            chainStatus = try values.decodeIfPresent(ChainTransactionStatus.self, forKey: .chainStatus)
         }
     }
 }

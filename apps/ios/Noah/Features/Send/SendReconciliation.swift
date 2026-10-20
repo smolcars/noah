@@ -136,7 +136,7 @@ enum SendReconciliation {
                 receipt.fee = tx.onchainFeeSats ?? receipt.fee
                 if tx.confirmation != nil { receipt.broadcastRetryPending = nil }
             } else {
-                // External offboards aren't in BDK's wallet history (FFI handoff item 15).
+                // External offboards use independent chain-source status below.
                 receipt.status = attempt.payment.source == .offchain ? .submitted : .unlocated
             }
             receipt.confirmedConflictTxid = conflict
@@ -165,6 +165,17 @@ enum SendReconciliation {
         // A previously evicted or unsynced historical payment can reappear after submission.
         // Only a txid returned by submit binds a BDK transaction to this attempt (FFI item 16).
         return candidates.isEmpty ? .uncertain : .possibleTransactions(candidates.sorted())
+    }
+
+    static func chainEvidence(_ status: ChainTransactionStatus, receipt: SendReceipt, source: SendSource?) -> SendReceipt {
+        var result = receipt
+        result.chainStatus = status
+        // BDK's reorg/competing-spend rules still own its lock and receipt state.
+        if source == .offchain, result.status != .conflicted {
+            if case .confirmed = status { result.status = .confirmed }
+            else { result.status = .submitted }
+        }
+        return result
     }
 
     private static func timestamp(_ value: String) -> Date? {

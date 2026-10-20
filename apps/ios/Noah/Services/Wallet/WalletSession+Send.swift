@@ -251,12 +251,21 @@ extension WalletSession {
                 return .paid(try checkpoint.receipt(status: status, movements: try await handles.wallet.history(), payment: payment, quote: quote))
             }
             if attempt.payment.method == "onchain", attempt.payment.source == .onchain || attempt.receipt?.txid != nil {
-                // A failed sync cannot upgrade cached transaction evidence.
-                try await handles.onchain.sync()
-                let resolution = try SendReconciliation.onchain(attempt, transactions: try await handles.onchain.transactions())
-                if case .paid(let receipt) = resolution, attempt.payment.source == .offchain,
-                   let movements = try? await handles.wallet.history() {
-                    return .paid(SendReconciliation.offboardReceipt(receipt, payment: attempt.payment, movements: movements))
+                let resolution: SendPaymentController.Resolution
+                if attempt.payment.source == .onchain {
+                    // Preserve BDK reorg and confirmed competing-spend checks.
+                    try await handles.onchain.sync()
+                    resolution = try SendReconciliation.onchain(attempt, transactions: try await handles.onchain.transactions())
+                } else if let receipt = attempt.receipt {
+                    resolution = .paid(SendReconciliation.offboardReceipt(receipt, payment: attempt.payment,
+                                                                         movements: try await handles.wallet.history()))
+                } else { return .uncertain }
+                if case .paid(var receipt) = resolution, let txid = receipt.txid {
+                    let status = attempt.payment.source == .onchain
+                        ? try await handles.onchain.transactionStatus(txid: txid)
+                        : try await handles.wallet.transactionStatus(txid: txid)
+                    receipt = SendReconciliation.chainEvidence(.init(status), receipt: receipt, source: attempt.payment.source)
+                    return .paid(receipt)
                 }
                 return resolution
             }

@@ -17,6 +17,7 @@ final class OnchainModel {
         var refreshReceipts: @Sendable () async throws -> Void = {}
         var claimAddress: @Sendable () async throws -> String = { throw OnchainFailure.unavailable }
         var claimOwnership: @Sendable (String) async throws -> Bool = { _ in throw OnchainFailure.unavailable }
+        var discardReview: @Sendable (OnchainQuote) async -> Void = { _ in }
         static func live(session: WalletSession = .shared) -> Self {
             Self(
                 ready: {
@@ -36,7 +37,8 @@ final class OnchainModel {
                 detail: { try await session.exitDetail($0) },
                 refreshReceipts: { try await session.refreshOnchainReceiptFees() },
                 claimAddress: { try await session.exitDepositAddress() },
-                claimOwnership: { try await session.exitClaimDestinationIsMine($0) })
+                claimOwnership: { try await session.exitClaimDestinationIsMine($0) },
+                discardReview: { await session.discardBoard($0) })
         }
     }
     private let dependencies: Dependencies
@@ -77,6 +79,7 @@ final class OnchainModel {
         }
     }
     private var generation = UUID()
+    private var expiry: Task<Void, Never>?
     private(set) var overview: OnchainOverview?
     private(set) var quote: OnchainQuote?
     private(set) var busy = false
@@ -93,6 +96,12 @@ final class OnchainModel {
     }
     func invalidate() {
         generation = UUID()
+        expiry?.cancel()
+        expiry = nil
+        if let quote {
+            let discard = dependencies.discardReview
+            Task { await discard(quote) }
+        }
         quote = nil
     }
 
@@ -110,8 +119,10 @@ final class OnchainModel {
                 throw OnchainFailure.unavailable
             }
             // Reconcile retained originals too; a later daemon sync can resolve an override.
-            for attempt in saved where attempt.receipt == nil {
-                _ = try? await dependencies.check(attempt.id)
+            var statusFailed = false
+            for attempt in saved where attempt.receipt == nil || attempt.receipt?.txid != nil {
+                do { _ = try await dependencies.check(attempt.id) }
+                catch { statusFailed = true }
             }
             // Fee lookup is optional after submission; it must never hide an existing receipt.
             try? await dependencies.refreshReceipts()
@@ -125,7 +136,7 @@ final class OnchainModel {
             let latest = try await dependencies.overview()
             guard token == generation, await dependencies.ready() else { return }
             overview = latest
-            error = nil
+            error = statusFailed ? "Couldn't check network status. Showing the last known status." : nil
         } catch {
             self.error =
                 (error as? OnchainFailure)?.errorDescription
@@ -147,23 +158,33 @@ final class OnchainModel {
             attempts = try await dependencies.attempt().filter { $0.overrideAudit?.acknowledgedAt == nil }
             guard !attempts.contains(where: { $0.blocks(action, ids: ids) }) else { throw OnchainFailure.busy }
             let fresh = try await dependencies.quote(action, ids, amount, destination)
-            guard generation == token, await dependencies.ready() else { return }
+            guard generation == token, !Task.isCancelled, await dependencies.ready() else {
+                await dependencies.discardReview(fresh)
+                return
+            }
             quote = fresh
+            if fresh.prepared != nil {
+                expiry = Task { [weak self] in
+                    do { try await Task.sleep(for: .seconds(120)) } catch { return }
+                    self?.invalidate()
+                }
+            }
         } catch {
             self.error =
                 (error as? OnchainFailure)?.errorDescription
-                ?? "Couldn't estimate fees. Nothing was submitted. Review again when the wallet is ready."
+                ?? "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready."
         }
     }
     /// Caller must have presented the quote and obtained explicit confirmation.
     func confirm() async {
         guard !busy, let quote else { return }
         self.quote = nil
+        expiry?.cancel()
         busy = true
         error = nil
         defer { busy = false }
         do {
-            guard await dependencies.ready(), ExitRules.current(reviewedAt: quote.createdAt) else {
+            guard await dependencies.ready(), quote.isCurrent else {
                 throw OnchainFailure.changed
             }
             message = try await dependencies.execute(quote)
@@ -171,6 +192,7 @@ final class OnchainModel {
             self.error =
                 (error as? OnchainFailure)?.errorDescription ?? OnchainFailure.uncertain.errorDescription
         }
+        await dependencies.discardReview(quote)
         let submissionError = error
         await load()
         if let submissionError { error = submissionError }

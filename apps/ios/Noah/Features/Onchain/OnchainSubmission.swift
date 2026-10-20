@@ -1,15 +1,39 @@
 import BarkBoltFFI
 
-/// Call-specific v0.4.0 codes only. Unclassified upstream errors remain uncertain.
+/// Only typed errors that precede board acceptance can release its journal lock.
 enum OnchainSubmission {
+    static func boardFailure(_ error: any Error) -> OnchainFailure? {
+        guard let code = (error as? BarkError)?.code else { return nil }
+        switch code {
+        case .belowMinimumBoardAmount: return .belowMinimum
+        case .tooManyInputs: return .tooManyInputs
+        case .preparedInputsUnavailable: return .reservedInputs
+        case .preparedBoardChanged, .preparedTransactionNotFound: return .changed
+        case .unsupportedOperation: return .notSynced
+        case .insufficientFunds, .dust, .invalidAmount, .invalidFeeRate: return .constructionFailed
+        default: return nil
+        }
+    }
+
     static func preBroadcast(_ error: any Error, action: OnchainAction) -> OnchainFailure? {
         if let failure = error as? OnchainFailure,
-            [.claimFeeChanged, .cancellationRefused].contains(failure) { return failure }
-        guard let code = (error as? BarkError)?.code else { return nil }
-        // error.rs maps BDK CreateTxError. boardAmount/boardAll build before sign/store/cosign.
-        // core/wallet.rs refresh/start/cancel validation and drainExits errors still use `other`.
-        // Claim broadcast errors are wrapped as OnchainFailure.uncertain at their call site.
-        if action == .board, [.insufficientFunds, .dust].contains(code) { return .constructionFailed }
-        return nil
+           [.claimFeeChanged, .cancellationRefused, .boardNotAttempted].contains(failure) { return failure }
+        return action == .board ? boardFailure(error) : nil
+    }
+
+    static func boardReceipt(_ result: BoardResult, quote: OnchainQuote) throws -> OnchainReceipt {
+        guard result.txid == quote.prepared?.txid else { throw OnchainFailure.uncertain }
+        switch result.broadcast {
+        case .notAttempted: throw OnchainFailure.boardNotAttempted
+        case .accepted, .failed:
+            var receipt = OnchainReceipt(message: OnchainReceipt.boardingMessage(fee: quote.chainFee),
+                txid: result.txid, onchainFee: quote.chainFee)
+            receipt.arkFee = quote.fee
+            if case .failed = result.broadcast {
+                receipt.broadcastRetryPending = true
+                receipt.message = "Boarding submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again."
+            }
+            return receipt
+        }
     }
 }

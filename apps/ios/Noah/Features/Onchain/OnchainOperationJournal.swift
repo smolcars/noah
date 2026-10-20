@@ -43,6 +43,13 @@ actor OnchainOperationJournal {
         func receipt(for attempt: Attempt) -> OnchainReceipt? {
             guard walletID == attempt.quote.walletID else { return nil }
             if let txid = attempt.txid, transactionIDs.contains(txid) {
+                if attempt.quote.action == .board, attempt.quote.prepared != nil {
+                    var receipt = OnchainReceipt(message: OnchainReceipt.boardingMessage(fee: attempt.quote.chainFee),
+                                                txid: txid, onchainFee: attempt.quote.chainFee)
+                    receipt.arkFee = attempt.quote.fee
+                    receipt.broadcastRetryPending = true
+                    return receipt
+                }
                 return .init(message: "The recorded transaction is in this wallet's transaction history.", txid: txid)
             }
             let ids = attempt.quote.ids
@@ -103,6 +110,17 @@ actor OnchainOperationJournal {
     }
     func recordTransaction(_ txid: String, for id: UUID) throws { try update(id, txid: txid) }
 
+    func observe(_ status: ChainTransactionStatus, for id: UUID) throws {
+        guard !running else { return }
+        guard let attempt = try loadAll().first(where: { $0.id == id }), var receipt = attempt.receipt else { return }
+        receipt.chainStatus = status
+        if case .confirmed = status, receipt.broadcastRetryPending == true {
+            receipt.broadcastRetryPending = nil
+            receipt.message = OnchainReceipt.boardingMessage(fee: receipt.onchainFee)
+        }
+        try update(id, receipt: receipt)
+    }
+
     func perform(_ quote: OnchainQuote, action: @Sendable () async throws -> OnchainReceipt) async throws -> String {
         let previous = try loadAll()
         guard !running, !previous.contains(where: { $0.blocks(quote.action, ids: quote.ids) }) else {
@@ -150,7 +168,8 @@ actor OnchainOperationJournal {
         guard !running else { throw OnchainFailure.busy }
         var attempts = try loadAll()
         guard let index = attempts.firstIndex(where: { id == nil || $0.id == id }),
-            attempts[index].receipt != nil else { throw OnchainFailure.uncertain }
+            attempts[index].receipt != nil, attempts[index].receipt?.broadcastRetryPending != true
+        else { throw OnchainFailure.uncertain }
         if attempts[index].overrideAudit != nil {
             attempts[index].overrideAudit?.acknowledgedAt = Date()
         } else {

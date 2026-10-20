@@ -61,7 +61,7 @@ struct OnchainRecoveryTests {
         for action in [OnchainAction.board, .claim, .refresh, .startExit, .cancel, .progress] {
             for code in BarkErrorCode.allCases {
                 let result = OnchainSubmission.preBroadcast(BarkError(message: "diagnostic", code: code), action: action)
-                #expect((result != nil) == (action == .board && [.insufficientFunds, .dust].contains(code)))
+                #expect((result != nil) == (action == .board && [.insufficientFunds, .dust, .invalidAmount, .invalidFeeRate, .preparedTransactionNotFound, .preparedInputsUnavailable, .unsupportedOperation, .belowMinimumBoardAmount, .tooManyInputs, .preparedBoardChanged].contains(code)))
             }
         }
         #expect(OnchainSubmission.preBroadcast(BarkError(message: "Drain exits failed: failure"), action: .claim) == nil)

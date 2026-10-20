@@ -39,14 +39,19 @@ struct OnchainStatusSection: View {
                         Text(audit.confirmation)
                     }
                 }
+                if let fee = attempt.receipt?.arkFee { OnchainAmountRow(title: "Ark fee", sats: fee) }
                 if let fee = attempt.receipt?.onchainFee {
                     OnchainAmountRow(title: "Actual onchain fee", sats: fee)
                 }
+                if let status = attempt.receipt?.chainStatus { Text(status.message) }
                 if let txid = attempt.receipt?.txid {
                     ExitTransactionRow(title: "Transaction ID", txid: txid)
                     Button("Copy transaction ID") { UIPasteboard.general.string = txid }
+                    Button("Refresh network status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
                 }
-                if attempt.receipt != nil {
+                if attempt.receipt?.broadcastRetryPending == true {
+                    Button("Check status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
+                } else if attempt.receipt != nil {
                     Button("Done") { Task { await model.acknowledge(attempt.id) } }.disabled(model.busy)
                 } else {
                     Text("Noah checks again automatically as your wallet syncs.")
@@ -84,22 +89,27 @@ struct OnchainReviewSheet: View {
             List {
                 Section {
                     OnchainAmountRow(
-                        title: quote.action == .board ? "Estimated boarding amount" : "Amount selected",
+                        title: quote.action == .board ? "Amount boarded" : "Amount selected",
                         sats: quote.amount)
                     if !quote.ids.isEmpty { LabeledContent("VTXOs selected", value: "\(quote.ids.count)") }
                     if quote.action != .cancel {
                         OnchainAmountRow(
                             title: quote.action == .board
-                                ? "Estimated Ark boarding fee"
+                                ? "Ark fee"
                                 : quote.action == .refresh ? "Refresh fee" : "Estimated claim fee", sats: quote.fee)
                         if quote.action == .board || quote.action == .startExit || quote.action == .progress {
                             OnchainAmountRow(
                                 title: quote.action == .board
-                                    ? "Estimated onchain fee" : "Estimated broadcast fees", sats: quote.chainFee)
+                                    ? "Onchain fee" : "Estimated broadcast fees", sats: quote.chainFee)
                         }
                         OnchainAmountRow(
-                            title: quote.action == .board ? "Estimated Ark balance receives" : "Amount after fee",
+                            title: quote.action == .board ? "Ark receives" : "Amount after fee",
                             sats: quote.net)
+                    }
+                    if let prepared = quote.prepared {
+                        OnchainAmountRow(title: "Total leaving onchain wallet", sats: quote.amount + quote.chainFee)
+                        LabeledContent("Signed transaction size", value: "\(prepared.vsize) vB")
+                        LabeledContent("Funding inputs", value: "\(prepared.inputCount)")
                     }
                     if let destination = quote.destination {
                         LabeledContent("Destination") { Text(destination).textSelection(.enabled) }
@@ -109,7 +119,7 @@ struct OnchainReviewSheet: View {
                     }
                     if quote.automatic {
                         OnchainAmountRow(
-                            title: "Estimated onchain reserve",
+                            title: "Onchain reserve left",
                             sats: quote.confirmed - quote.amount - quote.chainFee)
                     }
                 }
@@ -154,8 +164,8 @@ struct OnchainReviewSheet: View {
     private var explanation: String {
         switch quote.action {
         case .board:
-            "Move onchain bitcoin into Ark. Fees and received amounts are estimates. The final fee may be higher if more coins are needed. Funds become spendable after the board completes."
-                + (quote.boardAll == true ? " MAX boards all available onchain funds, including spendable pending funds. The final boarding amount may differ from this estimate." : "")
+            "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes."
+                + (quote.boardAll == true ? " MAX uses confirmed funds only and deducts the onchain fee from that balance." : "")
         case .refresh: "This refreshes the selected VTXOs in a delegated Ark round."
         case .startExit:
             "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."
@@ -192,6 +202,7 @@ struct OnchainScreen: ViewModifier {
             .onChange(of: app.isWalletSuspended) { _, suspended in
                 if suspended { model.invalidate() }
             }
+            .onChange(of: app.summary?.fingerprint) { _, _ in model.invalidate() }
             .onDisappear { model.invalidate() }
             .sheet(item: Binding(get: { model.quote }, set: { if $0 == nil { model.invalidate() } })) {
                 quote in

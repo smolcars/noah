@@ -4,18 +4,6 @@ import Testing
 @testable import Noah
 
 struct ExitHistoryTests {
-    @Test func discoverySurvivesRelaunchAndActiveListRemovalAndIsWalletScoped() async throws {
-        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
-        defer { try? FileManager.default.removeItem(at: file) }
-        let store = ExitHistoryStore(file: file)
-        try await store.remember(["canceled", "claimed", "canceled"], walletID: "wallet")
-        try await store.remember([], walletID: "wallet")
-        try await store.remember(["other"], walletID: "other-wallet")
-        let relaunched = ExitHistoryStore(file: file)
-        #expect(try await relaunched.ids(walletID: "wallet") == ["canceled", "claimed"])
-        #expect(try await relaunched.ids(walletID: "other-wallet") == ["other"])
-        #expect(try await relaunched.ids(walletID: "new-wallet").isEmpty)
-    }
     @MainActor
     @Test func terminalDetailAndTimelineLoadDirectlyWithoutActiveOverviewEntry() async {
         let calls = OnchainModelTests.Calls()
