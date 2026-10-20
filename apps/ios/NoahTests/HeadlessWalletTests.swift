@@ -158,4 +158,20 @@ import Testing
         try await session.close()
     }
 
+
+    @Test func sharedActivityCoversJobAndCancelledSettlement() async throws {
+        let services = AppServices(variant: .regtest, session: WalletSession(variant: .regtest))
+        let gate = RecurringReservationTests.Gate()
+        let work = Task { try await services.withBackgroundWallet { await gate.wait() } }
+        let limit = ContinuousClock.now + .seconds(5)
+        while !(await gate.entered), ContinuousClock.now < limit { await Task.yield() }
+        try #require(await gate.entered)
+        #expect(await WalletBackgroundActivity.shared.isRunning)
+        work.cancel()
+        #expect(await WalletBackgroundActivity.shared.isRunning)
+        await gate.release()
+        try await work.value
+        #expect(!(await WalletBackgroundActivity.shared.isRunning))
+    }
+
 }

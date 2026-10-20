@@ -72,7 +72,9 @@ import Testing
         let limit = ContinuousClock.now + .seconds(2)
         while !(await gate.entered), ContinuousClock.now < limit { await Task.yield() }
         try #require(await gate.entered)
-        execution.expire(); execution.expire()
+        execution.systemExpired()
+        while complete.isEmpty, ContinuousClock.now < limit { await Task.yield() }
+        execution.expire()
         #expect(complete == [false])
         #expect(available == nil)
         await gate.release()

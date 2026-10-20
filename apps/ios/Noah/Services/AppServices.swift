@@ -13,7 +13,7 @@ final class AppServices: Sendable {
     let seed: KeychainPassword
     /// One backup at a time for UI, push and background work.
     let backupCoordinator: BackupCoordinator
-    /// One interrupted-restore recovery at a time for launch and push work.
+    /// Foreground launch recovery; headless jobs defer pending journals/markers.
     let restoreRecovery: RestoreRecovery
 
     init(variant: AppVariant, session: WalletSession = .shared) {
@@ -70,7 +70,15 @@ final class AppServices: Sendable {
     }
 
     func withBackgroundWallet<T: Sendable>(_ operation: @escaping @Sendable () async throws -> T) async throws -> T {
-        try await session.withBackgroundAccess(operation, settle: { [self] in await backupCoordinator.settle() })
+        await WalletBackgroundActivity.shared.begin()
+        do {
+            let result = try await session.withBackgroundAccess(operation, settle: { [self] in await backupCoordinator.settle() })
+            await WalletBackgroundActivity.shared.end()
+            return result
+        } catch {
+            await WalletBackgroundActivity.shared.end()
+            throw error
+        }
     }
 
     var backupService: BackupService {

@@ -272,10 +272,9 @@ struct WalletRestorer: Sendable {
     }
 }
 
-/// One launch recovery at a time. The UI's start and push jobs each settle an
-/// interrupted restore first; without this, whichever came second hit the
-/// reservation the first held and failed. Creation, restore and deletion use
+/// One foreground launch recovery at a time. Creation, restore and deletion use
 /// the same mutation gate, so recovery checks only after those mutations settle.
+/// Headless jobs defer recovery because it may change wallet files or secrets.
 actor RestoreRecovery {
     private let mutation: WalletMutationGate
     private let recover: @Sendable () async throws -> RestoreTransaction.Recovery
