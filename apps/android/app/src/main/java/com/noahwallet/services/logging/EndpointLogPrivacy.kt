@@ -8,17 +8,33 @@ internal object EndpointLogPrivacy {
     fun failClosed() { unavailable = true }
     private val origins = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val paths = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
-    private val urls = Regex("""(?i)\bhttps?://[^\s<>"']*""")
+    private val urls = Regex("""(?i)https?://[^\s<>"']*""")
     // Admit only the SDK error type/status, never provider-controlled response text.
     private val responseStatus = Regex("""HttpResponse(?:\s*\{\s*status:\s*|\()([0-9]{3})\b""")
-    private fun origin(value: String): String? = value.toHttpUrlOrNull()?.newBuilder()
-        ?.encodedPath("/")?.query(null)?.fragment(null)?.username("")?.password("")?.build()?.toString()?.removeSuffix("/")
+    private fun origin(value: String): String? = value.toHttpUrlOrNull()?.let { url ->
+        url.newBuilder().host(url.host.trimEnd('.').ifEmpty { url.host }).encodedPath("/").query(null).fragment(null)
+            .username("").password("").build().toString().removeSuffix("/")
+    }
     fun register(endpoint: String?) {
         val url = endpoint?.toHttpUrlOrNull() ?: return
         for (path in LogFile.decodedViews(url.encodedPath, percentEncoded = true) ?: listOf(url.encodedPath)) {
             path.trimEnd('/').takeIf { it.isNotEmpty() }?.let(paths::add)
         }
-        origin(endpoint)?.let(origins::add)
+        origin(endpoint)?.let {
+            origins.add(it)
+            if (url.port == if (url.scheme == "http") 80 else 443) origins.add("$it:${url.port}")
+        }
+    }
+    private fun matches(value: String): Boolean {
+        if (origin(value)?.let { it in origins } == true) return true
+        // Match a known authority before log delimiters, never another host/port prefix.
+        val lower = value.lowercase()
+        return origins.any { origin ->
+            if (!lower.startsWith(origin)) false else {
+                val next = lower.drop(origin.length).dropWhile { it == '.' }.firstOrNull()
+                next == null || !next.isLetterOrDigit() && next !in "-_%:@"
+            }
+        }
     }
     fun redact(text: String): String = sanitize(text) ?: "[redacted]"
 
@@ -54,7 +70,7 @@ internal object EndpointLogPrivacy {
         if (origins.isEmpty()) return text
         var result = text
         for ((index, view) in views.withIndex()) {
-            val clean = urls.replace(view) { match -> if (origin(match.value)?.let { it in origins } == true) "[custom-esplora]" else match.value }
+            val clean = urls.replace(view) { match -> if (matches(match.value)) "[custom-esplora]" else match.value }
             // Inspect relative references separately: another origin never inherits our paths.
             val relative = urls.replace(clean, "")
             if (paths.any { relative.contains(it) }) return "[custom-esplora]"

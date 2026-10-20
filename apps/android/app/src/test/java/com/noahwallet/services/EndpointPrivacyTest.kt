@@ -12,7 +12,8 @@ class EndpointPrivacyTest {
     @Test fun hostCredentialsAndEncodedIdentitiesNeverReachSinks() {
         val origin = "https://fakehostcredential73.example.com:8443"
         EndpointLogPrivacy.register("$origin/api")
-        val inputs = listOf(origin, "$origin/api/blocks/tip/height", origin.uppercase(),
+        EndpointLogPrivacy.register("https://fakepunctcredential92.example.com/api")
+        val inputs = listOf("https://fakepunctcredential92.example.com:443)", origin, "$origin/api/blocks/tip/height", origin.uppercase(), "$origin)", "$origin,", "$origin.",
             origin.replace("fake", """\u0066ake"""), origin.replace(":", "%3A").replace("/", "%2F"), origin.replace("/", "%2F"),
             origin.replace("/", "\\/"), origin.replace(":", "&#58;").replace("/", "&#x2f;"))
         for (input in inputs) {
@@ -24,6 +25,7 @@ class EndpointPrivacyTest {
             event.release = input
             assertNull(AppTelemetry.scrub(event))
         }
+        assertEquals("prefix[custom-esplora]", LogFile.redact("prefix$origin"))
     }
 
     @Test fun unknownHTMLEntitiesAndUnterminatedNumericEntitiesCannotExposeHosts() {
@@ -60,7 +62,7 @@ class EndpointPrivacyTest {
 
     @Test fun routeOnlyEndpointsPreserveOtherOriginsAndDiagnostics() {
         EndpointLogPrivacy.register("https://route-privacy.example/api")
-        for (input in listOf("https://mempool.space/api/blocks/tip/height", "HTTP 404: /blocks/tip/height failed", "API v1 request completed")) {
+        for (input in listOf("https://mempool.space/api/blocks/tip/height", "HTTP 404: /blocks/tip/height failed", "API v1 request completed", "https://.", "https://route-privacy.example.other/api", "https://route-privacy.example:8443/api")) {
             assertEquals(input, LogFile.redact(input))
         }
     }
