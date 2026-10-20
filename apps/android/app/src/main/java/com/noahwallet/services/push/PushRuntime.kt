@@ -75,11 +75,11 @@ class PushRuntime(private val context: Context, private val services: AppService
         }, log = log::i,
     ))
 
-    suspend fun register(onToken: (String) -> Unit = {}): PushRegistration.Outcome {
+    suspend fun register(serverRegistrationPending: Boolean = false, onToken: (String) -> Unit = {}): PushRegistration.Outcome {
         PushNotifications.ensureChannels(context)
         val outcome = PushRegistration(
             onboarded = services::isOnboarded,
-            serverRegistered = { services.registration.state.isRegisteredWithServer == true },
+            serverRegistered = { serverRegistrationPending || services.registration.state.isRegisteredWithServer == true },
             permissionGranted = { PushNotifications.permissionGranted(context) },
             useUnifiedPush = { GoogleApiAvailabilityLight.getInstance().isGooglePlayServicesAvailable(context) != ConnectionResult.SUCCESS },
             unifiedEndpoint = { UnifiedPushRegistration(context).register() },

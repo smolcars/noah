@@ -182,10 +182,11 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
 
     suspend fun reRegisterWithServer() {
         check(!isWalletSuspended)
-        server.resetRegistration(); server.ensureRegistered()
-        server.refreshMailboxIfNeeded()
+        server.reRegister(loadWallet = { services.openWalletInForeground() }, registerPush = {
+            com.noahwallet.services.push.PushRuntime(getApplication(), services)
+                .register(serverRegistrationPending = true).requireCompleted()
+        })
         services.reconcileBackupTriggers()
-        com.noahwallet.services.push.PushRuntime(getApplication(), services).register()
     }
 
     private var starting = false

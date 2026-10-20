@@ -14,6 +14,52 @@ class ServerRegistrationTest {
     private val response = """{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK","user_status":"active"}"""
     private val device = DevicePayload(appVersion = "0.2.0", appBuild = "100")
 
+    @Test fun resetRegistrationCommitsOnlyAfterLoadPushAndImmediateMailboxRenewal() = runBlocking {
+        for (stop in listOf("load", "push", "mailbox", "disabled", "success")) {
+            val values = mutableMapOf<String, String>()
+            val storage = ServerStateStorage(values::get, { k, v -> values[k] = v })
+            storage.update { it.copy(isRegisteredWithServer = true, isMailboxAuthorizationEnabled = stop != "disabled") }
+            val steps = mutableListOf<String>()
+            val engine = MockEngine { request ->
+                val body = if (request.url.encodedPath == "/v0/register") response else {
+                    steps += "mailbox"
+                    assertFalse(storage.state.isRegisteredWithServer == true)
+                    if (stop == "mailbox") return@MockEngine respond("unavailable", HttpStatusCode.ServiceUnavailable)
+                    """{"success":true}"""
+                }
+                respond(body, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+            }
+            ServerClient.make("https://example.test", engine = engine).use { client ->
+                val service = ServerRegistration(client, storage, { "ark-test" }, { device }, warn = {},
+                    mailboxAuthorization = { com.noahwallet.api.generated.models.AuthorizeMailboxPayload("encoded", it, "mailbox") })
+                val result = runCatching { service.reRegister(loadWallet = {
+                    assertFalse(service.state.isRegisteredWithServer == true)
+                    steps += "load"; if (stop == "load") error("load failed")
+                }, registerPush = {
+                    assertFalse(service.state.isRegisteredWithServer == true)
+                    steps += "push"
+                    if (stop == "push") com.noahwallet.services.push.PushRegistration.Outcome.permissionDenied.requireCompleted()
+                }) }
+                assertEquals(stop, stop == "success", result.isSuccess)
+                assertEquals(stop == "success", service.state.isRegisteredWithServer)
+                assertEquals(stop == "success", service.state.isBackupEnabled)
+                assertEquals(stop == "success", service.state.mailboxAuthorizationExpiry != null)
+                assertEquals(when (stop) {
+                    "load" -> listOf("load")
+                    "push", "disabled" -> listOf("load", "push")
+                    else -> listOf("load", "push", "mailbox")
+                }, steps)
+            }
+        }
+    }
+
+    @Test fun explicitResetRejectsEveryIncompletePushOutcome() {
+        for (outcome in com.noahwallet.services.push.PushRegistration.Outcome.entries) {
+            assertEquals(outcome == com.noahwallet.services.push.PushRegistration.Outcome.registered,
+                runCatching { outcome.requireCompleted() }.isSuccess)
+        }
+    }
+
     @Test fun stalledVersionCheckDoesNotBlockRegistrationOrEmailAndRunsOnce() = runBlocking {
         val values = mutableMapOf<String, String>()
         val store = ServerStateStorage(values::get, { k, v -> values[k] = v })

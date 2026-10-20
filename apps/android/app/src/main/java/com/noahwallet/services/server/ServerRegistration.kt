@@ -39,11 +39,14 @@ class ServerRegistration(
         }
     }
 
-    suspend fun ensureRegistered() = registration.withLock {
-        if (state.isRegisteredWithServer == true) return@withLock
+    suspend fun ensureRegistered() = registration.withLock { register() }
+
+    private suspend fun register(completeServices: (suspend () -> Unit)? = null) {
+        if (state.isRegisteredWithServer == true) return
         val info = device()
         val response = V0RegisterClient(client).register(RegisterPayload(
             arkAddress = peekAddress(), deviceInfo = info.registrationPayload())).value()
+        completeServices?.invoke()
         apply(response, info)
     }
 
@@ -93,10 +96,25 @@ class ServerRegistration(
         catch (_: Exception) { warn("Failed to save email prompt dismissal") }
     }
 
-    suspend fun resetRegistration() = registration.withLock {
+    suspend fun resetRegistration() = registration.withLock { clearRegistration() }
+
+    private fun clearRegistration() {
         storage.update { it.copy(isRegisteredWithServer = false, lightningAddress = null, nostrPubkey = null,
             isBackupEnabled = false, emailAddress = null, isEmailVerified = false, isEmailPromptDismissed = false,
             mailboxAuthorizationExpiry = null, lastReportedDeviceFingerprint = null, lastDeviceReportAt = null) }
+    }
+
+    suspend fun reRegister(loadWallet: suspend () -> Unit, registerPush: suspend () -> Unit) = registration.withLock {
+        clearRegistration()
+        register {
+            loadWallet()
+            registerPush()
+            if (!mailbox.tryLock()) throw ServerFailure("Mailbox update is in progress.")
+            try {
+                if (state.isMailboxAuthorizationEnabled == false) throw ServerFailure("Mailbox authorization is disabled")
+                authorizeMailbox()
+            } finally { mailbox.unlock() }
+        }
     }
 
     suspend fun setBackupEnabled(enabled: Boolean) {

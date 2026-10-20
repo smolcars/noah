@@ -10,7 +10,13 @@ class PushRegistration(
     private val expoToken: suspend () -> String,
     private val registerToken: suspend (String) -> Unit,
 ) {
-    enum class Outcome { notReady, permissionDenied, waitingForDistributor, registered }
+    enum class Outcome {
+        notReady, permissionDenied, waitingForDistributor, registered;
+
+        fun requireCompleted() {
+            if (this != registered) throw com.noahwallet.services.server.ServerFailure("Push notification registration did not complete.")
+        }
+    }
 
     suspend fun register(): Outcome {
         if (!onboarded() || !serverRegistered()) return Outcome.notReady
