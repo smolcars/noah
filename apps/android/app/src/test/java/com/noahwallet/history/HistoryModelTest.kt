@@ -69,7 +69,7 @@ class HistoryModelTest {
     @Test fun resyncRequiredReopensSubscription() = runBlocking {
         var subscriptions = 0
         val opened = Channel<Int>(Channel.UNLIMITED)
-        val model = HistoryModel(dependencies().copy(changes = { flow {
+        val model = HistoryModel(dependencies().copy(price = { _, _ -> awaitCancellation() }, changes = { flow {
             val number = ++subscriptions; opened.send(number)
             emit(if (number == 1) "resyncRequired" else "initial")
             awaitCancellation()

@@ -96,7 +96,7 @@ class HistoryModel(private val dependencies: Dependencies) {
                             refresh(currency)
                             if (reason == "resyncRequired") { resubscribe = true; break }
                         }
-                    } finally { collector.cancelAndJoin(); events.cancel() }
+                    } finally { enrichment?.cancel(); collector.cancelAndJoin(); events.cancel() }
                 }
             } while (resubscribe && currentCoroutineContext().isActive)
             // A closed session ends its stream; clear stale history through the normal read path.
