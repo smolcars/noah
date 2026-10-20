@@ -1453,6 +1453,7 @@
   <string name="gt_969ccbd3cf6300ec">"Email"</string>
   <string name="gt_1cd009ba27e712a8">"Enable wallet authentication"</string>
   <string name="gt_14303aa0c4a08d39">"End date"</string>
+  <string name="gt_116f5d831d32a009">"Endpoint not changed. Restart Noah to reopen the previous endpoint."</string>
   <string name="gt_37e1760c4da6d94b">"Endpoint not changed. The wallet is using the previous endpoint."</string>
   <string name="gt_d131e9efe05ef284">"Enter a valid Bitcoin address for this network when the wallet is ready."</string>
   <string name="gt_4b9dbbb1c51ca64c">"Enter a valid destination and a whole-satoshi amount greater than zero."</string>

@@ -24,19 +24,18 @@ fun EsploraSettingsScreen(model: AppModel) {
     var input by remember { mutableStateOf(selection.input ?: effectiveEndpoint) }
     var message by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    val sessionRevision by model.session.walletChanges.collectAsState()
-    LaunchedEffect(sessionRevision) {
-        if (model.session.isOpen && error == "The server isn't responding; switching back…") {
-            selection = store.selection(BuildConfig.APP_VARIANT)
-            error = "Endpoint not changed. The wallet is using the previous endpoint."
-        }
-    }
     val editable = !model.busy && BuildConfig.APP_VARIANT != "regtest"
     fun apply(value: String?) {
         message = null; error = null
         model.action("Endpoint not changed") {
             try {
-                model.services.switchEsploraEndpoint(value)
+                model.services.switchEsploraEndpoint(value) { reopened ->
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        selection = store.selection(BuildConfig.APP_VARIANT)
+                        error = if (reopened) "Endpoint not changed. The wallet is using the previous endpoint."
+                            else "Endpoint not changed. Restart Noah to reopen the previous endpoint."
+                    }
+                }
                 selection = store.selection(BuildConfig.APP_VARIANT)
                 input = WalletConfiguration.effective(BuildConfig.APP_VARIANT, selection.endpoint).esplora.orEmpty()
                 message = if (selection.endpoint == null) "The wallet is now using Noah's default Esplora endpoint." else "The wallet is now using the new Esplora endpoint."

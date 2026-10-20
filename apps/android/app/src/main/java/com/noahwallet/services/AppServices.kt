@@ -231,7 +231,7 @@ class AppServices private constructor(private val context: Context) {
         } else if (foreground) walletOpener.openInForeground() else walletOpener.ensureOpen()
     }
 
-    suspend fun switchEsploraEndpoint(input: String?) {
+    suspend fun switchEsploraEndpoint(input: String?, lateCompletion: suspend (Boolean) -> Unit = {}) {
         val endpoint = (input ?: com.noahwallet.services.wallet.WalletConfiguration.base(variant).esplora)?.let {
             com.noahwallet.services.wallet.EsploraEndpoint.validate(it, variant)
         }
@@ -254,6 +254,7 @@ class AppServices private constructor(private val context: Context) {
                     backupObserver?.cancelAndJoin(); backupObserver = null
                     com.noahwallet.services.wallet.EsploraOpenWait().run(lateCompletion = {
                         reconcileBackupTriggers(); startServerServices()
+                        lateCompletion(session.isOpen)
                     }) { wait ->
                         try {
                             store.change(candidate, prepared, wait::commit) { selection, commit ->
