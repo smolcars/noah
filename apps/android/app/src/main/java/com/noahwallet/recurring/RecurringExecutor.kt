@@ -35,12 +35,33 @@ class RecurringExecutor(private val d: Dependencies,
         d.withWalletMutation { result = runCatching { block() } }
         return checkNotNull(result).getOrThrow()
     }
-    private suspend fun <T> storage(block: () -> T): T = walletMutation { withContext(Dispatchers.IO) { block() } }
+    private fun readAdmission(): RecurringStore.Binding {
+        if (!d.journal.file.parentFile!!.isDirectory) throw NoWallet()
+        val owner = d.binding()
+        val generation = d.automationGeneration()
+        if (!d.journal.file.parentFile!!.isDirectory || d.binding() != owner || d.automationGeneration() != generation ||
+            executionBinding != null && executionBinding != owner) throw NoWallet()
+        return owner
+    }
+    private suspend fun <T> storage(block: () -> T): T = walletMutation {
+        withContext(Dispatchers.IO) { readAdmission(); block() }
+    }
     private suspend fun ensureOpen() = walletMutation { d.ensureOpen() }
     suspend fun reload() {
         try { val state = storage { d.store.load() }; schedules = state.schedules.values.sortedBy { it.nextRunAt ?: Long.MAX_VALUE }; syncPending = state.pending }
+        catch (_: NoWallet) { schedules = emptyList(); syncPending = false }
         catch (_: Exception) { error = "Recurring payment data couldn't be read. Your saved schedules have been preserved. Sending is stopped." }
     }
+    internal suspend fun hasDuePayments(now: Long): Boolean = try {
+        storage { d.allowed(); RecurringRuntime.hasDuePayments(d.store.load(), now) }
+    } catch (_: NoWallet) { false }
+    internal suspend fun reminderSchedule(id: String?, due: Long): RecurringPayment? = try {
+        storage {
+            d.allowed()
+            val state = d.store.load()
+            state.schedules[id]?.takeIf { it.status == "active" && it.inFlight == null && it.nextRunAt == due && state.binding == d.binding() }
+        }
+    } catch (_: NoWallet) { null }
     suspend fun execute(manual: Boolean = false, approval: Review? = null, budget: RecurringBudget = RecurringBudget()) {
         task?.takeIf { !it.isCompleted }?.let { it.await(); return }
         task = null
@@ -145,6 +166,7 @@ class RecurringExecutor(private val d: Dependencies,
                     val job = controller.submit(payment, quote, entry.key) {
                         try {
                             d.allowed()
+                            check(readAdmission() == entry.binding && generation == d.automationGeneration())
                             val current = d.store.load()
                             val currentPlan = marked.copy(inFlight = null, status = "active").plan(d.now(), d.zone(), manual)
                             check(budget.available && caller?.isActive != false && currentPlan == entry.plan && generation == d.automationGeneration() && durableGeneration == d.store.automationGeneration() && marked.amountSat <= RecurringPayment.maximumAmount)
@@ -177,7 +199,7 @@ class RecurringExecutor(private val d: Dependencies,
         finally { try {
             if (!noWallet) reload()
             if (!noWallet && budget.available && caller?.isActive != false && currentCoroutineContext().isActive) {
-                val visible = storage { runCatching { d.store.load().schedules.values.toList() }.getOrDefault(emptyList()) }
+                val visible = runCatching { storage { d.store.load().schedules.values.toList() } }.getOrDefault(emptyList())
                 requireStage(budget, caller)
                 d.notify(visible, null)
             }

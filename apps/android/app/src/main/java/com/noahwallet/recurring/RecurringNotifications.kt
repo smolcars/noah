@@ -6,12 +6,10 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.work.*
-import com.noahwallet.BuildConfig
 import com.noahwallet.MainActivity
 import com.noahwallet.R
 import com.noahwallet.notifications.NotificationChannels
 import com.noahwallet.services.push.PushNotifications
-import com.noahwallet.services.storage.*
 import java.util.concurrent.TimeUnit
 
 /** Advisory only. WorkManager preserves reminders across process death and reboot. */
@@ -56,13 +54,8 @@ class RecurringReminderWorker(context: Context, parameters: WorkerParameters) : 
     override suspend fun doWork(): Result {
         return try {
             if (com.noahwallet.services.launch.LaunchState.current(applicationContext) != com.noahwallet.services.launch.LaunchState.existingWallet) return Result.success()
-            val settings = SettingsStorage(applicationContext)
-            val store = RecurringStore(settings)
-            val location = WalletDataLocation(applicationContext.filesDir, BuildConfig.APP_VARIANT)
-            val s = store.reminderSchedule(java.io.File(location.directory, "noah-recurring-journal.json.policies"),
-                { RecurringStore.binding(location) }, inputData.getString("id"), inputData.getLong("due", -1)) ?: return Result.success()
-            val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
-            if (wallet?.isInitialized == false || wallet?.isWalletSuspended == true) return Result.success()
+            val s = RecurringRuntime.shared(applicationContext).executor.reminderSchedule(
+                inputData.getString("id"), inputData.getLong("due", -1)) ?: return Result.success()
             val reminder = inputData.getString("kind") == "reminder"
             RecurringNotifications.show(applicationContext, "recurring-${s.id}-${inputData.getString("kind")}",
                 if (reminder) "Upcoming recurring payment" else "Recurring payment waiting",
@@ -70,13 +63,4 @@ class RecurringReminderWorker(context: Context, parameters: WorkerParameters) : 
             Result.success()
         } catch (_: Exception) { Result.failure() }
     }
-}
-
-/** The worker uses the same policy/automation authority as Send before displaying a reminder. */
-internal fun RecurringStore.reminderSchedule(ledger: java.io.File, binding: () -> RecurringStore.Binding,
-    id: String?, due: Long, sync: (java.io.File) -> Unit = ::syncDirectory,
-    syncFile: (java.io.FileDescriptor) -> Unit = { it.sync() }): RecurringPayment? {
-    protectPolicies(ledger, sync, syncFile, binding)
-    val state = load()
-    return state.schedules[id]?.takeIf { it.status == "active" && it.inFlight == null && it.nextRunAt == due && state.binding == binding() }
 }

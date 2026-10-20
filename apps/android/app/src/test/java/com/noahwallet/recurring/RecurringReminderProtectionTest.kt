@@ -15,7 +15,10 @@ class RecurringReminderProtectionTest {
             assertTrue(runCatching { if (cancel) w.executor.cancel("rent") else w.executor.pause("rent") }.isFailure)
             assertEquals(active, w.raw)
             val store = RecurringStore({ w.raw }, { w.raw = it })
-            assertNull(store.reminderSchedule(File("${w.journal.file.path}.policies"), { w.binding }, "rent", due, sync = {}, syncFile = {}))
+            store.protectPolicies(File("${w.journal.file.path}.policies"), sync = {}, syncFile = {}, binding = { w.binding })
+            val reader = RecurringExecutor(RecurringExecutor.Dependencies(store, w.journal, w.controller,
+                ensureOpen = {}, binding = { w.binding }, allowed = {}, quote = { error("unused") }, automationGeneration = { null }), this)
+            assertNull(reader.reminderSchedule("rent", due))
         }
     }
 }
