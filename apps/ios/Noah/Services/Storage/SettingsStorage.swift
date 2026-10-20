@@ -58,6 +58,21 @@ final class SettingsStorage: @unchecked Sendable {
     }
 
     static let settingsNotice = "Some settings couldn't be carried over from the previous version, so they're back to their defaults: biometric lock is off, balances are visible, and currency and display settings are reset. Please review Settings."
+    static func settingsNotice(values: [String: String]) -> String {
+        let wallet = values[PersistedWalletState.key].flatMap { try? RNStoreCodec.decode($0, key: PersistedWalletState.key).json() }
+            .flatMap { try? JSONDecoder().decode(PersistedEnvelope<PersistedWalletState>.self, from: Data($0.utf8)).state }
+        let privacy = values[PersistedPrivacyState.key].flatMap { try? RNStoreCodec.decode($0, key: PersistedPrivacyState.key).json() }
+            .flatMap { try? JSONDecoder().decode(PersistedEnvelope<PersistedPrivacyState>.self, from: Data($0.utf8)).state }
+        var defaults: [String] = []
+        if wallet?.isBiometricsEnabled == nil { defaults.append("biometric lock is off") }
+        if privacy?.isHomeBalanceHidden == nil { defaults.append("balances are visible") }
+        guard !defaults.isEmpty else {
+            return "Some display settings couldn't be carried over from the previous version and were reset. Please review Settings."
+        }
+        if values[PersistedProfileState.key] == nil { defaults.append("currency and display settings are reset") }
+        let descriptions = defaults.count == 1 ? defaults[0] : defaults.dropLast().joined(separator: ", ") + (defaults.count > 2 ? ", and " : " and ") + defaults.last!
+        return "Some settings couldn't be carried over from the previous version, so they're back to their defaults: \(descriptions). Please review Settings."
+    }
     static let recurringNotice = "Recurring payments need to be set up again after this update."
     static let emptyRecurring = #"{"state":{"schedules":{},"serverSyncPending":true},"version":0}"#
 
@@ -127,7 +142,7 @@ final class SettingsStorage: @unchecked Sendable {
     func takeUpgradeNotices() throws -> [String] {
         Self.access.lock(); defer { Self.access.unlock() }
         var state = load()
-        let notices = (state.settingsNoticePending ? [Self.settingsNotice] : []) + (state.recurringNoticePending ? [Self.recurringNotice] : [])
+        let notices = (state.settingsNoticePending ? [Self.settingsNotice(values: state.values)] : []) + (state.recurringNoticePending ? [Self.recurringNotice] : [])
         guard !notices.isEmpty else { return [] }
         state.settingsNoticePending = false; state.recurringNoticePending = false
         fallback = state
