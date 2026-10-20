@@ -11,6 +11,9 @@ data class FixtureCase(val name: String, val input: JsonElement, val expected: J
 private data class FixtureFile(val cases: List<FixtureCase>)
 
 object SharedFixtures {
+    fun document(domain: String): JsonElement = requireNotNull(javaClass.getResourceAsStream("/$domain.json"))
+        .bufferedReader(Charsets.UTF_8).use { Json.parseToJsonElement(it.readText()) }
+
     fun load(domain: String): List<FixtureCase> {
         val stream = requireNotNull(javaClass.getResourceAsStream("/$domain.json")) {
             "Missing shared fixture: $domain.json"
