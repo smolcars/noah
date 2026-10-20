@@ -22,7 +22,7 @@ struct TranslationsTests {
         let fixture = try #require(Fixtures.load("send-utils", input: SendFixtureTests.ParseInput.self,
                                                 expected: SendFixtureTests.ParseExpected.self).first { $0.name == "destination 5" })
         let uri = "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?lightning=\(fixture.input.destination)"
-        let expected = SendDestinationError.invalidMethods([.paymentMethodNetworkMismatch(expected: "mainnet", actual: "testnet")])
+        let expected = SendDestinationError.invalidMethods([.networkMismatch(expected: "mainnet", actual: "testnet")])
         for language in LegacyLocale.supported {
             defaults.set(language, forKey: LegacyLocale.key)
             let parsed = SendDestination.parse(uri, network: "mainnet")

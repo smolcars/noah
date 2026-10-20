@@ -137,10 +137,10 @@ struct RestoreWalletScreen: View {
 
     private var progressMessage: String {
         switch model.restoreStep {
-        case nil: "Starting restore…"
+        case nil: "Starting restore..."
         case .fetching: "Fetching backup…"
         case .validating: "Validating backup…"
-        case .loading: "Loading wallet…"
+        case .loading: "Loading wallet..."
         case .finalizing: "Finalizing…"
         }
     }

@@ -83,7 +83,7 @@ struct SendDestination: Equatable, Sendable {
             if parsed.destinationType == type {
                 methods[["ark":"arkAddress", "lightning":"lightningInvoice", "offer":"offer", "onchain":"onchainAddress"][type]!] = raw
             } else if case .networkMismatch(let expected, let actual) = parsed.error {
-                errors.append(.paymentMethodNetworkMismatch(expected: expected, actual: actual)); invalid = true
+                errors.append(.networkMismatch(expected: expected, actual: actual)); invalid = true
             } else if type == "offer" {
                 errors.append(.invalidOffer)
             }
@@ -126,7 +126,6 @@ struct SendDestination: Equatable, Sendable {
 /// Parser failures stay language independent, including arguments and combined URI failures.
 indirect enum SendDestinationError: LocalizedError, Equatable, Sendable {
     case networkMismatch(expected: String, actual: String)
-    case paymentMethodNetworkMismatch(expected: String, actual: String)
     case subSatoshiInvoice, invalidOffer, invalidBitcoinAddress, invalidURI, invalidAmount, noPaymentMethods
     case duplicateParameter(String), addressNetworkMismatch(String), unknownRequiredParameter(String)
     case invalidMethods([SendDestinationError])
@@ -136,8 +135,6 @@ indirect enum SendDestinationError: LocalizedError, Equatable, Sendable {
         switch self {
         case .networkMismatch(let expected, let actual):
             L10n.text("Network mismatch: expected {expected}, got {actual}", expected, actual, locale: locale)
-        case .paymentMethodNetworkMismatch(let expected, let actual):
-            L10n.text("Payment method network mismatch: expected {expected}, got {actual}", expected, actual, locale: locale)
         case .subSatoshiInvoice: L10n.text("Invoice amount is less than 1 satoshi.", locale: locale)
         case .invalidOffer: L10n.text("Invalid BOLT12 offer: Invalid checksum", locale: locale)
         case .invalidBitcoinAddress: L10n.text("Invalid bitcoin address", locale: locale)

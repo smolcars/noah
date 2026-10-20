@@ -211,7 +211,7 @@ struct SendView: View {
                         .textFieldStyle(.roundedBorder).focused($focus, equals: .note)
                     Text("\(model.comment.utf16.count)/\(route.commentAllowed)").font(.caption)
                     if !model.comment.isEmpty && route.arkAddress != nil {
-                        Text("Adding a note uses Lightning.").font(.caption)
+                        Text("Adding a note will send this payment over Lightning.").font(.caption)
                     }
                 }
             }
@@ -315,7 +315,7 @@ struct SendConfirmation: View {
                             if let message = controller.message { Text(LocalizedStringKey(message)).foregroundStyle(NoahColor.destructive) }
                         }.padding(24)
                     }.safeAreaInset(edge: .bottom) {
-                        NoahButton(title: "Confirm send") {
+                        NoahButton(title: "Confirm payment") {
                             if let confirm { confirm() } else { controller.submit(payment, quote: quote) }
                         }
                             .accessibilityIdentifier("send-confirm").padding()
@@ -351,7 +351,7 @@ struct SendOutcomeView: View {
                 switch controller.state {
                 case .submitting:
                     ProgressView()
-                    Text("Sending payment…").font(NoahFont.title)
+                    Text("Sending payment").font(NoahFont.title)
                     Text("Keep Noah open while your payment completes.")
                 case .uncertain:
                     Image(systemName: "clock.badge.exclamationmark").font(.largeTitle)
@@ -360,7 +360,7 @@ struct SendOutcomeView: View {
                         SendReceipt.uncertainMessage
                     )
                     if let progress = controller.attempt?.existingLightning {
-                        Text(LocalizedStringKey(progress.message))
+                        Text(L10n.text("A payment of {amount} sats for this invoice is already in progress. Do not pay again.", progress.amount.formatted(.number.locale(locale)), locale: locale.identifier))
                         Text("Fee for the existing payment: \(progress.fee.formatted(.number.locale(locale))) sats")
                         if let reviewed = controller.attempt?.payment.amount, reviewed != progress.amount {
                             Text("This differs from the \(reviewed.formatted(.number.locale(locale))) sats you reviewed.")
@@ -474,7 +474,7 @@ struct SendOutcomeView: View {
                let base = URL(string: AppVariant.current == .mainnet
                               ? "https://mempool.space/tx/" : "https://mempool.space/signet/tx/") {
                 Link(destination: base.appendingPathComponent(txid)) {
-                    Label("View in block explorer", systemImage: "arrow.up.right.square")
+                    Label("View in explorer", systemImage: "arrow.up.right.square")
                 }
             }
         }

@@ -107,7 +107,7 @@ fun BtcMapScreen(onClose: () -> Unit) {
                     }
                     OutlinedTextField(model.query, model::updateQuery, Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                         .onFocusChanged { searchFocused = it.isFocused },
-                        label = { Text(tr("Search cities or places")) }, singleLine = true,
+                        label = { Text(tr("Search places or cities")) }, singleLine = true,
                         trailingIcon = { if (model.query.isNotEmpty()) TextButton({ model.updateQuery("") }) { Text(tr("Clear")) } })
                     LazyRow(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(PlaceCategory.entries) { category ->

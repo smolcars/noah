@@ -97,7 +97,7 @@ fun TransactionsScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit) 
                         history.isLoading -> item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.semantics { contentDescription = "Loading transactions" }) } }
                         history.error != null -> item {
                             Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text(tr("Couldn't load transactions"), style = MaterialTheme.typography.titleLarge)
+                                Text(tr("Failed to load transactions"), style = MaterialTheme.typography.titleLarge)
                                 Text(tr(history.error!!))
                                 TextButton({ scope.launch { history.refresh(app.preferredCurrency) } }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(tr("Retry")) }
                             }

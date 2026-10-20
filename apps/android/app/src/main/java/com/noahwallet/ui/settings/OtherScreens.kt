@@ -44,7 +44,7 @@ fun FeedbackScreen(model: AppModel) {
         }
     }
     SettingsColumn {
-        if (success) { SectionTitle("Thank You"); Text(tr("Your feedback has been sent to the Noah team.")) }
+        if (success) { SectionTitle("Thank You"); Text(tr("Your feedback was sent to the Noah team.")) }
         else {
             Text(tr("Report a bug or share what would make Noah better."))
             OutlinedTextField(name, { name = it }, label = { Text(tr("Name")) }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())

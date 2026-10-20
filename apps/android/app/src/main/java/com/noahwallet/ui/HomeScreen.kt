@@ -112,7 +112,7 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
                         }
                     }
                 }
-                TextButton(model::toggleBalance) { Text(tr(if (model.hidden) "Show balance" else "Hide balance")) }
+                TextButton(model::toggleBalance) { Text(tr(if (model.hidden) "Show wallet balance" else "Hide wallet balance")) }
                 if (!dismissed && model.server.state.isEmailVerified != true) Card {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(tr("Add Emergency Email"), style = MaterialTheme.typography.titleLarge)

@@ -77,8 +77,8 @@ struct BackupSettingsView: View {
     private var status: String {
         switch state.lastBackupStatus {
         case .idle: "Up to date or waiting for changes"
-        case .inProgress: "Backing up..."
-        case .success: "Backup complete"
+        case .inProgress: "Backing up wallet"
+        case .success: "Backup completed"
         case .failed: "Backup failed. Please try again."
         }
     }

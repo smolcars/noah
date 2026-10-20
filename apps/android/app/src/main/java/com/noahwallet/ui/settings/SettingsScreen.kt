@@ -164,7 +164,7 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
                 }
             }
         }) { Text(tr("v${BuildConfig.VERSION_NAME}" + if (taps > 0) tr(" ({count} taps to unlock debug)", 5 - taps) else "")) }
-        Text(tr("Made with love from Noah team"), style = MaterialTheme.typography.bodySmall)
+        Text(tr("Made with ❤️ from Noah team"), style = MaterialTheme.typography.bodySmall)
         TextButton({ uri.openUri("https://t.me/blixtwallet/605026") }) { Text(tr("Telegram support")) }
         TextButton({ uri.openUri("https://github.com/smolcars/noah") }) { Text(tr("Noah on GitHub")) }
         message?.let { Text(tr(it)) }

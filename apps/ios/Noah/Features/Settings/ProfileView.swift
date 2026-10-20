@@ -76,7 +76,7 @@ struct ProfileView: View {
                 Button("Edit Lightning Address") { showIdentity = true }
             }
             Section("Emergency Email") {
-                Text(LocalizedStringKey(model.server.state.emailAddress ?? "No emergency email"))
+                Text(LocalizedStringKey(model.server.state.emailAddress ?? "No emergency email set"))
                 Text(LocalizedStringKey(model.server.state.isEmailVerified == true ? "Verified" : "Not verified")).font(NoahFont.footnote)
                 Button("Edit Emergency Email") { showEmail = true }
             }

@@ -29,7 +29,7 @@ struct TransactionsView: View {
                                 ProgressView("Loading transactions").padding(40)
                             } else if let error = history.error {
                                 ContentUnavailableView {
-                                    Label("Couldn't load transactions", systemImage: "exclamationmark.triangle")
+                                    Label("Failed to load transactions", systemImage: "exclamationmark.triangle")
                                 } description: { Text(LocalizedStringKey(error)) } actions: {
                                     Button("Retry") { Task { await history.refresh(currency: app.preferredCurrency) } }
                                 }

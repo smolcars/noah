@@ -45,7 +45,7 @@ fun BackupSettingsScreen(model: AppModel) {
         SectionTitle("Last Backup")
         Text(tr(state.lastBackupAt?.let { DateFormat.getDateTimeInstance().format(Date(it.toLong())) } ?: "No backups yet"))
         Text(tr(when (state.lastBackupStatus) {
-            "in_progress" -> "Backing up…"; "success" -> "Backup complete"; "failed" -> "Backup failed. Please try again."
+            "in_progress" -> "Backing up wallet"; "success" -> "Backup completed"; "failed" -> "Backup failed. Please try again."
             else -> "Up to date or waiting for changes"
         }))
         if (state.backupPending) Text(tr("Backup pending"))
@@ -129,8 +129,8 @@ fun LogScreen(model: AppModel) {
     var lines by remember { mutableStateOf<List<String>>(emptyList()) }
     LaunchedEffect(Unit) { lines = withContext(Dispatchers.IO) { LogFile.shared(context).lines() } }
     SettingsColumn {
-        NoahButton("Refresh Logs", !model.busy, secondary = true) { model.action("Couldn't read logs.") { lines = withContext(Dispatchers.IO) { LogFile.shared(context).lines() } } }
-        ShareFileButton(model, "Share Logs", "text/plain") {
+        NoahButton("Refresh app logs", !model.busy, secondary = true) { model.action("Couldn't read logs.") { lines = withContext(Dispatchers.IO) { LogFile.shared(context).lines() } } }
+        ShareFileButton(model, "Share app logs", "text/plain") {
             val scratch = model.services.scratch
             val folder = scratch.makeFolder("share")
             try {
@@ -138,7 +138,7 @@ fun LogScreen(model: AppModel) {
                 SharedFile(file) { scratch.discard(folder) }
             } catch (failure: Exception) { scratch.discard(folder); throw failure }
         }
-        if (lines.isEmpty()) Text(tr("No logs found"))
+        if (lines.isEmpty()) Text(tr("No logs found."))
         androidx.compose.foundation.text.selection.SelectionContainer {
             Text(tr(lines.joinToString("\n")), style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
         }

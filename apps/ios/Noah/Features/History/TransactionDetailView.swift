@@ -61,7 +61,7 @@ struct TransactionDetailView: View {
                         detail("Payment ID", transaction.id, copyable: true)
                         if let txid = transaction.txid { detail("Transaction ID", txid, copyable: true) }
                         if let url = transaction.explorerURL(variant: app.variant) {
-                            Link(destination: url) { Label("View in block explorer", systemImage: "arrow.up.right.square") }
+                            Link(destination: url) { Label("View in explorer", systemImage: "arrow.up.right.square") }
                                 .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
                         }
                         if let received = transaction.receivedOn, received.count == 1, let first = received.first, !first.destination.isEmpty {

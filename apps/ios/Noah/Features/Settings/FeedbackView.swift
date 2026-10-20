@@ -16,7 +16,7 @@ struct FeedbackView: View {
             if success {
                 Section {
                     Label("Thank You", systemImage: "checkmark.circle").font(NoahFont.title)
-                    Text("Your feedback has been sent to the Noah team.")
+                    Text("Your feedback was sent to the Noah team.")
                 }
             } else {
                 Section {

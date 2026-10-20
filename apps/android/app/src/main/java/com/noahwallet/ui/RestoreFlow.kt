@@ -9,7 +9,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
 fun WalletRestorer.Step?.restoreMessage(): String = when (this) {
-    null -> "Starting restore…"
+    null -> "Starting restore..."
     WalletRestorer.Step.fetching -> "Fetching backup…"
     WalletRestorer.Step.validating -> "Validating backup…"
     WalletRestorer.Step.loading -> "Installing wallet…"

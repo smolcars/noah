@@ -98,7 +98,7 @@ private fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: 
                 TextButton({
                     try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
                     catch (_: android.content.ActivityNotFoundException) { explorerError = true }
-                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(tr("View in block explorer")) }
+                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(tr("View in explorer")) }
                 if (explorerError) Text(tr("No browser available to open the explorer."))
             }
             row.receivedOn?.singleOrNull()?.destination?.takeIf(String::isNotEmpty)?.let { DetailValue("Invoice", it, true) }

@@ -167,7 +167,7 @@ struct MnemonicView: View {
 
                 VStack(spacing: 12) {
                     if onContinue == nil && !authenticated {
-                        NoahButton(title: "Authenticate to view seed phrase") { Task { await reveal() } }
+                        NoahButton(title: "Authenticate to view your seed phrase") { Task { await reveal() } }
                         if let error = lock.error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
                     }
                     NoahButton(title: copied ? "Copied" : "Copy Seed Phrase", kind: .secondary, action: copy)
@@ -194,7 +194,7 @@ struct MnemonicView: View {
     }
 
     private func reveal() async {
-        let allowed = onContinue != nil ? true : await lock.authenticate(L10n.text("Authenticate to view seed phrase", locale: locale.identifier))
+        let allowed = onContinue != nil ? true : await lock.authenticate(L10n.text("Authenticate to view your seed phrase", locale: locale.identifier))
         if allowed {
             guard scenePhase != .background else { return }
             authenticated = true

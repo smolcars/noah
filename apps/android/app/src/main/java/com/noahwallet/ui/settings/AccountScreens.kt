@@ -57,7 +57,7 @@ fun ProfileScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
         server.lightningAddress?.let { CopyRow("Lightning Address", it) }
         SettingRow("Edit Lightning Address") { navigate(SettingsDestination.Lightning) }
         SectionTitle("Emergency Email")
-        Text(tr(server.emailAddress ?: "No emergency email"))
+        Text(tr(server.emailAddress ?: "No emergency email set"))
         Text(tr(if (server.isEmailVerified == true) "Verified" else "Not verified"))
         SettingRow("Edit Emergency Email") { navigate(SettingsDestination.Email) }
         SectionTitle("Public Keys")

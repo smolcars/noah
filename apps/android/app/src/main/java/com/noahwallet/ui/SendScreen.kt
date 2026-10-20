@@ -141,7 +141,7 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
                         if (route.commentAllowed > 0) {
                             OutlinedTextField(model.comment, { model.comment = it }, label = { Text(tr("Add a note")) }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
                             Text(tr("${model.comment.length}/${route.commentAllowed}"), style = MaterialTheme.typography.bodySmall)
-                            if (model.comment.isNotEmpty() && route.arkAddress != null) Text(tr("Adding a note uses Lightning."), style = MaterialTheme.typography.bodySmall)
+                            if (model.comment.isNotEmpty() && route.arkAddress != null) Text(tr("Adding a note will send this payment over Lightning."), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     model.suggestions.forEach { suggestion -> TextButton(onClick = { model.setRecipient(suggestion) }) { Text(tr(suggestion)) } }

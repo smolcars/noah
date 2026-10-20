@@ -39,7 +39,7 @@ fun Onboarding(model: AppModel) {
         "restore" -> RestoreWalletScreen(model)
         "beta" -> NoahForm("Noah is in beta") {
             Text(tr("Noah is still in beta. There is a possibility you could lose money. Only deposit funds you are willing to lose."))
-            NoahButton(if (model.busy) "Creating wallet…" else "I accept", !model.busy) {
+            NoahButton(if (model.busy) "Creating your wallet..." else "I accept", !model.busy) {
                 model.action("Creation failed. Please try again.") { model.create() }
             }
             NoahButton("I decline", !model.busy, secondary = true) { model.step = "welcome" }
@@ -114,7 +114,7 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
         }
         if (fromSettings && words.isEmpty()) {
             model.walletLock.error?.let { Text(tr(it)) }
-            NoahButton("Authenticate to view seed phrase", !model.walletLock.authenticating) {
+            NoahButton("Authenticate to view your seed phrase", !model.walletLock.authenticating) {
                 scope.launch {
                     val started = model.walletLock.generation
                     if (model.walletLock.authenticate(activity as androidx.fragment.app.FragmentActivity, "View your seed phrase")) {

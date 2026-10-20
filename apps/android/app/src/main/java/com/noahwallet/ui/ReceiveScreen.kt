@@ -210,7 +210,7 @@ private fun ReceiveCopySheet(request: ReceiveRequest) {
     val context = LocalContext.current
     var copied by remember { mutableStateOf<String?>(null) }
     val items = listOf("Unified request" to request.uri(), "Ark address" to request.arkAddress,
-        "Onchain address" to request.onchainAddress) + listOfNotNull(request.lightningInvoice?.let { "Lightning invoice" to it })
+        "On-chain address" to request.onchainAddress) + listOfNotNull(request.lightningInvoice?.let { "Lightning invoice" to it })
     Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(tr("Payment details"), style = MaterialTheme.typography.headlineMedium)
         items.forEach { (label, value) ->

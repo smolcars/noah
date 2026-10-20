@@ -63,7 +63,7 @@ struct LogView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 8) {
-                if lines.isEmpty { Text("No logs found") }
+                if lines.isEmpty { Text("No logs found.") }
                 if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
                 ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                     Text(verbatim: line).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
@@ -73,7 +73,7 @@ struct LogView: View {
         .settingsStyle("Logs")
         .task { lines = await LogFile.shared.linesForExport() }
         .refreshable { lines = await LogFile.shared.linesForExport() }
-        .toolbar { Button("Share Logs", systemImage: "square.and.arrow.up", action: share) }
+        .toolbar { Button("Share app logs", systemImage: "square.and.arrow.up", action: share) }
         .sheet(isPresented: $sharing, onDismiss: { file?.discard(); file = nil }) {
             if let file { FileShareSheet(file: file) }
         }
