@@ -9,8 +9,8 @@
   "catalogEntries": 1287,
   "coverage": {
     "ios": {
-      "rnTranslated": 601,
-      "nativeOnlyEnglish": 413,
+      "rnTranslated": 602,
+      "nativeOnlyEnglish": 414,
       "nativeOnly": [
         "#{nativeValue1} · {nativeValue2} · {nativeValue3} sats",
         "6-digit code",
@@ -87,6 +87,7 @@
         "Couldn't check the latest status. Showing the last known status.",
         "Couldn't complete the backup operation. Please try again.",
         "Couldn't export your database. Please try again.",
+        "Couldn't list backups.",
         "Couldn't load Ark info. Pull to refresh.",
         "Couldn't load a Noah wallet address. Try again when the wallet is ready.",
         "Couldn't load a deposit address. Close and try again when the wallet is ready.",
@@ -702,6 +703,7 @@
         "MAX",
         "Made with ❤️ from Noah team",
         "Mailbox Notifications",
+        "Mailbox authorization is disabled",
         "Mailbox pubkey",
         "Maintenance",
         "Maintenance Delegated",
@@ -1031,7 +1033,7 @@
       ]
     },
     "android": {
-      "rnTranslated": 518,
+      "rnTranslated": 519,
       "nativeOnlyEnglish": 504,
       "nativeOnly": [
         "6-digit code",
@@ -1768,6 +1770,7 @@
         "MAX",
         "Made with ❤️ from Noah team",
         "Mailbox Notifications",
+        "Mailbox authorization is disabled",
         "Mailbox pubkey",
         "Maintenance",
         "Maintenance Delegated",

@@ -10837,6 +10837,18 @@
         }
       }
     },
+    "Couldn't list backups.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't list backups."
+          }
+        }
+      }
+    },
     "Couldn't load Ark info. Pull to refresh.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
