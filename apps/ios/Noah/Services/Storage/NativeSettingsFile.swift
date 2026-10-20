@@ -6,8 +6,8 @@ import Foundation
 struct NativeSettingsFile {
     struct State: Codable, Equatable {
         var values: [String: String] = [:]
-        var admittedKeys: [String] = []
-        var recoveryPending = false
+        var settingsNoticePending = false
+        var recurringNoticePending = false
         var cleanupPending = false
     }
     private struct Envelope: Codable { let version: Int; let payload: String; let sha256: String }
@@ -19,16 +19,15 @@ struct NativeSettingsFile {
 
     func load() throws -> State {
         let data = try Data(contentsOf: file)
-        let object = try RawObject(String(decoding: data, as: UTF8.self))
+        guard let raw = String(data: data, encoding: .utf8) else { throw SettingsStorage.OpenError() }
+        let object = try RawObject(raw)
         guard Set(object.fields.keys) == ["version", "payload", "sha256"],
               object.fields["version"]?.trimmingCharacters(in: .whitespacesAndNewlines) == "1" else { throw SettingsStorage.OpenError() }
         let envelope = try JSONDecoder().decode(Envelope.self, from: data)
         guard envelope.sha256 == Self.digest(envelope.payload) else { throw SettingsStorage.OpenError() }
         let payload = try RawObject(envelope.payload)
-        guard Set(payload.fields.keys) == ["values", "admittedKeys", "recoveryPending", "cleanupPending"] else { throw SettingsStorage.OpenError() }
+        guard Set(payload.fields.keys) == ["values", "settingsNoticePending", "recurringNoticePending", "cleanupPending"] else { throw SettingsStorage.OpenError() }
         let state = try JSONDecoder().decode(State.self, from: Data(envelope.payload.utf8))
-        guard state.admittedKeys.allSatisfy({ state.values[$0] != nil }),
-              Set(state.admittedKeys).count == state.admittedKeys.count else { throw SettingsStorage.OpenError() }
         return state
     }
 
