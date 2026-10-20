@@ -163,8 +163,9 @@ class AppServices private constructor(private val context: Context) {
      * only after an interrupted restore is settled, so headless launches (FCM, WorkManager) recover
      * it too instead of failing until the app is opened. Recovery runs even without a journal (it
      * removes plaintext a restore left before writing one) and even while suspended (no opening).
+     * Committed deletion waits for foreground recovery so a headless open never deletes a seed.
      */
-    private val walletOpener = StoredWalletOpener(seed) { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) }
+    private val walletOpener = StoredWalletOpener(seed, { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) }) { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) }
 
     suspend fun ensureWalletOpen(walletMutationHeld: Boolean = false) = openWallet(walletMutationHeld, foreground = false)
 
@@ -172,6 +173,9 @@ class AppServices private constructor(private val context: Context) {
 
     private suspend fun openWallet(walletMutationHeld: Boolean, foreground: Boolean): Unit = withContext(Dispatchers.IO) {
         if (!walletMutationHeld) { lifecycle.withWalletMutation { openWallet(walletMutationHeld = true, foreground) }; return@withContext }
+        settings.validateStores()
+        if (!foreground) walletOpener.requireHeadlessAdmission()
+        if (!foreground && WalletDataLocation(context.filesDir, variant).deletionMarker.exists()) throw RestoreNotSettled()
         if (recoverRestore(walletMutationHeld) == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
         if (settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
             throw WalletSuspended()

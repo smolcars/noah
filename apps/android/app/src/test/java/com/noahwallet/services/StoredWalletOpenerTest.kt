@@ -14,6 +14,7 @@ class StoredWalletOpenerTest {
         var bytes: ByteArray? = null
         var writes = 0
         var opens = 0
+        var walletState: PersistedWalletState? = PersistedWalletState(isInitialized = true)
         var mismatch = false
         private val key = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
         val seed = SeedStorage(NativeSecretStore("test", object : SecretKeys {
@@ -24,7 +25,7 @@ class StoredWalletOpenerTest {
             override fun writeAtomically(value: ByteArray) { writes++; bytes = value }
             override fun delete() = error("Must not delete seed")
         })) { SecretResult.Found(original) }
-        val opener = StoredWalletOpener(seed) {
+        val opener = StoredWalletOpener(seed, { walletState }) {
             assertTrue("Open must use the original credential", it == original)
             opens++
             check(!mismatch) { "Fingerprint mismatch" }
@@ -55,6 +56,23 @@ class StoredWalletOpenerTest {
         f.opener.openInForeground()
         assertEquals("Neither later pushes nor repeated foreground opens rewrite an identical copy", 1, f.writes)
         assertTrue(before.contentEquals(f.bytes))
+    }
+
+    @Test fun unfinishedOnboardingRejectsAllWalletPushJobsWithoutOpeningOrWritingSeeds() = runBlocking {
+        for (state in listOf(null, PersistedWalletState(), PersistedWalletState(isInitialized = false))) {
+            val f = Fixture().apply { walletState = state }
+            for (notification in listOf(NotificationDataMaintenance("k1"), NotificationDataLightningInvoiceRequest(1000, "tx"),
+                NotificationDataLightningClaimRequest(1, null, "hash"), NotificationDataBackupTrigger("k1"), NotificationDataRecurringPaymentDue(1))) {
+                assertTrue(runCatching { f.jobs.handle(notification) }.exceptionOrNull() is StoredWalletOpener.OnboardingIncomplete)
+            }
+            assertEquals(0, f.opens); assertEquals(0, f.writes); assertNull(f.bytes)
+            // Foreground onboarding can reuse the existing credential and complete normally.
+            f.opener.openInForeground()
+            assertEquals(1, f.opens); assertEquals(1, f.writes)
+            f.walletState = PersistedWalletState(isInitialized = true)
+            f.opener.ensureOpen()
+            assertEquals(2, f.opens); assertEquals(1, f.writes)
+        }
     }
 
     @Test fun failedFingerprintVerificationNeverMigrates() = runBlocking {

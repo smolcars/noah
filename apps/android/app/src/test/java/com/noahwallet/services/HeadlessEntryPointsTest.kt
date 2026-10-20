@@ -1,0 +1,64 @@
+package com.noahwallet.services
+
+import java.io.File
+import org.junit.Assert.*
+import org.junit.Test
+
+/** Wiring contracts complement StoredWalletOpenerTest's real admission/seed-write checks.
+ * Android framework entry classes cannot run in the plain JVM test process. */
+class HeadlessEntryPointsTest {
+    private fun source(path: String) = File("src/main/java/com/noahwallet/$path.kt").readText()
+    private fun walletGate() {
+        val app = source("services/AppServices")
+        assertTrue(app.contains("if (!foreground) walletOpener.requireHeadlessAdmission()"))
+        assertTrue(app.indexOf("if (!foreground) walletOpener.requireHeadlessAdmission()") < app.indexOf("if (recoverRestore(walletMutationHeld)"))
+        assertTrue(app.contains("else walletOpener.ensureOpen()"))
+        assertTrue(source("services/storage/StoredWalletOpener").contains("walletState()?.isInitialized != true"))
+        assertTrue(source("services/push/PushRuntime").contains("ensureWalletOpen = services::ensureWalletOpen"))
+    }
+    @Test fun headlessDeletionRecoveryCannotDeleteASeed() {
+        val code = source("services/AppServices")
+        val gate = "if (!foreground && WalletDataLocation(context.filesDir, variant).deletionMarker.exists()) throw RestoreNotSettled()"
+        assertTrue(code.contains(gate))
+        assertTrue(code.indexOf(gate) < code.indexOf("if (recoverRestore(walletMutationHeld)"))
+    }
+    @Test fun firebaseServiceRoutesThroughTheGatedWorker() {
+        assertTrue(source("services/push/NoahFirebaseMessagingService").contains("PushWork.enqueue")); walletGate()
+    }
+    @Test fun unifiedPushServiceRoutesThroughTheGatedWorker() {
+        assertTrue(source("services/push/NoahUnifiedPushService").contains("PushWork.enqueue")); walletGate()
+    }
+    @Test fun pushWorkerUsesTheGatedRuntime() {
+        assertTrue(source("services/push/PushWork").contains(".jobs.handle(PushPayload.decode(payload))")); walletGate()
+    }
+    @Test fun registrationWorkerRequiresOnboardingWithoutOpeningAWallet() {
+        assertTrue(source("services/push/PushWork").contains(".register()"))
+        assertTrue(source("services/push/PushRuntime").contains("onboarded = services::isOnboarded"))
+        assertTrue(source("services/push/PushRegistration").contains("if (!onboarded()"))
+    }
+    @Test fun recurringRuntimeUsesTheSharedGate() {
+        assertTrue(source("recurring/RecurringRuntime").contains("ensureOpen = { services.ensureWalletOpen() }")); walletGate()
+    }
+    @Test fun timeReceiverRoutesThroughTheRecurringRuntime() {
+        assertTrue(source("recurring/RecurringTimeReceiver").contains("RecurringRuntime.shared(context).timeChanged()")); walletGate()
+    }
+    @Test fun recurringForegroundRunnerRequiresOnboarding() {
+        assertTrue(source("recurring/RecurringRuntime").contains("isOnboarded = services::isOnboarded"))
+        assertTrue(source("recurring/RecurringForegroundRunner").contains("isOnboarded()")); walletGate()
+    }
+    @Test fun recurringReminderWorkerRequiresOnboardingAndDoesNotOpenWallets() {
+        val code = source("recurring/RecurringNotifications")
+        assertTrue(code.contains("wallet?.isInitialized != true"))
+        assertFalse(code.contains("ensureWalletOpen")); assertFalse(code.contains("ensureOpen"))
+    }
+    private fun cachedWidget(path: String? = null) {
+        val code = source("widgets/NoahWidgetProvider")
+        assertTrue(code.contains("WidgetSnapshot.read(prefs)"))
+        assertFalse(code.contains("AppServices")); assertFalse(code.contains("WalletSession"))
+        if (path != null) assertTrue(source("widgets/$path").contains("NoahWidgetProvider()"))
+    }
+    @Test fun widgetBaseRendersCachedDataWithoutOpeningWallets() = cachedWidget()
+    @Test fun mainnetWidgetOnlyUsesCachedData() = cachedWidget("NoahWidgetMainnetProvider")
+    @Test fun signetWidgetOnlyUsesCachedData() = cachedWidget("NoahWidgetSignetProvider")
+    @Test fun regtestWidgetOnlyUsesCachedData() = cachedWidget("NoahWidgetRegtestProvider")
+}
