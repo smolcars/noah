@@ -134,7 +134,7 @@ final class LogFile: @unchecked Sendable {
             guard let contents = try? String(contentsOf: url, encoding: .utf8) else { continue }
             lines.append(contentsOf: contents.split(whereSeparator: \.isNewline).map(String.init))
         }
-        return Array(lines.suffix(Self.maxLines))
+        return Array(lines.suffix(Self.maxLines)).map(EndpointLogPrivacy.redact)
     }
 
     /// Snapshot/export barriers also emit any outstanding overflow count.
@@ -236,18 +236,21 @@ final class LogFile: @unchecked Sendable {
     }
 
     // Decoding loses source offsets, so a hit in any decoded view omits the entire message.
-    private static func decodedViews(_ message: String) -> [String]? {
+    static func decodedViews(_ message: String, percentEncoded: Bool = false) -> [String]? {
+        let escapes = percentEncoded ? encodedEscapes : jsonEscapes
         var views = [message]
         for _ in 0..<4 {
             let source = views.last!
-            let matches = jsonEscapes.matches(in: source, range: NSRange(source.startIndex..., in: source))
+            let matches = escapes.matches(in: source, range: NSRange(source.startIndex..., in: source))
             if matches.isEmpty { return views }
             let original = source as NSString
             var parts: [String] = []
             var offset = 0
             for match in matches {
                 let token = original.substring(with: match.range)
-                guard let value = try? JSONDecoder().decode(String.self, from: Data(("\"" + token + "\"").utf8)) else { return nil }
+                let decoded = token.hasPrefix("%") ? token.removingPercentEncoding :
+                    (try? JSONDecoder().decode(String.self, from: Data(("\"" + token + "\"").utf8)))
+                guard let value = decoded else { return nil }
                 parts.append(original.substring(with: NSRange(location: offset, length: match.range.location - offset)))
                 parts.append(value)
                 offset = match.range.upperBound
@@ -256,7 +259,7 @@ final class LogFile: @unchecked Sendable {
             views.append(parts.joined())
         }
         let last = views.last!
-        guard jsonEscapes.firstMatch(in: last, range: NSRange(last.startIndex..., in: last)) == nil else { return nil }
+        guard escapes.firstMatch(in: last, range: NSRange(last.startIndex..., in: last)) == nil else { return nil }
         return views
     }
 
@@ -373,6 +376,7 @@ final class LogFile: @unchecked Sendable {
         return Set(text.split(whereSeparator: \.isWhitespace).map(String.init))
     }()
     private static let jsonEscapes = try! NSRegularExpression(pattern: #"(?:\\u[0-9a-fA-F]{4})++|\\["\\/bfnrt]"#)
+    private static let encodedEscapes = try! NSRegularExpression(pattern: jsonEscapes.pattern + #"|(?:%[0-9a-fA-F]{2})+"#)
     private static let wordPattern = try! NSRegularExpression(pattern: #"[\p{L}\p{M}]+"#)
     // Search once per maximal token, never again at every internal dot/hyphen boundary.
     private static func replaceTokens(in text: String, tokens: NSRegularExpression,

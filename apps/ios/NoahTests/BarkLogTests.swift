@@ -1,5 +1,6 @@
 import BarkBoltFFI
 import Foundation
+import Sentry
 import Testing
 
 @testable import Noah
@@ -17,6 +18,54 @@ struct BarkLogTests {
         let file = LogFile(directory: directory)
         BarkLog(file: file).log(level: .info, target: "wallet", message: message)
         #expect(file.lines().last?.hasSuffix("Using Esplora at https://esplora-privacy.example") == true)
+    }
+
+    @Test func relativeAndEscapedProviderErrorsCannotLeakEndpointCredentials() async throws {
+        let token = "fakeOpaqueCredential59df"
+        EndpointLogPrivacy.register("https://relative-privacy.example/api/\(token)")
+        let inputs = [
+            "No route: /api/\(token)/fee-estimates",
+            "fee estimation failed: HttpResponse(404): No route: /api/\(token)/fee-estimates\nCaused by: \(token)",
+            #"No route: \/api\/fakeOpaqueCredential59df\/fee-estimates"#,
+            #"No route: \u002fapi\u002ffakeOpaqueCredential59df\u002ffee-estimates"#,
+            "No route: %2fapi%2ffakeOpaqueCredential59df%2ffee-estimates",
+            "No route: /api/%66akeOpaqueCredential59df/fee-estimates",
+            #"No route: /api/\u0066akeOpaqueCredential59df/fee-estimates"#,
+            "No route: %252Fapi%252FfakeOpaqueCredential59df%252Ffee-estimates",
+            #"No route: \\/api\\/fakeOpaqueCredential59df\\/fee-estimates"#,
+        ]
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        // Old files must be scrubbed when exported after an endpoint is registered.
+        try inputs.joined(separator: "\n").write(to: directory.appending(path: "noah.log.1"), atomically: true, encoding: .utf8)
+        let file = LogFile(directory: directory)
+        for input in inputs {
+            #expect(EndpointLogPrivacy.redact(input) != input)
+            #expect(LogFile.redact(input) != input)
+            #expect(LogFile.redactForTelemetry(input) != input)
+            BarkLog(file: file).log(level: .warn, target: "bark::onchain", message: input)
+            AppLog("wallet", file: file).e(input)
+            let event = Event(level: .error)
+            event.message = SentryMessage(formatted: input)
+            let clean = try #require(AppTelemetry.scrub(event))
+            #expect(clean.message?.formatted.contains(token) == false)
+            event.releaseName = input
+            #expect(AppTelemetry.scrub(event) == nil, "Sentry final guard")
+        }
+        #expect(!file.lines().joined().contains(token))
+        #expect(!(await file.linesForExport()).joined().contains(token))
+        #expect(EndpointLogPrivacy.redact("HTTP 404: fee-estimates failed") == "HTTP 404: fee-estimates failed")
+    }
+
+    @Test func sdkSuppressesProviderResponseBodiesButKeepsErrorTypeAndStatus() {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = LogFile(directory: directory)
+        BarkLog(file: file).log(level: .warn, target: "bark::onchain", message:
+            #"fee estimation failed: HttpResponse { status: 404, message: "No route: /unknown/fakeUnregisteredCredential; \"nested\"" }; caused by: upstream unavailable"#)
+        #expect(file.lines().first?.hasSuffix(
+            #"fee estimation failed: HttpResponse { status: 404, message: "[provider response omitted]" }; caused by: upstream unavailable"#) == true)
     }
 
     @Test func mapsEveryLevelAndMatchesRNVerbosity() {

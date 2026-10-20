@@ -21,7 +21,7 @@ final class BarkLog: BarkLogger, @unchecked Sendable {
     }
 
     func log(level: LogLevel, target: String, message: String) {
-        AppLog("bark:\(target)", file: file).log(Self.appLevel(level), EndpointLogPrivacy.redact(message))
+        AppLog("bark:\(target)", file: file).log(Self.appLevel(level), EndpointLogPrivacy.sdkMessage(message))
     }
 
     static func appLevel(_ level: LogLevel) -> AppLog.Level {
