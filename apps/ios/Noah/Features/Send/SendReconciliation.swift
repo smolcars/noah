@@ -185,9 +185,10 @@ enum SendReconciliation {
         result.chainStatus = status
         result.chainStatusError = nil
         // BDK's reorg/competing-spend rules still own its lock and receipt state.
+        // Absence or mempool evidence only downgrades a confirmation; it never resolves an unlocated receipt.
         if source == .offchain, result.status != .conflicted {
             if case .confirmed = status { result.status = .confirmed }
-            else { result.status = .submitted }
+            else if result.status == .confirmed { result.status = .submitted }
         }
         return result
     }

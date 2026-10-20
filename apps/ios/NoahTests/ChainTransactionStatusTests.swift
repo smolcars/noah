@@ -17,6 +17,17 @@ import Testing
         #expect(ChainTransactionStatus(.confirmed(height: 123)).message == "Confirmed at block 123.")
         #expect(ChainTransactionStatus(.notFound).message.contains("Do not submit it again"))
     }
+    @Test func offboardAbsenceOrMempoolKeepsUnresolvedReceiptsLocked() {
+        for state in [SendReceipt.Status.unlocated, .conflicted] {
+            let original = SendReceipt(amount: 850, txid: "exact", status: state, fee: 150, proof: .submitReturnedTxid)
+            for status in [ChainTransactionStatus.notFound, .inMempool] {
+                let result = SendReconciliation.chainEvidence(status, receipt: original, source: .offchain)
+                #expect(result.status == state && result.isUnresolved)
+            }
+        }
+        let unlocated = SendReceipt(amount: 850, txid: "exact", status: .unlocated, fee: 150, proof: .submitReturnedTxid)
+        #expect(SendReconciliation.chainEvidence(.confirmed(123), receipt: unlocated, source: .offchain).status == .confirmed)
+    }
     @Test func chainStatusCannotWeakenBDKLocksOrConfirmedCompetingSpendEvidence() {
         for state in [SendReceipt.Status.unlocated, .conflicted, .submitted] {
             let original = SendReceipt(amount: 1000, txid: "exact", status: state, fee: 143,
