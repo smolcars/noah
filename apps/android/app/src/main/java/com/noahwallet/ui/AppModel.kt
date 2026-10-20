@@ -256,6 +256,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
     }
 
     suspend fun refresh(sync: Boolean = false) {
+        if (isWalletSuspended || settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) return
         try {
             if (sync) session.sync()
             summary = session.summary()

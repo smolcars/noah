@@ -29,6 +29,7 @@ enum class SettingsDestination(val title: String) : NavKey {
     Settings("Settings"), Profile("Profile"), Language("Language"), Currency("Currency"), Unit("Bitcoin Unit"),
     Backup("Backup & Restore"), Seed("Your Recovery Phrase"), Ark("Ark Info"), Export("Export Database"),
     Logs("Logs"), Feedback("Send Feedback"), Story("Noah's Ark Story"), Debug("Debug"),
+    Vtxos("VTXOs"), Board("Board to Ark"), Exits("Emergency Exit"),
     Email("Emergency Email"), Lightning("Lightning Address"), Battery("Battery Optimization"),
 }
 
@@ -49,6 +50,9 @@ fun SettingsPage(model: AppModel, destination: SettingsDestination, navigate: (S
         SettingsDestination.Email -> EmergencyEmailScreen(model) { navigate(SettingsDestination.Profile) }
         SettingsDestination.Lightning -> LightningScreen(model) { navigate(SettingsDestination.Profile) }
         SettingsDestination.Battery -> BatteryScreen()
+        SettingsDestination.Vtxos -> com.noahwallet.onchain.VtxosScreen(model)
+        SettingsDestination.Board -> com.noahwallet.onchain.BoardArkScreen(model)
+        SettingsDestination.Exits -> com.noahwallet.onchain.UnilateralExitScreen(model)
     }
 }
 
@@ -95,7 +99,7 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
     var threshold by remember { mutableStateOf<ULong?>(null) }
     val activity = LocalContext.current as FragmentActivity
     val uri = LocalUriHandler.current
-    LaunchedEffect(Unit) { threshold = runCatching { model.session.arkInfo()?.minBoardAmountSats }.getOrNull() }
+    LaunchedEffect(model.isWalletSuspended) { if (com.noahwallet.onchain.onchainReady(model)) threshold = runCatching { model.session.boardingMinimum()?.toULong() }.getOrNull() }
     LaunchedEffect(taps) { if (taps > 0) { delay(2000); taps = 0 } }
     SettingsColumn {
         SettingRow("Noah's Ark Story", "Listen to the story behind Noah") { navigate(SettingsDestination.Story) }
@@ -108,7 +112,10 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
         SettingRow("Ark Info", "Ark server, wallet, and explorer configuration") { navigate(SettingsDestination.Ark) }
         SectionTitle("Wallet")
         SettingRow("Show Seed Phrase", "Keep your recovery phrase safe. Never share it.") { navigate(SettingsDestination.Seed) }
-        listOf("Show VTXOs", "Emergency Exit", "Recurring Payments", "Board to Ark").forEach { SettingRow(it, "Coming soon", false) }
+        SettingRow("Show VTXOs", "Inspect and refresh your Ark funds") { navigate(SettingsDestination.Vtxos) }
+        SettingRow("Board to Ark", "Move onchain bitcoin into Ark") { navigate(SettingsDestination.Board) }
+        SettingRow("Emergency Exit", "Recover Ark funds onchain") { navigate(SettingsDestination.Exits) }
+        SettingRow("Recurring Payments", "Coming soon", false)
         SettingRow("Backup & Restore", "Automatic and manual encrypted backups") { navigate(SettingsDestination.Backup) }
         SettingToggle("Auto-Board to Ark", threshold?.let { "Ask to board when onchain funds cover ${maxOf(it, 20_000u)} sats, fees, and a 5,000 sats reserve." } ?: "Auto-board threshold unavailable",
             autoBoard, !model.busy) { value ->

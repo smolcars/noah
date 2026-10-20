@@ -44,6 +44,7 @@ fun NoahApp(model: AppModel) {
     LaunchedEffect(model, model.preferredCurrency, lifecycle, walletAvailable) {
         if (walletAvailable) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.history.observe(model.preferredCurrency) }
     }
+    if (backStack.last() == Destination.Home) com.noahwallet.onchain.AutoBoardPrompt(model)
     val repeat: (com.noahwallet.history.RepeatPayment) -> Unit = {
         model.repeatPayment = it
         backStack.clear(); backStack.add(Destination.Home); backStack.add(Destination.Send)
