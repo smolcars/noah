@@ -57,7 +57,7 @@ final class SettingsStorage: @unchecked Sendable {
         }
     }
 
-    static let settingsNotice = "Some settings couldn't be carried over from the previous version. Please check Settings, including security, currency and Esplora server."
+    static let settingsNotice = "Some settings couldn't be carried over from the previous version, so they're back to their defaults: biometric lock is off, balances are visible, and currency and display settings are reset. Please review Settings."
     static let recurringNotice = "Recurring payments need to be set up again after this update."
     static let emptyRecurring = #"{"state":{"schedules":{},"serverSyncPending":true},"version":0}"#
 
