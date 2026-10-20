@@ -4,6 +4,9 @@ import com.noahwallet.api.generated.models.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
+import com.noahwallet.services.wallet.WalletExecutionBudget
+import com.noahwallet.services.wallet.checkWalletAdmission
 
 /** The two transports share routing, including status reporting when wallet open fails. */
 class PushJobs(private val dependencies: Dependencies) {
@@ -23,17 +26,21 @@ class PushJobs(private val dependencies: Dependencies) {
         val recurring: suspend (com.noahwallet.recurring.RecurringBudget) -> Unit = {},
     )
 
-    suspend fun handle(notification: NotificationData) = com.noahwallet.services.wallet.WalletBackgroundActivity.during {
-        handleNotification(notification)
+    suspend fun handle(notification: NotificationData) = withContext(
+        currentCoroutineContext()[WalletExecutionBudget] ?: WalletExecutionBudget(com.noahwallet.recurring.RecurringBudget.push())
+    ) {
+        com.noahwallet.services.wallet.WalletBackgroundActivity.during { handleNotification(notification) }
     }
 
     private suspend fun handleNotification(notification: NotificationData) {
-        currentCoroutineContext().ensureActive()
+        val caller = currentCoroutineContext()
+        caller.checkWalletAdmission()
         val d = dependencies
         when (notification) {
             is NotificationDataMaintenance -> {
                 val failure = try {
                     d.ensureWalletOpen()
+                    caller.checkWalletAdmission()
                     d.maintenance()
                     null
                 } catch (cancelled: CancellationException) { throw cancelled }
@@ -47,12 +54,15 @@ class PushJobs(private val dependencies: Dependencies) {
             is NotificationDataLightningInvoiceRequest -> {
                 require(notification.amount >= 0)
                 d.ensureWalletOpen()
+                caller.checkWalletAdmission()
                 val invoice = d.createInvoice(notification.amount.toULong() / 1000u)
+                caller.checkWalletAdmission()
                 d.submitInvoice(notification.transactionId, invoice)
             }
             is NotificationDataLightningClaimRequest -> {
                 require(notification.amountSat >= 0)
                 d.ensureWalletOpen()
+                caller.checkWalletAdmission()
                 d.claimLightning()
                 bestEffort("Failed to announce Lightning receive") {
                     d.announceReceived(notification.amountSat, notification.amountUsd, notification.paymentHash)
@@ -64,7 +74,10 @@ class PushJobs(private val dependencies: Dependencies) {
             }
             is NotificationDataBackupTrigger -> {
                 val failure = try {
-                    d.ensureWalletOpen(); d.backup(); null
+                    d.ensureWalletOpen()
+                    caller.checkWalletAdmission()
+                    d.backup()
+                    null
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (error: Exception) { error }
                 bestEffort("Failed to report backup status") { d.reportBackup(notification.notificationK1, failure == null) }
@@ -72,9 +85,11 @@ class PushJobs(private val dependencies: Dependencies) {
             }
             is NotificationDataRecurringPaymentDue -> com.noahwallet.recurring.RecurringPushDeadline().run { budget ->
                 currentCoroutineContext().ensureActive()
+                caller.checkWalletAdmission()
                 if (!budget.available) throw CancellationException()
                 d.ensureWalletOpen()
                 currentCoroutineContext().ensureActive()
+                caller.checkWalletAdmission()
                 if (!budget.available) throw CancellationException()
                 d.recurring(budget)
             }
@@ -82,6 +97,7 @@ class PushJobs(private val dependencies: Dependencies) {
     }
 
     private suspend fun bestEffort(message: String, block: suspend () -> Unit) {
+        currentCoroutineContext().checkWalletAdmission()
         try { block() }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { dependencies.log(message) }
