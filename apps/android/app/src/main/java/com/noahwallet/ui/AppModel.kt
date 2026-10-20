@@ -87,7 +87,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
 
     suspend fun resumeRestoreRecovery() {
         check(launchState == LaunchState.seedWithoutWalletData && restore.canLeave)
-        services.lifecycle.resume()
+        services.lifecycle.resume { retryRestoreSettings() }
         isWalletSuspended = false
     }
 
@@ -147,7 +147,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     }
 
     suspend fun resumeWallet() {
-        services.lifecycle.resume()
+        services.lifecycle.resume { retryRestoreSettings() }
         try { withContext(Dispatchers.IO) { services.openWalletInForeground() } }
         catch (failure: Exception) { services.lifecycle.suspend(); throw failure }
         open = true; isWalletSuspended = false
@@ -235,7 +235,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         viewModelScope.launch {
             try { block() }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (failure: Exception) { error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage) failure.message else fallback }
+            catch (failure: Exception) { error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage || failure is WalletLifecycle.RestoreSettingsUnavailable) failure.message else fallback }
             finally { busy = false }
         }
     }
@@ -266,13 +266,14 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         refresh()
     }
 
+    private suspend fun retryRestoreSettings() {
+        RestoreTransaction(restoreLocation).completeSettings(settings)
+        restoreCompletion {}.replay(RestoreTransaction.Recovery.nothingPending, restoreLocation.databaseExists)
+    }
+
     suspend fun refresh(sync: Boolean = false, walletMutationHeld: Boolean = false): Unit = withContext(Dispatchers.IO) {
         if (open && (RestoreTransaction(restoreLocation).settingsPending || restoreCompletionJournal.pending)) {
-            suspend fun retry() {
-                RestoreTransaction(restoreLocation).completeSettings(settings)
-                restoreCompletion {}.replay(RestoreTransaction.Recovery.nothingPending, restoreLocation.databaseExists)
-            }
-            if (walletMutationHeld) retry() else services.lifecycle.withWalletMutation { retry() }
+            if (walletMutationHeld) retryRestoreSettings() else services.lifecycle.withWalletMutation { retryRestoreSettings() }
         }
         if (isWalletSuspended || settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) return@withContext
         try {

@@ -36,6 +36,7 @@ class WalletLifecycle(
 ) {
     companion object { const val automationStopKey = "native-recurring-automation-stop-generation" }
     class WaitingForSecureStorage : Exception("Waiting for secure storage. Unlock your device and try again.")
+    class RestoreSettingsUnavailable : Exception("Restored wallet settings can't be saved yet. Try Resume again when storage is available. Recurring payments remain stopped.")
     class RestorePending : Exception("Restart Noah to settle the pending restore before deleting")
     class BackupBusy : Exception("Noah is still finishing a backup. Try again in a moment.")
     class TemporaryFiles : Exception("Noah couldn't remove temporary wallet files. Restart Noah and try again.")
@@ -109,9 +110,14 @@ class WalletLifecycle(
         }
     }
 
-    suspend fun resume() = withContext(NonCancellable + Dispatchers.IO) {
+    suspend fun resume(retryRestoreSettings: suspend () -> Unit = {}) = withContext(NonCancellable + Dispatchers.IO) {
         mutation.withLock {
-            check(!RestoreTransaction(location).settingsPending) { "Restore settings completion is pending" }
+            val transaction = RestoreTransaction(location)
+            val receipt = com.noahwallet.ui.RestoreCompletionJournal(location)
+            if (transaction.settingsPending || receipt.pending) {
+                try { retryRestoreSettings() } catch (_: Exception) { throw RestoreSettingsUnavailable() }
+                if (transaction.settingsPending || receipt.pending) throw RestoreSettingsUnavailable()
+            }
             authority()?.resume()
             try { setSuspended(false) } catch (failure: Exception) { authority()?.stop(); throw failure }
         }

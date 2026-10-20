@@ -71,6 +71,53 @@ class WalletLifecycleTest {
         } finally { world.clean() }
     }
 
+    @Test fun explicitResumeRetriesSettingsAndReceiptBeforeReleasingAutomation() = runBlocking {
+        for (failureAt in listOf("none", "settings", "receipt", "receiptRetained")) {
+            val world = World()
+            try {
+                world.files()
+                val tx = RestoreTransaction(world.location)
+                tx.settingsCompletion.writeText("")
+                val receipt = RestoreCompletionJournal(world.location) {}
+                receipt.write(WalletRestorer.Outcome("restored-backup", "snapshot-hash", true))
+                world.lifecycle().suspend()
+                var metadata: Pair<String, String?>? = null
+                var tokenCleared = false
+                val completion = RestoreCompletion(loadState = { PersistedWalletState(isWalletSuspended = true) },
+                    saveState = { assertTrue(it.isInitialized == true); assertTrue(it.isWalletSuspended == true) },
+                    seedRestored = { hash, id ->
+                        if (failureAt == "receipt") error("Settings write failed")
+                        metadata = hash to id
+                    }, recover = { RestoreTransaction.Recovery.nothingPending }, openWallet = {},
+                    journal = receipt, clearToken = { tokenCleared = true })
+                val result = runCatching {
+                    world.lifecycle().resume {
+                        world.events.add("retry")
+                        if (failureAt == "settings") error("Settings write failed")
+                        check(tx.settingsCompletion.delete())
+                        if (failureAt != "receiptRetained") completion.replay(RestoreTransaction.Recovery.nothingPending, true)
+                    }
+                }
+                val authority = com.noahwallet.recurring.RecurringAutomationAuthority(world.location.directory) { file, bytes ->
+                    com.noahwallet.recurring.durableRecurringWrite(file, bytes) {}
+                }
+                assertTrue(world.events.contains("retry"))
+                if (failureAt == "none") {
+                    result.getOrThrow()
+                    assertFalse(world.suspended); assertFalse(tx.settingsPending); assertFalse(receipt.pending)
+                    assertTrue(tokenCleared); assertEquals("snapshot-hash" to "restored-backup", metadata)
+                    assertTrue(authority.allowed())
+                    assertTrue(world.events.indexOf("retry") < world.events.indexOf("flag:false"))
+                } else {
+                    assertTrue(result.isFailure)
+                    assertTrue(result.exceptionOrNull()!!.message!!.contains("settings can't be saved yet"))
+                    assertTrue(world.suspended); assertTrue(receipt.pending)
+                    assertFalse(authority.allowed()); assertFalse(world.session.isOpen)
+                }
+            } finally { world.clean() }
+        }
+    }
+
     @Test fun failedSuspendRollsBackFlag() = runBlocking {
         val world = World()
         try {

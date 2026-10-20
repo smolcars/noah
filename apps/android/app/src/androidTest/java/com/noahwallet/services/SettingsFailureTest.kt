@@ -176,6 +176,52 @@ class SettingsFailureTest {
         }
     }
 
+    @Test fun explicitResumeRetriesPendingSettingsAndReceiptAfterStorageRecovers() = runBlocking {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext
+        for (stillFailing in listOf(false, true)) {
+            val world = RestoreWorld(app, File(app.cacheDir, "restore-resume-${UUID.randomUUID()}"))
+            try {
+                world.stage("seed")
+                val settings = SettingsStorage(world.context)
+                val services = isolatedServices(world.context)
+                services.recoverRestore()
+                world.tx.completeSettings(settings)
+                assertTrue(world.tx.settingsPending)
+                Os.chmod(world.preferences.path, 448); Os.chmod(world.file.path, 384)
+                services.lifecycle.suspend()
+                val receipt = com.noahwallet.ui.RestoreCompletionJournal(world.location)
+                receipt.write(com.noahwallet.services.backup.WalletRestorer.Outcome("restored-backup", "snapshot-hash", true))
+                val completion = com.noahwallet.ui.RestoreCompletion(
+                    loadState = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState() },
+                    saveState = { if (!settings.completeRestore()) throw SettingsStorage.Unavailable() },
+                    seedRestored = { hash, id -> services.backupCoordinator.seedRestored(hash, id); settings.sync() },
+                    recover = { services.recoverRestore(walletMutationHeld = true) }, openWallet = {},
+                    journal = receipt, clearToken = services.tokens::clear,
+                    settingsUnavailable = { runCatching { settings.requireHealthy() }.isFailure })
+                if (stillFailing) Os.chmod(world.preferences.path, 320)
+                val result = runCatching {
+                    services.lifecycle.resume {
+                        world.tx.completeSettings(settings)
+                        completion.replay(com.noahwallet.services.backup.RestoreTransaction.Recovery.nothingPending, true)
+                    }
+                }
+                assertEquals(stillFailing, result.isFailure)
+                val state = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
+                assertEquals(stillFailing, state?.isWalletSuspended)
+                assertEquals(stillFailing, world.tx.settingsPending)
+                assertEquals(stillFailing, receipt.pending)
+                assertEquals(!stillFailing, RecurringAutomationAuthority(world.location.directory).allowed())
+                if (stillFailing) {
+                    assertTrue(result.exceptionOrNull()!!.message!!.contains("settings can't be saved yet"))
+                    assertFalse(services.session.isOpen)
+                } else {
+                    assertEquals("restored-backup", PersistedBackupState.decode(settings.string(PersistedBackupState.key)).lastBackupId)
+                    assertEquals("snapshot-hash", PersistedBackupState.decode(settings.string(PersistedBackupState.key)).lastUploadedSnapshotSha256)
+                }
+            } finally { world.cleanup() }
+        }
+    }
+
     @Test fun recurringSubmissionStopsWhenSettingsCannotPersist() = runBlocking {
         val app = InstrumentationRegistry.getInstrumentation().targetContext
         val directory = File(app.cacheDir, "settings-money-${UUID.randomUUID()}").apply { check(mkdir()) }
