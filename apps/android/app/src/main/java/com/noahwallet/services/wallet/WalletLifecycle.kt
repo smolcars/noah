@@ -1,6 +1,7 @@
 package com.noahwallet.services.wallet
 
 import com.noahwallet.services.storage.WalletDataLocation
+import com.noahwallet.services.storage.syncDirectory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -23,6 +24,7 @@ class WalletLifecycle(
     private val finishBackground: () -> Unit = {},
     private val isSuspended: () -> Boolean = { false },
     private val syncFiles: () -> Unit = {},
+    private val syncIdentityDirectory: (java.io.File) -> Unit = ::syncDirectory,
     private val warn: (String) -> Unit = {},
 ) {
     class RestorePending : Exception("Restart Noah to settle the pending restore before deleting")
@@ -30,7 +32,16 @@ class WalletLifecycle(
     private val mutation = Mutex()
 
     suspend fun recoverDeletion() = withContext(NonCancellable + Dispatchers.IO) {
-        mutation.withLock { if (location.deletionMarker.exists()) deleteLocked() }
+        mutation.withLock {
+            if (!location.deletionMarker.exists()) return@withLock
+            if (!location.deletionMatchesWallet()) {
+                warn("Discarding deletion marker for a different or unidentifiable wallet")
+                check(location.deletionMarker.delete())
+                syncFiles()
+                return@withLock
+            }
+            deleteLocked()
+        }
     }
 
     suspend fun suspend() = withContext(NonCancellable + Dispatchers.IO) {
@@ -59,12 +70,16 @@ class WalletLifecycle(
                 if (location.restorePending) throw RestorePending()
                 try { sweepScratch() } catch (_: Exception) { throw TemporaryFiles() }
                 // The durable marker commits the deletion; every later launch finishes it.
-                if (!location.deletionMarker.exists()) {
-                    java.io.FileOutputStream(location.deletionMarker).use { it.write(1); it.fd.sync() }
+                if (!location.deletionMarker.exists() || !location.deletionMatchesWallet()) {
+                    location.writeDeletionIdentity(syncIdentityDirectory)
                     syncFiles()
                 }
                 try { deregister() } catch (_: Exception) { warn("Deregistration failed while deleting wallet") }
-                check(!location.directory.exists() || location.directory.deleteRecursively()) { "Cannot delete wallet files" }
+                if (location.directory.exists()) {
+                    check(!location.deletionDirectory.exists() && location.directory.renameTo(location.deletionDirectory)) { "Cannot stage wallet deletion" }
+                    syncFiles()
+                }
+                check(!location.deletionDirectory.exists() || location.deletionDirectory.deleteRecursively()) { "Cannot delete wallet files" }
                 check(!location.restoreDirectory.exists() || location.restoreDirectory.deleteRecursively()) { "Cannot delete restore files" }
                 syncFiles()
                 deleteSeed()

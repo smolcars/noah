@@ -80,7 +80,10 @@ class WalletCreator(private val dependencies: Dependencies) {
             val storage = SeedStorage(context.applicationContext, variant)
             val location = WalletDataLocation(context.applicationContext.filesDir, variant)
             return WalletCreator(Dependencies(
-                readSeed = { storage.read() },
+                readSeed = {
+                    check(!location.deletionMarker.exists()) { "Restart Noah to finish deleting the previous wallet" }
+                    storage.read()
+                },
                 saveSeed = { value ->
                     val result = storage.save(value)
                     if (result !is SecretResult.Found || result.value != value) {

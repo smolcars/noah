@@ -39,6 +39,7 @@ class WalletRestorer(
     suspend fun restore(mnemonic: String, progress: (Step) -> Unit = {}): Outcome {
         val reservation = session.reserve()
         try {
+            check(!location.deletionMarker.exists()) { "Restart Noah to finish deleting the previous wallet" }
             return withContext(Dispatchers.IO) {
                 if (transaction.recover(seed) == RestoreTransaction.Recovery.waitingForSecret || seed.read() is SecretResult.Unavailable) {
                     throw Failure(Reason.secureStorageUnavailable)
