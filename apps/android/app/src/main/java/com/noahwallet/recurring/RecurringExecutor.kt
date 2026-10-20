@@ -10,6 +10,7 @@ import java.util.UUID
 /** Joins foreground/push/manual triggers. Only the Send controller can submit money. */
 class RecurringExecutor(private val d: Dependencies,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)) {
+    internal class NoWallet : Exception()
     class Dependencies(val store: RecurringStore, val journal: RecurringJournal, val controller: SendController,
         val ensureOpen: suspend () -> Unit, val binding: () -> RecurringStore.Binding, val allowed: () -> Unit,
         val quote: suspend (RecurringPayment) -> Pair<SendPayment, SendQuote>, val automationGeneration: () -> String?,
@@ -146,7 +147,8 @@ class RecurringExecutor(private val d: Dependencies,
             syncServer { requireStage(budget, caller) }
             requireStage(budget, caller)
             d.refresh()
-        } catch (failure: Exception) { error = failure.message ?: "Recurring sending is stopped." }
+        } catch (_: NoWallet) { /* Welcome has no automation authority yet. */ }
+        catch (failure: Exception) { error = failure.message ?: "Recurring sending is stopped." }
         finally { try {
             reload()
             if (budget.available && caller?.isActive != false && currentCoroutineContext().isActive) {

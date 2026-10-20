@@ -24,8 +24,7 @@ class RecurringRuntime private constructor(context: Context) {
         RecurringJournal(File(location.directory, "noah-recurring-journal.json")), SendRuntime.shared(context).controller,
         ensureOpen = { services.ensureWalletOpen() }, binding = { RecurringStore.binding(location) },
         allowed = {
-            val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
-            check(!services.recurringAutomationStorageFailed && !location.restorePending && !location.deletionMarker.exists() && wallet?.isInitialized != false && wallet?.isWalletSuspended != true) { "Wallet suspended or replacement pending. Sending is stopped." }
+            requireAdmission(location, settings.persistedState<PersistedWalletState>(PersistedWalletState.key), services.recurringAutomationStorageFailed)
         }, quote = { RecurringRecipient.quote(it, services.session) },
         automationGeneration = { settings.string(WalletLifecycle.automationStopKey) },
         sync = {
@@ -51,6 +50,10 @@ class RecurringRuntime private constructor(context: Context) {
     } }
     suspend fun execute(budget: RecurringBudget = RecurringBudget()) = withContext(Dispatchers.Main) { executor.execute(budget = budget) }
     companion object {
+        internal fun requireAdmission(location: WalletDataLocation, wallet: PersistedWalletState?, storageFailed: Boolean) {
+            if (!location.databaseExists) throw RecurringExecutor.NoWallet()
+            check(!storageFailed && !location.restorePending && !location.deletionMarker.exists() && wallet?.isInitialized != false && wallet?.isWalletSuspended != true) { "Wallet suspended or replacement pending. Sending is stopped." }
+        }
         @Volatile private var instance: RecurringRuntime? = null
         fun shared(context: Context) = instance ?: synchronized(this) { instance ?: RecurringRuntime(context.applicationContext).also { instance = it } }
     }
