@@ -20,7 +20,11 @@ class PushJobs(private val dependencies: Dependencies) {
         val reportBackup: suspend (String, Boolean) -> Unit,
     )
 
-    suspend fun handle(notification: NotificationData) {
+    suspend fun handle(notification: NotificationData) = com.noahwallet.services.wallet.WalletBackgroundActivity.during {
+        handleNotification(notification)
+    }
+
+    private suspend fun handleNotification(notification: NotificationData) {
         val d = dependencies
         when (notification) {
             is NotificationDataMaintenance -> {

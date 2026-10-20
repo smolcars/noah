@@ -1,5 +1,6 @@
 package com.noahwallet.services.wallet
 
+import com.noahwallet.onchain.*
 import android.content.Context
 import com.noahwallet.history.HistoryMapping
 import com.noahwallet.history.HistoryTransaction
@@ -45,6 +46,7 @@ class WalletSession internal constructor(
         val send: SendWallet get() = throw UnsupportedOperationException()
         suspend fun retrySendDiscards() {}
         suspend fun discardSendReviews() {}
+        val m6: OnchainWalletAccess get() = throw UnsupportedOperationException()
         suspend fun arkInfo(): io.github.niteshbalusu11.bark.ArkInfo? = throw UnsupportedOperationException()
         fun mailboxAuthorization(expiry: Long): io.github.niteshbalusu11.bark.MailboxAuthorization = throw UnsupportedOperationException()
         suspend fun debug(action: DebugAction, input: String): String = throw UnsupportedOperationException()
@@ -290,6 +292,30 @@ class WalletSession internal constructor(
         finally { synchronized(lock) { if (--runningCalls == 0) drained.complete(Unit) } }
     }
 
+    private suspend fun <T> withM6(block: suspend (Handles) -> T): T = withOpen {
+        if (WalletBackgroundActivity.isRunning) throw OnchainException(OnchainFailure.unavailable)
+        block(it)
+    }
+    val onchainJournal = OnchainOperationJournal(File(location.directory, "noah-onchain-attempt.json"))
+    private val exitHistory = ExitHistoryStore(File(location.directory, "noah-exit-history.json"))
+    private fun onchainOperations(handles: Handles) = OnchainOperations(handles.m6, onchainJournal, exitHistory,
+        ready = { !isSuspended() && !WalletBackgroundActivity.isRunning })
+    suspend fun onchainOverview(): OnchainOverview = withM6 {
+        if (WalletBackgroundActivity.isRunning) throw OnchainException(OnchainFailure.unavailable)
+        onchainOperations(it).overview(WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt())
+    }
+    suspend fun exitDetail(id: String): ExitModel? = withM6 { onchainOperations(it).detail(id) }
+    suspend fun exitDepositAddress(): String = withM6 { it.m6.depositAddress() }
+    suspend fun boardingMinimum(): Long? = withM6 { it.m6.minimum() }
+    suspend fun quoteOnchain(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0,
+        destination: String? = null, automatic: Boolean = false): OnchainQuote = withM6 {
+        onchainOperations(it).quote(action, ids, amount, destination, automatic)
+    }
+    suspend fun autoBoardQuote(): OnchainQuote? = withM6 { onchainOperations(it).autoBoardQuote() }
+    suspend fun executeOnchain(quote: OnchainQuote): String = withM6 { onchainOperations(it).execute(quote) }
+    suspend fun checkOnchainAttempt(id: String): Boolean = withM6 { onchainOperations(it).check(id) }
+    suspend fun refreshOnchainReceiptFees() = withM6 { onchainOperations(it).refreshReceiptFees() }
+
     suspend fun arkInfo() = withOpen { it.arkInfo() }
     suspend fun mailboxAuthorization(expiry: Long) = withOpen { it.mailboxAuthorization(expiry) }
     suspend fun debug(action: DebugAction, input: String) = withOpen { it.debug(action, input.trim()) }
@@ -434,6 +460,7 @@ class WalletSession internal constructor(
         override val send = SdkSendWallet(wallet, onchain, variant, warn)
         override suspend fun retrySendDiscards() { send.retryDiscards() }
         override suspend fun discardSendReviews() { send.discardAll() }
+        override val m6 = BarkOnchainAccess(wallet, onchain)
         override suspend fun arkInfo() = wallet.arkInfo()
         override fun mailboxAuthorization(expiry: Long) = wallet.mailboxAuthorizationAt(expiry)
         override suspend fun debug(action: DebugAction, input: String): String {

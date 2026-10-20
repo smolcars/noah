@@ -401,4 +401,24 @@ class WalletSessionTest {
             handles.stopGate!!.complete(Unit); closing.await(); assertTrue(handles.closed)
         }
     }
+    @Test fun suspendedWalletPerformsNoM6Operations() = runBlocking {
+        withLocation { location ->
+            var suspended = false
+            val handles = Handles()
+            val session = WalletSession("regtest", location, isSuspended = { suspended }, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test")
+            suspended = true
+            val quote = com.noahwallet.onchain.OnchainQuote(com.noahwallet.onchain.OnchainAction.board, "wallet")
+            val calls: List<suspend () -> Unit> = listOf(
+                { session.onchainOverview() }, { session.exitDetail("a") }, { session.exitDepositAddress() },
+                { session.boardingMinimum() }, { session.autoBoardQuote() },
+                { session.quoteOnchain(com.noahwallet.onchain.OnchainAction.board) }, { session.executeOnchain(quote) },
+                { session.checkOnchainAttempt("a") }, { session.refreshOnchainReceiptFees() },
+            )
+            for (call in calls) assertEquals(WalletSession.OpenFailure.suspended, (runCatching { call() }.exceptionOrNull() as WalletSession.OpenError).reason)
+            assertFalse(location.directory.resolve("noah-onchain-attempt.json").exists())
+            suspended = false; session.close()
+        }
+    }
+
 }
