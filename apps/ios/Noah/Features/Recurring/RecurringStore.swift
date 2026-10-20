@@ -32,9 +32,16 @@ final class RecurringStore: @unchecked Sendable {
     private func protected(_ state: State, automationOverlay: Bool = true) -> State {
         guard let ledger = policyLedger else { return state }
         let stopped: Set<String>
-        do { stopped = ledger.stopped(binding: try state.binding ?? policyBinding!(), schedules: state.schedules) }
-        catch { AppLog("recurring").w(RecurringPolicyLedger.logMessage); stopped = Set(state.schedules.keys) }
-        let automationStopped = automationOverlay && automation?.allowed() == false
+        let automationStopped: Bool
+        do {
+            // Welcome has no wallet authority to bootstrap or mark failed.
+            let owner = try policyBinding!()
+            stopped = ledger.stopped(binding: state.binding ?? owner, schedules: state.schedules)
+            automationStopped = automationOverlay && automation?.allowed() == false
+        } catch {
+            AppLog("recurring").w(RecurringPolicyLedger.logMessage)
+            stopped = Set(state.schedules.keys); automationStopped = false
+        }
         var visible = state
         for id in state.schedules.keys where (stopped.contains(id) || automationStopped) && visible.schedules[id]?.unsupportedStorage == false {
             visible.schedules[id]?.status = "needs_attention"

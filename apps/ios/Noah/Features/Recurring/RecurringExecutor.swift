@@ -108,6 +108,7 @@ import Observation
         error = nil
         defer { running = false; reload() }
         do {
+            try d.allowed()
             let automationGeneration = d.automationGeneration()
             let durableGeneration = try d.store.automationGeneration()
             try await d.ensureOpen()
