@@ -27,6 +27,17 @@ class RNStoreMigrationTest {
         }
     }
 
+    @Test fun unsupportedProfilePreferencesFallBackWithoutBlockingOrRepairingStoredValues() {
+        val original = """{"state":{"displayName":"Name","preferredCurrency":"future-currency","bitcoinAmountUnit":"future-unit"},"version":0}"""
+        RNStoreCodec.decode("profile-storage", original)
+        assertEquals("USD", SettingsPreferences.preferredCurrency(original))
+        assertEquals(com.noahwallet.formatting.BitcoinAmountUnit.bip177, SettingsPreferences.amountUnit(original))
+        val next = SettingsPreferences.update(original, mapOf("displayName" to JsonPrimitive("Updated")))
+        val saved = RNStoreCodec.decode("profile-storage", RNStoreCodec.merge("profile-storage", original, next)).getValue("state").jsonObject
+        assertEquals(JsonPrimitive("future-currency"), saved["preferredCurrency"])
+        assertEquals(JsonPrimitive("future-unit"), saved["bitcoinAmountUnit"])
+    }
+
     @Test fun onlyExactVersionTokensAreAccepted() {
         for (key in RNStoreCodec.versions.keys) {
             for (token in listOf("-0", "0e5", "1e-400", "0.0", "1.0", "1e0", "-1", "99", "true", "null", "\"0\"")) {

@@ -30,9 +30,9 @@ class AppModel(application: Application) : AndroidViewModel(application) {
     var summary by mutableStateOf<WalletSession.Summary?>(null); private set
     var hidden by mutableStateOf((state("privacy-storage")["isHomeBalanceHidden"] as? JsonPrimitive)?.booleanOrNull ?: false)
         private set
-    var amountUnit by mutableStateOf(if ((state("profile-storage")["bitcoinAmountUnit"] as? JsonPrimitive)?.contentOrNull == "sats") BitcoinAmountUnit.sats else BitcoinAmountUnit.bip177)
+    var amountUnit by mutableStateOf(SettingsPreferences.amountUnit(settings.string("profile-storage")))
         private set
-    var preferredCurrency by mutableStateOf((state("profile-storage")["preferredCurrency"] as? JsonPrimitive)?.contentOrNull ?: "USD")
+    var preferredCurrency by mutableStateOf(SettingsPreferences.preferredCurrency(settings.string("profile-storage")))
         private set
     var isWalletSuspended by mutableStateOf(settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true)
         private set
@@ -124,7 +124,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
     fun preference(key: String, value: String) {
         settings.set(com.noahwallet.services.storage.SettingsPreferences.update(settings.string("profile-storage"), mapOf(key to JsonPrimitive(value))), "profile-storage")
         if (key == "bitcoinAmountUnit") amountUnit = if (value == "sats") BitcoinAmountUnit.sats else BitcoinAmountUnit.bip177
-        if (key == "preferredCurrency") preferredCurrency = value
+        if (key == "preferredCurrency") preferredCurrency = SettingsPreferences.preferredCurrency(settings.string("profile-storage"))
     }
 
     fun setLanguage(code: String) {

@@ -45,8 +45,6 @@ object RNStoreCodec {
                 else -> true
             })
         }
-        if (key == "profile-storage") state["preferredCurrency"]?.let { require(it.jsonPrimitive.content in com.noahwallet.formatting.FiatCurrency.supported) }
-        if (key == "profile-storage") state["bitcoinAmountUnit"]?.let { require(it.jsonPrimitive.content in setOf("bip177", "sats")) }
         if (key == "backup-storage") state["lastBackupStatus"]?.let { require(it.jsonPrimitive.content in setOf("idle", "in_progress", "success", "failed")) }
         root
     } catch (_: Exception) { throw Unreadable() }

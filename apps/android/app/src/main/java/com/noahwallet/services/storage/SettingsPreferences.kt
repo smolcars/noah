@@ -8,6 +8,13 @@ object SettingsPreferences {
         Json.parseToJsonElement(envelope ?: "").jsonObject["state"]!!.jsonObject
     }.getOrDefault(JsonObject(emptyMap()))
 
+    fun preferredCurrency(envelope: String?): String = state(envelope)["preferredCurrency"]?.jsonPrimitive?.contentOrNull
+        ?.takeIf { it in com.noahwallet.formatting.FiatCurrency.supported } ?: "USD"
+
+    fun amountUnit(envelope: String?): com.noahwallet.formatting.BitcoinAmountUnit =
+        if (state(envelope)["bitcoinAmountUnit"]?.jsonPrimitive?.contentOrNull == "sats")
+            com.noahwallet.formatting.BitcoinAmountUnit.sats else com.noahwallet.formatting.BitcoinAmountUnit.bip177
+
     fun update(envelope: String?, fields: Map<String, JsonElement>, version: Int? = null): String {
         val root = if (envelope == null) JsonObject(emptyMap()) else try {
             Json.parseToJsonElement(envelope).jsonObject.also { require(it["state"] is JsonObject) }
