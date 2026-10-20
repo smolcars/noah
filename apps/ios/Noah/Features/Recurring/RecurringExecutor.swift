@@ -291,13 +291,16 @@ import Observation
     func save(_ input: RecurringPayment, editing: Bool) async throws {
         var schedule = input
         let state = try boundState()
+        let reapproval = editing && state.schedules[schedule.id]?.lastError == RecurringPolicyLedger.message
+        if reapproval { try requireReapprovalSafe(schedule.id) }
         if editing {
             try rejectLegacyUncertainty(schedule.id)
-            guard let old = state.schedules[schedule.id], old.inFlight == nil, old.status != "needs_attention" else { throw RecurringError.message("Check this payment's outcome before editing it.") }
+            guard let old = state.schedules[schedule.id], (reapproval || old.inFlight == nil && old.status != "needs_attention") else { throw RecurringError.message("Check this payment's outcome before editing it.") }
         } else if state.schedules.count >= 50 { throw RecurringError.message("You've reached the maximum number of recurring payments.") }
+        if reapproval { schedule.resume(now: d.now(), zone: d.zone()) }
         if editing { schedule.nativeRevision = UUID() }
         try schedule.validateInput(now: d.now())
-        try d.store.upsert(schedule)
+        try d.store.upsert(schedule, reapproval: reapproval)
         reload()
         await syncServer()
         await d.notifications(schedules, nil)
@@ -316,10 +319,18 @@ import Observation
         guard var schedule = try d.store.load().schedules[id], schedule.status != "completed" else { return }
         guard !schedule.unsupportedStorage else { throw RecurringError.message(RecurringPayment.unsupportedMessage) }
         guard schedule.amountSat <= RecurringPayment.maximumAmount else { throw RecurringError.message(RecurringPayment.amountLimitMessage) }
-        guard schedule.inFlight == nil, schedule.status != "needs_attention" else { throw RecurringError.message("Check your transaction history, then confirm the destructive override before resuming.") }
+        let reapproval = schedule.lastError == RecurringPolicyLedger.message
+        if reapproval { try requireReapprovalSafe(id) }
+        guard reapproval || schedule.inFlight == nil && schedule.status != "needs_attention" else { throw RecurringError.message("Check your transaction history, then confirm the destructive override before resuming.") }
         schedule.resume(now: d.now(), zone: d.zone())
-        try d.store.upsert(schedule)
+        if reapproval { schedule.nativeRevision = UUID() }
+        try d.store.upsert(schedule, reapproval: reapproval)
         await changed()
+    }
+    private func requireReapprovalSafe(_ id: String) throws {
+        let entry = try d.journal.load()[id]
+        guard entry == nil || entry?.resolved == true else { throw RecurringError.message("Check this payment's outcome before approving it again.") }
+        guard !d.controller.locked else { throw RecurringError.message("Acknowledge the current payment before approving it again.") }
     }
     func cancel(_ id: String) async throws {
         // Removing policy never removes either durable journal or unlocks an ambiguous Send.

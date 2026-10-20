@@ -3,7 +3,7 @@ import Foundation
 
 /// Write-ahead policy authority. A recovered MMKV snapshot can never repair this evidence.
 final class RecurringPolicyLedger: @unchecked Sendable {
-    static let message = "Recurring policy evidence needs attention. Saved schedules are preserved; cancel them and approve new payments. Sending remains stopped."
+    static let message = "Recurring policy evidence needs attention. Saved schedules are preserved; edit or resume them to approve a new revision. Sending remains stopped."
     static let logMessage = "Recurring policy rollback or unavailable evidence detected; sending stopped"
     struct Marker: Codable { let version: Int; let binding: RecurringStore.Binding }
     private struct Entry: Codable {
@@ -70,7 +70,7 @@ final class RecurringPolicyLedger: @unchecked Sendable {
             return stopped
         } catch { return Set(schedules.keys) }
     }
-    func commit(binding: RecurringStore.Binding, before: [String: RecurringPayment], after: [String: RecurringPayment], policyID: String? = nil) throws {
+    func commit(binding: RecurringStore.Binding, before: [String: RecurringPayment], after: [String: RecurringPayment], policyID: String? = nil, reapproval: Bool = false) throws {
         var state = try state(binding: binding, schedules: before)
         let changed = Set(before.keys).union(after.keys).union(policyID.map { [$0] } ?? []).filter { $0 == policyID || before[$0] != after[$0] }
         guard !changed.isEmpty else { return }
@@ -79,8 +79,9 @@ final class RecurringPolicyLedger: @unchecked Sendable {
         for id in changed {
             let key = try key(binding, id)
             if let schedule = after[id] {
-                // Deletion is the only way to resolve rollback; overrides cannot adopt old policy.
-                guard try before[id].map({ try matches(state.entries[key], binding, $0) }) ?? (state.entries[key] == nil) else { throw RecurringError.message(Self.message) }
+                // User reapproval starts a fresh revision under this generation.
+                let approved = reapproval && schedule.nativeRevision != nil && schedule.nativeRevision != state.entries[key]?.revision && schedule.nativeRevision != before[id]?.nativeRevision && schedule.inFlight == nil && schedule.status == "active"
+                guard try approved || (before[id].map({ try matches(state.entries[key], binding, $0) }) ?? (state.entries[key] == nil)) else { throw RecurringError.message(Self.message) }
                 state.entries[key] = try entry(binding, schedule, generation: state.generation)
             } else {
                 state.entries[key] = .init(binding: binding, scheduleID: id, generation: state.generation, revision: state.entries[key]?.revision, status: "deleted", digest: nil)

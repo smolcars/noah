@@ -104,7 +104,7 @@ final class RecurringStore: @unchecked Sendable {
         }
     }
     func load() throws -> State { try lock.withLock { protected(try rawState()) } }
-    private func change(policyID: String? = nil, _ mutate: (inout [String: String]) throws -> Void) throws {
+    private func change(policyID: String? = nil, reapproval: Bool = false, _ mutate: (inout [String: String]) throws -> Void) throws {
         try lock.withLock {
             let before = try rawState()
             var envelope = try envelope()
@@ -114,7 +114,7 @@ final class RecurringStore: @unchecked Sendable {
             let raw = try envelope.json()
             let fields = try RawObject(state.fields["schedules"]!)
             let after = Dictionary(uniqueKeysWithValues: fields.fields.map { (id, raw) in (id, Self.payment(id: id, raw: raw)) })
-            try policyLedger?.commit(binding: before.binding ?? policyBinding!(), before: before.schedules, after: after, policyID: policyID)
+            try policyLedger?.commit(binding: before.binding ?? policyBinding!(), before: before.schedules, after: after, policyID: policyID, reapproval: reapproval)
             do { try write(raw) }
             catch { writeFailed = true; throw error }
         }
@@ -125,8 +125,8 @@ final class RecurringStore: @unchecked Sendable {
             state["serverSyncPending"] = "true"
         }
     }
-    func upsert(_ schedule: RecurringPayment) throws {
-        try change(policyID: schedule.unsupportedStorage ? nil : schedule.id) { state in
+    func upsert(_ schedule: RecurringPayment, reapproval: Bool = false) throws {
+        try change(policyID: schedule.unsupportedStorage ? nil : schedule.id, reapproval: reapproval) { state in
             var schedules = try RawObject(state["schedules"]!)
             let previous = schedules.fields[schedule.id]
             if schedule.unsupportedStorage || previous.map({ Self.payment(id: schedule.id, raw: $0).unsupportedStorage }) == true {
