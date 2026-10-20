@@ -171,8 +171,21 @@ class LogFile(
 
         fun redact(message: String): String {
             if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return "[oversized log message omitted]"
-            var view = message
+            return redactForTelemetry(message) ?: "[redacted]"
+        }
+
+        /** Uncertain decoding and oversized messages have no telemetry admission path. */
+        internal fun redactForTelemetry(message: String): String? {
+            if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return null
+            val views = decodedViews(message) ?: return null
+            if (views.drop(1).any { redactPlain(it) != it }) return "[redacted]"
+            return redactPlain(message)
+        }
+
+        private fun decodedViews(message: String): List<String>? {
+            val views = mutableListOf(message)
             repeat(4) {
+                val view = views.last()
                 var uncertain = false
                 val decoded = jsonEscapes.replace(view) { match ->
                     try {
@@ -182,13 +195,43 @@ class LogFile(
                         ""
                     }
                 }
-                if (uncertain) return "[redacted]"
-                if (decoded == view) return redactPlain(message)
-                if (redactPlain(decoded) != decoded) return "[redacted]"
-                view = decoded
+                if (uncertain || !wellFormedUTF16(decoded)) return null
+                if (decoded == view) return views
+                views += decoded
             }
-            if (jsonEscapes.containsMatchIn(view)) return "[redacted]"
-            return redactPlain(message)
+            if (jsonEscapes.containsMatchIn(views.last())) return null
+            return views
+        }
+
+        private fun wellFormedUTF16(text: String): Boolean {
+            var index = 0
+            while (index < text.length) {
+                val char = text[index++]
+                if (char.isHighSurrogate()) {
+                    if (index == text.length || !text[index++].isLowSurrogate()) return false
+                } else if (char.isLowSurrogate()) return false
+            }
+            return true
+        }
+
+        internal fun containsMnemonicIn(parts: List<String>): Boolean {
+            val joined = parts.joinToString(" ")
+            if (joined.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return true
+            val views = decodedViews(joined) ?: return true
+            fun normalized(text: String) = detectionSkeleton(
+                Normalizer.normalize(text, Normalizer.Form.NFKD).lowercase(Locale.ROOT).replace("ß", "ss"))
+            if (views.any { containsMnemonic(normalized(it)) }) return true
+            // Individually mnemonic-only leaves can be interspersed with structural metadata.
+            var count = 0
+            for (part in parts) {
+                val decoded = decodedViews(part)?.last() ?: return true
+                val tokens = words.findAll(normalized(decoded)).map { it.value }.toList()
+                if (tokens.isNotEmpty() && tokens.all { it in bip39 }) {
+                    count += tokens.size
+                    if (count >= 12) return true
+                }
+            }
+            return false
         }
 
         // Decoded views cannot preserve source offsets; their hits omit the whole message.

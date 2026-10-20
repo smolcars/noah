@@ -20,6 +20,7 @@ class BarkLog(private val file: LogFile) : BarkLogger {
             val file = LogFile.shared(context)
             try { setLogger(BarkLog(file), maxLevel) }
             catch (_: Exception) { AppLog("bark", file).e("Could not install Bark logger") }
+            catch (_: LinkageError) { AppLog("bark", file).e("Could not install Bark logger") }
         }
 
         internal fun appLevel(level: LogLevel): AppLog.Level = when (level) {
