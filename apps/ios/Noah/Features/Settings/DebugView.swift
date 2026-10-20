@@ -31,7 +31,10 @@ struct DebugView: View {
                 }.disabled(busy || (action.needsInput && input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
             }
             if let result {
-                Section("Result") { Text(verbatim: result).font(.system(.caption, design: .monospaced)).textSelection(.enabled) }
+                Section("Result") {
+                    Text(verbatim: result).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                    CopySettingRow(title: "Copy", value: result)
+                }
             }
         }.settingsStyle("Debug")
         .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { focus = nil } } }
@@ -59,21 +62,21 @@ struct DebugView: View {
                 }
                 result = try await WalletSession.shared.withOpenWallet { handles in
                     switch action {
-                    case .ark: return String(describing: try await handles.wallet.arkInfo())
+                    case .ark: return try DebugJSON.ark(try await handles.wallet.arkInfo())
                     case .refresh: try await handles.wallet.refreshServer()
                     case .maintenance: try await handles.wallet.maintenance()
                     case .maintenanceRefresh: return try await handles.wallet.maintenanceRefresh() ?? "Maintenance refresh completed"
                     case .delegated: try await handles.wallet.maintenanceDelegated()
                     case .offboard: return String(describing: try await handles.wallet.offboardAll(bitcoinAddress: input))
-                    case .decode: return String(describing: try decodeVtxo(hexOrBase64: input))
-                    case .importVtxo: _ = try await handles.wallet.importVtxos(encodedVtxos: [input])
+                    case .decode: return try DebugJSON.decoded(try decodeVtxo(hexOrBase64: input))
+                    case .importVtxo: return try DebugJSON.imported(try await handles.wallet.importVtxos(encodedVtxos: [input]))
                     case .drop: try await handles.wallet.dangerousDropVtxo(id: input)
                     case .unlock: try await handles.wallet.unlockVtxos(vtxoIds: [input], expectedHolder: nil)
                     case .push: break
                     }
                     return "Action completed successfully"
                 }
-            } catch { result = "Action failed. Check your input and connection before trying again." }
+            } catch { result = SafeErrorDescription.of(error) }
         }
     }
 }
