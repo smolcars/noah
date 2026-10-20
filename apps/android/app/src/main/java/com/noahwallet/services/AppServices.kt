@@ -269,6 +269,8 @@ class AppServices private constructor(private val context: Context) {
         }
     }
 
+    private val foregroundSync = com.noahwallet.services.wallet.ForegroundWalletSync { lifecycle.withWalletMutation(it) }
+
     /** Foreground only: retain existing session/reservation rules and never open a wallet here. */
     @OptIn(InternalCoroutinesApi::class)
     suspend fun syncInForeground(budget: com.noahwallet.recurring.RecurringBudget) {
@@ -277,16 +279,14 @@ class AppServices private constructor(private val context: Context) {
         }
         try {
             withContext(Dispatchers.IO + com.noahwallet.services.wallet.WalletExecutionBudget(budget)) {
-                com.noahwallet.services.wallet.WalletBackgroundActivity.withExclusiveAccess {
-                    lifecycle.withWalletMutation {
-                        currentCoroutineContext().ensureActive()
-                        val location = WalletDataLocation(context.filesDir, variant)
-                        val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
-                        if (!budget.available || !isOnboarded() || wallet?.isWalletSuspended == true ||
-                            location.restorePending || location.deletionMarker.exists() || !session.isOpen) return@withWalletMutation
-                        com.noahwallet.services.wallet.WalletBackgroundActivity.during {
-                            session.sync(includingLightningClaims = true)
-                        }
+                foregroundSync.run {
+                    currentCoroutineContext().ensureActive()
+                    val location = WalletDataLocation(context.filesDir, variant)
+                    val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
+                    if (!budget.available || !isOnboarded() || wallet?.isWalletSuspended == true ||
+                        location.restorePending || location.deletionMarker.exists() || !session.isOpen) return@run
+                    com.noahwallet.services.wallet.WalletBackgroundActivity.during {
+                        session.sync(includingLightningClaims = true)
                     }
                 }
             }
