@@ -29,6 +29,7 @@ import Testing
         var controller: SendPaymentController!
         var executor: RecurringExecutor!
         let now = 1_800_000_000_000.0
+        let clock = Locked(1_800_000_000_000.0)
         init() throws {
             SettingsStorage.bootstrap()
             directory = FileManager.default.temporaryDirectory.appending(path: "recurring-executor-\(UUID())")
@@ -70,7 +71,7 @@ import Testing
                     try await beforeQuote()
                     return (SendPayment(destination: schedule.destination, method: "ark", amount: schedule.amountSat),
                             .init(amount: schedule.amountSat, fee: 0, total: schedule.amountSat, walletIdentity: owner.withLock { $0.wallet }))
-                }, automationGeneration: { [settings] in settings.string(forKey: WalletLifecycle.automationStopKey) }, now: { [now] in now }, sync: { [self] entries in try await sync(entries) }))
+                }, automationGeneration: { [settings] in settings.string(forKey: WalletLifecycle.automationStopKey) }, now: { [clock] in clock.withLock { $0 } }, sync: { [self] entries in try await sync(entries) }))
         }
         func reserve(_ work: @escaping @MainActor @Sendable () async -> Void) async throws {
             if let reservation { try await reservation(work) } else { await work() }
@@ -237,7 +238,8 @@ import Testing
         let h = try Harness(); let original = try h.add()
         await h.executor.execute()
         var edit = original
-        edit.startAt = h.now; edit.nextRunAt = h.now; edit.amountSat = 1234
+        edit.startAt = h.now + 1; edit.nextRunAt = h.now + 1; edit.amountSat = 1234
+        h.clock.withLock { $0 += 1 }
         try await h.executor.save(edit, editing: true)
         #expect(try h.store.load().schedules[original.id]?.nativeRevision != nil)
         await h.executor.execute()
@@ -271,4 +273,32 @@ import Testing
         await h.executor.syncServer()
         #expect(try h.store.load().pending)
     }
+    @Test func consumedWatermarkSurvivesLaterRevisionAndRollback() async throws {
+        let h = try Harness(); let revisionA = try h.add()
+        await h.executor.execute()
+        var revisionB = revisionA
+        revisionB.startAt = h.now + 1; revisionB.nextRunAt = h.now + 1
+        try await h.executor.save(revisionB, editing: true)
+        h.clock.withLock { $0 += 1 }
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 2)
+        try h.store.upsert(revisionA)
+        h.rebuild(); await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 2)
+        #expect(try h.store.load().schedules[revisionA.id]?.status == "needs_attention")
+    }
+    @Test func legacyJournalMigratesConsumptionBeforeAttemptReplacement() throws {
+        let h = try Harness(); let schedule = try h.add()
+        let owner = h.owner.withLock { $0 }
+        var old = RecurringJournal.Entry(binding: owner, scheduleID: schedule.id, plan: schedule.plan(now: h.now), markedAt: h.now)
+        old.resolved = true; old.consumed = true
+        try JSONEncoder().encode([schedule.id: old]).write(to: h.journal.file)
+        _ = try h.journal.load()
+        var new = old; new.consumed = nil; new.policyRevision = UUID()
+        try h.journal.save(new)
+        #expect(try h.journal.consumed(binding: owner, scheduleID: schedule.id, at: h.now))
+        var otherWallet = owner; otherWallet.instance = UUID()
+        #expect(try !h.journal.consumed(binding: otherWallet, scheduleID: schedule.id, at: h.now))
+    }
+
 }

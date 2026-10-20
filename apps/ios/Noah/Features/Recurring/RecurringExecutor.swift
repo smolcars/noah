@@ -59,8 +59,12 @@ import Observation
         let entries = try d.journal.load()
         for var schedule in state.schedules.values {
             let entry = entries[schedule.id]
-            let pendingMarker = entry.map { (!$0.resolved || $0.consumed == true) && $0.binding == state.binding && $0.policyRevision == schedule.nativeRevision && schedule.nextOccurrenceIndex <= $0.plan.occurrenceIndex! } == true
-            if (schedule.inFlight != nil || pendingMarker), schedule.status != "needs_attention" {
+            let pendingMarker = entry.map { !$0.resolved && $0.binding == state.binding } == true
+            let plan = schedule.plan(now: d.now(), ignoreBackoff: true)
+            let consumed = try plan.scheduledFor.map { at in
+                try d.journal.consumed(binding: state.binding!, scheduleID: schedule.id, at: at)
+            } ?? false
+            if (schedule.inFlight != nil || pendingMarker || consumed), schedule.status != "needs_attention" {
                 schedule.status = "needs_attention"
                 schedule.lastError = "Noah was interrupted while sending this payment. Check your transaction history before resuming."
                 // Retain the marker; ordinary pause/resume/edit cannot erase uncertainty.
