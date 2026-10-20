@@ -56,9 +56,9 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
                 TextButton({ act { executor.checkStatus(s.id) } }, enabled = !executor.running) { Text("Check payment status") }
                 TextButton({ overriding = s; overrideStep = 1 }, enabled = !executor.running) { Text("Resume after checking history…", color = MaterialTheme.colorScheme.error) }
             }
-            if (s.status != "completed" && s.status != "needs_attention") {
-                if (s.inFlight == null) TextButton({ editing = s; editor = true }, enabled = !app.isWalletSuspended) { Text("Edit payment") }
-                TextButton({ act { if (s.status == "active") executor.pause(s.id) else executor.resume(s.id) } }, enabled = s.status == "active" || s.inFlight == null && !app.isWalletSuspended) { Text(if (s.status == "active") "Pause" else "Resume") }
+            if (s.status != "completed" && (s.status != "needs_attention" || s.lastError == RecurringPolicyLedger.message)) {
+                if (s.inFlight == null || s.lastError == RecurringPolicyLedger.message) TextButton({ editing = s; editor = true }, enabled = !app.isWalletSuspended) { Text("Edit payment") }
+                TextButton({ act { if (s.status == "active") executor.pause(s.id) else executor.resume(s.id) } }, enabled = s.status == "active" || (s.inFlight == null || s.lastError == RecurringPolicyLedger.message) && !app.isWalletSuspended) { Text(if (s.status == "active") "Pause" else "Resume") }
             }
             TextButton({ cancelling = s }) { Text(if (s.status == "completed") "Remove" else "Cancel", color = MaterialTheme.colorScheme.error) }
         }

@@ -49,7 +49,7 @@ internal class RecurringPolicyLedger(val file: File, private val warn: () -> Uni
         schedules.filter { (id, schedule) -> !matches(state.entries[key(binding, id)], binding, schedule) }.keys.also { if (it.isNotEmpty()) warn() }
     } catch (_: Exception) { schedules.keys }
 
-    fun commit(binding: RecurringStore.Binding, before: Map<String, RecurringPayment>, after: Map<String, RecurringPayment>, policyID: String? = null) {
+    fun commit(binding: RecurringStore.Binding, before: Map<String, RecurringPayment>, after: Map<String, RecurringPayment>, policyID: String? = null, reapproval: Boolean = false) {
         val state = state(binding, before)
         val changed = (before.keys + after.keys + listOfNotNull(policyID)).filter { it == policyID || before[it] != after[it] }
         if (changed.isEmpty()) return
@@ -60,8 +60,8 @@ internal class RecurringPolicyLedger(val file: File, private val warn: () -> Uni
             val key = key(binding, id)
             if (schedule == null) entries[key] = Entry(binding, id, generation, entries[key]?.revision, "deleted", null)
             else {
-                // Only deletion can resolve a rollback; even an explicit override cannot adopt it.
-                check(if (before[id] == null) entries[key] == null else matches(entries[key], binding, before.getValue(id))) { message }
+                // A user approval creates a new revision under this generation; evidence stays intact.
+                check((reapproval && schedule.nativeRevision != null && schedule.nativeRevision != entries[key]?.revision && schedule.nativeRevision != before[id]?.nativeRevision && schedule.inFlight == null && schedule.status == "active") || if (before[id] == null) entries[key] == null else matches(entries[key], binding, before.getValue(id))) { message }
                 entries[key] = entry(binding, schedule, generation)
             }
         }
@@ -69,7 +69,7 @@ internal class RecurringPolicyLedger(val file: File, private val warn: () -> Uni
         catch (failure: Exception) { failed = true; warn(); throw failure }
     }
     companion object {
-        const val message = "Recurring policy evidence needs attention. Saved schedules are preserved; cancel them and approve new payments. Sending remains stopped."
+        const val message = "Recurring policy evidence needs attention. Saved schedules are preserved; edit or resume them to approve a new revision. Sending remains stopped."
         const val logMessage = "Recurring policy rollback or unavailable evidence detected; sending stopped"
     }
 }

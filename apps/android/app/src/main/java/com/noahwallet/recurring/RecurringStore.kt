@@ -69,16 +69,16 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         }
         return State(visible, state["serverSyncPending"]?.jsonPrimitive?.booleanOrNull ?: true, binding)
     }
-    private fun change(policyID: String? = null, mutate: (MutableMap<String, JsonElement>) -> Unit) = synchronized(lock) {
+    private fun change(policyID: String? = null, reapproval: Boolean = false, mutate: (MutableMap<String, JsonElement>) -> Unit) = synchronized(lock) {
         val envelope = envelope(); val before = decode(envelope)
         val state = envelope.getValue("state").jsonObject.toMutableMap(); mutate(state)
         val updated = JsonObject(envelope + ("state" to JsonObject(state)))
         val after = decode(updated)
-        policyLedger?.commit(before.binding ?: policyBinding!!(), before.schedules, after.schedules, policyID)
+        policyLedger?.commit(before.binding ?: policyBinding!!(), before.schedules, after.schedules, policyID, reapproval)
         try { write(updated.toString()) } catch (failure: Exception) { writeFailed = true; throw failure }
     }
     fun bind(binding: Binding) = change { it["nativeWalletBinding"] = json.encodeToJsonElement(binding); it["serverSyncPending"] = JsonPrimitive(true) }
-    fun upsert(schedule: RecurringPayment) = change(if (schedule.unsupportedStorage) null else schedule.id) { state ->
+    fun upsert(schedule: RecurringPayment, reapproval: Boolean = false) = change(if (schedule.unsupportedStorage) null else schedule.id, reapproval) { state ->
         val schedules = state.getValue("schedules").jsonObject.toMutableMap()
         val previous = (schedules[schedule.id] as? JsonObject).orEmpty()
         schedules[schedule.id] = if (schedule.unsupportedStorage) {
@@ -88,8 +88,8 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         state["schedules"] = JsonObject(schedules); state["serverSyncPending"] = JsonPrimitive(true)
     }
     /** Compare and replace under the same process-wide MMKV gate as pause/cancel/edit. */
-    fun updateIf(expected: RecurringPayment, replacement: RecurringPayment): Boolean = synchronized(lock) {
-        if (load().schedules[expected.id] != expected) false else { upsert(replacement); true }
+    fun updateIf(expected: RecurringPayment, replacement: RecurringPayment, reapproval: Boolean = false): Boolean = synchronized(lock) {
+        if (load().schedules[expected.id] != expected) false else { upsert(replacement, reapproval); true }
     }
     fun remove(id: String) = change(id) { it["schedules"] = JsonObject(it.getValue("schedules").jsonObject - id); it["serverSyncPending"] = JsonPrimitive(true) }
     fun setPending(value: Boolean) = change { it["serverSyncPending"] = JsonPrimitive(value) }

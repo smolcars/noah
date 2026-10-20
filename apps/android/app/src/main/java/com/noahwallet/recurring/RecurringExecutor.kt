@@ -230,14 +230,16 @@ class RecurringExecutor(private val d: Dependencies,
         storage { synchronized(RecurringStore.lock) {
             val state = boundStateNow()
             val old = state.schedules[input.id]
+            val reapproval = editing && old?.lastError == RecurringPolicyLedger.message
+            if (reapproval) requireReapprovalSafe(input.id)
             if (editing) {
                 check(!d.journal.legacyUncertain(d.binding(), input.id)) { RecurringJournal.legacyMessage }
-                check(old != null && old.inFlight == null && old.status != "needs_attention") { "Check this payment's outcome before editing it." }
+                check(old != null && (reapproval || old.inFlight == null && old.status != "needs_attention")) { "Check this payment's outcome before editing it." }
             }
             else check(state.schedules.size < 50 && old == null) { "You've reached the maximum number of recurring payments." }
             input.validateInput(d.now())
-            val schedule = input.copy(nativeRevision = UUID.randomUUID().toString())
-            if (editing) check(d.store.updateIf(old!!, schedule)) else d.store.upsert(schedule)
+            val schedule = (if (reapproval) input.resume(d.now(), d.zone()) else input).copy(nativeRevision = UUID.randomUUID().toString())
+            if (editing) check(d.store.updateIf(old!!, schedule, reapproval)) else d.store.upsert(schedule)
         } }
         changed()
     }
@@ -255,10 +257,17 @@ class RecurringExecutor(private val d: Dependencies,
             val schedule = d.store.load().schedules[id] ?: return@storage
             check(!schedule.unsupportedStorage) { RecurringPayment.unsupportedMessage }
             check(schedule.amountSat <= RecurringPayment.maximumAmount) { RecurringPayment.amountLimitMessage }
-            check(schedule.inFlight == null && schedule.status != "needs_attention") { "Check your transaction history, then confirm the destructive override before resuming." }
-            if (schedule.status != "completed") d.store.upsert(schedule.resume(d.now(), d.zone()))
+            val reapproval = schedule.lastError == RecurringPolicyLedger.message
+            if (reapproval) requireReapprovalSafe(id)
+            check(reapproval || schedule.inFlight == null && schedule.status != "needs_attention") { "Check your transaction history, then confirm the destructive override before resuming." }
+            if (schedule.status != "completed") d.store.upsert(schedule.resume(d.now(), d.zone()).let { if (reapproval) it.copy(nativeRevision = UUID.randomUUID().toString()) else it }, reapproval)
         } }
         changed()
+    }
+    private fun requireReapprovalSafe(id: String) {
+        val entry = d.journal.load()[id]
+        check(entry == null || entry.resolved) { "Check this payment's outcome before approving it again." }
+        check(!controller.locked) { "Acknowledge the current payment before approving it again." }
     }
     suspend fun cancel(id: String) { storage { d.store.remove(id) }; changed() }
     suspend fun overrideAndResume(id: String, confirmed: Boolean) {
