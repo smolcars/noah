@@ -29,10 +29,16 @@ class RecurringStorageDeviceTest {
             store.upsert(marked)
             assertEquals(marked, RecurringStore(SettingsStorage(context)).load().schedules.getValue("rent"))
             val corrupt = "{invalid"
-            settings.set(corrupt, RecurringStore.key); settings.sync()
+            val rawStore = com.tencent.mmkv.MMKV.mmkvWithID(SettingsStorage.instanceID, com.tencent.mmkv.MMKV.SINGLE_PROCESS_MODE, null, File(context.filesDir, "mmkv").path)!!
+            rawStore.encode(RecurringStore.key, corrupt); rawStore.sync()
             assertTrue(runCatching { RecurringStore(settings).load() }.isFailure)
             assertEquals(corrupt, settings.string(RecurringStore.key))
-        } finally { settings.removeAll() }
+        } finally {
+            // Restore the admitted envelope before the validated deletion path.
+            val rawStore = com.tencent.mmkv.MMKV.mmkvWithID(SettingsStorage.instanceID, com.tencent.mmkv.MMKV.SINGLE_PROCESS_MODE, null, File(context.filesDir, "mmkv").path)!!
+            rawStore.encode(RecurringStore.key, previous ?: """{"state":{"schedules":{},"serverSyncPending":false},"version":0}""")
+            settings.removeAll()
+        }
     }
     @Test fun realBindingChangesAfterSameSeedDatadirReplacementAndRefusesPendingMutation() = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("noahRecurringStorage") == "disposable-emulator")
