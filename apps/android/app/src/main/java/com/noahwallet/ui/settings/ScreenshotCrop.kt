@@ -3,6 +3,8 @@ package com.noahwallet.ui.settings
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,6 +17,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.noahwallet.localization.tr
 import com.noahwallet.ui.WalletAlertDialog
 import java.io.ByteArrayOutputStream
@@ -56,8 +60,9 @@ internal fun cropScreenshot(image: Bitmap, crop: ScreenshotCrop): ByteArray {
 internal fun ScreenshotCropDialog(image: Bitmap, onCancel: () -> Unit, onCrop: (ScreenshotCrop) -> Unit) {
     var crop by remember(image) { mutableStateOf(ScreenshotCrop()) }
     val bitmap = remember(image) { image.asImageBitmap() }
+    val left = tr("Left"); val right = tr("Right"); val top = tr("Top"); val bottom = tr("Bottom")
     WalletAlertDialog(onDismissRequest = onCancel, title = { Text(tr("Crop Screenshot")) }, text = {
-        Column {
+        Column(Modifier.verticalScroll(rememberScrollState())) {
             Canvas(Modifier.fillMaxWidth().height(200.dp)) {
                 val scale = minOf(size.width / image.width, size.height / image.height)
                 val width = image.width * scale; val height = image.height * scale
@@ -72,10 +77,10 @@ internal fun ScreenshotCropDialog(image: Bitmap, onCancel: () -> Unit, onCrop: (
                 drawRect(Color.White, origin + Offset(width * crop.left, height * crop.top),
                     Size(width * (crop.right - crop.left), height * (crop.bottom - crop.top)), style = Stroke(2.dp.toPx()))
             }
-            Text(tr("Left")); Slider(crop.left, { crop = crop.copy(left = it) }, valueRange = 0f..(crop.right - 0.01f))
-            Text(tr("Right")); Slider(crop.right, { crop = crop.copy(right = it) }, valueRange = (crop.left + 0.01f)..1f)
-            Text(tr("Top")); Slider(crop.top, { crop = crop.copy(top = it) }, valueRange = 0f..(crop.bottom - 0.01f))
-            Text(tr("Bottom")); Slider(crop.bottom, { crop = crop.copy(bottom = it) }, valueRange = (crop.top + 0.01f)..1f)
+            Text(left); Slider(crop.left, { crop = crop.copy(left = it) }, modifier = Modifier.semantics { contentDescription = left }, valueRange = 0f..(crop.right - 0.01f))
+            Text(right); Slider(crop.right, { crop = crop.copy(right = it) }, modifier = Modifier.semantics { contentDescription = right }, valueRange = (crop.left + 0.01f)..1f)
+            Text(top); Slider(crop.top, { crop = crop.copy(top = it) }, modifier = Modifier.semantics { contentDescription = top }, valueRange = 0f..(crop.bottom - 0.01f))
+            Text(bottom); Slider(crop.bottom, { crop = crop.copy(bottom = it) }, modifier = Modifier.semantics { contentDescription = bottom }, valueRange = (crop.top + 0.01f)..1f)
         }
     }, dismissButton = { TextButton(onCancel) { Text(tr("Cancel")) } },
         confirmButton = { TextButton({ onCrop(crop) }) { Text(tr("Done")) } })
