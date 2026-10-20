@@ -3,6 +3,56 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Round-4 submission/status race (2026-10-20)
+
+Base: `feat/native-rewrite` at `95cd6af0`. Fix: `ee261608`.
+Only iOS recurring executor/UI/tests and the two requested docs changed.
+
+- `RecurringExecutor.swift:258` rejects status checks while execution is running;
+  `RecurringPaymentsView.swift:53` disables **Check payment status** in that state.
+- `RecurringExecutor.swift:249` explicitly leaves a live `.submitting` state
+  unsettled instead of marking it uncertain. Successful submission then records
+  its single consumed occurrence and leaves the schedule active.
+- Settled uncertain attempts still expose the status check and reconcile through
+  Send. No Send internals changed. Notification taps still open the recurring
+  screen, whose screen-open execution retains every existing policy/fee guard.
+
+Permanent regressions in `RecurringExecutorTests`:
+`statusCheckDuringSubmissionDoesNotStopSuccessfulSchedule()` reloads the screen's
+schedule data and checks status while the guarded payment is submitting. It pins
+unchanged in-flight policy/journal, no reconciliation or attention notification,
+one submission/consumption, an active successful schedule and no repeat payment.
+`settledUncertainAttemptStillAllowsStatusCheck()` verifies a timed-out attempt can
+later reconcile to a proven receipt, consume once and release the Send lock.
+
+### Verification and cleanup
+
+Before the fix, selected
+`-only-testing:NoahTests/RecurringExecutorTests/statusCheckDuringSubmissionDoesNotStopSuccessfulSchedule()`:
+**1 test ran / 1 failed / 0 skipped**, with three failed assertions demonstrating
+the changed in-flight policy, stopped successful schedule and attention notice.
+The test still submitted once and consumed the occurrence. Xcode's automatic
+post-failure `simctl diagnose` stalled; only that owned diagnostic child was
+terminated, letting Xcode finish with exit 65 and export its failure summary.
+
+After the fix, executor/foreground/background/reservation/fee-policy suites:
+**49 tests / 81 expanded runs / 5 suites / 0 failures or skips**, 8.342 seconds.
+Full **NoahTests ran once**, without exclusions: **491 total / 472 passed /
+19 opt-in skipped / 0 failed**, **104 suites**, 39.663 seconds of test execution;
+**686 passed / 19 skipped** expanded runs. All invocations used Nix, XcodeGen,
+normal code signing, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, disabled
+parallel testing and DerivedData under `/private/tmp`. Passing runs disabled
+automatic diagnostic collection. No funded/live payment, physical notification
+delivery or UI-tap verification was attempted; these are deterministic regressions.
+
+Owned simulator: **Noah Recurring R4 Sol 611d17d7**, iPhone 17 / iOS 27.0,
+UDID **681E6EFF-377F-46EE-A1B5-E234470DE9C3**. Confirmed exact identity and
+**Shutdown** state before deletion, then verified absence. Removed owned
+`/private/tmp/noah-recurring-r4-sol-611d17d7-dd` and all **three** result bundles
+after exporting summaries/test trees. Logs, JSON summaries and cleanup evidence
+remain under `/private/tmp/noah-recurring-r4-sol-611d17d7-`. Protected/shared
+simulators, Android, the physical Pixel 6 and Docker were untouched.
+
 ## Round-3 cross-platform review fixes (2026-10-20)
 
 Base: `feat/native-rewrite` at `be45d670`. Only iOS recurring code,
