@@ -35,6 +35,7 @@ import Observation
     var parsed = SendDestination()
     var route: SendRecipientRoute?
     var source: SendSource?
+    var pendingLightningHashes: Set<String> = []
     var arkBalance: UInt64 = 0
     var onchainBalance: UInt64 = 0
     var onchainTotal: UInt64 = 0
@@ -75,8 +76,10 @@ import Observation
         return SendFlow.rails(type: parsed.destinationType, request: parsed.bip321)
     }
     var availability: [String: Bool] {
-        [
-            "ark": sats > 0 && arkBalance >= sats, "lightning": sats > 0 && arkBalance >= sats,
+        let invoice = parsed.bip321?["lightningInvoice"] ?? destination
+        let pending = PaymentEncoding.invoice(invoice)?.hash.map { pendingLightningHashes.contains($0) } ?? false
+        return [
+            "ark": sats > 0 && arkBalance >= sats, "lightning": sats > 0 && (arkBalance >= sats || pending || parsed.destinationType == "lnurl"),
             "onchain": isMax || (sats > 0 && (arkBalance >= sats || onchainBalance >= sats)),
         ]
     }
@@ -93,6 +96,7 @@ import Observation
             onchainBalance = summary?.balance.onchain.confirmed ?? 0
             onchainTotal = summary?.balance.onchain.total ?? 0
         } catch { self.error = "Unable to read available balances." }
+        pendingLightningHashes = (try? await session.pendingSendLightningHashes()) ?? []
         await controller.checkStatus()
     }
     func maxSend() {

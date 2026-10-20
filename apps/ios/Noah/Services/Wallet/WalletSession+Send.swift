@@ -3,7 +3,14 @@ import Foundation
 
 extension WalletSession {
     func quoteSend(_ payment: SendPayment) async throws -> SendQuote {
-        try await withOpenWallet { handles in try await Self.quote(payment, handles: handles) }
+        let invoice = payment.method == "lnurl" ? try await SendRecipientService.invoice(payment, session: self) : nil
+        return try await withOpenWallet { handles in
+            var resolved = payment
+            if let invoice { resolved.destination = invoice; resolved.method = "lightning" }
+            var quote = try await Self.quote(resolved, handles: handles)
+            quote.resolvedInvoice = invoice
+            return quote
+        }
     }
     private static func quote(_ payment: SendPayment, handles: Handles) async throws -> SendQuote {
         try SendMaxValidation.available(payment)
@@ -27,6 +34,14 @@ extension WalletSession {
             if payment.source == .offchain, try await handles.onchain.isMine(address: payment.destination) {
                 throw SendFailure.ownAddress
             }
+        }
+        if payment.method == "lightning", let hash = PaymentEncoding.invoice(payment.destination)?.hash,
+           case .inProgress(let send) = try await handles.wallet.lightningSendState(paymentHash: hash) {
+            // Funds may already be held by the checkpoint. Review the bound, not fresh spendability.
+            let (total, overflow) = payment.amount.addingReportingOverflow(send.feeSats)
+            guard !overflow else { throw SendFailure.invalid }
+            return SendQuote(amount: payment.amount, fee: send.feeSats, total: total,
+                             walletIdentity: try await Self.sendIdentity(handles), checkpoint: .init(send))
         }
         let available =
             payment.method == "onchain" && payment.source == .onchain
@@ -66,14 +81,26 @@ extension WalletSession {
         return quote
     }
     func prepareSend(_ payment: SendPayment, quote: SendQuote) async throws -> SendSnapshot {
-        let invoice = payment.method == "lnurl" ? try await SendRecipientService.invoice(payment, session: self) : nil
+        let invoice = quote.resolvedInvoice
         return try await withOpenWallet { handles in
+            guard payment.method != "lnurl" || invoice != nil else { throw SendFailure.unresolved }
+            let resolved = invoice ?? (payment.method == "lightning" ? payment.destination : "")
             guard quote.walletIdentity == (try await Self.sendIdentity(handles)) else { throw SendFailure.unresolved }
-            let fresh = try await Self.quote(payment, handles: handles)
-            guard fresh == quote else { throw SendFailure.feeChanged }
+            var checkpoint = quote.checkpoint
+            if let hash = PaymentEncoding.invoice(resolved)?.hash {
+                checkpoint = SendLightningCheckpoint.prepared(reviewed: quote,
+                    inspected: try await handles.wallet.lightningSendState(paymentHash: hash))
+            }
+            if checkpoint == nil {
+                var resolvedPayment = payment
+                if let invoice { resolvedPayment.destination = invoice; resolvedPayment.method = "lightning" }
+                var fresh = try await Self.quote(resolvedPayment, handles: handles)
+                fresh.resolvedInvoice = invoice
+                guard fresh == quote else { throw SendFailure.feeChanged }
+            }
             return SendSnapshot(movementIDs: Set(try await handles.wallet.history().map(\.id)),
                                 bdkTxids: Set(try await handles.onchain.transactions().map(\.txid)), resolvedInvoice: invoice,
-                                walletIdentity: try await Self.sendIdentity(handles))
+                                walletIdentity: try await Self.sendIdentity(handles), checkpoint: checkpoint)
         }
     }
     func submitSend(_ payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot) async throws -> SendReceipt {
@@ -101,7 +128,8 @@ extension WalletSession {
                 guard let hash = PaymentEncoding.invoice(invoice)?.hash else { throw SendFailure.invalid }
                 lightning = try await SendLightningSubmission.submit(
                     payment: resolved, state: try await handles.wallet.lightningSendState(paymentHash: hash),
-                    movements: try await handles.wallet.history()) {
+                    movements: try await handles.wallet.history(), checkpoint: snapshot.checkpoint, quote: quote,
+                    check: { try await handles.wallet.checkLightningPayment(paymentHash: $0, wait: false) }) {
                         try await handles.wallet.payLightningInvoice(
                             invoice: invoice, amountSats: fixed ? nil : payment.amount, wait: true)
                     }
@@ -143,10 +171,14 @@ extension WalletSession {
                 let movements = try await handles.wallet.history().filter {
                     $0.subsystemName == "bark.lightning_send" && $0.subsystemKind == "send" && $0.paymentHash == hash
                 }
-                switch SendReconciliation.lightning(movements, hash: hash, amount: payment.amount, snapshot: snapshot) {
-                case .paid(let actual): receipt = actual
-                case .alreadyPaid(let actual): throw SendAlreadyPaid(receipt: actual)
-                default: throw SendFailure.unresolved
+                if let checkpoint = snapshot.checkpoint {
+                    receipt = try checkpoint.receipt(status: lightning, movements: movements, payment: payment, quote: quote)
+                } else {
+                    switch SendReconciliation.lightning(movements, hash: hash, amount: payment.amount, snapshot: snapshot) {
+                    case .paid(let actual): receipt = actual
+                    case .alreadyPaid(let actual): throw SendAlreadyPaid(receipt: actual)
+                    default: throw SendFailure.unresolved
+                    }
                 }
             }
             if receipt.txid != nil { receipt.proof = .submitReturnedTxid }
@@ -184,6 +216,17 @@ extension WalletSession {
         try await withOpenWallet { handles in
             guard attempt.walletIdentity == (try await Self.sendIdentity(handles)) else { throw SendFailure.unresolved }
             guard attempt.inspectionPending != true else { return .uncertain }
+            if let checkpoint = attempt.snapshot.checkpoint {
+                guard let quote = attempt.quote else { throw SendFailure.unresolved }
+                var payment = attempt.payment
+                payment.destination = attempt.snapshot.resolvedInvoice ?? payment.destination
+                payment.method = "lightning"
+                let status = try await checkpoint.advance(
+                    invoice: payment.destination, payment: payment, quote: quote,
+                    state: try await handles.wallet.lightningSendState(paymentHash: checkpoint.paymentHash),
+                    check: { try await handles.wallet.checkLightningPayment(paymentHash: $0, wait: false) })
+                return .paid(try checkpoint.receipt(status: status, movements: try await handles.wallet.history(), payment: payment, quote: quote))
+            }
             if attempt.payment.method == "onchain", attempt.payment.source == .onchain || attempt.receipt?.txid != nil {
                 // Read even if sync fails: a persist error can leave the transaction only in BDK memory.
                 _ = try? await handles.onchain.sync()
@@ -222,6 +265,9 @@ extension WalletSession {
     private static func sendIdentity(_ handles: Handles) async throws -> SendWalletIdentity {
         let network = try await handles.wallet.network()
         return .init(fingerprint: handles.wallet.fingerprint(), network: network == .bitcoin ? "bitcoin" : String(describing: network))
+    }
+    func pendingSendLightningHashes() async throws -> Set<String> {
+        try await withOpenWallet { Set(try await $0.wallet.pendingLightningSends().map(\.paymentHash)) }
     }
     func sendArkServerKey() async throws -> String? {
         try await withOpenWallet { try await $0.wallet.arkInfo()?.serverPubkey }
@@ -275,8 +321,14 @@ enum SendLightningSubmission {
     }
     static func submit(
         payment: SendPayment, state: LightningSendStatus, movements: [Movement],
+        checkpoint: SendLightningCheckpoint? = nil, quote: SendQuote? = nil,
+        check: (@Sendable (String) async throws -> LightningSendStatus)? = nil,
         pay: @Sendable () async throws -> LightningSendStatus
     ) async throws -> LightningSendStatus {
+        if let checkpoint {
+            guard let quote, let check else { throw SendFailure.unresolved }
+            return try await checkpoint.advance(invoice: payment.destination, payment: payment, quote: quote, state: state, check: check)
+        }
         guard let hash = PaymentEncoding.invoice(payment.destination)?.hash else { throw SendFailure.invalid }
         let matching = movements.filter {
             $0.subsystemName == "bark.lightning_send" && $0.subsystemKind == "send" && $0.paymentHash == hash

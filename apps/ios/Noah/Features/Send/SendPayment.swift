@@ -28,6 +28,8 @@ struct SendQuote: Codable, Sendable, Equatable {
     var approximate = false
     var vtxoIDs: [String]?
     var walletIdentity: SendWalletIdentity?
+    var checkpoint: SendLightningCheckpoint?
+    var resolvedInvoice: String?
     var recipientIsEstimated: Bool { vtxoIDs?.isEmpty == false }
     var recipientDescription: String { recipientIsEstimated ? "Recipient receives about \(amount) sats" : "\(amount) sats" }
     static let recipientEstimateExplanation = "The exact amount depends on the network fee when sent. The total is exactly the reviewed coins."
@@ -77,6 +79,7 @@ struct SendSnapshot: Codable, Sendable {
     var bdkTxids: Set<String>?
     var resolvedInvoice: String?
     var walletIdentity: SendWalletIdentity?
+    var checkpoint: SendLightningCheckpoint?
 }
 enum SendFailure: LocalizedError {
     case invalid, insufficient, expired, ownAddress, feeChanged, unresolved, onchainMaxUnavailable, fundsChanged, constructionFailed, lightningInProgress

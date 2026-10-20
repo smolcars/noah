@@ -51,6 +51,87 @@ keeps the lock. Existing v1/v2/v3 outcome-provenance migrations still apply to
 identity-bound attempts. Tests without live storage inject their own identities
 or deliberately exercise the older migration logic in isolation.
 
+A pending BOLT11 checkpoint may be tracked when its canonical invoice, hash and
+amount match the reviewed recipient, its fee is within the persisted bound, and
+overflow-checked amount + fee is within the authorized total. Failed revocation,
+changed movement identity, mismatches and unknown evidence stay locked. Existing
+checkpoint amount/fee remains visible on mismatches. The quote retains a
+checkpoint already observed during review: disappearance before confirmation
+cannot become a new-payment permission. LNURL resolves and validates its invoice
+at review, then confirmation reuses that exact invoice rather than asking the
+callback to issue another one. The recipient, comment and original callback
+parameters retain round-4 validation.
+
+The session exclusively holds Send from confirmation inspection through durable
+journal writes and advancement, excluding both replacement and another creator.
+The adopted checkpoint is serialized before any advancement and survives caller
+cancellation/restart. Advancement uses only `checkLightningPayment(wait: false)`;
+there is no `payLightningInvoice` fallback, including when the checkpoint vanishes
+inside that check. No HTLC exit policy is enabled. A preliminary durable marker
+also preserves the lock if inspection or the adoption write fails.
+
+Tracking uses the checkpoint's held funds, not a fresh spendable-balance gate.
+Direct-invoice review stays available for a known pending hash even at zero
+spendable balance; LNURL defers this decision until its invoice resolves. Fresh
+payments still require sufficient funds. A paid SDK status with nonempty preimage
+and one successful exact-amount movement establishes success; receipt amounts and
+fees come from that movement and must remain within the reviewed authorization.
+Missing/ambiguous evidence, errors and failed revocation cannot unlock an adopted
+attempt, even when failed/canceled history appears later.
+
+Verification uses the dedicated `Noah Send Round 5 t3-6082a3cd` iPhone 17 / iOS
+27.0 simulator, UUID `D0B4DDBF-3EA1-4440-A16E-0FD10D55F582`, Nix, XcodeGen,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, and `/tmp/noah-send-r5-6082-dd`.
+
+Final full `NoahTests`: **318 tests, 303 passed, 15 opt-in skipped, 0 failed**,
+across **73 suites**; parameterized cases account for **364 passed individual
+runs**. No targets or suites were excluded. Result:
+`/tmp/noah-send-r5-full.xcresult`. The related Send/restore run passed **46 tests /
+69 individual runs** (`/tmp/noah-send-r5-targeted4.xcresult`); the final identity/
+adoption run passed **13 tests / 29 individual runs**
+(`/tmp/noah-send-r5-targeted-final.xcresult`). All have zero failures/skips.
+The simulator's exact name/UUID and Shutdown state were verified before deletion;
+other devices and the shared stack were left alone.
+
+The real replacement regression uses the SDK, SQLite, encrypted backup archive,
+Keychain, WalletLifecycle.delete and WalletRestorer in the same process. It
+starts with an unacknowledged Ark receipt, deletes the wallet, restores a backup
+from another generated seed and checks the new fingerprint and empty controller.
+Its backup server is injected; it does not exercise Settings/onboarding controls.
+The cancellation test holds a real open SDK session and proves close, replacement
+reservation and a second Send hold all fail until the original hold ends.
+
+Live attempt: the disposable wallet was funded **20,000 Ark sats once**. A single
+SDK creating call produced a **2,000-sat** Lightning checkpoint; the native app
+was launched and terminated with the checkpoint outstanding, then a separate test
+process attempted re-review/adoption. CLN's hold invoice remained **unpaid** with
+no incoming HTLC, and the checkpoint failed/revoked before adoption. The adoption
+test therefore failed its pending-checkpoint assertion; this is **not evidence of
+successful live adoption**. Sender SQLite contains one Lightning movement, failed
+with zero effective balance change; no success receipt was claimed. LND was not
+running, and the existing CLN route did not hold the payment. Only our disposable
+hold invoice was canceled; no service was started/reconfigured and no blocks
+were mined. The final harness additionally requires a checkpoint in the quote
+before submitting, so it cannot create a fresh payment in this situation.
+
+Live artifacts: `/tmp/noah-send-r5-live-create.xcresult` (1 passed),
+`/tmp/noah-send-r5-live-adopt.xcresult` (1 failed before adoption),
+`/tmp/noah-send-r5-hold-before.json` and `/tmp/noah-send-r5-hold-cleanup.txt`.
+No seeds, invoices, destinations or wallet databases are committed.
+
+To repeat with a reachable held invoice, pass `TEST_RUNNER_NOAH_SEND_ROUND5_LIVE=1`
+and `TEST_RUNNER_NOAH_SEND_INVOICE` (a fresh fixed 2,000-sat BOLT11). Run
+`-only-testing:NoahTests/SendRoundFiveLiveTests/createHeldCheckpoint()` on a fresh
+simulator, fund `Documents/send-r5-fund.txt` once with 20,000 sats, and confirm the
+receiver actually holds an HTLC before terminating the app. Then run
+`-only-testing:NoahTests/SendRoundFiveLiveTests/adoptHeldCheckpointAfterRelaunch()`.
+Wait for `Documents/send-r5-adopted-ready` before settling the hold invoice. The
+second process waits up to 180 seconds, tracks through production controller/
+journal/session/SDK code, requires a proven actual receipt and exactly one
+successful Lightning movement, and exports `send-r5-{adopted,receipt}.json` in
+Documents. These test-only creating calls simulate an inherited pre-Noah
+checkpoint; the production adoption path never makes them.
+
 ## Round-4 payment safety (2026-10-19)
 
 LNURL and Lightning addresses resolve the callback invoice in the app, persist it
