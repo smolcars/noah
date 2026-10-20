@@ -11,6 +11,37 @@ struct AppTelemetryTests {
          "CFBundleShortVersionString": "0.2.0", "CFBundleVersion": "100"]
     }
 
+    @Test func sharedSecretsAreScrubbedAtEveryTelemetryBoundary() throws {
+        for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
+            where !fixture.name.hasPrefix("address-") {
+            let event = Event(level: .error)
+            event.message = SentryMessage(formatted: fixture.input)
+            event.exceptions = [Exception(value: fixture.input, type: "WalletError")]
+            event.context = ["nested": ["array": [["text": fixture.input]]]]
+            let crumb = Breadcrumb(level: .info, category: "test")
+            crumb.message = fixture.input
+            crumb.setData(value: ["text": fixture.input], key: "nested")
+            event.breadcrumbs = [crumb]
+            let clean = try #require(AppTelemetry.scrub(event), "\(fixture.name)")
+            #expect(clean.message?.formatted == fixture.expected)
+            #expect(clean.exceptions?.first?.value == fixture.expected)
+            #expect(clean.breadcrumbs?.first?.message == fixture.expected)
+            let unchecked = Event(level: .error)
+            unchecked.transaction = fixture.input
+            #expect((AppTelemetry.scrub(unchecked) == nil) == (fixture.input != fixture.expected), "final check \(fixture.name)")
+        }
+        let words = Array(repeating: "ABANDON", count: 11) + ["ABOUT"]
+        let event = Event(level: .error)
+        event.extra = ["nested": ["words": words, "access_token": "fake", "clientSecret": "fake"]]
+        let clean = try #require(AppTelemetry.scrub(event))
+        let nested = try #require(clean.extra?["nested"] as? [String: Any])
+        #expect(nested.values.allSatisfy { $0 as? String == "[redacted]" })
+        let unchecked = Event(level: .error)
+        unchecked.user = User(userId: "test")
+        unchecked.user?.data = ["words": words]
+        #expect(AppTelemetry.scrub(unchecked) == nil)
+    }
+
     @Test func disabledInDebugAndRegtest() {
         for variant in AppVariant.allCases {
             #expect(AppTelemetry.options(variant: variant, isDebug: true, info: info) == nil)

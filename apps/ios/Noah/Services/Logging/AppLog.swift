@@ -140,8 +140,7 @@ final class LogFile: @unchecked Sendable {
         }
     }
 
-    /// Shared by local logs and telemetry. Deliberately also hides long hashes:
-    /// an unlabelled preimage/key/signature cannot safely be distinguished from one.
+    /// Shared by persistence and telemetry. Unlabelled hashes/txids remain useful diagnostics.
     static func redact(_ message: String) -> String {
         guard message.utf8.count <= maxMessageBytes else { return "[oversized log message omitted]" }
         var result = message
@@ -149,16 +148,50 @@ final class LogFile: @unchecked Sendable {
             result = pattern.stringByReplacingMatches(in: result,
                 range: NSRange(result.startIndex..., in: result), withTemplate: "[redacted]")
         }
-        return result.replacing(mnemonicShape, with: "[redacted]")
+        let words = wordPattern.matches(in: result, range: NSRange(result.startIndex..., in: result))
+        var runs: [NSRange] = []
+        var start = 0, count = 0
+        for (index, word) in words.enumerated() {
+            let text = (result as NSString).substring(with: word.range).lowercased()
+            if bip39.contains(text) {
+                if count == 0 { start = index }
+                count += 1
+            } else {
+                if count >= 12 { runs.append(NSRange(location: words[start].range.location,
+                    length: words[index - 1].range.upperBound - words[start].range.location)) }
+                count = 0
+            }
+        }
+        if count >= 12, let last = words.last {
+            runs.append(NSRange(location: words[start].range.location,
+                                length: last.range.upperBound - words[start].range.location))
+        }
+        let clean = NSMutableString(string: result)
+        for range in runs.reversed() { clean.replaceCharacters(in: range, with: "[redacted]") }
+        return clean as String
     }
 
-    nonisolated(unsafe) private static let mnemonicShape = /\b[a-z]{3,8}(?:\s+[a-z]{3,8}){11,}\b/
+    static func isSensitiveKey(_ field: String) -> Bool {
+        let key = field.lowercased().filter(\.isLetter)
+        return key == "key" || ["mnemonic", "seed", "privatekey", "privkey", "secret", "signature",
+            "preimage", "authorization", "password", "token", "xamz"].contains { key.contains($0) }
+    }
+
+    private static let bip39: Set<String> = {
+        guard let url = Bundle.main.url(forResource: "bip39-english", withExtension: "txt"),
+              let text = try? String(contentsOf: url, encoding: .utf8) else {
+            preconditionFailure("Missing bundled BIP39 word list")
+        }
+        return Set(text.split(whereSeparator: \.isWhitespace).map(String.init))
+    }()
+    private static let wordPattern = try! NSRegularExpression(pattern: "[A-Za-z]+")
     private static let sensitivePatterns = [
-        // Drop the remainder, including multiline/structured secret values.
-        #"(?is)\b(?:mnemonic|seed(?:[_ -]?phrase)?|private[_ -]?key|privkey|secret[_ -]?key|signature|preimage|authorization|password|token)[\"']?\s*[:=({\[].*"#,
-        #"(?i)\bhttps?://[^\s<>\"']*\?[^\s<>\"']*"#,
-        #"(?i)\bhttps?%3a%2f%2f[^\s<>\"']*"#,
-        #"(?i)\b(?:0x)?[0-9a-f]{64,}\b"#,
-        #"\b(?:[xt]prv[1-9A-HJ-NP-Za-km-z]{20,}|[KL5][1-9A-HJ-NP-Za-km-z]{50,51}|c[1-9A-HJ-NP-Za-km-z]{51})\b"#,
+        // Consume structured/multiline values too; never attempt to parse a credential's end.
+        #"(?is)\b(?:[\w.-]*(?:token|secret|signature|authorization|password)[\w.-]*|mnemonic|seed(?:[_ -]?phrase)?|private[_ -]?key|privkey|preimage|authorization|password|key|x-amz-[\w-]+)["']?\s*[:=({\[].*"#,
+        #"(?i)\bhttps?://[^\s<>"']*\?[^\s<>"']*"#,
+        #"(?i)\bhttps?%3a%2f%2f[^\s<>"']*"#,
+        #"(?i)\bBearer\s+[A-Za-z0-9._~+/-]+=*|\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"#,
+        #"(?i)\bExpo(?:nent)?PushToken\[[^\]]*\]"#,
+        #"\b(?:[xt]prv[1-9A-HJ-NP-Za-km-z]{20,}|[59][1-9A-HJ-NP-Za-km-z]{50}|[KLc][1-9A-HJ-NP-Za-km-z]{51})\b"#,
     ].map { try! NSRegularExpression(pattern: $0) }
 }

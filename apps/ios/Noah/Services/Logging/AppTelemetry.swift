@@ -76,17 +76,19 @@ enum AppTelemetry {
 
     private static func scrubValue(_ value: Any) -> Any {
         if let string = value as? String { return LogFile.redact(string) }
-        if let array = value as? [Any] { return array.map(scrubValue) }
+        if let array = value as? [Any] {
+            if let words = array as? [String], LogFile.redact(words.joined(separator: " ")) != words.joined(separator: " ") {
+                return "[redacted]"
+            }
+            return array.map(scrubValue)
+        }
         if let fields = value as? [String: Any] { return scrubFields(fields) }
         return value
     }
 
     private static func scrubFields(_ fields: [String: Any]) -> [String: Any] {
         fields.reduce(into: [String: Any]()) { result, field in
-            let key = field.key.lowercased().filter(\.isLetter)
-            let secret = ["mnemonic", "seed", "privatekey", "secretkey", "signature", "preimage",
-                          "authorization", "password", "token", "xamz"].contains { key.contains($0) }
-            result[LogFile.redact(field.key)] = secret ? "[redacted]" : scrubValue(field.value)
+            result[LogFile.redact(field.key)] = LogFile.isSensitiveKey(field.key) ? "[redacted]" : scrubValue(field.value)
         }
     }
 }

@@ -6,6 +6,18 @@ import Testing
 struct AppLogTests {
     private let directory = FileManager.default.temporaryDirectory.appending(path: "logs-\(UUID().uuidString)")
 
+    @Test func sharedSecretRedactionVectors() throws {
+        for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
+            where !fixture.name.hasPrefix("address-") {
+            #expect(LogFile.redact(fixture.input) == fixture.expected, "\(fixture.name)")
+            #expect(LogFile.redact(fixture.expected) == fixture.expected, "idempotent \(fixture.name)")
+            let file = LogFile(directory: directory)
+            file.append(level: .info, tag: "fixture", message: fixture.input)
+            #expect(file.lines().last?.hasSuffix(fixture.expected.replacingOccurrences(of: "\n", with: "\n  ")) == true,
+                    "persistence \(fixture.name)")
+        }
+    }
+
     @Test func writesReactNativeLineFormat() throws {
         let file = LogFile(directory: directory)
         let date = Date(timeIntervalSince1970: 0)

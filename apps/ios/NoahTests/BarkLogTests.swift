@@ -34,7 +34,7 @@ struct BarkLogTests {
             "signing private_key=synthetic-key-value",
             "payment signature: synthetic-base64-value==",
             "payment preimage=\(String(repeating: "ab", count: 32))",
-            "signing \(String(repeating: "c2", count: 64))",
+            "signing signature=\(String(repeating: "c2", count: 64))",
             "backup https://bucket.invalid/archive?X-Amz-Credential=fake&X-Amz-Signature=fake",
             "secret_key: [1, 2,\n3, 4]",
             "Mnemonic { words: [synthetic, test, words] }",
