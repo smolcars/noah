@@ -62,7 +62,7 @@ final class SettingsStorage: @unchecked Sendable {
     static let emptyRecurring = #"{"state":{"schedules":{},"serverSyncPending":true},"version":0}"#
 
     static func importValues(_ source: [String: String?]) -> NativeSettingsFile.State {
-        var state = NativeSettingsFile.State(settingsNoticePending: source.isEmpty())
+        var state = NativeSettingsFile.State(settingsNoticePending: source.isEmpty)
         for (key, raw) in source {
             if key == RecurringStore.key {
                 // Never admit an RN schedule, even if its schema is unsupported.
@@ -131,11 +131,8 @@ final class SettingsStorage: @unchecked Sendable {
     private func finishCleanup() throws {
         guard try nativeFile.load().cleanupPending else { return }
         let fm = FileManager.default
-        for name in [storeID, storeID + ".crc"] {
-            let file = root.appending(path: name)
-            if fm.fileExists(atPath: file.path) { try fm.removeItem(at: file) }
-        }
-        if fm.fileExists(atPath: root.path) { try RestoreTransaction.fullSync(root) }
+        if fm.fileExists(atPath: root.path) { try fm.removeItem(at: root) }
+        try RestoreTransaction.fullSync(root.deletingLastPathComponent())
         try MMKVUpgradeBackup(root: root, instanceID: storeID).deleteSnapshot()
         try nativeFile.save(.init()) // Keep the import marker through re-onboarding.
     }

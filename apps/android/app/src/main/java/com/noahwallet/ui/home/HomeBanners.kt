@@ -23,14 +23,6 @@ import java.util.Locale
 
 @Composable
 fun HomeBanners(app: AppModel, refresh: Int) {
-    val context = LocalContext.current
-    var upgradeNotices by remember { mutableStateOf<List<String>>(emptyList()) }
-    LaunchedEffect(Unit) {
-        upgradeNotices = withContext(Dispatchers.IO) { com.noahwallet.services.storage.SettingsStorage(context).takeUpgradeNotices() }
-    }
-    upgradeNotices.forEach { message ->
-        Card(Modifier.fillMaxWidth()) { Text(message, Modifier.padding(16.dp)) }
-    }
     val backup by app.services.backupCoordinator.statusChanges.collectAsState()
     val version by app.server.versionChanges.collectAsState()
     LaunchedEffect(app.server) { withContext(Dispatchers.IO) { app.server.checkVersionOnce() } }
@@ -136,4 +128,22 @@ private fun RoundTransaction(label: String, txid: String, copyable: Boolean = fa
     TextButton({
         uri.openUri("https://mempool.space/${if (BuildConfig.APP_VARIANT == "mainnet") "" else "signet/"}tx/$txid")
     }) { Text("Open $label in browser") }
+}
+
+@Composable
+fun UpgradeNotices() {
+    val context = LocalContext.current
+    var upgradeNotices by remember { mutableStateOf<List<String>>(emptyList()) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            if (upgradeNotices.isEmpty()) upgradeNotices = withContext(Dispatchers.IO) {
+                com.noahwallet.services.storage.SettingsStorage(context).takeUpgradeNotices()
+            }
+            awaitCancellation()
+        }
+    }
+    upgradeNotices.forEach { message ->
+        Card(Modifier.fillMaxWidth()) { Text(message, Modifier.padding(16.dp)) }
+    }
 }

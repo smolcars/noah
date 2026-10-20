@@ -2,8 +2,6 @@ package com.noahwallet.services.storage
 
 import java.io.File
 import java.io.FileOutputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 /** Immutable pre-native bytes for the one-time best-effort import. */
 internal class MMKVUpgradeBackup(private val root: File, private val id: String,
@@ -19,17 +17,15 @@ internal class MMKVUpgradeBackup(private val root: File, private val id: String,
             if (staging.exists()) check(staging.deleteRecursively())
             check(staging.mkdirs())
             val present = names.map { File(root, it).exists() }
-            var size = 0L
             if (present.any { it }) {
                 names.filter { File(root, it).exists() }.forEach { name ->
                     File(root, name).inputStream().use { input ->
                         FileOutputStream(File(staging, name)).use { output -> input.copyTo(output); output.fd.sync() }
                     }
                 }
-                size = 1
             }
             FileOutputStream(File(staging, "manifest")).use {
-                it.write("${if (present.any { it }) 1 else 0}\n$size".toByteArray()); it.fd.sync()
+                it.write("${if (present.any { it }) 1 else 0}\n0".toByteArray()); it.fd.sync()
             }
             sync(staging)
             check(staging.renameTo(directory))

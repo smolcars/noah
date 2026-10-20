@@ -24,7 +24,8 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 28) {
-                    Color.clear.frame(height: 0).task {
+                    Color.clear.frame(height: 0).task(id: scenePhase == .active && isActive) {
+                        guard scenePhase == .active, isActive else { return }
                         if upgradeNotices.isEmpty { upgradeNotices = (try? SettingsStorage.shared.takeUpgradeNotices()) ?? [] }
                     }
                     ForEach(upgradeNotices, id: \.self) { message in

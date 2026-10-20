@@ -72,6 +72,7 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
                     TextButton({ map = true }) { Text("Bitcoin Map") }
                     if (!model.isWalletSuspended) TextButton(onQR) { Text("QR Code") }
                 }
+                com.noahwallet.ui.home.UpgradeNotices()
                 // Like RN, a suspended wallet shows only the suspended card.
                 if (model.isWalletSuspended) {
                     Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

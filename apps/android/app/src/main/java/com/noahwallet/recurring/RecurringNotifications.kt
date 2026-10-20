@@ -55,6 +55,7 @@ object RecurringNotifications {
 class RecurringReminderWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
     override suspend fun doWork(): Result {
         return try {
+            if (com.noahwallet.services.launch.LaunchState.current(applicationContext) != com.noahwallet.services.launch.LaunchState.existingWallet) return Result.success()
             val settings = SettingsStorage(applicationContext)
             val store = RecurringStore(settings)
             val location = WalletDataLocation(applicationContext.filesDir, BuildConfig.APP_VARIANT)

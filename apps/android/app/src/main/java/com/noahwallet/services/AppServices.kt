@@ -155,7 +155,7 @@ class AppServices private constructor(private val context: Context) {
     private val startup = Mutex()
     private var started = false
 
-    fun isOnboarded(): Boolean = SettingsStorage(context)
+    fun isOnboarded(): Boolean = WalletDataLocation(context.filesDir, variant).databaseExists && SettingsStorage(context)
         .persistedState<PersistedWalletState>(PersistedWalletState.key)?.isInitialized != false
 
     class WalletSuspended : Exception("Wallet suspended")

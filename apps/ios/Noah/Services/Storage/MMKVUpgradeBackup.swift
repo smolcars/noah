@@ -6,7 +6,7 @@ struct MMKVUpgradeBackup {
     let instanceID: String
     var directory: URL { URL(fileURLWithPath: root.path + ".native-backup", isDirectory: true) }
     private var names: [String] { [instanceID, instanceID + ".crc"] }
-    private struct Manifest: Codable { let present: Bool; let actualSize: UInt32 }
+    private struct Manifest: Codable { let present: Bool }
 
     func prepare() throws {
         let fm = FileManager.default
@@ -16,7 +16,6 @@ struct MMKVUpgradeBackup {
             try fm.createDirectory(at: staging, withIntermediateDirectories: true)
             try excludeFromBackup(staging)
             let present = names.map { fm.fileExists(atPath: root.appending(path: $0).path) }
-            var size: UInt32 = 0
             if present.contains(true) {
                 for name in names {
                     let source = root.appending(path: name), target = staging.appending(path: name)
@@ -24,9 +23,8 @@ struct MMKVUpgradeBackup {
                     try fm.copyItem(at: source, to: target)
                     try RestoreTransaction.fullSync(target)
                 }
-                size = 1
             }
-            try JSONEncoder().encode(Manifest(present: present.contains(true), actualSize: size))
+            try JSONEncoder().encode(Manifest(present: present.contains(true)))
                 .write(to: staging.appending(path: "manifest.json"))
             try RestoreTransaction.fullSync(staging.appending(path: "manifest.json"))
             try RestoreTransaction.fullSync(staging)
@@ -41,7 +39,7 @@ struct MMKVUpgradeBackup {
 
     var hasContent: Bool { get throws { try manifest().present } }
 
-    /// Recovery may rewrite an mmap, so inventory only a disposable copy of the immutable pair.
+    /// MMKV only maps this disposable copy of the immutable pair.
     func inspectSnapshot<T>(_ read: (URL) throws -> T) throws -> T {
         let fm = FileManager.default
         let inspection = directory.appending(path: "inspection", directoryHint: .isDirectory)

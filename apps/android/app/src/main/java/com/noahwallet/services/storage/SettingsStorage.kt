@@ -63,8 +63,8 @@ class SettingsStorage(context: Context) {
     }
     private fun finishCleanup() {
         if (!nativeFile.load().cleanupPending) return
-        listOf(instanceID, "$instanceID.crc").forEach { name -> File(root, name).let { check(!it.exists() || it.delete()) } }
-        if (root.exists()) syncDirectory(root)
+        check(!root.exists() || root.deleteRecursively())
+        syncDirectory(root.parentFile!!)
         MMKVUpgradeBackup(root, instanceID, backupRoot = backupRoot).deleteSnapshot()
         nativeFile.save(NativeSettingsFile.State()) // Keep the marker through re-onboarding.
     }
