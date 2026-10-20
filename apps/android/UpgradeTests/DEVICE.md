@@ -1,5 +1,25 @@
 # Pixel 6 RN → native upgrade, 2026-10-19
 
+## Settings upgrade policy — 2026-10-20
+
+This supersedes the historical MMKV recovery notes below. Seed + DB opens Home;
+only explicit readable `isInitialized=false` resumes onboarding. Settings are
+best-effort, imported once from an integrity-verified immutable snapshot through
+scratch MMKV. All native writes use the durable JSON store; live RN files stay
+unchanged. Damaged native files use defaults and the settings notice, without
+reimporting RN. Background opens never write seeds and require Home admission.
+
+RN recurring schedules never import. Home shows the one-time recurring notice;
+the existing server-sync path sends `{"schedules":[]}` after admission and retains
+pending state on failure. Upgrade assertions now inspect the native store and
+expect empty recurring state plus the notice. Native-created schedules retain
+the existing ledger, authority and journal. Deletion removes RN files/snapshot
+and leaves an empty native import marker through re-onboarding.
+
+See [the complete storage policy](STORES.md#settings-upgrade-policy--2026-10-20)
+for file format, sync ordering, notices, server verification and corruption rules.
+
+
 **Partial pass; live push acceptance is blocked by the existing server on port
 3100 becoming unavailable.** Wallet and Expo-token continuity passed on the real
 phone. This run does not establish successful background callbacks, killed-process
@@ -398,7 +418,7 @@ and QEMU-process absence were checked before deleting this AVD. Both owned AVDs
 and their private artifacts were removed. Reserved emulators and the physical
 Pixel 6 were left untouched.
 
-## MMKV interrupted-update safety (2026-10-20)
+## Historical MMKV interrupted-update safety (superseded 2026-10-20)
 
 Native now registers CRC and length **OnErrorRecover** callbacks through MMKV's
 initialization handler. Warning/error callbacks send fixed diagnostics through
@@ -467,7 +487,7 @@ Verification for this change (base `37ab2125`, branch `t3/mmkv-upgrade-recovery`
   checks passed; the running replacement procedure was exercised on iOS.
   No physical device, other agent's emulator, or Docker container was touched.
 
-## MMKV recovery review fixes (2026-10-20; base `172446b6`)
+## Historical MMKV recovery review fixes (2026-10-20; base `172446b6`)
 
 `SettingsStorage` distinguishes absent keys from undecodable stored values and
 uses the MMKV byte getter with a strict UTF-8 decoder; JNI string replacement
@@ -514,7 +534,7 @@ The nine shared storage vectors passed in the equivalent real-MMKV iOS tests.
 Durable pause/cancel tombstones remain a separate task; no `RecurringExecutor`
 or `RecurringStore` implementation was changed.
 
-## MMKV migration safety, review round 2 (2026-10-20; base `4f7228c5`)
+## Historical MMKV migration safety, review round 2 (2026-10-20; base `4f7228c5`)
 
 Recovery rejection now survives process restarts. Before returning **recover**
 from either MMKV error callback, native atomically writes and syncs a quarantine
@@ -582,7 +602,7 @@ real-MMKV iOS probes and all shared vectors passed. No Android device, protected
 simulator, Docker, client or server implementation was changed; funded/live
 upgrade and real FCM/UnifiedPush delivery were not repeated.
 
-## MMKV migration safety, review round 3 (2026-10-20; base `32e1b6ef`)
+## Historical MMKV migration safety, review round 3 (2026-10-20; base `32e1b6ef`)
 
 Recovery is gated **before mapping** the live data/CRC pair, restored pair and
 snapshot inspection copy. The checker reads the MMKV 2.4.3 format directly;
@@ -650,3 +670,50 @@ probes were also removed. No other emulator, protected simulator, physical
 device or Docker was used. No funded/live RN upgrade, real push delivery or
 physical biometric prompt was repeated. The late-callback process-termination
 fallback is source-verified; pre-open durability failures are fault-injected.
+
+## Native settings replacement verification — 2026-10-20
+
+Base `b6b3538d`; branch `t3/simplify-settings-migration`. This implements the
+2026-10-20 policy above, replacing the prior recovery/Continue behavior.
+
+- Android final required Nix command ran after the final code change with
+  `--max-workers=2`: **2,978 JVM tests / 103 suites / 0 failures, errors or skips**;
+  regtest APK assembly and Android instrumentation Kotlin compilation passed.
+- Owned Android 15/API 35 arm64 AVD **NoahSettings_fdb0**, console port **5596**:
+  **13 instrumentation tests discovered: 12 passed, 1 opt-in skipped**, zero
+  failures. These are 10 `MMKVRecoveryTest` snapshot/native-file tests, two
+  `RecurringStorageDeviceTest` tests, and the skipped prepared RN
+  `UpgradeCompatibilityTest` (no funded RN sandbox/expectations supplied).
+- iOS full `NoahTests` ran once after the final code change and XcodeGen:
+  **652 tests / 130 suites / 630 passed / 22 opt-in skipped / 0 failures**;
+  XCResult records 923 expanded parameterized passes. Arm64/active architecture
+  only, signing enabled, two build jobs, no parallel test runners, owned
+  DerivedData/result bundle under `/private/tmp`.
+- Targeted iOS runs verified all 196 raw RN import cases, shared launch policy,
+  empty recurring sync after admission (with retry), native damage/defaults,
+  interruption before/after rename for absent and existing generations,
+  concurrent import, existing immutable snapshot precedence, fresh install,
+  deletion/re-onboarding, notices and 2,000 native writes with unchanged RN bytes.
+  Android's matching JVM/JNI coverage passed. Native-created recurring tests
+  remain in the full suites; production executor, ledger and authority unchanged.
+- The first Android device run exposed fixture assumptions (the real binary
+  has no recurring schedules) and a test-only directory creation race. Explicit
+  generated recurring records and precreated test directories fixed these;
+  the complete final device run passed. The first iOS atomic-order assertion
+  compared URL directory hints; comparing paths fixed it, with real fsync order
+  unchanged. A Swift import typo was caught during compilation and corrected.
+
+Cleanup: confirmed exact simulator **NoahSettings-fdb0** /
+`842FE262-F486-4394-924E-A2896937075B`, shut it down, verified Shutdown, deleted
+it and verified absence. Confirmed `emulator-5596` reported **NoahSettings_fdb0**,
+stopped it, verified absence from adb, listed and deleted that exact AVD and
+verified absence. Removed owned DerivedData, every result bundle and temporary
+scripts/logs; stopped the lingering failed targeted Xcode invocation. No owned
+build process remains. Shared/protected simulators, other AVDs, physical devices,
+Docker, `client/`, `server/`, AppLog and AppTelemetry were untouched.
+
+Limits: no funded RN replacement, stopped/running RN install acceptance, live
+server sync, push delivery or physical biometric prompt was repeated. Server
+clearing semantics were source-verified (including its existing empty-set test);
+native empty-payload/admission/retry behavior was executed in tests. The updated
+prepared upgrade assertions compile but remain opt-in for that acceptance run.

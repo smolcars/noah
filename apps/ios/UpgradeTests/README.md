@@ -1,5 +1,25 @@
 # iOS in-place upgrade safety
 
+## Settings upgrade policy — 2026-10-20
+
+This supersedes the historical MMKV recovery notes below. Seed + DB opens Home;
+only explicit readable `isInitialized=false` resumes onboarding. Settings are
+best-effort, imported once from an integrity-verified immutable snapshot through
+scratch MMKV. All native writes use the durable JSON store; live RN files stay
+unchanged. Damaged native files use defaults and the settings notice, without
+reimporting RN. Background opens never write seeds and require Home admission.
+
+RN recurring schedules never import. Home shows the one-time recurring notice;
+the existing server-sync path sends `{"schedules":[]}` after admission and retains
+pending state on failure. Upgrade assertions now inspect the native store and
+expect empty recurring state plus the notice. Native-created schedules retain
+the existing ledger, authority and journal. Deletion removes RN files/snapshot
+and leaves an empty native import marker through re-onboarding.
+
+See [the complete storage policy](../../android/UpgradeTests/STORES.md#settings-upgrade-policy--2026-10-20)
+for file format, sync ordering, notices, server verification and corruption rules.
+
+
 Base: `feat/native-rewrite` at `c6283d16`. Run from the repository root in the
 Nix development shell, with XcodeGen on PATH:
 
@@ -24,10 +44,9 @@ sends 5,000 back, creates a recurring rule through RN's editor with its first
 payment tomorrow, changes display unit/currency/name/auto-board/privacy/mailbox/debug/language through
 RN UI, then receives **10,000 onchain sats** from Bitcoin Core and mines **one**
 confirming block. RN must show the onchain amount and Confirmed section before
-native installation. All recurring fields are compared against a private copy
-of RN's actual MMKV bytes, including timing, destination, amount, status,
-occurrences and history. The native recurring screen must show the rule and
-zero payments. The native wallet must retain the fingerprint, every movement's
+native installation. The native store must contain no RN recurring schedules, record the one-time
+notice, and the recurring screen must show its empty state. Other settings are
+compared against a private import of RN's actual MMKV bytes. The native wallet must retain the fingerprint, every movement's
 ID/status/kind/amount/fee, Ark balance and confirmed/total onchain balance.
 Settings comparisons additionally cover unchanged biometric, suspension and
 backup flags. Debug and mailbox flags and the Swedish locale must be non-default.
@@ -302,7 +321,7 @@ down, deleted and verified absent; its DerivedData and all `.xcresult`
 bundles were removed. No protected/shared device or Docker was touched. The
 funded RN-to-native device procedure was not repeated in this seed/storage pass.
 
-## MMKV interrupted-update safety (2026-10-20)
+## Historical MMKV interrupted-update safety (superseded 2026-10-20)
 
 `SettingsStorage` installs CRC/length **recover** callbacks as part of MMKV
 initialization, before any instance is opened. Warnings/errors go to `AppLog`
@@ -398,7 +417,7 @@ deleted it, then verified its UDID absent. Removed task-owned DerivedData,
 The cached RN build was preserved. The only retained binary evidence is the
 non-secret RN fixture committed under `apps/fixtures/rn-mmkv`.
 
-## MMKV recovery review fixes (2026-10-20; base `172446b6`)
+## Historical MMKV recovery review fixes (2026-10-20; base `172446b6`)
 
 Permanent `MMKVRecoveryTests` probes reproduced suspension rollback, later
 wallet-key loss, present-but-undecodable RN bytes and missing system-backup
@@ -439,7 +458,7 @@ exact name/UDID in Shutdown state, deleted and verified absent. Removed its
 `/private/tmp/noah-mmkv-safety-4176-dd` DerivedData (including all result bundles)
 and all owned transient scripts/logs. Shared/protected devices were untouched.
 
-## MMKV migration safety, review round 2 (2026-10-20; base `4f7228c5`)
+## Historical MMKV migration safety, review round 2 (2026-10-20; base `4f7228c5`)
 
 Recovery rejection now survives process restarts. Before returning **recover**
 from either MMKV error callback, native atomically writes and syncs a quarantine
@@ -506,7 +525,7 @@ No funded/running-RN replacement or physical push delivery was repeated.
 Cleanup: owned simulator **NoahMMKVRound2-639fae47** (`FFB51B88-7853-45E3-B0F9-75DD652CC1D9`) was confirmed by exact name/UDID, shut down through T3, confirmed **Shutdown**, deleted and verified absent. Its `/private/tmp/noah-mmkv-r2-639fae47-dd` DerivedData and every owned result bundle were removed. No protected simulator, Android device, physical device,
 Docker, client or server implementation was changed.
 
-## MMKV migration safety, review round 3 (2026-10-20; base `32e1b6ef`)
+## Historical MMKV migration safety, review round 3 (2026-10-20; base `32e1b6ef`)
 
 Recovery is gated **before mapping** the live data/CRC pair, restored pair and
 snapshot inspection copy. The checker reads the MMKV 2.4.3 format directly;
@@ -567,3 +586,50 @@ Limits: no funded/running-RN replacement, live push delivery or physical
 biometric prompt was repeated. Tests exercise immediate lock/hiding policy and
 actual MMKV recovery; the secondary callback's process-termination fallback is
 source-verified, with injected durability failures covered before mapping.
+
+## Native settings replacement verification — 2026-10-20
+
+Base `b6b3538d`; branch `t3/simplify-settings-migration`. This implements the
+2026-10-20 policy above, replacing the prior recovery/Continue behavior.
+
+- Android final required Nix command ran after the final code change with
+  `--max-workers=2`: **2,978 JVM tests / 103 suites / 0 failures, errors or skips**;
+  regtest APK assembly and Android instrumentation Kotlin compilation passed.
+- Owned Android 15/API 35 arm64 AVD **NoahSettings_fdb0**, console port **5596**:
+  **13 instrumentation tests discovered: 12 passed, 1 opt-in skipped**, zero
+  failures. These are 10 `MMKVRecoveryTest` snapshot/native-file tests, two
+  `RecurringStorageDeviceTest` tests, and the skipped prepared RN
+  `UpgradeCompatibilityTest` (no funded RN sandbox/expectations supplied).
+- iOS full `NoahTests` ran once after the final code change and XcodeGen:
+  **652 tests / 130 suites / 630 passed / 22 opt-in skipped / 0 failures**;
+  XCResult records 923 expanded parameterized passes. Arm64/active architecture
+  only, signing enabled, two build jobs, no parallel test runners, owned
+  DerivedData/result bundle under `/private/tmp`.
+- Targeted iOS runs verified all 196 raw RN import cases, shared launch policy,
+  empty recurring sync after admission (with retry), native damage/defaults,
+  interruption before/after rename for absent and existing generations,
+  concurrent import, existing immutable snapshot precedence, fresh install,
+  deletion/re-onboarding, notices and 2,000 native writes with unchanged RN bytes.
+  Android's matching JVM/JNI coverage passed. Native-created recurring tests
+  remain in the full suites; production executor, ledger and authority unchanged.
+- The first Android device run exposed fixture assumptions (the real binary
+  has no recurring schedules) and a test-only directory creation race. Explicit
+  generated recurring records and precreated test directories fixed these;
+  the complete final device run passed. The first iOS atomic-order assertion
+  compared URL directory hints; comparing paths fixed it, with real fsync order
+  unchanged. A Swift import typo was caught during compilation and corrected.
+
+Cleanup: confirmed exact simulator **NoahSettings-fdb0** /
+`842FE262-F486-4394-924E-A2896937075B`, shut it down, verified Shutdown, deleted
+it and verified absence. Confirmed `emulator-5596` reported **NoahSettings_fdb0**,
+stopped it, verified absence from adb, listed and deleted that exact AVD and
+verified absence. Removed owned DerivedData, every result bundle and temporary
+scripts/logs; stopped the lingering failed targeted Xcode invocation. No owned
+build process remains. Shared/protected simulators, other AVDs, physical devices,
+Docker, `client/`, `server/`, AppLog and AppTelemetry were untouched.
+
+Limits: no funded RN replacement, stopped/running RN install acceptance, live
+server sync, push delivery or physical biometric prompt was repeated. Server
+clearing semantics were source-verified (including its existing empty-set test);
+native empty-payload/admission/retry behavior was executed in tests. The updated
+prepared upgrade assertions compile but remain opt-in for that acceptance run.

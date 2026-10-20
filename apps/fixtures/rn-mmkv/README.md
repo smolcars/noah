@@ -18,34 +18,14 @@ SHA-256:
 - data: `7b7b069453dc2201122825825cbef3ec34b419c123537a13c74d05b45f1442d5`
 - crc: `37afcbcbb3864955a5effaccbb6ad20aef39770680f176b67adbdaea0219d635`
 
-Both platforms copy these files into disposable directories. Tests damage the
-current checksum and last-confirmed metadata, set impossible lengths, truncate
-the last record, or erase payload bytes. They verify recovery, exact pre-open
-backup bytes, a single closed-file restore, and blocking when recovery cannot
-prove RN data remains. Baseline tests explicitly select the former discard
-strategy and demonstrate loss on the same CRC-damaged bytes. Android runs this
-through real JNI instrumentation; JVM tests separately exercise durable backup
-publication, directory-sync failures, restart retries and deletion markers.
-
-The iOS discard demonstration intentionally replaces the global handler and
-must run alone in a separate test process:
-
-```sh
-TEST_RUNNER_NOAH_MMKV_DISCARD_DEMO=1 xcodebuild ... \
-  '-only-testing:NoahTests/MMKVDiscardDemonstrationTests/defaultStrategyDiscardsTheSameCorruptRNBytes()' \
-  test
-```
-
-It is skipped in the ordinary full suite. Do not collect real user MMKV files
-as fixtures or ask users to share their settings backup.
-
-The recovery review also damages UTF-8 in the final real `wallet-storage` value
-while retaining its MMKV key. Present-but-undecodable values must block. After a
-successful native validation, suspension writes followed by empty/CRC recovery
-and admitted-key removal must block without restoring the initial snapshot.
-A separate fsynced retirement record survives snapshot deletion and re-onboarding.
-The nine shared launch decisions are in `../mmkv-launch-state.json`.
-
+Both platforms copy these files into isolated test directories. The importer
+must preserve both files byte-for-byte, including after 2,000 native writes.
+Checksum/length failures import defaults, with the settings notice and no
+recovery. The real RN pair has four stores and no recurring schedules; separate
+MMKV-written test records exercise recurring non-import and notices. Shared
+`../mmkv-launch-state.json` supplies eight admission cases; all 196 raw envelope
+cases have independent import/drop expectations. Do not collect real user MMKV
+files as fixtures or ask users to share their settings backup.
 
 ## Pre-open verifier pinned in review round 3
 

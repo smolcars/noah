@@ -137,9 +137,23 @@ values. Recurring fixtures go through the existing recurring codecs, whose
 financial-policy tests remain in `recurring-storage.json` and
 `recurring-rn-range.json`. Esplora remains inactive until a native consumer lands.
 
-`mmkv-launch-state.json` adds nine storage-layer launch vectors with an existing
-seed+DB. Both `MMKVRecoveryTests` (iOS) and `MMKVRecoveryTest` (Android JNI)
-consume the same first-open/after-native values. They distinguish RN's initially
-missing wallet-storage (resume onboarding), explicit unfinished onboarding,
-present undecodable values (block), and later loss of an admitted wallet key
-(block). The original source-level seed/DB launch fixtures remain unchanged.
+`mmkv-launch-state.json` contains eight seed+DB settings cases under the product
+policy dated 2026-10-20: missing, empty, cleared and damaged MMKV, invalid wallet
+bytes, missing initialization flag, initialized wallet and explicit false. Both
+native importer suites assert the same Home/onboarding decisions and notice
+flags. Missing/unreadable settings use Home; only explicit false resumes
+onboarding. The seed-safety fixture remains unchanged.
+
+All 196 `rn-store-compatibility.json` cases now include `expected.imported`:
+valid non-recurring keys import byte-for-byte; invalid keys drop independently;
+recurring never imports, even when its codec accepts the envelope. Codec/write
+preservation checks still cover native-created schedules. Snapshot-only imports
+are checked with real JNI/MMKV on Android and real MMKV on iOS; native writes
+never touch the RN pair.
+
+Damaged native settings use defaults and the settings notice without reimporting
+RN. Notices persist through background import and are consumed once on visible
+Home. See both UpgradeTests READMEs for native file paths, atomic-write ordering,
+empty recurring server sync, deletion and cleanup behavior. Earlier fixture
+notes about blocking malformed RN stores apply only to direct codec operations,
+not to the best-effort importer.

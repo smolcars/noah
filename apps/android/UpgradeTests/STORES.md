@@ -1,5 +1,75 @@
 # RN persistence inventory (c6283d16)
 
+## Settings upgrade policy — 2026-10-20
+
+This policy supersedes every earlier MMKV recovery/retirement/Continue rule below.
+Wallet identity comes from the validated stored seed and wallet database. Seed + DB
+opens Home even if RN settings are missing, empty, cleared, damaged or unreadable.
+Only a readable `wallet-storage` explicitly containing `isInitialized=false` resumes
+onboarding with the existing seed. `launch-seed-safety.json` still fails closed for
+corrupt/conflicting seeds; settings never change those rules.
+
+Settings import runs on the first settings access, including a background push
+launch, under the platform's process-wide storage lock. It first creates the
+immutable `MMKVUpgradeBackup` snapshot if absent, then copies that snapshot to
+scratch. `MMKVIntegrity` must verify the scratch data/CRC pair before MMKV maps it.
+Only scratch is opened; live RN files and the immutable pair are never mapped or
+modified. Verification/read failure imports nothing. A bad known envelope drops
+only that key. Every other RN key retains its exact original string; transaction
+v0 migration and profile fallbacks remain read-time behavior. Esplora is validated
+and retained, with its existing native consumer status unchanged.
+
+`recurring-payment-storage` is never imported. A nonempty or unreadable recurring
+record conservatively records the recurring notice and creates only an empty
+native schedule envelope with `serverSyncPending=true`. The existing executor,
+ledger, automation authority and journal continue to govern native-created rules.
+After wallet admission the normal recurring server-sync path sends
+`POST /v0/recurring_payments/sync` with `{"schedules":[]}`. The endpoint calls
+`RecurringPaymentRepository.replace_for_pubkey`: it deletes missing IDs, so an
+empty list removes every old server wake entry. Existing server test
+`test_sync_recurring_payments_replaces_schedule_set` explicitly covers clearing.
+Native regression tests assert no payment, an empty payload after admission,
+and pending-state retention/retry on sync failure. No server code changed.
+
+Home shows each applicable message once, without blocking or acknowledgement:
+
+- Some settings couldn't be carried over from the previous version. Please check Settings, including security, currency and Esplora server.
+- Recurring payments need to be set up again after this update.
+
+Pending notice flags live in the native file and are consumed only by visible
+foreground Home. Background import retains them. Missing RN files cannot prove
+lost preferences and use defaults without the loss notice; an existing empty or
+cleared MMKV snapshot does record that notice.
+
+The native store's existence is the import-complete marker. A damaged native
+file uses defaults plus the settings notice, atomically commits that reset, and
+never reimports RN; the wallet itself is unaffected. Pending temporary files are
+never loaded as a fallback. Wallet deletion resets the native file with a durable
+cleanup-pending flag, deletes the RN directory and snapshot, then clears the flag.
+Interrupted cleanup retries on the next settings access. The empty native file
+remains, so re-onboarding can never import the old RN wallet again.
+
+Background opens require the seed/DB launch decision Home, no pending restore or
+deletion, no explicit unfinished onboarding, and no suspension. They read seeds
+only; Android's foreground migration remains after verified SDK open. Fresh
+installs create a native file and an absent-source snapshot, never live MMKV files.
+Quarantine, support/settings-blocked states, Continue/model rebuilding, automatic
+restoration, retirement, error handlers and lazy-reload guards have been removed.
+
+The native format is a version-1 UTF-8 JSON envelope with `payload` (a JSON string)
+and `sha256` (SHA-256 of that string). Payload contains `values` (string-to-string
+map of RN envelopes/other small native values), `settingsNoticePending`,
+`recurringNoticePending`, and `cleanupPending`. Strict decoding checks version,
+field sets, string/boolean types, UTF-8 and digest. Writes use same-directory temp
+→ file fsync → atomic rename → parent-directory fsync. Each filesystem stage and
+sync operation is injectable for interruption tests. SettingsStorage's public
+read/write APIs remain; durable failures still stop financial automation.
+
+Paths: iOS `Documents/mmkv.native-settings.json`; Android
+`noBackupFilesDir/settings.native.json`. Snapshot paths remain
+`Documents/mmkv.native-backup` / `noBackupFilesDir/mmkv.native-backup`.
+
+
 All eight stores use `client/src/lib/mmkv.ts` instance `noah-wallet-storage` in
 `files/mmkv`, with Zustand `persist` + `createJSONStorage` envelopes
 `{"state":{...},"version":N}`. Functions are omitted by JSON serialization.
@@ -26,10 +96,9 @@ RN recurring rows persist `id`, `label`, `destination`, `destinationType`, `amou
 unknown to RN; unsupported numeric rows stay preserved and unsendable.
 
 `RNStoreCodec` rejects malformed envelopes, future/incorrectly typed versions and
-incorrect known field types. Existing native consumers are checked before opening
-the wallet. Android keeps the raw full envelope and merges typed writes through
-`SettingsStorage.set`, preserving unknown root/state fields. A bad existing value
-cannot be replaced with defaults. Auto-board reads apply RN's v0 attempted reset;
+incorrect known field types. During import, invalid keys are dropped independently.
+Android keeps valid raw full envelopes in its native store and merges typed writes through
+`SettingsStorage.set`, preserving unknown root/state fields. The importer uses defaults for a bad RN value; direct codec operations still reject invalid writes. Auto-board reads apply RN's v0 attempted reset;
 a corrupt envelope disables the prompt. Esplora is deliberately not wired to the
 runtime until its screen is implemented. The codec does not rewrite RN data on read.
 
