@@ -74,6 +74,25 @@ struct MMKVRecoveryTests {
         #expect(store.string(forKey: PersistedWalletState.key) == nil)
     }
 
+    @Test func continueRebuildsModelWithBiometricsAndBalanceHidingBeforeLaunch() async throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        let store = try SettingsStorage(rootPath: root.path)
+        var wallet = try #require(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key))
+        wallet.isBiometricsEnabled = true
+        try store.setPersistedState(wallet, key: PersistedWalletState.key, version: 0)
+        try store.setPersistedState(PersistedPrivacyState(isHomeBalanceHidden: true), key: PersistedPrivacyState.key, version: 0)
+        #expect(MMKVQuarantine(root: root, store: Self.id).recordRecovery())
+        let blocked = AppModel(settings: store, readLaunchState: { .onboarding }, settleRestore: { .nothingPending })
+        let oldLock = WalletLock(settings: store)
+        #expect(!blocked.isBalanceHidden && !oldLock.policy.enabled)
+        await blocked.start()
+        #expect(blocked.phase == .blocked(.settingsRecovered))
+        let fresh = try #require(blocked.acknowledgeRecoveredSettings())
+        let freshLock = WalletLock(settings: store)
+        #expect(fresh !== blocked && fresh.phase == .launching && fresh.summary == nil)
+        #expect(fresh.isBalanceHidden && freshLock.policy.enabled && freshLock.policy.locked)
+    }
+
     @Test(arguments: ["crc", "length", "truncate"])
     func recoversCorruptRNFilesWithoutDiscarding(mode: String) throws {
         let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }

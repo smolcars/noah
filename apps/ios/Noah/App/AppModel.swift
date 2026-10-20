@@ -53,7 +53,7 @@ final class AppModel {
     let pushPermission = PushPermissionModel()
     let server: ServerRegistration
     private let log = AppLog("app")
-    private let settings = SettingsStorage.shared
+    private let settings: SettingsStorage
     private let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
     @ObservationIgnored private let creator: WalletCreator
     @ObservationIgnored private var recurringForeground: RecurringForegroundRunner?
@@ -64,11 +64,12 @@ final class AppModel {
     @ObservationIgnored private var backupTriggers: (id: UUID, task: Task<Void, Never>)?
     @ObservationIgnored private let lifecycle = WalletLifecycle(dependencies: .live())
 
-    init(readLaunchState: @escaping () -> LaunchState = { .current() },
+    init(settings: SettingsStorage = .shared, readLaunchState: @escaping () -> LaunchState = { .current() },
          settleRestore: @escaping @MainActor () async throws -> RestoreTransaction.Recovery = { try await AppServices.shared.restoreRecovery.settle() }) {
+        self.settings = settings
         self.readLaunchState = readLaunchState
         self.settleRestore = settleRestore
-        server = ServerRegistration(variant: .current, client: AppServices.shared.client)
+        server = ServerRegistration(variant: .current, settings: settings, client: AppServices.shared.client)
         creator = WalletCreator(
             dependencies: .live(session: session, variant: variant, appVersion: appVersion))
         isBalanceHidden = settings.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key)?
@@ -387,14 +388,14 @@ final class AppModel {
         backupTriggers = (id, task)
     }
 
-    func acknowledgeRecoveredSettings() async {
+    /// The root replaces this quarantined model and its entire view hierarchy before launch.
+    func acknowledgeRecoveredSettings() -> AppModel? {
         guard phase == .blocked(.settingsRecovered), !starting,
-              UIApplication.shared.applicationState == .active else { return }
+              UIApplication.shared.applicationState == .active else { return nil }
         do {
             try settings.acknowledgeRecovery()
-            started = false; phase = .launching
-            await start()
-        } catch { phase = .blocked(.incompatibleStorage) }
+            return AppModel(settings: settings, readLaunchState: readLaunchState, settleRestore: settleRestore)
+        } catch { phase = .blocked(.incompatibleStorage); return nil }
     }
 
     /// Unavailable is retryable; it must never become an absent seed/default wallet.

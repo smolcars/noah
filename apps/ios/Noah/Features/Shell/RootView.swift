@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Picks onboarding, the wallet tabs or a blocking message from `AppModel`.
 struct RootView: View {
+    var replaceModel: (AppModel) -> Void = { _ in }
     @Environment(AppModel.self) private var model
     @State private var lock = WalletLock()
     @State private var showingDelete = false
@@ -15,7 +16,9 @@ struct RootView: View {
             case .onboarding:
                 OnboardingFlow()
             case .wallet:
-                if model.pushPermission.blocksWallet(initialized: true) {
+                if lock.policy.locked {
+                    WalletLockView()
+                } else if model.pushPermission.blocksWallet(initialized: true) {
                     PushNotificationsRequiredView()
                 } else {
                     WalletTabs()
@@ -40,7 +43,7 @@ struct RootView: View {
             if model.phase == .blocked(.settingsRecovered) {
                 Button("Continue") {
                     guard scenePhase == .active else { return }
-                    Task { await model.acknowledgeRecoveredSettings() }
+                    if let fresh = model.acknowledgeRecoveredSettings() { replaceModel(fresh) }
                 }
                 .padding()
             }

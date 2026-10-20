@@ -31,8 +31,8 @@ final class WalletLock {
     private(set) var error: String?
     private var context: LAContext?
 
-    init() {
-        policy = .init(enabled: SettingsStorage.shared.persistedState(
+    init(settings: SettingsStorage = .shared) {
+        policy = .init(enabled: settings.persistedState(
             PersistedWalletState.self, key: PersistedWalletState.key)?.isBiometricsEnabled == true)
     }
 

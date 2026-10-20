@@ -12,10 +12,10 @@ struct NoahApp: App {
             if ProcessInfo.processInfo.arguments.contains("-btc-map-preview") {
                 NavigationStack { BtcMapView() }
             } else {
-                RootView().environment(model)
+                RootView(replaceModel: { model = $0 }).id(ObjectIdentifier(model)).environment(model)
             }
             #else
-            RootView().environment(model)
+            RootView(replaceModel: { model = $0 }).id(ObjectIdentifier(model)).environment(model)
             #endif
         }
     }
