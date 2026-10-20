@@ -20,6 +20,18 @@ See [the complete storage policy](STORES.md#settings-upgrade-policy--2026-10-20)
 for file format, sync ordering, notices, server verification and corruption rules.
 
 
+Current funded acceptance uses `run.sh` from its entry point with both
+`INSTALL_WHILE_RUNNING=0` and `=1` on a newly created, root-capable Google APIs
+AVD. The runner checks the first Home's recurring reset notice, absence after a
+process restart, an empty native recurring list, unchanged live RN data/CRC files
+through native launch, the same DB inode, all movement rows, balances and saved
+settings. Language is set to Swedish through RN before replacement; biometrics
+must retain the RN flag. Esplora is compared if present (regtest uses Core).
+A successful empty recurring sync must appear in the existing server log for
+this wallet's public login key after replacement. The RN-runtime Expo harness
+still obtains real FCM/Expo tokens because RN's JS emulator guard skips automatic
+registration. No seed, auth token or push token enters the result document.
+
 **Partial pass; live push acceptance is blocked by the existing server on port
 3100 becoming unavailable.** Wallet and Expo-token continuity passed on the real
 phone. This run does not establish successful background callbacks, killed-process
@@ -717,3 +729,245 @@ server sync, push delivery or physical biometric prompt was repeated. Server
 clearing semantics were source-verified (including its existing empty-set test);
 native empty-payload/admission/retry behavior was executed in tests. The updated
 prepared upgrade assertions compile but remain opt-in for that acceptance run.
+
+
+## Funded acceptance rerun — 2026-10-20, base 0d1d724e
+
+Branch `t3/rerun-native-upgrade-tests`, initially clean at **0d1d724e**. Only
+upgrade tests and evidence change; client/server production code is unchanged.
+The RN regtest release was rebuilt from this worktree with embedded JavaScript,
+inside Nix, `CI_DEBUG_SIGNING=true`, `SENTRY_DISABLE_AUTO_UPLOAD=true`,
+`CMAKE_BUILD_PARALLEL_LEVEL=2`, `assembleRegtestRelease`,
+`-PreactNativeArchitectures=arm64-v8a --max-workers=2 --no-parallel`, Kotlin
+compilation in-process and a 3 GiB Gradle heap. Build passed in **9m39s**.
+Native regtest and instrumentation APK builds also passed, always with two
+Gradle workers. RN/native certificate SHA-256 matched:
+`fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c`.
+
+- RN APK SHA-256:
+  `fda9e9ce82dfe891e225712c21f9618e4a217a37254bb1750c30a5b6281c9c44`.
+- Native APK SHA-256:
+  `ab76cb9827ef2e536ff5e0153342937bf9470164f21d2cca64243749345f7097`.
+
+The only AVD used is the newly created **NoahUpgrade1020_ac03**, Google APIs
+Android 15 / API 35 / ARM64, console **5620**, gRPC **8620**. Initial emulator **37.2.12** failed as detailed
+below; final acceptance uses private emulator **36.6.11**.
+Its name is verified through `adb -s emulator-5620 emu avd name` before actions.
+No reserved emulator, physical Pixel 6, physical iPhone, or other agent's AVD is
+used. The current host's emulator binary and system image are in the host SDK;
+Nix supplies build/platform tools. Set
+`EMULATOR_PROTO_DIR="$HOME/Library/Android/sdk/emulator/lib"` for the runner's
+authenticated per-emulator clipboard helper, because Nix's SDK lacks those
+emulator protocol files. No discovery token is printed.
+
+### Host/setup failures before final acceptance
+
+These attempts are not counted as native-upgrade passes. The first attempt
+stopped before funding because the emulator protocol directory was missing.
+A subsequent Maestro launch failed while RN remained alive; a concurrent
+agent-device snapshot helper recorded a UIAutomation connection exception.
+A launch-only reproduction later passed; the exact launch failure cause was
+not established. No manual UI inspection runs concurrently with final Maestro
+flows.
+
+Four emulator exits were reproduced before native installation, including a
+no-payment 15-iteration Home/Send/keypad stress flow. Host logs report QEMU main
+and CPU loopers unresponsive for roughly **15,000 ms**, then ADB reports
+`device 'emulator-5620' not found` / `device offline`. The macOS crash report for
+PID **26197** identifies **SIGSEGV** in
+`android::crashreport::CrashReporter::GenerateDumpAndDie`, called from
+`HangDetector::LooperWatcher::process`; this is an emulator hang termination,
+not a wallet exception. Default graphics and SwiftShader both reproduced it;
+removing the iOS build load and explicitly disabling Vulkan did not prevent the
+streamed stress failure. Interrupted RN wallet **d5d72ecc** was read back as
+**one movement / 100,000 spendable sats**, proving its send was not submitted.
+
+The final test-only send flow types Bark's address and verifies the recipient
+field, avoiding shared-host pasteboard interference discovered in the iOS run.
+The final native assertions compare an independent import of the actual RN bytes,
+including biometric/Esplora settings; language is set to Swedish through RN.
+Home's recurring notice must appear once across a process restart, native
+schedules must be empty, the server must accept an empty sync and have zero
+wake rows, and every live RN data/CRC file must remain byte-identical. Final
+file capture force-stops native after foreground assertions to keep DB/WAL copies
+consistent. No seed or token is exported; Expo values in evidence are hashes.
+
+The identical no-payment stress flow passed **all 15 loops** with the T3 Device
+panel stream closed. A subsequent full funded run nevertheless reproduced the
+same QEMU hang before native installation, so the stream is **not established as
+the sole cause**. The owned device was opened through T3 before diagnosis; final
+attempts leave the stream closed and use device-scoped Maestro assertions/logs.
+The 37.2.12 command was `emulator -avd NoahUpgrade1020_ac03 -port 5620
+-no-window -no-snapshot -grpc 8620 -grpc-use-token -dns-server 8.8.8.8
+-gpu swiftshader -feature -Vulkan -cores 2 -memory 2048`.
+
+Another entry-point attempt found no Send tab immediately after cold launch;
+a later filtered UI hierarchy showed the normal Home/Send tabs and no blocking
+dialog. RN's Android startup loads icons/wallet state before navigation becomes
+available. The harness now waits for navigation and positive available balance.
+Standalone client post-onboarding flows get the same readiness wait in private
+copies, leaving `client/` unchanged. Own locale/onchain/writer flows also wait for
+navigation; the live writer deadline allows 120 seconds for cold startup. A
+direct-entry send probe then passed its recipient/review/success checks.
+
+To isolate emulator 37.2.12, downloaded Google's archived **36.6.11** Apple
+Silicon binary into the private test directory, without replacing the shared
+SDK. The [official emulator archive](https://developer.android.com/studio/emulator_archive)
+provided `emulator-darwin_aarch64-15507667.zip`; SHA-256 was checked against
+`aebcd4dde29a4921d47e5e79b8c1ffece69a70f5b280d8dc7033ebaffa737072`
+before extraction. It uses the same owned AVD and API 35 image, with no container
+or production-source change.
+
+The first 36.6.11 entry-point attempt reached confirmed funding without an
+emulator exit but failed RN's `125,000.*` assertion before native installation.
+A filtered UI dump showed balance still hidden after the completed Show tap;
+read-only fingerprint **71b25b69** had exactly receive 100,000 / send 5,000 and
+95,000 spendable, and UI activity showed +30,000 onchain confirmed at block 667.
+A separate probe successfully showed **125,000 total / 30,000 confirmed**, then
+restored hiding. The exact missed-tap cause was not established. The final harness waits for
+animation after boarding-prompt dismissal, retries the Show tap with a required
+Hide-label assertion, and requires the final hidden state. No wallet code changed.
+The failed preparation is not a native acceptance pass; the full script was
+restarted from its entry point with a new RN wallet.
+
+The next fresh 36.6.11 attempt timed out waiting 60 seconds for RN's boarding
+confirmation. After failure, a guarded hierarchy showed the real Board-to-Ark
+dialog and both visible action buttons; activity already showed confirmed
+30,000 onchain at block 672. Read-only fingerprint **21c7eb79** again retained
+exactly two Ark movements / 95,000 spendable. This was delayed RN preparation,
+not native upgrade behavior. The final bounded boarding wait is 180 seconds to
+cover wallet sync plus fee-plan loading on the shared host. No native APK had
+been installed in this failed attempt; the full entry point was restarted.
+
+The next uninterrupted stopped entry-point invocation completed every RN/native
+wallet, settings, notice, launcher and Expo assertion. Fingerprint **1697ba78**,
+movements **1,2**, **95,000 Ark + 30,000 confirmed onchain**, settings
+**sats/EUR/sv/hidden=true/biometrics=false/auto-boarding=false**, native recurring
+count **0**. Instrumentation: **OK (1 test), 10.216 seconds**. The live MMKV
+manifest remained `402e80c045e161c820f8f16ab6d3e865cc387f17b3d5fa025478fd22ecbe09a3`,
+and the immutable snapshot pair matched. Expo ID/token SHA-256 remained
+`7f8bc1235f58e1d6277f33bd6a75c6819365dae1cbc3ec24a085b841c03f63a3` /
+`9597a29b4e2e52ef5e342d395dc424fe745578b93fe220702e1aa1c11372073c`.
+
+That invocation still exited nonzero in the final test-only server helper:
+Python 3.9 lacks `tomllib`, and native Ktor sends `User-Agent: ktor-client`
+rather than OkHttp's default. Removed that unnecessary TOML parsing and require
+Ktor's observed identity, distinct from RN's `okhttp/4.12.0`. Read-only verification
+then accepted request **6234a043-10d8-4ed0-844d-81fddb798802**, HTTP 200,
+empty schedules, public-key prefix **0375b01ba38b**, and found **0** wake rows.
+RN's earlier active-rule requests returned 400; its later paused empty sync is
+explicitly excluded by the native-identity check. This diagnostic is not counted
+as a passing final script. Both modes are rerun from the entry point below.
+
+### Stopped replacement — PASS, uninterrupted final entry-point run
+
+`FUNDED=1 INSTALL_WHILE_RUNNING=0`, **504 seconds**, exit **0**. Fresh RN
+wallet, with no resume or manual UI repair.
+Native instrumentation: **OK (1 test), 9.549 seconds**. Native build **100**
+replaced rebuilt RN **38**, same `com.noahwallet.regtest` and certificate.
+Both use bark-bolt/Ark through their respective existing wrappers; native FFI
+is **0.5.0**, RN Nitro Ark **0.0.144**.
+
+- Wallet fingerprint **f687c2c3**, movements **1,2**: receive +100,000 and send
+  −5,000, successful, identical IDs/status/subsystem/kind/intended/effective
+  amounts and fees. Same DB inode. Native SDK fingerprint validation and
+  foreign/invalid-seed rejection before writes pass; legacy secret files remain
+  untouched. No upgrade-created movement or payment.
+- **95,000 spendable/offchain + 30,000 confirmed/total onchain = 125,000 total
+  sats**, pending **0**, identical before/after native launch.
+- Settings **sats / EUR / Swedish (`sv`) / hidden balance true / biometrics
+  false / auto-boarding false**, display name **Android upgrade**. Exact profile,
+  privacy, transaction and Esplora records match an independent private RN import;
+  mailbox/email-prompt flags and native import marker pass. Esplora is unset.
+- Direct Home admission. The RN recurring rule is absent: **0 native schedules**.
+  The recurring reset notice appears once, disappears after a process restart,
+  and its native pending flag is consumed. No settings-loss notice appears.
+- Every live RN MMKV file, including CRC, remains byte-identical across stopped
+  installation and after all native assertions. Manifest SHA-256:
+  `53a25fb4e2b1799548fb5272498ae1fecf4aa2189d7e63bc444fc133828f773e`.
+  The immutable native snapshot's data/CRC pair matches the same baseline.
+- Native `ktor-client` empty sync accepted, HTTP **200**, request
+  **d00a7250-c459-4a02-8500-245012890f08**, login-key prefix **0237f7044ccb**.
+  Read-only database query: **0** recurring wake rows. RN's HTTP identity is
+  excluded, so its earlier empty paused-rule sync cannot satisfy this assertion.
+- Real RN-runtime Expo installation ID/token preserved. SHA-256:
+  `6539bc5d8b57df49c854effb2603814a60ffeecf9a48891d0519a00344d8de97` /
+  `91999acc715d7c2379aba87716057ce55a0be3fc3c05a82abd3697d1081de88e`.
+  Native FCM/Expo registration succeeds with the exact RN token. Notification
+  permission, placed widget IDs/provider/host/metadata (**1 widget**) and pinned
+  MainActivity shortcut survive `adb install -r`.
+
+Final commands use the prebuilt RN APK and the private emulator's protocol files:
+
+```sh
+FUNDED=1 INSTALL_WHILE_RUNNING=0 \
+  EMULATOR_PROTO_DIR=<private-tmp>/emulator36-sdk/emulator/lib \
+  UPGRADE_EVIDENCE=<private-tmp>/android-stopped.json \
+  apps/android/UpgradeTests/run.sh emulator-5620 <private-tmp>/rn-regtest.apk
+```
+
+The separate running/writing invocation uses `INSTALL_WHILE_RUNNING=1` and a
+fresh RN installation on the same owned AVD. No uninstall occurs between RN and
+native within either scenario.
+
+### Running/writing replacement — PASS, uninterrupted final entry-point run
+
+`FUNDED=1 INSTALL_WHILE_RUNNING=1`, **507 seconds**, exit **0**, fresh RN wallet
+and the committed final runner from its entry point. The runner observed a real
+RN data-file hash change, a completed EUR selection and a still-live Maestro
+writer, then called `adb install -r` without first stopping RN. It stopped the
+writer only after replacement and captured the final RN generation before the
+first native launch. Instrumentation: **OK (1 test), 8.081 seconds**.
+
+Fingerprint **f0bd46a5**, movements **1,2**, **95,000 spendable/offchain + 30,000
+confirmed/total onchain = 125,000 total sats**, pending **0**. Every wallet,
+DB-inode/full-movement/no-payment, settings, once-only notice, native-empty-rule,
+real Expo registration and launcher assertion above passes in this mode too.
+Native Home opens directly; the settings-loss notice is absent.
+
+The live RN two-file manifest changed during RN writing from
+`ec95deee965a83012149fb9420191943c89e5b8ebd26a2e5164548e55f0d9830`
+to `96bb60144ca302c732f1a2526d332445a41c6b92bdc7f7e0948f9600eaf2cb63`.
+The latter remained byte-identical after all native checks. The immutable
+snapshot's data/CRC pair matches. Native empty sync HTTP **200**, request
+**9527fb87-8300-49c7-80b1-8b84f4cc83f8**, login-key prefix **030e76563f75**;
+read-only wake-row count **0**. Expo ID/token SHA-256 preserved:
+`573c4a8a866e76bda0aeef1ab1fafb8cb75d4aa4378bf4e4b9b577668a6989b3` /
+`000934024a4b146580d9ba21db360fe0183d7f9378ac476cd5e1f66ab92a6370`.
+One placed widget and the pinned MainActivity shortcut survive.
+
+### Verification, limits and cleanup
+
+Both Android extended funded scripts passed uninterrupted from the entry point;
+the earlier resumed-procedure limitation in TODO 0.5 is resolved. Both iOS modes
+also passed freshly; see [the iOS report](../../ios/UpgradeTests/README.md#funded-acceptance-rerun--2026-10-20-base-0d1d724e).
+No production upgrade defect was observed. The failures above are retained as
+harness/environment evidence rather than counted as passes.
+
+Repository hooks run normally: client lint, React Compiler lint, **148 unit tests
+/ 0 failures**, TypeScript, and `cargo fmt --check` pass. Both runner shells pass
+`bash -n`; MMKV verifier self-checks accept identical files and reject a changed
+CRC or mismatched snapshot. A synthetic server-log check excludes RN/foreign-wallet
+requests and accepts only the matching native request. No hook is bypassed.
+
+Android's real RN-runtime FCM/Expo registration is exercised even though RN's JS
+emulator guard skips automatic registration. iOS simulator APNs/real Expo
+registration remains an explicit skip. Physical biometric authentication is not
+exercised; the persisted false flag is checked on both platforms. A non-null
+Esplora endpoint is not configured in this Core-backed regtest fixture; exact
+unset-state preservation is checked. Push delivery/background callbacks and the
+settings-corruption matrix are outside this funded rerun, covered separately by
+the historical device/storage reports.
+
+Cleanup: checked exact AVD **NoahUpgrade1020_ac03**, console **5620**, and owned
+QEMU PID **40750** before `emu kill`. Verified the serial disappeared and the
+PID exited before deleting the AVD; verified both its `.ini` and `.avd` directory
+are absent. The owned iOS simulator was separately checked, shut down, deleted
+and verified absent. Removed owned RN/native build directories, Pods, private
+emulator/SDK/APKs, all iOS DerivedData and XCResult bundles. Temporary dependencies
+and remaining private screenshots/logs/public evidence are removed after the
+final documentation commit hooks. No owned build/test/writer process remains.
+Shared devices/SDKs and service containers are unchanged; the existing server,
+Postgres and Bitcoin Core retain start times preceding this task. Mining and
+funding used the allowed wrappers; no stack lifecycle recipe ran. `client/`,
+`server/`, `.env` files and production native code have no committed changes.

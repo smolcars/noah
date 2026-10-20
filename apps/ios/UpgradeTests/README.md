@@ -26,7 +26,7 @@ restore settings first and surfaces the storage failure through Settings. See
 [restore recovery regression evidence](../RestoreTests/README.md#restore-recovery-review-round-3).
 
 
-Base: `feat/native-rewrite` at `c6283d16`. Run from the repository root in the
+Base for the current rerun: `feat/native-rewrite` at `0d1d724e`. Run from the repository root in the
 Nix development shell, with XcodeGen on PATH:
 
 ```sh
@@ -47,15 +47,16 @@ baseline. Do not use this mode after native has been installed.
 
 `FUNDED=1` uses RN's onboarding/send subflows, receives 100,000 Ark sats and
 sends 5,000 back, creates a recurring rule through RN's editor with its first
-payment tomorrow, changes display unit/currency/name/auto-board/privacy/mailbox/debug/language through
-RN UI, then receives **10,000 onchain sats** from Bitcoin Core and mines **one**
+payment tomorrow, changes display unit/currency/name/auto-board/privacy/debug/language through
+RN UI, then receives **30,000 onchain sats** from Bitcoin Core and mines **one**
 confirming block. RN must show the onchain amount and Confirmed section before
-native installation. The native store must contain no RN recurring schedules, record the one-time
+native installation. RN's explicit “No, turn off” boarding prompt disables auto-boarding;
+mailbox is compared with its actual RN value. The native store must contain no RN recurring schedules, record the one-time
 notice, and the recurring screen must show its empty state. Other settings are
 compared against a private import of RN's actual MMKV bytes. The native wallet must retain the fingerprint, every movement's
 ID/status/kind/amount/fee, Ark balance and confirmed/total onchain balance.
-Settings comparisons additionally cover unchanged biometric, suspension and
-backup flags. Debug and mailbox flags and the Swedish locale must be non-default.
+Settings comparisons additionally cover unchanged biometric, suspension, mailbox
+and backup flags. Debug mode and the Swedish locale must be non-default.
 
 Bark needs at least 100,000 spendable sats. If necessary, obtain a fresh address
 with `just bark onchain address`, fund it using `just bcli sendtoaddress` (BTC
@@ -70,6 +71,28 @@ it never exports the phrase, keys, signatures, auth JWT or Expo token. It copies
 screen at `UPGRADE_SCREENSHOT` (default `/private/tmp/noah-upgrade.png`). Avoid
 capturing the onboarding recovery-phrase screen. Delete transient test artifacts
 after recording the non-secret evidence here.
+
+## Running the current acceptance gate
+
+Run both `INSTALL_WHILE_RUNNING=0 FUNDED=1` and
+`INSTALL_WHILE_RUNNING=1 FUNDED=1` from `run.sh` on an owned simulator. The
+running case must observe an RN MMKV write and keep the writer alive until
+`simctl install` replaces RN. After replacement, before native launch, the runner
+records hashes of **every** live MMKV file (including CRC metadata). It requires
+those exact bytes after Home, restart, SDK open and recurring-screen inspection.
+The stopped case additionally requires unchanged bytes across installation.
+The DB inode and complete movement rows must survive; SDK schema migrations can
+change database bytes, so a whole-database byte comparison is not the contract.
+
+The first native Home must show the recurring reset notice; a process restart
+must not show it again. The native recurring screen must be empty. The runner
+reads the existing `scripts-noah-server-1` log and requires a successful sync
+with `recurring_schedule_count:0` for this wallet's derived public login key,
+received after replacement. No server environment or token is exported.
+Esplora is compared if present; regtest uses Bitcoin Core and does not activate
+an Esplora endpoint. The biometric flag is compared; simulator authentication
+hardware is not an acceptance result. On simulators RN skips APNs registration,
+so the real Expo-token test remains explicitly skipped.
 
 ## Seed and conflict gates
 
@@ -639,3 +662,115 @@ server sync, push delivery or physical biometric prompt was repeated. Server
 clearing semantics were source-verified (including its existing empty-set test);
 native empty-payload/admission/retry behavior was executed in tests. The updated
 prepared upgrade assertions compile but remain opt-in for that acceptance run.
+
+
+## Funded acceptance rerun — 2026-10-20, base 0d1d724e
+
+Only upgrade tests and evidence change in this branch. Both RN release builds
+were rebuilt from this worktree; no cached RN iOS app was available. Installed
+RN build **38** → native **100**, same `com.noahwallet.regtest` sandbox. Owned
+simulator **NoahUpgrade1020-ac03**, iPhone 17 / iOS 27.0,
+**0930132A-5C1D-4D73-84C9-6876066F3136**; Xcode 27.1, arm64, two build jobs,
+private DerivedData. No protected simulator or physical device was used.
+
+RN build preparation used `bun install --frozen-lockfile`, `just ios-prebuild`,
+then `xcodebuild build -workspace ios/noah.xcworkspace -scheme Noah-Regtest
+-configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS
+Simulator' -derivedDataPath <private-tmp>/rn-ios-dd ARCHS=arm64
+ONLY_ACTIVE_ARCH=YES -jobs 2`, inside Nix, with `SENTRY_DISABLE_AUTO_UPLOAD=true`,
+`EXPO_PUBLIC_REGTEST_URL=127.0.0.1` and
+`EXPO_PUBLIC_REGTEST_SERVER_URL=http://127.0.0.1:3000`. Keep generated
+`Podfile.lock` matching `Pods/Manifest.lock` through the RN build; restore the
+tracked lockfile afterwards. The final checkout has no client/server changes.
+The RN JS bundle SHA-256 was
+`e259803855010a70f6610bcf0698a0b9dd198b41a290366819a20138397037b4`.
+
+### Stopped replacement — PASS, uninterrupted final entry-point run
+
+`FUNDED=1 INSTALL_WHILE_RUNNING=0`, **397 seconds** end to end. Native suite:
+**5 discovered / 4 passed / 1 physical Expo test skipped**, zero failures,
+**0.104 seconds** in Swift Testing. Fingerprint **13e2fd52**, movements **1,2**,
+**95,000 spendable/offchain + 30,000 confirmed/total onchain = 125,000 total
+sats**, zero pending. The full movement IDs/status/kind/intended/effective amounts
+and fees match RN; the DB inode is unchanged, and no upgrade payment occurred.
+
+Imported preferences: **sats, EUR, Swedish (`sv`), hidden balance, biometrics
+false, auto-boarding false**, display name **Upgrade safety**. Wallet suspension,
+debug, mailbox and backup flags match the private RN import. Esplora's raw
+record matches if present; this regtest fixture has no endpoint override.
+Home opened directly. The RN recurring rule is absent from native storage and
+its UI. The recurring reset notice appeared on the first native Home and was
+absent after a process restart; no settings-loss notice appeared.
+
+Both live RN MMKV files (data and CRC) were byte-identical before/after stopped
+installation and after native Home, restart, SDK tests and recurring UI. Live
+manifest SHA-256 stayed
+`e96c8524d81fbd3962f8656d3c827bef7d969f848fc6fb4c6d79349f2b8b58ef`.
+The immutable native snapshot's data/CRC pair also matches that baseline.
+The existing local server accepted `schedules:[]`, HTTP 200, request
+**be395887-fe6b-4f1a-9c0a-1207b509e62a**, login-key prefix **03a9a4d20793**;
+a read-only query then found **0** recurring wake rows for that key. The server
+check also requires native `Noah/100` HTTP identity, excluding RN requests.
+All three widget identities/groups match and the placed SpringBoard instance
+**6BF7981D-7E8B-47A9-88E9-A011B4389DFD** survived replacement.
+
+### Running/writing replacement — PASS, uninterrupted final entry-point run
+
+`FUNDED=1 INSTALL_WHILE_RUNNING=1`, **520 seconds** end to end. The runner
+observed an RN MMKV write and a completed EUR selection, verified its writer was
+still alive, and called `simctl install` without first stopping RN. Only after
+replacement did it stop the Maestro writer and capture RN's final generation.
+Native suite: **4 passed / 1 physical Expo skip / 0 failures**, **0.149 seconds**.
+
+Fingerprint **d31f31c0**, movements **1,2**, **95,000 Ark + 30,000 confirmed
+onchain = 125,000 total sats**, zero pending, same DB inode and complete movement
+rows. All settings, Home, no-payment, empty-recurring, once-only-notice and
+widget assertions passed exactly as in the stopped case above.
+
+RN's live manifest changed from
+`36f4586f4c06e08f6ed8e710083ab5df20c572d58c50c57e1534cd940c08c7f5`
+to `c79c3a222157fc8d4381706864caf797755b1f32eb34b3ce47ded99bdfd5e289`
+while RN was writing. The latter value remained identical after every native
+check, and the immutable snapshot's data/CRC pair matched. Server HTTP 200 empty
+sync request **2a152917-1f68-4127-938e-e41dcb48f3ff**, login-key prefix
+**0236593b9746**; read-only wake-row count **0**. The iOS simulator Expo limit is
+the same explicit skip as the stopped case.
+
+### Test setup corrections verified before the final run
+
+Earlier preparation attempts are not counted as complete acceptance passes.
+An old clipboard-driven send self-paid: fingerprint **ffe2f4ef** had receive
+100,000 / send 5,000 / receive 5,000, leaving 100,000 sats and three movements;
+Bark's address was different. The old onchain clipboard baseline also failed.
+The runner now decodes RN's displayed QR with a small Vision helper (emitting
+only Ark/onchain addresses), types Bark's destination and checks the recorded
+send destination. A direct-entry diagnostic sent the intended 5,000 to Bark;
+the fresh final run retained the intended two-movement baseline.
+
+RN's nested SwiftUI switches exposed duplicate accessibility nodes; completed
+AX taps/swipes did not reliably change their value. Auto-boarding is now disabled
+through RN's explicit boarding prompt after a 30,000-sat receive, as on Android.
+Mailbox retains its RN value and remains compared. The obsolete switch-tapping
+flow was removed. The native recurring flow now uses `home-settings-button` and
+Swedish labels. The DB inode check explicitly uses Darwin `/usr/bin/stat` under
+Nix. These are test-only changes. Preliminary wallet **2503679b** passed native
+SDK/settings/notice/server checks while selectors were corrected; the complete
+397-second result above was a fresh, uninterrupted run of the final procedure.
+
+Simulator limits: RN does not acquire APNs/Expo registration here, so the real
+installation-ID/token continuity test is explicitly skipped; no synthetic ID is
+used as evidence. Physical biometric authentication and a non-null Esplora
+override are not exercised. The persisted biometric flag and unset Esplora state
+are checked.
+
+Cleanup after both successful scenarios: confirmed the exact owned simulator name
+and UDID, shut it down through T3, verified **Shutdown**, deleted it and verified
+its absence. Removed owned iOS DerivedData (including both final XCResult
+bundles), the private RN app copy and the QR compiler cache. The original RN
+DerivedData had already been removed after retaining the app for both runs.
+The existing stack's service containers and all protected/shared devices were
+untouched. Android also passed both final entry-point runs (**504s stopped / 507s running
+and writing**); its owned emulator was checked, shut down and deleted. Temporary
+dependencies and remaining private evidence are removed after final commit hooks.
+Client checks passed (lint, React Compiler lint, 148 unit tests, TypeScript), as
+did Rust formatting. See [the Android results and cleanup](../../android/UpgradeTests/DEVICE.md#funded-acceptance-rerun--2026-10-20-base-0d1d724e).
