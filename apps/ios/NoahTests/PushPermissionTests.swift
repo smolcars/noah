@@ -29,6 +29,24 @@ struct PushPermissionTests {
         }
     }
 
+    @Test func matchesSharedPlatformPushGate() async throws {
+        struct PlatformInput: Decodable {
+            let initialized: Bool
+            let physical: Bool
+            let permission: PushPermissionModel.Status
+        }
+        let cases = try Fixtures.load("platform-gates", input: PlatformInput.self, expected: String?.self)
+        #expect(cases.count == 64)
+        for fixture in cases {
+            let input = fixture.input
+            let model = PushPermissionModel(dependencies: .init(
+                isPhysicalDevice: input.physical, status: { input.permission }, request: {}))
+            await model.refresh()
+            // Battery outcomes belong to Android; only a push outcome blocks iOS.
+            #expect(model.blocksWallet(initialized: input.initialized) == (fixture.expected == "push"), "\(fixture.name)")
+        }
+    }
+
     @Test func denialRetryAndSettingsReturn() async {
         var status = PushPermissionModel.Status.denied
         var requests = 0

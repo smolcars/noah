@@ -176,11 +176,14 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [ ] HomeScreen: fiat, recent 3 transactions, shortcuts, banners, facts — Android
 - [x] HomeScreen: recent 3 transactions, View all, transaction detail — iOS
 - [x] Banners: backup status/retry + 5-second success, automatic boarding success + 5-second expiry, pending rounds + detail/copy/explorer + 30-second active-only polling, persisted email dismissal/verification, update warning — iOS
-  - iOS deliberately observes successful automatic boarding receipts from the existing journal (no boarding changes); historical receipts do not replay. Backup/boarding snapshots follow coordinator/journal events, success banners use one-shot expiry timers, and idle Home has no presentation polling; background jobs pause round progression; completion revisions and wallet-change events resume queries even for jobs completed between UI updates. Existing native boarding review/receipt messages remain.
+  - iOS deliberately observes successful automatic boarding receipts from the existing journal (observational hook only; boarding behaviour unchanged); historical receipts do not replay. Backup/boarding snapshots follow coordinator/journal events, success banners use one-shot expiry timers, and idle Home has no presentation polling; background jobs pause round progression; completion revisions and wallet-change events resume queries even for jobs completed between UI updates. Existing native boarding review/receipt messages remain.
 - [ ] Banners: backup status, auto-boarding, pending round, email verification, update warning — Android
 - [x] App version check — iOS (`/v0/app_version`, current version once per process, no retry, failure allows use, Home warning + variant TestFlight link; no blocking update screen, as in RN)
 - [ ] App version check — Android
+- [x] Shared RN Home predicates/facts/symbols (`home-status.json`) and platform push gates (`platform-gates.json`), retaining unknown-round and iOS authorization cases — iOS
 - [x] iOS parity verification: 33 targeted passes; full NoahTests once, 537 total / 515 passed / 22 opt-in skipped / 0 failed (113 suites). Dedicated regtest simulator, 10 screenshots, no payments submitted; simulator/DerivedData/result bundles removed. Deliberate session-lifetime/scanner/presentation differences and device-only acceptance gaps: `apps/ios/ParityTests/README.md`.
+
+- [x] iOS M1 review round 1: completion/wallet events resume idle round queries; observable backup/journal status, one-shot 5 s expiry and 30 s active-round timers; shared Home/platform push fixtures match. 50 targeted passes; full NoahTests once, 553 total / 531 passed / 22 opt-in skipped / 0 failed (115 suites). Owned simulator/DerivedData/7 result bundles removed; `apps/ios/ParityTests/README.md`.
 
 - [x] Launch gating (including unfinished onboarding), Navigation 3 tabs, create/beta/secure mnemonic, emergency email and Lightning identity — Android
 - [x] Derive key 0 before fresh-wallet registration and persist `staticVtxoPubkey` — Android

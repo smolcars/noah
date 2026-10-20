@@ -4,43 +4,68 @@ import Testing
 
 @MainActor
 struct HomeParityTests {
-    struct BackupInput: Decodable {
-        let lastBackupStatus: PersistedBackupState.Status
-        let backupPending: Bool
-        let lastBackupAt: Double?
-        let now: Double
+    struct StatusInput: Decodable {
+        let operation: String
+        let status: String
+        let pending: Bool?
+        let at: Double?
+        let now: Double?
+        let final: Bool?
     }
-    struct RoundInput: Decodable { let status: String; let isFinal: Bool }
+    enum StatusExpected: Decodable, Equatable {
+        case banner(String?), round(Bool)
+        init(from decoder: Decoder) throws {
+            let value = try decoder.singleValueContainer()
+            if value.decodeNil() { self = .banner(nil) }
+            else if let active = try? value.decode(Bool.self) { self = .round(active) }
+            else { self = .banner(try value.decode(String.self)) }
+        }
+    }
+    struct StatusFixtures: Decodable {
+        let facts: [String]
+        let symbols: [String: String]
+        let cases: [Fixtures.File<StatusInput, StatusExpected>.Case]
+    }
 
-    @Test func backupMatchesRNFixtures() throws {
-        let cases = try Fixtures.load("home-backup", input: BackupInput.self, expected: String?.self)
-        #expect(cases.count == 25)
-        for fixture in cases {
-            var state = PersistedBackupState()
-            state.lastBackupStatus = fixture.input.lastBackupStatus
-            state.backupPending = fixture.input.backupPending
-            state.lastBackupAt = fixture.input.lastBackupAt
-            let banner = HomeBanner.backup(state, now: fixture.input.now, locale: Locale(identifier: "en"))
-            #expect(banner?.title == fixture.expected, "\(fixture.name)")
-            #expect((banner?.retry == true) == (state.lastBackupStatus == .failed))
+    @Test func statusMatchesSharedRNFixtures() throws {
+        let fixtures = try Fixtures.decode("home-status", as: StatusFixtures.self)
+        #expect(fixtures.cases.count == 43)
+        for fixture in fixtures.cases {
+            let input = fixture.input
+            switch input.operation {
+            case "backup":
+                var state = PersistedBackupState()
+                state.lastBackupStatus = try #require(.init(rawValue: input.status))
+                state.backupPending = try #require(input.pending)
+                state.lastBackupAt = input.at
+                let banner = HomeBanner.backup(state, now: try #require(input.now), locale: Locale(identifier: "en"))
+                #expect(.banner(banner?.title) == fixture.expected, "\(fixture.name)")
+                #expect((banner?.retry == true) == (state.lastBackupStatus == .failed))
+            case "round":
+                let round = HomeRound(roundID: 1, status: input.status, isFinal: try #require(input.final), isSuccess: false)
+                #expect(.round(round.active) == fixture.expected, "\(fixture.name)")
+            default: Issue.record("Unknown Home fixture operation: \(input.operation)")
+            }
         }
     }
 
-    @Test func activeRoundsMatchRNFixtures() throws {
-        let cases = try Fixtures.load("home-rounds", input: RoundInput.self, expected: Bool.self)
-        #expect(cases.count == 12)
+    @Test func unknownRoundStatusesRetainFinality() throws {
+        struct Input: Decodable { let status: String; let isFinal: Bool }
+        let cases = try Fixtures.load("home-rounds", input: Input.self, expected: Bool.self)
+            .filter { $0.input.status == "future_status" }
+        #expect(cases.count == 2)
         for fixture in cases {
             #expect(HomeRound(roundID: 1, status: fixture.input.status, isFinal: fixture.input.isFinal, isSuccess: false).active == fixture.expected)
         }
     }
 
-    @Test func factsAndHiddenFiatMatchRN() throws {
-        let facts = try Fixtures.load("home-facts", input: Int.self, expected: String.self)
-        #expect(facts.count == HomeFacts.values.count)
-        for fixture in facts { #expect(HomeFacts.values[fixture.input] == fixture.expected) }
-        let symbols = try Fixtures.load("home-hidden-fiat", input: String.self, expected: String.self)
-        #expect(symbols.count == FiatCurrency.supported.count)
-        for fixture in symbols { #expect(HomeModel.hiddenFiat(currency: fixture.input) == fixture.expected) }
+    @Test func factsAndHiddenFiatMatchSharedRNFixtures() throws {
+        let fixtures = try Fixtures.decode("home-status", as: StatusFixtures.self)
+        #expect(fixtures.facts.count == 24 && HomeFacts.values == fixtures.facts)
+        #expect(fixtures.symbols.count == FiatCurrency.supported.count)
+        for (currency, symbol) in fixtures.symbols {
+            #expect(HomeModel.hiddenFiat(currency: currency) == "\(symbol) ••••")
+        }
     }
 
     @Test func pricesCacheForFiveMinutesAndSwitchCurrency() async {
