@@ -225,7 +225,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Starting/progressing exits — iOS RN parity: explicit start review explains automatic background broadcasts/fee bumps and onchain fees; manual Progress Exits review, cancel until final broadcast, claim reviews; optional manual-daemon policy is P2 FFI 17
 - [x] Suspended wallet gates — iOS Settings M6 rows remain navigable like RN; M6 screen actions/queries, Home refresh, boarding minimum/address queries and Auto-Board perform no wallet operations
 - [ ] Durable operation reconciliation after an ambiguous M6 submission — FFI 19; iOS preserves the attempt and blocks resubmission
-- [ ] Full live exit broadcast/claim/cancel lifecycle — iOS (estimates only verified; see `apps/ios/ExitTests/README.md`)
+- [x] Live exit start → automatic daemon broadcast/CPFP → 144-block timelock → reviewed manual progress → claim/confirmation — iOS; manual boarding/MAX actual fees and suspended UI verified (see `apps/ios/ExitTests/README.md`)
+- [ ] Live exit cancellation before final broadcast — iOS (fixture coverage passes; daemon progressed the acceptance exit before cancellation)
 - [ ] BoardArkScreen, auto-boarding, VTXOs/details/refresh, all exit screens — Android
 
 ## M7 — Recurring payments
