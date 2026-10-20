@@ -140,6 +140,7 @@ final class SettingsStorage: @unchecked Sendable {
         try backup?.markReset()
         mmkv.clearAll()
         mmkv.sync()
+        try backup?.deleteSnapshot()
     }
 
     /// Reads a zustand-persisted store. Returns `nil` when the key is absent

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Immutable pre-native bytes. The directory itself is the native-only first-open marker.
+/// Immutable pre-native bytes; the separate retirement record governs automatic restoration.
 struct MMKVUpgradeBackup {
     let root: URL
     let instanceID: String
@@ -37,6 +37,7 @@ struct MMKVUpgradeBackup {
             let staging = URL(fileURLWithPath: directory.path + ".pending", isDirectory: true)
             if fm.fileExists(atPath: staging.path) { try fm.removeItem(at: staging) }
             try fm.createDirectory(at: staging, withIntermediateDirectories: true)
+            try excludeFromBackup(staging)
             let present = names.map { fm.fileExists(atPath: root.appending(path: $0).path) }
             guard present[0] == present[1] else { throw SettingsStorage.OpenError() }
             var size: UInt32 = 0
@@ -59,6 +60,7 @@ struct MMKVUpgradeBackup {
             try fm.moveItem(at: staging, to: directory)
             try RestoreTransaction.fullSync(directory.deletingLastPathComponent())
         }
+        try excludeFromBackup(directory)
         _ = try manifest()
         try RestoreTransaction.fullSync(directory)
         try RestoreTransaction.fullSync(directory.deletingLastPathComponent())
@@ -67,7 +69,7 @@ struct MMKVUpgradeBackup {
     }
 
     var hasContent: Bool {
-        get throws { try manifest().actualSize > 4 && !exists("reset") }
+        get throws { try retiredKeys == nil && manifest().actualSize > 4 && !exists("reset") }
     }
 
     var restored: Bool { exists("restored") }
@@ -87,7 +89,23 @@ struct MMKVUpgradeBackup {
     }
 
     /// A deliberate wallet deletion must never resurrect the old settings.
-    func markReset() throws { try retire(keys: []); try mark("reset") }
+    func markReset() throws { try retire(keys: []) }
+
+    /// Called only after local wallet deletion has cleared and synced live settings.
+    func deleteSnapshot() throws {
+        let fm = FileManager.default
+        for url in [directory, URL(fileURLWithPath: directory.path + ".pending")] {
+            if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
+        }
+        try RestoreTransaction.fullSync(directory.deletingLastPathComponent())
+    }
+
+    private func excludeFromBackup(_ url: URL) throws {
+        var url = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try url.setResourceValues(values)
+    }
 
     private func manifest() throws -> Manifest {
         let value = try JSONDecoder().decode(Manifest.self, from: Data(contentsOf: directory.appending(path: "manifest.json")))

@@ -144,13 +144,38 @@ struct MMKVRecoveryTests {
         #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
     }
 
+    @Test func backupDirectoriesAreExcludedFromSystemBackup() throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
+        try backup.prepare()
+        #expect(try backup.directory.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+        // A failed pair copy leaves staging in place; it must be excluded too.
+        try FileManager.default.removeItem(at: backup.directory)
+        try FileManager.default.removeItem(at: root.appending(path: Self.id + ".crc"))
+        #expect(throws: (any Error).self) { try backup.prepare() }
+        let staging = URL(fileURLWithPath: backup.directory.path + ".pending")
+        #expect(try staging.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+    }
+
     @Test func deliberateDeletionDoesNotResurrectTheBackup() throws {
         let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
         let store = try SettingsStorage(rootPath: root.path)
+        let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
+        let staging = URL(fileURLWithPath: backup.directory.path + ".pending")
+        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
+        try Data([1]).write(to: staging.appending(path: "old"))
         try store.removeAllDurably(); Self.close(root)
+        #expect(!FileManager.default.fileExists(atPath: backup.directory.path))
+        #expect(!FileManager.default.fileExists(atPath: staging.path))
+        #expect(FileManager.default.fileExists(atPath: backup.retirementFile.path))
         let reopened = try SettingsStorage(rootPath: root.path)
         #expect(Self.rnKeys(reopened).isEmpty)
-        #expect(try !MMKVUpgradeBackup(root: root, instanceID: Self.id).hasContent)
+        #expect(try !backup.hasContent)
+        try reopened.setPersistedState(PersistedWalletState(isInitialized: true), key: PersistedWalletState.key, version: 0)
+        Self.close(root)
+        let reonboarded = try SettingsStorage(rootPath: root.path)
+        #expect(reonboarded.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true)
+        #expect(!FileManager.default.fileExists(atPath: backup.directory.path))
     }
 
     /// RN's Delete Wallet unlinked the MMKV folder while open, so a wallet re-created in
