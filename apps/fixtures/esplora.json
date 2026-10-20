@@ -59,6 +59,42 @@
     {
       "input": "http://127.1:8080/api",
       "endpoint": "http://127.0.0.1:8080/api"
+    },
+    {
+      "input": "https://example.com/a\\b",
+      "endpoint": "https://example.com/a/b"
+    },
+    {
+      "input": "http://example.com/a\\..\\api",
+      "endpoint": "http://example.com/api"
+    },
+    {
+      "input": "https://example.com/a/%2e%2e/api",
+      "endpoint": "https://example.com/api"
+    },
+    {
+      "input": "https://example.com/a/.%2E/api",
+      "endpoint": "https://example.com/api"
+    },
+    {
+      "input": "https://example.com/a/%2e./api",
+      "endpoint": "https://example.com/api"
+    },
+    {
+      "input": "https://example.com/a/%2E/api",
+      "endpoint": "https://example.com/a/api"
+    },
+    {
+      "input": "https://example.com/a/%252e%252e/api",
+      "endpoint": "https://example.com/a/%252e%252e/api"
+    },
+    {
+      "input": "https://example.com/a%5Cb/api",
+      "endpoint": "https://example.com/a%5Cb/api"
+    },
+    {
+      "input": "https://example.com/a//b/../api",
+      "endpoint": "https://example.com/a//api"
     }
   ],
   "genesis": [

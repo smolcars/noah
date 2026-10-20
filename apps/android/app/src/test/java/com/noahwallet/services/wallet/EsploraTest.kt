@@ -20,7 +20,7 @@ class EsploraTest {
     @Test fun sharedNormalizationNetworkAndTipFixtures() {
         val raw = javaClass.classLoader!!.getResource("esplora.json")!!.readText()
         val fixture = Json.parseToJsonElement(raw).jsonObject
-        assertEquals(27, fixture.values.sumOf { it.jsonArray.size })
+        assertEquals(36, fixture.values.sumOf { it.jsonArray.size })
         fixture.getValue("normalization").jsonArray.forEach { value ->
             val test = value.jsonObject
             assertEquals(test["endpoint"]?.jsonPrimitive?.contentOrNull, runCatching { EsploraEndpoint.normalize(test.getValue("input").jsonPrimitive.content) }.getOrNull())

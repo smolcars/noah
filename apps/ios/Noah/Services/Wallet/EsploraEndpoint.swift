@@ -10,7 +10,7 @@ enum EsploraEndpoint {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw Failure(message: "Enter an Esplora API endpoint.") }
         let input = trimmed.range(of: "^https?://", options: [.regularExpression, .caseInsensitive]) == nil ? "https://" + trimmed : trimmed
-        guard var url = URLComponents(string: input), let host = url.host, !host.isEmpty,
+        guard var url = URLComponents(string: input.replacingOccurrences(of: "\\", with: "/")), let host = url.host, !host.isEmpty,
               !host.contains(where: { $0.isWhitespace }), url.url != nil else {
             throw Failure(message: "Enter a valid Esplora API URL.")
         }
@@ -19,7 +19,16 @@ enum EsploraEndpoint {
         guard url.port.map({ (0...65535).contains($0) }) ?? true else { throw Failure(message: "Enter a valid Esplora API URL.") }
         url.scheme = url.scheme?.lowercased(); url.host = try ipv4Host(host.lowercased())
         if url.port == (url.scheme == "http" ? 80 : 443) { url.port = nil }
-        var path = URL(string: url.string!)!.standardized.path(percentEncoded: true).replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
+        // WHATWG special schemes treat backslashes as separators and recognize encoded dot segments.
+        var segments: [String] = []
+        for segment in url.percentEncodedPath.split(separator: "/", omittingEmptySubsequences: false).dropFirst() {
+            switch segment.replacingOccurrences(of: "%2e", with: ".", options: .caseInsensitive) {
+            case ".": continue
+            case "..": if !segments.isEmpty { segments.removeLast() }
+            default: segments.append(String(segment))
+            }
+        }
+        var path = ("/" + segments.joined(separator: "/")).replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
         for suffix in ["/blocks/tip/height", "/blocks/tip/hash", "/block-height/0"] where path.hasSuffix(suffix) {
             path.removeLast(suffix.count); break
         }
