@@ -24,6 +24,15 @@ class AppLogTest {
             assertTrue("persistence ${case.name}", file.lines().last().endsWith(expected))
         }
     }
+    @Test fun sharedAddressRedactionVectors() = withFile { _, file ->
+        for (case in SharedFixtures.load("log-redaction").filter { it.name.startsWith("address-") }) {
+            val expected = case.expected.jsonPrimitive.content
+            val input = case.input.jsonPrimitive.content
+            assertEquals(case.name, expected, LogFile.redact(input))
+            file.append(AppLog.Level.info, "fixture", input)
+            assertTrue("persistence ${case.name}", file.lines().last().endsWith(expected))
+        }
+    }
     @Test fun oversizedMessagesAreOmitted() {
         assertEquals("[oversized log message omitted]", LogFile.redact("x".repeat(16385)))
     }

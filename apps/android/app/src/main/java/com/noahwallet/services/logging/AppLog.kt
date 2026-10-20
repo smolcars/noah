@@ -80,6 +80,8 @@ class LogFile(private val directory: File) {
             .bufferedReader().use { it.readLines().toSet() }
         private val words = Regex("[A-Za-z]+")
         private val sensitivePatterns = listOf(
+            """(?is)\b[\w.-]*(?:email|lightning[_ -]?address)[\w.-]*["']?\s*[:=].*""",
+            """(?i)\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,63}\b""",
             """(?is)\b(?:[\w.-]*(?:token|secret|signature|authorization|password)[\w.-]*|mnemonic|seed(?:[_ -]?phrase)?|private[_ -]?key|privkey|preimage|authorization|password|key|x-amz-[\w-]+)["']?\s*[:=({\[].*""",
             """(?i)\bhttps?://[^\s<>"']*\?[^\s<>"']*""",
             """(?i)\bhttps?%3a%2f%2f[^\s<>"']*""",
