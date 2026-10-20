@@ -4,7 +4,7 @@
       <verify-metadata>false</verify-metadata>
       <verify-signatures>false</verify-signatures>
       <trusted-artifacts>
-         <trust group="^(?!io[.]github[.]niteshbalusu11$|io[.]ktor$|org[.]jetbrains[.]kotlinx$|org[.]slf4j$|androidx[.]work$|androidx[.]biometric$|androidx[.]fragment$|androidx[.]room$|androidx[.]sqlite$|androidx[.]concurrent$|org[.]unifiedpush[.]android$|org[.]apache[.]commons$|commons-io$|commons-codec$|com[.]google[.]zxing$|org[.]maplibre[.]gl$|com[.]jakewharton[.]timber$|com[.]google[.]code[.]gson$).*" regex="true" reason="Verify the wallet AAR, backup extraction, server networking, push connector, WorkManager, biometric and map dependencies; retain the scaffold trust policy for other groups."/>
+         <trust group="^(?!io[.]github[.]niteshbalusu11$|io[.]ktor$|org[.]jetbrains[.]kotlinx$|org[.]slf4j$|androidx[.]camera$|androidx[.]work$|androidx[.]biometric$|androidx[.]fragment$|androidx[.]room$|androidx[.]sqlite$|androidx[.]concurrent$|org[.]unifiedpush[.]android$|org[.]apache[.]commons$|commons-io$|commons-codec$|com[.]google[.]zxing$|org[.]maplibre[.]gl$|com[.]jakewharton[.]timber$|com[.]google[.]code[.]gson$).*" regex="true" reason="Verify the wallet AAR, backup extraction, server networking, push connector, WorkManager, biometric and map dependencies; retain the scaffold trust policy for other groups."/>
       </trusted-artifacts>
    </configuration>
    <components>
@@ -316,6 +316,31 @@
       <component group="com.google.code.gson" name="gson" version="2.8.9">
          <artifact name="gson-2.8.9.jar">
             <sha256 value="d3999291855de495c94c743761b8ab5176cfeabe281a5ab0d8e8d45326fd703e" origin="Publisher Maven repository, independently downloaded (existing scaffold dependency)"/>
+         </artifact>
+      </component>
+      <component group="androidx.camera" name="camera-camera2" version="1.4.2">
+         <artifact name="camera-camera2-1.4.2.aar">
+            <sha256 value="cafb962aa98c9a580f4d24edb8ef24bb58bf7b5ab06af612570bef4a7c08efb7" origin="Google Maven artifact, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="androidx.camera" name="camera-core" version="1.4.2">
+         <artifact name="camera-core-1.4.2.aar">
+            <sha256 value="bbca13760ce1587502eb15723d0e17fa0a3495d084e609c4e4c8d3c2e1c85cf8" origin="Google Maven artifact, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="androidx.camera" name="camera-lifecycle" version="1.4.2">
+         <artifact name="camera-lifecycle-1.4.2.aar">
+            <sha256 value="8355383d86060ba2ac260f749305b7a3bcc9fa80b534b46e814e2140871998ce" origin="Google Maven artifact, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="androidx.camera" name="camera-video" version="1.4.2">
+         <artifact name="camera-video-1.4.2.aar">
+            <sha256 value="f26d4a7a0cc63b40b71854b7c0d702ed50cf2bbf2a843f40bb3d7231f0360479" origin="Google Maven artifact, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="androidx.camera" name="camera-view" version="1.4.2">
+         <artifact name="camera-view-1.4.2.aar">
+            <sha256 value="9b4881e451330fad587833dd57da275084a8a1032f9429c364c2d9641426b123" origin="Google Maven artifact, independently downloaded"/>
          </artifact>
       </component>
    </components>
