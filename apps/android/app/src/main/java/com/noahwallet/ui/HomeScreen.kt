@@ -24,6 +24,7 @@ import androidx.lifecycle.repeatOnLifecycle
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatPayment) -> Unit, onQR: () -> Unit, settings: () -> Unit) {
+    var balanceExpanded by rememberSaveable { mutableStateOf(false) }
     var selectedID by rememberSaveable { mutableStateOf<String?>(null) }
     var map by rememberSaveable { mutableStateOf(false) }
     var fact by remember { mutableStateOf(com.noahwallet.ui.home.bitcoinFacts.random()) }
@@ -94,6 +95,21 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
                 Text(if (model.hidden) "••••" else model.summary?.let {
                     BitcoinAmount.format(it.balance.totalSats.toLong(), model.amountUnit, java.util.Locale.forLanguageTag(model.localeIdentifier))
                 } ?: "Loading…", style = MaterialTheme.typography.displaySmall)
+                TextButton({ balanceExpanded = !balanceExpanded }) { Text(if (balanceExpanded) "Hide balance details" else "Show balance details") }
+                model.summary?.balance?.let { balance ->
+                    fun display(sats: ULong) = com.noahwallet.services.wallet.WalletBalance.display(sats, model.hidden, model.amountUnit, locale)
+                    if (balance.pendingSats > 0uL) Text("Pending balance: ${display(balance.pendingSats)}")
+                    if (balanceExpanded) Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Balance Details", style = MaterialTheme.typography.titleMedium)
+                            balance.details.forEach { row ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(row.label, Modifier.weight(1f)); Text(display(row.sats))
+                                }
+                            }
+                        }
+                    }
+                }
                 TextButton(model::toggleBalance) { Text(if (model.hidden) "Show balance" else "Hide balance") }
                 if (!dismissed && model.server.state.isEmailVerified != true) Card {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
