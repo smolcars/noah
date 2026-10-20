@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct RecurringPaymentsView: View {
+    @Environment(\.locale) private var locale
+
     @State private var executor = RecurringExecutor.shared
     @State private var cancelling: RecurringPayment?
     @State private var overriding: RecurringPayment?
@@ -26,7 +28,7 @@ struct RecurringPaymentsView: View {
                         HStack(alignment: .firstTextBaseline) {
                             Text(schedule.label).font(NoahFont.headline)
                             Spacer()
-                            Text(status(schedule)).font(NoahFont.footnote)
+                            Text(LocalizedStringKey(status(schedule))).font(NoahFont.footnote)
                                 .foregroundStyle(schedule.status == "needs_attention" ? NoahColor.destructive : NoahColor.mutedForeground)
                         }
                         Text(schedule.destination).font(NoahFont.footnote).textSelection(.enabled)
@@ -34,14 +36,14 @@ struct RecurringPaymentsView: View {
                         Text("\(schedule.interval.description) · \(schedule.occurrencesPaid) paid" + (schedule.maxOccurrences.map { " of \($0)" } ?? ""))
                             .foregroundStyle(NoahColor.mutedForeground)
                         if schedule.status == "active", let next = schedule.nextRunAt {
-                            Text("Next payment: \(Date(timeIntervalSince1970: next / 1000).formatted())")
+                            Text(L10n.text("Next payment: {_gt_value_2}", Date(timeIntervalSince1970: next / 1000).formatted(), locale: locale.identifier))
                         }
-                        if let end = schedule.endAt { Text("Ends: \(Date(timeIntervalSince1970: end / 1000).formatted(date: .abbreviated, time: .omitted))") }
+                        if let end = schedule.endAt { Text(L10n.text("Ends: {_gt_value_2}", Date(timeIntervalSince1970: end / 1000).formatted(date: .abbreviated, time: .omitted), locale: locale.identifier)) }
                         if let run = schedule.runs.first {
-                            Text("Last attempt: \(Date(timeIntervalSince1970: run.attemptedAt / 1000).formatted()) (\(run.status == "success" ? "Successful" : run.status == "skipped" ? "Skipped" : "Failed"))")
+                            Text(L10n.text("Last attempt: {_gt_value_2} ({_gt_value_3})", Date(timeIntervalSince1970: run.attemptedAt / 1000).formatted(), run.status == "success" ? "Successful" : run.status == "skipped" ? "Skipped" : "Failed", locale: locale.identifier))
                                 .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
                         }
-                        if let error = schedule.lastError { Text(error).font(NoahFont.footnote).foregroundStyle(NoahColor.destructive) }
+                        if let error = schedule.lastError { Text(LocalizedStringKey(error)).font(NoahFont.footnote).foregroundStyle(NoahColor.destructive) }
                     }.accessibilityIdentifier("recurring-payment-\(schedule.id)")
                     if schedule.status == "needs_approval" {
                         Button("Review and pay manually") { run { review = try await executor.review(schedule.id) } }
@@ -73,7 +75,7 @@ struct RecurringPaymentsView: View {
                 }
             }
             if executor.syncPending { Text("Wake-up schedule hasn't synced yet. Noah will retry when opened.").font(NoahFont.footnote) }
-            if let error = actionError ?? executor.error { Text(error).foregroundStyle(NoahColor.destructive) }
+            if let error = actionError ?? executor.error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
         }
         .settingsStyle("Recurring payments")
         .sheet(item: $review) { item in
@@ -95,7 +97,7 @@ struct RecurringPaymentsView: View {
                 if let schedule = overriding { run { try await executor.overrideAndResume(schedule.id, confirmed: true) } }
                 overriding = nil
             }
-        } message: { Text(RecurringExecutor.overrideWarning) }
+        } message: { Text(LocalizedStringKey(RecurringExecutor.overrideWarning)) }
     }
     private func status(_ schedule: RecurringPayment) -> String {
         if schedule.inFlight != nil && executor.running { return "Sending" }

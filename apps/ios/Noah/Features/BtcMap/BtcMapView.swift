@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct BtcMapView: View {
+    @Environment(\.locale) private var locale
+
     @State private var model = BtcMapModel()
     @Environment(\.scenePhase) private var scenePhase
     @FocusState private var searchFocused: Bool
@@ -30,7 +32,7 @@ struct BtcMapView: View {
                     } else if let error = model.loadError {
                         ContentUnavailableView {
                             Label("Could not open BTC Map", systemImage: "map")
-                        } description: { Text(error) } actions: {
+                        } description: { Text(LocalizedStringKey(error)) } actions: {
                             Button("Retry") { Task { await model.load() } }
                         }
                         .background(NoahColor.background)
@@ -103,7 +105,7 @@ struct BtcMapView: View {
         .onDisappear { locatingTask?.cancel() }
         .alert("Location unavailable", isPresented: Binding(get: { model.alert != nil }, set: { if !$0 { model.alert = nil } })) {
             Button("OK", role: .cancel) { model.alert = nil }
-        } message: { Text(model.alert ?? "") }
+        } message: { Text(LocalizedStringKey(model.alert ?? "")) }
     }
 
     private func searchControls(maxHeight: Double) -> some View {
@@ -179,8 +181,8 @@ struct BtcMapView: View {
             HStack(spacing: 12) {
                 Image(systemName: symbol).frame(width: 24)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(name).font(NoahFont.headline)
-                    Text(detail).font(NoahFont.footnote).foregroundStyle(.secondary)
+                    Text(LocalizedStringKey(name)).font(NoahFont.headline)
+                    Text(LocalizedStringKey(detail)).font(NoahFont.footnote).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Image(systemName: "chevron.right").font(.footnote)
@@ -212,7 +214,7 @@ struct BtcMapView: View {
                 }
             } else {
                 HStack {
-                    Text("\(model.filtered.count) places").font(NoahFont.footnote)
+                    Text(L10n.plural("{_gt_value_4} places{_gt_value_3}", count: model.filtered.count, "", locale: locale.identifier)).font(NoahFont.footnote)
                     if model.isSyncing { ProgressView().controlSize(.small).accessibilityLabel("Updating places") }
                     if model.isLocating { ProgressView().controlSize(.small).accessibilityLabel("Finding location") }
                     if model.syncUnavailable {

@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct BtcMapDetailView: View {
+    @Environment(\.locale) private var locale
+
     let place: BtcMapPlace
     let location: [Double]?
     let repository: BtcMapRepository
@@ -27,7 +29,7 @@ struct BtcMapDetailView: View {
                         if let location {
                             Text(BtcMapDistance.format(BtcMapDistance.kilometers(from: location, to: place.center))).font(NoahFont.footnote)
                         }
-                        if let verified = merchant.verified_at { Text("Verified \(dateLabel(verified))").font(NoahFont.footnote).foregroundStyle(.secondary) }
+                        if let verified = merchant.verified_at { Text(L10n.text("Verified {date}", dateLabel(verified), locale: locale.identifier)).font(NoahFont.footnote).foregroundStyle(.secondary) }
                     }
                     Spacer(minLength: 4)
                     Button("Close place details", systemImage: "xmark", action: onClose)
@@ -47,7 +49,7 @@ struct BtcMapDetailView: View {
                     } label: {
                         Label(address, systemImage: copied ? "checkmark" : "doc.on.doc")
                             .multilineTextAlignment(.leading)
-                    }.buttonStyle(.plain).accessibilityLabel(copied ? "Address copied" : "Copy address: \(address)")
+                    }.buttonStyle(.plain).accessibilityLabel(copied ? "Address copied" : L10n.text("Copy address: {value1}", address, locale: locale.identifier))
                 }
                 if let hours = fields["opening_hours"] { Label(hours, systemImage: "clock").font(NoahFont.callout) }
                 if let description = fields["description"] { Text(description).font(NoahFont.callout) }
@@ -101,7 +103,7 @@ struct BtcMapDetailView: View {
                 openURL(url) { if !$0 { linkFailed = true } }
             }
         }
-        ShareLink(item: "\(place.name)\nhttps://btcmap.org/merchant/\(place.id)") { Label("Share", systemImage: "square.and.arrow.up") }
+        ShareLink(item: L10n.text("{value1}\nhttps://btcmap.org/merchant/{value2}", place.name, place.id, locale: locale.identifier)) { Label("Share", systemImage: "square.and.arrow.up") }
     }
 
     private var paymentMethods: [String] {

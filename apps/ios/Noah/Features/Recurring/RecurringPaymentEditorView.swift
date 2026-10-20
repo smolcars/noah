@@ -49,7 +49,7 @@ struct RecurringPaymentEditorView: View {
                 TextField("name@domain.com, ark1… or lno1…", text: $recipient)
                     .textInputAutocapitalization(.never).autocorrectionDisabled().focused($focus, equals: .recipient)
                     .accessibilityIdentifier("recurring-recipient-input")
-                Text(destination.map { $0.type == "ark" ? "Ark address" : $0.type == "lnurl" ? "Lightning address" : "BOLT12 offer" } ?? "Ark address, Lightning address or BOLT12 offer")
+                Text(LocalizedStringKey(destination.map { $0.type == "ark" ? "Ark address" : $0.type == "lnurl" ? "Lightning address" : "BOLT12 offer" } ?? "Ark address, Lightning address or BOLT12 offer"))
                     .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
             }
             Section("Amount (sats)") {
@@ -84,7 +84,7 @@ struct RecurringPaymentEditorView: View {
                         .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
                 }
             }
-            if let error { Section { Text(error).foregroundStyle(NoahColor.destructive) } }
+            if let error { Section { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) } }
         }
         .settingsStyle(original == nil ? "New recurring payment" : "Edit recurring payment")
         .scrollDismissesKeyboard(.interactively)
