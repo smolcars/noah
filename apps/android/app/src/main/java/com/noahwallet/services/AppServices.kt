@@ -78,11 +78,18 @@ class AppServices private constructor(private val context: Context) {
     }
 
     private val restoreRecovery = RestoreRecovery {
-        lifecycle.recoverRestoreAndDeletion {
-            WalletRestorer.recoverInterruptedRestore(session, WalletDataLocation(context.filesDir, variant), SeedItem(seed))
-        }
+        WalletRestorer.recoverInterruptedRestore(session, WalletDataLocation(context.filesDir, variant), SeedItem(seed))
     }
-    suspend fun recoverRestore(): RestoreTransaction.Recovery = restoreRecovery.settle()
+    /**
+     * Settles an interrupted restore, then any committed deletion. Lock order is always lifecycle
+     * gate → RestoreRecovery → session reservation; the gate isn't reentrant, so a caller already
+     * holding it (the restore flow) passes [walletMutationHeld] and has checked there's no marker.
+     */
+    suspend fun recoverRestore(walletMutationHeld: Boolean = false): RestoreTransaction.Recovery =
+        if (walletMutationHeld) {
+            check(!WalletDataLocation(context.filesDir, variant).deletionMarker.exists())
+            restoreRecovery.settle()
+        } else lifecycle.recoverRestoreAndDeletion { restoreRecovery.settle() }
 
     fun restorer() = WalletRestorer(variant, session, WalletDataLocation(context.filesDir, variant), SeedItem(seed),
         makeClient = { phrase ->
@@ -144,8 +151,8 @@ class AppServices private constructor(private val context: Context) {
      * it too instead of failing until the app is opened. Recovery runs even without a journal (it
      * removes plaintext a restore left before writing one) and even while suspended (no opening).
      */
-    suspend fun ensureWalletOpen() {
-        if (recoverRestore() == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
+    suspend fun ensureWalletOpen(walletMutationHeld: Boolean = false) {
+        if (recoverRestore(walletMutationHeld) == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
         if (settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
             throw WalletSuspended()
         }

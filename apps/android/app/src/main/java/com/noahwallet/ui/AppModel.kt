@@ -52,10 +52,10 @@ class AppModel(application: Application) : AndroidViewModel(application) {
                 loadState = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState() },
                 saveState = { settings.setPersistedState(it, PersistedWalletState.key, 0); settings.sync() },
                 seedRestored = services.backupCoordinator::seedRestored,
-                recover = services::recoverRestore,
+                recover = { services.recoverRestore(walletMutationHeld = true) },
                 openWallet = {
                     services.tokens.clear()
-                    withContext(Dispatchers.IO) { services.ensureWalletOpen() }
+                    withContext(Dispatchers.IO) { services.ensureWalletOpen(walletMutationHeld = true) }
                     open = true; onboarded = true; launchState = LaunchState.existingWallet
                     refresh(); services.startServerServices()
                 },
@@ -69,6 +69,9 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         busy = true
         viewModelScope.launch {
             try {
+                services.lifecycle.withWalletMutation {
+                // Recheck after a deletion that may have been draining when this request queued.
+                check(launchState in setOf(LaunchState.onboarding, LaunchState.seedWithoutWalletData))
                 val mnemonic = phrase ?: withContext(Dispatchers.IO) {
                     when (val result = SeedStorage(getApplication(), BuildConfig.APP_VARIANT).read()) {
                         is SecretResult.Found -> result.value
@@ -76,6 +79,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
                 restore.run(mnemonic)
+                }
             } catch (failure: Exception) { restore.reject(RestoreIssue.from(failure)) }
             finally { busy = false }
         }

@@ -410,6 +410,37 @@ class WalletLifecycleTest {
         } finally { world.clean() }
     }
 
+    @Test fun restoreWaitsForDeletionDrainThenHoldsGateThroughCompletion() = runBlocking {
+        val world = World()
+        val drainEntered = CompletableDeferred<Unit>(); val releaseDrain = CompletableDeferred<Unit>()
+        val restoreCommitted = CompletableDeferred<Unit>(); val finishCompletion = CompletableDeferred<Unit>()
+        try {
+            world.files()
+            world.settleBackground = { drainEntered.complete(Unit); releaseDrain.await() }
+            val lifecycle = world.lifecycle()
+            val deletion = async { lifecycle.delete() }
+            drainEntered.await()
+            var restoreEntered = false
+            val restoration = async {
+                lifecycle.withWalletMutation {
+                    restoreEntered = true
+                    assertFalse(world.location.databaseExists)
+                    val reservation = world.session.reserve()
+                    try { world.files() } finally { world.session.release(reservation) }
+                    restoreCommitted.complete(Unit); finishCompletion.await()
+                    assertTrue("Completion keeps its installed wallet", world.location.databaseExists)
+                }
+            }
+            yield(); assertFalse(restoreEntered)
+            releaseDrain.complete(Unit); deletion.await(); restoreCommitted.await()
+            var competingMutationEntered = false
+            val competing = async { lifecycle.withWalletMutation { competingMutationEntered = true } }
+            yield(); assertFalse(competingMutationEntered)
+            finishCompletion.complete(Unit); restoration.await(); competing.await()
+            assertTrue(competingMutationEntered)
+        } finally { releaseDrain.complete(Unit); finishCompletion.complete(Unit); world.clean() }
+    }
+
     @Test fun suspendedSessionRejectsDelayedOpen() = runBlocking {
         val world = World()
         try {

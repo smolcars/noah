@@ -37,6 +37,9 @@ class WalletLifecycle(
     class TemporaryFiles : Exception("Noah couldn't remove temporary wallet files. Restart Noah and try again.")
     private val mutation = Mutex()
 
+    /** Always acquire this gate before a session reservation; held through restore completion. */
+    suspend fun <T> withWalletMutation(block: suspend () -> T): T = mutation.withLock { block() }
+
     /** Called by launch and headless recovery; keeps deletion out until restore has settled. */
     suspend fun recoverRestoreAndDeletion(recoverRestore: suspend () -> RestoreTransaction.Recovery) =
         withContext(NonCancellable + Dispatchers.IO) {
