@@ -22,6 +22,8 @@ import Testing
         var saved: SendPaymentController.Attempt?
         var writeReceiptFails = false
         var ambiguous = false
+        var resolution: SendPaymentController.Resolution = .uncertain
+        var statusChecks = 0
         var fee: UInt64 = 0
         var method = "ark"
         var fees: LightningSendFees? = nil
@@ -62,7 +64,7 @@ import Testing
                     return .init(movementIDs: [], walletIdentity: owner.withLock { $0.wallet })
                 },
                 pay: { _, _, _ in Issue.record("Recurring must use guarded Send submission"); throw SendFailure.unresolved },
-                reconcile: { _ in .uncertain },
+                reconcile: { [self] _ in await reconcile() },
                 read: { [self] in saved },
                 write: { [self] in
                     if writeReceiptFails && $0?.receipt != nil { throw CocoaError(.fileWriteUnknown) }
@@ -110,6 +112,7 @@ import Testing
         func beforePayment() async throws { try await beforePay?() }
         func afterPayment() async throws { try await afterPay?() }
         func isAmbiguous() -> Bool { ambiguous }
+        func reconcile() -> SendPaymentController.Resolution { statusChecks += 1; return resolution }
         func sync(_ entries: [Components.Schemas.RecurringPaymentScheduleEntry]) async throws { sentEntries.append(entries); try await syncHook?(entries) }
         func add() throws -> RecurringPayment {
             var schedule = RecurringScheduleTests.schedule(start: now - 4 * 86_400_000)
@@ -158,6 +161,48 @@ import Testing
         #expect(h.calls.withLock { $0 } == 1)
         #expect(h.controller.state == .uncertain)
         #expect(try h.store.load().schedules[schedule.id]?.status == "needs_attention")
+    }
+    @Test func statusCheckDuringSubmissionDoesNotStopSuccessfulSchedule() async throws {
+        let h = try Harness(); let schedule = try h.add()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        h.afterPay = {
+            #expect(h.executor.running && h.controller.state == .submitting)
+            h.executor.reload() // Opening the recurring screen during submission.
+            let sending = try #require(h.executor.schedules.first { $0.id == schedule.id })
+            #expect(sending.inFlight != nil && sending.status == "active")
+            let journal = try Data(contentsOf: h.journal.file)
+            await h.executor.checkStatus(schedule.id)
+            #expect(try h.store.load().schedules[schedule.id] == sending)
+            #expect(try Data(contentsOf: h.journal.file) == journal)
+            #expect(h.statusChecks == 0)
+        }
+        await h.executor.execute()
+        await h.executor.execute() // Reopening the screen reuses the recorded occurrence.
+        let saved = try #require(h.store.load().schedules[schedule.id])
+        #expect(h.calls.withLock { $0 } == 1)
+        #expect(saved.status == "active" && saved.occurrencesPaid == 1 && saved.nextOccurrenceIndex == 5)
+        #expect(saved.inFlight == nil && saved.lastError == nil)
+        #expect(saved.runs.filter { $0.status == "success" }.count == 1)
+        #expect(try h.journal.load()[schedule.id]?.resolved == true)
+        #expect(try h.journal.load()[schedule.id]?.consumed == true)
+        #expect(!h.notified.contains { $0.status == "needs_attention" })
+        #expect(!h.controller.locked)
+    }
+    @Test func settledUncertainAttemptStillAllowsStatusCheck() async throws {
+        let h = try Harness(); let schedule = try h.add(); h.ambiguous = true
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        await h.executor.execute()
+        #expect(!h.executor.running && h.controller.state == .uncertain)
+        #expect(try h.store.load().schedules[schedule.id]?.status == "needs_attention")
+        let checks = h.statusChecks
+        h.resolution = .paid(.init(amount: schedule.amountSat, proof: .submitReturnedArkSuccess))
+        await h.executor.checkStatus(schedule.id)
+        #expect(h.statusChecks == checks + 1 && h.calls.withLock { $0 } == 1)
+        #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == 1)
+        #expect(try h.store.load().schedules[schedule.id]?.inFlight == nil)
+        #expect(try h.journal.load()[schedule.id]?.resolved == true)
+        #expect(try h.journal.load()[schedule.id]?.consumed == true)
+        #expect(!h.controller.locked)
     }
     @Test func crashWithUnsavedSendReceiptRetainsRecurringMarker() async throws {
         let h = try Harness(); let schedule = try h.add(); h.ambiguous = true

@@ -246,6 +246,8 @@ import Observation
             var resolved = entry; resolved.resolved = true
             try d.journal.save(resolved)
             if !retainReceipt { d.controller.acknowledge() }
+        case .submitting:
+            return
         default:
             latest.status = "needs_attention"
             latest.lastError = d.controller.message ?? "This payment may have been sent. Check its status before making another payment."
@@ -254,6 +256,7 @@ import Observation
         }
     }
     func checkStatus(_ id: String) async {
+        guard !running else { return }
         do {
             guard let entry = try d.journal.load()[id], let original = try d.store.load().schedules[id] else { return }
             await d.controller.checkStatus()

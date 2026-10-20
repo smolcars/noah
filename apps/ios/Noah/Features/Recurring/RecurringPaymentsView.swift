@@ -50,6 +50,7 @@ struct RecurringPaymentsView: View {
                     }
                     if schedule.status == "needs_attention" || schedule.inFlight != nil {
                         Button("Check payment status") { Task { await executor.checkStatus(schedule.id) } }
+                            .disabled(executor.running)
                         Button("Resume after checking history…", role: .destructive) { overriding = schedule }.disabled(executor.running)
                     } else if schedule.status != "completed" {
                         NavigationLink("Edit payment") { RecurringPaymentEditorView(executor: executor, schedule: schedule) }
