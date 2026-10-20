@@ -65,7 +65,7 @@ struct MMKVRecoveryTests {
             try Self.corrupt(root, mode: mode)
             let before = try bytes(root)
             let store = try SettingsStorage(rootPath: root.path)
-            #expect(try store.nativeFile.load().values.isEmpty)
+            #expect(try store.nativeFile.load().values == [EsploraSettings.historyUnavailableKey: "1"])
             #expect(try store.takeUpgradeNotices() == [SettingsStorage.settingsNotice])
             #expect(try bytes(root) == before)
         }
