@@ -1,8 +1,19 @@
 import AVFAudio
 import SwiftUI
 
+/// SwiftUI retains State across tab switches; release audio only when this screen is removed.
+final class StoryPlayback {
+    let player: AVAudioPlayer
+    init(player: AVAudioPlayer) { self.player = player }
+    deinit {
+        player.stop()
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+}
+
 struct NoahStoryView: View {
-    @State private var player: AVAudioPlayer?
+    @State private var playback: StoryPlayback?
+    private var player: AVAudioPlayer? { playback?.player }
     @State private var position: Double = 0
     @State private var playing = false
     @State private var seeking = false
@@ -37,9 +48,11 @@ struct NoahStoryView: View {
         }.settingsStyle("Noah's Ark Story")
         .task {
             do {
-                guard let url = Bundle.main.url(forResource: "noahs-ark-story", withExtension: "m4a") else { throw CocoaError(.fileNoSuchFile) }
-                try AVAudioSession.sharedInstance().setCategory(.playback)
-                player = try AVAudioPlayer(contentsOf: url)
+                if playback == nil {
+                    guard let url = Bundle.main.url(forResource: "noahs-ark-story", withExtension: "m4a") else { throw CocoaError(.fileNoSuchFile) }
+                    try AVAudioSession.sharedInstance().setCategory(.playback)
+                    playback = StoryPlayback(player: try AVAudioPlayer(contentsOf: url))
+                }
                 while !Task.isCancelled {
                     if !seeking { position = player?.currentTime ?? 0 }
                     playing = player?.isPlaying == true
@@ -47,6 +60,5 @@ struct NoahStoryView: View {
                 }
             } catch is CancellationError {} catch { self.error = "Couldn't play the story. Please try again." }
         }
-        .onDisappear { player?.stop(); player = nil; try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation) }
     }
 }
