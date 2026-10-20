@@ -68,12 +68,20 @@ class RecurringExecutor(private val d: Dependencies,
             }
         }
     }
+    private suspend fun requireStage(budget: RecurringBudget) {
+        currentCoroutineContext().ensureActive()
+        check(budget.available) { "Recurring background work stopped." }
+    }
     private suspend fun run(manual: Boolean, approval: Review?, budget: RecurringBudget) {
         running = true; error = null
         try {
+            requireStage(budget)
             val generation = storage { d.automationGeneration() }
             val durableGeneration = storage { d.store.automationGeneration() }
-            d.ensureOpen(); refreshDates()
+            requireStage(budget)
+            d.ensureOpen()
+            requireStage(budget)
+            refreshDates()
             val initial = boundState(); recoverMarkers(initial)
             for (id in initial.schedules.keys.sorted()) {
                 if (approval != null && approval.schedule.id != id) continue
@@ -130,9 +138,21 @@ class RecurringExecutor(private val d: Dependencies,
                     }
                 }
             }
-            refreshDates(); syncServer(); d.refresh()
+            requireStage(budget)
+            refreshDates()
+            requireStage(budget)
+            syncServer { requireStage(budget) }
+            requireStage(budget)
+            d.refresh()
         } catch (failure: Exception) { error = failure.message ?: "Recurring sending is stopped." }
-        finally { try { reload(); d.notify(storage { runCatching { d.store.load().schedules.values.toList() }.getOrDefault(emptyList()) }, null) } finally { running = false } }
+        finally { try {
+            reload()
+            if (budget.available && currentCoroutineContext().isActive) {
+                val visible = storage { runCatching { d.store.load().schedules.values.toList() }.getOrDefault(emptyList()) }
+                requireStage(budget)
+                d.notify(visible, null)
+            }
+        } finally { running = false } }
     }
     private suspend fun markUncertain(entry: RecurringJournal.Entry, message: String? = controller.message) = storage {
         synchronized(RecurringStore.lock) {
@@ -272,7 +292,7 @@ class RecurringExecutor(private val d: Dependencies,
     }
     suspend fun timeChanged() { try { refreshDates(); changed() } catch (_: Exception) { reload() } }
     private suspend fun changed() { reload(); syncServer(); d.notify(schedules, null) }
-    suspend fun syncServer() {
+    suspend fun syncServer(stage: suspend () -> Unit = {}) {
         syncTask?.takeIf { !it.isCompleted }?.let { it.await(); return }
         syncTask = null
         val work = scope.async(start = CoroutineStart.LAZY) {
@@ -280,7 +300,7 @@ class RecurringExecutor(private val d: Dependencies,
                 repeat(20) {
                     refreshDates()
                     val entries = entries(boundState().schedules.values.toList())
-                    storage { d.store.setPending(true) }; d.sync(entries); refreshDates()
+                    storage { d.store.setPending(true) }; stage(); d.sync(entries); stage(); refreshDates()
                     val synced = storage { synchronized(RecurringStore.lock) {
                         if (entries(boundStateNow().schedules.values.toList()) == entries) { d.store.setPending(false); true } else false
                     } }
