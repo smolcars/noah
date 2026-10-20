@@ -108,8 +108,10 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 ### 0.6 Platform services
 - [x] Redacting logger (file-backed, rotating, exportable) — iOS (`AppLog`, same `Caches/noah_logs` layout as RN)
 - [x] Redacting logger — Android
-- [ ] Route bark-bolt-ffi `BarkLogger` callbacks into the app log
-- [ ] Sentry (cocoa / android), disabled in debug + regtest like RN
+- [x] Route bark-bolt-ffi `BarkLogger` callbacks into the app log — iOS (synchronized, RN Debug verbosity, bounded redacted files)
+- [ ] Route bark-bolt-ffi `BarkLogger` callbacks into the app log — Android
+- [x] Sentry (cocoa), disabled in debug + regtest like RN — iOS (build-config DSN, shared redaction, archive dSYMs; CI credentials required)
+- [ ] Sentry (android), disabled in debug + regtest like RN
 - [ ] HTTP clients (URLSession / OkHttp) incl. upload/download
 - [x] Server auth: `/v0/getk1` → sign (offline key `m/350/0`) → `/v0/auth/login` → JWT; refresh near expiry; retry once — iOS (live-tested on regtest)
 - [x] Server auth — Android (offline index-0 signing, shared login, RN token storage, retry once; live-tested on regtest)
