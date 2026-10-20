@@ -193,6 +193,8 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             var recovering = true
             try {
+                try { withContext(Dispatchers.IO) { settings.validateStores() } }
+                catch (failure: Exception) { launchState = LaunchState.openFailure(failure); return@launch }
                 withContext(Dispatchers.IO) {
                     services.lifecycle.withWalletMutation {
                         val recovered = services.recoverRestore(walletMutationHeld = true)

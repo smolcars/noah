@@ -8,25 +8,28 @@ import com.tencent.mmkv.MMKVRecoverStrategic
 import com.noahwallet.services.logging.AppLog
 import java.io.File
 
-class SettingsStorage(context: Context) {
-    private val mmkv: MMKV?
+class SettingsStorage private constructor(private val context: Context, acknowledgingRecovery: Boolean) {
+    constructor(context: Context) : this(context, false)
+    private val rootPath = File(context.filesDir, "mmkv").absolutePath
+    private val mmkv: MMKV? get() = synchronized(openLock) { opened[rootPath] }
+    private val quarantine = MMKVQuarantine(context.noBackupFilesDir, instanceID)
     private val backup = MMKVUpgradeBackup(File(context.filesDir, "mmkv"), instanceID, backupRoot = context.noBackupFilesDir)
 
     init {
-        val rootPath = File(context.filesDir, "mmkv").absolutePath
-        mmkv = synchronized(openLock) {
+        synchronized(openLock) {
             if (opened.containsKey(rootPath)) opened[rootPath]
             else {
                 val log = AppLog(context, "mmkv")
                 var store: MMKV? = null
                 try {
-                    val recovery = RecoveryHandler(log)
+                    val recovery = RecoveryHandler(log, quarantine)
                     MMKV.initialize(context.applicationContext, rootPath, null, MMKVLogLevel.LevelWarning, recovery)
                     check(File(rootPath).isDirectory || File(rootPath).mkdirs())
                     backup.prepare()
+                    quarantine.requireDurable()
                     store = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, rootPath))
                     val retired = backup.retiredKeys
-                    if (retired == null && backup.hasContent && !hasRNKeys(store)) {
+                    if (retired == null && (quarantine.exists || backup.hasContent && !hasRNKeys(store))) {
                         store.close(); store = null
                         check(!backup.restored)
                         backup.restore()
@@ -35,10 +38,15 @@ class SettingsStorage(context: Context) {
                         check(hasRNKeys(store))
                     }
                     validate(store, retired.orEmpty())
-                    check(retired == null || !recovery.didRecover) { "Native settings required recovery" }
+                    quarantine.requireDurable()
+                    if (retired != null && quarantine.exists && !acknowledgingRecovery) throw RecoveryRequired()
                     backup.retire(rnKeys(store))
+                    quarantine.clear()
+                    recoveryRequired.remove(rootPath)
                     store
-                } catch (_: Exception) {
+                } catch (failure: Exception) {
+                    if (failure is RecoveryRequired) recoveryRequired.add(rootPath)
+                    else recoveryRequired.remove(rootPath)
                     store?.close()
                     log.e("Settings unavailable; original files preserved. Restart Noah to retry or contact support.")
                     null
@@ -47,9 +55,21 @@ class SettingsStorage(context: Context) {
         }
     }
 
+    class RecoveryRequired : Exception("Settings were recovered from an older state")
+    val recoveryNeedsAcknowledgement get() = synchronized(openLock) { rootPath in recoveryRequired }
+    /** Called only by the resumed foreground launch gate's Continue action. */
+    fun acknowledgeRecovery() = synchronized(openLock) {
+        check(recoveryNeedsAcknowledgement && quarantine.exists)
+        opened.remove(rootPath)
+        SettingsStorage(context, true).requireHealthy()
+    }
     class Unavailable : Exception("Wallet settings need recovery. Restart Noah to retry or contact support; wallet files have been kept.")
-    fun requireHealthy() { if (mmkv == null) throw Unavailable() }
-    fun string(key: String): String? = mmkv?.let { store ->
+    fun requireHealthy() {
+        if (recoveryNeedsAcknowledgement) throw RecoveryRequired()
+        if (mmkv == null || quarantine.exists) throw Unavailable()
+        validate(mmkv!!, backup.retiredKeys.orEmpty())
+    }
+    fun string(key: String): String? = if (quarantine.exists) null else mmkv?.let { store ->
         if (key in RNStoreCodec.versions) RNStoreCodec.storedString(store.containsKey(key), store.decodeBytes(key))
         else store.decodeString(key)
     }
@@ -63,12 +83,11 @@ class SettingsStorage(context: Context) {
     }
     fun validateStores() {
         requireHealthy()
-        validate(mmkv!!, backup.retiredKeys.orEmpty())
         // Wallet-storage already missing at first open resumes onboarding with the existing wallet.
         // Losing an admitted key later blocks above.
     }
     fun sync() { requireHealthy(); mmkv!!.sync() }
-    fun removeAll() = synchronized(openLock) { requireHealthy(); backup.markReset(); mmkv!!.clearAll(); mmkv.sync(); backup.deleteSnapshot() }
+    fun removeAll() = synchronized(openLock) { requireHealthy(); backup.markReset(); mmkv!!.clearAll(); mmkv!!.sync(); backup.deleteSnapshot() }
     inline fun <reified State> persistedState(key: String): State? =
         string(key)?.let { PersistedStateCodec.decode<State>(it) }
     inline fun <reified State> setPersistedState(state: State, key: String, version: Int) =
@@ -78,6 +97,7 @@ class SettingsStorage(context: Context) {
         const val instanceID = "noah-wallet-storage"
         private val openLock = Any()
         private val opened = mutableMapOf<String, MMKV?>()
+        private val recoveryRequired = mutableSetOf<String>()
         private fun rnKeys(store: MMKV) = RNStoreCodec.versions.keys.filter(store::containsKey)
         private fun hasRNKeys(store: MMKV) = rnKeys(store).isNotEmpty()
         private fun validate(store: MMKV, requiredKeys: List<String>) {
@@ -89,15 +109,14 @@ class SettingsStorage(context: Context) {
     }
 }
 
-private class RecoveryHandler(private val log: AppLog) : MMKVHandler {
-    @Volatile var didRecover = false; private set
+private class RecoveryHandler(private val log: AppLog, private val quarantine: MMKVQuarantine) : MMKVHandler {
     override fun onMMKVCRCCheckFail(mmapID: String): MMKVRecoverStrategic {
-        didRecover = true
+        quarantine.recordRecovery()
         log.w("CRC check failed; recovering settings")
         return MMKVRecoverStrategic.OnErrorRecover
     }
     override fun onMMKVFileLengthError(mmapID: String): MMKVRecoverStrategic {
-        didRecover = true
+        quarantine.recordRecovery()
         log.w("File length check failed; recovering settings")
         return MMKVRecoverStrategic.OnErrorRecover
     }

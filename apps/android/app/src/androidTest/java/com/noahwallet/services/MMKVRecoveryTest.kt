@@ -109,6 +109,19 @@ class MMKVRecoveryTest {
         assertTrue(runCatching { SettingsStorage(context).validateStores() }.isFailure)
         assertFalse(MMKVUpgradeBackup(root, id, backupRoot = context.noBackupFilesDir).restored)
     }
+    @Test fun rejectedOlderSuspensionStaysBlockedAcrossRetries() = fixture { context, root ->
+        val store = SettingsStorage(context)
+        val wallet = store.persistedState<PersistedWalletState>("wallet-storage")!!
+        store.setPersistedState(wallet.copy(isWalletSuspended = true), "wallet-storage", 0); store.sync()
+        closeForRestart(root)
+        val file = File(root, id); val bytes = file.readBytes(); val needle = "wallet-storage".toByteArray()
+        val offset = (0..bytes.size - needle.size).last { start -> needle.indices.all { bytes[start + it] == needle[it] } }
+        bytes[offset + needle.size - 1] = 'X'.code.toByte(); file.writeBytes(bytes); corrupt(root, "crc")
+        repeat(2) {
+            assertTrue(runCatching { SettingsStorage(context).validateStores() }.isFailure)
+            closeForRestart(root)
+        }
+    }
     @Test fun recurringEnvelopeAndAdmittedKeyLossBlock() {
         for (mode in listOf("undecodable", "missing", "missingSchedules")) fixture { context, root ->
             if (mode == "missing") SettingsStorage(context).validateStores() else MMKV.initialize(app, root.path)
@@ -122,6 +135,27 @@ class MMKVRecoveryTest {
             assertTrue(runCatching { SettingsStorage(context).validateStores() }.isFailure)
         }
     }
+    @Test fun acknowledgementIsExplicitAndDurableAcrossRestart() = fixture { context, root ->
+        SettingsStorage(context).validateStores(); closeForRestart(root); corrupt(root, "crc")
+        val blocked = SettingsStorage(context)
+        assertTrue(blocked.recoveryNeedsAcknowledgement)
+        assertTrue(runCatching { blocked.set("{}", "wallet-storage") }.isFailure)
+        val other = SettingsStorage(context)
+        blocked.acknowledgeRecovery()
+        other.validateStores() // Objects created by background services observe the same admitted handle.
+        closeForRestart(root)
+        SettingsStorage(context).validateStores()
+        assertFalse(MMKVQuarantine(context.noBackupFilesDir, id).exists)
+    }
+    @Test fun markerWriteFailureBlocksTheLaunch() = fixture { context, root ->
+        SettingsStorage(context).validateStores(); closeForRestart(root)
+        val marker = MMKVQuarantine(context.noBackupFilesDir, id).file
+        check(marker.mkdir()); corrupt(root, "crc")
+        val store = SettingsStorage(context)
+        assertFalse(store.recoveryNeedsAcknowledgement)
+        assertTrue(runCatching { store.validateStores() }.isFailure)
+    }
+
     @Test fun laterCRCRecoveryBlocksEvenWhenRNKeysSurvive() = fixture { context, root ->
         SettingsStorage(context).validateStores(); closeForRestart(root); corrupt(root, "crc")
         assertTrue(runCatching { SettingsStorage(context).validateStores() }.isFailure)

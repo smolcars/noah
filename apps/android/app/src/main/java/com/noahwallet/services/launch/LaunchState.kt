@@ -9,7 +9,7 @@ import com.noahwallet.services.storage.SeedStorage
 import com.noahwallet.services.storage.WalletDataLocation
 
 enum class LaunchState {
-    existingWallet, onboarding, seedWithoutWalletData, walletDataWithoutSeed, secureStorageUnavailable, restoreIncomplete, invalidSeed, seedConflict, incompatibleStorage;
+    existingWallet, onboarding, seedWithoutWalletData, walletDataWithoutSeed, secureStorageUnavailable, restoreIncomplete, invalidSeed, seedConflict, incompatibleStorage, settingsRecovered;
 
     enum class SeedStatus {
         present, absent, unavailable, invalid, conflict;
@@ -51,6 +51,7 @@ enum class LaunchState {
                 failure.reason == com.noahwallet.services.wallet.WalletSession.OpenFailure.seedConflict -> seedConflict
             failure is io.github.niteshbalusu11.bark.BarkError &&
                 failure.message?.contains("incorrect mnemonic for existing wallet") == true -> seedConflict
+            failure is com.noahwallet.services.storage.SettingsStorage.RecoveryRequired -> settingsRecovered
             failure is com.noahwallet.services.storage.RNStoreCodec.Unreadable ||
                 failure is com.noahwallet.services.storage.SettingsStorage.Unavailable -> incompatibleStorage
             else -> secureStorageUnavailable
@@ -67,6 +68,7 @@ enum class LaunchState {
 
         suspend fun current(context: Context, variant: String = BuildConfig.APP_VARIANT): LaunchState {
             try { com.noahwallet.services.storage.SettingsStorage(context).validateStores() }
+            catch (_: com.noahwallet.services.storage.SettingsStorage.RecoveryRequired) { return settingsRecovered }
             catch (_: com.noahwallet.services.storage.RNStoreCodec.Unreadable) { return incompatibleStorage }
             catch (_: com.noahwallet.services.storage.SettingsStorage.Unavailable) { return incompatibleStorage }
             val location = WalletDataLocation(context.filesDir, variant)
