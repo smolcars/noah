@@ -1,0 +1,10 @@
+[
+  {
+    "status": "paid",
+    "amount_msat": 1000000,
+    "amount_received_msat": 1000000,
+    "paid_at": 1792472276,
+    "pay_index": 9,
+    "payment_hash": "2c0c5e7754b0b45833b2c9f87b8b1e359e0df056f17c0e4848ad801aaa3fd064"
+  }
+]

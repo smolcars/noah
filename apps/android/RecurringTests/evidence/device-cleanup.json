@@ -1,0 +1,11 @@
+{
+  "avd": "NoahRecurringM7Sol6506",
+  "serial": "emulator-5590",
+  "identityConfirmedBeforeShutdown": true,
+  "shutdownConfirmedBeforeDeletion": true,
+  "avdDirectoryAbsent": true,
+  "iniAbsent": true,
+  "walletDeletedThroughProductionLifecycle": true,
+  "testOfferDisabled": true,
+  "buildOutputOutsideWorktree": "none created"
+}
