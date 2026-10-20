@@ -8,11 +8,7 @@ import io.sentry.SentryEnvelopeItem
 import io.sentry.SentryItemType
 import io.sentry.SentryOptions
 import io.sentry.Session
-import io.sentry.hints.DiskFlushNotification
-import io.sentry.hints.Retryable
-import io.sentry.hints.SubmissionResult
 import io.sentry.transport.ITransport
-import io.sentry.util.HintUtils
 import java.io.StringReader
 import kotlinx.serialization.json.*
 
@@ -21,14 +17,10 @@ internal class TelemetryTransport(private val delegate: ITransport, private val 
     override fun send(envelope: SentryEnvelope, hint: Hint) {
         val filtered = filter(envelope, options.proguardUuid, options.release)
         if (filtered != null) {
+            TelemetrySubmission.prepare(hint, options.flushTimeoutMillis)
             delegate.send(filtered, hint)
         } else {
-            HintUtils.runIfHasType(hint, Retryable::class.java) { it.setRetry(false) }
-            HintUtils.runIfHasType(hint, DiskFlushNotification::class.java) {
-                if (it.isFlushable(envelope.header.eventId)) it.markFlushed()
-            }
-            // Consumed successfully: let outbox replay continue with later items.
-            HintUtils.runIfHasType(hint, SubmissionResult::class.java) { it.setResult(true) }
+            TelemetrySubmission.drop(hint, envelope.header.eventId, options.flushTimeoutMillis)
         }
     }
 

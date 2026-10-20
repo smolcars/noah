@@ -229,6 +229,53 @@ class TelemetryTransportTest {
         } finally { client.close(); cache.deleteRecursively() }
     }
 
+    @Test fun acceptedEnvelopeLeavesCompletionAndFlushCloseToDelegate() {
+        val options = options()
+        class Callback : SubmissionResult, Retryable {
+            var completed = false
+            var retryValue = true
+            override fun setResult(success: Boolean) { completed = true }
+            override fun isSuccess() = completed
+            override fun setRetry(value: Boolean) { retryValue = value }
+            override fun isRetry() = retryValue
+        }
+        val callback = Callback()
+        var sentHint: Hint? = null
+        var flushTimeout: Long? = null
+        var closed: Boolean? = null
+        val delegate = object : ITransport {
+            override fun send(envelope: SentryEnvelope, hint: Hint) { sentHint = hint }
+            override fun flush(timeoutMillis: Long) { flushTimeout = timeoutMillis }
+            override fun close() { closed = false }
+            override fun close(isRestarting: Boolean) { closed = isRestarting }
+            override fun getRateLimiter(): io.sentry.transport.RateLimiter? = null
+        }
+        val transport = TelemetryTransport(delegate, options)
+        val hint = HintUtils.createWithTypeCheckHint(callback)
+        transport.send(SentryEnvelope.from(serializer, SentryEvent(), null), hint)
+        assertSame(hint, sentHint)
+        assertFalse(callback.completed)
+        assertTrue(callback.retryValue)
+        transport.flush(123)
+        transport.close(true)
+        assertEquals(123L, flushTimeout)
+        assertEquals(true, closed)
+    }
+
+    @Test fun sessionDropsUserIpAndArbitraryAttributes() {
+        val session = Session(SentryUUID.generateSentryId(), io.sentry.protocol.User().apply {
+            id = "fake-user"; ipAddress = "192.0.2.1"
+        }, "production", "com.noahwallet.mainnet@0.2.0+100")
+        session.setUnknown(mapOf("user" to "fake-user", "token" to "fake-token"))
+        val filtered = requireNotNull(TelemetryTransport.filter(SentryEnvelope.from(serializer, session, null)))
+        val output = filtered.items.single().data.toString(Charsets.UTF_8)
+        assertFalse(output.contains("192.0.2.1"))
+        assertFalse(output.contains("fake-user"))
+        assertFalse(output.contains("fake-token"))
+        assertFalse(output.contains("ip_address"))
+        assertFalse(output.contains("user_agent"))
+    }
+
     private class RecordingTransport : ITransport {
         val envelopes = mutableListOf<SentryEnvelope>()
         override fun send(envelope: SentryEnvelope, hint: Hint) {
