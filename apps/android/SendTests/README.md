@@ -441,3 +441,13 @@ lookup can be interrupted without losing the exact identity used after restart.
 Deterministic regression covers Amount/MAX offboards and BDK sends, plus receipt
 write failure. Targeted SendRefreshTest, SendSafetyTest and SendChainStatusTest:
 **17 tests passed, zero failures/errors/skips**. No live process kill was induced.
+
+### Offboard status parity
+
+Exact offboard receipts now query Bark status without BDK sync or graph reads,
+matching iOS. BDK sends still require a successful sync before cached confirmation,
+reorg or competing-input evidence is considered; status alone never clears their
+retry lock. Regressions make both BDK reads fail while offboard status remains
+available, and verify BDK sync failure/reorg rules. SendChainStatusTest,
+SendConflictTest, SendRefreshTest and SendOffboardTest: **19 tests passed**,
+zero failures/errors/skips.

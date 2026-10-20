@@ -67,6 +67,19 @@ object SendReconciliation {
         // For BDK sends this is display evidence only: cached confirmation/conflict and retry locks still govern.
         return SendResolution.Paid(updated.copy(chainStatus = status, statusError = null))
     }
+    suspend fun onchainStatus(attempt: SendAttempt, sync: suspend () -> Unit,
+        transactions: suspend () -> List<WalletTransaction>, offboardHistory: suspend () -> List<Movement>,
+        status: suspend (String) -> ChainStatus): SendResolution {
+        val resolution = if (attempt.payment.source == SendSource.onchain) {
+            sync() // A failed BDK sync must not promote cached evidence.
+            onchain(attempt, transactions())
+        } else {
+            val receipt = attempt.receipt ?: return SendResolution.Uncertain
+            SendResolution.Paid(offboardReceipt(receipt, attempt.payment, offboardHistory()))
+        }
+        val txid = (resolution as? SendResolution.Paid)?.receipt?.txid ?: return resolution
+        return withChainStatus(resolution, attempt.payment.source, status(txid))
+    }
     fun onchain(attempt: SendAttempt, transactions: List<WalletTransaction>): SendResolution {
         val receipt = attempt.receipt
         val originalTxid = receipt?.txid ?: attempt.broadcastingTxid

@@ -176,13 +176,10 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
             return SendResolution.Paid(checkpoint.receipt(status, wallet.history(), payment, quote))
         }
         if (attempt.payment.method == "onchain" && (attempt.payment.source == SendSource.onchain || attempt.receipt?.txid != null)) {
-            onchain.sync() // A failed sync must not promote cached evidence.
-            val resolution = SendReconciliation.onchain(attempt, onchain.transactions())
-            val withAmounts = if (resolution is SendResolution.Paid && attempt.payment.source == SendSource.offchain)
-                SendResolution.Paid(SendReconciliation.offboardReceipt(resolution.receipt, attempt.payment, wallet.history())) else resolution
-            val txid = (withAmounts as? SendResolution.Paid)?.receipt?.txid ?: return withAmounts
-            val status = ChainStatus.from(if (attempt.payment.source == SendSource.onchain) onchain.transactionStatus(txid) else wallet.transactionStatus(txid))
-            return SendReconciliation.withChainStatus(withAmounts, attempt.payment.source, status)
+            return SendReconciliation.onchainStatus(attempt, sync = { onchain.sync() }, transactions = { onchain.transactions() },
+                offboardHistory = { wallet.history() }, status = { txid ->
+                    ChainStatus.from(if (attempt.payment.source == SendSource.onchain) onchain.transactionStatus(txid) else wallet.transactionStatus(txid))
+                })
         }
         if (attempt.payment.method in listOf("lightning", "lnurl") && attempt.paymentHash != null) {
             val state = wallet.lightningSendState(attempt.paymentHash)
