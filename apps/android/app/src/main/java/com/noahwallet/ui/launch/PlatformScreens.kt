@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.noahwallet.services.push.UnifiedPushRegistration
 import com.noahwallet.services.push.PushWork
@@ -38,11 +39,19 @@ fun BatteryOptimizationScreen(model: AppModel, onContinue: () -> Unit) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var failed by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    var proceeding by remember { mutableStateOf(false) }
     fun proceed() {
-        val state = model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
-        model.settings.setPersistedState(state.copy(hasSeenBatteryOptimizationPrompt = true), PersistedWalletState.key, 0)
-        model.settings.sync()
-        onContinue()
+        if (proceeding) return
+        proceeding = true
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                val state = model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
+                model.settings.setPersistedState(state.copy(hasSeenBatteryOptimizationPrompt = true), PersistedWalletState.key, 0)
+                model.settings.sync()
+            }
+            onContinue()
+        }
     }
     LaunchedEffect(Unit) { if (!PlatformAccess.batteryEnabled(context)) proceed() }
     DisposableEffect(lifecycle) {
@@ -70,29 +79,44 @@ fun BatteryOptimizationScreen(model: AppModel, onContinue: () -> Unit) {
 @Composable
 fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
     val context = LocalContext.current
-    val registration = remember { UnifiedPushRegistration(context) }
-    var distributors by remember { mutableStateOf(registration.distributors()) }
-    var selected by remember { mutableStateOf(distributors.firstOrNull { it.saved }?.id ?: distributors.firstOrNull { it.connected }?.id) }
-    var endpoint by remember { mutableStateOf(registration.endpoint()) }
+    var registration by remember { mutableStateOf<UnifiedPushRegistration?>(null) }
+    var distributors by remember { mutableStateOf(emptyList<UnifiedPushRegistration.Distributor>()) }
+    var selected by remember { mutableStateOf<String?>(null) }
+    var endpoint by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(true) }
     var registering by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) {
-            distributors = registration.distributors(); endpoint = registration.endpoint()
-        } }
-        lifecycle.addObserver(observer)
-        onDispose { lifecycle.removeObserver(observer) }
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            loading = true
+            val connector = withContext(Dispatchers.IO) { UnifiedPushRegistration(context) }
+            val choices = withContext(Dispatchers.IO) { connector.distributors() }
+            endpoint = withContext(Dispatchers.IO) { connector.endpoint() }
+            distributors = choices
+            selected = choices.firstOrNull { it.saved }?.id ?: choices.firstOrNull { it.connected }?.id
+            registration = connector
+            loading = false
+            awaitCancellation()
+        }
     }
     BackHandler { onContinue() }
     NoahForm(if (fromOnboarding) "UnifiedPush Setup" else "UnifiedPush") {
         Text("Google Play Services is not available. To receive notifications, please use a UnifiedPush distributor (like ntfy).")
         Text("Select Distributor", style = MaterialTheme.typography.titleMedium)
-        if (distributors.isEmpty()) Text("No distributors detected. Install ntfy or another UnifiedPush distributor.")
+        if (loading) Text("Loading distributors…")
+        else if (distributors.isEmpty()) Text("No distributors detected. Install ntfy or another UnifiedPush distributor.")
         distributors.forEach { distributor ->
-            NoahButton(distributor.name, !registering, secondary = selected != distributor.id) {
-                registration.select(distributor.id); selected = distributor.id; distributors = registration.distributors()
+            NoahButton(distributor.name, !registering && !loading, secondary = selected != distributor.id) {
+                scope.launch {
+                    val connector = registration ?: return@launch
+                    loading = true
+                    try {
+                        distributors = withContext(Dispatchers.IO) { connector.select(distributor.id); connector.distributors() }
+                        selected = distributor.id
+                    } finally { loading = false }
+                }
             }
             Text(distributor.id, style = MaterialTheme.typography.bodySmall)
         }
@@ -103,27 +127,30 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
         }
         if (failed) Text("Couldn't register with UnifiedPush. Please try again.", color = MaterialTheme.colorScheme.error)
         if (endpoint != null && !registering) NoahButton(if (fromOnboarding) "Continue" else "Done", onClick = onContinue)
-        else NoahButton(if (registering) "Registering..." else if (fromOnboarding) "Register" else "Register with UnifiedPush", !registering) {
+        else NoahButton(if (registering) "Registering..." else if (fromOnboarding) "Register" else "Register with UnifiedPush", !registering && !loading && registration != null) {
             scope.launch {
                 registering = true; failed = false
                 try {
-                    selected?.let(registration::select)
-                    registration.register()
-                    val received = withTimeoutOrNull(30_000) {
-                        while (registration.endpoint() == null) delay(1000)
-                        registration.endpoint()
+                    val connector = registration ?: return@launch
+                    val received = withContext(Dispatchers.IO) {
+                        selected?.let(connector::select)
+                        connector.register()
+                        withTimeoutOrNull(30_000) {
+                            while (connector.endpoint() == null) delay(1000)
+                            connector.endpoint()
+                        }
                     }
                     endpoint = received
                     if (received != null) {
                         // Onboarding has a registered server user before isInitialized is set.
                         val services = com.noahwallet.services.AppServices.shared(context)
                         try {
-                            if (services.registration.state.isRegisteredWithServer == true)
+                            withContext(Dispatchers.IO) { if (services.registration.state.isRegisteredWithServer == true)
                                 com.noahwallet.api.generated.client.V0RegisterPushTokenClient(services.client)
-                                    .registerPushToken(com.noahwallet.api.generated.models.RegisterPushToken(received)).value()
+                                    .registerPushToken(com.noahwallet.api.generated.models.RegisterPushToken(received)).value() }
                         } catch (cancelled: CancellationException) { throw cancelled }
-                        catch (_: Exception) { com.noahwallet.services.logging.AppLog(context, "push").w("UnifiedPush server registration failed; queued for retry") }
-                        PushWork.register(context)
+                        catch (_: Exception) { withContext(Dispatchers.IO) { com.noahwallet.services.logging.AppLog(context, "push").w("UnifiedPush server registration failed; queued for retry") } }
+                        withContext(Dispatchers.IO) { PushWork.register(context) }
                     } else failed = true
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { failed = true }

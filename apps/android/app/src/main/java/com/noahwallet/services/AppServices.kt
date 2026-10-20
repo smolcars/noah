@@ -170,8 +170,8 @@ class AppServices private constructor(private val context: Context) {
 
     suspend fun openWalletInForeground(walletMutationHeld: Boolean = false) = openWallet(walletMutationHeld, foreground = true)
 
-    private suspend fun openWallet(walletMutationHeld: Boolean, foreground: Boolean) {
-        if (!walletMutationHeld) { lifecycle.withWalletMutation { openWallet(walletMutationHeld = true, foreground) }; return }
+    private suspend fun openWallet(walletMutationHeld: Boolean, foreground: Boolean): Unit = withContext(Dispatchers.IO) {
+        if (!walletMutationHeld) { lifecycle.withWalletMutation { openWallet(walletMutationHeld = true, foreground) }; return@withContext }
         if (recoverRestore(walletMutationHeld) == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
         if (settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
             throw WalletSuspended()

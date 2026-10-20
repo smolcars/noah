@@ -8,7 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import com.noahwallet.api.generated.models.AppVersionInfo
 import com.noahwallet.ui.home.*
 import com.noahwallet.ui.launch.*
@@ -16,9 +17,12 @@ import com.noahwallet.ui.launch.*
 /** Debug-only public-copy previews. Never reads or displays a seed or wallet balance. */
 class ParityPreviewActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        android.os.StrictMode.setThreadPolicy(android.os.StrictMode.ThreadPolicy.Builder()
+            .detectDiskReads().detectDiskWrites().detectNetwork().penaltyLog().build())
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val model = ViewModelProvider(this)[AppModel::class.java]
+        lifecycleScope.launch {
+            val model = loadAppModel(this@ParityPreviewActivity)
         setContent { NoahTheme { Surface { Box(Modifier.fillMaxSize().safeDrawingPadding()) {
             var result by remember { mutableStateOf<String?>(null) }
             when (intent.getStringExtra("screen")) {
@@ -40,5 +44,6 @@ class ParityPreviewActivity : FragmentActivity() {
             result?.let { text -> AlertDialog(onDismissRequest = { result = null }, title = { Text(text) },
                 confirmButton = { TextButton({ result = null }) { Text("OK") } }) }
         } } } }
+        }
     }
 }

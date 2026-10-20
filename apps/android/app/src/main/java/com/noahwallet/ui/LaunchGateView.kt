@@ -31,16 +31,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.noahwallet.ui.launch.*
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.R
 import com.noahwallet.services.launch.LaunchState
 
 @Composable
-fun LaunchGateView() {
+fun LaunchGateView(model: AppModel) {
     val context = LocalContext.current.applicationContext
     val lifecycleOwner = LocalLifecycleOwner.current
-    val model: AppModel = androidx.lifecycle.viewmodel.compose.viewModel()
     val state = model.launchState
     val activity = LocalContext.current as androidx.fragment.app.FragmentActivity
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -60,25 +61,38 @@ fun LaunchGateView() {
     var requesting by remember { mutableStateOf(false) }
     var permissionStatus by remember { mutableStateOf(PlatformGateRules.Permission.checking) }
     var gateRevision by remember { mutableStateOf(0) }
+    var platformGate by remember { mutableStateOf<PlatformGateRules.Gate?>(null) }
+    var resolvedGateInputs by remember { mutableStateOf<Triple<Boolean, PlatformGateRules.Permission, Int>?>(null) }
+    val gateInputs = Triple(model.onboarded, permissionStatus, gateRevision)
+    val gatesReady = resolvedGateInputs == gateInputs && (!model.onboarded || permissionStatus != PlatformGateRules.Permission.checking)
     fun refreshPermission() {
-        runCatching { PlatformAccess.permission(context) }.onSuccess { permissionStatus = it }
-        gateRevision++
+        resolvedGateInputs = null
+        scope.launch {
+            val status = withContext(Dispatchers.IO) { PlatformAccess.permission(context) }
+            permissionStatus = status
+            gateRevision++
+        }
     }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        requesting = false; refreshPermission(); PushWork.register(context)
+        requesting = false; refreshPermission(); scope.launch(Dispatchers.IO) { PushWork.register(context) }
     }
     fun requestPermission() {
         if (Build.VERSION.SDK_INT >= 33) {
-            check(context.getSharedPreferences("expo.modules.permissions.asked", android.content.Context.MODE_PRIVATE).edit()
-                .putBoolean(Manifest.permission.POST_NOTIFICATIONS, true).commit())
             requesting = true; permissionRequested = true
-            permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    context.getSharedPreferences("expo.modules.permissions.asked", android.content.Context.MODE_PRIVATE).edit()
+                        .putBoolean(Manifest.permission.POST_NOTIFICATIONS, true).apply()
+                }
+                permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
         } else PlatformAccess.openSettings(activity)
     }
     LaunchedEffect(model.onboarded, model.walletLock.locked, state) {
         if (model.onboarded && !model.walletLock.locked && PlatformGateRules.launchResolved(state)) {
-            PushNotifications.ensureChannels(context)
-            refreshPermission()
+            withContext(Dispatchers.IO) { PushNotifications.ensureChannels(context) }
+            permissionStatus = withContext(Dispatchers.IO) { PlatformAccess.permission(context) }
+            gateRevision++
             if (PlatformAccess.physical() && permissionStatus == PlatformGateRules.Permission.undetermined && !permissionRequested) requestPermission()
         }
     }
@@ -89,9 +103,12 @@ fun LaunchGateView() {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    val platformGate = remember(model.onboarded, permissionStatus, gateRevision) {
-        PlatformGateRules.gate(model.onboarded, PlatformAccess.physical(), permissionStatus,
-            PlatformAccess.batteryEnabled(context), model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.hasSeenBatteryOptimizationPrompt == true)
+    LaunchedEffect(model.onboarded, permissionStatus, gateRevision) {
+        platformGate = withContext(Dispatchers.IO) {
+            PlatformGateRules.gate(model.onboarded, PlatformAccess.physical(), permissionStatus,
+                PlatformAccess.batteryEnabled(context), model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.hasSeenBatteryOptimizationPrompt == true)
+        }
+        resolvedGateInputs = gateInputs
     }
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -104,6 +121,7 @@ fun LaunchGateView() {
             when {
                 state == LaunchState.seedWithoutWalletData -> RestoreWalletScreen(model, useStoredSeed = true)
                 !PlatformGateRules.launchResolved(state) -> LaunchMessage(state, model.error != null, model::start, model)
+                !gatesReady -> LaunchMessage(null, false, model::start, model)
                 (model.open || model.isWalletSuspended) && model.onboarded -> when (platformGate) {
                     PlatformGateRules.Gate.push -> PushNotificationsRequiredScreen(requesting, ::requestPermission, ::refreshPermission)
                     PlatformGateRules.Gate.battery -> BatteryOptimizationScreen(model) { gateRevision++ }

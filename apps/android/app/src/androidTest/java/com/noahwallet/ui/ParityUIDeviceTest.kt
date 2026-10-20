@@ -61,6 +61,32 @@ class ParityUIDeviceTest {
             bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
         }
     }
+    @Test fun interruptedRecoveryStaysAheadOfGatesAfterAsyncStartup() = runBlocking {
+        optIn()
+        val location = WalletDataLocation(context.filesDir, "regtest")
+        assertFalse("Requires fresh disposable app", location.hasAnyData)
+        assertFalse(location.restoreDirectory.exists())
+        var activity: com.noahwallet.MainActivity? = null
+        try {
+            location.restoreDirectory.mkdirs()
+            File(location.restoreDirectory, "journal.json").writeText("{}")
+            activity = instrumentation.startActivitySync(Intent(context, com.noahwallet.MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as com.noahwallet.MainActivity
+            val model = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { loadAppModel(activity) }
+            waitFor("Recovery decision completes") { model.launchState == com.noahwallet.services.launch.LaunchState.restoreIncomplete }
+            waitFor("Recovery error appears") { text("OK") != null }
+            click("OK")
+            waitFor("Recovery screen appears") { text("Restore didn't finish") != null }
+            assertNull(text("Create Wallet"))
+            assertNull(text("Turn on push notifications"))
+            assertNull(text("Disable battery optimization"))
+            assertNull(text("Recent Activity"))
+        } finally {
+            instrumentation.runOnMainSync { activity?.finish() }
+            location.restoreDirectory.deleteRecursively()
+        }
+    }
+
     @Test fun qrContainsOnlyLightningAddressAndCopiesLiteralValue() {
         optIn()
         val activity = preview("qr")

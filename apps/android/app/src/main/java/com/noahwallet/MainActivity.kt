@@ -8,7 +8,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.view.WindowManager
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.*
+import com.noahwallet.ui.loadAppModel
 import com.noahwallet.ui.AppModel
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
@@ -18,12 +20,16 @@ import com.noahwallet.ui.NoahTheme
 
 class MainActivity : FragmentActivity() {
     private var credentialRequestCode: Int? = null
-    private val model by lazy { ViewModelProvider(this)[AppModel::class.java] }
+    private var model: AppModel? = null
+    private var invalidatedBeforeReady = false
+    private fun invalidateLock() {
+        model?.walletLock?.background() ?: run { invalidatedBeforeReady = true }
+    }
     private val backgroundReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             // Credential confirmation stops our Activity too. Home/Recents/screen-off still invalidate it.
             if (intent.action == Intent.ACTION_SCREEN_OFF || intent.action == Intent.ACTION_CLOSE_SYSTEM_DIALOGS) {
-                model.walletLock.background()
+                invalidateLock()
             }
         }
     }
@@ -32,7 +38,7 @@ class MainActivity : FragmentActivity() {
     override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
         if (Build.VERSION.SDK_INT < 29 && intent.action == "android.app.action.CONFIRM_DEVICE_CREDENTIAL") {
             credentialRequestCode = requestCode
-            model.walletLock.credentialStarted()
+            model?.walletLock?.credentialStarted()
         }
         super.startActivityForResult(intent, requestCode, options)
     }
@@ -41,16 +47,22 @@ class MainActivity : FragmentActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (credentialRequestCode == requestCode) {
             credentialRequestCode = null
-            model.walletLock.credentialReturned(resultCode == RESULT_OK)
+            model?.walletLock?.credentialReturned(resultCode == RESULT_OK)
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onNewIntent(intent: Intent) {
         // An exported singleTask relaunch can dismiss credential UI without a background broadcast.
-        model.walletLock.background()
+        invalidateLock()
         super.onNewIntent(intent)
-        if (intent.getBooleanExtra("recurring", false)) model.recurringNotification = true
+        setIntent(intent)
+        if (intent.getBooleanExtra("recurring", false)) model?.recurringNotification = true
+    }
+
+    override fun onStop() {
+        if (model == null && !isChangingConfigurations) invalidatedBeforeReady = true
+        super.onStop()
     }
 
     override fun onDestroy() {
@@ -59,25 +71,32 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onResume() {
-        model.walletLock.resumed()
+        model?.walletLock?.resumed()
         super.onResume()
-        com.noahwallet.services.AppServices.shared(this).reconcileBackupTriggers(foreground = true)
-        if (model.services.isOnboarded()) com.noahwallet.recurring.RecurringRuntime.shared(this).foreground()
+        model?.let { current -> lifecycleScope.launch(Dispatchers.IO) {
+            current.services.reconcileBackupTriggers(foreground = true)
+            if (current.services.isOnboarded()) com.noahwallet.recurring.RecurringRuntime.shared(this@MainActivity).foreground()
+        } }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (BuildConfig.DEBUG) android.os.StrictMode.setThreadPolicy(android.os.StrictMode.ThreadPolicy.Builder()
+            .detectDiskReads().detectDiskWrites().detectNetwork().penaltyLog().build())
         super.onCreate(savedInstanceState)
-        lifecycle.addObserver(com.noahwallet.recurring.RecurringRuntime.shared(this).foregroundRunner)
-        if (intent.getBooleanExtra("recurring", false)) model.recurringNotification = true
-        if (model.walletLock.enabled) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         if (Build.VERSION.SDK_INT < 29) ContextCompat.registerReceiver(this, backgroundReceiver,
             IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_CLOSE_SYSTEM_DIALOGS) },
             ContextCompat.RECEIVER_EXPORTED)
         enableEdgeToEdge()
-        setContent {
-            NoahTheme {
-                LaunchGateView()
-            }
+        lifecycleScope.launch {
+            val current = loadAppModel(this@MainActivity)
+            model = current
+            if (!invalidatedBeforeReady && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) current.walletLock.resumed()
+            else current.walletLock.background()
+            if (intent.getBooleanExtra("recurring", false)) current.recurringNotification = true
+            if (current.walletLock.enabled) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            val recurring = withContext(Dispatchers.IO) { com.noahwallet.recurring.RecurringRuntime.shared(this@MainActivity) }
+            lifecycle.addObserver(recurring.foregroundRunner)
+            setContent { NoahTheme { LaunchGateView(current) } }
         }
     }
 }

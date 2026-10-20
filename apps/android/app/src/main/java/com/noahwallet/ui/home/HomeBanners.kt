@@ -25,7 +25,7 @@ import java.util.Locale
 fun HomeBanners(app: AppModel, refresh: Int) {
     val backup by app.services.backupCoordinator.statusChanges.collectAsState()
     val version by app.server.versionChanges.collectAsState()
-    LaunchedEffect(app.server) { app.server.checkVersionOnce() }
+    LaunchedEffect(app.server) { withContext(Dispatchers.IO) { app.server.checkVersionOnce() } }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var retrying by remember { mutableStateOf(false) }
     var rounds by remember { mutableStateOf<List<PendingRoundStatus>>(emptyList()) }
@@ -39,7 +39,7 @@ fun HomeBanners(app: AppModel, refresh: Int) {
             observeHomeRounds(
                 activity = com.noahwallet.services.wallet.WalletBackgroundActivity.changes,
                 walletChanges = app.session.walletChanges,
-                query = { app.session.pendingRounds() },
+                query = { withContext(Dispatchers.IO) { app.session.pendingRounds() } },
                 active = { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) },
                 publish = { rounds = it },
                 initiallyActive = rounds.any { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) },
@@ -55,7 +55,7 @@ fun HomeBanners(app: AppModel, refresh: Int) {
     HomeRules.backup(backup, now, locale)?.let { banner -> StatusBanner(banner, retrying) {
         scope.launch {
             retrying = true
-            try { app.services.backupCoordinator.flush(BackupCoordinator.Reason.manual, requireEnabled = false) }
+            try { withContext(Dispatchers.IO) { app.services.backupCoordinator.flush(BackupCoordinator.Reason.manual, requireEnabled = false) } }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { /* Coordinator persists a safe error for this banner. */ }
             finally { retrying = false }
