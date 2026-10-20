@@ -1390,7 +1390,6 @@
   <string name="gt_2cade3f6b9302759">"Clear local server registration and register again? Your wallet will be kept."</string>
   <string name="gt_cea4d2e010b8fd52">"Clear selection"</string>
   <string name="gt_c08aa5bbc4491798">"Close the wallet and disable all wallet operations until re-enabled"</string>
-  <string name="gt_4f7d64017689437e">"Coming soon"</string>
   <string name="gt_8a8041ef40e7db1a">"Configure push notifications"</string>
   <string name="gt_aeae980b83b4c572">"Confirmed at block %1$s"</string>
   <string name="gt_1eaf1ad8e5f877d0">"Confirmed block: %1$s"</string>
@@ -1465,6 +1464,7 @@
   <string name="gt_642b28d69cbf8365">"Enter an Ark address, Lightning address or BOLT12 offer and a valid interval."</string>
   <string name="gt_fdcfbcff651b5b35">"Enter your 12 words in order, or paste the whole phrase into any word field."</string>
   <string name="gt_a464fa0760351f31">"Error: %1$s"</string>
+  <string name="gt_dea4969e1e0f5ab1">"Esplora API · Custom endpoint"</string>
   <string name="gt_7926af61aab9882c">"Esplora Settings"</string>
   <string name="gt_f81c8539f3f844d2">"Estimated broadcast fees"</string>
   <string name="gt_8019400caf0913fa">"Estimated total"</string>
@@ -1673,6 +1673,7 @@
   <string name="gt_4e4f26976fb34aea">"Show balance"</string>
   <string name="gt_193124aa28317067">"Show balance details"</string>
   <string name="gt_6e65049bf16d9dc9">"Signed transaction size"</string>
+  <string name="gt_b8ea39497aef1a93">"Snapshot schema version [0-9]+ is newer than supported version [0-9]+"</string>
   <string name="gt_d65d3a6d1c27a19c">"Start a new payment after checking history"</string>
   <string name="gt_8a565d98b83e392b">"Start a new payment anyway"</string>
   <string name="gt_e51e8c039fe7960f">"Start an exit"</string>
@@ -1720,7 +1721,7 @@
   <string name="gt_69d8d757288ce17b">"This address isn\'t in your Noah wallet. The claimed funds will be sent there."</string>
   <string name="gt_e736f5c6032cba7b">"This amount exceeds 21 million BTC. Cancel this schedule and approve a new payment within the limit."</string>
   <string name="gt_14eec81c84b44811">"This backup belongs to a different Bitcoin network. Use the matching version of Noah."</string>
-  <string name="gt_eb83ff7af2428e5b">"This backup needs a newer version of Noah. Update the app before restoring."</string>
+  <string name="gt_f8225bade85a4f12">"This backup was created by a newer version of Noah. Update the app, then try restoring again."</string>
   <string name="gt_42336142cf45ba47">"This broadcasts the claim transaction. Earlier broadcast fees are not deducted again."</string>
   <string name="gt_9e3a6e3e9bd56700">"This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs."</string>
   <string name="gt_f2faa6b386bacbee">"This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status."</string>

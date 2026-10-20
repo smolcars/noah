@@ -9325,18 +9325,6 @@
         }
       }
     },
-    "Coming soon": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coming soon"
-          }
-        }
-      }
-    },
     "Coming soon in the native app.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -14961,6 +14949,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Esplora API · Anpassad"
+          }
+        }
+      }
+    },
+    "Esplora API · Custom endpoint": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esplora API · Custom endpoint"
           }
         }
       }
@@ -43741,18 +43741,6 @@
         }
       }
     },
-    "This backup needs a newer version of Noah. Update the app before restoring.": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This backup needs a newer version of Noah. Update the app before restoring."
-          }
-        }
-      }
-    },
     "This backup upload was superseded by a newer attempt.": {
       "comment": "GT 0dabdd4cc955110c; arguments: none",
       "extractionState": "manual",
@@ -43785,6 +43773,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Den här uppladdningen av säkerhetskopian ersattes av ett senare försök."
+          }
+        }
+      }
+    },
+    "This backup was created by a newer version of Noah. Update the app, then try restoring again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This backup was created by a newer version of Noah. Update the app, then try restoring again."
           }
         }
       }
