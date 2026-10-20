@@ -64,28 +64,30 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
         else "Enter your 12 words in order, or paste the whole phrase into any word field.")
         if (!useStoredSeed && !blocked) {
             key(clearGeneration) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                repeat(6) { row ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        repeat(2) { column ->
-                            val index = row * 2 + column
-                            RecoveryWordField(words[index], index, {
-                                input.update(it, index)
-                                if (!input.wrongWordCount && RecoveryPhraseInput.normalizedWords(it).size == 12) clipboard.accepted(it)
-                                revision++; flow.clearIssue()
-                            }, onFocus = { focused = index },
-                                onNext = { if (index < 11) requesters[index + 1].requestFocus() },
-                                modifier = Modifier.weight(1f).focusRequester(requesters[index])
-                                    .testTag("restore-word-${index + 1}"))
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    repeat(6) { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            repeat(2) { column ->
+                                val index = row * 2 + column
+                                RecoveryWordField(words[index], index, {
+                                    input.update(it, index)
+                                    if (!input.wrongWordCount && RecoveryPhraseInput.normalizedWords(it).size == 12) clipboard.accepted(it)
+                                    revision++; flow.clearIssue()
+                                }, onFocus = { focused = index },
+                                    onNext = { if (index < 11) requesters[index + 1].requestFocus() },
+                                    modifier = Modifier.weight(1f).focusRequester(requesters[index])
+                                        .testTag("restore-word-${index + 1}"))
+                            }
                         }
                     }
                 }
             }
-            }
             Text("${input.wordCount} of 12 words", style = MaterialTheme.typography.bodySmall)
             focused?.let { index ->
                 val suggestions = input.suggestions(index)
-                if (suggestions.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                if (suggestions.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                    // Suggestions reveal the private prefix; password accessibility exposes editing only.
+                    .clearAndSetSemantics { }) {
                     suggestions.forEach { word -> TextButton({
                         input.update(word, index); revision++; flow.clearIssue()
                         if (index < 11) requesters[index + 1].requestFocus() else focus.clearFocus()

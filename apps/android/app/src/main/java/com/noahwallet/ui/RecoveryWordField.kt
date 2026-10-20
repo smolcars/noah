@@ -14,6 +14,7 @@ import androidx.core.widget.doAfterTextChanged
 internal class RecoveryWordEditText(context: Context, index: Int) : EditText(context) {
     init {
         hint = "Word ${index + 1}"
+        contentDescription = hint // API 24–25 do not expose a separate accessibility hint.
         isSingleLine = true
         isSaveEnabled = false
         inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
@@ -38,6 +39,7 @@ internal fun RecoveryWordField(word: String, index: Int, onChange: (String) -> U
             }
         }
     }, update = { field ->
+        field.error = if (word.isNotEmpty() && word !in RecoveryPhraseInput.wordList) "Check this word" else null
         if (field.text.toString() != word) {
             field.setText(word)
             field.setSelection(field.length())

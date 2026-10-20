@@ -239,6 +239,8 @@ class RestoreUIDeviceTest {
         val resolver = context.contentResolver
         val setting = android.provider.Settings.Secure.ACCESSIBILITY_SPEAK_PASSWORD
         val previous = android.provider.Settings.Secure.getString(resolver, setting)
+        val priorEventTypes = automation.serviceInfo.eventTypes
+        automation.serviceInfo = automation.serviceInfo.apply { eventTypes = android.view.accessibility.AccessibilityEvent.TYPES_ALL_MASK }
         automation.adoptShellPermissionIdentity(android.Manifest.permission.WRITE_SECURE_SETTINGS)
         try {
             android.provider.Settings.Secure.putInt(resolver, setting, 0)
@@ -248,18 +250,31 @@ class RestoreUIDeviceTest {
                 activity.setContentView(field)
                 field.requestFocus()
             }
+            instrumentation.waitForIdleSync()
+            waitFor("Native password is attached") { find(automation.rootInActiveWindow) { it.isEditable && it.isPassword } != null }
             automation.setOnAccessibilityEventListener { event ->
-                if (event.eventType == android.view.accessibility.AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED)
-                    events.add(android.view.accessibility.AccessibilityEvent.obtain(event))
+                events.add(android.view.accessibility.AccessibilityEvent.obtain(event))
             }
-            instrumentation.runOnMainSync { field.setText("abandon") }
-            waitFor("Password change event delivered") { events.any { it.isPassword } }
+            val before = checkNotNull(find(automation.rootInActiveWindow) { it.isEditable && it.isPassword })
+            before.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS)
+            assertTrue(before.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
+                Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "abando") }))
+            instrumentation.runOnMainSync { field.setSelection(field.length()) }
+            instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_N)
+            instrumentation.waitForIdleSync()
+            waitFor("Password node updates after edit") {
+                find(automation.rootInActiveWindow) { it.isEditable && it.isPassword }?.text?.length == 7
+            }
+            Thread.sleep(400)
             val node = checkNotNull(find(automation.rootInActiveWindow) { it.isEditable && it.isPassword })
             assertTrue("Password node text is redacted", node.text?.contains("abandon") != true)
             assertTrue("Word position remains accessible", node.hintText?.contains("Word 1") == true)
             assertTrue("Editing remains available", node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT })
+            assertTrue("Actual password text-change events were observed", events.any {
+                it.eventType == android.view.accessibility.AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED && it.isPassword
+            })
             assertTrue("Password event text and beforeText are redacted", events.all { event ->
-                event.text.none { it.contains("abandon") } && event.beforeText?.contains("abandon") != true
+                event.text.none { it.contains("abando") } && event.beforeText?.contains("abando") != true
             })
             instrumentation.runOnMainSync {
                 val info = android.view.inputmethod.EditorInfo()
@@ -272,6 +287,7 @@ class RestoreUIDeviceTest {
             }
         } finally {
             automation.setOnAccessibilityEventListener(null)
+            automation.serviceInfo = automation.serviceInfo.apply { eventTypes = priorEventTypes }
             android.provider.Settings.Secure.putString(resolver, setting, previous)
             automation.dropShellPermissionIdentity()
             instrumentation.runOnMainSync { activity.finish() }
