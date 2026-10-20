@@ -24,6 +24,7 @@ struct KeychainPassword: Sendable {
     let account: String
 
     func read() -> ReadResult {
+        if service.hasPrefix("com.noah.mnemonic.") { return readSeedCandidates() }
         var query = baseQuery
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -42,6 +43,30 @@ struct KeychainPassword: Sendable {
         default:
             return .unavailable(status)
         }
+    }
+
+    /// RN and native intentionally share one seed item. Search the service
+    /// across accounts and synchronizability so a second candidate cannot be
+    /// silently hidden by MatchLimitOne, even when its contents agree.
+    private func readSeedCandidates() -> ReadResult {
+        var query = baseQuery
+        query.removeValue(forKey: kSecAttrAccount as String)
+        query[kSecAttrSynchronizable as String] = kSecAttrSynchronizableAny
+        query[kSecMatchLimit as String] = kSecMatchLimitAll
+        query[kSecReturnData as String] = true
+        query[kSecReturnAttributes as String] = true
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status == errSecItemNotFound { return .notFound }
+        guard status == errSecSuccess else { return .unavailable(status) }
+        guard let items = result as? [[String: Any]], items.count == 1,
+              let item = items.first, item[kSecAttrAccount as String] as? String == account,
+              (item[kSecAttrSynchronizable as String] as? Bool) != true else {
+            return .unavailable(errSecDuplicateItem)
+        }
+        guard let data = item[kSecValueData as String] as? Data,
+              let value = String(data: data, encoding: .utf8) else { return .unavailable(errSecDecode) }
+        return .found(value)
     }
 
     /// Updates the item in place when it exists, otherwise adds it. Never

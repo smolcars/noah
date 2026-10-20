@@ -1,0 +1,13 @@
+{
+  "description": "Invalid and ambiguous stored seeds always block, without seed/DB writes. Fingerprint mismatch and multiple stores map to conflict after read-only inspection.",
+  "cases": [
+    {"name":"empty item with DB", "input":{"seed":"invalid","walletDatabaseExists":true},"expected":"invalidSeed"},
+    {"name":"empty item without DB", "input":{"seed":"invalid","walletDatabaseExists":false},"expected":"invalidSeed"},
+    {"name":"invalid word/checksum with DB", "input":{"seed":"invalid","walletDatabaseExists":true},"expected":"invalidSeed"},
+    {"name":"invalid word/checksum without DB", "input":{"seed":"invalid","walletDatabaseExists":false},"expected":"invalidSeed"},
+    {"name":"seed and DB fingerprint differ", "input":{"seed":"conflict","walletDatabaseExists":true},"expected":"seedConflict"},
+    {"name":"multiple candidate seed stores without DB", "input":{"seed":"conflict","walletDatabaseExists":false},"expected":"seedConflict"},
+    {"name":"RN and native candidates differ", "input":{"seed":"conflict","walletDatabaseExists":true},"expected":"seedConflict"},
+    {"name":"two database candidates", "input":{"seed":"conflict","walletDatabaseExists":true},"expected":"seedConflict"}
+  ]
+}

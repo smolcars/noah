@@ -12,6 +12,7 @@ import Testing
 /// swaps in one that fails or waits.
 @Suite(.serialized)
 struct WalletRestorerTests {
+    private static let previousSeed = try! generateMnemonic()
     private let root = FileManager.default.temporaryDirectory.appending(path: "restorer-\(UUID().uuidString)")
     private var deviceB: WalletDataLocation { WalletDataLocation(variant: .regtest, documentsDirectory: root.appending(path: "device-b")) }
 
@@ -115,7 +116,7 @@ struct WalletRestorerTests {
 
     private func expectPreviousWalletBack(_ seed: FakeSeed) throws {
         #expect(deviceBWallet == "previous wallet")
-        #expect(seed.current == "previous seed")
+        #expect(seed.current == Self.previousSeed)
         try expectNoRestoreLeftovers()
     }
 
@@ -239,7 +240,7 @@ struct WalletRestorerTests {
 
     @Test func failedOpenPutsThePreviousWalletBack() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let seed = FakeSeed("previous seed")
+        let seed = FakeSeed(Self.previousSeed)
         let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in throw OpenRefused() }
         let (restorer, mnemonic) = try await setUp(seed: seed, session: session)
 
@@ -249,7 +250,7 @@ struct WalletRestorerTests {
 
     @Test func sessionIsReservedForTheWholeRestore() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let seed = FakeSeed("previous seed")
+        let seed = FakeSeed(Self.previousSeed)
         let gate = Gate()
         let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in
             await gate.enter()
@@ -262,7 +263,7 @@ struct WalletRestorerTests {
         // Mid-restore: the new files are in place but nobody else can reach them.
         #expect(deviceBWallet != "previous wallet")
         await #expect(throws: WalletSession.OpenError.busy) {
-            try await session.ensureOpen(mnemonic: "previous seed", runDaemon: false, appVersion: "test")
+            try await session.ensureOpen(mnemonic: Self.previousSeed, runDaemon: false, appVersion: "test")
         }
         await #expect(throws: WalletSession.OpenError.busy) { try await session.reserve() }
         await #expect(throws: WalletSession.OpenError.busy) { try await session.close() }
@@ -280,7 +281,7 @@ struct WalletRestorerTests {
 
     @Test func cancellingDuringTheOpenCheckWaitsForTheNativeWork() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let seed = FakeSeed("previous seed")
+        let seed = FakeSeed(Self.previousSeed)
         let gate = Gate()
         let sawCancellation = FakeSeed(nil)
         // BoltFFI answers a cancelled Swift caller early while Rust goes on. The
@@ -314,7 +315,7 @@ struct WalletRestorerTests {
 
     @Test func downloadLargerThanTheServerRecordIsCutOff() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let seed = FakeSeed("previous seed")
+        let seed = FakeSeed(Self.previousSeed)
         let (restorer, mnemonic) = try await setUp(seed: seed, reportedSize: 64)
 
         await #expect(throws: WalletRestorer.Failure.downloadMismatch) { try await restorer.restore(mnemonic: mnemonic) }
@@ -323,7 +324,7 @@ struct WalletRestorerTests {
 
     @Test func launchRecoveryWithTheWalletAlreadyOpeningIsNotAFailure() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let seed = FakeSeed("previous seed")
+        let seed = FakeSeed(Self.previousSeed)
         let gate = Gate()
         let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in
             await gate.enter()
@@ -338,7 +339,7 @@ struct WalletRestorerTests {
         try Data("decrypted".utf8).write(to: transaction.work.appending(path: "db.sqlite"))
 
         // A silent push started opening the wallet before the UI launched.
-        let pushOpen = Task { try await session.ensureOpen(mnemonic: "previous seed", runDaemon: false, appVersion: "test") }
+        let pushOpen = Task { try await session.ensureOpen(mnemonic: Self.previousSeed, runDaemon: false, appVersion: "test") }
         await gate.waitUntilEntered()
         #expect(try await WalletRestorer.recoverInterruptedRestore(session: session, location: deviceB, seed: seed) == .nothingPending)
         #expect(!FileManager.default.fileExists(atPath: transaction.work.path), "decrypted leftovers are swept anyway")
@@ -370,7 +371,7 @@ struct WalletRestorerTests {
     /// session another launch is opening.
     @Test func recoveryWithoutAJournalNeverBlocksAnOpen() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let seed = FakeSeed("previous seed")
+        let seed = FakeSeed(Self.previousSeed)
         let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in throw OpenRefused() }
         _ = try await setUp(seed: seed, session: session)
         try makeBarkProperties(at: deviceB)
@@ -391,7 +392,7 @@ struct WalletRestorerTests {
             await Task.yield()
         }
         do {
-            try await session.ensureOpen(mnemonic: "previous seed", runDaemon: false, appVersion: "test")
+            try await session.ensureOpen(mnemonic: Self.previousSeed, runDaemon: false, appVersion: "test")
             Issue.record("the refusing opener should have thrown")
         } catch {
             #expect(error is OpenRefused, "the open must get past the session, not find it busy: \(error)")
@@ -429,7 +430,7 @@ struct WalletRestorerTests {
 
     @Test func restoreCommitsTheSeedAndLeavesTheSessionReopenable() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let seed = FakeSeed("previous seed")
+        let seed = FakeSeed(Self.previousSeed)
         let session = WalletSession(variant: .regtest, location: deviceB)
         let (restorer, mnemonic) = try await setUp(seed: seed, session: session)
 
@@ -446,7 +447,7 @@ struct WalletRestorerTests {
 
     @Test func failedSeedWritePutsThePreviousWalletBack() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let seed = FakeSeed("previous seed")
+        let seed = FakeSeed(Self.previousSeed)
         seed.failWrites()
         let (restorer, mnemonic) = try await setUp(seed: seed)
 
@@ -456,7 +457,7 @@ struct WalletRestorerTests {
 
     @Test func seedWriteThatLandedDespiteAnErrorCommits() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let seed = FakeSeed("previous seed")
+        let seed = FakeSeed(Self.previousSeed)
         seed.failWrites(landing: true)
         let (restorer, mnemonic) = try await setUp(seed: seed)
 
@@ -468,7 +469,7 @@ struct WalletRestorerTests {
 
     @Test func unknownSeedStateIsLeftForLaunchRecovery() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let seed = FakeSeed("previous seed")
+        let seed = FakeSeed(Self.previousSeed)
         seed.failWrites(thenLock: true)
         let session = WalletSession(variant: .regtest, location: deviceB)
         let (restorer, mnemonic) = try await setUp(seed: seed, session: session)
@@ -476,7 +477,7 @@ struct WalletRestorerTests {
         await #expect(throws: WalletRestorer.Failure.seedStateUnknown) { try await restorer.restore(mnemonic: mnemonic) }
         #expect(deviceB.restorePending)
         await #expect(throws: WalletSession.OpenError.restorePending) {
-            try await session.ensureOpen(mnemonic: "previous seed", runDaemon: false, appVersion: "test")
+            try await session.ensureOpen(mnemonic: Self.previousSeed, runDaemon: false, appVersion: "test")
         }
         // Next launch, still locked: wait. Unlocked, old seed: undo.
         #expect(try await WalletRestorer.recoverInterruptedRestore(session: session, location: deviceB, seed: seed) == .waitingForKeychain)
@@ -487,7 +488,7 @@ struct WalletRestorerTests {
 
     @Test func unreadableKeychainChangesNothing() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let seed = FakeSeed("previous seed")
+        let seed = FakeSeed(Self.previousSeed)
         seed.makeUnavailable()
         let (restorer, mnemonic) = try await setUp(seed: seed)
 
@@ -498,7 +499,7 @@ struct WalletRestorerTests {
 
     @Test func downloadThatDoesNotMatchTheServerRecordIsRejected() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let seed = FakeSeed("previous seed")
+        let seed = FakeSeed(Self.previousSeed)
         let (restorer, mnemonic) = try await setUp(seed: seed, reportedSha256: String(repeating: "0", count: 64))
 
         await #expect(throws: WalletRestorer.Failure.downloadMismatch) { try await restorer.restore(mnemonic: mnemonic) }

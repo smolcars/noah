@@ -18,14 +18,18 @@ enum LaunchState: String, Equatable, Sendable {
     case walletDataWithoutSeed
     /// Keychain could not be read (locked, error). Retry later; do nothing.
     case secureStorageUnavailable
+    case invalidSeed
+    case seedConflict
 
     enum SeedStatus: String, Sendable {
-        case present, absent, unavailable
+        case present, absent, unavailable, invalid, conflict
     }
 
     /// `walletDatabaseExists` means "the datadir holds any wallet data".
     static func resolve(seed: SeedStatus, walletDatabaseExists: Bool) -> LaunchState {
         switch (seed, walletDatabaseExists) {
+        case (.invalid, _): .invalidSeed
+        case (.conflict, _): .seedConflict
         case (.unavailable, _): .secureStorageUnavailable
         case (.present, true): .existingWallet
         case (.present, false): .seedWithoutWalletData
@@ -39,11 +43,11 @@ extension LaunchState.SeedStatus {
     init(_ result: KeychainPassword.ReadResult) {
         switch result {
         case .found(let value):
-            self = value.isEmpty ? .absent : .present
+            self = (try? StoredSeed.normalized(value)) == nil ? .invalid : .present
         case .notFound:
             self = .absent
-        case .unavailable:
-            self = .unavailable
+        case .unavailable(let status):
+            self = status == errSecDuplicateItem ? .conflict : status == errSecDecode ? .invalid : .unavailable
         }
     }
 }
@@ -51,7 +55,9 @@ extension LaunchState.SeedStatus {
 extension LaunchState {
     /// Reads the current state from the Keychain and the filesystem.
     static func current(variant: AppVariant = .current) -> LaunchState {
-        resolve(
+        let location = WalletDataLocation(variant: variant)
+        if location.hasMultipleDatabases { return .seedConflict }
+        return resolve(
             seed: SeedStatus(KeychainPassword.mnemonic(for: variant).read()),
             walletDatabaseExists: WalletDataLocation(variant: variant).hasAnyData
         )

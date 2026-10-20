@@ -85,6 +85,10 @@ struct WalletDataLocation: Sendable {
 
     var database: URL { directory.appending(path: "db.sqlite", directoryHint: .notDirectory) }
 
+    var hasMultipleDatabases: Bool {
+        databaseExists && FileManager.default.fileExists(atPath: directory.appending(path: "bark.sqlite").path)
+    }
+
     /// Restore workspace (`RestoreTransaction`): next to the datadir, so on
     /// the same volume and every swap is a rename.
     var restoreDirectory: URL {

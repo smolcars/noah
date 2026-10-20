@@ -19,9 +19,9 @@ struct LaunchStateTests {
         }
     }
 
-    @Test func emptyKeychainValueCountsAsAbsent() {
-        #expect(LaunchState.SeedStatus(.found("")) == .absent)
-        #expect(LaunchState.SeedStatus(.found("abandon")) == .present)
+    @Test func corruptKeychainValuesNeverCountAsAbsent() {
+        #expect(LaunchState.SeedStatus(.found("")) == .invalid)
+        #expect(LaunchState.SeedStatus(.found("abandon")) == .invalid)
         #expect(LaunchState.SeedStatus(.notFound) == .absent)
         #expect(LaunchState.SeedStatus(.unavailable(-25308)) == .unavailable)
     }

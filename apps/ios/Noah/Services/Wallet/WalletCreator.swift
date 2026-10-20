@@ -86,9 +86,9 @@ actor WalletCreator {
         switch dependencies.readSeed() {
         case .unavailable(let status):
             throw Failure.secureStorageUnavailable(status)
-        case .found(let value) where !value.isEmpty:
-            seed = value
-        case .found, .notFound:
+        case .found(let value):
+            seed = try StoredSeed.normalized(value)
+        case .notFound:
             seed = nil
         }
         switch (seed, dependencies.walletDataExists()) {
@@ -104,6 +104,7 @@ actor WalletCreator {
         guard try plan() == .fresh else { throw WalletSession.OpenError.busy }
         let datadirExisted = dependencies.datadirExists()
         let mnemonic = try dependencies.generateMnemonic()
+        _ = try StoredSeed.normalized(mnemonic)
         try dependencies.saveSeed(mnemonic)
         do {
             try await dependencies.createNew(reservation, mnemonic)
@@ -130,9 +131,12 @@ extension WalletCreator.Dependencies {
                 guard !FileManager.default.fileExists(atPath: location.deletionMarker.path) else {
                     return .unavailable(errSecInteractionNotAllowed)
                 }
+                let stored = seedItem.read()
+                guard (try? StoredSeed.requireUsable(stored)) != nil else { return stored }
+                guard !location.hasMultipleDatabases else { return .unavailable(errSecDuplicateItem) }
                 do { try location.removeDiscardedDeletionData() }
                 catch { return .unavailable(errSecIO) }
-                return seedItem.read()
+                return stored
             },
             saveSeed: { try seedItem.save($0) },
             deleteSeed: { seedItem.delete(onlyIfValueIs: $0) },

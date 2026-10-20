@@ -519,17 +519,27 @@ actor WalletSession {
 
     private static func sdkOpener(variant: AppVariant) -> Opener {
         { mnemonic, datadir, runDaemon, appVersion, create in
+            let mnemonic = try StoredSeed.normalized(mnemonic)
+            let location = WalletDataLocation(variant: variant, documentsDirectory: URL(fileURLWithPath: datadir).deletingLastPathComponent())
+            guard !location.hasMultipleDatabases else { throw StoredSeed.Failure.conflict }
+            // Direct/background callers must not bypass the launch seed gate.
+            try StoredSeed.requireUsable(KeychainPassword.mnemonic(for: variant).read())
             let configuration = WalletConfiguration.base(for: variant)
             let config = configuration.sdkConfig(
                 userAgent: WalletConfiguration.userAgent(variant: variant, version: appVersion))
             // Existing wallets go through the SDK's read-only identity check
             // (properties, network, seed fingerprint) before anything writes;
             // only creation may use the creating factory.
-            let onchain = create
-                ? try await OnchainWallet.default(
+            let onchain: OnchainWallet
+            do {
+                onchain = create
+                    ? try await OnchainWallet.default(
                     network: configuration.network, mnemonic: mnemonic, config: config, datadir: datadir)
-                : try await OnchainWallet.openExisting(
+                    : try await OnchainWallet.openExisting(
                     network: configuration.network, mnemonic: mnemonic, config: config, datadir: datadir)
+            } catch let error as BarkError where error.message.contains("incorrect mnemonic for existing wallet") {
+                throw StoredSeed.Failure.conflict
+            }
             let wallet = try await Wallet.openWithOnchain(
                 network: configuration.network,
                 mnemonicOrSeed: mnemonic,

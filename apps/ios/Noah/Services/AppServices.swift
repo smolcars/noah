@@ -63,6 +63,8 @@ final class AppServices: Sendable {
     struct RestoreNotSettled: Error {}
 
     func ensureWalletOpen() async throws {
+        try StoredSeed.requireUsable(seed.read())
+        guard !WalletDataLocation(variant: variant).hasMultipleDatabases else { throw StoredSeed.Failure.conflict }
         // A background (push) launch never runs AppModel.start: settle an interrupted
         // restore here too, instead of failing every job until the app is opened.
         // This runs without a journal too (it removes plaintext a restore left

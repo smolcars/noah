@@ -81,6 +81,11 @@ final class AppModel {
         // `.task` can run again if the root view is rebuilt; launch once.
         guard !started else { return }
         started = true
+        let initialState = LaunchState.current(variant: variant)
+        if initialState == .invalidSeed || initialState == .seedConflict {
+            phase = .blocked(initialState)
+            return
+        }
         if UIApplication.shared.applicationState == .active { recurringForeground?.start() }
         // An interrupted restore must be settled before the datadir and seed
         // say anything about which wallet this is.
@@ -111,7 +116,7 @@ final class AppModel {
             await openExistingWallet()
         case .onboarding:
             phase = .onboarding
-        case .seedWithoutWalletData, .walletDataWithoutSeed, .secureStorageUnavailable:
+        case .seedWithoutWalletData, .walletDataWithoutSeed, .secureStorageUnavailable, .invalidSeed, .seedConflict:
             phase = .blocked(state)
         }
     }
@@ -234,6 +239,10 @@ final class AppModel {
                 walletError = nil
             }
         } catch {
+            if let failure = error as? StoredSeed.Failure {
+                phase = .blocked(failure == .invalid ? .invalidSeed : .seedConflict)
+                return
+            }
             log.e("Failed to open wallet: \(Self.describe(error))")
             walletError = String(localized: "Couldn't open your wallet.")
             return
