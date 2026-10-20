@@ -12,11 +12,13 @@ final class MMKVQuarantine: @unchecked Sendable {
     }
     var exists: Bool { FileManager.default.fileExists(atPath: file.path) }
     private var record: Data { Data("1\n\(store)\n".utf8) }
-    func recordRecovery() {
+    @discardableResult
+    func recordRecovery() -> Bool {
         do {
             try record.write(to: file, options: .atomic)
             try sync(file); try sync(file.deletingLastPathComponent())
         } catch { writeFailed = true }
+        return !writeFailed
     }
     func requireDurable() throws {
         guard !writeFailed else { throw SettingsStorage.OpenError() }

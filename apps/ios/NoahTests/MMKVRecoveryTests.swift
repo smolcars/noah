@@ -38,6 +38,31 @@ struct MMKVRecoveryTests {
         RNStoreCodec.schemas.keys.filter { store.string(forKey: $0) != nil }.sorted()
     }
 
+    @Test func silentLastConfirmedRollbackRequiresContinue() throws {
+        for mode in ["crc", "length"] {
+            let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+            let store = try SettingsStorage(rootPath: root.path)
+            let crc = root.appending(path: Self.id + ".crc")
+            let before = try Data(contentsOf: crc)
+            var wallet = try #require(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key))
+            wallet.isWalletSuspended = true
+            try store.setPersistedState(wallet, key: PersistedWalletState.key, version: 0)
+            Self.close(root)
+            var meta = try Data(contentsOf: crc)
+            // A valid older prefix allows MMKV to roll back without any error callback.
+            meta.replaceSubrange(32..<36, with: before[28..<32])
+            meta.replaceSubrange(36..<40, with: before[0..<4])
+            if mode == "crc" { meta[0] ^= 0xff }
+            else { for offset in 28..<32 { meta[offset] = 0xff } }
+            try meta.write(to: crc)
+            #expect(throws: SettingsStorage.RecoveryRequired.self) { try SettingsStorage(rootPath: root.path) }
+            #expect(MMKVQuarantine(root: root, store: Self.id).exists)
+            let recovered = try SettingsStorage.acknowledgeRecovery(rootPath: root.path)
+            #expect(recovered.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == false)
+            #expect(!MMKVUpgradeBackup(root: root, instanceID: Self.id).restored)
+        }
+    }
+
     @Test(arguments: ["crc", "length", "truncate"])
     func recoversCorruptRNFilesWithoutDiscarding(mode: String) throws {
         let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }

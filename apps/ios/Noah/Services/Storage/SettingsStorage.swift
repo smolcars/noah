@@ -69,13 +69,14 @@ final class SettingsStorage: @unchecked Sendable {
         try FileManager.default.createDirectory(
             atPath: rootPath, withIntermediateDirectories: true)
         let backup = MMKVUpgradeBackup(root: URL(fileURLWithPath: rootPath), instanceID: instanceID)
-        try backup.prepare()
         let quarantine = MMKVQuarantine(root: URL(fileURLWithPath: rootPath), store: instanceID)
-        try quarantine.requireDurable()
+        try MMKVIntegrity.quarantineBeforeOpen(root: URL(fileURLWithPath: rootPath), store: instanceID, quarantine: quarantine)
+        try backup.prepare()
+        try MMKVIntegrity.quarantineBeforeOpen(root: URL(fileURLWithPath: rootPath), store: instanceID, quarantine: quarantine)
         Self.handler.begin(quarantine)
         defer { Self.handler.end() }
         let retiredKeys = try backup.retiredKeys
-        let snapshot = retiredKeys == nil ? try Self.snapshotInventory(backup, instanceID: instanceID) : nil
+        let snapshot = retiredKeys == nil ? try Self.snapshotInventory(backup, instanceID: instanceID, quarantine: quarantine) : nil
         let generation = Self.handler.generation
         guard var opened = MMKV(mmapID: instanceID, rootPath: rootPath) else { throw OpenError() }
         do {
@@ -86,6 +87,7 @@ final class SettingsStorage: @unchecked Sendable {
                     opened.close()
                     guard !backup.restored else { throw OpenError() }
                     try backup.restore()
+                    try MMKVIntegrity.quarantineBeforeOpen(root: URL(fileURLWithPath: rootPath), store: instanceID, quarantine: quarantine)
                     AppLog("mmkv").w("Restoring pre-native settings backup after incomplete recovery")
                     guard let restored = MMKV(mmapID: instanceID, rootPath: rootPath) else { throw OpenError() }
                     opened = restored
@@ -124,9 +126,10 @@ final class SettingsStorage: @unchecked Sendable {
         RNStoreCodec.storeKeys.filter { store.contains(key: $0) }
     }
     private struct SnapshotInventory { let keys: [String]; let readable: Bool }
-    private static func snapshotInventory(_ backup: MMKVUpgradeBackup, instanceID: String) throws -> SnapshotInventory {
+    private static func snapshotInventory(_ backup: MMKVUpgradeBackup, instanceID: String, quarantine: MMKVQuarantine) throws -> SnapshotInventory {
         guard try backup.hasContent else { return SnapshotInventory(keys: [], readable: true) }
         return try backup.inspectSnapshot { root in
+            try MMKVIntegrity.quarantineBeforeOpen(root: root, store: instanceID, quarantine: quarantine)
             guard let snapshot = MMKV(mmapID: instanceID, rootPath: root.path) else { throw OpenError() }
             defer { snapshot.close() }
             let keys = rnKeys(snapshot)
