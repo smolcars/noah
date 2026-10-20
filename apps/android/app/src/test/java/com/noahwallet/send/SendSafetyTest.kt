@@ -15,7 +15,8 @@ internal open class FakeSendWallet : SendWallet {
     var prepareBlock: suspend () -> SendSnapshot = { snapshot }
     var reconciliation: suspend (SendAttempt) -> SendResolution = { SendResolution.Uncertain }
     override suspend fun identity() = owner
-    override suspend fun quote(payment: SendPayment) = quote
+    var quoteBlock: suspend (SendPayment) -> SendQuote = { quote }
+    override suspend fun quote(payment: SendPayment) = quoteBlock(payment)
     override suspend fun prepare(payment: SendPayment, quote: SendQuote): SendSnapshot { prepareCalls++; return prepareBlock() }
     override suspend fun pay(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot): SendReceipt { calls++; return payBlock() }
     override suspend fun reconcile(attempt: SendAttempt) = reconciliation(attempt)

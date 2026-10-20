@@ -2,7 +2,7 @@ package com.noahwallet.send
 
 import io.github.niteshbalusu11.bark.*
 import kotlinx.serialization.json.*
-import java.time.Instant
+import com.noahwallet.history.HistoryRules
 
 object SendReconciliation {
     fun isLightning(movement: Movement, hash: String) = movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" && movement.paymentHash == hash
@@ -37,7 +37,7 @@ object SendReconciliation {
         val hash = if (payment.method in listOf("lightning", "lnurl")) attempt.paymentHash ?: PaymentEncoding.invoice(payment.destination)?.hash else null
         val candidates = movements.filter {
             matches(it, payment, hash) && (hash != null || it.id !in attempt.snapshot.movementIDs &&
-                (runCatching { Instant.parse(it.createdAt).toEpochMilli() }.getOrNull() ?: Long.MIN_VALUE) >= attempt.startedAt)
+                (HistoryRules.parseDate(it.createdAt)?.time ?: Long.MIN_VALUE) >= attempt.startedAt)
         }
         return if (hash != null) lightning(candidates, hash, payment.amount, attempt.snapshot) else SendResolution.Candidates(candidates.map { it.id })
     }

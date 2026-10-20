@@ -13,6 +13,9 @@ import org.junit.Test
 class WalletSessionTest {
     private class Boom : Exception()
     private class Handles : WalletSession.Handles {
+        override val send = com.noahwallet.send.FakeSendWallet()
+        var sendReviewsDiscarded = false
+        override suspend fun discardSendReviews() { sendReviewsDiscarded = true }
         val subscribed = CompletableDeferred<Unit>()
         val waiting = CompletableDeferred<Unit>()
         val released = CompletableDeferred<Unit>()
@@ -97,6 +100,32 @@ class WalletSessionTest {
     private fun bark(location: WalletDataLocation) { location.directory.mkdirs(); location.database.writeText("fake") }
     private fun assertFailure(expected: WalletSession.OpenFailure, result: Result<Unit>) {
         assertEquals(expected, (result.exceptionOrNull() as? WalletSession.OpenError)?.reason)
+    }
+    @Test fun canceledQuoteDiscardsTheSuccessfulNativeResult() = runBlocking {
+        withLocation { location ->
+            val handles = Handles(); val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test")
+            val entered = CompletableDeferred<Unit>(); val gate = CompletableDeferred<Unit>()
+            handles.send.quoteBlock = { entered.complete(Unit); gate.await(); com.noahwallet.send.chainQuote }
+            val quoting = launch { session.quoteSend(com.noahwallet.send.chainPayment) }
+            entered.await(); quoting.cancel(); gate.complete(Unit); quoting.join()
+            assertEquals(1, handles.send.discards)
+            session.close()
+        }
+    }
+    @Test fun sendReservationIsCountedShieldedAndExcludesReplacement() = runBlocking {
+        withLocation { location ->
+            val handles = Handles()
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test")
+            val entered = CompletableDeferred<Unit>(); val gate = CompletableDeferred<Unit>()
+            val sending = launch { session.withSendReservation { entered.complete(Unit); gate.await(); assertFalse(handles.closed) } }
+            entered.await(); sending.cancel()
+            assertTrue(runCatching { session.reserve() }.isFailure)
+            val closing = launch { session.close() }; yield(); assertFalse(handles.closed)
+            gate.complete(Unit); sending.join(); closing.join()
+            assertTrue(handles.sendReviewsDiscarded); assertTrue(handles.closed)
+        }
     }
     @Test fun canceledHistoryReadCompletesBothReadsBeforeClose() = runBlocking {
         withLocation { location ->

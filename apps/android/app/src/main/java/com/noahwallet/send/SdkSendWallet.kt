@@ -207,5 +207,8 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         try { onchain.discardPrepared(id) } catch (_: Exception) { warn("Prepared send handle could not be discarded") }
     }
     }
-    override suspend fun discardAll() { synchronized(reviewLock) { reviews.values.map { it.quote } }.forEach { discard(it, true) } }
+    override suspend fun discardAll() {
+        synchronized(reviewLock) { reviews.values.map { it.quote } }.forEach { discard(it, true) }
+        discardGate.withLock { } // Join an expiry that already removed its entry before native disposal.
+    }
 }

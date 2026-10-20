@@ -2,18 +2,19 @@ package com.noahwallet.send
 
 import android.util.AtomicFile
 import com.noahwallet.services.storage.syncDirectory
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.*
 import java.io.File
 
 /** Wallet-private, atomically replaced and fsynced before the payment call. */
 class SendJournal(private val file: File) {
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     @Synchronized fun read(): SendAttempt? {
         val atomic = AtomicFile(file)
         if (!file.exists() && !File(file.path + ".bak").exists()) return null
         return atomic.openRead().use { stream ->
             require(stream.channel.size() <= 1_048_576)
-            json.decodeFromString<SendAttempt>(stream.readBytes().toString(Charsets.UTF_8))
+            val value = json.parseToJsonElement(stream.readBytes().toString(Charsets.UTF_8)).jsonObject
+            json.decodeFromJsonElement<SendAttempt>(value).let { if ("safetyVersion" in value) it else it.copy(safetyVersion = 0) }
         }
     }
     @Synchronized fun write(attempt: SendAttempt?) {

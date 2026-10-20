@@ -22,16 +22,16 @@ class SendController(private val dependencies: Dependencies,
         generation++; checking = false; attempt = null; message = null; unboundJournal = false; state = State.storageBlocked
     }
     suspend fun reloadForWalletChange() {
-        generation++; checking = false; attempt = null; state = State.ready; message = null; unboundJournal = false
+        generation++; checking = false; attempt = null; state = State.storageBlocked; message = null; unboundJournal = false
         try {
             dependencies.reservation { wallet ->
-                var saved = dependencies.read() ?: return@reservation
+                var saved = dependencies.read() ?: run { state = State.ready; return@reservation }
                 if (saved.walletIdentity == null) {
                     unboundJournal = true; state = State.uncertain
                     message = "This legacy payment has no wallet identity. Check your history and recipient before discarding it."
                     return@reservation
                 }
-                if (saved.walletIdentity != wallet.identity()) { dependencies.write(null); return@reservation }
+                if (saved.walletIdentity != wallet.identity()) { dependencies.write(null); state = State.ready; return@reservation }
                 if (saved.safetyVersion != journalVersion || saved.receipt?.isProven(saved.payment, saved.paymentHash) == false || saved.alreadyPaid?.isProven(saved.payment, saved.paymentHash, true) == false) {
                     saved = saved.copy(safetyVersion = journalVersion, receipt = null, alreadyPaid = null, failed = false,
                         possibleTxids = (saved.possibleTxids + listOfNotNull(saved.receipt?.txid, saved.alreadyPaid?.txid)).distinct(),
