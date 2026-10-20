@@ -30,7 +30,7 @@ fun AutoBoardPrompt(app: AppModel) {
         plan?.let { held -> disposalScope.launch { app.session.discardBoardReview(held) } }
         plan = null
     }
-    fun prefs() = SettingsPreferences.state(app.settings.string("transaction-storage"))
+    fun prefs() = SettingsPreferences.transaction(app.settings.string("transaction-storage"))
     fun enabled() = prefs()["isAutoBoardingEnabled"]?.jsonPrimitive?.booleanOrNull != false
     fun attempted() = prefs()["hasAttemptedAutoBoarding"]?.jsonPrimitive?.booleanOrNull == true
     fun markAttempted(): Boolean = try {

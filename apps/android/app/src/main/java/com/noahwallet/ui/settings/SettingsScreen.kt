@@ -90,7 +90,7 @@ fun SettingToggle(title: String, detail: String, checked: Boolean, enabled: Bool
 @Composable
 private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
     var wallet by remember { mutableStateOf(model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()) }
-    var autoBoard by remember { mutableStateOf(SettingsPreferences.state(model.settings.string("transaction-storage"))["isAutoBoardingEnabled"]?.jsonPrimitive?.booleanOrNull != false) }
+    var autoBoard by remember { mutableStateOf(SettingsPreferences.transaction(model.settings.string("transaction-storage"))["isAutoBoardingEnabled"]?.jsonPrimitive?.booleanOrNull != false) }
     var server by remember { mutableStateOf(model.server.state) }
     var taps by remember { mutableIntStateOf(0) }
     var lastTap by remember { mutableLongStateOf(0L) }

@@ -1,0 +1,60 @@
+package com.noahwallet.services.storage
+
+import kotlinx.serialization.json.*
+
+/** Validate the persisted RN contract before any mutation; retain the complete JSON envelope. */
+object RNStoreCodec {
+    class Unreadable : Exception("Saved settings could not be read. Keep Noah installed and contact support.")
+    val versions = mapOf("wallet-storage" to 0, "backup-storage" to 0, "esplora-storage" to 0,
+        "privacy-storage" to 0, "profile-storage" to 0, "recurring-payment-storage" to 0,
+        "server-storage" to 0, "transaction-storage" to 1)
+    private val fields = mapOf(
+        "wallet-storage" to setOf("isInitialized", "isWalletLoaded", "staticVtxoPubkey", "isBiometricsEnabled", "isDebugModeEnabled", "isWalletSuspended", "hasSeenBatteryOptimizationPrompt"),
+        "backup-storage" to setOf("backupPending", "lastBackupAt", "lastBackupAttemptAt", "lastBackupStatus", "lastBackupError", "lastBackupId", "lastUploadedSnapshotSha256"),
+        "esplora-storage" to setOf("endpointOverride"),
+        "privacy-storage" to setOf("isHomeBalanceHidden"),
+        "profile-storage" to setOf("displayName", "preferredCurrency", "bitcoinAmountUnit"),
+        "recurring-payment-storage" to setOf("schedules", "serverSyncPending"),
+        "server-storage" to setOf("isRegisteredWithServer", "lightningAddress", "nostrPubkey", "isBackupEnabled", "emailAddress", "isEmailVerified", "isEmailPromptDismissed", "mailboxAuthorizationExpiry", "isMailboxAuthorizationEnabled", "lastReportedDeviceFingerprint", "lastDeviceReportAt"),
+        "transaction-storage" to setOf("isAutoBoardingEnabled", "hasAttemptedAutoBoarding"),
+    )
+    private val booleans = setOf("isInitialized", "isWalletLoaded", "isBiometricsEnabled", "isDebugModeEnabled",
+        "isWalletSuspended", "hasSeenBatteryOptimizationPrompt", "backupPending", "isHomeBalanceHidden",
+        "serverSyncPending", "isRegisteredWithServer", "isBackupEnabled", "isEmailVerified", "isEmailPromptDismissed",
+        "isMailboxAuthorizationEnabled", "isAutoBoardingEnabled", "hasAttemptedAutoBoarding")
+    private val nullableStrings = setOf("staticVtxoPubkey", "endpointOverride", "lastBackupError", "lastBackupId",
+        "lastUploadedSnapshotSha256", "lightningAddress", "nostrPubkey", "emailAddress", "lastReportedDeviceFingerprint")
+    private val strings = setOf("displayName", "preferredCurrency", "bitcoinAmountUnit", "lastBackupStatus")
+    private val numbers = setOf("lastBackupAt", "lastBackupAttemptAt", "mailboxAuthorizationExpiry", "lastDeviceReportAt")
+
+    fun decode(key: String, value: String): JsonObject = try {
+        val root = Json.parseToJsonElement(value).jsonObject
+        val state = root.getValue("state").jsonObject
+        val version = root["version"]?.let { (it as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull ?: throw Unreadable() } ?: 0
+        require(version in 0..versions.getValue(key))
+        state.forEach { (field, value) ->
+            val primitive = value as? JsonPrimitive
+            require(when (field) {
+                !in fields.getValue(key) -> true
+                in booleans -> primitive != null && !primitive.isString && primitive.booleanOrNull != null
+                in nullableStrings -> value == JsonNull || primitive?.isString == true
+                in strings -> primitive?.isString == true
+                in numbers -> value == JsonNull || (primitive != null && !primitive.isString && primitive.doubleOrNull?.isFinite() == true)
+                "schedules" -> value is JsonObject
+                else -> true
+            })
+        }
+        if (key == "profile-storage") state["preferredCurrency"]?.let { require(it.jsonPrimitive.content in com.noahwallet.formatting.FiatCurrency.supported) }
+        if (key == "profile-storage") state["bitcoinAmountUnit"]?.let { require(it.jsonPrimitive.content in setOf("bip177", "sats")) }
+        if (key == "backup-storage") state["lastBackupStatus"]?.let { require(it.jsonPrimitive.content in setOf("idle", "in_progress", "success", "failed")) }
+        root
+    } catch (_: Exception) { throw Unreadable() }
+
+    /** Merge complete envelopes and nested state so typed writers never drop future fields. */
+    fun merge(key: String, previous: String?, next: String): String {
+        val new = decode(key, next)
+        val old = previous?.let { decode(key, it) }.orEmpty()
+        val state = (old["state"] as? JsonObject).orEmpty() + new.getValue("state").jsonObject
+        return JsonObject(old + new + ("state" to JsonObject(state))).toString()
+    }
+}

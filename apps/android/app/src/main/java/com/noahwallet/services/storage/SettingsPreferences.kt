@@ -9,9 +9,23 @@ object SettingsPreferences {
     }.getOrDefault(JsonObject(emptyMap()))
 
     fun update(envelope: String?, fields: Map<String, JsonElement>, version: Int? = null): String {
-        val root = runCatching { Json.parseToJsonElement(envelope ?: "").jsonObject }.getOrDefault(JsonObject(emptyMap()))
+        val root = if (envelope == null) JsonObject(emptyMap()) else try {
+            Json.parseToJsonElement(envelope).jsonObject.also { require(it["state"] is JsonObject) }
+        } catch (_: Exception) { throw RNStoreCodec.Unreadable() }
         return JsonObject(root + ("state" to JsonObject(state(envelope) + fields)) +
             ("version" to (version?.let(::JsonPrimitive) ?: root["version"] ?: JsonPrimitive(0)))).toString()
+    }
+
+    fun transaction(envelope: String?): JsonObject {
+        if (envelope == null) return JsonObject(emptyMap())
+        return try {
+            val root = RNStoreCodec.decode("transaction-storage", envelope)
+            val state = root.getValue("state").jsonObject
+            if ((root["version"]?.jsonPrimitive?.intOrNull ?: 0) < 1)
+                JsonObject(state + ("hasAttemptedAutoBoarding" to JsonPrimitive(false))) else state
+        } catch (_: RNStoreCodec.Unreadable) {
+            buildJsonObject { put("isAutoBoardingEnabled", false); put("hasAttemptedAutoBoarding", true) }
+        }
     }
 
     fun autoBoard(envelope: String?, enabled: Boolean): String {

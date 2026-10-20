@@ -30,6 +30,8 @@ enum class LaunchState {
         }
 
         suspend fun current(context: Context, variant: String = BuildConfig.APP_VARIANT): LaunchState {
+            try { com.noahwallet.services.storage.SettingsStorage(context).validateStores() }
+            catch (_: com.noahwallet.services.storage.RNStoreCodec.Unreadable) { return secureStorageUnavailable }
             return resolve(
                 SeedStatus.from(SeedStorage(context, variant).read()),
                 WalletDataLocation(context.filesDir, variant).databaseExists,

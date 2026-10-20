@@ -169,6 +169,7 @@ class AppServices private constructor(private val context: Context) {
         if (settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
             throw WalletSuspended()
         }
+        settings.validateStores()
         val mnemonic = seed.read()
         check(mnemonic is SecretResult.Found && mnemonic.value.isNotEmpty()) { "Wallet seed unavailable" }
         session.ensureOpen(mnemonic.value, true, BuildConfig.VERSION_NAME)

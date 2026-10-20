@@ -15,7 +15,11 @@ class SettingsStorage(context: Context) {
     }
 
     fun string(key: String): String? = mmkv.decodeString(key)
-    fun set(value: String, key: String) { check(mmkv.encode(key, value)) }
+    fun set(value: String, key: String) {
+        val preserved = if (key in RNStoreCodec.versions) RNStoreCodec.merge(key, string(key), value) else value
+        check(mmkv.encode(key, preserved))
+    }
+    fun validateStores() { RNStoreCodec.versions.keys.filter { it != "esplora-storage" }.forEach { key -> string(key)?.let { RNStoreCodec.decode(key, it) } } }
     fun sync() { mmkv.sync() }
     fun removeAll() { mmkv.clearAll(); mmkv.sync() }
     inline fun <reified State> persistedState(key: String): State? =

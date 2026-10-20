@@ -1,0 +1,224 @@
+{
+  "description": "Real RN Zustand persist bytes; only platform MMKV/logging and unused formatting mocked.",
+  "cases": [
+    {
+      "name": "wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "envelope": {
+          "state": {
+            "isInitialized": true,
+            "isWalletLoaded": true,
+            "staticVtxoPubkey": null,
+            "isBiometricsEnabled": false,
+            "isDebugModeEnabled": true,
+            "isWalletSuspended": false,
+            "hasSeenBatteryOptimizationPrompt": false
+          },
+          "version": 0
+        }
+      },
+      "expected": {
+        "state": {
+          "isInitialized": true,
+          "isWalletLoaded": true,
+          "staticVtxoPubkey": null,
+          "isBiometricsEnabled": false,
+          "isDebugModeEnabled": true,
+          "isWalletSuspended": false,
+          "hasSeenBatteryOptimizationPrompt": false
+        },
+        "version": 0
+      }
+    },
+    {
+      "name": "backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "envelope": {
+          "state": {
+            "backupPending": true,
+            "lastBackupAt": null,
+            "lastBackupAttemptAt": null,
+            "lastBackupStatus": "failed",
+            "lastBackupError": "offline",
+            "lastBackupId": null,
+            "lastUploadedSnapshotSha256": null
+          },
+          "version": 0
+        }
+      },
+      "expected": {
+        "state": {
+          "backupPending": true,
+          "lastBackupAt": null,
+          "lastBackupAttemptAt": null,
+          "lastBackupStatus": "failed",
+          "lastBackupError": "offline",
+          "lastBackupId": null,
+          "lastUploadedSnapshotSha256": null
+        },
+        "version": 0
+      }
+    },
+    {
+      "name": "esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "envelope": {
+          "state": {
+            "endpointOverride": "https://example.com/api"
+          },
+          "version": 0
+        }
+      },
+      "expected": {
+        "state": {
+          "endpointOverride": "https://example.com/api"
+        },
+        "version": 0
+      }
+    },
+    {
+      "name": "privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "envelope": {
+          "state": {
+            "isHomeBalanceHidden": true
+          },
+          "version": 0
+        }
+      },
+      "expected": {
+        "state": {
+          "isHomeBalanceHidden": true
+        },
+        "version": 0
+      }
+    },
+    {
+      "name": "profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "envelope": {
+          "state": {
+            "displayName": "Upgrade test",
+            "preferredCurrency": "EUR",
+            "bitcoinAmountUnit": "sats"
+          },
+          "version": 0
+        }
+      },
+      "expected": {
+        "state": {
+          "displayName": "Upgrade test",
+          "preferredCurrency": "EUR",
+          "bitcoinAmountUnit": "sats"
+        },
+        "version": 0
+      }
+    },
+    {
+      "name": "recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "envelope": {
+          "state": {
+            "schedules": {},
+            "serverSyncPending": true
+          },
+          "version": 0
+        }
+      },
+      "expected": {
+        "state": {
+          "schedules": {},
+          "serverSyncPending": true
+        },
+        "version": 0
+      }
+    },
+    {
+      "name": "server-storage",
+      "input": {
+        "key": "server-storage",
+        "envelope": {
+          "state": {
+            "isRegisteredWithServer": true,
+            "lightningAddress": null,
+            "nostrPubkey": null,
+            "isBackupEnabled": false,
+            "emailAddress": null,
+            "isEmailVerified": false,
+            "isEmailPromptDismissed": false,
+            "mailboxAuthorizationExpiry": null,
+            "isMailboxAuthorizationEnabled": false,
+            "lastReportedDeviceFingerprint": null,
+            "lastDeviceReportAt": null
+          },
+          "version": 0
+        }
+      },
+      "expected": {
+        "state": {
+          "isRegisteredWithServer": true,
+          "lightningAddress": null,
+          "nostrPubkey": null,
+          "isBackupEnabled": false,
+          "emailAddress": null,
+          "isEmailVerified": false,
+          "isEmailPromptDismissed": false,
+          "mailboxAuthorizationExpiry": null,
+          "isMailboxAuthorizationEnabled": false,
+          "lastReportedDeviceFingerprint": null,
+          "lastDeviceReportAt": null
+        },
+        "version": 0
+      }
+    },
+    {
+      "name": "transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "envelope": {
+          "state": {
+            "isAutoBoardingEnabled": false,
+            "hasAttemptedAutoBoarding": true
+          },
+          "version": 1
+        }
+      },
+      "expected": {
+        "state": {
+          "isAutoBoardingEnabled": false,
+          "hasAttemptedAutoBoarding": true
+        },
+        "version": 1
+      }
+    },
+    {
+      "name": "transaction v0 migration",
+      "input": {
+        "key": "transaction-storage",
+        "envelope": {
+          "state": {
+            "isAutoBoardingEnabled": false,
+            "hasAttemptedAutoBoarding": true,
+            "future": {
+              "keep": 1
+            }
+          },
+          "version": 0
+        }
+      },
+      "expected": {
+        "state": {
+          "isAutoBoardingEnabled": false,
+          "hasAttemptedAutoBoarding": false
+        },
+        "version": 1
+      }
+    }
+  ]
+}

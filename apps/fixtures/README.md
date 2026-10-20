@@ -80,3 +80,11 @@ versions and non-default values. RN's existing `recurring-storage.json` and
 edge cases. iOS rejects unknown versions/types without overwriting the input,
 preserves unknown JSON tokens on writes, and applies transaction v0→v1's
 `hasAttemptedAutoBoarding = false` migration in memory before any write.
+
+Android RN store shapes: `rn-stores-android-shapes.json` is produced by
+`bun --tsconfig-override ./client/tsconfig.json apps/fixtures/tools/generate-rn-stores-android.ts`.
+It executes all eight actual Zustand stores and the transaction v0 migration.
+See `apps/android/UpgradeTests/STORES.md` for keys, fields, versions, native consumers
+and unknown-field preservation. The Android-specific name avoids concurrent iOS
+fixture edits. `launch-state.json` additionally covers invalid/empty BIP39 records,
+conflicting sources and corrupt secondary sources with and without a wallet DB.
