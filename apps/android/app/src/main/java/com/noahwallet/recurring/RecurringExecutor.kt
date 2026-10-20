@@ -176,8 +176,8 @@ class RecurringExecutor(private val d: Dependencies,
                         } catch (_: Exception) { throw SendNotSubmitted(SendFailure.Reason.recurringStopped) }
                     }
                     if (job == null) { markUncertain(entry); continue }
-                    job.join()
-                    settle(entry, marked, retainReceipt = approval != null)
+                    val result = job.await()
+                    settle(entry, marked, result, retainReceipt = approval != null)
                 } catch (stale: NoWallet) { throw stale }
                 catch (_: Exception) {
                     val entry = storage { d.journal.load()[id] }
@@ -216,11 +216,10 @@ class RecurringExecutor(private val d: Dependencies,
             d.store.upsert(stopped); d.notify(emptyList(), stopped)
         }
     }
-    private suspend fun settle(entry: RecurringJournal.Entry, original: RecurringPayment?, retainReceipt: Boolean = false) {
-        // Own this exact outcome before storage can suspend and the UI can start another attempt.
-        val attempt = controller.attempt ?: return
-        val outcome = controller.state
-        val message = controller.message
+    private suspend fun settle(entry: RecurringJournal.Entry, original: RecurringPayment?, result: SendController.TerminalResult?, retainReceipt: Boolean = false) {
+        val attempt = result?.attempt ?: return
+        val outcome = result.outcome
+        val message = result.message
         if (attempt.recurringOccurrenceKey != entry.key) return
         val success = outcome == SendController.State.succeeded && attempt.receipt?.let { !it.isUnresolved && !it.broadcastRetryPending && it.isProven(attempt.payment) } == true
         val paid = success || outcome == SendController.State.alreadyPaid
@@ -260,7 +259,7 @@ class RecurringExecutor(private val d: Dependencies,
             }
             true
         }
-        if (settled && !retainReceipt) controller.acknowledge(attempt)
+        if (settled) controller.settlementConsumed(result, retainReceipt)
         if (policyFailure != null) error = RecurringPolicyLedger.message
     }
     suspend fun checkStatus(id: String) {
@@ -269,7 +268,7 @@ class RecurringExecutor(private val d: Dependencies,
             val entry = storage { d.journal.load()[id] } ?: return
             val schedule = storage { runCatching { d.store.load().schedules[id] }.getOrNull() }
             if (schedule == null && !entry.policyApplied && !entry.consumed) return
-            controller.checkStatus(); settle(entry, schedule)
+            controller.checkStatus(); settle(entry, schedule, controller.resultForSettlement(entry.key))
         } catch (_: Exception) { error = "Unable to check this payment. Sending remains stopped." }
         reload()
     }

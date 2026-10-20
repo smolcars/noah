@@ -3,6 +3,25 @@
 Initial implementation base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
 Kotlin / Compose, API 24 minimum, bark-bolt-ffi **0.4.0**.
 
+## Done before submission returns (2026-10-20)
+
+Base `a184db6b`. The iOS review's early-Done race also reproduces on Android
+after exclusive wallet work ends but before its coroutine returns. Send now
+freezes an immutable result before publishing success and returns it directly
+to settlement. Done hides the receipt while retaining its journal/result until
+durable settlement; cleanup matches the submission generation. Retained lookup
+also checks the wallet-load generation. Normal Send locks and UI copy are unchanged.
+
+The original regression failed before the fix. `RecurringSettlementTest` now adds
+**8 passing regressions** for early Done, different/same-key replacement, reload,
+proven failure/message, ambiguity, blocked settlement and a replacement wallet.
+Focused checks: **99 tests / 11 suites**. Final full unit tests and regtest APK
+assembly passed: **3,489 tests / 123 suites**, zero failures/errors/skips.
+The required two-worker Nix command completed after the last source/test edit;
+an earlier invocation was stopped during APK assembly to add the wallet-load guard.
+No emulator, physical device, funded payment or Docker service was used.
+Logs and exported JUnit evidence: `/private/tmp/noah-done-bc1177-android-*`.
+
 ## Remaining read races and strict JSON regressions (2026-10-20)
 
 Base: `feat/native-rewrite` at `76c1e3ed`. Review evidence and temporary probe

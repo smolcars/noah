@@ -9,6 +9,103 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 class RecurringSettlementTest {
+    @Test fun doneBeforeReservationReturnStillRecordsPaidOccurrence() = reservationRace("done")
+    @Test fun replacementBeforeReservationReturnKeepsOriginalOutcome() = reservationRace("replacement")
+    @Test fun sameKeyReplacementBeforeReservationReturnKeepsOriginalOutcome() = reservationRace("sameKeyReplacement")
+    @Test fun reloadBeforeReservationReturnKeepsOriginalOutcome() = reservationRace("reload")
+    @Test fun failedResultBeforeReservationReturnKeepsItsMessage() = reservationRace("failed")
+    @Test fun ambiguousResultBeforeReservationReturnNeverRetries() = reservationRace("ambiguous")
+    @Test fun hiddenReceiptSurvivesBlockedSettlementUntilDurableConsumption() = reservationRace("blocked")
+    @Test fun retainedResultFromPreviousWalletCannotSettleMatchingKey() = reservationRace("foreignReload")
+
+    private fun reservationRace(change: String) = runBlocking {
+        val wallet = FakeSendWallet()
+        val terminal = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        var holdReturn = true
+        val w = RecurringWorld(this, wallet, reservation = { work ->
+            work(wallet)
+            // The exclusive wallet work is finished; the submission coroutine has not returned.
+            if (holdReturn) {
+                holdReturn = false
+                terminal.complete(Unit)
+                release.await()
+            }
+        })
+        try {
+            val schedule = w.add().copy(status = "needs_approval")
+            w.store.upsert(schedule)
+            if (change == "failed") wallet.payBlock = { throw SendNotSubmitted(SendFailure.Reason.fundsChanged) }
+            if (change == "ambiguous") wallet.payBlock = { error("Outcome unknown") }
+            val review = w.executor.review(schedule.id)
+            val run = async { w.executor.execute(manual = true, approval = review) }
+            var replacement: SendAttempt? = null
+            var key = ""
+            var originalMessage: String? = null
+            try {
+                withTimeout(5000) { terminal.await() }
+                key = w.controller.attempt!!.recurringOccurrenceKey!!
+                val result = w.controller.resultForSettlement(key)!!
+                originalMessage = result.message
+                assertEquals(if (change == "failed") SendController.State.failed else if (change == "ambiguous") SendController.State.uncertain else SendController.State.succeeded, result.outcome)
+                w.controller.acknowledge()
+                if (change == "ambiguous") assertTrue(w.controller.locked) else {
+                    assertFalse(w.controller.locked)
+                    assertNull(w.controller.attempt)
+                    assertEquals(result, w.controller.resultForSettlement(key))
+                    assertNotNull("Done must retain the durable Send evidence until settlement", w.sendJournal.attempt)
+                }
+                if (change in listOf("replacement", "sameKeyReplacement")) {
+                    wallet.payBlock = { throw SendNotSubmitted(SendFailure.Reason.recurringStopped) }
+                    w.controller.submit(arkPayment, FakeSendWallet.quote.copy(walletIdentity = wallet.owner),
+                        if (change == "sameKeyReplacement") key else "another-occurrence")!!.await()
+                    replacement = w.controller.attempt
+                } else if (change == "reload") {
+                    w.controller.reloadForWalletChange()
+                    replacement = w.controller.attempt
+                } else if (change == "foreignReload") {
+                    w.binding = w.binding.copy(instance = java.util.UUID.randomUUID().toString())
+                    w.sendJournal.attempt = null
+                    w.controller.reloadForWalletChange()
+                } else if (change == "blocked") w.journal.quarantineFile.writeText("Storage admission blocked by test")
+            } finally { release.complete(Unit) }
+            withTimeout(5000) { run.await() }
+            if (change == "foreignReload") {
+                assertNull(w.controller.resultForSettlement(key))
+                assertFalse(w.journal.load().getValue(schedule.id).consumed)
+                assertEquals(0, w.schedule!!.occurrencesPaid)
+                assertEquals(1, wallet.calls)
+                return@runBlocking
+            }
+            if (change == "blocked") {
+                assertNotNull(w.controller.resultForSettlement(key))
+                assertNotNull(w.sendJournal.attempt)
+                assertTrue(w.journal.quarantineFile.delete())
+                assertFalse(w.journal.load().getValue(schedule.id).consumed)
+                w.executor.checkStatus(schedule.id)
+            }
+            val paid = change !in listOf("failed", "ambiguous")
+            assertEquals(if (change in listOf("replacement", "sameKeyReplacement")) 2 else 1, wallet.calls)
+            assertEquals(paid, w.journal.load().getValue(schedule.id).consumed)
+            assertEquals(if (paid) 1 else 0, w.schedule!!.occurrencesPaid)
+            if (change == "failed") assertEquals(originalMessage, w.schedule!!.lastError)
+            if (replacement != null) {
+                assertSame("Only the original generation may be acknowledged", replacement, w.controller.attempt)
+                assertTrue(w.controller.locked)
+            } else if (change != "ambiguous") {
+                assertNull(w.controller.resultForSettlement(key))
+                assertNull(w.sendJournal.attempt)
+            }
+            val calls = wallet.calls
+            val paidCount = w.schedule!!.occurrencesPaid
+            w.executor.checkStatus(schedule.id)
+            w.executor.execute()
+            assertEquals(paidCount, w.schedule!!.occurrencesPaid)
+            assertEquals(calls, wallet.calls)
+            if (change == "ambiguous") assertEquals("needs_attention", w.schedule!!.status)
+        } finally { release.complete(Unit); w.policyDirectory.parentFile!!.deleteRecursively() }
+    }
+
     @Test fun paidOccurrenceKeepsItsOutcomeWhenAnotherPaymentFailsDuringSettlement() = runBlocking {
         val w = RecurringWorld(this); val schedule = w.add()
         val plan = schedule.plan(w.now, w.zone, true)

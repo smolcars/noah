@@ -7,6 +7,8 @@ import kotlinx.coroutines.*
 class SendController(private val dependencies: Dependencies,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)) {
     enum class State { ready, submitting, uncertain, succeeded, alreadyPaid, failed, storageBlocked }
+    data class TerminalResult(val generation: Int, val walletGeneration: Int, val attempt: SendAttempt, val outcome: State, val message: String?)
+    private val recurringResults = java.util.concurrent.ConcurrentHashMap<Int, TerminalResult>()
     class Dependencies(val read: suspend () -> SendAttempt?, val write: (SendAttempt?) -> Unit,
         val quarantineUnreadable: () -> Unit = { error("Journal quarantine unavailable") },
         val auditOverride: (SendOverrideAudit) -> Unit = { error("Override audit storage unavailable") },
@@ -17,6 +19,7 @@ class SendController(private val dependencies: Dependencies,
     var message by mutableStateOf<String?>(null); private set
     var checking by mutableStateOf(false); private set
     @Volatile private var generation = 0
+    @Volatile private var walletGeneration = 0
     private var journalIdentity: SendIdentity? = null
     private var unboundJournal: SendAttempt? = null
     private var unreadableJournal = false
@@ -25,13 +28,13 @@ class SendController(private val dependencies: Dependencies,
         attempt != null && (state in listOf(State.uncertain, State.storageBlocked) || state == State.succeeded && attempt?.receipt?.broadcastRetryPending == true))
 
     fun invalidateForWalletChange() {
-        generation++; journalIdentity = null; checking = false; attempt = null; message = null; unboundJournal = null; unreadableJournal = false; state = State.storageBlocked
+        generation++; walletGeneration++; journalIdentity = null; checking = false; attempt = null; message = null; unboundJournal = null; unreadableJournal = false; state = State.storageBlocked
     }
     suspend fun reloadForWalletChange() {
         loadAttempt(null)
     }
     private suspend fun loadAttempt(retained: SendAttempt?) {
-        generation++; val current = generation; checking = true; attempt = retained; state = State.storageBlocked; message = null; unboundJournal = null; unreadableJournal = false
+        generation++; walletGeneration++; val current = generation; checking = true; attempt = retained; state = State.storageBlocked; message = null; unboundJournal = null; unreadableJournal = false
         var loadedAttempt = retained
         var loadedUnbound: SendAttempt? = null
         var loadedUnreadable = false
@@ -84,11 +87,11 @@ class SendController(private val dependencies: Dependencies,
         }
     }
     /** Must be invoked on Main: take the lock before launching any coroutine. */
-    fun submit(payment: SendPayment, quote: SendQuote, recurringKey: String? = null, beforeSubmit: (() -> Unit)? = null): Job? {
+    fun submit(payment: SendPayment, quote: SendQuote, recurringKey: String? = null, beforeSubmit: (() -> Unit)? = null): Deferred<TerminalResult?>? {
         if (locked) return null
         state = State.submitting; message = null
-        val current = generation
-        return scope.launch {
+        val current = ++generation
+        return scope.async {
             try {
                 val reservation = if (recurringKey != null) dependencies.recurringReservation ?: dependencies.reservation else dependencies.reservation
                 reservation reserve@{ wallet ->
@@ -113,7 +116,7 @@ class SendController(private val dependencies: Dependencies,
                         if (failure is SendNotSubmitted && recurringKey != null && attempt == null) {
                             val stopped = SendAttempt(walletIdentity = quote.walletIdentity, recurringOccurrenceKey = recurringKey,
                                 payment = payment, quote = quote, failed = true, failureMessage = failure.reason.message)
-                            dependencies.write(stopped); attempt = stopped; state = State.failed; message = failure.reason.message
+                            attempt = stopped; message = failure.reason.message; finish(SendResolution.Failed)
                             return@reserve
                         }
                         state = if (attempt == null) State.ready else State.uncertain
@@ -147,7 +150,18 @@ class SendController(private val dependencies: Dependencies,
             } catch (_: Exception) {
                 if (current == generation) { state = if (attempt == null) State.ready else State.uncertain; message = "Unable to reserve the wallet. Check payment status before sending again." }
             }
+            recurringResults[current] ?: if (current == generation && recurringKey != null) resultForSettlement(recurringKey) else null
         }
+    }
+    fun resultForSettlement(key: String): TerminalResult? {
+        recurringResults[generation]?.takeIf { it.attempt.recurringOccurrenceKey == key }?.let { return it }
+        val current = attempt
+        if (current?.recurringOccurrenceKey == key) return TerminalResult(generation, walletGeneration, current, state, message)
+        return recurringResults.values.filter { it.attempt.recurringOccurrenceKey == key && it.walletGeneration == walletGeneration }.maxByOrNull { it.generation }
+    }
+    suspend fun settlementConsumed(result: TerminalResult, retainReceipt: Boolean) {
+        if (generation == result.generation && (!retainReceipt || attempt == null)) clear(settled = true)
+        recurringResults.remove(result.generation)
     }
     suspend fun checkStatus() {
         if (checking) return
@@ -175,20 +189,25 @@ class SendController(private val dependencies: Dependencies,
     }
     private fun finish(resolution: SendResolution): Boolean {
         var saved = attempt ?: return false
+        var outcome = state
         when (resolution) {
-            SendResolution.Uncertain -> { saved = saved.copy(receipt = saved.receipt?.let { if (it.txid != null) it.copy(status = SendReceipt.Status.unlocated) else it }); state = State.uncertain }
-            is SendResolution.Paid -> { message = resolution.receipt.statusError; saved = saved.copy(receipt = resolution.receipt.copy(statusError = null)); state = if (resolution.receipt.isUnresolved) State.uncertain else State.succeeded }
-            is SendResolution.AlreadyPaid -> { saved = saved.copy(alreadyPaid = resolution.receipt); state = State.alreadyPaid }
-            is SendResolution.InProgress -> { saved = saved.copy(existingLightning = resolution.progress); state = State.uncertain }
-            is SendResolution.Candidates -> { saved = saved.copy(candidates = resolution.ids); state = State.uncertain }
-            is SendResolution.PossibleTransactions -> { saved = saved.copy(possibleTxids = (saved.possibleTxids + resolution.ids).distinct()); state = State.uncertain }
-            SendResolution.Failed -> { if (saved.receipt != null) return false; saved = saved.copy(failed = true); state = State.failed }
+            SendResolution.Uncertain -> { saved = saved.copy(receipt = saved.receipt?.let { if (it.txid != null) it.copy(status = SendReceipt.Status.unlocated) else it }); outcome = State.uncertain }
+            is SendResolution.Paid -> { message = resolution.receipt.statusError; saved = saved.copy(receipt = resolution.receipt.copy(statusError = null)); outcome = if (resolution.receipt.isUnresolved) State.uncertain else State.succeeded }
+            is SendResolution.AlreadyPaid -> { saved = saved.copy(alreadyPaid = resolution.receipt); outcome = State.alreadyPaid }
+            is SendResolution.InProgress -> { saved = saved.copy(existingLightning = resolution.progress); outcome = State.uncertain }
+            is SendResolution.Candidates -> { saved = saved.copy(candidates = resolution.ids); outcome = State.uncertain }
+            is SendResolution.PossibleTransactions -> { saved = saved.copy(possibleTxids = (saved.possibleTxids + resolution.ids).distinct()); outcome = State.uncertain }
+            SendResolution.Failed -> { if (saved.receipt != null) return false; saved = saved.copy(failed = true); outcome = State.failed }
         }
         attempt = saved
-        try { dependencies.write(saved); return true } catch (_: Exception) {
+        val durable = try { dependencies.write(saved); true } catch (_: Exception) {
             message = "Payment status could not be saved. Check status again after restarting Noah."
-            return false
+            false
         }
+        // Done may hide this receipt before the reservation returns to recurring settlement.
+        if (saved.recurringOccurrenceKey != null) recurringResults[generation] = TerminalResult(generation, walletGeneration, saved, outcome, message)
+        state = outcome
+        return durable
     }
     suspend fun acknowledge(expected: SendAttempt? = attempt) {
         if (attempt !== expected) return
@@ -210,10 +229,11 @@ class SendController(private val dependencies: Dependencies,
                 originalEvidence = evidence, warning = warning, confirmation = confirmation, status = status, statusMessage = statusMessage))
         }
     }
-    private suspend fun clear(beforeRemove: (() -> Unit)? = null) {
+    private suspend fun clear(settled: Boolean = false, beforeRemove: (() -> Unit)? = null) {
         if (checking) return
         val current = generation
-        val identity = journalIdentity ?: attempt?.walletIdentity
+        val pending = recurringResults[current]
+        val identity = journalIdentity ?: attempt?.walletIdentity ?: pending?.attempt?.walletIdentity
         checking = true
         var removed = false
         var audited = beforeRemove == null
@@ -226,11 +246,14 @@ class SendController(private val dependencies: Dependencies,
                     // The counted reservation prevents replacement until audit and removal are durable.
                     beforeRemove?.invoke()
                     audited = true
-                    dependencies.write(null)
+                    if (settled || pending == null || beforeRemove != null) dependencies.write(null)
                     removed = true
                 }
             }
-            if (removed && current == generation) { attempt = null; unboundJournal = null; unreadableJournal = false; state = State.ready; message = null }
+            if (removed && current == generation) {
+                if (settled || beforeRemove != null) recurringResults.remove(current)
+                attempt = null; unboundJournal = null; unreadableJournal = false; state = State.ready; message = null
+            }
         } catch (_: Exception) {
             if (current == generation) message = if (!audited) "Unable to save the override confirmation. Sending remains locked." else "Unable to save payment status."
         }
