@@ -32,9 +32,9 @@ import Testing
         #expect(try store.load().schedules["rent"]?.status == "paused")
     }
     @Test func unreadableAndFutureVersionsNeverBecomeEmpty() throws {
-        let settings = try settings()
-        let store = RecurringStore(settings: settings)
         for raw in ["not JSON", #"{"version":1,"state":{"schedules":{}}}"#, #"{"version":0,"state":{"schedules":[]}}"#] {
+            let settings = try settings()
+            let store = RecurringStore(settings: settings)
             settings.set(raw, forKey: RecurringStore.key)
             #expect(throws: (any Error).self) { try store.load() }
             #expect(throws: (any Error).self) { try store.upsert(RecurringScheduleTests.schedule()) }

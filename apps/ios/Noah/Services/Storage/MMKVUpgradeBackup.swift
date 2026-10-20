@@ -5,10 +5,33 @@ struct MMKVUpgradeBackup {
     let root: URL
     let instanceID: String
     var directory: URL { URL(fileURLWithPath: root.path + ".native-backup", isDirectory: true) }
+    var retirementFile: URL { URL(fileURLWithPath: root.path + ".native-retired") }
+    var retiredKeys: [String]? {
+        get throws {
+            guard FileManager.default.fileExists(atPath: retirementFile.path) else { return nil }
+            return try JSONDecoder().decode([String].self, from: Data(contentsOf: retirementFile))
+        }
+    }
+
+    /// This admission record outlives the support snapshot and is durable before any native write.
+    func retire(keys: [String]) throws {
+        let keys = keys.sorted()
+        if try retiredKeys != keys {
+            try JSONEncoder().encode(keys).write(to: retirementFile, options: .atomic)
+        }
+        try RestoreTransaction.fullSync(retirementFile)
+        try RestoreTransaction.fullSync(retirementFile.deletingLastPathComponent())
+    }
+
     private var names: [String] { [instanceID, instanceID + ".crc"] }
     private struct Manifest: Codable { let present: Bool; let actualSize: UInt32 }
 
     func prepare() throws {
+        if try retiredKeys != nil {
+            try RestoreTransaction.fullSync(retirementFile)
+            try RestoreTransaction.fullSync(retirementFile.deletingLastPathComponent())
+            return
+        }
         let fm = FileManager.default
         if !fm.fileExists(atPath: directory.path) {
             let staging = URL(fileURLWithPath: directory.path + ".pending", isDirectory: true)
@@ -50,7 +73,7 @@ struct MMKVUpgradeBackup {
     var restored: Bool { exists("restored") }
 
     func restore() throws {
-        guard try manifest().present else { throw SettingsStorage.OpenError() }
+        guard try retiredKeys == nil, try manifest().present else { throw SettingsStorage.OpenError() }
         try mark("restore-pending")
         for name in names {
             let target = root.appending(path: name)
@@ -64,7 +87,7 @@ struct MMKVUpgradeBackup {
     }
 
     /// A deliberate wallet deletion must never resurrect the old settings.
-    func markReset() throws { try mark("reset") }
+    func markReset() throws { try retire(keys: []); try mark("reset") }
 
     private func manifest() throws -> Manifest {
         let value = try JSONDecoder().decode(Manifest.self, from: Data(contentsOf: directory.appending(path: "manifest.json")))

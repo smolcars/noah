@@ -43,9 +43,14 @@ struct MMKVRecoveryTests {
         let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
         try Self.corrupt(root, mode: mode)
         let original = try Data(contentsOf: root.appending(path: Self.id))
-        let store = try SettingsStorage(rootPath: root.path)
-        #expect(!Self.rnKeys(store).isEmpty)
-        #expect(store.string(forKey: PersistedWalletState.key) != nil)
+        if mode == "truncate" {
+            // Recovery retains keys, but a partial JSON envelope must still block startup.
+            #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
+        } else {
+            let store = try SettingsStorage(rootPath: root.path)
+            #expect(!Self.rnKeys(store).isEmpty)
+            #expect(store.string(forKey: PersistedWalletState.key) != nil)
+        }
         let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
         let exact = try Data(contentsOf: backup.directory.appending(path: Self.id)) == original
         #expect(exact)
@@ -97,6 +102,33 @@ struct MMKVRecoveryTests {
         #expect(!FileManager.default.fileExists(atPath: backup.directory.appending(path: "restore-pending").path))
     }
 
+    @Test func nativeSuspensionIsNeverReplacedByTheOriginalSnapshot() throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        let store = try SettingsStorage(rootPath: root.path)
+        var wallet = try #require(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key))
+        wallet.isWalletSuspended = true
+        try store.setPersistedState(wallet, key: PersistedWalletState.key, version: 0)
+        Self.close(root)
+        try Self.corrupt(root, mode: "empty")
+        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
+        #expect(!MMKVUpgradeBackup(root: root, instanceID: Self.id).restored)
+    }
+
+    @Test func laterCRCRecoveryBlocksEvenWhenRNKeysSurvive() throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        _ = try SettingsStorage(rootPath: root.path)
+        Self.close(root); try Self.corrupt(root, mode: "crc")
+        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
+    }
+
+    @Test func laterMissingWalletKeyBlocksInsteadOfResumingOnboarding() throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        _ = try SettingsStorage(rootPath: root.path)
+        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
+        raw.removeValue(forKey: PersistedWalletState.key); raw.sync(); raw.close()
+        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
+    }
+
     @Test func deliberateDeletionDoesNotResurrectTheBackup() throws {
         let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
         let store = try SettingsStorage(rootPath: root.path)
@@ -107,12 +139,13 @@ struct MMKVRecoveryTests {
     }
 
     /// RN's Delete Wallet unlinked the MMKV folder while open, so a wallet re-created in
-    /// that session has no wallet-storage. A healthy store without it is compatible:
-    /// the existing wallet resumes onboarding (isInitialized is not true), never blocks.
+    /// that session has no wallet-storage. Absence at first native open is compatible:
+    /// the existing wallet resumes onboarding (isInitialized is not true).
     @Test func missingWalletSettingsResumeOnboardingInsteadOfBlocking() throws {
         let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
+        raw.removeValue(forKey: PersistedWalletState.key); raw.sync(); raw.close()
         let store = try SettingsStorage(rootPath: root.path)
-        store.remove(forKey: PersistedWalletState.key)
         try store.requireCompatibleRNStores()
         #expect(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized != true)
         try store.setPersistedState(PersistedWalletState(isInitialized: false), key: PersistedWalletState.key, version: 0)

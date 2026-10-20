@@ -1,4 +1,5 @@
 import Foundation
+import MMKV
 import Testing
 
 @testable import Noah
@@ -18,10 +19,13 @@ struct RNStoreTests {
         SettingsStorage.bootstrap()
         let root = FileManager.default.temporaryDirectory.appending(path: "rn-stores-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }
-        let storage = try SettingsStorage(rootPath: root.path)
         let cases = try Fixtures.load("rn-store-compatibility", input: Input.self, expected: Expected.self)
         #expect(cases.count == 196)
         for item in cases {
+            // Each raw RN vector is independent; a corrupt store blocks later native writes.
+            let path = root.appending(path: UUID().uuidString).path
+            let storage = try SettingsStorage(rootPath: path)
+            defer { MMKV(mmapID: SettingsStorage.instanceID, rootPath: path)?.close() }
             let key = item.input.key
             let raw = item.input.raw
             storage.set(raw, forKey: key)
@@ -76,8 +80,11 @@ struct RNStoreTests {
         let bad = ["broken", #"{"state":[],"version":0}"#, #"{"state":{},"version":99}"#,
                    #"{"state":{"isHomeBalanceHidden":"true"},"version":0}"#,
                    #"{"state":{},"version":false}"#, #"{"state":{},"version":-1}"#]
+        let rawStore = try #require(MMKV(mmapID: SettingsStorage.instanceID, rootPath: root.path))
+        defer { rawStore.close() }
         for raw in bad {
-            storage.set(raw, forKey: PersistedPrivacyState.key)
+            // Inject corrupt RN bytes outside the native mutation gate.
+            rawStore.set(raw, forKey: PersistedPrivacyState.key)
             #expect(throws: (any Error).self) { try storage.requireCompatibleRNStores() }
             #expect(throws: (any Error).self) {
                 try storage.setPersistedState(PersistedPrivacyState(isHomeBalanceHidden: false), key: PersistedPrivacyState.key, version: 0)

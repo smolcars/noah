@@ -11,6 +11,7 @@ import MMKV
 final class SettingsStorage: @unchecked Sendable {
     // MMKV instances are internally synchronized.
     private let mmkv: MMKV?
+    private static let access = NSRecursiveLock()
     private let backup: MMKVUpgradeBackup?
 
     static let instanceID = "noah-wallet-storage"
@@ -48,12 +49,15 @@ final class SettingsStorage: @unchecked Sendable {
     }
 
     init(rootPath: String, instanceID: String = SettingsStorage.instanceID) throws {
+        Self.access.lock(); defer { Self.access.unlock() }
         precondition(Self.isBootstrapped, "SettingsStorage.bootstrap() must run first")
         try FileManager.default.createDirectory(
             atPath: rootPath, withIntermediateDirectories: true)
         let backup = MMKVUpgradeBackup(root: URL(fileURLWithPath: rootPath), instanceID: instanceID)
         try backup.prepare()
-        let expectedContent = try backup.hasContent
+        let retiredKeys = try backup.retiredKeys
+        let expectedContent = retiredKeys == nil ? try backup.hasContent : false
+        let recoveryGeneration = Self.handler.generation
         guard var opened = MMKV(mmapID: instanceID, rootPath: rootPath) else {
             throw OpenError()
         }
@@ -66,12 +70,33 @@ final class SettingsStorage: @unchecked Sendable {
             opened = recovered
             guard Self.hasRNKeys(opened) else { opened.close(); throw OpenError() }
         }
+        do {
+            try Self.validate(opened, requiredKeys: retiredKeys ?? [])
+            if retiredKeys != nil, Self.handler.generation != recoveryGeneration { throw OpenError() }
+            try backup.retire(keys: Self.rnKeys(opened))
+        } catch { opened.close(); throw error }
         self.mmkv = opened
         self.backup = backup
     }
 
-    private static func hasRNKeys(_ store: MMKV) -> Bool {
-        RNStoreCodec.schemas.keys.contains { store.contains(key: $0) }
+    private static func rnKeys(_ store: MMKV) -> [String] {
+        RNStoreCodec.schemas.keys.filter { store.contains(key: $0) }
+    }
+    private static func hasRNKeys(_ store: MMKV) -> Bool { !rnKeys(store).isEmpty }
+
+    private static func validate(_ store: MMKV, requiredKeys: [String]) throws {
+        guard requiredKeys.allSatisfy({ store.contains(key: $0) }) else { throw OpenError() }
+        for key in RNStoreCodec.schemas.keys where key != PersistedEsploraState.key {
+            if let raw = store.string(forKey: key) { _ = try RNStoreCodec.decode(raw, key: key) }
+        }
+    }
+
+    private func admitMutation(key: String? = nil) throws {
+        try requireCompatibleRNStores()
+        guard let mmkv else { throw OpenError() }
+        var keys = Self.rnKeys(mmkv)
+        if let key, RNStoreCodec.schemas[key] != nil, !keys.contains(key) { keys.append(key) }
+        try backup?.retire(keys: keys)
     }
 
     func requireHealthy() throws { guard mmkv != nil else { throw OpenError() } }
@@ -81,18 +106,23 @@ final class SettingsStorage: @unchecked Sendable {
     }
 
     func set(_ value: String, forKey key: String) {
-        mmkv?.set(value, forKey: key)
+        do { try setDurably(value, forKey: key) }
+        catch { AppLog("mmkv").e("Settings write stopped: storage unavailable") }
     }
 
     /// Financial automation must observe write failures and flush the before-send marker.
     func setDurably(_ value: String, forKey key: String) throws {
+        Self.access.lock(); defer { Self.access.unlock() }
+        try admitMutation(key: key)
         guard let mmkv, mmkv.set(value, forKey: key) else { throw OpenError() }
         mmkv.sync()
         guard mmkv.string(forKey: key) == value else { throw OpenError() }
     }
 
     func remove(forKey key: String) {
-        mmkv?.removeValue(forKey: key)
+        Self.access.lock(); defer { Self.access.unlock() }
+        do { try admitMutation(); mmkv?.removeValue(forKey: key) }
+        catch { AppLog("mmkv").e("Settings removal stopped: storage unavailable") }
     }
 
     /// Every store, as RN's wallet deletion wiped `Documents/mmkv`.
@@ -102,6 +132,7 @@ final class SettingsStorage: @unchecked Sendable {
     }
 
     func removeAllDurably() throws {
+        Self.access.lock(); defer { Self.access.unlock() }
         guard let mmkv else { throw OpenError() }
         try backup?.markReset()
         mmkv.clearAll()
@@ -133,19 +164,23 @@ final class SettingsStorage: @unchecked Sendable {
     /// An unreadable consumed store blocks startup and headless wallet work;
     /// defaults must never overwrite a future or corrupt RN envelope.
     func requireCompatibleRNStores() throws {
-        try requireHealthy()
-        for key in RNStoreCodec.schemas.keys where key != PersistedEsploraState.key {
-            if let raw = string(forKey: key) { _ = try RNStoreCodec.decode(raw, key: key) }
-        }
+        Self.access.lock(); defer { Self.access.unlock() }
+        guard let mmkv else { throw OpenError() }
+        try Self.validate(mmkv, requiredKeys: backup?.retiredKeys ?? [])
     }
 }
 
 private final class RecoveryHandler: NSObject, MMKVHandler, @unchecked Sendable {
+    private let lock = NSLock()
+    private var recoveries: UInt64 = 0
+    var generation: UInt64 { lock.withLock { recoveries } }
     func onMMKVCRCCheckFail(_ mmapID: String) -> MMKVRecoverStrategic {
+        lock.withLock { recoveries &+= 1 }
         AppLog("mmkv").w("CRC check failed; recovering settings")
         return .onErrorRecover
     }
     func onMMKVFileLengthError(_ mmapID: String) -> MMKVRecoverStrategic {
+        lock.withLock { recoveries &+= 1 }
         AppLog("mmkv").w("File length check failed; recovering settings")
         return .onErrorRecover
     }
