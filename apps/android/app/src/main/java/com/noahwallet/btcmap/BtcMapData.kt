@@ -10,7 +10,7 @@ import kotlin.math.*
 
 internal val mapJson = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
 internal fun JsonObject.string(key: String): String? = (get(key) as? JsonPrimitive)
-    ?.takeIf { it.isString }?.content?.takeIf { it.isNotEmpty() }
+    ?.takeIf { it.isString }?.content?.also(BtcMapLimits::checkString)?.takeIf { it.isNotEmpty() }
 internal fun JsonObject.requiredString(key: String) = requireNotNull(string(key)) { "Invalid map data" }
 internal fun JsonElement.number(): Double = (this as JsonPrimitive).let {
     require(!it.isString); requireNotNull(it.doubleOrNull).also { n -> require(n.isFinite()) }
@@ -78,6 +78,17 @@ data class BtcMapPlace(
 }
 
 @Serializable
+private data class BtcMapSnapshotInput(
+    val schemaVersion: Int, val generatedAt: String, val source: String,
+    @Serializable(with = BtcMapRecordsSerializer::class) val places: List<JsonObject>,
+)
+
+internal fun parseMapRecords(text: String): List<JsonObject> {
+    BtcMapLimits.checkBytes(text)
+    return mapJson.decodeFromString(BtcMapRecordsSerializer, text)
+}
+
+@Serializable
 data class BtcMapSnapshot(val schemaVersion: Int, val generatedAt: String, val source: String, val places: List<BtcMapPlace>) {
     fun merging(patches: List<BtcMapPatch>, at: String): BtcMapSnapshot {
         val merged = places.associateBy { it.id }.toMutableMap()
@@ -86,18 +97,19 @@ data class BtcMapSnapshot(val schemaVersion: Int, val generatedAt: String, val s
     }
     companion object {
         fun parse(text: String): BtcMapSnapshot {
-            val raw = mapJson.parseToJsonElement(text).jsonObject
-            require(raw.getValue("schemaVersion").integer() == 1L)
-            return BtcMapSnapshot(1, raw.requiredString("generatedAt"), raw.requiredString("source"),
-                raw.getValue("places").jsonArray.map { BtcMapPlace.parse(it.jsonObject) })
+            BtcMapLimits.checkBytes(text)
+            val raw = mapJson.decodeFromString<BtcMapSnapshotInput>(text)
+            require(raw.schemaVersion == 1 && raw.generatedAt.isNotEmpty() && raw.source.isNotEmpty())
+            BtcMapLimits.checkString(raw.generatedAt)
+            BtcMapLimits.checkString(raw.source)
+            return BtcMapSnapshot(1, raw.generatedAt, raw.source, raw.places.map(BtcMapPlace::parse))
         }
     }
 }
 
 data class BtcMapPatch(val id: Long, val place: BtcMapPlace?) {
     companion object {
-        fun parse(text: String) = mapJson.parseToJsonElement(text).jsonArray.map {
-            val raw = it.jsonObject
+        fun parse(text: String) = parseMapRecords(text).map { raw ->
             BtcMapPatch(raw.getValue("id").integer(), if (raw.string("deleted_at") != null) null else BtcMapPlace.parse(raw))
         }
     }
@@ -107,10 +119,10 @@ data class BtcMapComment(val id: Long, val text: String, val createdAt: String)
 data class BtcMapDetail(val place: BtcMapPlace, val fields: Map<String, String>, val comments: List<BtcMapComment>) {
     companion object {
         fun parse(place: String, comments: String): BtcMapDetail {
+            BtcMapLimits.checkBytes(place)
             val raw = mapJson.parseToJsonElement(place).jsonObject
             return BtcMapDetail(BtcMapPlace.parse(raw), raw.keys.mapNotNull { key -> raw.string(key)?.let { key to it } }.toMap(),
-                mapJson.parseToJsonElement(comments).jsonArray.map {
-                    val c = it.jsonObject
+                parseMapRecords(comments).map { c ->
                     BtcMapComment(c.getValue("id").integer(), c.requiredString("text"), c.requiredString("created_at"))
                 })
         }

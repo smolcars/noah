@@ -69,6 +69,18 @@ class BtcMapRepositoryTest {
         assertEquals(1, requests); assertFalse(file.exists())
     }
 
+    @Test fun ordinaryFailureWaitsOneSecondBeforeItsOnlyRetry() = runBlocking {
+        val times = mutableListOf<Long>()
+        val repository = BtcMapRepository(File(folder.root, "cache"), { bundle }, { "" }, {
+            times += System.nanoTime()
+            throw IOException("offline")
+        })
+        assertTrue(runCatching { repository.sync() }.isFailure)
+        assertEquals(2, times.size)
+        assertTrue(times[1] - times[0] >= 1_000_000_000L)
+        assertEquals(BtcMapSnapshot.parse(bundle), repository.load())
+    }
+
     @Test fun coordinatesAndWrongDetailIdentityAreRejected() = runBlocking {
         assertTrue(runCatching { BtcMapSnapshot.parse(bundle.replace("\"lat\":33", "\"lat\":91")) }.isFailure)
         val repository = repo { raw.replace("\"id\":1", "\"id\":2") }

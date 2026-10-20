@@ -45,7 +45,13 @@ wallet data in verification artifacts.
   temporary writes are flushed and renamed before the in-memory snapshot or UTC
   cursor advances. Invalid updates or disk failures retain the previous data.
   The v4 endpoints, requested fields, deletions, one retry, five-minute sync and
-  fifteen-minute detail freshness match iOS. Network work is canceled with its
+  fifteen-minute detail freshness match iOS. Ordinary failures wait one second before
+  their single retry. Resource-limit failures skip that retry and enter a five-minute
+  cooldown (sync-wide or per merchant for details). Downloads and cache/asset reads
+  stop at 32 MiB, including missing or dishonest Content-Length headers; decoding
+  caps arrays at 100,000 records and strings at 16 KiB of UTF-8. The merged cache's
+  record count and encoded bytes are checked before the atomic write. Every failure
+  preserves the previous cache and cursor. Network work is canceled with its
   caller; sync and detail locks deduplicate concurrent successful requests.
 - Viewport JSON retains MMKV key `btc-map-viewport-v1` in the existing settings
   instance. Invalid values cannot reach the camera. City selection uses zoom 11,

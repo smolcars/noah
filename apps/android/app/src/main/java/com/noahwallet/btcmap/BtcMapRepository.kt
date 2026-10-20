@@ -34,26 +34,32 @@ class BtcMapRepository(
     private var snapshot: BtcMapSnapshot? = null
     private var cities: List<CitySearchEntry>? = null
     private var lastSync: Long? = null
+    private var oversizedSync: Long? = null
+    private val oversizedDetails = mutableMapOf<Long, Long>()
     private val details = mutableMapOf<Long, Pair<Long, BtcMapDetail>>()
 
     suspend fun load(): BtcMapSnapshot = withContext(Dispatchers.IO) {
         snapshotLock.withLock {
-            snapshot ?: (runCatching { BtcMapSnapshot.parse(cache.readText()) }.getOrNull()
+            snapshot ?: (runCatching { BtcMapSnapshot.parse(cache.inputStream().use { BtcMapLimits.read(it) }) }.getOrNull()
                 ?: BtcMapSnapshot.parse(bundled())).also { snapshot = it }
         }
     }
 
     suspend fun sync(now: Long = System.currentTimeMillis()): BtcMapSnapshot = withContext(Dispatchers.IO) {
         syncLock.withLock {
+            if (oversizedSync?.let { now - it < BtcMapLimits.cooldown } == true) throw BtcMapResourceLimit()
             val current = load()
             if (lastSync?.let { now - it in 0 until 300_000 } == true) return@withLock current
-            val result = retry {
+            val result = try { retry {
                 val patches = BtcMapPatch.parse(fetch(syncURL(current.generatedAt)))
                 val merged = current.merging(patches, btcMapTimestamp(now))
+                BtcMapLimits.checkRecords(merged.places.size)
+                val encoded = mapJson.encodeToString(merged)
+                BtcMapLimits.checkBytes(encoded)
                 currentCoroutineContext().ensureActive()
-                write(cache, mapJson.encodeToString(merged))
+                write(cache, encoded)
                 merged
-            }
+            } } catch (limit: BtcMapResourceLimit) { oversizedSync = now; throw limit }
             snapshotLock.withLock { snapshot = result }
             lastSync = now
             result
@@ -69,14 +75,15 @@ class BtcMapRepository(
 
     suspend fun detail(place: BtcMapPlace, now: Long = System.currentTimeMillis()): BtcMapDetail = withContext(Dispatchers.IO) {
         detailLock.withLock {
+            if (oversizedDetails[place.id]?.let { now - it < BtcMapLimits.cooldown } == true) throw BtcMapResourceLimit()
             details[place.id]?.takeIf { now - it.first in 0 until 900_000 }?.let { return@withLock it.second }
-            val result = retry {
+            val result = try { retry {
                 coroutineScope {
                     val data = async { fetch(url("places/${place.id}").newBuilder().addQueryParameter("fields", detailFields).build()) }
                     val comments = async { if ((place.comments ?: 0) > 0) fetch(url("places/${place.id}/comments")) else "[]" }
                     BtcMapDetail.parse(data.await(), comments.await()).also { require(it.place.id == place.id) }
                 }
-            }
+            } } catch (limit: BtcMapResourceLimit) { oversizedDetails[place.id] = now; throw limit }
             details[place.id] = now to result
             result
         }
@@ -84,6 +91,7 @@ class BtcMapRepository(
 
     private suspend fun <T> retry(block: suspend () -> T): T = try { block() }
     catch (cancel: CancellationException) { throw cancel }
+    catch (limit: BtcMapResourceLimit) { throw limit }
     catch (_: Exception) { delay(retryDelay); block() }
 
     companion object {
@@ -97,7 +105,7 @@ class BtcMapRepository(
         fun create(context: Context): BtcMapRepository {
             val app = context.applicationContext
             return BtcMapRepository(File(app.filesDir, "btcmap-places-v1.btcmap"),
-                { app.assets.open("places.btcmap").bufferedReader().use { it.readText() } },
+                { app.assets.open("places.btcmap").use { BtcMapLimits.read(it) } },
                 { app.assets.open("cities.geonames").bufferedReader().use { it.readText() } })
         }
 
@@ -111,7 +119,7 @@ class BtcMapRepository(
                 override fun onResponse(call: Call, response: Response) {
                     val result = runCatching { response.use {
                         if (!it.isSuccessful) throw IOException("Map request failed")
-                        it.body.string()
+                        it.body.byteStream().use { stream -> BtcMapLimits.read(stream, it.body.contentLength()) }
                     } }
                     if (continuation.isActive) result.fold(continuation::resume, continuation::resumeWithException)
                 }
