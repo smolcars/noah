@@ -143,6 +143,43 @@ class WalletSessionTest {
             session.close()
         }
     }
+    @Test fun recurringReservationDrainsCallsExcludesCloseAndSurvivesCancellation() = runBlocking {
+        withLocation { location ->
+            val handles = Handles().apply { summaryEntered = CompletableDeferred(); summaryGate = CompletableDeferred() }
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test")
+            val reading = launch { session.summary() }; handles.summaryEntered!!.await()
+            val entered = CompletableDeferred<Unit>(); val gate = CompletableDeferred<Unit>()
+            val sending = launch { session.withRecurringReservation { entered.complete(Unit); gate.await(); assertFalse(handles.closed) } }
+            withTimeout(2000) { while (runCatching { session.peekAddress(0u) }.isSuccess) yield() }
+            assertFalse(entered.isCompleted)
+            assertTrue(runCatching { session.close() }.isFailure)
+            handles.summaryGate!!.complete(Unit); reading.join(); entered.await(); sending.cancel()
+            assertTrue(runCatching { session.reserve() }.isFailure)
+            assertTrue(runCatching { session.summary() }.isFailure)
+            gate.complete(Unit); sending.join(); session.close(); assertTrue(handles.closed)
+        }
+    }
+    @Test fun failedSuspendOrDeletePermanentlyRevokesPendingRecurringSubmission() = runBlocking {
+        for (delete in listOf(false, true)) withLocation { location ->
+            val handles = Handles()
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test")
+            val world = com.noahwallet.recurring.RecurringWorld(this, handles.send) { body -> session.withRecurringReservation(body) }
+            world.add()
+            val entered = CompletableDeferred<Unit>(); val gate = CompletableDeferred<Unit>()
+            handles.send.prepareBlock = { entered.complete(Unit); gate.await(); handles.send.snapshot }
+            val execution = async { world.executor.execute() }; entered.await()
+            val lifecycle = WalletLifecycle(session, location, setSuspended = { world.allowed = !it }, deregister = {},
+                readSeed = { com.noahwallet.services.storage.SecretResult.NotFound }, deleteSeed = {}, clearToken = {},
+                clearSettings = {}, clearWidget = {}, sweepScratch = {}, stopAutomation = { world.generation = java.util.UUID.randomUUID().toString() })
+            assertTrue(runCatching { if (delete) lifecycle.delete() else lifecycle.suspend() }.isFailure)
+            assertTrue(world.allowed); assertNotNull(world.generation)
+            gate.complete(Unit); execution.await()
+            assertEquals(0, handles.send.calls); assertFalse(world.journal.consumed(world.binding, "rent", 1000))
+            session.close()
+        }
+    }
     @Test fun sendReservationIsCountedShieldedAndExcludesReplacement() = runBlocking {
         withLocation { location ->
             val handles = Handles()

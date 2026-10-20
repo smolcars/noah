@@ -26,7 +26,8 @@ import kotlinx.serialization.json.*
 @Serializable data class SendQuote(val amount: Long, val fee: Long, val total: Long,
     val feeRate: Long? = null, val approximate: Boolean = false, val vtxoIDs: List<String>? = null,
     val walletIdentity: SendIdentity? = null, val checkpoint: SendCheckpoint? = null,
-    val resolvedInvoice: String? = null, val prepared: SendPrepared? = null)
+    val resolvedInvoice: String? = null, val prepared: SendPrepared? = null,
+    val lightningFeeSchedule: com.noahwallet.recurring.RecurringFeeSchedule? = null)
 @Serializable data class SendReceipt(val amount: Long, val txid: String? = null, val paymentHash: String? = null,
     val movementID: UInt? = null, val amountIsPending: Boolean = false, val status: Status = Status.submitted,
     val fee: Long? = null, val proof: Proof? = null, val broadcastRetryPending: Boolean = false,
@@ -48,6 +49,7 @@ import kotlinx.serialization.json.*
 @Serializable data class SendSnapshot(val movementIDs: Set<UInt> = emptySet(), val bdkTxids: Set<String>? = null,
     val resolvedInvoice: String? = null, val walletIdentity: SendIdentity? = null, val checkpoint: SendCheckpoint? = null)
 @Serializable data class SendAttempt(val walletIdentity: SendIdentity? = null, val inspectionPending: Boolean = false,
+    val recurringOccurrenceKey: String? = null,
     val safetyVersion: Int = 2, val broadcastingTxid: String? = null, val payment: SendPayment,
     val snapshot: SendSnapshot = SendSnapshot(), val receipt: SendReceipt? = null, val alreadyPaid: SendReceipt? = null,
     val failed: Boolean = false, val startedAt: Long = System.currentTimeMillis(), val paymentHash: String? = null,
@@ -58,6 +60,7 @@ import kotlinx.serialization.json.*
 }
 class SendFailure(val reason: Reason) : Exception(reason.message) {
     enum class Reason(val message: String) {
+        recurringStopped("This recurring payment was stopped before submission."),
         invalid("Enter a valid destination and a whole-satoshi amount greater than zero."),
         insufficient("The selected balance cannot cover this payment and its fee."),
         expired("This Lightning invoice has expired. Request a new invoice."),

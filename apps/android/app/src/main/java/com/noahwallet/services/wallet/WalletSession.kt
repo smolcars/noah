@@ -138,6 +138,32 @@ class WalletSession internal constructor(
     private fun walletChanged() { changed.value += 1 }
     internal suspend fun <T> withSendReservation(block: suspend (SendWallet) -> T): T =
         withOpen { handles -> sendMutation.withLock { block(handles.send) } }
+    // Block unrelated counted calls and close while unattended submission owns this wallet.
+    private var exclusiveSend = false
+    internal suspend fun <T> withRecurringReservation(block: suspend (SendWallet) -> T): T = withContext(NonCancellable + Dispatchers.IO) {
+        val handles = synchronized(lock) {
+            if (exclusiveSend || isSuspended()) throw OpenError(OpenFailure.busy)
+            val open = (state as? State.Open)?.handles ?: throw SessionError()
+            exclusiveSend = true
+            open
+        }
+        var counted = false
+        try {
+            synchronized(lock) { drained }.await()
+            synchronized(lock) {
+                check((state as? State.Open)?.handles === handles)
+                if (runningCalls++ == 0) drained = CompletableDeferred()
+                counted = true
+            }
+            handles.retrySendDiscards()
+            block(handles.send)
+        } finally {
+            synchronized(lock) {
+                if (counted && --runningCalls == 0) drained.complete(Unit)
+                exclusiveSend = false
+            }
+        }
+    }
     suspend fun quoteSend(payment: SendPayment): SendQuote {
         var result: SendQuote? = null
         try { return withSendReservation { it.quote(payment).also { quote -> result = quote } } }
@@ -284,6 +310,7 @@ class WalletSession internal constructor(
     internal suspend fun <T> withOpen(block: suspend (Handles) -> T): T {
         val handles = synchronized(lock) {
             if (isSuspended()) throw OpenError(OpenFailure.suspended)
+            if (exclusiveSend) throw OpenError(OpenFailure.busy)
             val handles = (state as? State.Open)?.handles ?: throw SessionError()
             if (runningCalls++ == 0) drained = CompletableDeferred()
             handles
@@ -390,6 +417,7 @@ class WalletSession internal constructor(
 
     suspend fun close() {
         val handles = synchronized(lock) {
+            if (exclusiveSend) throw OpenError(OpenFailure.busy)
             when (val current = state) {
                 State.Closed -> return
                 is State.Open -> current.handles.also { state = State.Closing }

@@ -70,7 +70,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
             val file = File(location.directory, ".noah-recurring-instance")
             val instance = if (file.exists()) file.readText().also { UUID.fromString(it) }
             else UUID.randomUUID().toString().also { durableRecurringWrite(file, it.toByteArray()) }
-            Binding(SendIdentity(properties.fingerprint, properties.network), instance)
+            Binding(SendIdentity(properties.fingerprint, properties.network.uppercase(java.util.Locale.ROOT)), instance)
         }
     }
 }

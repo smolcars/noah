@@ -31,7 +31,9 @@ class WalletLifecycle(
     private val syncIdentityDirectory: (java.io.File) -> Unit = ::syncDirectory,
     private val drainTimeoutMillis: Long = 30_000,
     private val warn: (String) -> Unit = {},
+    private val stopAutomation: () -> Unit = {},
 ) {
+    companion object { const val automationStopKey = "native-recurring-automation-stop-generation" }
     class WaitingForSecureStorage : Exception("Waiting for secure storage. Unlock your device and try again.")
     class RestorePending : Exception("Restart Noah to settle the pending restore before deleting")
     class BackupBusy : Exception("Noah is still finishing a backup. Try again in a moment.")
@@ -98,6 +100,7 @@ class WalletLifecycle(
     }
 
     suspend fun suspend() = withContext(NonCancellable + Dispatchers.IO) {
+        stopAutomation()
         mutation.withLock {
             setSuspended(true)
             try { settleBackground(); session.closeSettled() }
@@ -108,10 +111,12 @@ class WalletLifecycle(
     suspend fun resume() = mutation.withLock { setSuspended(false) }
 
     suspend fun delete() = withContext(NonCancellable + Dispatchers.IO) {
+        stopAutomation()
         mutation.withLock { deleteLocked() }
     }
 
     private suspend fun deleteLocked() {
+        stopAutomation()
         val wasSuspended = isSuspended()
         setSuspended(true)
         try {

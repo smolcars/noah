@@ -15,7 +15,14 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         requireSend(!payment.max || payment.method == "onchain" && payment.source != null)
         val invoice = if (payment.method == "lnurl") recipientService().invoice(payment) else null
         val resolved = if (invoice != null) payment.copy(destination = invoice, method = "lightning") else payment
-        val quote = quoteResolved(resolved).copy(resolvedInvoice = invoice)
+        val captured = if (payment.method in listOf("lightning", "lnurl", "offer")) try {
+            wallet.arkInfo()?.feeSchedule?.lightningSend?.let { fees ->
+                fun signed(value: ULong) = value.coerceAtMost(Long.MAX_VALUE.toULong()).toLong()
+                com.noahwallet.recurring.RecurringFeeSchedule(signed(fees.minFeeSats), signed(fees.baseFeeSats),
+                    fees.ppmExpiryTable.maxOfOrNull { it.ppm.toLong() } ?: 0)
+            }
+        } catch (_: Exception) { null } else null
+        val quote = quoteResolved(resolved).copy(resolvedInvoice = invoice, lightningFeeSchedule = captured)
         quote.prepared?.let { preparations.bind(it.id, payment, quote) }
         return quote
     }
@@ -89,16 +96,18 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         }
         if (checkpoint == null) {
             val resolved = if (resolvedInvoice != null) payment.copy(destination = resolvedInvoice, method = "lightning") else payment
-            val fresh = quoteResolved(resolved).copy(resolvedInvoice = resolvedInvoice)
+            val fresh = quoteResolved(resolved).copy(resolvedInvoice = resolvedInvoice, lightningFeeSchedule = quote.lightningFeeSchedule)
             requireSend(fresh == quote, SendFailure.Reason.feeChanged)
         }
         return SendSnapshot(wallet.history().map { it.id }.toSet(), onchain.transactions().map { it.txid }.toSet(), resolvedInvoice, identity(), checkpoint)
     }
-    override suspend fun pay(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot): SendReceipt {
+    override suspend fun pay(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot) = payInternal(payment, quote, snapshot, null)
+    override suspend fun payGuarded(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot, beforeSubmit: () -> Unit) = payInternal(payment, quote, snapshot, beforeSubmit)
+    private suspend fun payInternal(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot, beforeSubmit: (() -> Unit)?): SendReceipt {
         requireSend(snapshot.walletIdentity == identity(), SendFailure.Reason.unresolved)
         var receipt = SendReceipt(quote.amount)
         val lightning: LightningSendStatus? = when (payment.method) {
-            "ark" -> { wallet.sendArkoorPayment(payment.destination, payment.amount.toULong()); receipt = receipt.copy(proof = SendReceipt.Proof.submitReturnedArkSuccess); null }
+            "ark" -> { beforeSubmit?.invoke(); wallet.sendArkoorPayment(payment.destination, payment.amount.toULong()); receipt = receipt.copy(proof = SendReceipt.Proof.submitReturnedArkSuccess); null }
             "lightning", "lnurl" -> {
                 val invoice = if (payment.method == "lnurl") snapshot.resolvedInvoice ?: throw SendFailure(SendFailure.Reason.invalid) else payment.destination
                 if (payment.method == "lnurl") SendRecipientService.validateInvoice(invoice, payment.amount, network)
@@ -109,10 +118,10 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
                 requireSend(pending.size <= 1, SendFailure.Reason.unresolved)
                 val state = pending.firstOrNull()?.let { LightningSendStatus.InProgress(it) } ?: wallet.lightningSendState(decoded.hash)
                 SendLightningSubmission.submit(resolved, state, wallet.history(), snapshot.checkpoint, quote,
-                    check = { wallet.checkLightningPayment(it, false) },
-                    pay = { wallet.payLightningInvoice(invoice, if ((decoded.sats?.signum() ?: 0) > 0) null else payment.amount.toULong(), true) })
+                    check = { beforeSubmit?.invoke(); wallet.checkLightningPayment(it, false) },
+                    pay = { beforeSubmit?.invoke(); wallet.payLightningInvoice(invoice, if ((decoded.sats?.signum() ?: 0) > 0) null else payment.amount.toULong(), true) })
             }
-            "offer" -> SendLightningSubmission.offer(wallet.pendingLightningSends()) { wallet.payLightningOffer(payment.destination, payment.amount.toULong(), true) }
+            "offer" -> SendLightningSubmission.offer(wallet.pendingLightningSends()) { beforeSubmit?.invoke(); wallet.payLightningOffer(payment.destination, payment.amount.toULong(), true) }
             "onchain" -> {
                 if (payment.source == SendSource.onchain) {
                     val prepared = quote.prepared ?: throw SendNotSubmitted(SendFailure.Reason.feeChanged)
