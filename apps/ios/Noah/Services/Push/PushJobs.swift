@@ -29,6 +29,17 @@ struct PushJobs: Sendable {
     private let log = AppLog("pushJobs")
 
     func handle(_ notification: NotificationData) async throws {
+        await WalletBackgroundActivity.shared.begin()
+        do {
+            try await handleAction(notification)
+            await WalletBackgroundActivity.shared.end()
+        } catch {
+            await WalletBackgroundActivity.shared.end()
+            throw error
+        }
+    }
+
+    private func handleAction(_ notification: NotificationData) async throws {
         let d = dependencies
         log.i("Handling \(Self.name(notification)) push")
         defer { log.i("Finished \(Self.name(notification)) push") }
