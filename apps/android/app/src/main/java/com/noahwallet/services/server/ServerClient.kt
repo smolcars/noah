@@ -4,6 +4,7 @@ import com.noahwallet.api.generated.PublicOperations
 import com.noahwallet.api.generated.client.*
 import com.noahwallet.api.generated.models.*
 import com.noahwallet.services.wallet.WalletConfiguration
+import com.noahwallet.services.storage.StoredMnemonic
 import io.github.niteshbalusu11.bark.derivePublicKeyFromMnemonic
 import io.github.niteshbalusu11.bark.signMessageWithMnemonic
 import io.ktor.client.*
@@ -75,14 +76,18 @@ object ServerClient {
     }
 
     /** The offline login key (`m/350/0`) the server puts in the token's `sub`. */
-    fun loginKey(variant: String, mnemonic: String): String =
-        derivePublicKeyFromMnemonic(mnemonic, WalletConfiguration.base(variant).network, 0u)
+    fun loginKey(variant: String, mnemonic: String,
+                 derive: (String) -> String = { derivePublicKeyFromMnemonic(it, WalletConfiguration.base(variant).network, 0u) }): String =
+        derive(requireNotNull(StoredMnemonic.normalize(mnemonic)) { "Invalid wallet seed" })
+
+    fun signChallenge(challenge: String, variant: String, mnemonic: String,
+                      sign: (String) -> String = { signMessageWithMnemonic(challenge, it, WalletConfiguration.base(variant).network, 0u) }): String =
+        sign(requireNotNull(StoredMnemonic.normalize(mnemonic)) { "Invalid wallet seed" })
 
     suspend fun login(client: HttpClient, variant: String, mnemonic: String): String {
         val k1 = V0Getk1Client(client).getK1().value().k1
-        val network = WalletConfiguration.base(variant).network
         val key = loginKey(variant, mnemonic)
-        val sig = signMessageWithMnemonic(k1, mnemonic, network, 0u)
+        val sig = signChallenge(k1, variant, mnemonic)
         return V0AuthLoginClient(client).authLogin(AuthLoginPayload(k1 = k1, key = key, sig = sig)).value().accessToken
     }
 }
