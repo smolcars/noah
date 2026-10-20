@@ -7,7 +7,10 @@ struct HomeView: View {
     @State private var home = HomeModel()
     @State private var showEmail = false
     @State private var showMap = false
+    @State private var showQR = false
     @State private var selectedID: String?
+    let isActive: Bool
+    let onScan: (String) -> Void
     let onOpenHistory: () -> Void
     let onRepeatPayment: (RepeatPayment) -> Void
 
@@ -161,10 +164,12 @@ struct HomeView: View {
                     VariantBadge(variant: model.variant)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("QR", systemImage: "qrcode") {}
+                    Button("Open QR code", systemImage: "qrcode") { showQR = true }
+                        .accessibilityIdentifier("home-qr-button")
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(isPresented: $showQR) { QRHubView(isActive: isActive, onScan: onScan) }
             .navigationDestination(isPresented: $showMap) { BtcMapView() }
             .navigationDestination(isPresented: $showEmail) {
                 EmergencyEmailView(fromOnboarding: false, onContinue: { showEmail = false })

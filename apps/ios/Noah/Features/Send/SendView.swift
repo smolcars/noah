@@ -3,7 +3,9 @@ import SwiftUI
 struct SendView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppModel.self) private var app
-    @State private var model = SendModel()
+    @State private var model: SendModel
+
+    init(model: SendModel = SendModel()) { _model = State(initialValue: model) }
     @State private var scanner = false
     @FocusState private var focus: Field?
     private enum Field { case recipient, note }

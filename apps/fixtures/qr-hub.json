@@ -1,0 +1,68 @@
+{
+  "cases": [
+    {
+      "name": "address",
+      "input": {
+        "value": "alice@pay.example.com",
+        "pasted": false
+      },
+      "expected": "alice@pay.example.com"
+    },
+    {
+      "name": "ark",
+      "input": {
+        "value": "tark1example",
+        "pasted": false
+      },
+      "expected": "tark1example"
+    },
+    {
+      "name": "unified",
+      "input": {
+        "value": "bitcoin:bcrt1example?amount=0.00001",
+        "pasted": false
+      },
+      "expected": "bitcoin:bcrt1example?amount=0.00001"
+    },
+    {
+      "name": "invoice",
+      "input": {
+        "value": "lnbcrt1example",
+        "pasted": false
+      },
+      "expected": "lnbcrt1example"
+    },
+    {
+      "name": "invalid is sent to importer",
+      "input": {
+        "value": "invalid request",
+        "pasted": false
+      },
+      "expected": "invalid request"
+    },
+    {
+      "name": "empty scan",
+      "input": {
+        "value": "",
+        "pasted": false
+      },
+      "expected": null
+    },
+    {
+      "name": "empty paste",
+      "input": {
+        "value": "  \n",
+        "pasted": true
+      },
+      "expected": null
+    },
+    {
+      "name": "paste preserves input",
+      "input": {
+        "value": " alice@pay.example.com ",
+        "pasted": true
+      },
+      "expected": " alice@pay.example.com "
+    }
+  ]
+}

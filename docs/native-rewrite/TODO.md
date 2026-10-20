@@ -186,7 +186,8 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 ## M2 — Receive
 - [x] ReceiveScreen (BIP-321 unified QR, amount/description sheet, copy sheet, share, completion subscriptions) — iOS
 - [x] ReceiveSuccessScreen + animation — iOS
-- [ ] QRHubScreen (my lightning-address code / scan)
+- [x] QRHubScreen (my Lightning-address code / scan) — iOS (address-only QR, name/copy, Profile fallback, existing scanner + paste, existing Send recipient import; denied/canceled/lost-focus reset to My code; live payments are preserved)
+- [ ] QRHubScreen (my lightning-address code / scan) — Android
 
 - [x] ReceiveScreen: BIP-321 QR with Noah logo, amount/note/fiat sheet, copy/share, Ark and Lightning completion — Android
 - [x] ReceiveSuccessScreen with animation, settled status and refreshed balance — Android
@@ -198,6 +199,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] SendScreen (amount-first + recipient-first, MAX, method/source choice, fee review, notes, suggestions) — iOS
 - [x] AmountKeypad (custom keypad, never with system keyboard) — iOS
 - [x] QR scanner (AVFoundation; RN camera permission wording preserved) — iOS
+  - QR hub reuses the existing native QR scanner (QR only; RN also recognizes EAN-13). Paste uses iOS PasteButton privacy consent. Only SendView model injection and shell routing changed; Send/payment internals remain unchanged.
 - [x] SendConfirmation + SendSuccess sheets — iOS
 - [x] Repeat payment metadata (`updateHistoryMetadata`, RN envelope) — iOS
 - [x] Submission lock, persisted attempt, cancellation-shielded wallet calls, sync/history reconciliation without automatic retry — iOS

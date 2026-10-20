@@ -71,13 +71,15 @@ struct WalletTabs: View {
     @State private var history = HistoryModel(dependencies: .live(
         session: .shared, client: AppServices.shared.client, variant: .current))
     @State private var pendingRepeatPayment: RepeatPayment?
+    @State private var send = SendModel()
+    @State private var scanBlocked = false
     @State private var selection: Tab = .home
     @State private var recurringRoute = RecurringNotificationRoute.shared
 
     var body: some View {
         TabView(selection: $selection) {
             SwiftUI.Tab("Home", systemImage: "house", value: .home) {
-                HomeView(onOpenHistory: { selection = .history }, onRepeatPayment: repeatPayment)
+                HomeView(isActive: selection == .home, onScan: scanned, onOpenHistory: { selection = .history }, onRepeatPayment: repeatPayment)
             }
             SwiftUI.Tab("Receive", systemImage: "arrow.down.left", value: .receive) {
                 NavigationStack { ReceiveView(isActive: selection == .receive) { selection = .home } }
@@ -85,12 +87,15 @@ struct WalletTabs: View {
             SwiftUI.Tab("Send", systemImage: "arrow.up.right", value: .send) {
                 // TODO: hand `pendingRepeatPayment` to SendView once it takes a prefill
                 // (after the Send safety fixes, which also reset routes on prefill).
-                NavigationStack { SendView() }
+                NavigationStack { SendView(model: send) }
             }
             SwiftUI.Tab("History", systemImage: "clock.arrow.circlepath", value: .history) {
                 NavigationStack { TransactionsView(onRepeatPayment: repeatPayment) }
             }
         }
+        .alert("Payment in progress", isPresented: $scanBlocked) {
+            Button("OK", role: .cancel) {}
+        } message: { Text("Finish the current payment before scanning another request.") }
         .environment(history)
         .sheet(isPresented: $recurringRoute.presented) {
             NavigationStack {
@@ -109,6 +114,11 @@ struct WalletTabs: View {
         }
         .tint(NoahColor.brand)
         .tabBarMinimizeOnScrollIfAvailable()
+    }
+
+    private func scanned(_ value: String) {
+        selection = .send
+        Task { if !(await QRScanRoute.apply(value, to: send)) { scanBlocked = true } }
     }
 
     private func repeatPayment(_ details: RepeatPayment) {
