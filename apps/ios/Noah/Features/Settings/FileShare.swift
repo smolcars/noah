@@ -11,8 +11,14 @@ final class SharedFile: Sendable {
 
 struct FileShareSheet: UIViewControllerRepresentable {
     let file: SharedFile
+    var completed: @MainActor @Sendable (Bool) -> Void = { _ in }
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: [file.url], applicationActivities: nil)
+        let controller = UIActivityViewController(activityItems: [file.url], applicationActivities: nil)
+        controller.completionWithItemsHandler = { _, success, _, error in
+            let shared = success && error == nil
+            Task { @MainActor in completed(shared) }
+        }
+        return controller
     }
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
@@ -22,6 +28,8 @@ struct ExportDatabaseView: View {
     @State private var sharing = false
     @State private var busy = false
     @State private var error: String?
+    @State private var sharedSuccessfully = false
+    @State private var exported = false
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -30,14 +38,14 @@ struct ExportDatabaseView: View {
                     .foregroundStyle(NoahColor.mutedForeground)
                 if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
                 NoahButton(title: "Export Database", isLoading: busy) {
-                    busy = true; error = nil
+                    busy = true; error = nil; sharedSuccessfully = false
                     Task {
                         defer { busy = false }
                         do {
                             file = try await ScratchSpace.shared.withOperation {
                                 let folder = try ScratchSpace.shared.makeFolder("share-backup")
                                 do {
-                                    let url = folder.appending(path: "noah-\(AppVariant.current.rawValue).noahbackup")
+                                    let url = folder.appending(path: ExportFilename.database())
                                     _ = try await AppServices.shared.backupService.exportEncryptedBackup(to: url)
                                     return SharedFile(url: url, folder: folder)
                                 } catch { ScratchSpace.shared.discard(folder); throw error }
@@ -49,9 +57,11 @@ struct ExportDatabaseView: View {
             }.padding(24).frame(maxWidth: 640).frame(maxWidth: .infinity)
         }
         .settingsStyle("Export Database")
-        .sheet(isPresented: $sharing, onDismiss: { file?.discard(); file = nil }) {
-            if let file { FileShareSheet(file: file) }
+        .sheet(isPresented: $sharing, onDismiss: { file?.discard(); file = nil; exported = sharedSuccessfully }) {
+            if let file { FileShareSheet(file: file) { sharedSuccessfully = $0 } }
         }
+        .alert("Export Complete", isPresented: $exported) { Button("OK", role: .cancel) {} }
+            message: { Text("Your encrypted database backup was exported.") }
     }
 }
 
