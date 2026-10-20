@@ -1,5 +1,51 @@
 # Native Send verification
 
+## bark-bolt-ffi 0.5.0 review round 1 fixes (2026-10-20)
+
+Based on `be45d670`. `972aca72` keeps successful BDK reconciliation independent
+of a subsequent `transactionStatus` failure. Evicted originals and confirmed
+competing spends downgrade the persisted receipt and retain the acknowledgement
+lock. The last known chain status remains alongside a separately persisted lookup
+error, restored after restart and cleared by a successful lookup. Chain-source
+confirmation cannot override BDK's downgrade; `notFound` cannot fail or unlock it.
+
+`89fab615` replaces Auto-Board's estimated-gross first preparation with a
+confirmed-only DrainAll fee probe. The probe is discarded before one reduced-gross
+preparation, allowing for the added change output (up to 43 vB at the reviewed
+rate). The review requires the exact signed reserve to be at least 5,000 sats and
+the net amount to meet the boarding threshold. Probe/review errors and cancellation
+release their preparations; failed probe cleanup prevents a review and retains
+session cleanup ownership. Typed insufficient-funds, too-many-inputs and
+below-minimum errors use the existing copy, including the automatic prompt.
+
+Regression tests reproduced both findings before the fixes: Send retained a
+confirmed receipt and acknowledgement unlocked it in both eviction/conflict
+cases; Auto-Board threw insufficient funds before reaching review. Final focused
+runs passed **76 tests / 133 individual executions across 10 suites**, no
+failures/skips: Send **45 / 90**, boarding **31 / 43**. They cover both status-error
+refresh orders, stale positive chain evidence, restart/acknowledgement locks,
+twenty confirmed 50,000-sat inputs at 10 sat/vB, 5,000/4,999-sat reserve edges,
+gross/net thresholds, typed failures at either preparation, cancellation at either
+preparation, failed probe cleanup and existing lifecycle/journal regressions.
+
+Full `NoahTests` ran **once** after final source/test changes: **467 total,
+448 passed, 19 explicitly gated skips, zero failures, 99 suites**; expanded device
+execution is **611 passed / 19 skipped**. XcodeGen ran immediately before the
+signed arm64 run, with `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY=-`,
+two jobs, disabled parallel testing, and DerivedData
+`/private/tmp/noah-ffi-r1-7f01-dd`. Counts were read from `xcresulttool` summaries;
+no focused invocation silently ran zero tests (method IDs include their argument
+signature/parentheses; suite filters select all methods).
+
+Owned simulator **Noah FFI Fix R1 Sol 7f01**, iPhone 17 / iOS 27.0,
+`671A0A0B-E3F0-4075-AE95-3F273960EFDA`, was opened in T3's Device panel. Its exact
+name/type/UDID were checked, it was shut down through T3, **Shutdown** was
+rechecked, then only that simulator was deleted and its absence verified.
+Its DerivedData, all **six owned `.xcresult` bundles**, and scratch logs/summaries
+were removed. No live funded regtest was needed: these are deterministic
+regressions at the production reconciliation/preparation seams. Protected
+simulators, Android devices, physical hardware and Docker containers were untouched.
+
 ## bark-bolt-ffi 0.5.0 adoption (2026-10-20)
 
 Base `211ecdf2` (`feat/native-rewrite`). iOS pins **exactVersion 0.5.0** at

@@ -1,5 +1,31 @@
 # Native iOS M6 verification
 
+## bark-bolt-ffi 0.5.0 review round 1 fixes (2026-10-20)
+
+Base `be45d670`; boarding fix `89fab615`. Auto-Board starts with a confirmed-only
+DrainAll probe, discards it, then prepares one reduced gross with room for the
+change output. Only the exact signed quote with reserve **≥5,000 sats** and a
+sufficient net amount reaches review. A twenty-input, 1,000,000-sat / 10-sat/vB
+regression now reaches an affordable **983,000-sat gross / 12,000-sat fee** review
+with exactly **5,000 sats** remaining. A one-sat fee increase discards the review.
+Probes are discarded on success, thresholds, errors and cancellation; cleanup
+failure prevents a review while the session retains cleanup ownership. Both
+preparation stages map typed errors to the existing copy in the automatic prompt.
+
+Final boarding verification: **31 tests / 43 executions in 6 suites**, no
+failures/skips. Send's independent BDK/status-error fix `972aca72` passed another
+**45 tests / 90 executions**. [Details](../SendTests/README.md#bark-bolt-ffi-050-review-round-1-fixes-2026-10-20).
+
+Full `NoahTests` ran **once** after final source/test changes: **467 total,
+448 passed / 19 gated skips / zero failures in 99 suites**, **611 expanded passes**.
+XcodeGen preceded the signed arm64 run with `ONLY_ACTIVE_ARCH=YES`, two jobs,
+disabled parallel testing and isolated `/private/tmp/noah-ffi-r1-7f01-dd`.
+Owned iPhone 17 simulator **Noah FFI Fix R1 Sol 7f01**
+(`671A0A0B-E3F0-4075-AE95-3F273960EFDA`) was identity-checked, shut down, rechecked
+**Shutdown**, deleted and verified absent. Its DerivedData, all six owned result
+bundles and scratch logs/summaries were removed. No live funding, Docker or
+unrelated-device operations; neither review finding remains open.
+
 ## bark-bolt-ffi 0.5.0 adoption (2026-10-20)
 
 Based on `211ecdf2`; iOS now uses the checksum-verified 0.5.0 release. Prepared
