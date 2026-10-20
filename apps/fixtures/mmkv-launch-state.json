@@ -1,0 +1,14 @@
+{
+  "description": "Seed and DB already exist. Missing wallet-storage on first native open resumes onboarding; losing a previously admitted key blocks. Consumed by iOS MMKVRecoveryTests and Android MMKVRecoveryTest.",
+  "cases": [
+    {"name":"initialized upgrade","initialWallet":"initialized","expected":"existingWallet"},
+    {"name":"RN never persisted wallet settings","initialWallet":"absent","expected":"onboarding"},
+    {"name":"unfinished RN onboarding","initialWallet":"unfinished","expected":"onboarding"},
+    {"name":"present undecodable RN wallet value","initialWallet":"undecodable","expected":"incompatibleStorage"},
+    {"name":"later native wallet key loss","initialWallet":"initialized","afterNativeWallet":"absent","expected":"incompatibleStorage"},
+    {"name":"later native undecodable value","initialWallet":"initialized","afterNativeWallet":"undecodable","expected":"incompatibleStorage"},
+    {"name":"foreground completes resumed onboarding","initialWallet":"absent","afterNativeWallet":"initialized","expected":"existingWallet"},
+    {"name":"explicit unfinished state remains readable","initialWallet":"initialized","afterNativeWallet":"unfinished","expected":"onboarding"},
+    {"name":"onboarding still has no wallet key","initialWallet":"absent","afterNativeWallet":"absent","expected":"onboarding"}
+  ]
+}

@@ -157,6 +157,58 @@ struct MMKVRecoveryTests {
         #expect(try staging.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
     }
 
+    @Test func sharedStorageLaunchDecisions() throws {
+        struct Case: Decodable { let name: String; let initialWallet: String; let afterNativeWallet: String?; let expected: String }
+        struct Fixture: Decodable { let cases: [Case] }
+        let url = Self.fixture.deletingLastPathComponent().appending(path: "mmkv-launch-state.json")
+        for vector in try JSONDecoder().decode(Fixture.self, from: Data(contentsOf: url)).cases {
+            let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+            let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
+            func apply(_ state: String) {
+                if state == "absent" { raw.removeValue(forKey: PersistedWalletState.key) }
+                else if state == "undecodable" { raw.set(Data([0xff]), forKey: PersistedWalletState.key) }
+                else { raw.set("{\"state\":{\"isInitialized\":\(state == "initialized")},\"version\":0}", forKey: PersistedWalletState.key) }
+                raw.sync()
+            }
+            apply(vector.initialWallet); raw.close()
+            let outcome: String
+            do {
+                let store = try SettingsStorage(rootPath: root.path)
+                if let after = vector.afterNativeWallet {
+                    if after == "absent" || after == "undecodable" {
+                        let live = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
+                        if after == "absent" { live.removeValue(forKey: PersistedWalletState.key) }
+                        else { live.set(Data([0xff]), forKey: PersistedWalletState.key) }
+                        live.sync()
+                    } else {
+                        try store.setPersistedState(PersistedWalletState(isInitialized: after == "initialized"), key: PersistedWalletState.key, version: 0)
+                    }
+                }
+                try store.requireCompatibleRNStores()
+                outcome = store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true ? "existingWallet" : "onboarding"
+            } catch { outcome = "incompatibleStorage" }
+            #expect(outcome == vector.expected, "\(vector.name)")
+        }
+    }
+
+    @Test func unavailableRetirementMarkerStopsNativeMutationAndCanRetry() throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        let store = try SettingsStorage(rootPath: root.path)
+        let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
+        let original = store.string(forKey: PersistedWalletState.key)
+        let marker = try Data(contentsOf: backup.retirementFile)
+        try FileManager.default.removeItem(at: backup.retirementFile)
+        try FileManager.default.createDirectory(at: backup.retirementFile, withIntermediateDirectories: false)
+        #expect(throws: (any Error).self) {
+            try store.setPersistedState(PersistedWalletState(isInitialized: false), key: PersistedWalletState.key, version: 0)
+        }
+        #expect(store.string(forKey: PersistedWalletState.key) == original)
+        try FileManager.default.removeItem(at: backup.retirementFile)
+        try marker.write(to: backup.retirementFile)
+        try store.setPersistedState(PersistedWalletState(isInitialized: false), key: PersistedWalletState.key, version: 0)
+        #expect(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == false)
+    }
+
     @Test func deliberateDeletionDoesNotResurrectTheBackup() throws {
         let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
         let store = try SettingsStorage(rootPath: root.path)

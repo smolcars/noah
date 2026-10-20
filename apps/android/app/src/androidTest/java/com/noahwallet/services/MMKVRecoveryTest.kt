@@ -156,6 +156,37 @@ class MMKVRecoveryTest {
         assertFalse(backup.directory.exists())
     }
 
+    @Test fun sharedStorageLaunchDecisions() {
+        val vectors = org.json.JSONObject(instrumentation.context.assets.open("mmkv-launch-state.json").bufferedReader().use { it.readText() }).getJSONArray("cases")
+        for (i in 0 until vectors.length()) fixture { context, root ->
+            val vector = vectors.getJSONObject(i)
+            MMKV.initialize(app, root.path)
+            val raw = MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!
+            val initial = vector.getString("initialWallet")
+            when (initial) {
+                "absent" -> raw.removeValueForKey("wallet-storage")
+                "undecodable" -> raw.encode("wallet-storage", byteArrayOf(0xff.toByte()))
+                else -> raw.encode("wallet-storage", """{"state":{"isInitialized":${initial == "initialized"}},"version":0}""")
+            }
+            raw.sync(); raw.close()
+            val outcome = runCatching {
+                val store = SettingsStorage(context)
+                if (vector.has("afterNativeWallet")) {
+                    val after = vector.getString("afterNativeWallet")
+                    if (after == "absent" || after == "undecodable") {
+                        val live = MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!
+                        if (after == "absent") live.removeValueForKey("wallet-storage")
+                        else live.encode("wallet-storage", byteArrayOf(0xff.toByte()))
+                        live.sync()
+                    } else store.setPersistedState(PersistedWalletState(isInitialized = after == "initialized"), "wallet-storage", 0)
+                }
+                store.validateStores()
+                if (store.persistedState<PersistedWalletState>("wallet-storage")?.isInitialized == true) "existingWallet" else "onboarding"
+            }.getOrElse { "incompatibleStorage" }
+            assertEquals(vector.getString("name"), vector.getString("expected"), outcome)
+        }
+    }
+
     @Test fun existingDatabaseWithMissingWalletStoreResumesOnboardingInsteadOfBlocking() = fixture { context, root ->
         MMKV.initialize(app, root.path)
         MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!.let {
