@@ -7,7 +7,7 @@ import java.io.File
 import java.security.MessageDigest
 
 /** Write-ahead authority for policies; MMKV is never allowed to repair newer evidence. */
-internal class RecurringPolicyLedger(val file: File, private val warn: () -> Unit = {}, private val sync: (File) -> Unit = ::syncDirectory) {
+internal class RecurringPolicyLedger(val file: File, private val warn: () -> Unit = {}, private val sync: (File) -> Unit = ::syncDirectory, private val syncFile: (java.io.FileDescriptor) -> Unit = { it.sync() }) {
     @Serializable private data class Marker(val version: Int, val binding: RecurringStore.Binding)
     @Serializable private data class Entry(val binding: RecurringStore.Binding, val scheduleID: String, val generation: Long, val revision: String?, val status: String, val digest: String?)
     @Serializable private data class State(val version: Int, val binding: RecurringStore.Binding, val generation: Long, val entries: Map<String, Entry>)
@@ -21,13 +21,13 @@ internal class RecurringPolicyLedger(val file: File, private val warn: () -> Uni
     private fun entry(binding: RecurringStore.Binding, schedule: RecurringPayment, generation: Long) = Entry(binding, schedule.id, generation, schedule.nativeRevision, schedule.status, digest(schedule))
     private fun matches(entry: Entry?, binding: RecurringStore.Binding, schedule: RecurringPayment) = entry != null && entry.binding == binding && entry.scheduleID == schedule.id && entry.status == schedule.status &&
         entry.revision == schedule.nativeRevision && entry.digest == digest(schedule)
-    private fun persist(state: State) = durableRecurringWrite(file, json.encodeToString(state).toByteArray(), sync)
+    private fun persist(state: State) = durableRecurringWrite(file, json.encodeToString(state).toByteArray(), sync, syncFile)
     private fun state(binding: RecurringStore.Binding, schedules: Map<String, RecurringPayment>): State {
         check(!failed) { message }
         try {
             if (!marker.exists() && !file.exists()) {
                 // Marker first: a crash during bootstrap must never authorize a second import.
-                durableRecurringWrite(marker, json.encodeToString(Marker(1, binding)).toByteArray(), sync)
+                durableRecurringWrite(marker, json.encodeToString(Marker(1, binding)).toByteArray(), sync, syncFile)
                 persist(State(1, binding, 0, schedules.map { (id, schedule) -> key(binding, id) to entry(binding, schedule, 0) }.toMap()))
             }
             val markerState = json.decodeFromString<Marker>(marker.readText())

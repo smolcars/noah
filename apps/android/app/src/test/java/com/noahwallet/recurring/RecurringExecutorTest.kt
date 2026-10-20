@@ -35,7 +35,7 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
     var beforeQuote: suspend () -> Unit = {}; var sync: suspend () -> Unit = {}; var syncCalls = 0
     val notifications = mutableListOf<RecurringPayment>()
     var audits = 0
-    init { store.protectPolicies(File("${journal.file.path}.policies"), sync = { it.listFiles()?.forEach(File::deleteOnExit) }) { binding } }
+    init { store.protectPolicies(File("${journal.file.path}.policies"), sync = { it.listFiles()?.forEach(File::deleteOnExit) }, syncFile = {}) { binding } }
     val executor = RecurringExecutor(RecurringExecutor.Dependencies(store, journal, controller,
         ensureOpen = {}, binding = { beforeBinding(); binding }, allowed = { check(allowed) },
         quote = { s -> quotes++; beforeQuote(); SendPayment(s.destination, method, s.amountSat) to SendQuote(s.amountSat, fee, s.amountSat + fee, walletIdentity = binding.wallet, lightningFeeSchedule = feeSchedule) },

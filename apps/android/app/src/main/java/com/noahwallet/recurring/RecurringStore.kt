@@ -21,8 +21,8 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     private var writeFailed = false
     private var policyLedger: RecurringPolicyLedger? = null
     private var policyBinding: (() -> Binding)? = null
-    internal fun protectPolicies(file: File, sync: (File) -> Unit = ::syncDirectory, binding: () -> Binding) = synchronized(lock) {
-        if (policyLedger == null) { policyLedger = RecurringPolicyLedger(file, policyWarning, sync); policyBinding = binding }
+    internal fun protectPolicies(file: File, sync: (File) -> Unit = ::syncDirectory, syncFile: (java.io.FileDescriptor) -> Unit = { it.sync() }, binding: () -> Binding) = synchronized(lock) {
+        if (policyLedger == null) { policyLedger = RecurringPolicyLedger(file, policyWarning, sync, syncFile); policyBinding = binding }
     }
     private fun protected(state: State): State {
         val ledger = policyLedger ?: return state
@@ -109,11 +109,11 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     }
 }
 
-internal fun durableRecurringWrite(file: File, bytes: ByteArray, sync: (File) -> Unit = ::syncDirectory) {
+internal fun durableRecurringWrite(file: File, bytes: ByteArray, sync: (File) -> Unit = ::syncDirectory, syncFile: (java.io.FileDescriptor) -> Unit = { it.sync() }) {
     check(file.parentFile!!.isDirectory)
     val temporary = File(file.parentFile, ".recurring-${UUID.randomUUID()}")
     try {
-        FileOutputStream(temporary).use { it.write(bytes); it.fd.sync() }
+        FileOutputStream(temporary).use { it.write(bytes); syncFile(it.fd) }
         check(temporary.renameTo(file)) { "Unable to save recurring payment evidence" }
         sync(file.parentFile!!)
     } finally { temporary.delete() }
