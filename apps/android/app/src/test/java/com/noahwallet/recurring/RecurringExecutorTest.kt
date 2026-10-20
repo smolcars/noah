@@ -58,6 +58,20 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
 }
 
 class RecurringExecutorTest {
+    @Test fun recoveredMMKVRollbackWaitsForHealthyStorageAndCannotPayTwice() = runBlocking {
+        val w = RecurringWorld(this); w.add(); val lastConfirmed = w.raw
+        w.executor.execute(); assertEquals(1, w.wallet.calls)
+        // MMKV can return the last-confirmed policy while its independent journal stays newer.
+        w.raw = lastConfirmed; w.allowed = false
+        w.executor.execute(); assertEquals(1, w.wallet.calls)
+        assertEquals(lastConfirmed, w.raw)
+        w.allowed = true
+        w.executor.execute(); w.executor.execute()
+        assertEquals(1, w.wallet.calls)
+        assertEquals("needs_attention", w.schedule!!.status)
+        assertTrue(w.journal.consumed(w.binding, "rent", 1000))
+    }
+
     @Test fun oversizedStoredPolicyCannotRunResumeOverrideOrBlockHealthyPayments() = runBlocking {
         val w = RecurringWorld(this); val healthy = w.add()
         val oversized = healthy.copy(id = "oversized", amountSat = RecurringPayment.maximumAmount + 1)

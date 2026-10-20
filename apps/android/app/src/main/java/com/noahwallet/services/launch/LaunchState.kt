@@ -51,7 +51,8 @@ enum class LaunchState {
                 failure.reason == com.noahwallet.services.wallet.WalletSession.OpenFailure.seedConflict -> seedConflict
             failure is io.github.niteshbalusu11.bark.BarkError &&
                 failure.message?.contains("incorrect mnemonic for existing wallet") == true -> seedConflict
-            failure is com.noahwallet.services.storage.RNStoreCodec.Unreadable -> incompatibleStorage
+            failure is com.noahwallet.services.storage.RNStoreCodec.Unreadable ||
+                failure is com.noahwallet.services.storage.SettingsStorage.Unavailable -> incompatibleStorage
             else -> secureStorageUnavailable
         }
 
@@ -67,6 +68,7 @@ enum class LaunchState {
         suspend fun current(context: Context, variant: String = BuildConfig.APP_VARIANT): LaunchState {
             try { com.noahwallet.services.storage.SettingsStorage(context).validateStores() }
             catch (_: com.noahwallet.services.storage.RNStoreCodec.Unreadable) { return incompatibleStorage }
+            catch (_: com.noahwallet.services.storage.SettingsStorage.Unavailable) { return incompatibleStorage }
             val location = WalletDataLocation(context.filesDir, variant)
             if (location.restorePending || location.deletionMarker.exists()) return restoreIncomplete
             return inspect(listOf(SeedStorage(context, variant).read()), location.hasAnyData,

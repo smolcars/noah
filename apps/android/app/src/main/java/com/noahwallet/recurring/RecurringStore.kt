@@ -13,7 +13,7 @@ import java.util.UUID
 
 /** RN's version-0 Zustand envelope. Unsupported rows stay visible; invalid envelopes stop mutations. */
 class RecurringStore(private val read: () -> String?, private val write: (String) -> Unit) {
-    constructor(settings: SettingsStorage) : this({ settings.string(key) }, { raw ->
+    constructor(settings: SettingsStorage) : this({ settings.requireHealthy(); settings.string(key) }, { raw ->
         settings.set(raw, key); settings.sync(); check(settings.string(key) == raw) { "Unable to save recurring payments" }
     })
     @Serializable data class Binding(val wallet: SendIdentity, val instance: String)

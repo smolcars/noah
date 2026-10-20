@@ -163,7 +163,8 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
         LaunchState.onboarding -> R.string.launch_welcome to R.string.launch_onboarding_message
         LaunchState.seedWithoutWalletData -> R.string.launch_seed_found to R.string.launch_seed_found_message
         LaunchState.walletDataWithoutSeed -> R.string.launch_seed_needed to R.string.launch_seed_needed_message
-        LaunchState.secureStorageUnavailable, LaunchState.invalidSeed, LaunchState.seedConflict, LaunchState.incompatibleStorage ->
+        LaunchState.incompatibleStorage -> R.string.launch_settings_recovery to R.string.launch_settings_recovery_message
+        LaunchState.secureStorageUnavailable, LaunchState.invalidSeed, LaunchState.seedConflict ->
             R.string.launch_unlock to R.string.launch_unlock_message
     }
     Column(
@@ -175,7 +176,7 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
         androidx.compose.foundation.text.selection.SelectionContainer {
             Text(stringResource(message.second), textAlign = TextAlign.Center)
         }
-        if (state == LaunchState.secureStorageUnavailable || (state == LaunchState.existingWallet && openFailed)) {
+        if (state == LaunchState.secureStorageUnavailable || state == LaunchState.incompatibleStorage || (state == LaunchState.existingWallet && openFailed)) {
             val context = LocalContext.current
             androidx.compose.material3.TextButton({
                 val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
