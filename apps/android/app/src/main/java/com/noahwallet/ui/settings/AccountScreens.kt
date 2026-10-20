@@ -129,6 +129,7 @@ fun ArkInfoScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (info == null) Text(tr("Ark server info is unavailable. Try refreshing."))
         info?.let {
+            SettingRow("Network", it.network.name.lowercase(Locale.ROOT))
             SectionTitle("Keys")
             CopyRow("Server pubkey", it.serverPubkey); CopyRow("Mailbox pubkey", it.mailboxPubkey)
             SectionTitle("Boarding limits")
@@ -150,6 +151,7 @@ fun ArkInfoScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
         config.bitcoind?.let { CopyRow("Bitcoind RPC", it) }
         SettingRow("Esplora Settings") { navigate(SettingsDestination.Esplora) }
         SectionTitle("Explorer APIs")
+        CopyRow("Block height API", ArkInfoEndpoints.blockHeight(BuildConfig.APP_VARIANT, selection.endpoint))
         val prices = com.noahwallet.services.server.ServerEndpoint.priceURLs(
             com.noahwallet.services.server.ServerEndpoint.baseURL(BuildConfig.APP_VARIANT, BuildConfig.REGTEST_SERVER_URL))
         CopyRow("Mempool explorer", "https://mempool.space" + if (BuildConfig.APP_VARIANT == "mainnet") "" else "/signet")

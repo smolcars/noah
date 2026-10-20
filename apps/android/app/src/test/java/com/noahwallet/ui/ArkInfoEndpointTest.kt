@@ -1,10 +1,20 @@
 package com.noahwallet.ui
 
 import com.noahwallet.services.server.ServerEndpoint
+import com.noahwallet.ui.settings.ArkInfoEndpoints
 import org.junit.Assert.*
 import org.junit.Test
 
 class ArkInfoEndpointTest {
+    @Test fun blockHeightMatchesRNDefaultsAndOverride() {
+        assertEquals("https://mempool.second.tech/api/blocks/tip/height", ArkInfoEndpoints.blockHeight("mainnet", null))
+        assertEquals("https://mempool.space/signet/api/blocks/tip/height", ArkInfoEndpoints.blockHeight("signet", null))
+        for (variant in listOf("mainnet", "signet")) {
+            assertEquals("https://custom.example/api/blocks/tip/height", ArkInfoEndpoints.blockHeight(variant, "https://custom.example/api/"))
+        }
+        assertEquals("http://192.0.2.1:18443", ArkInfoEndpoints.blockHeight("regtest", "https://ignored.example", "192.0.2.1"))
+    }
+
     @Test fun pricesUseConfiguredServerForEveryVariant() {
         for ((variant, origin) in listOf("mainnet" to "https://noahwallet.io", "signet" to "https://signet.noahwallet.io", "regtest" to "http://10.0.2.2:3000")) {
             val urls = ServerEndpoint.priceURLs(ServerEndpoint.baseURL(variant))
