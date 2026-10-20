@@ -62,6 +62,22 @@ journal existed. **No successful native live automatic-payment claim is made.**
 Above-cap behavior is covered deterministically. The Pixel observation above
 is supplied evidence, not a new physical-device run.
 
+Live re-run, passed (2026-10-20, 00:58–00:59 EDT, after merge to `feat/native-rewrite`
+`45fec2b3`). Ran on the dedicated **Noah FeeCap Live** simulator, iPhone 17 / iOS 27.0, UDID
+`AC0BC636-0D66-4ABC-A1A1-808BEEBE055F`, using `NoahTests/RecurringFeeLiveTests/belowCapLightningAutomaticallyPaysOnce()`.
+LND was down, so the wallet was funded over Ark instead of Lightning: the real
+Pixel 6 (regtest build) sent **31,000 sats** to the published
+`recurring-fee-funding-address.txt`, with a 0-sat fee on review.
+- The unattended executor then quoted **155 sats** for the 20,000-sat BOLT12 payment against a
+  **400-sat cap**, with a worst-case published-schedule fee of **235 sats**.
+  These match the `regtest: 20,000 sats limited by 2% of the amount` fixture case.
+- It decided `within_cap` and paid automatically, **once**, across the automatic and repeated manual triggers.
+- CLN's fresh offer `b06dd616ee71…` shows exactly one paid invoice, 20,000,000 msat, at 00:59:07.
+- The wallet recorded one successful movement (#2), and the occurrence was consumed.
+- The test then cancelled the schedule and deleted its disposable wallet.
+- **1 test passed**, 64.2 s.
+- Cleanup: simulator shut down and deleted, and its DerivedData and result bundle removed.
+
 Reproduce on a fresh dedicated simulator with
 `TEST_RUNNER_NOAH_RECURRING_FEE_LIVE=1`,
 `TEST_RUNNER_NOAH_RECURRING_FEE_OFFER=<fresh reusable regtest CLN offer>` and
