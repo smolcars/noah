@@ -137,30 +137,106 @@ struct BoardPreparedTests {
         }
         #expect(try await journal.loadAll().isEmpty)
     }
-    @Test(arguments: [false, true]) func reserveRepreparesOnceThenKeepsOrDiscardsExactQuote(secondFeeRises: Bool) async throws {
-        let calls = Calls()
-        var quote = Self.quote
-        quote.amount = 34_792 // Seeded with 208 sats, exact fee is 1,543.
-        quote.automatic = true
-        let original = quote
-        let result = try await WalletSession.reserveBoardReview(quote, minimum: 20_000,
-            discard: { try? await calls.discard($0) }, prepare: { reduced in
-                #expect(await calls.discarded == [original.id])
-                #expect(reduced == 33_457)
-                var replacement = original
-                replacement.id = UUID()
-                replacement.amount = reduced
-                if secondFeeRises { replacement.chainFee += 1 }
-                return replacement
-            })
-        if secondFeeRises {
-            #expect(result == nil)
-            #expect(await calls.discarded.count == 2)
-        } else {
-            let result = try #require(result)
-            #expect(result.confirmed - result.amount - result.chainFee == 5_000)
+    actor AutoBoardCalls {
+        let balance: UInt64
+        let fee: UInt64
+        let arkFee: UInt64
+        let reviewExtraFee: UInt64
+        let failure: BarkErrorCode?
+        let failAt: Int
+        let cancelAt: Int
+        let failDiscard: Bool
+        var amounts: [UInt64] = []
+        var active: [UUID] = []
+        var discarded: [UUID] = []
+        init(balance: UInt64 = 1_000_000, fee: UInt64 = 12_000, arkFee: UInt64 = 100,
+             reviewExtraFee: UInt64 = 0, failure: BarkErrorCode? = nil, failAt: Int = 0,
+             cancelAt: Int = 0, failDiscard: Bool = false) {
+            self.balance = balance; self.fee = fee; self.arkFee = arkFee; self.reviewExtraFee = reviewExtraFee
+            self.failure = failure; self.failAt = failAt; self.cancelAt = cancelAt; self.failDiscard = failDiscard
+        }
+        func prepare(_ amount: UInt64) throws -> OnchainQuote {
+            #expect(active.isEmpty) // A probe must release its inputs before the review is built.
+            amounts.append(amount)
+            if amounts.count == failAt, let failure { throw BarkError(message: "private", code: failure) }
+            let chainFee = amount == 0 ? fee - 430 : fee + reviewExtraFee // One extra 43-vB change output at 10 sat/vB.
+            guard amount == 0 || amount + chainFee <= balance else {
+                throw BarkError(message: "insufficient", code: .insufficientFunds)
+            }
+            var quote = BoardPreparedTests.quote
+            quote.id = UUID(); quote.automatic = true; quote.confirmed = balance
+            quote.amount = amount == 0 ? balance - chainFee : amount
+            quote.chainFee = chainFee; quote.fee = arkFee; quote.feeRate = 10
+            quote.prepared = .init(PreparedBoard(id: quote.id.uuidString, txid: "exact",
+                grossSats: quote.amount, netSats: quote.net, arkFeeSats: arkFee, onchainFeeSats: chainFee,
+                vsize: chainFee / 10, inputs: (0..<20).map { .init(txid: "funding", vout: UInt32($0)) }))
+            active.append(quote.id)
+            if amounts.count == cancelAt { withUnsafeCurrentTask { $0?.cancel() } }
+            return quote
+        }
+        func discard(_ quote: OnchainQuote) throws {
+            discarded.append(quote.id)
+            if failDiscard { throw OnchainFailure.uncertain }
+            active.removeAll { $0 == quote.id }
+        }
+        func review() async throws -> OnchainQuote? {
+            try await WalletSession.reserveBoardReview(minimum: 20_000, feeRate: 10,
+                discard: { try await self.discard($0) }, prepare: { try await self.prepare($0) })
         }
     }
+    @Test func manyInputsAtHighFeeReachAnAffordableReview() async throws {
+        // Twenty confirmed 50,000-sat inputs; the old 992,920-sat gross cannot pay the real fee.
+        let calls = AutoBoardCalls()
+        let quote = try #require(try await calls.review())
+        #expect(await calls.amounts == [0, 983_000])
+        #expect(await calls.discarded.count == 1)
+        #expect(await calls.active == [quote.id])
+        #expect(quote.prepared?.inputCount == 20 && quote.chainFee == 12_000)
+        #expect(quote.confirmed - quote.amount - quote.chainFee == 5_000)
+    }
+    @Test(arguments: [UInt64(12_000), 12_001])
+    func exactReserveIsCheckedBeforeReview(fee: UInt64) async throws {
+        let calls = AutoBoardCalls(reviewExtraFee: fee - 12_000)
+        let result = try await calls.review()
+        #expect((result != nil) == (fee == 12_000))
+        #expect(await calls.discarded.count == (result == nil ? 2 : 1))
+        #expect(await calls.active.count == (result == nil ? 0 : 1))
+        if let result { #expect(result.confirmed - result.amount - result.chainFee == 5_000) }
+    }
+    @Test(arguments: [BarkErrorCode.insufficientFunds, .tooManyInputs, .belowMinimumBoardAmount], [1, 2])
+    func probeAndReviewTypedFailuresUseExistingCopy(code: BarkErrorCode, stage: Int) async {
+        let calls = AutoBoardCalls(failure: code, failAt: stage)
+        let expected: OnchainFailure = switch code {
+        case .insufficientFunds: .constructionFailed
+        case .tooManyInputs: .tooManyInputs
+        default: .belowMinimum
+        }
+        await #expect(throws: expected) { try await calls.review() }
+        #expect(await calls.active.isEmpty)
+        #expect(await calls.discarded.count == (stage == 1 ? 0 : 1))
+    }
+    @Test(arguments: [1, 2]) func cancellationDiscardsEveryReturnedPreparation(stage: Int) async throws {
+        let calls = AutoBoardCalls(cancelAt: stage)
+        let work = Task { try await calls.review() }
+        await #expect(throws: CancellationError.self) { try await work.value }
+        #expect(await calls.active.isEmpty)
+        #expect(await calls.discarded.count == stage)
+    }
+    @Test(arguments: [UInt64(16_000), 36_999, 37_000])
+    func belowGrossOrNetThresholdDiscardsEveryPreparation(balance: UInt64) async throws {
+        let calls = AutoBoardCalls(balance: balance, arkFee: 101)
+        #expect(try await calls.review() == nil)
+        #expect(await calls.amounts == (balance == 37_000 ? [0, 20_000] : [0]))
+        #expect(await calls.active.isEmpty)
+        #expect(await calls.discarded.count == (balance == 37_000 ? 2 : 1))
+    }
+    @Test func failedProbeDiscardPreventsReviewPreparation() async {
+        let calls = AutoBoardCalls(failDiscard: true)
+        await #expect(throws: OnchainFailure.uncertain) { try await calls.review() }
+        #expect(await calls.amounts == [0])
+        #expect(await calls.discarded.count == 1)
+    }
+
 }
 
 @MainActor struct BoardReviewLifetimeTests {

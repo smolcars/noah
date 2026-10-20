@@ -84,12 +84,9 @@ extension WalletSession {
         try await withOpenWallet { handles in
             guard let info = try await handles.wallet.arkInfo() else { throw OnchainFailure.unavailable }
             let balance = try await handles.onchain.balance().confirmedSats
-            let seedFee = BoardingRules.onchainFee(
-                satsPerKwu: try await handles.onchain.feeRates().regularSatPerKwu)
-            guard balance > BoardingRules.reserve + seedFee + BoardingRules.threshold(info.minBoardAmountSats)
+            guard balance > BoardingRules.reserve + BoardingRules.threshold(info.minBoardAmountSats)
             else { return nil }
-            return try await self.prepareBoardReview(handles, requested: balance - BoardingRules.reserve - seedFee,
-                                                     automatic: true)
+            return try await self.prepareBoardReview(handles, requested: 0, automatic: true)
         }
     }
 
@@ -104,39 +101,49 @@ extension WalletSession {
                 feeRateSatPerVb: rate, confirmedOnly: true)
             let quote = OnchainQuote(action: .board, walletID: walletID, ids: [], amount: board.grossSats,
                 fee: board.arkFeeSats, chainFee: board.onchainFeeSats, confirmed: balance, feeRate: rate,
-                automatic: automatic, boardAll: requested == 0 ? true : nil, prepared: .init(board))
+                automatic: automatic, boardAll: !automatic && requested == 0 ? true : nil, prepared: .init(board))
             await self.retainBoardReview(quote, wallet: handles.wallet)
             return quote
         }
-        let quote: OnchainQuote
-        do { quote = try await prepare(requested) }
-        catch { throw OnchainSubmission.boardFailure(error) ?? error }
-        guard automatic else { return quote }
-        return try await Self.reserveBoardReview(quote, minimum: minimum,
-            discard: { await self.discardBoard($0) }, prepare: { try await prepare($0) })
+        guard automatic else {
+            do { return try await prepare(requested) }
+            catch { throw OnchainSubmission.boardFailure(error) ?? error }
+        }
+        return try await Self.reserveBoardReview(minimum: minimum, feeRate: rate,
+            discard: { quote in
+                await self.discardBoard(quote)
+                guard await self.boardPreparations[quote.prepared!.id] == nil else { throw OnchainFailure.uncertain }
+            }, prepare: prepare)
     }
 
     static func reserveBoardReview(
-        _ original: OnchainQuote, minimum: UInt64,
-        discard: @Sendable (OnchainQuote) async -> Void,
+        minimum: UInt64, feeRate: UInt64,
+        discard: @Sendable (OnchainQuote) async throws -> Void,
         prepare: @Sendable (UInt64) async throws -> OnchainQuote
     ) async throws -> OnchainQuote? {
-        var quote = original
         do {
-            if quote.amount + quote.chainFee + BoardingRules.reserve > quote.confirmed {
-                let excess = quote.amount + quote.chainFee + BoardingRules.reserve - quote.confirmed
-                guard quote.amount > excess else { throw OnchainFailure.invalid }
-                await discard(quote)
-                quote = try await prepare(quote.amount - excess)
+            let probe = try await prepare(0) // Confirmed-only DrainAll can afford its own exact input fees.
+            try await discard(probe)
+            try Task.checkCancellation()
+            // Allow for the extra change output (at most 43 vB) absent from the drain probe.
+            let retained = BoardingRules.reserve + 43 * feeRate
+            guard probe.amount > retained else { return nil }
+            let gross = probe.amount - retained
+            guard gross >= BoardingRules.threshold(minimum) else { return nil }
+            let quote = try await prepare(gross)
+            do {
+                try Task.checkCancellation()
+                guard quote.amount + quote.chainFee + BoardingRules.reserve <= quote.confirmed,
+                      quote.net >= BoardingRules.threshold(minimum) else {
+                    try await discard(quote)
+                    return nil
+                }
+                return quote
+            } catch {
+                try? await discard(quote)
+                throw error
             }
-            guard quote.amount + quote.chainFee + BoardingRules.reserve <= quote.confirmed,
-                  quote.net >= BoardingRules.threshold(minimum) else {
-                await discard(quote)
-                return nil
-            }
-            return quote
         } catch {
-            await discard(quote)
             throw OnchainSubmission.boardFailure(error) ?? error
         }
     }

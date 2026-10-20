@@ -127,7 +127,8 @@ struct AutoBoardingService: View {
             }
             plan = quote
         } catch {
-            message = "Unable to prepare boarding. Use Settings → Board to Ark to try again."
+            message = (error as? OnchainFailure)?.errorDescription
+                ?? "Unable to prepare boarding. Use Settings → Board to Ark to try again."
         }
     }
     private func invalidate() {
