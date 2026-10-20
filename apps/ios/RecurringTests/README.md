@@ -3,6 +3,94 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Round-2 safety fixes (2026-10-20)
+
+Base: `feat/native-rewrite` at `211ecdf2`. The ArkInfo fee policy below is unchanged.
+
+- Consumed occurrence indices survive MMKV rollback, device-zone changes and
+  replacement of the latest attempt by a different policy revision. Regression:
+  monthly index 1 paid in New York at `1774753200000` cannot pay again in UTC at
+  `1775016000000`. Daily spring/fall DST shifts and wallet/revision isolation are
+  also covered.
+- Attended manual approval retains Send's terminal outcome/receipt and lock.
+  The existing receipt's **Done** action acknowledges it. Replaying the review
+  before or after Done sends nothing; the persisted recurring result stays paid.
+  Unattended settlement still acknowledges immediately.
+- A single foreground timer waits 60 seconds between executor checks, matching
+  RN's `useRecurringPaymentsRunner`. AppModel starts it at active startup and on
+  activation, with wallet-phase/suspension eligibility checked on every tick.
+  `UIScene.willDeactivateNotification` cancels the timer, including an already
+  woken tick. Reactivation starts one new timer. Native payment settlement stays
+  owned by the executor and can outlive cancellation. Timer, push and screen-open
+  triggers join the same executor task and reuse its markers, execution budget,
+  wallet-instance binding and persistent stop generation.
+
+### Portable recurring journal v2
+
+`noah-recurring-journal.json` is UTF-8 JSON, atomically replaced and file/directory
+fsynced before execution can continue. Android can use these exact field names
+and types; no Swift keyed UUID maps or platform date encodings are used:
+
+- `version`: integer `2`.
+- `attempts`: object keyed by schedule ID, retaining the v1 `Entry` fields.
+- `consumed`: array of `{binding, scheduleID, through}` cross-revision watermarks;
+  `through` is Unix milliseconds, inclusive.
+- `consumedIndices`: array of `{binding, scheduleID, policyRevision?, indices}`;
+  `indices` is a sorted unique integer array. An absent/null `policyRevision`
+  denotes the original RN policy; otherwise it is a UUID string, compared as a UUID.
+- `legacyUncertainty`: array of `{binding, scheduleID}` scopes whose earlier
+  revision/index history cannot be reconstructed safely.
+
+Every `binding` is `{wallet: {fingerprint, network}, instance}`; `instance` is a
+UUID string compared as a UUID. Scope equality includes every binding field.
+An occurrence is blocked if its exact revision/index is recorded, its timestamp
+is at/before the cross-revision watermark, **or** its wallet/schedule has legacy
+uncertainty. Attempt replacement must never remove any of those records.
+
+Migration is durable on the first read, before another attempt can overwrite
+old evidence. Both v1 and legacy dictionary journals derive exact revision/index
+records from every retained `consumed: true` attempt, and retain/derive timestamp
+watermarks. A v1 watermark may cover overwritten revisions with unknown indices,
+so every such scope also gains `legacyUncertainty`. Legacy dictionaries cannot
+prove whether an earlier consumed attempt was overwritten, so every retained
+scope gains that flag, even when the latest attempt failed. These scopes stay
+stopped at `needs_attention`, including after a zone change, edit or destructive
+resume. Cancel and create a fresh schedule with explicit approval to continue.
+Unknown versions, malformed consumption evidence and failed migration writes
+stop execution without treating the journal as empty.
+
+### Round-2 verification and cleanup
+
+Focused passing runs (all zero failures/skips):
+
+- Journal/executor + schedule + store: **44 tests / 67 individual runs**, three suites.
+- Attended settlement/executor: **35 tests / 58 individual runs**, one suite.
+- Foreground runner + executor + real session reservation: **41 tests / 71 individual
+  runs**, three suites. The injected clock advances minutes deterministically;
+  the tests post the production scene-deactivation notification.
+
+Before each of the first two fixes, its selected regression was run against the
+old behavior and failed on the exact symptom (one failing test each: duplicate
+payment after zone rollback; cleared attended success/receipt). Function-level
+Swift Testing selectors included trailing `()`; neither selected run was empty.
+
+The full `NoahTests` suite ran **once**, without exclusions: **447 total,
+429 passed, 18 opt-in skipped, zero failed**, **95 suites**, 36.344 seconds of
+execution. Parameterized results report **576 passed / 18 skipped** individual
+runs. All Xcode runs used Nix, XcodeGen, normal code signing,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2` and disabled parallel testing.
+No live payment, physical wake or timed OS-notification delivery was attempted;
+the opt-in integration tests remained skipped. Fee policy, Send, Onchain/M6,
+the SDK pin and Android source were untouched.
+
+Owned simulator: **Noah Recurring R2 Sol cbf385d4**, iPhone 17 / iOS 27.0,
+UDID `D9736DCB-3522-49F6-9B39-E9329FDDE7F8`. After the passing full run,
+confirmed its exact name/UDID and **Shutdown** state, deleted it and verified its
+absence. Removed `/private/tmp/noah-recurring-r2-dd` and all **six** owned
+xcresult bundles after exporting summary JSONs. Logs, summaries and cleanup
+evidence remain under `/private/tmp/noah-recurring-r2-`. Protected simulators,
+Android emulators, the physical Pixel 6 and Docker were untouched.
+
 ## ArkInfo unattended fee policy (2026-10-20)
 
 Base: `feat/native-rewrite` at `1aa9a618`. Supersedes round 1's max(1%, 200 sats)
@@ -270,8 +358,8 @@ recorded as unverified. Audit, journal or MMKV write errors retain the lock.
 - The generated authenticated server client sends only opaque IDs and due times
   in seconds. Requests serialize, resend edits made during a request and retain
   `serverSyncPending` after failures. Wake sync sends neither amounts nor recipients.
-- iOS follows RN's server-wake and foreground triggers. RN's periodic
-  WorkManager task is Android-only. Local reminder/result notifications are
+- iOS follows RN's server-wake, activation and one-minute foreground checks.
+  RN's periodic WorkManager task is Android-only. Local reminder/result notifications are
   advisory and asynchronous: notification-daemon delays cannot block payments
   or settings. A generation check prevents stale reminder callbacks replacing
   a newer schedule list.
