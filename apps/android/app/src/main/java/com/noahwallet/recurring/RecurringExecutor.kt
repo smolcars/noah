@@ -157,7 +157,11 @@ class RecurringExecutor(private val d: Dependencies,
         val settled = storage {
             synchronized(RecurringStore.lock) {
                 if (d.binding() != entry.binding || d.store.load().binding != entry.binding) return@storage false
-                d.journal.save(entry.copy(resolved = true, consumed = paid))
+                val saved = d.journal.load()[entry.scheduleID]
+                if (saved?.binding != entry.binding || saved.plan != entry.plan || saved.policyRevision != entry.policyRevision || saved.markedAt != entry.markedAt) return@storage false
+                if (saved.policyApplied) return@storage true
+                // Claim application with consumption: interruption may stop advancement, never repeat it.
+                d.journal.save(entry.copy(resolved = true, consumed = paid, policyApplied = true))
                 val latest = d.store.load().schedules[entry.scheduleID]
                 if (latest != null && latest.nativeRevision == entry.policyRevision) {
                     val result = when {

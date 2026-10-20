@@ -11,7 +11,7 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
     private val write: (String) -> Unit = { durableRecurringWrite(file, it.toByteArray(), ::syncDirectory) },
     private val quarantine: (ByteArray) -> Unit = { durableRecurringWrite(File("${file.path}.quarantine"), it) }) {
     @Serializable data class Entry(val binding: RecurringStore.Binding, val scheduleID: String, val plan: RecurringPayment.Plan,
-        val markedAt: Long, val policyRevision: String? = null, val resolved: Boolean = false, val consumed: Boolean = false) {
+        val markedAt: Long, val policyRevision: String? = null, val resolved: Boolean = false, val consumed: Boolean = false, val policyApplied: Boolean = false) {
         val key get() = "$scheduleID:${plan.occurrenceIndex}"
     }
     @Serializable data class Scope(val binding: RecurringStore.Binding, val scheduleID: String)
@@ -88,7 +88,7 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
         state.attempts.forEach { (id, e) ->
             scope(e.binding, id)
             e.policyRevision?.let(::uuid)
-            require(id == e.scheduleID && e.plan.kind == "pay" && e.plan.occurrenceIndex != null && e.plan.occurrenceIndex >= 0 && e.plan.scheduledFor != null && (!e.consumed || e.resolved))
+            require(id == e.scheduleID && e.plan.kind == "pay" && e.plan.occurrenceIndex != null && e.plan.occurrenceIndex >= 0 && e.plan.scheduledFor != null && (!e.consumed || e.resolved) && (!e.policyApplied || e.resolved))
             if (complete && e.consumed) {
                 require(state.consumed.any { sameScope(it.binding, it.scheduleID, e.binding, id) && it.through >= e.plan.scheduledFor } &&
                     state.consumedIndices.any { sameScope(it.binding, it.scheduleID, e.binding, id) && sameRevision(it.policyRevision, e.policyRevision) && e.plan.occurrenceIndex in it.indices })
