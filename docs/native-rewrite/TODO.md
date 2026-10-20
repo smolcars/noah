@@ -356,6 +356,13 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Parity audit against RN, screen by screen
   - Send: while a refresh round awaits confirmation, Send shows "0 sats available in Ark" without saying why (both apps; Home already shows pending-in-round funds)
   - History: refresh movements (`bark.round:refresh`) fall through to the "Onchain" label, the same as RN; consider a Refresh label in the design pass
+  - Send/Board (FFI 0.5.0 verification, 2026-10-20) — align, both safe today:
+    - Receipt refresh: Android refreshes visible Send receipts every 10 s and after submission; iOS only on load or on request.
+    - Network-status copy: iOS adds explanations and repeat-payment warnings; Android uses short labels.
+    - Lookup errors: iOS saves Send lookup errors with the receipt, while Android shows a transient message. M6 does the opposite.
+    - Boarding typed-error copy differs: insufficient funds, minimum amount, reserved inputs, failed broadcast and `notAttempted`.
+    - Boarding receipts: Android shows net Ark amount and total leaving next to the fees; iOS shows only the fee rows.
+    - Incomplete probe cleanup: iOS stops before re-preparing; Android re-prepares and relies on SDK reservations to reject it.
 - [ ] TestFlight + Play internal track on existing listings; upgrade test on real devices (iOS, GMS Android, non-GMS Android)
 - [ ] Monitor heartbeats, push delivery, migration telemetry; staged rollout
 - [ ] Retire `client/`, Nitro modules, ts-rs
