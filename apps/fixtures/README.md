@@ -31,3 +31,19 @@ Lightning without a cap) and hand-specified from the decision recorded in
 with the published fallback schedule when ArkInfo is unavailable. The description field
 states the formula. The regtest cases use captaind's local schedule
 (`scripts/captaind.toml`) and include the two BOLT11 quotes verified on the Pixel.
+
+M7 RN numeric storage: `recurring-rn-range.json` is the exact 11-row RN-written
+Zustand v0 envelope from Android commit `a4ea8f0e`. iOS `RecurringRangeTests` now
+reads this shared copy; Android's original `app/src/test/resources/recurring-rn-range.json`
+is deliberately retained byte-for-byte, with no Android changes. Counts include
+3e9, MAX_SAFE_INTEGER, the integer token `9223372036854775000`, 2^63 (RN writes
+`9223372036854776000`), 1e100 and Number.MAX_VALUE. Fractional timestamps and
+out-of-range starts are also included. RN's real `validateRecurringPaymentInput`,
+`createRecurringPayment`, and `useRecurringPaymentStore.upsertSchedule` through
+Zustand `persist` / `createJSONStorage` produced these bytes; only MMKV, logging,
+translation and unused React hooks were mocked. Re-running the original writer
+script from `/tmp/noah-android-recurring-r3-rn.ts` with output redirected to
+`/private/tmp/noah-recurring-range-sol-24fa25b5-rn.json` reproduced the shared and
+Android copies exactly. The script uses Bun with `--tsconfig-override client/tsconfig.json`;
+this worktree used the main checkout's installed dependencies via `NODE_PATH`.
+The fixture contains no wallet secrets.

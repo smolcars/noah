@@ -34,7 +34,7 @@ import Testing
     @Test func unreadableAndFutureVersionsNeverBecomeEmpty() throws {
         let settings = try settings()
         let store = RecurringStore(settings: settings)
-        for raw in ["not JSON", #"{"version":1,"state":{"schedules":{}}}"#, #"{"version":0,"state":{"schedules":{"broken":{"amountSat":1}}}}"#] {
+        for raw in ["not JSON", #"{"version":1,"state":{"schedules":{}}}"#, #"{"version":0,"state":{"schedules":[]}}"#] {
             settings.set(raw, forKey: RecurringStore.key)
             #expect(throws: (any Error).self) { try store.load() }
             #expect(throws: (any Error).self) { try store.upsert(RecurringScheduleTests.schedule()) }

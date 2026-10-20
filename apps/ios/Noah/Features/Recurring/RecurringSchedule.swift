@@ -43,7 +43,14 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
     var runs: [Run] = []
     var createdAt: Double
     var updatedAt: Double
+    var unsupportedStorage = false
 
+    enum CodingKeys: String, CodingKey {
+        case id, label, destination, destinationType, amountSat, comment, interval, startAt, endAt, maxOccurrences, nativeRevision
+        case status, nextOccurrenceIndex, nextRunAt, occurrencesPaid, consecutiveFailures, lastError, retryNotBefore, inFlight, runs, createdAt, updatedAt
+    }
+
+    static let unsupportedMessage = "Noah can't safely read this schedule. Cancel it and explicitly approve a new recurring payment."
     static let maximumAmount: UInt64 = 2_100_000_000_000_000
     static let amountLimitMessage = "This amount exceeds 21 million BTC. Cancel this schedule and approve a new payment within the limit."
     static var now: Double { Date().timeIntervalSince1970 * 1000 }
@@ -57,6 +64,7 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
             && (maxOccurrences == nil || maxOccurrences! >= 1) && nextOccurrenceIndex >= 0 && nextOccurrenceIndex <= 1_000_000
     }
     func validateInput(now: Double) throws {
+        guard !unsupportedStorage else { throw RecurringError.message(Self.unsupportedMessage) }
         guard !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, label.utf16.count <= 64 else { throw RecurringError.message("Give this payment a short name (max 64 characters).") }
         guard amountSat > 0, amountSat <= Self.maximumAmount else { throw RecurringError.message("Enter a whole amount in sats, up to 21 million BTC.") }
         guard ["ark", "lnurl", "offer"].contains(destinationType), !destination.isEmpty else { throw RecurringError.message("Enter an Ark address, Lightning address or BOLT12 offer.") }
@@ -87,6 +95,7 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
         return (calendar.date(from: parts)!.timeIntervalSince1970 * 1000).rounded() + milliseconds
     }
     func next(_ index: Int, zone: TimeZone = .current) -> Double? {
+        guard !unsupportedStorage else { return nil }
         if let maxOccurrences, index >= maxOccurrences { return nil }
         let at = occurrence(index, zone: zone)
         return endAt.map { at > $0 } == true ? nil : at
@@ -98,7 +107,7 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
         var skippedIndices: [Int]?
     }
     func plan(now: Double, zone: TimeZone = .current, ignoreBackoff: Bool = false) -> Plan {
-        guard status == "active" else { return .init(kind: "idle") }
+        guard !unsupportedStorage, status == "active" else { return .init(kind: "idle") }
         if let inFlight { return .init(kind: now - inFlight.startedAt > 600_000 ? "stale_in_flight" : "idle") }
         guard let first = next(nextOccurrenceIndex, zone: zone) else { return .init(kind: "complete") }
         guard first <= now, ignoreBackoff || (retryNotBefore ?? 0) <= now else { return .init(kind: "idle") }

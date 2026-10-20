@@ -48,11 +48,11 @@ struct RecurringPaymentsView: View {
                             .disabled(executor.running || executor.controller.locked)
                             .accessibilityIdentifier("recurring-review-\(schedule.id)")
                     }
-                    if schedule.status == "needs_attention" || schedule.inFlight != nil {
+                    if !schedule.unsupportedStorage && (schedule.status == "needs_attention" || schedule.inFlight != nil) {
                         Button("Check payment status") { Task { await executor.checkStatus(schedule.id) } }
                             .disabled(executor.running)
                         Button("Resume after checking history…", role: .destructive) { overriding = schedule }.disabled(executor.running)
-                    } else if schedule.status != "completed" {
+                    } else if !schedule.unsupportedStorage && schedule.status != "completed" {
                         NavigationLink("Edit payment") { RecurringPaymentEditorView(executor: executor, schedule: schedule) }
                         Button(schedule.status == "active" ? "Pause" : "Resume") {
                             run { schedule.status == "active" ? try await executor.pause(schedule.id) : try await executor.resume(schedule.id) }

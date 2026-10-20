@@ -77,7 +77,7 @@ import Observation
             }
             throw error
         }
-        for var schedule in state.schedules.values {
+        for var schedule in state.schedules.values where !schedule.unsupportedStorage {
             let entry = entries[schedule.id]
             let legacyUncertain = try d.journal.legacyUncertain(binding: state.binding!, scheduleID: schedule.id)
             let pendingMarker = entry.map { !$0.resolved && $0.binding == state.binding } == true
@@ -111,7 +111,7 @@ import Observation
             for id in initial.schedules.keys.sorted() {
                 if let approval, approval.schedule.id != id { continue }
                 guard RecurringSubmissionBudget.available, RecurringExecutionBudget.available else { break }
-                guard var schedule = try boundState().schedules[id] else { continue }
+                guard var schedule = try boundState().schedules[id], !schedule.unsupportedStorage else { continue }
                 guard schedule.validPolicy else { throw SendFailure.invalid }
                 var planning = schedule
                 if let approval {
@@ -258,7 +258,7 @@ import Observation
     func checkStatus(_ id: String) async {
         guard !running else { return }
         do {
-            guard let entry = try d.journal.load()[id], let original = try d.store.load().schedules[id] else { return }
+            guard let entry = try d.journal.load()[id], let original = try d.store.load().schedules[id], !original.unsupportedStorage else { return }
             await d.controller.checkStatus()
             try await settle(entry, original: original)
         } catch { self.error = error.localizedDescription }
@@ -301,6 +301,7 @@ import Observation
         _ = try boundState()
         try rejectLegacyUncertainty(id)
         guard var schedule = try d.store.load().schedules[id], schedule.status != "completed" else { return }
+        guard !schedule.unsupportedStorage else { throw RecurringError.message(RecurringPayment.unsupportedMessage) }
         guard schedule.amountSat <= RecurringPayment.maximumAmount else { throw RecurringError.message(RecurringPayment.amountLimitMessage) }
         guard schedule.inFlight == nil, schedule.status != "needs_attention" else { throw RecurringError.message("Check your transaction history, then confirm the destructive override before resuming.") }
         schedule.resume(now: d.now(), zone: d.zone())
@@ -316,6 +317,7 @@ import Observation
         guard confirmed, !running else { return }
         _ = try boundState()
         guard var schedule = try d.store.load().schedules[id] else { return }
+        guard !schedule.unsupportedStorage else { throw RecurringError.message(RecurringPayment.unsupportedMessage) }
         try rejectLegacyUncertainty(id)
         guard schedule.amountSat <= RecurringPayment.maximumAmount else { throw RecurringError.message(RecurringPayment.amountLimitMessage) }
         if let entry = try d.journal.load()[id], d.controller.attempt?.recurringOccurrenceKey == entry.key {
@@ -345,7 +347,7 @@ import Observation
         try RestoreTransaction.fullSync(file.deletingLastPathComponent())
     }
     private func refreshDates() throws {
-        for var schedule in try boundState().schedules.values where schedule.status != "completed" {
+        for var schedule in try boundState().schedules.values where !schedule.unsupportedStorage && schedule.status != "completed" {
             let next = schedule.next(schedule.nextOccurrenceIndex, zone: d.zone())
             if next != schedule.nextRunAt {
                 schedule.nextRunAt = next

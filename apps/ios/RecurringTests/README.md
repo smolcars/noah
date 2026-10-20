@@ -3,6 +3,75 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## RN wide-number storage compatibility (2026-10-20)
+
+Base: `feat/native-rewrite` local HEAD `38af11f3`.
+
+Before this fix, `RecurringStore.load()` decoded the entire schedule dictionary
+at once. The RN-written range fixture failed the selected simulator regression
+with `Number 9223372036854776000 is not representable in Swift`: **1 test ran,
+1 failed, 0 skipped**. Because `change()` first calls `load()`, that failure also
+blocked cancellation and unrelated writes. A probe using the unchanged production
+`RecurringPayment` decoder confirmed that 3e9, MAX_SAFE_INTEGER and the serialized
+integer `9223372036854775000` decode exactly as `Int`; 2^63 (RN's token
+`9223372036854776000`), 1e100 and Number.MAX_VALUE fail. Fractional start/end
+milliseconds decode normally on iOS. The fixture's two starts beyond JavaScript's
+Date range decode but fail policy validation, previously stopping the whole store
+as well. Fractional counts are rejected by RN's validator, but a malformed saved
+fractional count is now also isolated to its row.
+
+- Decode and validate each row independently. Unsupported rows remain visible as
+  **Needs attention**, with Android's cancel-and-create guidance. Their display
+  model is explicitly marked unsupported and cannot plan, execute, resume, edit or
+  destructively override. Its placeholder is never written back. Cancel remains
+  available; unsupported rows are excluded from date refresh and server wakes.
+- Representable counts retain `Int` and normal scheduling, including 3e9 and
+  MAX_SAFE_INTEGER. All counts beyond `Int.max` stay stopped; no unlimited-limit
+  substitution or scheduling-equivalence assumption is made.
+- Foundation validates the envelope, while a small object-value slicer retains
+  original JSON tokens through binding, pending-state updates, healthy schedule
+  payments/edits, pause, reopen and cancellation of other rows. Unsupported rows
+  remain verbatim, including unknown fields and numeric literals. Invalid or
+  future-version envelopes still stop reads/writes and retain original bytes.
+- `apps/fixtures/recurring-rn-range.json` is a shared copy of Android commit
+  `a4ea8f0e`'s 11-row RN-written resource. Android's original resource is retained
+  unchanged; no Android code changed. Re-running RN's actual validator, factory
+  and Zustand `persist` / `createJSONStorage` writer reproduced both copies
+  byte-for-byte (SHA-256 `c96c5f940008ac97f3f0757b79cef276381a56ac8e9fcca4a8d1cd27b23954b3`).
+  The shared-fixtures README records provenance and the writer invocation.
+
+Verification: focused store/executor/parity/range run **54 tests / 104 expanded
+runs / 4 suites**, zero failures/skips. Final executor/range run after the
+unsupported status-check guard: **42 tests / 72 expanded runs / 2 suites**, zero
+failures/skips. The five new range test definitions expand to 12 runs; they cover
+six RN schedules paying exactly once, all five unsupported rows staying stopped
+and byte-for-byte unchanged, resume/edit/override/new-approval refusal, status
+checks preserving existing journal bytes, cancellation/reopen, malformed counts,
+and unknown nested/string/number token preservation. One intermediate targeted
+build caught a Swift 6 actor-isolated test-argument constant; marking that immutable
+list `nonisolated` fixed it. That build ran zero tests.
+
+Full **NoahTests ran once**, without exclusions: **496 total / 477 passed /
+19 opt-in skipped / 0 failed**, **105 suites**, **37.223 seconds** of execution;
+**698 passed / 19 skipped** expanded runs. All invocations used Nix, XcodeGen,
+normal code signing, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, disabled
+parallel testing and automatic diagnostic collection, and DerivedData under
+`/private/tmp`. The baseline function selector included its trailing `()`.
+No funded/live payment, physical notification delivery, UI-tap verification or
+Android tests were run; these are deterministic compatibility regressions.
+The shared fixture filename also appears in Android's local resources; read-only
+inspection of its pinned AGP 9.4.1 `ProcessJavaResTask.CreationAction` confirmed
+`DuplicatesStrategy.INCLUDE`, so its unchanged identical copy is supported.
+
+Owned simulator: **Noah Recurring Range Sol 24fa25b5**, iPhone 17 / iOS 27.0,
+UDID **BCE5DCA2-C3DA-4317-B7DA-197AEE458A6F**. Confirmed exact identity and
+**Shutdown** state before deletion, then verified absence. Removed owned
+`/private/tmp/noah-recurring-range-sol-24fa25b5-dd` and all **five** result bundles
+after exporting summaries/test trees. Logs, JSON summaries, the RN writer output,
+decode probe and cleanup evidence remain under
+`/private/tmp/noah-recurring-range-sol-24fa25b5-`. Protected/shared simulators,
+Android emulators, the physical Pixel 6 and Docker were untouched.
+
 ## Round-4 submission/status race (2026-10-20)
 
 Base: `feat/native-rewrite` at `95cd6af0`. Fix: `ee261608`.
@@ -446,7 +515,8 @@ service was stopped, restarted or reconfigured.
 `RecurringStore` reads and writes RN's `noah-wallet-storage` MMKV instance,
 `recurring-payment-storage` key, version-0 Zustand envelope. Unknown envelope,
 state and top-level schedule fields survive writes. Unreadable/invalid/future-version
-stores stop execution and retain their bytes. Nothing is silently filtered out.
+envelopes stop execution and retain their bytes. Unsupported rows remain visible,
+stopped and cancellable with their original JSON preserved. Nothing is silently filtered out.
 The upgrade fixture is generated by running RN's actual `createRecurringPayment`.
 Real MMKV reopen, unknown-field and invalid-store tests cover migration.
 
