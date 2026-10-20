@@ -6,55 +6,55 @@ final class SettingsStorage: @unchecked Sendable {
     private static let access = NSRecursiveLock()
     static let instanceID = "noah-wallet-storage"
     static var defaultRootPath: String { URL.documentsDirectory.appending(path: "mmkv").path }
-    static let shared: SettingsStorage = {
-        // A failed durable write must remain observable to automation, but never changes wallet identity.
-        do { return try SettingsStorage(rootPath: defaultRootPath) }
-        catch { return SettingsStorage(rootPath: defaultRootPath, unavailable: ()) }
-    }()
+    static let shared = try! SettingsStorage(rootPath: defaultRootPath)
     struct OpenError: Error {}
     private let root: URL
     private let storeID: String
     let nativeFile: NativeSettingsFile
-    private var unavailableState = NativeSettingsFile.State(settingsNoticePending: true)
-    private var writable = true
+    // All access, including the shared fallback for each file, holds `access`.
+    nonisolated(unsafe) private static var fallbacks: [String: NativeSettingsFile.State] = [:]
+    private var fallback: NativeSettingsFile.State? {
+        get { Self.fallbacks[nativeFile.file.path] }
+        set { Self.fallbacks[nativeFile.file.path] = newValue }
+    }
 
     @MainActor static func bootstrap() {} // MMKV is initialized only if a snapshot needs importing.
-
-    private init(rootPath: String, unavailable: Void) {
-        root = URL(fileURLWithPath: rootPath); storeID = Self.instanceID
-        nativeFile = NativeSettingsFile(file: URL(fileURLWithPath: rootPath + ".native-settings.json"))
-        writable = false
-    }
 
     init(rootPath: String, instanceID: String = SettingsStorage.instanceID) throws {
         Self.access.lock(); defer { Self.access.unlock() }
         root = URL(fileURLWithPath: rootPath); storeID = instanceID
         nativeFile = NativeSettingsFile(file: URL(fileURLWithPath: rootPath + ".native-settings.json"))
-        try FileManager.default.createDirectory(at: root.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if nativeFile.exists {
-            // A damaged native generation never reimports RN or affects the wallet/seed.
-            if (try? nativeFile.load()) == nil { try nativeFile.save(.init(settingsNoticePending: true)) }
-        } else {
-            let backup = MMKVUpgradeBackup(root: root, instanceID: instanceID)
-            let state: NativeSettingsFile.State
-            do {
-                try backup.prepare()
-                state = try backup.hasContent ? backup.inspectSnapshot { scratch in
-                    guard MMKVIntegrity.verifies(root: scratch, store: instanceID),
-                          FileManager.default.fileExists(atPath: scratch.appending(path: instanceID).path),
-                          FileManager.default.fileExists(atPath: scratch.appending(path: instanceID + ".crc").path)
-                    else { throw OpenError() }
-                    MMKV.initialize(rootDir: scratch.path, logLevel: .none)
-                    guard let snapshot = MMKV(mmapID: instanceID, rootPath: scratch.path) else { throw OpenError() }
-                    defer { snapshot.close() }
-                    return Self.importValues(Dictionary(uniqueKeysWithValues: (snapshot.allKeys() as? [String] ?? []).map {
-                        ($0, snapshot.string(forKey: $0))
-                    }))
-                } : .init()
-            } catch { state = .init(settingsNoticePending: true) }
-            try nativeFile.save(state)
+        do {
+            try FileManager.default.createDirectory(at: root.deletingLastPathComponent(), withIntermediateDirectories: true)
+            if nativeFile.exists || fallback != nil {
+                // A damaged native generation never reimports RN or affects the wallet/seed.
+                _ = load()
+            } else {
+                let backup = MMKVUpgradeBackup(root: root, instanceID: instanceID)
+                let state: NativeSettingsFile.State
+                do {
+                    try backup.prepare()
+                    state = try backup.hasContent ? backup.inspectSnapshot { scratch in
+                        guard MMKVIntegrity.verifies(root: scratch, store: instanceID),
+                              FileManager.default.fileExists(atPath: scratch.appending(path: instanceID).path),
+                              FileManager.default.fileExists(atPath: scratch.appending(path: instanceID + ".crc").path)
+                        else { throw OpenError() }
+                        MMKV.initialize(rootDir: scratch.path, logLevel: .none)
+                        guard let snapshot = MMKV(mmapID: instanceID, rootPath: scratch.path) else { throw OpenError() }
+                        defer { snapshot.close() }
+                        return Self.importValues(Dictionary(uniqueKeysWithValues: (snapshot.allKeys() as? [String] ?? []).map {
+                            ($0, snapshot.string(forKey: $0))
+                        }))
+                    } : .init()
+                } catch { state = .init(settingsNoticePending: true) }
+                fallback = state
+                try persist(state)
+            }
+            if fallback != nil { try persist(load()) }
+            try finishCleanup()
+        } catch {
+            if fallback == nil { fallback = .init(settingsNoticePending: true) }
         }
-        try finishCleanup()
     }
 
     static let settingsNotice = "Some settings couldn't be carried over from the previous version. Please check Settings, including security, currency and Esplora server."
@@ -82,19 +82,29 @@ final class SettingsStorage: @unchecked Sendable {
         return state
     }
 
-    private func load() throws -> NativeSettingsFile.State {
-        guard writable else { return unavailableState }
+    private func load() -> NativeSettingsFile.State {
+        if let fallback { return fallback }
         do { return try nativeFile.load() }
         catch {
             let defaults = NativeSettingsFile.State(settingsNoticePending: true)
-            try nativeFile.save(defaults)
+            fallback = defaults
+            try? persist(defaults)
             return defaults
         }
     }
-    func requireHealthy() throws { if !writable { throw OpenError() } }
+    private func persist(_ state: NativeSettingsFile.State) throws {
+        try FileManager.default.createDirectory(at: root.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try nativeFile.save(state)
+        fallback = nil
+    }
+    func requireHealthy() throws {
+        Self.access.lock(); defer { Self.access.unlock() }
+        _ = load()
+        if fallback != nil { throw OpenError() }
+    }
     func string(forKey key: String) -> String? {
         Self.access.lock(); defer { Self.access.unlock() }
-        return (try? load())?.values[key]
+        return load().values[key]
     }
     func set(_ value: String, forKey key: String) {
         do { try setDurably(value, forKey: key) }
@@ -102,39 +112,43 @@ final class SettingsStorage: @unchecked Sendable {
     }
     func setDurably(_ value: String, forKey key: String) throws {
         Self.access.lock(); defer { Self.access.unlock() }
-        try requireHealthy()
-        var state = try load(); state.values[key] = value
-        try nativeFile.save(state)
+        let previous = load()
+        var state = previous; state.values[key] = value
+        do { try persist(state) }
+        catch { fallback = previous; throw error }
     }
     func remove(forKey key: String) {
         Self.access.lock(); defer { Self.access.unlock() }
-        do { try requireHealthy(); var state = try load(); state.values.removeValue(forKey: key); try nativeFile.save(state) }
-        catch { AppLog("settings").e("Settings removal failed") }
+        let previous = load()
+        do { var state = previous; state.values.removeValue(forKey: key); try persist(state) }
+        catch { fallback = previous; AppLog("settings").e("Settings removal failed") }
     }
     /// Called by Home only after it becomes visible. Durable flags survive background launches.
     func takeUpgradeNotices() throws -> [String] {
         Self.access.lock(); defer { Self.access.unlock() }
-        var state = try load()
+        var state = load()
         let notices = (state.settingsNoticePending ? [Self.settingsNotice] : []) + (state.recurringNoticePending ? [Self.recurringNotice] : [])
         guard !notices.isEmpty else { return [] }
         state.settingsNoticePending = false; state.recurringNoticePending = false
-        if writable { try nativeFile.save(state) } else { unavailableState = state }
+        fallback = state
+        try? persist(state)
         return notices
     }
     func removeAll() { do { try removeAllDurably() } catch { AppLog("settings").e("Settings deletion failed") } }
     func removeAllDurably() throws {
         Self.access.lock(); defer { Self.access.unlock() }
-        try requireHealthy()
-        try nativeFile.save(.init(cleanupPending: true))
+        let previous = load()
+        do { try persist(.init(cleanupPending: true)) }
+        catch { fallback = previous; throw error }
         try finishCleanup()
     }
     private func finishCleanup() throws {
-        guard try nativeFile.load().cleanupPending else { return }
+        guard load().cleanupPending else { return }
         let fm = FileManager.default
         if fm.fileExists(atPath: root.path) { try fm.removeItem(at: root) }
         try RestoreTransaction.fullSync(root.deletingLastPathComponent())
         try MMKVUpgradeBackup(root: root, instanceID: storeID).deleteSnapshot()
-        try nativeFile.save(.init()) // Keep the import marker through re-onboarding.
+        try persist(.init()) // Keep the import marker through re-onboarding.
     }
 
     /// Reads a zustand-persisted store. Returns `nil` when the key is absent
