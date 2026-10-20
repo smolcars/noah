@@ -16,7 +16,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.noahwallet.BuildConfig
 import com.noahwallet.api.generated.models.AppVersionInfo
 import com.noahwallet.services.backup.BackupCoordinator
-import com.noahwallet.services.storage.PersistedBackupState
 import com.noahwallet.ui.AppModel
 import io.github.niteshbalusu11.bark.PendingRoundStatus
 import kotlinx.coroutines.*
@@ -24,7 +23,7 @@ import java.util.Locale
 
 @Composable
 fun HomeBanners(app: AppModel, refresh: Int) {
-    var backup by remember { mutableStateOf(PersistedBackupState()) }
+    val backup by app.services.backupCoordinator.statusChanges.collectAsState()
     val version by app.server.versionChanges.collectAsState()
     LaunchedEffect(app.server) { app.server.checkVersionOnce() }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -35,15 +34,6 @@ fun HomeBanners(app: AppModel, refresh: Int) {
     val locale = Locale.forLanguageTag(app.localeIdentifier)
     val scope = rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(app, lifecycle) {
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            while (isActive) {
-                now = System.currentTimeMillis()
-                backup = PersistedBackupState.decode(app.settings.string(PersistedBackupState.key))
-                delay(1000)
-            }
-        }
-    }
     LaunchedEffect(app.session, refresh, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             observeHomeRounds(
@@ -56,10 +46,10 @@ fun HomeBanners(app: AppModel, refresh: Int) {
             )
         }
     }
-    LaunchedEffect(backup.lastBackupAt, backup.lastBackupStatus, boarding) {
-        val expiries = listOfNotNull(backup.lastBackupAt?.toLong(), boarding?.second).map { it + HomeRules.successMillis }
-            .filter { it > System.currentTimeMillis() }.sorted()
-        expiries.forEach { expiry -> delay((expiry - System.currentTimeMillis()).coerceAtLeast(0)); now = System.currentTimeMillis() }
+    LaunchedEffect(backup, boarding, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            homeBannerExpiries(listOfNotNull(backup.lastBackupAt?.toLong(), boarding?.second), publish = { now = it })
+        }
     }
     version?.takeIf { it.updateRequired }?.let { UpdateWarningBanner(it, BuildConfig.VERSION_NAME, BuildConfig.APP_VARIANT) }
     HomeRules.backup(backup, now, locale)?.let { banner -> StatusBanner(banner, retrying) {

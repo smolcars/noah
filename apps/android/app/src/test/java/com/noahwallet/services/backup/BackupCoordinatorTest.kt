@@ -37,6 +37,26 @@ class BackupCoordinatorTest {
             sleep = clock::sleep, jitter = { 1.0 }, now = { 1000.0 }))
     }
     private suspend fun eventually(condition: () -> Boolean) = withTimeout(5000) { while (!condition()) delay(2) }
+    @Test fun statusSnapshotsPublishOnlyAfterPersistenceAndRetainEarlierValues() = runBlocking {
+        val w = World()
+        val initial = w.coordinator.statusChanges.value
+        assertEquals(w.state, initial)
+        w.coordinator.schedule(BackupCoordinator.Reason.databaseChanged)
+        assertTrue(w.coordinator.statusChanges.value.backupPending)
+        assertFalse(initial.backupPending)
+        w.coordinator.flush(BackupCoordinator.Reason.manual)
+        val success = w.coordinator.statusChanges.value
+        assertEquals(w.state, success)
+        assertEquals("success", success.lastBackupStatus)
+        w.coordinator.forgetUploadedBackup(success.lastBackupId!!)
+        assertEquals("idle", w.coordinator.statusChanges.value.lastBackupStatus)
+        assertEquals("success", success.lastBackupStatus)
+        w.state = PersistedBackupState() // wallet deletion clears persisted state
+        w.coordinator.reloadStatus()
+        assertEquals(PersistedBackupState(), w.coordinator.statusChanges.value)
+        w.coordinator.cancelScheduled()
+    }
+
     @Test fun deletionCancelsUploadAndWaitsForItsFinalStateWrite() = runBlocking {
         val w = World()
         w.held = CompletableDeferred()

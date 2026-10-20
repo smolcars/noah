@@ -125,6 +125,7 @@ class AppServices private constructor(private val context: Context) {
         clearToken = tokens::clear,
         clearSettings = {
             settings.removeAll()
+            backupCoordinator.reloadStatus()
             check(context.getSharedPreferences("gt_store", Context.MODE_PRIVATE).edit().clear().commit())
         },
         clearWidget = { com.noahwallet.services.push.WidgetDataWriter.clear(context, variant) },

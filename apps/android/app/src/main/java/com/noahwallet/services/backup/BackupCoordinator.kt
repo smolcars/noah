@@ -2,6 +2,8 @@ package com.noahwallet.services.backup
 
 import com.noahwallet.services.storage.PersistedBackupState
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /** A pass owns its slot until state is updated, then clears it BEFORE resuming flush waiters. */
 class BackupCoordinator(private val dependencies: Dependencies) {
@@ -16,6 +18,8 @@ class BackupCoordinator(private val dependencies: Dependencies) {
         val jitter: () -> Double = { kotlin.random.Random.nextDouble(0.8, 1.2) },
         val now: () -> Double = { System.currentTimeMillis().toDouble() },
     )
+    private val status = MutableStateFlow(dependencies.loadState().copy())
+    val statusChanges = status.asStateFlow()
     private val lock = Any()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var requested = 0L
@@ -25,6 +29,8 @@ class BackupCoordinator(private val dependencies: Dependencies) {
     private var debounce: Job? = null
     private var retry: Job? = null
     private var inFlight: Deferred<Result<Unit>>? = null
+
+    fun reloadStatus() = synchronized(lock) { status.value = dependencies.loadState().copy() }
 
     fun schedule(reason: Reason, immediate: Boolean = false, requireEnabled: Boolean = true) = synchronized(lock) {
         if (!dependencies.canBackup(requireEnabled)) return@synchronized
@@ -120,7 +126,9 @@ class BackupCoordinator(private val dependencies: Dependencies) {
         }
     }.also { it.start() }
     private fun update(change: (PersistedBackupState) -> Unit) {
-        dependencies.saveState(dependencies.loadState().copy().also(change))
+        val next = dependencies.loadState().copy().also(change)
+        dependencies.saveState(next)
+        status.value = next.copy()
     }
     fun seedRestored(sha: String, backupId: String?) = synchronized(lock) {
         update { it.seedRestored(sha, backupId, dependencies.now()) }
