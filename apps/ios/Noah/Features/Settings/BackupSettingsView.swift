@@ -6,6 +6,7 @@ struct BackupSettingsView: View {
     @State private var backups: [Components.Schemas.BackupObjectInfo]?
     @State private var busy = false
     @State private var message: String?
+    @State private var listError = false
     @State private var deleting: Components.Schemas.BackupObjectInfo?
 
     var body: some View {
@@ -28,15 +29,18 @@ struct BackupSettingsView: View {
                 if state.backupPending { Text("Backup pending").font(NoahFont.footnote) }
                 Button("Backup Now") {
                     run {
-                        try await AppServices.shared.backupCoordinator.flush(.manual, requireEnabled: false)
+                        let refreshed = try await Self.backUpAndRefresh(backup: {
+                            try await AppServices.shared.backupCoordinator.flush(.manual, requireEnabled: false)
+                        }, refresh: { if backups != nil { try await list() } })
                         message = "Your wallet has been backed up successfully."
-                        if backups != nil { try await list() }
+                        listError = !refreshed
                     }
                 }.disabled(busy)
                 Button("List Backups") { run { try await list() } }.disabled(busy)
                 if busy { ProgressView() }
                 if let message { Text(LocalizedStringKey(message)).font(NoahFont.footnote) }
             }
+            if listError { Text("Couldn't list backups.").font(NoahFont.footnote) }
             if let backups {
                 Section("Available Backups") {
                     if backups.isEmpty { Text("No backups found") }
@@ -83,7 +87,16 @@ struct BackupSettingsView: View {
         }
     }
     private func reloadState() { state = SettingsStorage.shared.persistedState(PersistedBackupState.self, key: PersistedBackupState.key) ?? .init() }
-    private func list() async throws { backups = try await AppServices.shared.client.listBackupObjects().ok.body.json }
+    private func list() async throws {
+        backups = try await AppServices.shared.client.listBackupObjects().ok.body.json
+        listError = false
+    }
+
+    /// The upload is the operation; a stale list cannot turn it into a failed backup.
+    static func backUpAndRefresh(backup: () async throws -> Void, refresh: () async throws -> Void) async throws -> Bool {
+        try await backup()
+        do { try await refresh(); return true } catch { return false }
+    }
     private func run(_ action: @escaping @MainActor () async throws -> Void) {
         guard !busy else { return }; busy = true; message = nil
         Task {

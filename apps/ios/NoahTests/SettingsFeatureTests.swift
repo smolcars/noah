@@ -74,6 +74,21 @@ struct FeedbackPayloadTests {
 
 @MainActor
 struct SettingsFeatureTests {
+    @Test func successfulManualBackupSurvivesFailedListRefresh() async throws {
+        var uploaded = false
+        let refreshed = try await BackupSettingsView.backUpAndRefresh(backup: { uploaded = true },
+            refresh: { throw URLError(.notConnectedToInternet) })
+        #expect(uploaded)
+        #expect(!refreshed)
+        var listed = false
+        await #expect(throws: URLError.self) {
+            try await BackupSettingsView.backUpAndRefresh(backup: { throw URLError(.notConnectedToInternet) },
+                refresh: { listed = true })
+        }
+        #expect(!listed)
+        #expect(try await BackupSettingsView.backUpAndRefresh(backup: {}, refresh: {}) == true)
+    }
+
     @Test func rnStoresRoundTripAndPreferenceEditsPreserveIdentity() throws {
         SettingsStorage.bootstrap()
         let root = FileManager.default.temporaryDirectory.appending(path: "settings-\(UUID())")
