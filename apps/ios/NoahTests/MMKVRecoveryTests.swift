@@ -129,6 +129,21 @@ struct MMKVRecoveryTests {
         #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
     }
 
+    @Test func presentButUndecodableWalletValueBlocksValidationAndWrites() throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        let file = root.appending(path: Self.id)
+        var bytes = try Data(contentsOf: file)
+        let value = try #require(bytes.range(of: Data(#"{"state":{"isInitialized"#.utf8), options: .backwards))
+        bytes[value.lowerBound + 3] = 0xff
+        try bytes.write(to: file)
+        try Self.corrupt(root, mode: "crc")
+        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
+        #expect(raw.contains(key: PersistedWalletState.key))
+        #expect(raw.string(forKey: PersistedWalletState.key) == nil)
+        raw.close()
+        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
+    }
+
     @Test func deliberateDeletionDoesNotResurrectTheBackup() throws {
         let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
         let store = try SettingsStorage(rootPath: root.path)

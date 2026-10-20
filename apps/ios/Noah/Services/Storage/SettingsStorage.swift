@@ -87,7 +87,10 @@ final class SettingsStorage: @unchecked Sendable {
     private static func validate(_ store: MMKV, requiredKeys: [String]) throws {
         guard requiredKeys.allSatisfy({ store.contains(key: $0) }) else { throw OpenError() }
         for key in RNStoreCodec.schemas.keys where key != PersistedEsploraState.key {
-            if let raw = store.string(forKey: key) { _ = try RNStoreCodec.decode(raw, key: key) }
+            if store.contains(key: key) {
+                guard let raw = store.string(forKey: key) else { throw OpenError() }
+                _ = try RNStoreCodec.decode(raw, key: key)
+            }
         }
     }
 
