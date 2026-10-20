@@ -218,3 +218,72 @@ class RestoreClipboardTest {
         content = null; clipboard.clearIfUnchanged(); assertNull(content)
     }
 }
+
+class RestoreCompletionReplayTest {
+    @Test fun restartReplaysEveryPostcommitCrashPointIncludingBeforeEngineReturn() = runBlocking {
+        for (boundary in listOf("engineReturn", "flags", "seed", "recover", "token", "open", "clear")) {
+            val root = java.nio.file.Files.createTempDirectory("restore-completion").toFile()
+            try {
+                val location = com.noahwallet.services.storage.WalletDataLocation(root, "regtest")
+                location.directory.mkdirs(); location.database.writeText("committed wallet")
+                var fail = boundary
+                var armed = false
+                val journal = RestoreCompletionJournal(location) { if (armed && fail == "clear" && !java.io.File(location.restoreDirectory, "completion.json").exists()) error("crash") }
+                // Engine callback persists the metadata before the seed commit.
+                journal.write(WalletRestorer.Outcome("backup", "snapshot"))
+                armed = true
+                var state = PersistedWalletState()
+                var seeded: Pair<String, String?>? = null
+                var invalidated = false
+                var opened = false
+                fun crash(at: String) { if (fail == at) error("crash") }
+                fun completion() = RestoreCompletion(
+                    { state }, { crash("flags"); state = it },
+                    { hash, id -> crash("seed"); seeded = hash to id },
+                    { crash("recover"); RestoreTransaction.Recovery.nothingPending },
+                    { crash("open"); opened = true }, journal,
+                    { crash("token"); invalidated = true },
+                )
+                if (boundary != "engineReturn") assertTrue(runCatching {
+                    completion().finish(WalletRestorer.Outcome("backup", "snapshot", true))
+                }.isFailure)
+                fail = ""
+                // Construct a fresh journal, as after process death. No in-memory outcome is reused.
+                val relaunched = RestoreCompletionJournal(location) {}
+                val replay = RestoreCompletion({ state }, { state = it }, { hash, id -> seeded = hash to id },
+                    { RestoreTransaction.Recovery.nothingPending }, { opened = true }, relaunched, { invalidated = true })
+                replay.replay(RestoreTransaction.Recovery.nothingPending, location.databaseExists)
+                assertTrue(state.isInitialized == true && state.isWalletLoaded == true)
+                assertEquals("snapshot" to "backup", seeded)
+                assertTrue(invalidated); assertTrue(opened); assertFalse(relaunched.pending)
+            } finally { root.deleteRecursively() }
+        }
+    }
+    @Test fun precommitRollbackAndNoInstallationDiscardReceiptButWaitingSecretKeepsIt() = runBlocking {
+        val root = java.nio.file.Files.createTempDirectory("restore-completion").toFile()
+        try {
+            val location = com.noahwallet.services.storage.WalletDataLocation(root, "regtest")
+            val journal = RestoreCompletionJournal(location) {}
+            val completion = RestoreCompletion({ error("No flags") }, {}, { _, _ -> error("No seed") },
+                { error("No recovery") }, { error("No open") }, journal)
+            for ((recovery, database) in listOf(RestoreTransaction.Recovery.rolledBack to true,
+                RestoreTransaction.Recovery.nothingPending to false)) {
+                journal.write(WalletRestorer.Outcome("backup", "hash"))
+                completion.replay(recovery, database); assertFalse(journal.pending)
+            }
+            journal.write(WalletRestorer.Outcome(null, null))
+            assertTrue(runCatching { completion.replay(RestoreTransaction.Recovery.waitingForSecret, true) }.isFailure)
+            assertTrue(journal.pending)
+        } finally { root.deleteRecursively() }
+    }
+    @Test fun unreadableReceiptFailsClosed() {
+        val root = java.nio.file.Files.createTempDirectory("restore-completion").toFile()
+        try {
+            val location = com.noahwallet.services.storage.WalletDataLocation(root, "regtest")
+            location.restoreDirectory.mkdirs()
+            java.io.File(location.restoreDirectory, "completion.json").writeText("{}")
+            val journal = RestoreCompletionJournal(location) {}
+            assertTrue(runCatching { journal.read() }.isFailure); assertTrue(journal.pending)
+        } finally { root.deleteRecursively() }
+    }
+}

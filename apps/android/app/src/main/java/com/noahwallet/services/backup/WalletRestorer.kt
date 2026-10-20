@@ -36,7 +36,8 @@ class WalletRestorer(
     enum class Step { fetching, validating, loading, finalizing }
     data class Outcome(val backupId: String?, val snapshotSha256: String?, val cleanupPending: Boolean = false)
 
-    suspend fun restore(mnemonic: String, progress: (Step) -> Unit = {}): Outcome {
+    suspend fun restore(mnemonic: String, beforeInstall: (Outcome) -> Unit = {},
+                        progress: (Step) -> Unit = {}): Outcome {
         val reservation = session.reserve()
         try {
             check(!location.deletionMarker.exists()) { "Restart Noah to finish deleting the previous wallet" }
@@ -51,6 +52,7 @@ class WalletRestorer(
                     // Once installation starts, cancellation must not interrupt native verification or seed read-back.
                     withContext(NonCancellable) {
                         try {
+                            beforeInstall(outcome)
                             transaction.begin(mnemonic)
                             progress(Step.loading)
                             session.verify(reservation, mnemonic, "restore")

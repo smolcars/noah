@@ -106,6 +106,19 @@ class WalletRestorerTest {
         // Each restore runs PBKDF2 (600k iterations) to seal and open; 10 s timed out on a loaded machine.
         try { withTimeout(60_000) { world.block() } } finally { world.root.deleteRecursively() }
     }
+    @Test fun completionReceiptIsWrittenBeforeInstallationAndItsFailureCannotCommit() = runBlocking { world {
+        var recorded: WalletRestorer.Outcome? = null
+        val result = restorer().restore("new seed", beforeInstall = {
+            assertEquals("old wallet", location.database.readText())
+            assertEquals("old seed", seed.value)
+            recorded = it
+        })
+        assertEquals(result, recorded)
+    } }
+    @Test fun failedCompletionReceiptLeavesOriginalWalletUntouched() = runBlocking { world {
+        assertTrue(runCatching { restorer().restore("new seed", beforeInstall = { throw Boom() }) }.exceptionOrNull() is Boom)
+        previous()
+    } }
     @Test fun legacyUsesSameReservedTransactionAndSeedCommit() = runBlocking { world {
         legacy = true
         val outcome = restorer().restore("new seed")

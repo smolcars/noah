@@ -39,27 +39,36 @@ class AppModel(application: Application) : AndroidViewModel(application) {
     var localeIdentifier by mutableStateOf(com.noahwallet.services.storage.LegacyLocale.read(application) ?: "en")
         private set
 
+    private val restoreLocation = WalletDataLocation(application.filesDir, BuildConfig.APP_VARIANT)
+    private val restoreCompletionJournal = RestoreCompletionJournal(restoreLocation)
+    private fun restoreCompletion(openWallet: suspend () -> Unit) = RestoreCompletion(
+        loadState = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState() },
+        saveState = { settings.setPersistedState(it, PersistedWalletState.key, 0); settings.sync() },
+        seedRestored = { hash, id -> services.backupCoordinator.seedRestored(hash, id); settings.sync() },
+        recover = { services.recoverRestore(walletMutationHeld = true) },
+        openWallet = openWallet,
+        journal = restoreCompletionJournal,
+        clearToken = services.tokens::clear,
+    )
+
     val restore = RestoreFlow(
         restore = { phrase, progress ->
             val location = WalletDataLocation(getApplication<Application>().filesDir, BuildConfig.APP_VARIANT)
             if (location.restorePending || location.deletionMarker.exists()) throw RestoreCompletion.RestartRequired()
             if (location.hasAnyData) throw WalletSession.OpenError(WalletSession.OpenFailure.walletDatabaseExists)
             check(!open && !isWalletSuspended)
-            services.restorer().restore(phrase, progress)
+            try { services.restorer().restore(phrase, beforeInstall = restoreCompletionJournal::write, progress = progress) }
+            catch (failure: Exception) {
+                if (!location.restorePending && !location.databaseExists) restoreCompletionJournal.clear()
+                throw failure
+            }
         },
         complete = { outcome ->
-            RestoreCompletion(
-                loadState = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState() },
-                saveState = { settings.setPersistedState(it, PersistedWalletState.key, 0); settings.sync() },
-                seedRestored = services.backupCoordinator::seedRestored,
-                recover = { services.recoverRestore(walletMutationHeld = true) },
-                openWallet = {
-                    services.tokens.clear()
-                    withContext(Dispatchers.IO) { services.ensureWalletOpen(walletMutationHeld = true) }
-                    open = true; onboarded = true; launchState = LaunchState.existingWallet
-                    refresh(); services.startServerServices()
-                },
-            ).finish(outcome)
+            restoreCompletion {
+                withContext(Dispatchers.IO) { services.ensureWalletOpen(walletMutationHeld = true) }
+                open = true; onboarded = true; launchState = LaunchState.existingWallet
+                refresh(); services.startServerServices()
+            }.finish(outcome)
         },
     )
 
@@ -160,11 +169,14 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             var recovering = true
             try {
-                val recovered = services.recoverRestore()
+                services.lifecycle.recoverDeletion()
+                services.lifecycle.withWalletMutation {
+                val recovered = services.recoverRestore(walletMutationHeld = true)
                 if (recovered == com.noahwallet.services.backup.RestoreTransaction.Recovery.waitingForSecret) {
                     launchState = LaunchState.secureStorageUnavailable
-                    return@launch
+                    return@withWalletMutation
                 }
+                restoreCompletion {}.replay(recovered, restoreLocation.databaseExists)
                 if (recovered == RestoreTransaction.Recovery.completed) {
                     val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
                     settings.setPersistedState(wallet.copy(isInitialized = true, isWalletLoaded = true), PersistedWalletState.key, 0)
@@ -176,13 +188,14 @@ class AppModel(application: Application) : AndroidViewModel(application) {
                 launchState = withContext(Dispatchers.IO) { LaunchState.current(getApplication()) }
                 if (launchState == LaunchState.existingWallet) {
                     onboarded = services.isOnboarded()
-                    if (isWalletSuspended) return@launch
-                    withContext(Dispatchers.IO) { services.ensureWalletOpen() }
+                    if (isWalletSuspended) return@withWalletMutation
+                    withContext(Dispatchers.IO) { services.ensureWalletOpen(walletMutationHeld = true) }
                     open = true
                     onboarded = services.isOnboarded()
                     if (!onboarded) step = "mnemonic"
                     refresh()
                     services.startServerServices()
+                }
                 }
             } catch (failure: Exception) {
                 if (recovering) launchState = LaunchState.restoreIncomplete

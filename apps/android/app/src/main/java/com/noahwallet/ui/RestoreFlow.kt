@@ -22,16 +22,28 @@ class RestoreCompletion(
     private val seedRestored: (String, String?) -> Unit,
     private val recover: suspend () -> RestoreTransaction.Recovery,
     private val openWallet: suspend () -> Unit,
+    private val journal: RestoreCompletionJournal? = null,
+    private val clearToken: suspend () -> Unit = {},
 ) {
     class RestartRequired : Exception()
+    suspend fun replay(recovery: RestoreTransaction.Recovery, hasDatabase: Boolean) {
+        val outcome = journal?.read() ?: return
+        if (recovery == RestoreTransaction.Recovery.waitingForSecret) throw RestartRequired()
+        if (recovery == RestoreTransaction.Recovery.rolledBack || !hasDatabase) journal.clear()
+        else finish(outcome)
+    }
+
     suspend fun finish(outcome: WalletRestorer.Outcome) {
+        journal?.write(outcome)
         val wallet = loadState()
         saveState(wallet.copy(isInitialized = true, isWalletLoaded = true))
         outcome.snapshotSha256?.let { seedRestored(it, outcome.backupId) }
         if (outcome.cleanupPending && recover() !in setOf(RestoreTransaction.Recovery.completed, RestoreTransaction.Recovery.nothingPending)) {
             throw RestartRequired()
         }
+        clearToken()
         openWallet()
+        journal?.clear()
     }
 }
 
