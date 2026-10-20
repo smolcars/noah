@@ -183,6 +183,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] TransactionDetail: phone sheet / wide split pane, historical fiat, technical details, variant explorer and repeat callback (Send hookup `TODO(M3)`) — Android
 - [x] Home recent 3 transactions, View all and detail; 107 shared history fixture cases and live three-rail verification (`apps/android/HistoryTests/README.md`) — Android
 
+- [x] History review: fractional/offset dates, transitive deterministic ordering under partial block-time enrichment, and CSV formula neutralization — both platforms; shared `history-regressions` fixtures
+
 ## M5 — Settings & recovery
 - [x] SettingsScreen (biometrics, auto-board preference, mailbox, version/debug unlock) — iOS
 - [x] Suspend/resume, delete wallet (files before seed, under a reservation; refused while a restore is pending), re-register: model layer + suspended Home — iOS

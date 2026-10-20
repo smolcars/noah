@@ -1,0 +1,473 @@
+{
+  "description": "Native History regression contract shared by iOS and Android.",
+  "cases": [
+    {
+      "name": "ISO timestamp .1Z",
+      "input": {
+        "operation": "date",
+        "date": "2026-07-15T12:00:00.1Z"
+      },
+      "expected": 1784116800100
+    },
+    {
+      "name": "ISO timestamp .12Z",
+      "input": {
+        "operation": "date",
+        "date": "2026-07-15T12:00:00.12Z"
+      },
+      "expected": 1784116800120
+    },
+    {
+      "name": "ISO timestamp .123Z",
+      "input": {
+        "operation": "date",
+        "date": "2026-07-15T12:00:00.123Z"
+      },
+      "expected": 1784116800123
+    },
+    {
+      "name": "ISO timestamp .123456Z",
+      "input": {
+        "operation": "date",
+        "date": "2026-07-15T12:00:00.123456Z"
+      },
+      "expected": 1784116800123
+    },
+    {
+      "name": "ISO timestamp +02:00",
+      "input": {
+        "operation": "date",
+        "date": "2026-07-15T12:00:00+02:00"
+      },
+      "expected": 1784109600000
+    },
+    {
+      "name": "partial block time permutation 0",
+      "input": {
+        "operation": "sort",
+        "transactions": [
+          {
+            "id": "A",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "onchain-wallet",
+            "hasConfirmation": true,
+            "sortHeight": 1,
+            "sortTimestamp": 100
+          },
+          {
+            "id": "B",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "onchain-wallet",
+            "hasConfirmation": true,
+            "sortHeight": 2
+          },
+          {
+            "id": "C",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "ark",
+            "sortTimestamp": 50
+          }
+        ]
+      },
+      "expected": [
+        "A",
+        "C",
+        "B"
+      ]
+    },
+    {
+      "name": "partial block time permutation 1",
+      "input": {
+        "operation": "sort",
+        "transactions": [
+          {
+            "id": "A",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "onchain-wallet",
+            "hasConfirmation": true,
+            "sortHeight": 1,
+            "sortTimestamp": 100
+          },
+          {
+            "id": "C",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "ark",
+            "sortTimestamp": 50
+          },
+          {
+            "id": "B",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "onchain-wallet",
+            "hasConfirmation": true,
+            "sortHeight": 2
+          }
+        ]
+      },
+      "expected": [
+        "A",
+        "C",
+        "B"
+      ]
+    },
+    {
+      "name": "partial block time permutation 2",
+      "input": {
+        "operation": "sort",
+        "transactions": [
+          {
+            "id": "B",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "onchain-wallet",
+            "hasConfirmation": true,
+            "sortHeight": 2
+          },
+          {
+            "id": "A",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "onchain-wallet",
+            "hasConfirmation": true,
+            "sortHeight": 1,
+            "sortTimestamp": 100
+          },
+          {
+            "id": "C",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "ark",
+            "sortTimestamp": 50
+          }
+        ]
+      },
+      "expected": [
+        "A",
+        "C",
+        "B"
+      ]
+    },
+    {
+      "name": "partial block time permutation 3",
+      "input": {
+        "operation": "sort",
+        "transactions": [
+          {
+            "id": "B",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "onchain-wallet",
+            "hasConfirmation": true,
+            "sortHeight": 2
+          },
+          {
+            "id": "C",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "ark",
+            "sortTimestamp": 50
+          },
+          {
+            "id": "A",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "onchain-wallet",
+            "hasConfirmation": true,
+            "sortHeight": 1,
+            "sortTimestamp": 100
+          }
+        ]
+      },
+      "expected": [
+        "A",
+        "C",
+        "B"
+      ]
+    },
+    {
+      "name": "partial block time permutation 4",
+      "input": {
+        "operation": "sort",
+        "transactions": [
+          {
+            "id": "C",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "ark",
+            "sortTimestamp": 50
+          },
+          {
+            "id": "A",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "onchain-wallet",
+            "hasConfirmation": true,
+            "sortHeight": 1,
+            "sortTimestamp": 100
+          },
+          {
+            "id": "B",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "onchain-wallet",
+            "hasConfirmation": true,
+            "sortHeight": 2
+          }
+        ]
+      },
+      "expected": [
+        "A",
+        "C",
+        "B"
+      ]
+    },
+    {
+      "name": "partial block time permutation 5",
+      "input": {
+        "operation": "sort",
+        "transactions": [
+          {
+            "id": "C",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "ark",
+            "sortTimestamp": 50
+          },
+          {
+            "id": "B",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "onchain-wallet",
+            "hasConfirmation": true,
+            "sortHeight": 2
+          },
+          {
+            "id": "A",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "source": "onchain-wallet",
+            "hasConfirmation": true,
+            "sortHeight": 1,
+            "sortTimestamp": 100
+          }
+        ]
+      },
+      "expected": [
+        "A",
+        "C",
+        "B"
+      ]
+    },
+    {
+      "name": "deterministic timestamp and height ties",
+      "input": {
+        "operation": "sort",
+        "transactions": [
+          {
+            "id": "Z",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "sortHeight": 1
+          },
+          {
+            "id": "A",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "sortHeight": 1
+          },
+          {
+            "id": "B",
+            "type": "Onchain",
+            "amount": 1,
+            "date": "1970-01-01T00:00:00.000Z",
+            "direction": "incoming",
+            "sortHeight": 2
+          }
+        ]
+      },
+      "expected": [
+        "B",
+        "A",
+        "Z"
+      ]
+    },
+    {
+      "name": "CSV text '=1+1'",
+      "input": {
+        "operation": "csv",
+        "transactions": [
+          {
+            "id": "=1+1",
+            "type": "Arkoor",
+            "amount": 2100,
+            "date": "2026-07-15T12:00:00.000Z",
+            "direction": "outgoing",
+            "txid": "=1+1",
+            "destination": "=1+1"
+          }
+        ],
+        "currency": "USD"
+      },
+      "expected": "Payment ID,Date,Type,Status,Direction,Amount (sats),BTC Price (USD),Transaction ID,Destination\n'=1+1,2026-07-15,Ark,,Outgoing,-2100,,'=1+1,'=1+1\n"
+    },
+    {
+      "name": "CSV text '+SUM(1,2)'",
+      "input": {
+        "operation": "csv",
+        "transactions": [
+          {
+            "id": "+SUM(1,2)",
+            "type": "Arkoor",
+            "amount": 2100,
+            "date": "2026-07-15T12:00:00.000Z",
+            "direction": "outgoing",
+            "txid": "+SUM(1,2)",
+            "destination": "+SUM(1,2)"
+          }
+        ],
+        "currency": "USD"
+      },
+      "expected": "Payment ID,Date,Type,Status,Direction,Amount (sats),BTC Price (USD),Transaction ID,Destination\n\"'+SUM(1,2)\",2026-07-15,Ark,,Outgoing,-2100,,\"'+SUM(1,2)\",\"'+SUM(1,2)\"\n"
+    },
+    {
+      "name": "CSV text '-1+1'",
+      "input": {
+        "operation": "csv",
+        "transactions": [
+          {
+            "id": "-1+1",
+            "type": "Arkoor",
+            "amount": 2100,
+            "date": "2026-07-15T12:00:00.000Z",
+            "direction": "outgoing",
+            "txid": "-1+1",
+            "destination": "-1+1"
+          }
+        ],
+        "currency": "USD"
+      },
+      "expected": "Payment ID,Date,Type,Status,Direction,Amount (sats),BTC Price (USD),Transaction ID,Destination\n'-1+1,2026-07-15,Ark,,Outgoing,-2100,,'-1+1,'-1+1\n"
+    },
+    {
+      "name": "CSV text '@SUM(A1)'",
+      "input": {
+        "operation": "csv",
+        "transactions": [
+          {
+            "id": "@SUM(A1)",
+            "type": "Arkoor",
+            "amount": 2100,
+            "date": "2026-07-15T12:00:00.000Z",
+            "direction": "outgoing",
+            "txid": "@SUM(A1)",
+            "destination": "@SUM(A1)"
+          }
+        ],
+        "currency": "USD"
+      },
+      "expected": "Payment ID,Date,Type,Status,Direction,Amount (sats),BTC Price (USD),Transaction ID,Destination\n'@SUM(A1),2026-07-15,Ark,,Outgoing,-2100,,'@SUM(A1),'@SUM(A1)\n"
+    },
+    {
+      "name": "CSV text '\\t=1'",
+      "input": {
+        "operation": "csv",
+        "transactions": [
+          {
+            "id": "\t=1",
+            "type": "Arkoor",
+            "amount": 2100,
+            "date": "2026-07-15T12:00:00.000Z",
+            "direction": "outgoing",
+            "txid": "\t=1",
+            "destination": "\t=1"
+          }
+        ],
+        "currency": "USD"
+      },
+      "expected": "Payment ID,Date,Type,Status,Direction,Amount (sats),BTC Price (USD),Transaction ID,Destination\n'\t=1,2026-07-15,Ark,,Outgoing,-2100,,'\t=1,'\t=1\n"
+    },
+    {
+      "name": "CSV text '\\r=1'",
+      "input": {
+        "operation": "csv",
+        "transactions": [
+          {
+            "id": "\r=1",
+            "type": "Arkoor",
+            "amount": 2100,
+            "date": "2026-07-15T12:00:00.000Z",
+            "direction": "outgoing",
+            "txid": "\r=1",
+            "destination": "\r=1"
+          }
+        ],
+        "currency": "USD"
+      },
+      "expected": "Payment ID,Date,Type,Status,Direction,Amount (sats),BTC Price (USD),Transaction ID,Destination\n\"'\r=1\",2026-07-15,Ark,,Outgoing,-2100,,\"'\r=1\",\"'\r=1\"\n"
+    },
+    {
+      "name": "CSV text 'normal,\"quoted\"\\ntext'",
+      "input": {
+        "operation": "csv",
+        "transactions": [
+          {
+            "id": "normal,\"quoted\"\ntext",
+            "type": "Arkoor",
+            "amount": 2100,
+            "date": "2026-07-15T12:00:00.000Z",
+            "direction": "outgoing",
+            "txid": "normal,\"quoted\"\ntext",
+            "destination": "normal,\"quoted\"\ntext"
+          }
+        ],
+        "currency": "USD"
+      },
+      "expected": "Payment ID,Date,Type,Status,Direction,Amount (sats),BTC Price (USD),Transaction ID,Destination\n\"normal,\"\"quoted\"\"\ntext\",2026-07-15,Ark,,Outgoing,-2100,,\"normal,\"\"quoted\"\"\ntext\",\"normal,\"\"quoted\"\"\ntext\"\n"
+    }
+  ]
+}

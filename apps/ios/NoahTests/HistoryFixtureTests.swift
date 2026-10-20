@@ -54,6 +54,7 @@ struct HistoryFixtureTests {
         }
     }
     struct Input: Decodable {
+        var date: String?
         var operation: String
         var metadataJson: String?
         var metadata: JSON?
@@ -108,10 +109,13 @@ struct HistoryFixtureTests {
 
     @Test func matchesReactNativeHistory() throws {
         let cases = try Fixtures.load("transaction-history", input: Input.self, expected: JSON.self)
+            + Fixtures.load("history-regressions", input: Input.self, expected: JSON.self)
         for fixture in cases {
             let input = fixture.input
             let result: JSON
             switch input.operation {
+            case "csv": result = try .value(HistoryCSV(transactions: #require(input.transactions), currency: #require(input.currency)).content)
+            case "date": result = try .value(HistoryRules.parseDate(#require(input.date)).map { Int64(($0.timeIntervalSince1970 * 1000).rounded()) })
             case "metadata": result = try .value(HistoryMetadata.parse(#require(input.metadataJson)))
             case "transactionID": result = try .value(HistoryMapping.transactionID(#require(input.movement).sdk, metadata: #require(input.metadata).decode(HistoryMetadata.self), outgoing: #require((input.outgoing))))
             case "boardAmount": result = try .value(HistoryMapping.boardAmount(#require(input.movement).sdk))

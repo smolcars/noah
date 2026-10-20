@@ -67,13 +67,18 @@ enum class HistoryFilter {
 
 object HistoryRules {
     fun parseDate(value: String): Date? {
-        var normalized = value.replace(' ', 'T')
-        if (!Regex("(Z|[+-]\\d{2}:?\\d{2})$").containsMatchIn(normalized)) normalized += "Z"
-        for (pattern in listOf("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", "yyyy-MM-dd'T'HH:mm:ssXXX")) {
-            val parsed = runCatching { SimpleDateFormat(pattern, Locale.ROOT).apply { isLenient = false }.parse(normalized) }.getOrNull()
-            if (parsed != null) return parsed
+        // SimpleDateFormat treats S as integer milliseconds, so scale fractions explicitly.
+        val match = Regex("^(\\d{4}-\\d{2}-\\d{2})[T ](\\d{2}:\\d{2}:\\d{2})(?:\\.(\\d+))?(Z|[+-]\\d{2}:?\\d{2})?$")
+            .matchEntire(value) ?: return null
+        val fraction = match.groupValues[3].padEnd(3, '0').take(3)
+        val zone = match.groupValues[4].ifEmpty { "Z" }.let {
+            if (it.length == 5) it.take(3) + ":" + it.takeLast(2) else it
         }
-        return null
+        val normalized = "${match.groupValues[1]}T${match.groupValues[2]}.$fraction$zone"
+        val position = java.text.ParsePosition(0)
+        val parsed = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.ROOT)
+            .apply { isLenient = false }.parse(normalized, position)
+        return parsed?.takeIf { position.index == normalized.length }
     }
     fun isoDate(date: Date): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ROOT)
         .apply { timeZone = TimeZone.getTimeZone("UTC") }.format(date)
@@ -98,11 +103,12 @@ object HistoryRules {
         val aChain = a.source == "onchain-wallet"; val bChain = b.source == "onchain-wallet"
         val aPending = aChain && a.hasConfirmation != true; val bPending = bChain && b.hasConfirmation != true
         if (aPending != bPending) return aPending
-        val aTimed = (a.sortTimestamp ?: 0.0) > 0; val bTimed = (b.sortTimestamp ?: 0.0) > 0
-        if (aTimed && bTimed) return a.sortTimestamp!! > b.sortTimestamp!!
-        if (aChain && bChain) return (a.sortHeight ?: 0u) > (b.sortHeight ?: 0u)
-        if (aTimed != bTimed) return aTimed
-        return (a.sortTimestamp ?: a.timestamp?.time?.toDouble() ?: 0.0) > (b.sortTimestamp ?: b.timestamp?.time?.toDouble() ?: 0.0)
+        fun timestamp(row: HistoryTransaction): Double = row.sortTimestamp?.takeIf { it.isFinite() }
+            ?: row.timestamp?.time?.toDouble() ?: 0.0
+        val aTime = timestamp(a); val bTime = timestamp(b)
+        if (aTime != bTime) return aTime > bTime
+        if ((a.sortHeight ?: 0u) != (b.sortHeight ?: 0u)) return (a.sortHeight ?: 0u) > (b.sortHeight ?: 0u)
+        return a.id < b.id
     }
     fun sorted(rows: List<HistoryTransaction>): List<HistoryTransaction> = rows.sortedWith { a, b ->
         when { precedes(a, b) -> -1; precedes(b, a) -> 1; else -> 0 }

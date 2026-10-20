@@ -13,7 +13,7 @@ class HistoryFixtureTest(private val name: String, private val input: JsonObject
     companion object {
         val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
         @JvmStatic @Parameterized.Parameters(name = "{0}") fun cases() =
-            SharedFixtures.load("transaction-history").map { arrayOf(it.name, it.input.jsonObject, it.expected) } +
+            (SharedFixtures.load("transaction-history") + SharedFixtures.load("history-regressions")).map { arrayOf(it.name, it.input.jsonObject, it.expected) } +
                 SharedFixtures.load("bark-movement").map { arrayOf(it.name, JsonObject(it.input.jsonObject + ("operation" to JsonPrimitive("status"))), it.expected) }
     }
     private inline fun <reified T> value(v: T): JsonElement = json.encodeToJsonElement(v)
@@ -34,6 +34,8 @@ class HistoryFixtureTest(private val name: String, private val input: JsonObject
     }
     @Test fun matchesEveryReactNativeField() {
         val result = when (read<String>("operation")) {
+            "csv" -> value(HistoryCSV.content(read("transactions"), read("currency")))
+            "date" -> value(HistoryRules.parseDate(read("date"))?.time)
             "status" -> value(HistoryMapping.isFailedOrCanceled(read("status")))
             "metadata" -> value(HistoryMetadata.parse(read("metadataJson")))
             "transactionID" -> value(HistoryMapping.transactionID(movement(read("movement")), read("metadata"), read("outgoing")))

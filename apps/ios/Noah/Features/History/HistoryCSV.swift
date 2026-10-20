@@ -14,10 +14,14 @@ struct HistoryCSV: Transferable, Sendable {
              String(transaction.accounting.amount), transaction.btcPrice.map { String($0) } ?? "",
              transaction.txid ?? "", transaction.destination ?? ""]
         }
-        content = ([header] + rows).map { $0.map(Self.escape).joined(separator: ",") }.joined(separator: "\n") + "\n"
+        let escaped = [header.map { Self.escape($0) }] + rows.map { row in
+            row.enumerated().map { Self.escape($0.element, numeric: $0.offset == 5 || $0.offset == 6) }
+        }
+        content = escaped.map { $0.joined(separator: ",") }.joined(separator: "\n") + "\n"
     }
 
-    private static func escape(_ value: String) -> String {
+    private static func escape(_ raw: String, numeric: Bool = false) -> String {
+        let value = !numeric && raw.first.map { ["=", "+", "-", "@", "\t", "\r"].contains($0) } == true ? "'" + raw : raw
         // RFC 4180: destinations/comments can contain commas, quotes or newlines.
         if value.contains(where: { [",", "\"", "\n", "\r"].contains($0) }) {
             return "\"" + value.replacingOccurrences(of: "\"", with: "\"\"") + "\""

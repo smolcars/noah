@@ -180,11 +180,13 @@ enum HistoryRules {
         let aChain = a.source == "onchain-wallet", bChain = b.source == "onchain-wallet"
         let aPending = aChain && a.hasConfirmation != true, bPending = bChain && b.hasConfirmation != true
         if aPending != bPending { return aPending }
-        let aTimed = (a.sortTimestamp ?? 0) > 0, bTimed = (b.sortTimestamp ?? 0) > 0
-        if aTimed && bTimed { return (a.sortTimestamp ?? 0) > (b.sortTimestamp ?? 0) }
-        if aChain && bChain { return (a.sortHeight ?? 0) > (b.sortHeight ?? 0) }
-        if aTimed != bTimed { return aTimed }
-        return (a.sortTimestamp ?? (a.timestamp?.timeIntervalSince1970 ?? 0) * 1000)
-            > (b.sortTimestamp ?? (b.timestamp?.timeIntervalSince1970 ?? 0) * 1000)
+        func timestamp(_ row: HistoryTransaction) -> Double {
+            if let time = row.sortTimestamp, time.isFinite { return time }
+            return (row.timestamp?.timeIntervalSince1970 ?? 0) * 1000
+        }
+        let aTime = timestamp(a), bTime = timestamp(b)
+        if aTime != bTime { return aTime > bTime }
+        if (a.sortHeight ?? 0) != (b.sortHeight ?? 0) { return (a.sortHeight ?? 0) > (b.sortHeight ?? 0) }
+        return a.id < b.id
     }
 }

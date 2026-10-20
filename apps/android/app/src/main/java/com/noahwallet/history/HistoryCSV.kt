@@ -7,7 +7,12 @@ object HistoryCSV {
         val rows = transactions.map { row -> listOf(row.id, row.confirmationLabel ?: row.date.take(10),
             row.displayLabel, row.statusLabel ?: "", row.accounting.direction, row.accounting.amount.toString(),
             row.btcPrice?.toString() ?: "", row.txid ?: "", row.destination ?: "") }
-        return (listOf(header) + rows).joinToString("\n", postfix = "\n") { row -> row.joinToString(",") { escape(it) } }
+        return (listOf(header.map { escape(it) }) + rows.map { row ->
+            row.mapIndexed { index, value -> escape(value, numeric = index == 5 || index == 6) }
+        }).joinToString("\n", postfix = "\n") { it.joinToString(",") }
     }
-    private fun escape(value: String) = if (value.any { it in ",\"\n\r" }) "\"${value.replace("\"", "\"\"")}\"" else value
+    private fun escape(raw: String, numeric: Boolean = false): String {
+        val value = if (!numeric && raw.firstOrNull() in listOf('=', '+', '-', '@', '\t', '\r')) "'" + raw else raw
+        return if (value.any { it in ",\"\n\r" }) "\"${value.replace("\"", "\"\"")}\"" else value
+    }
 }
