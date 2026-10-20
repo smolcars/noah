@@ -41,14 +41,15 @@ internal object EndpointLogPrivacy {
         .getOrNull()?.toHttpUrlOrNull()?.host?.trimEnd('.')?.let { if (':' in it) "[$it]" else it }
     private val plainAuthority = Regex("""(?:\[[0-9a-fA-F:.]+\]|[a-zA-Z0-9.-]+)(?::[0-9]+)?""")
     private val malformedPercent = Regex("%(?![0-9a-fA-F]{2})")
-    private fun allowed(value: String, registered: Set<String>): Boolean {
+    private fun allowed(value: String, registered: Set<String>, hosts: Set<String>): Boolean {
         val authority = authority(value) ?: return false
-        if ('\\' in value || malformedPercent.containsMatchIn(value) || !plainAuthority.matches(authority)) return false
+        if (value.indexOf("://") != value.lastIndexOf("://") || '\\' in value || malformedPercent.containsMatchIn(value) || !plainAuthority.matches(authority)) return false
         val origin = origin(value) ?: return false
         if (origin in registered || origin !in publicOrigins) return false
         // Only the canonical IP spelling may inherit an allowlisted origin.
         val rawHost = if (authority.startsWith('[')) authority.substringBefore(']') + "]" else authority.substringBefore(':')
-        return rawHost.lowercase().trimEnd('.') == host(value)
+        val tail = value.substringAfter("://").drop(authority.length)
+        return rawHost.lowercase().trimEnd('.') == host(value) && redactHosts(tail, hosts) == tail
     }
 
     fun register(endpoint: String?) {
@@ -63,7 +64,7 @@ internal object EndpointLogPrivacy {
         hosts += host
         origins += origin
     }
-    private val hostTokens = Regex("""\[[^\[\]\s]+\](?::[^\s<>"'()/\\?#,\];{}!$&*=^`|]+)?|[^\s<>"'()/\\?#,\[\];{}!$&*=^`|]+""")
+    private val hostTokens = Regex("""\[[0-9a-fA-F.]*:[0-9a-fA-F:.]*(?:%[^\[\]\s]+)?\](?::[^\s<>"'()/\\?#,\];{}!$&*=^`|]+)?|[^\s<>"'()/\\?#,\[\];{}!$&*=^`|]+""")
     private fun redactHosts(text: String, registered: Set<String>): String {
         val urlRanges = urls.findAll(text).map { it.range }.toList()
         var urlIndex = 0
@@ -71,11 +72,17 @@ internal object EndpointLogPrivacy {
             while (urlIndex < urlRanges.size && urlRanges[urlIndex].last < match.range.first) urlIndex++
             if (urlIndex < urlRanges.size && urlRanges[urlIndex].first <= match.range.last) return@replace match.value
             val token = match.value
-            if (token.startsWith('[') && !token.drop(1).substringBefore(']').substringBefore('%').all { it in "0123456789abcdefABCDEF:.%" }) return@replace token
-            if ('.' !in token && !(token.startsWith('[') && ':' in token) &&
-                !token.all { it in '0'..'9' } && !token.startsWith("0x", ignoreCase = true)) return@replace token
+            if (token.none { it.isLetterOrDigit() || it.code > 127 }) return@replace token
+            val address = token.substringBefore('%')
+            if (("::" in address || address.count { it == ':' } == 7) &&
+                address.all { it in "0123456789abcdefABCDEF:." }) return@replace "[custom-esplora]"
             val authority = token.substringAfterLast('@')
             val rawHost = if (authority.startsWith('[')) authority.substringBefore(']') + "]" else authority.substringBefore(':')
+            if (rawHost.isEmpty()) return@replace token
+            // Plain words need a registration; authority-shaped and encoded tokens require inspection.
+            if (rawHost.lowercase() !in registered && '.' !in token && ':' !in token && '%' !in token &&
+                !rawHost.all { it in '0'..'9' } && !rawHost.startsWith("0x", ignoreCase = true) &&
+                token.none { it.code > 127 }) return@replace token
             val canonical = host("https://$rawHost")
             if (canonical == null || canonical in registered) "[custom-esplora]" else token
         }
@@ -119,7 +126,7 @@ internal object EndpointLogPrivacy {
         if (registered.isEmpty()) return text
         var result = text
         for ((index, view) in views.withIndex()) {
-            var clean = urls.replace(view) { match -> if (!allowed(match.value, registered)) "[custom-esplora]" else match.value }
+            var clean = urls.replace(view) { match -> if (!allowed(match.value, registered, hosts)) "[custom-esplora]" else match.value }
             // Inspect relative references separately: another origin never inherits our paths.
             val relative = urls.replace(clean, "")
             if (sensitive.any { relative.contains(it) }) return "[custom-esplora]"
