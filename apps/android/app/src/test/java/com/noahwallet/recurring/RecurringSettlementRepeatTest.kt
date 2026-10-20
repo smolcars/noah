@@ -16,9 +16,13 @@ class RecurringSettlementRepeatTest {
         w.executor.checkStatus("rent")
         assertEquals(1, w.schedule!!.occurrencesPaid)
         assertTrue(w.controller.locked)
+        val applied = w.schedule; val notices = w.notifications.toList()
         w.beforeJournalWrite = {}; w.sendJournal.fail = false
         w.executor.checkStatus("rent")
         assertEquals("one paid occurrence must create one history entry", 1, w.schedule!!.occurrencesPaid)
+        assertEquals(applied, w.schedule); assertEquals(notices, w.notifications)
+        assertTrue(w.journal.load().getValue("rent").policyApplied)
+        assertFalse(w.controller.locked); assertEquals(1, w.wallet.calls)
     }
 
 }
