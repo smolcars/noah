@@ -109,6 +109,7 @@ import Observation
         defer { running = false; reload() }
         do {
             let automationGeneration = d.automationGeneration()
+            let durableGeneration = try d.store.automationGeneration()
             try await d.ensureOpen()
             try refreshDates()
             let initial = try boundState()
@@ -177,6 +178,7 @@ import Observation
                         guard RecurringSubmissionBudget.available, RecurringExecutionBudget.available,
                               currentPlan.plan(now: now(), zone: zone(), ignoreBackoff: manual) == entry.plan,
                               generation() == automationGeneration,
+                              durableGeneration == (try store.automationGeneration()),
                               state.binding == (try binding()), state.binding == entry.binding,
                               state.schedules[id] == marked,
                               marked.amountSat <= RecurringPayment.maximumAmount,

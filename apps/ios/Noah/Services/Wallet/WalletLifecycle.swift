@@ -67,6 +67,7 @@ struct WalletLifecycle: Sendable {
 
     /// Clears the flag; the caller then opens the wallet as at launch.
     func resume() throws {
+        try authority()?.resume()
         try setSuspended(false)
     }
 
@@ -139,6 +140,7 @@ struct WalletLifecycle: Sendable {
         try Self.stopLatch.lock.withLock {
             let settings = dependencies.settings
             do {
+                try authority()?.stop()
                 let generation = UUID().uuidString
                 if let persist = dependencies.persistAutomationStop { try persist(generation) }
                 else { try settings.setDurably(generation, forKey: Self.automationStopKey) }
@@ -233,7 +235,12 @@ struct WalletLifecycle: Sendable {
         }
     }
 
+    private func authority() -> RecurringAutomationAuthority? {
+        guard FileManager.default.fileExists(atPath: dependencies.location.directory.path) else { return nil }
+        return RecurringAutomationAuthority(directory: dependencies.location.directory)
+    }
     private func setSuspended(_ suspended: Bool) throws {
+        try authority()?.suspension(suspended)
         let settings = dependencies.settings
         var wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
         wallet.isWalletSuspended = suspended

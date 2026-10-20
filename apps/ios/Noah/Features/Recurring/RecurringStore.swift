@@ -18,10 +18,11 @@ final class RecurringStore: @unchecked Sendable {
     private let lock = NSRecursiveLock()
     private var writeFailed = false
     private var policyLedger: RecurringPolicyLedger?
+    private var automation: RecurringAutomationAuthority?
     private var policyBinding: (@Sendable () throws -> Binding)?
     func protectPolicies(file: URL, sync: @escaping @Sendable (URL) throws -> Void = RestoreTransaction.fullSync, binding: @escaping @Sendable () throws -> Binding) {
         lock.withLock {
-            if policyLedger == nil { policyLedger = RecurringPolicyLedger(file: file, sync: sync); policyBinding = binding }
+            if policyLedger == nil { policyLedger = RecurringPolicyLedger(file: file, sync: sync); policyBinding = binding; automation = RecurringAutomationAuthority(directory: file.deletingLastPathComponent(), sync: sync) }
         }
     }
     private func protected(_ state: State) -> State {
@@ -29,10 +30,11 @@ final class RecurringStore: @unchecked Sendable {
         let stopped: Set<String>
         do { stopped = ledger.stopped(binding: try state.binding ?? policyBinding!(), schedules: state.schedules) }
         catch { AppLog("recurring").w(RecurringPolicyLedger.logMessage); stopped = Set(state.schedules.keys) }
+        let automationStopped = automation?.allowed() == false
         var visible = state
-        for id in stopped where visible.schedules[id]?.unsupportedStorage == false {
+        for id in state.schedules.keys where (stopped.contains(id) || automationStopped) && visible.schedules[id]?.unsupportedStorage == false {
             visible.schedules[id]?.status = "needs_attention"
-            visible.schedules[id]?.lastError = RecurringPolicyLedger.message
+            visible.schedules[id]?.lastError = stopped.contains(id) ? RecurringPolicyLedger.message : RecurringAutomationAuthority.message
         }
         return visible
     }
@@ -40,7 +42,9 @@ final class RecurringStore: @unchecked Sendable {
         self.settings = settings
         self.write = write ?? { try settings.setDurably($0, forKey: Self.key) }
     }
+    func automationGeneration() throws -> UUID? { try lock.withLock { try automation?.generation() } }
     func checkAutomationAllowed() throws {
+        _ = try automationGeneration()
         try settings.requireHealthy()
         try lock.withLock {
             guard !writeFailed, WalletLifecycle.automationAllowed(settings: settings) else {
