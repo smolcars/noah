@@ -100,25 +100,33 @@ class WalletLifecycle(
     }
 
     suspend fun suspend() = withContext(NonCancellable + Dispatchers.IO) {
-        stopAutomation()
+        stopDurably()
         mutation.withLock {
-            setSuspended(true)
+            persistSuspended(true)
             try { settleBackground(); session.closeSettled() }
-            catch (failure: Exception) { setSuspended(false); throw failure }
+            catch (failure: Exception) { persistSuspended(false); throw failure }
         }
     }
 
-    suspend fun resume() = mutation.withLock { setSuspended(false) }
+    suspend fun resume() = withContext(NonCancellable + Dispatchers.IO) {
+        mutation.withLock {
+            authority()?.resume()
+            setSuspended(false)
+        }
+    }
+    private fun authority() = if (location.directory.isDirectory) com.noahwallet.recurring.RecurringAutomationAuthority(location.directory) { file, bytes -> com.noahwallet.recurring.durableRecurringWrite(file, bytes, syncIdentityDirectory) } else null
+    private fun stopDurably() { authority()?.stop(); stopAutomation() }
+    private fun persistSuspended(value: Boolean) { authority()?.suspension(value); setSuspended(value) }
 
     suspend fun delete() = withContext(NonCancellable + Dispatchers.IO) {
-        stopAutomation()
+        stopDurably()
         mutation.withLock { deleteLocked() }
     }
 
     private suspend fun deleteLocked() {
-        stopAutomation()
+        stopDurably()
         val wasSuspended = isSuspended()
-        setSuspended(true)
+        persistSuspended(true)
         try {
             try {
                 withTimeout(drainTimeoutMillis) { settleBackground(); drainExports() }
@@ -161,7 +169,7 @@ class WalletLifecycle(
                 syncFiles()
             } finally { session.release(reservation) }
         } catch (failure: Exception) {
-            if (!location.deletionMarker.exists()) setSuspended(wasSuspended)
+            if (!location.deletionMarker.exists()) persistSuspended(wasSuspended)
             throw failure
         } finally { finishBackground() }
     }

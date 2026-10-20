@@ -20,17 +20,20 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     data class State(val schedules: Map<String, RecurringPayment>, val pending: Boolean, val binding: Binding?)
     private var writeFailed = false
     private var policyLedger: RecurringPolicyLedger? = null
+    private var automation: RecurringAutomationAuthority? = null
     private var policyBinding: (() -> Binding)? = null
     internal fun protectPolicies(file: File, sync: (File) -> Unit = ::syncDirectory, syncFile: (java.io.FileDescriptor) -> Unit = { it.sync() }, binding: () -> Binding) = synchronized(lock) {
-        if (policyLedger == null) { policyLedger = RecurringPolicyLedger(file, policyWarning, sync, syncFile); policyBinding = binding }
+        if (policyLedger == null) { policyLedger = RecurringPolicyLedger(file, policyWarning, sync, syncFile); policyBinding = binding; automation = RecurringAutomationAuthority(file.parentFile!!) { target, bytes -> durableRecurringWrite(target, bytes, sync, syncFile) } }
     }
     private fun protected(state: State): State {
         val ledger = policyLedger ?: return state
+        val automationStopped = automation?.allowed() == false
         val stopped = runCatching { ledger.stopped(state.binding ?: policyBinding!!(), state.schedules) }.getOrElse { policyWarning(); state.schedules.keys }
         return state.copy(schedules = state.schedules.mapValues { (id, schedule) ->
-            if (id in stopped && !schedule.unsupportedStorage) schedule.copy(status = "needs_attention", lastError = RecurringPolicyLedger.message) else schedule
+            if ((id in stopped || automationStopped) && !schedule.unsupportedStorage) schedule.copy(status = "needs_attention", lastError = if (id in stopped) RecurringPolicyLedger.message else RecurringAutomationAuthority.message) else schedule
         })
     }
+    internal fun automationGeneration(): String? = synchronized(lock) { automation?.generation() }
     private fun envelope(): JsonObject {
         check(!writeFailed) { "Recurring payment storage failed. Restart Noah; sending is stopped." }
         val raw = read() ?: return buildJsonObject { put("version", 0); putJsonObject("state") { putJsonObject("schedules") {}; put("serverSyncPending", false) } }
@@ -109,7 +112,10 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     }
 }
 
-internal fun durableRecurringWrite(file: File, bytes: ByteArray, sync: (File) -> Unit = ::syncDirectory, syncFile: (java.io.FileDescriptor) -> Unit = { it.sync() }) {
+internal fun durableRecurringWrite(file: File, bytes: ByteArray, sync: (File) -> Unit = ::syncDirectory) =
+    durableRecurringWrite(file, bytes, sync) { it.sync() }
+
+internal fun durableRecurringWrite(file: File, bytes: ByteArray, sync: (File) -> Unit, syncFile: (java.io.FileDescriptor) -> Unit) {
     check(file.parentFile!!.isDirectory)
     val temporary = File(file.parentFile, ".recurring-${UUID.randomUUID()}")
     try {

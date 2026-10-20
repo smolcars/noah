@@ -22,7 +22,7 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
     var journalRaw: String? = null
     var journalFails = false; var mmkvFails = false; var auditFails = false
     var quarantineRaw: ByteArray? = null
-    val policyDirectory = java.nio.file.Files.createTempDirectory("noah-policy-db76c70d-").toFile().also { it.deleteOnExit() }
+    val policyDirectory = File(java.nio.file.Files.createTempDirectory("noah-money-world-").toFile().also { it.deleteOnExit() }, "noah-data-regtest").also { it.mkdir(); it.deleteOnExit() }
     val journal = RecurringJournal(File(policyDirectory, "journal.json"), { beforeJournalRead(); journalRaw }, { beforeJournalWrite(it); if (journalFails) error("journal"); journalRaw = it },
         quarantine = { if (quarantineRaw == null) quarantineRaw = it })
     init { wallet.owner = SendIdentity("wallet-a", "regtest"); wallet.snapshot = SendSnapshot(walletIdentity = wallet.owner) }

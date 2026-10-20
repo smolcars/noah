@@ -42,6 +42,7 @@ class RecurringExecutor(private val d: Dependencies,
     private suspend fun boundState(): RecurringStore.State = storage { boundStateNow() }
     private fun boundStateNow(): RecurringStore.State {
         d.allowed()
+        d.store.automationGeneration()
         val owner = d.binding()
         var state = d.store.load()
         if (state.binding == null || state.binding != owner && state.schedules.isEmpty()) { d.store.bind(owner); state = d.store.load() }
@@ -71,6 +72,7 @@ class RecurringExecutor(private val d: Dependencies,
         running = true; error = null
         try {
             val generation = storage { d.automationGeneration() }
+            val durableGeneration = storage { d.store.automationGeneration() }
             d.ensureOpen(); refreshDates()
             val initial = boundState(); recoverMarkers(initial)
             for (id in initial.schedules.keys.sorted()) {
@@ -110,7 +112,7 @@ class RecurringExecutor(private val d: Dependencies,
                             d.allowed()
                             val current = d.store.load()
                             val currentPlan = marked.copy(inFlight = null, status = "active").plan(d.now(), d.zone(), manual)
-                            check(budget.available && currentPlan == entry.plan && generation == d.automationGeneration() && marked.amountSat <= RecurringPayment.maximumAmount)
+                            check(budget.available && currentPlan == entry.plan && generation == d.automationGeneration() && durableGeneration == d.store.automationGeneration() && marked.amountSat <= RecurringPayment.maximumAmount)
                             check(current.binding == d.binding() && current.binding == entry.binding && current.schedules[id] == marked)
                             check(!d.journal.consumed(entry.binding, id, entry.plan.scheduledFor!!, entry.policyRevision, entry.plan.occurrenceIndex))
                             check(approval != null || RecurringFeePolicy.evaluate(payment.amount, payment.method, quote.fee, quote.lightningFeeSchedule).autoPay)
