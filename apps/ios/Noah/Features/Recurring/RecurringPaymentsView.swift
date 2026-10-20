@@ -51,11 +51,13 @@ struct RecurringPaymentsView: View {
                     if !schedule.unsupportedStorage && (schedule.status == "needs_attention" || schedule.inFlight != nil) {
                         Button("Check payment status") { Task { await executor.checkStatus(schedule.id) } }
                             .disabled(executor.running)
-                        Button("Resume after checking history…", role: .destructive) { overriding = schedule }.disabled(executor.running)
+                        if schedule.lastError != RecurringPolicyLedger.message {
+                            Button("Resume after checking history…", role: .destructive) { overriding = schedule }.disabled(executor.running)
+                        }
                     }
                     if !schedule.unsupportedStorage && schedule.status != "completed" && (schedule.status != "needs_attention" || schedule.lastError == RecurringPolicyLedger.message) {
                         NavigationLink("Edit payment") { RecurringPaymentEditorView(executor: executor, schedule: schedule) }
-                        Button(schedule.status == "active" ? "Pause" : "Resume") {
+                        Button(schedule.status == "active" ? "Pause" : schedule.lastError == RecurringPolicyLedger.message ? "Approve and resume" : "Resume") {
                             run { schedule.status == "active" ? try await executor.pause(schedule.id) : try await executor.resume(schedule.id) }
                         }.accessibilityIdentifier("recurring-toggle-\(schedule.id)")
                     }
