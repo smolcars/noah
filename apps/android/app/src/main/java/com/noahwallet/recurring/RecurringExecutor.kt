@@ -158,10 +158,10 @@ class RecurringExecutor(private val d: Dependencies,
                 if (d.binding() != entry.binding || d.store.load().binding != entry.binding) return@storage false
                 d.journal.save(entry.copy(resolved = true, consumed = paid))
                 val latest = d.store.load().schedules[entry.scheduleID]
-                if (latest != null && latest.nativeRevision == original.nativeRevision) {
+                if (latest != null && latest.nativeRevision == entry.policyRevision) {
                     val result = when {
                         success -> {
-                            val advanced = original.copy(status = "active").success(entry.plan, d.now(), d.zone())
+                            val advanced = latest.copy(status = "active").success(entry.plan, d.now(), d.zone())
                             if (latest.status !in listOf("active", "needs_approval") && advanced.status == "active")
                                 advanced.copy(status = latest.status, consecutiveFailures = latest.consecutiveFailures,
                                     lastError = latest.lastError, retryNotBefore = latest.retryNotBefore) else advanced
@@ -170,7 +170,7 @@ class RecurringExecutor(private val d: Dependencies,
                         else -> latest.failure(entry.plan, message ?: "No payment was submitted.", true, d.now())
                     }
                     d.store.upsert(result); d.notify(emptyList(), result)
-                } else if (success) d.notify(emptyList(), original.copy(status = "active").success(entry.plan, d.now(), d.zone()))
+                } else if (success && original.nativeRevision == entry.policyRevision) d.notify(emptyList(), original.copy(status = "active").success(entry.plan, d.now(), d.zone()))
             }
             true
         }

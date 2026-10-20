@@ -81,4 +81,72 @@ class RecurringSettlementTest {
             assertEquals("$action must not replay the paid occurrence", 1, w.wallet.calls)
         }
     }
+
+    @Test fun oldSuccessfulReceiptCannotSettleAnEditedPolicyRevision() = runBlocking {
+        val w = RecurringWorld(this)
+        val original = w.add()
+        w.beforeJournalWrite = { raw ->
+            // Paid receipt is durable; only its subsequent acknowledged removal fails.
+            if (raw.contains("\"consumed\":true")) w.sendJournal.fail = true
+        }
+        w.executor.execute()
+        assertEquals(1, w.wallet.calls)
+        assertEquals(1, w.schedule!!.occurrencesPaid)
+        assertEquals(SendController.State.succeeded, w.controller.state)
+        w.beforeJournalWrite = {}
+        w.sendJournal.fail = false
+        // The real editor resets occurrence counters and preserves the selected first date.
+        w.executor.save(original.copy(destination = "different-recipient", amountSat = 2000, maxOccurrences = 1), editing = true)
+        w.executor.execute()
+        assertEquals("needs_attention", w.schedule!!.status)
+        assertEquals(0, w.schedule!!.occurrencesPaid)
+        val edited = w.schedule!!
+        assertNotEquals(w.journal.load().getValue("rent").policyRevision, edited.nativeRevision)
+        // This is the visible Check payment status action on the stopped edited row.
+        val notificationsBefore = w.notifications.toList()
+        w.executor.checkStatus("rent")
+        assertEquals("An old receipt must not advance the edited recipient/amount", edited, w.schedule)
+        assertEquals(1, w.wallet.calls)
+        assertTrue(w.journal.load().getValue("rent").let { it.resolved && it.consumed })
+        assertNull(w.controller.attempt)
+        assertFalse(w.controller.locked)
+        assertEquals("Checking A must not announce the edited payment as sent", notificationsBefore, w.notifications)
+        w.executor.checkStatus("rent")
+        w.executor.execute()
+        assertEquals(edited, w.schedule)
+        assertEquals(1, w.wallet.calls)
+    }
+    @Test fun statusCheckOutcomesCannotMutateAnotherPolicyRevision() = runBlocking {
+        for (outcome in listOf("success", "alreadyPaid", "failed", "uncertain")) {
+            val w = RecurringWorld(this); val original = w.add()
+            w.wallet.payBlock = { error("Outcome unknown") }
+            w.executor.execute()
+            val entry = w.journal.load().getValue(original.id)
+            // Recovery can display an edited policy while the old Send attempt is unresolved.
+            val edited = original.copy(destination = "different-recipient", amountSat = 2000,
+                nativeRevision = java.util.UUID.randomUUID().toString(), status = "needs_attention", maxOccurrences = 1)
+            w.store.upsert(edited)
+            val notificationsBefore = w.notifications.toList()
+            w.wallet.reconciliation = {
+                yield() // Status reconciliation suspends before settlement reloads the policy.
+                when (outcome) {
+                    "success" -> SendResolution.Paid(SendReceipt(1000, proof = SendReceipt.Proof.submitReturnedArkSuccess))
+                    "alreadyPaid" -> SendResolution.AlreadyPaid(SendReceipt(1000, proof = SendReceipt.Proof.actualMovement))
+                    "failed" -> SendResolution.Failed
+                    else -> SendResolution.Uncertain
+                }
+            }
+            w.executor.checkStatus(original.id)
+            assertEquals(outcome, edited, w.schedule)
+            assertEquals(outcome, notificationsBefore, w.notifications)
+            val resolved = w.journal.load().getValue(original.id)
+            assertEquals(outcome, outcome != "uncertain", resolved.resolved)
+            assertEquals(outcome, outcome in listOf("success", "alreadyPaid"), resolved.consumed)
+            assertEquals(outcome, entry.policyRevision, resolved.policyRevision)
+            assertEquals(outcome, outcome == "uncertain", w.controller.locked)
+            w.executor.execute()
+            assertEquals("$outcome must not retry A or pay the edited policy", 1, w.wallet.calls)
+        }
+    }
+
 }
