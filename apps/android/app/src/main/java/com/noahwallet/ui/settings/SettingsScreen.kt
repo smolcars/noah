@@ -27,7 +27,7 @@ import kotlinx.serialization.json.*
 @Serializable
 enum class SettingsDestination(val title: String) : NavKey {
     Settings("Settings"), Profile("Profile"), Language("Language"), Currency("Currency"), Unit("Bitcoin Unit"),
-    Backup("Backup & Restore"), Seed("Your Recovery Phrase"), Ark("Ark Info"), Export("Export Database"),
+    Backup("Backup & Restore"), Seed("Your Recovery Phrase"), Ark("Ark Info"), Esplora("Edit Esplora API"), Export("Export Database"),
     Logs("Logs"), Feedback("Send Feedback"), Story("Noah's Ark Story"), Debug("Debug"),
     Recurring("Recurring payments"), Vtxos("VTXOs"), Board("Board to Ark"), Exits("Emergency Exit"),
     Email("Emergency Email"), Lightning("Lightning Address"), Battery("Battery Optimization"), UnifiedPush("UnifiedPush"),
@@ -41,7 +41,8 @@ fun SettingsPage(model: AppModel, destination: SettingsDestination, navigate: (S
         SettingsDestination.Language, SettingsDestination.Currency, SettingsDestination.Unit -> PreferenceScreen(model, destination)
         SettingsDestination.Backup -> BackupSettingsScreen(model)
         SettingsDestination.Seed -> MnemonicScreen(model, fromSettings = true)
-        SettingsDestination.Ark -> ArkInfoScreen(model)
+        SettingsDestination.Ark -> ArkInfoScreen(model, navigate)
+        SettingsDestination.Esplora -> EsploraSettingsScreen(model)
         SettingsDestination.Export -> ExportScreen(model)
         SettingsDestination.Logs -> LogScreen(model)
         SettingsDestination.Feedback -> FeedbackScreen(model)

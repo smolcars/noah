@@ -98,12 +98,13 @@ fun PreferenceScreen(model: AppModel, kind: SettingsDestination) {
 }
 
 @Composable
-fun ArkInfoScreen(model: AppModel) {
+fun ArkInfoScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
     var info by remember { mutableStateOf<io.github.niteshbalusu11.bark.ArkInfo?>(null) }
     var loading by remember { mutableStateOf(false) }
     suspend fun load() { loading = true; try { info = model.session.arkInfo() } finally { loading = false } }
     LaunchedEffect(Unit) { runCatching { load() } }
-    val config = WalletConfiguration.base(BuildConfig.APP_VARIANT)
+    val selection = com.noahwallet.services.wallet.EsploraSettings(model.settings).selection(BuildConfig.APP_VARIANT)
+    val config = WalletConfiguration.effective(BuildConfig.APP_VARIANT, selection.endpoint)
     SettingsColumn {
         NoahButton("Refresh", !loading && !model.isWalletSuspended, secondary = true) { model.action("Couldn't load Ark info.") { load() } }
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -126,9 +127,9 @@ fun ArkInfoScreen(model: AppModel) {
         }
         SectionTitle("Wallet endpoints")
         CopyRow("Ark server", config.arkServer)
-        config.esplora?.let { CopyRow("Esplora API · Noah default", it) }
+        config.esplora?.let { CopyRow(if (selection.endpoint == null) "Esplora API · Noah default" else "Esplora API · Custom endpoint", it) }
         config.bitcoind?.let { CopyRow("Bitcoind RPC", it) }
-        SettingRow("Esplora Settings", "Coming soon", false)
+        SettingRow("Esplora Settings") { navigate(SettingsDestination.Esplora) }
         SectionTitle("Explorer APIs")
         CopyRow("Mempool explorer", "https://mempool.space" + if (BuildConfig.APP_VARIANT == "mainnet") "" else "/signet")
         CopyRow("Price API", "https://mempool.space/api/v1/prices")
