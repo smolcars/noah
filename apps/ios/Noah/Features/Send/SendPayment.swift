@@ -128,6 +128,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         case failed, storageBlocked
     }
     struct Attempt: Codable, Sendable {
+        var recurringOccurrenceKey: String?
         var walletIdentity: SendWalletIdentity?
         var inspectionPending: Bool?
         var safetyVersion: Int? = 3
@@ -155,6 +156,8 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         var discard: @Sendable (SendQuote) async -> Void = { _ in }
         var withReservation: @Sendable (@escaping @MainActor @Sendable () async -> Void) async throws -> Void = { await $0() }
         var auditOverride: (SendOverrideAudit) throws -> Void = { _ in }
+        var withRecurringReservation: (@Sendable (@escaping @MainActor @Sendable () async -> Void) async throws -> Void)?
+        var guardedPay: (@Sendable (SendPayment, SendQuote, SendSnapshot, @escaping @Sendable () throws -> Void) async throws -> SendReceipt)?
     }
     enum Resolution: Sendable, Equatable {
         case uncertain
@@ -240,16 +243,17 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
             }
         } catch { state = .storageBlocked }
     }
-    func submit(_ payment: SendPayment, quote: SendQuote) {
+    func submit(_ payment: SendPayment, quote: SendQuote, recurringKey: String? = nil, beforeSubmit: (@Sendable () throws -> Void)? = nil) {
         guard state == .ready else { return }
         state = .submitting
         message = nil
         // This task belongs to the controller, not a sheet's cancellable .task.
         let generation = self.generation
         task = Task {
-            do { try await dependencies.withReservation {
+            let reserve = recurringKey == nil ? dependencies.withReservation : (dependencies.withRecurringReservation ?? dependencies.withReservation)
+            do { try await reserve {
                 guard generation == self.generation else { return }
-                await self.performSubmit(payment, quote: quote, generation: generation)
+                await self.performSubmit(payment, quote: quote, generation: generation, recurringKey: recurringKey, beforeSubmit: beforeSubmit)
             } }
             catch {
                 guard generation == self.generation else { return }
@@ -259,19 +263,27 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
             }
         }
     }
-    private func performSubmit(_ payment: SendPayment, quote: SendQuote, generation: Int) async {
+    /// Automation awaits the controller-owned task; cancelling a push cannot abandon a send.
+    func submitAndWait(_ payment: SendPayment, quote: SendQuote, recurringKey: String,
+                       beforeSubmit: @escaping @Sendable () throws -> Void) async {
+        guard state == .ready else { return }
+        submit(payment, quote: quote, recurringKey: recurringKey, beforeSubmit: beforeSubmit)
+        await task?.value
+    }
+    private func performSubmit(_ payment: SendPayment, quote: SendQuote, generation: Int,
+                               recurringKey: String?, beforeSubmit: (@Sendable () throws -> Void)?) async {
         defer { Task { await dependencies.discard(quote) } }
         do {
             let identity = try dependencies.identity?()
             // Lightning inspection errors must survive restart without granting permission to pay.
             if ["lightning", "lnurl"].contains(payment.method) {
-                let pending = Attempt(walletIdentity: identity, inspectionPending: true, payment: payment, snapshot: .init(movementIDs: []), quote: quote)
+                let pending = Attempt(recurringOccurrenceKey: recurringKey, walletIdentity: identity, inspectionPending: true, payment: payment, snapshot: .init(movementIDs: []), quote: quote)
                 try dependencies.write(pending)
                 attempt = pending
             }
             let snapshot = try await dependencies.prepare(payment, quote)
             guard generation == self.generation else { return }
-            let pending = Attempt(walletIdentity: identity, broadcastingTxid: quote.prepared?.txid, payment: payment, snapshot: snapshot,
+            let pending = Attempt(recurringOccurrenceKey: recurringKey, walletIdentity: identity, broadcastingTxid: quote.prepared?.txid, payment: payment, snapshot: snapshot,
                                   paymentHash: PaymentEncoding.invoice(snapshot.resolvedInvoice ?? (payment.method == "lightning" ? payment.destination : ""))?.hash, quote: quote)
             try dependencies.write(pending)
             attempt = pending
@@ -285,7 +297,12 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
             return
         }
         do {
-            let receipt = try await dependencies.pay(payment, quote, attempt!.snapshot)
+            let receipt: SendReceipt
+            if let beforeSubmit {
+                guard let guardedPay = dependencies.guardedPay else { throw SendFailure.unresolved }
+                guard attempt!.snapshot.checkpoint == nil else { throw SendFailure.lightningInProgress }
+                receipt = try await guardedPay(payment, quote, attempt!.snapshot, beforeSubmit)
+            } else { receipt = try await dependencies.pay(payment, quote, attempt!.snapshot) }
             guard generation == self.generation else { return }
             finish(.paid(receipt))
         } catch let error as SendExistingLightning {
@@ -385,7 +402,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     var overrideWarning: String {
         [attempt?.receipt?.conflictDescription, SendOverrideAudit.warningText].compactMap { $0 }.joined(separator: "\n\n")
     }
-    func startNewPaymentAfterHistoryCheck(confirmed: Bool) {
+    func startNewPaymentAfterHistoryCheck(confirmed: Bool, confirmationText: String = SendOverrideAudit.confirmationText, warningText: String? = nil) {
         guard confirmed, canOverride else { return }
         let evidence = attempt ?? unboundJournal
         do {
@@ -393,7 +410,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                                                 walletIdentity: evidence?.walletIdentity,
                                                 ownershipUnverified: evidence?.walletIdentity == nil,
                                                 candidates: evidence?.candidates, possibleTxids: evidence?.possibleTxids,
-                                                warning: overrideWarning,
+                                                warning: warningText ?? overrideWarning, confirmation: confirmationText,
                                                 statusMessage: message))
         } catch {
             message = "Unable to save the override confirmation. Sending remains locked."
@@ -452,6 +469,8 @@ extension SendPaymentController.Dependencies {
             },
             discard: { await session.discardSend($0, includingClaimed: true) },
             withReservation: { try await session.withSendReservation($0) },
-            auditOverride: { try SendOverrideAudit.append($0, to: location.directory.appending(path: "noah-send-overrides.json")) })
+            auditOverride: { try SendOverrideAudit.append($0, to: location.directory.appending(path: "noah-send-overrides.json")) },
+            withRecurringReservation: { try await session.withSendReservation($0, exclusive: true) },
+            guardedPay: { try await session.submitSend($0, quote: $1, snapshot: $2, beforeSubmit: $3) })
     }
 }

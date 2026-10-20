@@ -31,6 +31,7 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
     var startAt: Double
     var endAt: Double?
     var maxOccurrences: Int?
+    var nativeRevision: UUID?
     var status = "active"
     var nextOccurrenceIndex = 0
     var nextRunAt: Double?
@@ -48,9 +49,10 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
         !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && label.utf16.count <= 64
             && amountSat > 0 && amountSat <= 9_007_199_254_740_991
             && ["ark", "lnurl", "offer"].contains(destinationType) && !destination.isEmpty
+            && ["active", "paused", "needs_attention", "completed"].contains(status)
             && interval.valid && startAt.isFinite && abs(startAt) < 8.64e15
             && (endAt == nil || (endAt!.isFinite && endAt! >= startAt))
-            && (maxOccurrences == nil || maxOccurrences! >= 1) && nextOccurrenceIndex >= 0
+            && (maxOccurrences == nil || maxOccurrences! >= 1) && nextOccurrenceIndex >= 0 && nextOccurrenceIndex <= 1_000_000
     }
     func validateInput(now: Double) throws {
         guard !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, label.utf16.count <= 64 else { throw RecurringError.message("Give this payment a short name (max 64 characters).") }
@@ -103,6 +105,7 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
             guard let at = next(latest + 1, zone: zone), at <= now else { break }
             latest += 1
         }
+        if let at = next(latest + 1, zone: zone), at <= now { return .init(kind: "too_many_missed") }
         return .init(kind: "pay", occurrenceIndex: latest, scheduledFor: occurrence(latest, zone: zone), skippedIndices: Array(nextOccurrenceIndex..<latest))
     }
     mutating func advance(_ index: Int, zone: TimeZone = .current) {

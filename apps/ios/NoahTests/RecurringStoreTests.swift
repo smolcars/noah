@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 import Testing
 @testable import Noah
 
@@ -39,6 +40,31 @@ import Testing
             #expect(throws: (any Error).self) { try store.upsert(RecurringScheduleTests.schedule()) }
             #expect(settings.string(forKey: RecurringStore.key) == raw)
         }
+    }
+    @Test func legacyReplacementCannotAdoptUnboundSchedules() throws {
+        let store = RecurringStore(settings: try settings())
+        let schedule = RecurringScheduleTests.schedule()
+        try store.upsert(schedule)
+        try store.protectLegacyBeforeReplacement()
+        #expect(try store.load().binding?.wallet.fingerprint == "unverified-previous-wallet")
+        #expect(try store.load().schedules[schedule.id] == schedule)
+    }
+    @Test func realWalletTokenChangesAfterSameSeedRestoreAndPendingMutationsRefuse() throws {
+        let documents = FileManager.default.temporaryDirectory.appending(path: "recurring-identity-\(UUID())")
+        let location = WalletDataLocation(variant: .regtest, documentsDirectory: documents)
+        try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
+        var db: OpaquePointer?
+        try #require(sqlite3_open(location.database.path, &db) == SQLITE_OK)
+        try #require(sqlite3_exec(db, "CREATE TABLE bark_properties (id TEXT PRIMARY KEY, network TEXT, fingerprint TEXT); INSERT INTO bark_properties VALUES ('1', 'regtest', 'same-seed');", nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(db)
+        let first = try RecurringStore.binding(location: location)
+        let token = location.directory.appending(path: ".noah-recurring-instance")
+        #expect(try token.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+        try FileManager.default.removeItem(at: token)
+        let restored = try RecurringStore.binding(location: location)
+        #expect(first.wallet == restored.wallet && first.instance != restored.instance)
+        try Data().write(to: location.deletionMarker)
+        #expect(throws: WalletSession.OpenError.restorePending) { try RecurringStore.binding(location: location) }
     }
     @Test func realMMKVReopenRetainsBeforeSendMarker() throws {
         SettingsStorage.bootstrap()

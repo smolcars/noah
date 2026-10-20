@@ -117,7 +117,7 @@ extension WalletSession {
                                 walletIdentity: try await Self.sendIdentity(handles), checkpoint: checkpoint)
         }
     }
-    func submitSend(_ payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot) async throws -> SendReceipt {
+    func submitSend(_ payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot, beforeSubmit: @escaping @Sendable () throws -> Void = {}) async throws -> SendReceipt {
         do { try SendMaxValidation.available(payment) }
         catch let error as SendFailure { throw SendNotSubmitted(reason: error) }
         return try await withOpenWallet { handles in
@@ -126,6 +126,7 @@ extension WalletSession {
             var lightning: LightningSendStatus?
             switch payment.method {
             case "ark":
+                try beforeSubmit()
                 try await handles.wallet.sendArkoorPayment(arkAddress: payment.destination, amountSats: payment.amount)
                 // SDK 0.3.0 returns Void on success; persist that result, never infer it from history candidates.
                 receipt.proof = .submitReturnedArkSuccess
@@ -144,12 +145,14 @@ extension WalletSession {
                     payment: resolved, state: try await handles.wallet.lightningSendState(paymentHash: hash),
                     movements: try await handles.wallet.history(), checkpoint: snapshot.checkpoint, quote: quote,
                     check: { try await handles.wallet.checkLightningPayment(paymentHash: $0, wait: false) }) {
-                        try await handles.wallet.payLightningInvoice(
+                        try beforeSubmit()
+                        return try await handles.wallet.payLightningInvoice(
                             invoice: invoice, amountSats: fixed ? nil : payment.amount, wait: true)
                     }
             case "offer":
                 lightning = try await SendLightningSubmission.offer(pending: try await handles.wallet.pendingLightningSends()) {
-                    try await handles.wallet.payLightningOffer(
+                    try beforeSubmit()
+                    return try await handles.wallet.payLightningOffer(
                         offer: payment.destination, amountSats: payment.amount, wait: true)
                 }
             case "onchain":
@@ -159,6 +162,7 @@ extension WalletSession {
                         throw SendNotSubmitted(reason: .feeChanged)
                     }
                     do {
+                        try beforeSubmit()
                         let result = try await handles.onchain.broadcastPrepared(id: prepared.id)
                         receipt = try SendOnchainSubmission.receipt(result, quote: quote)
                     } catch {
@@ -173,9 +177,11 @@ extension WalletSession {
                         let current = try await handles.wallet.spendableVtxos().map(\.id)
                         do { try SendMaxValidation.offchain(currentIDs: current, reviewedIDs: quote.vtxoIDs) }
                         catch let error as SendFailure { throw SendNotSubmitted(reason: error) }
+                        try beforeSubmit()
                         receipt.txid = try await handles.wallet.offboardVtxos(
                             vtxoIds: quote.vtxoIDs!, bitcoinAddress: payment.destination).txid
                     } else {
+                        try beforeSubmit()
                         receipt.txid = try await handles.wallet.sendOnchain(address: payment.destination, amountSats: payment.amount)
                     }
                 }

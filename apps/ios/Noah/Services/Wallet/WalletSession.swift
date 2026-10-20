@@ -86,6 +86,8 @@ actor WalletSession {
     private var state = State.closed
     private var runningCalls = 0
     private var sendReserved = false
+    private var exclusiveSend = false
+    @TaskLocal private static var sendWork = false
     private var drainWaiters: [CheckedContinuation<Void, Never>] = []
     private var observers: [UUID: Observer] = [:]
 
@@ -287,6 +289,7 @@ actor WalletSession {
     /// observers must not use this, or `close` would wait for them forever.
     func withOpenWallet<T: Sendable>(_ body: @escaping @Sendable (Handles) async throws -> T) async throws -> T {
         guard case .open(let handles) = state else { throw SessionError.notOpen }
+        guard !exclusiveSend || Self.sendWork else { throw OpenError.busy }
         runningCalls += 1
         defer { callFinished() }
         await retrySendDiscards()
@@ -294,11 +297,14 @@ actor WalletSession {
     }
 
     /// Covers inspection, durable journal writes and progression; excludes replacement and other Send creators.
-    func withSendReservation(_ body: @escaping @MainActor @Sendable () async -> Void) async throws {
+    func withSendReservation(_ body: @escaping @MainActor @Sendable () async -> Void, exclusive: Bool = false) async throws {
         guard isOpen, !sendReserved else { throw OpenError.busy }
         sendReserved = true
-        defer { sendReserved = false }
-        await Task { await body() }.value
+        exclusiveSend = exclusive
+        defer { sendReserved = false; exclusiveSend = false }
+        // Automation drains counted work and excludes new callers through the same Send hold.
+        if exclusive { await callsDrained() }
+        await Self.$sendWork.withValue(true) { await Task { await body() }.value }
     }
 
     private func callFinished() {
