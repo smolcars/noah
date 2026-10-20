@@ -6,7 +6,7 @@ import Foundation
 final class AppServices: Sendable {
     static let shared = AppServices(variant: .current)
 
-    private static let configurationAccess = WalletMutationGate()
+    static let configurationAccess = WalletMutationGate()
 
     let variant: AppVariant
     let session: WalletSession

@@ -20,11 +20,10 @@ struct EsploraSettingsScreen: View {
                 Text(selection.endpoint == nil ? "Noah default" : "Custom endpoint").foregroundStyle(NoahColor.mutedForeground)
             }
             Section("Esplora API base URL") {
-                TextField("https://mempool.space/api", text: $input)
+                TextField("https://mempool.space/api", text: Binding(get: { input }, set: { input = $0; error = nil; message = nil }))
                     .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
                     .disabled(busy || AppVariant.current == .regtest)
                     .accessibilityIdentifier("esplora-endpoint-input")
-                    .onChange(of: input) { error = nil; message = nil }
                 Text("Noah will test /block-height/0 and verify the Bitcoin network before changing the wallet configuration. You may also paste the full test or tip URL.")
                     .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
                 if let attention = selection.attention { Text(attention).foregroundStyle(NoahColor.destructive) }

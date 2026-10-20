@@ -29,7 +29,7 @@ final class HistoryModel {
                     }
                 },
                 blockTime: { txid in
-                    guard let base = WalletConfiguration.base(for: variant).esplora,
+                    guard let base = WalletConfiguration.effective(for: variant, endpoint: EsploraSettings().selection(for: variant).endpoint).esplora,
                           let url = URL(string: base)?.appendingPathComponent("tx").appendingPathComponent(txid) else { return nil }
                     var request = URLRequest(url: url)
                     request.timeoutInterval = 10

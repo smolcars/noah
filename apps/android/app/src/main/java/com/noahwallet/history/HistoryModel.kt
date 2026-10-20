@@ -30,14 +30,15 @@ class HistoryModel(private val dependencies: Dependencies) {
     ) {
         companion object {
             fun live(session: WalletSession, client: HttpClient, variant: String,
-                suspended: () -> Boolean, warn: (String) -> Unit): Dependencies {
+                suspended: () -> Boolean, warn: (String) -> Unit,
+                esploraEndpoint: () -> String? = { WalletConfiguration.base(variant).esplora }): Dependencies {
                 val explorer = OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).build()
                 fun available() { if (suspended()) throw AppServices.WalletSuspended() }
                 return Dependencies(
                     load = { available(); session.transactionHistory() }, sync = { available(); session.sync() },
                     changes = { flow { available(); emitAll(session.stateChanges().map { it.reason }) } },
                     blockTime = { txid ->
-                        WalletConfiguration.base(variant).esplora?.let { base ->
+                        esploraEndpoint()?.let { base ->
                             suspendCancellableCoroutine { continuation ->
                                 // Esplora has no wallet authentication; cancellation aborts the network request.
                                 val request = Request.Builder().url(base.trimEnd('/') + "/tx/" + java.net.URLEncoder.encode(txid, "UTF-8")).build()

@@ -122,6 +122,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         session, services.client, BuildConfig.APP_VARIANT,
         suspended = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true },
         warn = com.noahwallet.services.logging.AppLog(application, "history")::w,
+        esploraEndpoint = { WalletConfiguration.effective(BuildConfig.APP_VARIANT,
+            EsploraSettings(settings).selection(BuildConfig.APP_VARIANT).endpoint).esplora },
     ))
     var recurringNotification by mutableStateOf(false)
     var autoBoardSuccessBanner by mutableStateOf<Pair<Long, Long>?>(null)
