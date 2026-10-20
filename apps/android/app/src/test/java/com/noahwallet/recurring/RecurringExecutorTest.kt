@@ -93,6 +93,47 @@ class RecurringExecutorTest {
         w.raw = rollback; w.zone = TimeZone.getTimeZone("UTC")
         w.executor.execute(); assertEquals(1, w.wallet.calls); assertEquals("needs_attention", w.schedule!!.status)
     }
+    @Test fun legacyTimestampWithOverwrittenRevisionCannotReplayAfterZoneRollback() = runBlocking {
+        val w = RecurringWorld(this)
+        w.zone = TimeZone.getTimeZone("America/New_York"); w.now = 1774753200000
+        val a = w.add(1772337600000).copy(interval = RecurringInterval("month", 1), nextOccurrenceIndex = 1,
+            nextRunAt = w.now, nativeRevision = UUID.randomUUID().toString())
+        w.store.upsert(a); val rollback = w.raw
+        w.executor.execute(); assertEquals(1, w.wallet.calls)
+        // v1 retained A only as a timestamp after B's proven pre-submission failure.
+        val b = RecurringJournal.Entry(w.binding, a.id, a.plan(w.now, w.zone), w.now,
+            UUID.randomUUID().toString(), resolved = true)
+        w.journalRaw = """{"version":1,"attempts":${RecurringStore.json.encodeToString(mapOf(a.id to b))},"consumed":${RecurringStore.json.encodeToString(listOf(RecurringJournal.Watermark(w.binding, a.id, w.now)))}}"""
+        w.raw = rollback; w.zone = TimeZone.getTimeZone("UTC"); w.now = 1775016000000
+        assertEquals(w.now, a.plan(w.now, w.zone).scheduledFor)
+        w.executor.execute()
+        assertEquals("Paid monthly index must never be submitted again", 1, w.wallet.calls)
+        assertEquals("needs_attention", w.schedule!!.status)
+        assertEquals(RecurringJournal.legacyMessage, w.schedule!!.lastError)
+        assertTrue(runCatching { w.executor.overrideAndResume(a.id, true) }.isFailure)
+        assertTrue(runCatching { w.executor.resume(a.id) }.isFailure)
+        w.store.upsert(a.copy(nativeRevision = UUID.randomUUID().toString()))
+        w.executor.execute(); assertEquals(1, w.wallet.calls); assertEquals("needs_attention", w.schedule!!.status)
+        w.executor.cancel(a.id)
+        val fresh = a.copy(id = UUID.randomUUID().toString(), startAt = w.now + 1000, nextOccurrenceIndex = 0, nextRunAt = w.now + 1000)
+        w.executor.save(fresh, editing = false); w.now += 1000
+        w.executor.execute(); assertEquals(2, w.wallet.calls)
+    }
+    @Test fun consumedDailyIndexSurvivesSpringAndFallDSTZoneRollback() = runBlocking {
+        for (fall in listOf(false, true)) {
+            val w = RecurringWorld(this)
+            val start = java.time.Instant.parse(if (fall) "2026-10-31T16:00:00Z" else "2026-03-07T17:00:00Z").toEpochMilli()
+            val from = TimeZone.getTimeZone(if (fall) "UTC" else "America/New_York")
+            val to = TimeZone.getTimeZone(if (fall) "America/New_York" else "UTC")
+            val a = w.add(start).copy(nextOccurrenceIndex = 1)
+            val paidAt = a.occurrence(1, from); val shifted = a.occurrence(1, to)
+            assertEquals(3_600_000L, shifted - paidAt)
+            w.zone = from; w.now = paidAt; w.store.upsert(a); val rollback = w.raw
+            w.executor.execute(); assertEquals(1, w.wallet.calls)
+            w.raw = rollback; w.zone = to; w.now = shifted
+            w.executor.execute(); assertEquals(1, w.wallet.calls); assertEquals("needs_attention", w.schedule!!.status)
+        }
+    }
     @Test fun legacyConsumptionMigratesBeforeLaterAttemptReplacesIt() {
         var raw: String? = null
         val binding = RecurringStore.Binding(SendIdentity("wallet", "regtest"), UUID.randomUUID().toString())
@@ -100,7 +141,7 @@ class RecurringExecutorTest {
         raw = RecurringStore.json.encodeToString(mapOf("rent" to a))
         val j = RecurringJournal(File("unused"), { raw }, { raw = it })
         j.save(a.copy(plan = a.plan.copy(scheduledFor = 2000), consumed = false, resolved = false, policyRevision = "b"))
-        assertTrue(raw!!.contains("\"version\":1")); assertTrue(j.consumed(binding, "rent", 1000)); assertFalse(j.consumed(binding, "rent", 2000))
+        assertTrue(raw!!.contains("\"version\":2")); assertTrue(j.consumed(binding, "rent", 1000)); assertTrue(j.consumed(binding, "rent", 2000))
     }
     @Test fun failedLegacyMigrationCannotOverwriteConsumption() {
         val binding = RecurringStore.Binding(SendIdentity("wallet", "regtest"), UUID.randomUUID().toString())

@@ -50,9 +50,10 @@ class RecurringExecutor(private val d: Dependencies,
         for (schedule in state.schedules.values) {
             val planning = if (schedule.status == "needs_approval") schedule.copy(status = "active") else schedule
             val plan = planning.plan(d.now(), d.zone(), true)
-            val consumed = plan.scheduledFor?.let { d.journal.consumed(state.binding!!, schedule.id, it, schedule.nativeRevision, plan.occurrenceIndex) } ?: false
-            if (schedule.status != "needs_attention" && (schedule.inFlight != null || entries[schedule.id]?.let { !it.resolved && it.binding == state.binding } == true || consumed)) {
-                val stopped = schedule.copy(status = "needs_attention", lastError = "Noah was interrupted while sending this payment. Check your transaction history before resuming.")
+            val legacyUncertain = d.journal.legacyUncertain(state.binding!!, schedule.id)
+            val consumed = plan.scheduledFor?.let { d.journal.consumed(state.binding, schedule.id, it, schedule.nativeRevision, plan.occurrenceIndex) } ?: false
+            if (schedule.status != "needs_attention" && (legacyUncertain || schedule.inFlight != null || entries[schedule.id]?.let { !it.resolved && it.binding == state.binding } == true || consumed)) {
+                val stopped = schedule.copy(status = "needs_attention", lastError = if (legacyUncertain) RecurringJournal.legacyMessage else "Noah was interrupted while sending this payment. Check your transaction history before resuming.")
                 if (d.store.updateIf(schedule, stopped)) d.notify(emptyList(), stopped)
             }
         }
@@ -201,6 +202,7 @@ class RecurringExecutor(private val d: Dependencies,
         check(!running); boundState()
         val schedule = d.store.load().schedules[id] ?: return
         val entry = d.journal.load()[id]
+        check(!d.journal.legacyUncertain(d.binding(), id)) { RecurringJournal.legacyMessage }
         // Audit the exact warning before either lock can be removed, including legacy RN markers.
         d.audit(schedule, entry, overrideWarning, overrideConfirmation)
         if (entry != null && controller.attempt?.recurringOccurrenceKey == entry.key) {
