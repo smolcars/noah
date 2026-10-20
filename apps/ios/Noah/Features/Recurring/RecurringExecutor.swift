@@ -46,7 +46,7 @@ import Observation
         try d.allowed()
         let owner = try d.binding()
         var state = try d.store.load()
-        if state.binding == nil {
+        if state.binding == nil || (state.binding != owner && state.schedules.isEmpty) {
             // First RN upgrade only. All existing schedules are retained, including in-flight ones.
             try d.store.bind(owner)
             state.binding = owner
@@ -165,6 +165,13 @@ import Observation
             try d.journal.save(resolved)
             d.controller.acknowledge()
             await d.notifications([], result)
+        case .alreadyPaid:
+            latest.failure(entry.plan, message: "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.", retryable: false, now: d.now())
+            try d.store.upsert(latest)
+            var resolved = entry; resolved.resolved = true; resolved.consumed = true
+            try d.journal.save(resolved)
+            d.controller.acknowledge()
+            await d.notifications([], latest)
         case .failed:
             latest.inFlight = nil
             latest.failure(entry.plan, message: d.controller.message ?? "No payment was submitted.", retryable: true, now: d.now())

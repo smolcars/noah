@@ -22,6 +22,7 @@ import Testing
         var ambiguous = false
         var preflight: (@MainActor () async throws -> Void)?
         var beforePay: (@MainActor () async throws -> Void)?
+        var afterPay: (@MainActor () async throws -> Void)?
         var syncHook: (@MainActor ([Components.Schemas.RecurringPaymentScheduleEntry]) async throws -> Void)?
         var sentEntries: [[Components.Schemas.RecurringPaymentScheduleEntry]] = []
         var controller: SendPaymentController!
@@ -56,6 +57,7 @@ import Testing
                     try await beforePayment()
                     try guardPolicy()
                     calls.withLock { $0 += 1 }
+                    try await afterPayment()
                     if await isAmbiguous() { throw URLError(.timedOut) }
                     return .init(amount: payment.amount, proof: .submitReturnedArkSuccess)
                 }))
@@ -71,6 +73,7 @@ import Testing
         func beforePrepare() async throws {}
         func beforeQuote() async throws { try await preflight?() }
         func beforePayment() async throws { try await beforePay?() }
+        func afterPayment() async throws { try await afterPay?() }
         func isAmbiguous() -> Bool { ambiguous }
         func sync(_ entries: [Components.Schemas.RecurringPaymentScheduleEntry]) async throws { sentEntries.append(entries); try await syncHook?(entries) }
         func add() throws -> RecurringPayment {
@@ -178,6 +181,16 @@ import Testing
         #expect(try h.store.load().schedules[schedule.id] != nil)
         #expect(h.executor.error != nil)
     }
+    @Test func replacementWalletCanCreateFreshPolicyAfterCancellingOldOnes() async throws {
+        let h = try Harness(); var schedule = try h.add()
+        try h.store.bind(h.owner.withLock { $0 })
+        h.owner.withLock { $0.instance = UUID() }
+        try await h.executor.cancel(schedule.id)
+        schedule.id = UUID().uuidString; schedule.startAt = h.now; schedule.nextRunAt = h.now
+        try await h.executor.save(schedule, editing: false)
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 1)
+    }
     @Test func unresolvedSendBlocksOtherSchedulesAndOverrideSkipsPastDue() async throws {
         let h = try Harness(); let schedule = try h.add(); h.ambiguous = true
         await h.executor.execute()
@@ -187,6 +200,23 @@ import Testing
         #expect(h.calls.withLock { $0 } == 1)
         #expect(try h.store.load().schedules[schedule.id]?.nextOccurrenceIndex == 5)
         #expect(FileManager.default.fileExists(atPath: h.directory.appending(path: "noah-recurring-overrides.json").path))
+    }
+    @Test(arguments: ["pause", "cancel", "edit"]) func userChangesWhileNativePaymentFinishesNeverReenableOrRecreatePolicy(action: String) async throws {
+        let h = try Harness(); let original = try h.add()
+        h.afterPay = {
+            if action == "pause" { try await h.executor.pause(original.id) }
+            if action == "cancel" { try await h.executor.cancel(original.id) }
+            if action == "edit" {
+                var edit = original; edit.startAt = h.now; edit.nextRunAt = h.now
+                await #expect(throws: (any Error).self) { try await h.executor.save(edit, editing: true) }
+            }
+        }
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 1)
+        let saved = try h.store.load().schedules[original.id]
+        if action == "cancel" { #expect(saved == nil) }
+        else { #expect(saved?.occurrencesPaid == 1 && saved?.status == (action == "pause" ? "paused" : "active")) }
+        #expect(!h.controller.locked)
     }
     @Test func consumedJournalBlocksAnOlderMMKVSnapshot() async throws {
         let h = try Harness(); let original = try h.add()

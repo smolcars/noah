@@ -58,7 +58,7 @@ final class RecurringStore: @unchecked Sendable {
             // Merge known fields, retaining unknown RN/native fields on both the envelope and schedule.
             var value = schedules[schedule.id] as? [String: Any] ?? [:]
             let fields = try JSONSerialization.jsonObject(with: JSONEncoder().encode(schedule)) as! [String: Any]
-            for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "retryNotBefore", "inFlight"] { value[key] = NSNull() }
+            for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "retryNotBefore", "inFlight", "nativeRevision"] { value[key] = NSNull() }
             value.merge(fields) { _, new in new }
             schedules[schedule.id] = value
             state["schedules"] = schedules

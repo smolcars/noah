@@ -42,6 +42,7 @@ struct RecurringPaymentEditorView: View {
             Section {
                 Text("Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time.")
                     .foregroundStyle(NoahColor.mutedForeground)
+                if original != nil { Text("Saving starts a new schedule at the first payment date. Previous attempts remain visible.").font(NoahFont.footnote) }
             }
             Section("Name") { TextField("e.g. Rent, Donation, VPN", text: $label).focused($focus, equals: .label).accessibilityIdentifier("recurring-label-input") }
             Section("Recipient") {
@@ -89,8 +90,10 @@ struct RecurringPaymentEditorView: View {
         .scrollDismissesKeyboard(.interactively)
         .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { focus = nil } } }
         .safeAreaInset(edge: .bottom) {
-            NoahButton(title: original == nil ? "Schedule payment" : "Save payment", isLoading: saving) { focus = nil; save() }.padding()
-                .accessibilityIdentifier("recurring-save-button")
+            if focus == nil {
+                NoahButton(title: original == nil ? "Schedule payment" : "Save payment", isLoading: saving) { save() }.padding()
+                    .accessibilityIdentifier("recurring-save-button")
+            }
         }
     }
     private var preview: [Double] {
@@ -111,7 +114,7 @@ struct RecurringPaymentEditorView: View {
                 let recipient = try RecurringRecipient.resolve(recipient)
                 var schedule = draft(destination: recipient.destination, type: recipient.type)
                 // Editing grants a new policy from its chosen first payment; retain visible history.
-                if let original { schedule.runs = original.runs; schedule.occurrencesPaid = original.occurrencesPaid }
+                if let original { schedule.runs = original.runs }
                 try await executor.save(schedule, editing: original != nil)
                 dismiss()
             } catch { self.error = error.localizedDescription }

@@ -70,7 +70,8 @@ enum RecurringRecipient {
 
 /// iOS uses the same server wake + foreground execution and local reminder policy as RN.
 enum RecurringNotifications {
-    static func refresh(_ schedules: [RecurringPayment], result: RecurringPayment?) async {
+    @MainActor private static var revision = UUID()
+    @MainActor static func refresh(_ schedules: [RecurringPayment], result: RecurringPayment?) async {
         let center = UNUserNotificationCenter.current()
         if let result {
             let content = UNMutableNotificationContent()
@@ -85,11 +86,23 @@ enum RecurringNotifications {
                 content.body = "\(result.amountSat) sats sent to \(result.label)."
             }
             content.sound = .default
-            try? await center.add(.init(identifier: UUID().uuidString, content: content, trigger: nil))
+            center.add(.init(identifier: UUID().uuidString, content: content, trigger: nil), withCompletionHandler: nil)
             return
         }
-        let pending = await center.pendingNotificationRequests().map(\.identifier).filter { $0.hasPrefix("recurring-") }
-        center.removePendingNotificationRequests(withIdentifiers: pending)
+        revision = UUID()
+        let requested = revision
+        // Notification-daemon callbacks are advisory and must never hold up payments or the UI.
+        center.getPendingNotificationRequests { pending in
+            let identifiers = pending.map(\.identifier).filter { $0.hasPrefix("recurring-") }
+            Task { @MainActor in
+                guard requested == revision else { return }
+                let center = UNUserNotificationCenter.current()
+                center.removePendingNotificationRequests(withIdentifiers: identifiers)
+                schedule(schedules, center: center)
+            }
+        }
+    }
+    private static func schedule(_ schedules: [RecurringPayment], center: UNUserNotificationCenter) {
         for schedule in schedules where schedule.status == "active" && schedule.inFlight == nil {
             guard let due = schedule.nextRunAt else { continue }
             for (suffix, at, title, body) in [
@@ -100,7 +113,7 @@ enum RecurringNotifications {
                 content.title = title; content.body = body; content.sound = .default
                 content.userInfo = ["notification_type": "recurring_payment_reminder"]
                 let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, (at - RecurringPayment.now) / 1000), repeats: false)
-                try? await center.add(.init(identifier: "recurring-\(schedule.id)-\(suffix)", content: content, trigger: trigger))
+                center.add(.init(identifier: "recurring-\(schedule.id)-\(suffix)", content: content, trigger: trigger), withCompletionHandler: nil)
             }
         }
     }
