@@ -31,3 +31,30 @@ removal release; removal requires confirming that supported clients use backup v
 the legacy restore window has ended.
 
 Removal is tracked in [GitHub issue #264](https://github.com/smolcars/noah/issues/264).
+
+## Local inspection tool
+
+`scripts/decrypt_backup.js` accepts raw binary or base64 v1/v2 envelopes. Its
+existing three arguments still write a **plaintext ZIP** to the output file:
+
+```sh
+bun scripts/decrypt_backup.js encrypted.noahbackup decrypted.zip "<recovery phrase>"
+```
+
+For v2, add `--extract <new-directory>` to also extract exactly `manifest.json`
+and `db.sqlite`. Validation finishes before extraction creates the directory;
+an existing directory is refused. Required manifest fields/types/version, ZIP
+entry names/types/duplicates, per-entry CRC, inflation limits (64 KiB manifest,
+1 GiB database) and the manifest's snapshot SHA-256 are checked. Stored/deflated,
+single-disk, non-ZIP64 v2 archives are supported; unknown manifest fields are
+allowed, matching the apps. This is an inspection tool: it does not run Bark's
+schema/identity validation or install a wallet. V1 keeps its existing ZIP output;
+the optional extraction flag is v2-only.
+
+Diagnostics print paths, versions and lengths, never the recovery phrase,
+derived AES key or plaintext. The ZIP and extracted database intentionally
+contain decrypted wallet data; keep and delete them accordingly. New output
+files use mode 0600 and extraction directories 0700. The existing command-line
+phrase interface remains visible to shell history/process listings. No secrets
+are required to run `bun test scripts/decrypt_backup.test.js` or the equivalent
+`node --test` command (Node 22.2+); all fixtures contain public synthetic data.

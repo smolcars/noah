@@ -57,3 +57,49 @@ apps/ios/UpgradeTests/run.sh <dedicated-simulator-udid> /path/to/Noah-Regtest.ap
 `FUNDED=1` also receives 100k sats from the regtest bark CLI and sends 5k through the RN Send flow, then requires the native side to report the RN database's fingerprint, movement count and spendable balance.
 
 It wipes that simulator's Noah regtest app, creates a wallet in the RN app with the RN Maestro onboarding flows, installs the native build over it, and runs `UpgradeCompatibilityTests` inside the upgraded app's sandbox (seed, MMKV, wallet DB, opening the DB with bark-bolt-ffi).
+
+## Direct native backup compatibility (2026-10-20)
+
+Base `5a19f992`. `NoahTests/CrossPlatformBackupTests.swift` exports through the
+real Swift `BackupService` and restores the committed Android `BackupService`
+export through `WalletRestorer`: file download, envelope/archive checks, SDK
+snapshot validation, transactional installation, secure seed save and production
+SDK reopening. Only the server metadata transport is replaced. The tests use
+separate datadirs and unique test Keychain items; no app wallet is replaced.
+
+Both committed native exports in `apps/fixtures/native-backups.json` restore
+with fingerprint **53bdf6b1**, **0 movements** (full history empty), and **0 sats
+in all 14 balance rows**. This proves direct native file compatibility for a
+public BIP39 vector and an unfunded regtest wallet. It does not repeat the earlier
+funded/S3 acceptance test. Generation uses the SDK's offline factory inside a
+session; consumption uses the production opener. Ark connectivity is unnecessary
+for this empty-wallet comparison (no daemon or sync is started).
+
+V2 includes only `manifest.json` and a self-contained `db.sqlite`; no mnemonic,
+Keychain/auth token, MMKV settings, recurring schedules, logs, widgets, WAL/SHM or
+attachments. Manifest fields on both platforms are `formatVersion` (2),
+`createdAt` (UTC ISO milliseconds), `snapshotSha256`, `network`,
+`walletFingerprint`, required nullable `serverPubkey` and `mailboxPubkey`, and
+`barkSchemaVersion` (currently 42). The restorer checks snapshot hash, network,
+fingerprint, schema and both optional identities against the SDK. V1 remains a
+base64 envelope over the variant's legacy directory subtree, including sidecars.
+
+There is **no app/build version field**. A newer app writing the same supported
+format/schema remains compatible. The four newer-version regression cases use
+server-listed format 3, envelope 3, manifest 3 and a real SQLite migrations table
+at 9999 (with matching manifest/hash). All refuse before installation and retain
+the previous database bytes and seed, with no pending journal or open wallet.
+Existing retained-backup fallback remains: a rejected candidate may be followed
+by an older compatible server-listed backup.
+
+**Known restore-copy bug, left unfixed:** only the server-listed format error
+says to update Noah. Internal envelope/manifest versions and the SDK's explicit
+“newer than supported version” schema error become “Please try again later.”
+The opt-in failing acceptance test reproduces all three paths; default suites
+skip it. Reproduce on your own simulator with
+`TEST_RUNNER_NOAH_REQUIRE_FUTURE_BACKUP_COPY=1` and
+`-only-testing:'NoahTests/CrossPlatformBackupTests/newerBackupsExplainUpdateRequired(_:)'`.
+Use `test-without-building` after building this test source. Ordinary focused
+verification uses `-only-testing:NoahTests/CrossPlatformBackupTests`.
+
+Verification: native export generation passed once; focused restore + four newer-version safety cases passed. The opt-in copy reproduction failed all three cases as expected. Final full NoahTests ran once after the last iOS code change: **694 total / 669 passed / 25 opt-in skipped / 0 failed**, **144 suites** (1,393 expanded passes in xcresult). XcodeGen regenerated the project; regtest, arm64, ONLY_ACTIVE_ARCH=YES, code signing enabled, DerivedData under `/private/tmp`. The owned iPhone 17 / iOS 27.0 simulator **Noah Backup Cross 5612** (`B8D12D73-AFA2-47D2-958F-8369D59D85AF`) was identity-checked, shut down and deleted. Owned DerivedData, result bundles and temporary exports/logs were removed. No protected simulator/device or Docker lifecycle was controlled.

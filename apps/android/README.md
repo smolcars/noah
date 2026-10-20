@@ -889,3 +889,62 @@ No live Sentry ingestion, credentialed mapping upload or physical/device crash/A
 was attempted. These require the team's CI credentials or an owned test device.
 No emulator, simulator, physical device or Docker was used for this change.
 Android-only commits bypassed the client/server Husky checks.
+
+### Direct native backup compatibility (2026-10-20)
+
+Base `5a19f992`. `CrossPlatformBackupTest` exports through Kotlin `BackupService`
+and restores the unaltered Swift service export in
+`apps/fixtures/native-backups.json`. An in-process loopback HTTP fixture exercises
+production Ktor/OkHttp metadata/download paths; SDK snapshot validation,
+`WalletRestorer`, filesystem transaction/seed commit and the production
+SDK opener all run. Each test owns a fresh datadir and memory seed item, leaving
+the app's real wallet untouched.
+
+Both directions match fingerprint **53bdf6b1**, **0 movements** (entire history
+empty) and **0 sats in every one of the 14 balance rows**. The committed files
+are native-produced v2 envelopes around real synthetic regtest SQLite snapshots,
+using the public BIP39 `abandon` × 11 + `about` vector. No funding, S3 upload,
+container changes or real credentials were needed. This verifies direct native
+file compatibility; it does not repeat prior funded restore acceptance.
+
+V2 contains exactly `manifest.json` + `db.sqlite`; it excludes mnemonic/seed,
+auth tokens, MMKV preferences, recurring schedules, logs, widgets and database
+sidecars. Both manifests have `formatVersion=2`, `createdAt` (UTC ISO milliseconds),
+`snapshotSha256`, `network`, `walletFingerprint`, required nullable
+`serverPubkey`/`mailboxPubkey`, and `barkSchemaVersion` (42). Restore validates the
+hash, network, fingerprint, schema and optional identities with the SDK before
+installation. V1 retains its base64 legacy subtree extraction, including sidecars.
+No app/build version is stored: newer app versions using supported format/schema
+remain compatible. Future list/envelope/manifest versions (3) and an actual
+SQLite migration 9999 are refused before installation, preserving the prior DB
+bytes and seed with no journal/open wallet. The existing restorer can still fall
+back to an older compatible retained backup after rejecting a candidate.
+
+**Known bug, not fixed:** only future format in server metadata produces the
+update-required message. Internal future envelope/manifest versions and newer
+SDK database schema map to generic retry-later copy. Enable the deliberately
+failing `newerBackupsExplainUpdateRequired` test with
+`-e noahRequireFutureBackupCopy 1`; it first reproduces the manifest case.
+The normal safety test covers all four newer-version rejection paths.
+
+Run only on an emulator you created:
+
+```sh
+adb -s YOUR_SERIAL shell am instrument -w \
+  -e class 'com.noahwallet.services.CrossPlatformBackupTest#restoresIOSServiceExport,com.noahwallet.services.CrossPlatformBackupTest#refusesNewerBackupsWithoutPartialRestore' \
+  com.noahwallet.regtest.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+No external fixture server or live Noah server is required. The SDK reads local
+regtest configuration but no sync/daemon/funding operation runs. See the shared
+fixture README for the opt-in native exporter.
+
+Verification: **14 targeted JVM tests** passed; native export generation and both direct-restore/safety instrumentation methods passed (**3 distinct native tests**, including four safety cases). The opt-in copy reproduction failed as expected. An initial restore run lacked the test documents directory; a subsequent process was killed for a startup ANR before tests began. After correcting only test setup, the final two-method run passed in **34.608 seconds**.
+
+The required final command ran once after the last Android code change:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+Result: **3,462 JVM tests / 122 suites / 0 failures / 0 errors / 0 skips**, regtest debug APK assembled, **BUILD SUCCESSFUL in 3m 5s**. All targeted Gradle calls also used `--max-workers=2`. The owned Android 15 Google APIs ARM64 AVD **NoahBackupCross5612** was explicitly mapped to **emulator-5612**, identity-checked, shut down and deleted. Temporary exports/logs were removed and no owned build process remains. No other emulator, physical device or Docker lifecycle was controlled.

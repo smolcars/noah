@@ -169,7 +169,8 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Backup upload and unchanged-snapshot skip; live S3 round trip at port 3100 — Android
 - [x] Shared Node/Info-ZIP v1/v2 archives and a Node-made real wallet snapshot restored/reopened — Android
 - [x] Independently built v2 + v1 backup files (Node crypto + Info-ZIP, `backup-archives.json`) open on iOS
-- [ ] Verify a direct iOS ↔ Android backup round trip and add v2 support to `scripts/decrypt_backup.js` (line 29 still accepts only v1). Both native v1/v2 codecs, shared fixtures and Node → Android are verified; those do not establish a direct cross-platform round trip (`apps/android/README.md:575`, `60ebc1b7`)
+- [x] Direct iOS ↔ Android `BackupService` exports → `WalletRestorer` → real SDK reopen verified both ways (2026-10-20): public BIP39 vector, fingerprint `53bdf6b1`, empty movements and all 14 balance rows zero; native encrypted files retained in `apps/fixtures/native-backups.json`. `scripts/decrypt_backup.js` keeps v1 and adds v2 validation/extraction; 31 checks pass under both Bun and Node. See both native README backup notes.
+  - [ ] Newer-backup copy: list format 3 clearly asks for an update; internal envelope/manifest 3 and database schema 9999 safely refuse before installation but show generic retry-later copy. Opt-in failing `newerBackupsExplainUpdateRequired` tests retained on both platforms; restore code deliberately unchanged.
 
 ### 0.8 Translations
 - [ ] Tool: GT catalogs → `.xcstrings` + `strings.xml` for en/es/ja/ko/sv (placeholders, plurals, rich text flattened)

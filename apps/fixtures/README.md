@@ -166,3 +166,32 @@ Home. See both UpgradeTests READMEs for native file paths, atomic-write ordering
 empty recurring server sync, deletion and cleanup behavior. Earlier fixture
 notes about blocking malformed RN stores apply only to direct codec operations,
 not to the best-effort importer.
+
+`backup-crypto.json` and `backup-crypto-unicode.json` contain Node-generated
+AES-GCM envelope vectors (including empty/binary plaintext and original UTF-8
+password bytes). `backup-archives.json` contains complete independent Node +
+Info-ZIP v1/v2 files; its database bytes are synthetic, not usable SDK databases.
+
+`native-backups.json` contains the **unaltered encrypted exports** of each native
+`BackupService`, generated on 2026-10-20 with bark-bolt-ffi 0.5.0. Both use the
+public BIP39 `abandon` × 11 + `about` vector and fresh offline regtest databases:
+fingerprint `53bdf6b1`, empty movements, zero in every balance row. No real funds,
+private credentials or server backup objects are involved. Fresh salts/nonces and
+SQLite timestamps make regeneration intentionally non-byte-deterministic; the
+committed inputs make consumption repeatable. Do not replace these files with
+Node-generated envelopes: that would lose the direct native writer evidence.
+
+Generation is opt-in: iOS `CrossPlatformBackupTests.generateIOSServiceExport()`
+with `TEST_RUNNER_NOAH_GENERATE_CROSS_BACKUP=1` writes
+`tmp/native-backup-ios.json`; Android
+`CrossPlatformBackupTest#generateAndroidServiceExport` with instrumentation
+`-e noahGenerateCrossBackup 1` writes `cache/native-backup-android.json`. Run only
+on disposable devices you created, copy these two JSON cases into the shared
+`cases` array, and rerun both consumers. Each generator uses a separate wallet
+directory and deletes its plaintext wallet/scratch afterward. See both native
+READMEs for direct-restore and newer-backup evidence.
+
+The decrypt tool fixture/security checks run from the repo root with either
+`bun test scripts/decrypt_backup.test.js` or
+`node --test scripts/decrypt_backup.test.js` (Node 22.2+). They check both native
+exports as well as the independent crypto/archive vectors.
