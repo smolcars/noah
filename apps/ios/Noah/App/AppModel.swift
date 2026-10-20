@@ -114,8 +114,8 @@ final class AppModel {
         switch state {
         case .existingWallet:
             resumeOnboarding = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized != true
-            phase = resumeOnboarding ? .onboarding : .wallet
             await openExistingWallet()
+            if phase == .launching { phase = resumeOnboarding ? .onboarding : .wallet }
         case .onboarding:
             phase = .onboarding
         case .seedWithoutWalletData, .walletDataWithoutSeed, .secureStorageUnavailable, .invalidSeed, .seedConflict, .incompatibleStorage:
@@ -125,7 +125,13 @@ final class AppModel {
 
     /// Onboarding "I accept": create (or resume) the wallet.
     func createWallet() async throws {
-        try await creator.createOrResume()
+        do { try await creator.createOrResume() }
+        catch {
+            if let failure = error as? StoredSeed.Failure {
+                phase = .blocked(failure == .invalid ? .invalidSeed : .seedConflict)
+            }
+            throw error
+        }
         var wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
         wallet.isInitialized = false
         wallet.staticVtxoPubkey = try await session.peekPublicKey(index: 0)
@@ -135,7 +141,8 @@ final class AppModel {
     }
 
     func currentMnemonicWords() -> [String] {
-        guard case .found(let mnemonic) = KeychainPassword.mnemonic(for: variant).read() else { return [] }
+        guard case .found(let value) = KeychainPassword.mnemonic(for: variant).read(),
+              let mnemonic = try? StoredSeed.normalized(value) else { return [] }
         return mnemonic.split(separator: " ").map(String.init)
     }
 
@@ -180,6 +187,9 @@ final class AppModel {
                 }).finish(outcome)
         } catch {
             log.e("Restore failed: \(SafeErrorDescription.of(error))")
+            if let failure = error as? StoredSeed.Failure {
+                phase = .blocked(failure == .invalid ? .invalidSeed : .seedConflict)
+            }
             restoreIssue = committed ? .committed : .from(error)
         }
     }
@@ -240,6 +250,8 @@ final class AppModel {
                 summary = latest
                 walletError = nil
             }
+            // Identity checks must finish before exposing wallet/settings actions.
+            if phase == .launching { phase = resumeOnboarding ? .onboarding : .wallet }
         } catch {
             if let failure = error as? StoredSeed.Failure {
                 phase = .blocked(failure == .invalid ? .invalidSeed : .seedConflict)

@@ -85,6 +85,8 @@ actor WalletCreator {
         let seed: String?
         switch dependencies.readSeed() {
         case .unavailable(let status):
+            if status == errSecDecode { throw StoredSeed.Failure.invalid }
+            if status == errSecDuplicateItem { throw StoredSeed.Failure.conflict }
             throw Failure.secureStorageUnavailable(status)
         case .found(let value):
             seed = try StoredSeed.normalized(value)

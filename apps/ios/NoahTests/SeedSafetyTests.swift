@@ -46,7 +46,7 @@ struct SeedSafetyTests {
         try second.save(try generateMnemonic())
         let blocked = first.read() == .unavailable(errSecDuplicateItem)
         #expect(blocked)
-        #expect(LaunchState.SeedStatus(first.read()) == .conflict)
+        #expect({ LaunchState.SeedStatus(first.read()) == .conflict }())
         second.remove()
         let preserved: Bool
         if case .found = first.read() { preserved = true } else { preserved = false }
@@ -80,7 +80,32 @@ struct SeedSafetyTests {
         #expect(!FileManager.default.fileExists(atPath: root.path))
     }
 
-    @Test func fingerprintConflictDoesNotWriteWalletFiles() async throws {
+    @Test func undecodableKeychainBytesBlockRecoveryWithoutReplacement() throws {
+        let item = KeychainPassword(service: "com.noah.mnemonic.test-\(UUID().uuidString)", account: "noah")
+        defer { item.remove() }
+        let attributes: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: item.service, kSecAttrAccount as String: item.account,
+            kSecUseDataProtectionKeychain as String: true, kSecAttrSynchronizable as String: false,
+            kSecValueData as String: Data([0xff, 0xfe])]
+        #expect(SecItemAdd(attributes as CFDictionary, nil) == errSecSuccess)
+        #expect(LaunchState.SeedStatus(item.read()) == .invalid)
+        #expect(throws: StoredSeed.Failure.invalid) { try StoredSeed.requireUsable(item.read()) }
+        let unchanged = item.read() == .unavailable(errSecDecode)
+        #expect(unchanged)
+    }
+
+    @Test func unavailableConflictAndDecodeErrorsNeverCreate() async {
+        for (status, failure) in [(errSecDecode, StoredSeed.Failure.invalid), (errSecDuplicateItem, .conflict)] {
+            let fake = WalletCreatorTests.Fake()
+            fake.seed = .unavailable(status)
+            fake.database = true
+            await #expect(throws: failure) { try await WalletCreator(dependencies: fake.dependencies()).createOrResume() }
+            let unchanged = fake.seed == .unavailable(status) && fake.database && fake.generated.isEmpty && fake.opened.isEmpty && fake.created.isEmpty
+            #expect(unchanged)
+        }
+    }
+
+    @Test func identityConflictsDoNotWriteWalletFiles() async throws {
         let root = FileManager.default.temporaryDirectory.appending(path: "seed-conflict-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: root)
@@ -98,5 +123,13 @@ struct SeedSafetyTests {
         let unchanged = try Data(contentsOf: location.database) == before
         #expect(unchanged)
         #expect(try FileManager.default.contentsOfDirectory(atPath: location.directory.path) == ["db.sqlite"])
+        let legacy = location.directory.appending(path: "bark.sqlite")
+        let candidate = Data("legacy candidate".utf8)
+        try candidate.write(to: legacy)
+        await #expect(throws: StoredSeed.Failure.conflict) {
+            try await session.openExisting(mnemonic: seed, runDaemon: false, appVersion: "test")
+        }
+        #expect(try Data(contentsOf: location.database) == before)
+        #expect(try Data(contentsOf: legacy) == candidate)
     }
 }

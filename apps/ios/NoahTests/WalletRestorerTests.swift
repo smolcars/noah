@@ -116,7 +116,7 @@ struct WalletRestorerTests {
 
     private func expectPreviousWalletBack(_ seed: FakeSeed) throws {
         #expect(deviceBWallet == "previous wallet")
-        #expect(seed.current == Self.previousSeed)
+        #expect({ seed.current == Self.previousSeed }())
         try expectNoRestoreLeftovers()
     }
 
@@ -164,10 +164,10 @@ struct WalletRestorerTests {
             makeClient: { _ in Client(serverURL: URL(string: "http://fake")!, transport: FakeServer(backupId: "b1", encrypted: backup)) },
             walletChanged: {})
         _ = try await restorer.restore(mnemonic: mnemonic)
-        #expect(deviceB.databaseExists); #expect(seed.read() == .found(mnemonic))
+        #expect({ deviceB.databaseExists }()); #expect({ seed.read() == .found(mnemonic) }())
         #expect(!FileManager.default.fileExists(atPath: deviceB.deletionDirectory.path))
         try await lifecycle.delete()
-        #expect(seed.read() == .notFound)
+        #expect({ seed.read() == .notFound }())
         #expect(!deviceB.databaseExists)
         #expect(!FileManager.default.fileExists(atPath: deviceB.deletionMarker.path))
     }
@@ -210,7 +210,7 @@ struct WalletRestorerTests {
         _ = try await restorer.restore(mnemonic: replacementSeed)
         try await session.openExisting(mnemonic: replacementSeed, runDaemon: false, appVersion: "test")
         #expect(try await session.summary()?.fingerprint != oldFingerprint)
-        #expect(seed.read() == .found(replacementSeed))
+        #expect({ seed.read() == .found(replacementSeed) }())
         #expect(controller.state == .ready && controller.attempt == nil)
         try await session.close()
     }
@@ -436,7 +436,7 @@ struct WalletRestorerTests {
 
         let outcome = try await restorer.restore(mnemonic: mnemonic)
         #expect(outcome.backupId == "b1")
-        #expect(seed.current == mnemonic)
+        #expect({ seed.current == mnemonic }())
         #expect(deviceBWallet != "previous wallet")
         try expectNoRestoreLeftovers()
         // The open check released the datadir lock.
@@ -462,7 +462,7 @@ struct WalletRestorerTests {
         let (restorer, mnemonic) = try await setUp(seed: seed)
 
         _ = try await restorer.restore(mnemonic: mnemonic)
-        #expect(seed.current == mnemonic)
+        #expect({ seed.current == mnemonic }())
         #expect(deviceBWallet != "previous wallet")
         try expectNoRestoreLeftovers()
     }

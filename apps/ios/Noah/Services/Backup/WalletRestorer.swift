@@ -61,7 +61,8 @@ struct WalletRestorer: Sendable {
 
     private func restoreLocked(mnemonic: String, progress: @Sendable (Step) -> Void) async throws -> Outcome {
         _ = try StoredSeed.normalized(mnemonic)
-        try StoredSeed.requireUsable(seed.read())
+        do { try StoredSeed.requireUsable(seed.read()) }
+        catch is KeychainPassword.WriteError { throw Failure.secureStorageUnavailable }
         guard !location.hasMultipleDatabases else { throw StoredSeed.Failure.conflict }
         guard !FileManager.default.fileExists(atPath: location.deletionMarker.path) else {
             throw WalletSession.OpenError.restorePending

@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 import SQLite3
 import Testing
@@ -263,6 +264,7 @@ struct WalletLifecycleTests {
         let (seed, token) = items()
         defer { seed.remove(); token.remove() }
         try seed.save("old wallet")
+        let replacementMnemonic = try generateMnemonic()
         let mutation = WalletMutationGate()
         let committed = Gate()
         let settlement = Gate()
@@ -278,7 +280,7 @@ struct WalletLifecycleTests {
             mutation: mutation,
             readSeed: { seed.read() }, saveSeed: { try seed.save($0) }, deleteSeed: { seed.delete(onlyIfValueIs: $0) },
             walletDataExists: { location.hasAnyData }, datadirExists: { FileManager.default.fileExists(atPath: location.directory.path) },
-            removeAttemptFiles: { _ in false }, generateMnemonic: { "new wallet" },
+            removeAttemptFiles: { _ in false }, generateMnemonic: { replacementMnemonic },
             openExisting: { _ in throw Unreachable() }, reserve: { try await session.reserve() },
             release: { await session.release($0) },
             createNew: { reservation, _ in
@@ -295,12 +297,12 @@ struct WalletLifecycleTests {
         try await replacement.value
         _ = try await push.value
         #expect(location.databaseExists)
-        #expect(seed.read() == .found("new wallet"))
+        #expect({ seed.read() == .found(replacementMnemonic) }())
         #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
         // A late headless recovery also rechecks after the new wallet exists.
         _ = try await recovery.settle()
         #expect(location.databaseExists)
-        #expect(seed.read() == .found("new wallet"))
+        #expect({ seed.read() == .found(replacementMnemonic) }())
     }
 
     @Test func markerForAnotherOrLegacyWalletNeverDeletesCurrentData() async throws {
