@@ -174,4 +174,42 @@ import Testing
         #expect(!(await WalletBackgroundActivity.shared.isRunning))
     }
 
+    struct OpenedAfterExpiry: Error {}
+
+    @Test(arguments: ["budget", "deadline", "cancellation"], [true, false])
+    func expiredShieldedTaskCannotStartWalletOpen(expiry: String, ensure: Bool) async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "review-open-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let location = WalletDataLocation(variant: .regtest, documentsDirectory: directory)
+        try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
+        var database: OpaquePointer?
+        try #require(sqlite3_open(location.database.path, &database) == SQLITE_OK)
+        try #require(sqlite3_exec(database, "CREATE TABLE bark_properties (network TEXT, fingerprint TEXT); INSERT INTO bark_properties VALUES ('regtest', 'test');", nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(database)
+        let recorder = PushJobsTests.Recorder()
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in
+            recorder.add("native open")
+            throw OpenedAfterExpiry()
+        }
+        let budget = RecurringSubmissionBudget()
+        await RecurringSubmissionBudget.$current.withValue(budget) {
+            await #expect(throws: CancellationError.self) {
+                try await session.withBackgroundAccess {
+                    // Model OS revocation after ownership, before the actor admits the open.
+                    if expiry == "budget" { budget.revoke() }
+                    try await RecurringExecutionBudget.$deadline.withValue(expiry == "deadline" ? .now - .seconds(1) : nil) {
+                        try await Task {
+                            if expiry == "cancellation" { withUnsafeCurrentTask { $0?.cancel() } }
+                            if ensure { try await session.ensureOpen(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+                            else { try await session.openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+                        }.value
+                    }
+                }
+            }
+        }
+        #expect(recorder.all.isEmpty)
+        let reservation = try await session.reserve()
+        await session.release(reservation)
+    }
+
 }

@@ -158,9 +158,11 @@ actor WalletSession {
     /// wallet, or belongs to another network.
     func openExisting(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
         try checkAccess()
+        try BackgroundExecution.checkActive()
         guard case .closed = state else { throw OpenError.busy }
         guard !location.restorePending else { throw OpenError.restorePending }
         try checkExistingDatabase()
+        let admission = RecurringSubmissionBudget()
         let opener = self.opener
         let datadir = location.directory.path
         // The attempt settles the state itself before anyone awaiting it
@@ -168,6 +170,10 @@ actor WalletSession {
         // finished open still marked as opening.
         let attempt = Task {
             do {
+                try BackgroundExecution.checkActive()
+                guard RecurringSubmissionBudget.$current.withValue(admission, operation: { RecurringSubmissionBudget.available }) else {
+                    throw CancellationError()
+                }
                 let handles = try await opener(mnemonic, datadir, runDaemon && Self.backgroundOwner == nil, appVersion, false)
                 state = .open(handles)
                 return handles
@@ -177,7 +183,12 @@ actor WalletSession {
             }
         }
         state = .opening(attempt)
-        _ = try await attempt.value
+        _ = try await withTaskCancellationHandler {
+            try await attempt.value
+        } onCancel: {
+            // Revoke admission without cancelling native work that already started.
+            admission.revoke()
+        }
     }
 
     /// Opens the existing wallet unless it is already open (RN's
@@ -185,6 +196,7 @@ actor WalletSession {
     /// Waits for an open already in progress instead of failing.
     func ensureOpen(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
         try checkAccess()
+        try BackgroundExecution.checkActive()
         switch state {
         case .open:
             return
