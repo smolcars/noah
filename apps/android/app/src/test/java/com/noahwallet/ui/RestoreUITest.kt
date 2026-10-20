@@ -243,7 +243,7 @@ class RestoreFlowTest {
         flow.run(phrase); assertEquals(2, calls)
     }
     @Test fun stepLabelsCoverEngineStages() {
-        assertEquals("Starting restore…", null.restoreMessage())
+        assertEquals("Starting restore...", null.restoreMessage())
         assertEquals(listOf("Fetching backup…", "Validating backup…", "Installing wallet…", "Verifying recovery phrase storage…"),
             WalletRestorer.Step.entries.map { it.restoreMessage() })
     }
