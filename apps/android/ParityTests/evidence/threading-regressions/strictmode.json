@@ -1,0 +1,68 @@
+[
+  {
+    "flow": "cold-initialized-battery-launch",
+    "durationSeconds": 15,
+    "pid": 4721,
+    "startedAt": "2026-10-20T10:34:10.387944+00:00",
+    "finishedAt": "2026-10-20T10:34:29.093556+00:00",
+    "diskReads": 0,
+    "diskWrites": 0,
+    "network": 0,
+    "total": 0
+  },
+  {
+    "flow": "send-from-home",
+    "durationSeconds": 15,
+    "pid": 4721,
+    "startedAt": "2026-10-20T10:34:35.706049+00:00",
+    "finishedAt": "2026-10-20T10:34:51.099323+00:00",
+    "diskReads": 0,
+    "diskWrites": 0,
+    "network": 0,
+    "total": 0
+  },
+  {
+    "flow": "home-from-send",
+    "durationSeconds": 15,
+    "pid": 4721,
+    "startedAt": "2026-10-20T10:35:06.414783+00:00",
+    "finishedAt": "2026-10-20T10:35:22.035144+00:00",
+    "diskReads": 0,
+    "diskWrites": 0,
+    "network": 0,
+    "total": 0
+  },
+  {
+    "flow": "cold-initialized-launch",
+    "durationSeconds": 15,
+    "pid": 5073,
+    "startedAt": "2026-10-20T10:35:43.690516+00:00",
+    "finishedAt": "2026-10-20T10:36:02.102174+00:00",
+    "diskReads": 0,
+    "diskWrites": 0,
+    "network": 0,
+    "total": 0
+  },
+  {
+    "flow": "recurring-from-settings",
+    "durationSeconds": 15,
+    "pid": 5073,
+    "startedAt": "2026-10-20T10:36:16.497306+00:00",
+    "finishedAt": "2026-10-20T10:36:32.234668+00:00",
+    "diskReads": 0,
+    "diskWrites": 0,
+    "network": 0,
+    "total": 0
+  },
+  {
+    "flow": "foreground-recurring-with-timer",
+    "durationSeconds": 75,
+    "pid": 5073,
+    "startedAt": "2026-10-20T10:36:38.136749+00:00",
+    "finishedAt": "2026-10-20T10:37:54.639320+00:00",
+    "diskReads": 0,
+    "diskWrites": 0,
+    "network": 0,
+    "total": 0
+  }
+]

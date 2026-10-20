@@ -522,3 +522,46 @@ thread and proves that no reservation is granted on its suspended result. Existi
 journal-before-payment, migration-failure, audit-failure and counted-session tests
 remain in the targeted runs. Funded-device StrictMode counts and final verification
 are recorded in [ParityTests](../ParityTests/README.md#initialized-wallet-main-thread-io-base-37ab2125).
+
+## Launch-threading regression fixes (base `1d9aff5d`)
+
+Acknowledgement and the destructive history-check override now acquire the same
+counted Send session reservation as journal loading/submission. They validate the
+captured controller generation and owning wallet after reservation acquisition and
+after the suspending identity lookup, before quarantine, audit or removal. Audit
+and removal retain ownership until completion, so lifecycle drain cannot finish
+and recreate the datadir underneath an old clear. Unbound/unreadable evidence uses
+the wallet identity captured during load; it never authorizes deleting another
+wallet's journal. Failure keeps the lock and evidence.
+
+The journal-write audit covered foreign-wallet removal, unsafe-outcome/v1
+migration, Lightning inspection markers, pending attempts, recurring stopped
+attempts, receipt/status persistence and refresh/reconciliation. Those paths
+already retain counted reservations. Added generation checks after suspending
+identity/preparation/payment/receipt refresh prevent a stale operation from
+writing/publishing into a new controller generation; stale preparation also
+releases its review. Quarantine and audit were the other unreserved mutations;
+both now share clear's reservation. Recurring acknowledgement names the exact
+attempt captured before settlement I/O and cannot clear a replacement payment.
+
+`SendJournalOwnershipTest` derives its delayed-clear race from the review probe.
+It **failed before** the fix when replacement overtook removal and **passes after**
+the fix, with replacement waiting for the old clear and retaining its own receipt.
+Further cases delay reservation/identity for both acknowledgement and override,
+with and without invalidation, and invalidate a pending preparation. They assert
+zero stale mutation/submission and preserved replacement evidence.
+
+`WalletSessionUiReadTest`, also probe-derived, **failed before / passes after**:
+`isOpen` returns while an IO suspension read owns the session monitor. Session
+state is volatile; UI reads take no monitor. Observer subscription/cleanup,
+close/settled-close, direct create, and restore reservation setup run on IO;
+action-time suspension checks and counted drain remain authoritative. Existing
+creator, lifecycle and restore-recovery reservation call sites already run on IO.
+
+Final counts and owned-emulator StrictMode evidence are in
+[ParityTests](../ParityTests/README.md#launch-threading-review-regressions-base-1d9aff5d).
+
+The final full check ran once: **2,899 tests / 88 suites passed**, zero failures/
+errors/skips, with APK assembly in the same run. Owned-AVD launch/Home/Send/
+Recurring/foreground StrictMode samples all measured zero violations; the wallet
+was initialized and unfunded. No live payment or crash was induced.

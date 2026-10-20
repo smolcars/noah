@@ -585,3 +585,45 @@ failed reads prevent execution, and stop/replacement during binding cannot pay.
 The targeted payment/widget-value run passed **2,053 cases / 31 suites**, zero
 failures/errors/skips, including **1,455 recurring cases**. Final full-suite and
 funded-device StrictMode results are in [ParityTests](../ParityTests/README.md#initialized-wallet-main-thread-io-base-37ab2125).
+
+## Launch-threading regression fixes (base `1d9aff5d`)
+
+Settlement captures the exact Send attempt, outcome and error before any storage
+suspension. It validates the wallet/database binding inside the durable mutation,
+consumes only that occurrence, advances only its policy revision, and acknowledges
+only the captured attempt. A later attended payment's failure cannot turn a paid
+occurrence into a retry, and settlement cannot dismiss that later payment's result.
+Pause and safety failure latches survive advancement; edit/cancel/replacement
+retain their own state. Ambiguous settlement also checks binding/revision and uses
+the captured error before marking attention.
+
+`RecurringSettlementTest` derives its primary race from the review probe: hold
+A's post-payment binding read, acknowledge A, submit B with a proven failure,
+release A, then advance 15 minutes. It **failed before / passes after**: A remains
+consumed and paid exactly once, B retains its result, and no duplicate occurs.
+A second test changes pause/cancel/edit/suspend/wallet/instance/failure-latch state
+at settlement and verifies ownership, consumption and no replay.
+
+Every storage suspension introduced by `85c80d98` was rechecked. Startup generation,
+open, date refresh, binding and marker recovery cannot authorize submission:
+quotes and safety reads still lead to occurrence journal → in-flight policy →
+counted Send reservation → final synchronous guarded SDK call. That final guard
+rereads stop generation, the runtime storage-failure latch, suspension/deletion/
+restore markers, exact wallet/instance/policy, budget, consumption and fee policy.
+User changes during any earlier read/write invalidate the comparison; existing
+loading/race tests cover held/failed reads and writes, quote/preparation changes,
+stop/replacement, backoff/clock jumps, ambiguous outcomes and storage-failure latches.
+Policy mutations retain their store locks/update-if comparisons, and wake-sync
+recompares the replacement payload after requests. Post-submission work settles
+already-submitted money even after a stop/deadline; unresolved outcomes retain
+markers and cannot retry automatically. Consumption remains durable before
+policy advancement and exact-attempt acknowledgement.
+
+Final counts and owned-emulator StrictMode evidence are in
+[ParityTests](../ParityTests/README.md#launch-threading-review-regressions-base-1d9aff5d).
+
+The final full check ran once: **2,899 tests / 88 suites passed**, zero failures/
+errors/skips, with APK assembly in the same run. Owned-AVD Recurring entry and a
+75-second foreground sample covering the timer tick measured zero main-thread
+StrictMode violations. The initialized wallet was unfunded; settlement races use
+permanent deterministic tests, with no live recurring payment or power loss.

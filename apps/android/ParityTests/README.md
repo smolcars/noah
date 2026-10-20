@@ -266,3 +266,89 @@ Cleanup: immediately before shutdown, `adb -s emulator-5590 emu avd name` return
 **NoahMainThreadIO5590**. The Device panel shut down that AVD; its serial was absent
 and both ports **5590/5591** were closed before `avdmanager delete avd`. Its `.avd`
 directory and `.ini` were then confirmed absent. [Cleanup checks](evidence/main-thread-io/device-cleanup.json).
+
+## Launch-threading review regressions (base `1d9aff5d`)
+
+Four fixes address the review of `1d3cacb0`, `85c80d98`, `9d009d9e` and
+`49d2e614`; MMKV opening/recovery is intentionally outside this change.
+
+- Recurring settlement captures A's exact attempt/outcome/error before the first
+  suspension, validates binding inside mutation, durably consumes A, preserves
+  changed revisions and safety latches, and acknowledges only A. A later failed
+  payment B cannot make A retry or have its own result dismissed. Ambiguous
+  settlement also validates binding/revision before changing policy.
+- Send clear, quarantine and audit retain a counted session reservation through
+  completion. Generation and wallet identity are validated before mutation,
+  including after suspending identity lookup. Journal reload/migration, inspection,
+  pending/stopped markers, finish/reconcile and receipt-refresh writes were audited;
+  stale identity/preparation/payment/refresh results cannot publish/write into a
+  new generation. Lifecycle replacement must drain the old mutation first.
+- `isOpen` reads volatile session state without entering the disk-owning monitor.
+  Close, observer subscription/cleanup, direct create and restore reservation
+  acquisition run on IO. Existing creator/lifecycle/recovery callers already use
+  IO. Suspension validation remains authoritative at action time.
+- Widgets derive all six displayed balance/expiry fields from one `prefs.all`
+  snapshot. Commit/clear still await IO before broadcast; defaults and formatting
+  are unchanged.
+
+The reviewer's three temporary probes were turned into permanent desired-behavior
+regressions. Each was run against the unfixed code and **failed**, then **passed**
+after its fix: `RecurringSettlementTest` (paid A versus failed B),
+`SendJournalOwnershipTest` (replacement overtaking delayed clear), and
+`WalletSessionUiReadTest` (UI blocked behind suspension storage). Two additional
+`WidgetSnapshotTest` cases failed with the old six-getter reader and pass with
+concurrent commit/clear using the snapshot reader. The permanent suites also cover
+settlement policy/wallet/latch changes, clear/override delayed at reservation and
+identity boundaries, and stale preparation. [Red logs and verification summary](evidence/threading-regressions/verification.json).
+
+The final targeted run passed **2,106 tests / 38 suites**, zero failures/errors/
+skips, and assembled both APKs. All Gradle invocations used `--max-workers=2`.
+Two earlier overlapping Gradle invocations collided in the shared result directory;
+the sequential rerun passed. This was a harness error, not a passing test run.
+
+Live remeasurement used only **NoahThreadingRegression5598**, API 35 ARM64, launched
+explicitly with **`-port 5598`**. The existing private setup test passed (**1 test**)
+and created an initialized **unfunded** regtest wallet without displaying/exporting
+a seed. The existing widget held-IO device test also passed (**1 test**); it checks
+main-thread responsiveness and commit-before-broadcast for write and clear.
+The installed APK matched the assembled APK's SHA-256 in the verification summary.
+
+StrictMode disk reads / disk writes / network were **0 / 0 / 0 in every sample**:
+
+- Cold initialized launch to Home, 15 seconds.
+- Send from Home, 15 seconds.
+- Home from Send, 15 seconds.
+- Recurring from Settings, 15 seconds.
+- Foreground from Recurring, 75 seconds, covering the 60-second timer tick.
+- The first initialized launch to the one-time battery gate also measured zero.
+
+Each sample clears only the owned device's logcat, performs the action, verifies
+the app remains alive, and counts `StrictMode policy violation` headers only where
+PID and TID both equal the live app PID. Debug disk-read/write/network detection
+and `penaltyLog()` remain enabled with no exemptions. [Per-flow counts and windows](evidence/threading-regressions/strictmode.json).
+Zero-violation logs contain one newline. The first agent-device open hit a stale
+session for a previously deleted AVD on 5598; after verifying the current AVD's
+identity, only that stale automation session was released and measurement resumed.
+
+Cleanup verified **NoahThreadingRegression5598** immediately before Device-panel
+shutdown, then confirmed the serial absent, QEMU process exited and ports
+**5598/5599 closed before deletion**. Both its `.avd` directory and `.ini` were
+confirmed absent afterwards. [Cleanup receipt](evidence/threading-regressions/device-cleanup.json).
+No other device/emulator/simulator or Docker was operated. No iOS, server, client,
+or MMKV opening/recovery code changed. No funded payment, induced process crash,
+power loss or launcher-hosted widget rendering is claimed; money-path races and
+snapshot consistency use the deterministic permanent tests.
+
+The exact required final command ran **once**, after production/test changes and
+owned-device verification/cleanup:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**2,899 tests / 88 suites passed**, zero failures/errors/skips; regtest APK assembly
+passed in the same **1m 8s** run. [Full log](evidence/threading-regressions/gradle-final.log),
+[per-suite counts](evidence/threading-regressions/junit-summary.json).
+All four reported findings are fixed. Funded settlement and crash safety are
+covered deterministically here; this run does not repeat the historical funded
+StrictMode scenario or induce real power loss.
