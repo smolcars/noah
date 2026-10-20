@@ -32,6 +32,17 @@ suite was excluded. Swift Testing's parameterized cases account for 269 passed
 individual runs. The pre-fix regression run failed both missing-BDK-history and
 wrong-destination-amount assertions; both pass after the fix.
 
+## Round-3 payment safety (2026-10-19)
+
+- Before BOLT11 submission, SDK 0.3.0 `lightningSendState(paymentHash:)` reads the
+  paid fact/checkpoint without driving it. Existing checkpoints never call pay,
+  including checkpoints inherited before any movement existed. Their actual
+  amount and fee are persisted and displayed alongside any reviewed mismatch.
+  Read-only status checks keep mismatched attempts uncertain even if the old
+  checkpoint later settles. Pending/unknown movement evidence also blocks pay.
+  Paid invoices use actual movement amounts/fees and never call pay again.
+  See [SDK implementation](https://github.com/smolcars/bark-bolt-ffi/blob/v0.3.0/src/core/wallet.rs).
+
 ## Round-2 payment safety (2026-10-19)
 
 - Onchain-wallet MAX is disabled in the UI, quote/review and submission paths.

@@ -83,8 +83,13 @@ extension WalletSession {
                 try await handles.wallet.sendArkoorPayment(arkAddress: payment.destination, amountSats: payment.amount)
             case "lightning":
                 let fixed = PaymentEncoding.invoice(payment.destination)?.sats.map { $0 > 0 } ?? false
-                lightning = try await handles.wallet.payLightningInvoice(
-                    invoice: payment.destination, amountSats: fixed ? nil : payment.amount, wait: true)
+                guard let hash = PaymentEncoding.invoice(payment.destination)?.hash else { throw SendFailure.invalid }
+                lightning = try await SendLightningSubmission.submit(
+                    payment: payment, state: try await handles.wallet.lightningSendState(paymentHash: hash),
+                    movements: try await handles.wallet.history()) {
+                        try await handles.wallet.payLightningInvoice(
+                            invoice: payment.destination, amountSats: fixed ? nil : payment.amount, wait: true)
+                    }
             case "offer":
                 lightning = try await handles.wallet.payLightningOffer(
                     offer: payment.destination, amountSats: payment.amount, wait: true)
@@ -158,6 +163,22 @@ extension WalletSession {
                 _ = try? await handles.onchain.sync()
                 return try SendReconciliation.onchain(attempt, transactions: try await handles.onchain.transactions())
             }
+            if attempt.payment.method == "lightning", let hash = attempt.paymentHash {
+                // Status checks must not drive an inherited checkpoint with an unreviewed amount.
+                let state = try await handles.wallet.lightningSendState(paymentHash: hash)
+                if case .inProgress(let send) = state {
+                    return .inProgress(.init(amount: send.amountSats, fee: send.feeSats))
+                }
+                if let existing = attempt.existingLightning, existing.amount != attempt.payment.amount {
+                    return .inProgress(existing)
+                }
+                let movements = try await handles.wallet.history()
+                var tracked = attempt
+                if attempt.existingLightning != nil {
+                    tracked.snapshot.movementIDs.formUnion(movements.map(\.id))
+                }
+                return SendReconciliation.ark(tracked, movements: movements)
+            }
             try await handles.wallet.sync()
             let resolution = SendReconciliation.ark(attempt, movements: try await handles.wallet.history())
             if case .paid(let receipt) = resolution, let id = receipt.movementID, let patch = attempt.payment.repeatMetadata {
@@ -207,5 +228,39 @@ enum SendOnchainSubmission {
         // https://gitlab.com/ark-bitcoin/bark/-/blob/bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c/bark/src/onchain/bdk.rs
         if message.hasPrefix("Send failed: error building tx: ") { return .constructionFailed }
         return nil
+    }
+}
+
+/// The pinned Bark resumes checkpoints without checking the newly supplied amount.
+enum SendLightningSubmission {
+    static func submit(
+        payment: SendPayment, state: LightningSendStatus, movements: [Movement],
+        pay: @Sendable () async throws -> LightningSendStatus
+    ) async throws -> LightningSendStatus {
+        guard let hash = PaymentEncoding.invoice(payment.destination)?.hash else { throw SendFailure.invalid }
+        let matching = movements.filter {
+            $0.subsystemName == "bark.lightning_send" && $0.subsystemKind == "send" && $0.paymentHash == hash
+        }
+        switch state {
+        case .inProgress(let send):
+            throw SendExistingLightning(progress: .init(amount: send.amountSats, fee: send.feeSats))
+        case .paid:
+            let snapshot = SendSnapshot(movementIDs: Set(matching.map(\.id)))
+            guard case .alreadyPaid(let receipt) = SendReconciliation.lightning(
+                matching, hash: hash, amount: payment.amount, snapshot: snapshot)
+            else { throw SendFailure.unresolved }
+            throw SendAlreadyPaid(receipt: receipt)
+        case .unknown:
+            // Unknown or pending movement evidence cannot authorize resuming a payment.
+            if !matching.isEmpty {
+                let snapshot = SendSnapshot(movementIDs: Set(matching.map(\.id)))
+                switch SendReconciliation.lightning(matching, hash: hash, amount: payment.amount, snapshot: snapshot) {
+                case .alreadyPaid(let receipt): throw SendAlreadyPaid(receipt: receipt)
+                case .failed: break
+                default: throw SendFailure.unresolved
+                }
+            }
+        }
+        return try await pay()
     }
 }

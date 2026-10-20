@@ -309,6 +309,13 @@ struct SendOutcomeView: View {
                     Text(
                         "Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."
                     )
+                    if let progress = controller.attempt?.existingLightning {
+                        Text(progress.message)
+                        Text("Fee for the existing payment: \(progress.fee.formatted()) sats")
+                        if let reviewed = controller.attempt?.payment.amount, reviewed != progress.amount {
+                            Text("This differs from the \(reviewed.formatted()) sats you reviewed.")
+                        }
+                    }
                     if let receipt = controller.attempt?.receipt {
                         Text("Noah can’t find this transaction right now. Its confirmation may no longer be trackable in-app. Check a block explorer.")
                         transactionDetails(receipt)

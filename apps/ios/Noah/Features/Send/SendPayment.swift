@@ -64,6 +64,12 @@ enum SendFailure: LocalizedError {
 /// Explicit proof that submission stopped before the SDK could record or broadcast a payment.
 struct SendNotSubmitted: Error { let reason: SendFailure }
 struct SendAlreadyPaid: Error { let receipt: SendReceipt }
+struct SendExistingLightning: Error { let progress: SendLightningProgress }
+struct SendLightningProgress: Codable, Equatable, Sendable {
+    var amount: UInt64
+    var fee: UInt64
+    var message: String { "A payment of \(amount.formatted()) sats for this invoice is already in progress. Do not pay again." }
+}
 
 /// Stored before funds can move. Weak history matches never authorize another attempt.
 @MainActor @Observable final class SendPaymentController {
@@ -85,6 +91,7 @@ struct SendAlreadyPaid: Error { let receipt: SendReceipt }
         var quote: SendQuote?
         var candidates: [SendCandidate]?
         var failureMessage: String?
+        var existingLightning: SendLightningProgress?
     }
     struct Dependencies {
         var prepare: @Sendable (SendPayment, SendQuote) async throws -> SendSnapshot
@@ -98,6 +105,7 @@ struct SendAlreadyPaid: Error { let receipt: SendReceipt }
         case paid(SendReceipt)
         case alreadyPaid(SendReceipt)
         case candidates([SendCandidate])
+        case inProgress(SendLightningProgress)
         case failed
     }
     static let shared = SendPaymentController(dependencies: .live())
@@ -154,6 +162,8 @@ struct SendAlreadyPaid: Error { let receipt: SendReceipt }
             do {
                 let receipt = try await dependencies.pay(payment, quote, attempt!.snapshot)
                 finish(.paid(receipt))
+            } catch let error as SendExistingLightning {
+                finish(.inProgress(error.progress))
             } catch let error as SendAlreadyPaid {
                 finish(.alreadyPaid(error.receipt))
             } catch let error as SendNotSubmitted {
@@ -182,6 +192,9 @@ struct SendAlreadyPaid: Error { let receipt: SendReceipt }
         switch resolution {
         case .uncertain:
             if attempt.receipt?.txid != nil { attempt.receipt?.status = .unlocated }
+            state = .uncertain
+        case .inProgress(let progress):
+            attempt.existingLightning = progress
             state = .uncertain
         case .candidates(let candidates):
             guard attempt.receipt == nil else { return }
