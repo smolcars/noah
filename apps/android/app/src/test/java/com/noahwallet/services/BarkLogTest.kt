@@ -25,7 +25,7 @@ class BarkLogTest {
         assertEquals(expected, LogFile.redact(message))
         assertEquals(expected, LogFile.redactForTelemetry(message))
         val directory = Files.createTempDirectory("esplora-log").toFile()
-        val file = LogFile(directory, executor = Executor { it.run() })
+        val file = LogFile(directory, executor = Executor { it.run() }, systemSink = { _, _, _ -> })
         try {
             BarkLog(file).log(LogLevel.INFO, "wallet", message)
             assertTrue(file.lines().last().endsWith(expected))
