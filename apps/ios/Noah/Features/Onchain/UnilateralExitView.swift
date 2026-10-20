@@ -7,7 +7,7 @@ struct UnilateralExitView: View {
     private var destination: String { model.claimDestination }
     @State private var showDeposit = false
     @State private var depositFee: UInt64 = 0
-    @State private var filter = "All"
+    @State private var filter: String?
     private var exits: [ExitModel] { model.overview?.exits ?? [] }
     private var eligible: [VtxoModel] { (model.overview?.vtxos ?? []).filter(\.eligible) }
     private var pending: [ExitModel] {
@@ -89,13 +89,13 @@ struct UnilateralExitView: View {
             }
             Section("Exits") {
                 Picker("Status", selection: $filter) {
-                    Text("All").tag("All")
+                    Text("All").tag(nil as String?)
                     ForEach(ExitTimeline.labels.keys.sorted(), id: \.self) {
-                        Text(LocalizedStringKey(ExitTimeline.labels[$0]!)).tag($0)
+                        Text(LocalizedStringKey(ExitTimeline.labels[$0]!)).tag(Optional($0))
                     }
                 }
                 if exits.isEmpty { Text("No exits have been started.") }
-                ForEach(exits.filter { filter == "All" || $0.state == filter }) { exit in
+                ForEach(exits.filter { filter == nil || $0.state == filter }) { exit in
                     NavigationLink {
                         ExitVtxoDetailView(id: exit.id)
                     } label: {

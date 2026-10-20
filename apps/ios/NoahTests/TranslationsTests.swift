@@ -49,6 +49,21 @@ struct TranslationsTests {
         }
     }
 
+    @Test func vtxoStatusIdentifiersPreserveDisplayAndUnknownStates() {
+        let base = VtxoModel(id: "id", amount: 1000, expiry: 101, state: "Spendable", kind: "", exitDepth: 0,
+                             exitWeight: 0, registered: true, serverPubkey: "", exitDelta: 0, anchorPoint: "", point: "", expiring: false, tip: 100)
+        #expect(base.statusID == .active && base.status == "Active")
+        var value = base
+        value.expiring = true
+        #expect(value.statusID == .expiring && value.status == "Expiring")
+        value.expiry = 100
+        #expect(value.statusID == .expired && value.status == "Expired")
+        value.state = "Locked"
+        #expect(value.statusID == .locked && value.status == "Locked")
+        value = base; value.state = "FutureSDKState"
+        #expect(value.statusID == nil && value.status == "FutureSDKState")
+    }
+
     @Test func selectedLanguageControlsAmountsWithAnEnglishDevice() {
         let selected = LegacyLocale.resolve(preference: "es", system: ["en-US"])
         let locale = Locale(identifier: selected)

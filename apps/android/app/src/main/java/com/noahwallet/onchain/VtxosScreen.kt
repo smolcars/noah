@@ -19,15 +19,15 @@ fun VtxosScreen(app: AppModel) {
         return
     }
     val model = rememberOnchainModel(app)
-    var filter by rememberSaveable { mutableStateOf("All") }
+    var filter by rememberSaveable { mutableStateOf<VtxoStatus?>(null) }
     var selecting by rememberSaveable { mutableStateOf(false) }
     var selected by remember { mutableStateOf(setOf<String>()) }
     val scope = rememberCoroutineScope()
     val vtxos = model.overview?.vtxos.orEmpty()
-    val visible = vtxos.filter { filter == "All" || it.status == filter }
+    val visible = vtxos.filter { filter == null || it.statusID == filter }
     OnchainScreen(app, model) {
         Text(tr("VTXOs"), style = MaterialTheme.typography.headlineSmall)
-        FilterMenu(filter, listOf("All", "Active", "Expiring", "Expired", "Locked")) { filter = it }
+        FilterMenu(filter, listOf(null) + VtxoStatus.entries, { it?.label ?: "All" }) { filter = it }
         AmountRow(app, "Total (${vtxos.size} VTXOs)", vtxos.sumOf { it.amount })
         TextButton({ selecting = !selecting; selected = emptySet(); model.invalidate() }, enabled = !model.busy) { Text(tr(if (selecting) "Done selecting" else "Select VTXOs")) }
         if (selecting) {
@@ -68,12 +68,12 @@ private fun VtxoDetailScreen(app: AppModel, id: String, back: () -> Unit) {
 }
 
 @Composable
-internal fun FilterMenu(selected: String, values: List<String>, change: (String) -> Unit) {
+internal fun <T> FilterMenu(selected: T, values: List<T>, label: (T) -> String, change: (T) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        TextButton({ open = true }) { Text(tr("Filter: ${ExitTimeline.labels[selected] ?: selected}")) }
+        TextButton({ open = true }) { Text(tr("Filter") + ": " + tr(label(selected))) }
         DropdownMenu(open, onDismissRequest = { open = false }) {
-            values.forEach { value -> DropdownMenuItem(text = { Text(tr(ExitTimeline.labels[value] ?: value)) }, onClick = { change(value); open = false }) }
+            values.forEach { value -> DropdownMenuItem(text = { Text(tr(label(value))) }, onClick = { change(value); open = false }) }
         }
     }
 }

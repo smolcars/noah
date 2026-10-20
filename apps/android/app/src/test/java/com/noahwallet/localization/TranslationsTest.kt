@@ -37,6 +37,19 @@ class TranslationsTest {
         }
     }
 
+    @Test fun vtxoStatusIdentifiersPreserveDisplayAndUnknownStates() {
+        val base = com.noahwallet.onchain.VtxoModel("id", 1000, 101, "Spendable", "", 0, 0, true, "", 0, "", "", false, 100)
+        assertEquals(com.noahwallet.onchain.VtxoStatus.active, base.statusID); assertEquals("Active", base.status)
+        val expiring = base.copy(expiring = true)
+        assertEquals(com.noahwallet.onchain.VtxoStatus.expiring, expiring.statusID); assertEquals("Expiring", expiring.status)
+        val expired = expiring.copy(expiry = 100)
+        assertEquals(com.noahwallet.onchain.VtxoStatus.expired, expired.statusID); assertEquals("Expired", expired.status)
+        val locked = expired.copy(state = "Locked")
+        assertEquals(com.noahwallet.onchain.VtxoStatus.locked, locked.statusID); assertEquals("Locked", locked.status)
+        val future = base.copy(state = "FutureSDKState")
+        assertNull(future.statusID); assertEquals("FutureSDKState", future.status)
+    }
+
     @Test fun selectedLanguageControlsAmountsWithAnEnglishDevice() {
         val previous = java.util.Locale.getDefault()
         try {

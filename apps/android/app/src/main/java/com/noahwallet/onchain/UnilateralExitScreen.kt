@@ -27,7 +27,7 @@ fun UnilateralExitScreen(app: AppModel) {
     val model = rememberOnchainModel(app)
     var selected by remember { mutableStateOf(setOf<String>()) }
     val destination = model.claimDestination
-    var filter by rememberSaveable { mutableStateOf("All") }
+    var filter by rememberSaveable { mutableStateOf<String?>(null) }
     var deposit by remember { mutableStateOf(false) }
     var depositFee by remember { mutableLongStateOf(0) }
     val scope = rememberCoroutineScope()
@@ -79,9 +79,9 @@ fun UnilateralExitScreen(app: AppModel) {
         }
         HorizontalDivider()
         Text(tr("Exits"), style = MaterialTheme.typography.titleLarge)
-        FilterMenu(filter, listOf("All") + ExitTimeline.labels.keys.toList()) { filter = it }
+        FilterMenu(filter, listOf(null) + ExitTimeline.labels.keys, { key -> key?.let { ExitTimeline.labels[it] ?: it } ?: "All" }) { filter = it }
         if (exits.isEmpty()) Text(tr("No exits have been started."))
-        exits.filter { filter == "All" || it.state == filter }.forEach { exit ->
+        exits.filter { filter == null || it.state == filter }.forEach { exit ->
             TextButton({ detailID = exit.id }, enabled = !model.busy) { Text(tr("${ExitTimeline.labels[exit.state] ?: exit.state} · ${amountText(app, exit.amount)} · ${exit.id.take(12)}…")) }
         }
     }

@@ -1,5 +1,12 @@
 import Foundation
 
+enum VtxoStatus: String, CaseIterable {
+    case active, expiring, expired, locked
+    var label: String {
+        switch self { case .active: "Active"; case .expiring: "Expiring"; case .expired: "Expired"; case .locked: "Locked" }
+    }
+}
+
 struct VtxoModel: Identifiable, Equatable, Sendable {
     var id: String
     var amount: UInt64
@@ -16,11 +23,10 @@ struct VtxoModel: Identifiable, Equatable, Sendable {
     var expiring: Bool
     var tip: UInt32
     var expired: Bool { state != "Locked" && expiry <= tip }
-    var status: String {
-        state == "Locked"
-            ? "Locked"
-            : expired ? "Expired" : expiring ? "Expiring" : state == "Spendable" ? "Active" : state
+    var statusID: VtxoStatus? {
+        state == "Locked" ? .locked : expired ? .expired : expiring ? .expiring : state == "Spendable" ? .active : nil
     }
+    var status: String { statusID?.label ?? state }
     var eligible: Bool { ExitRules.eligible(state: state, amount: amount) }
     var refreshable: Bool { state == "Spendable" }
 }

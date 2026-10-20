@@ -69,13 +69,16 @@ data class OnchainReceipt(val message: String, val txid: String? = null, val onc
     }
 }
 
+enum class VtxoStatus(val label: String) { active("Active"), expiring("Expiring"), expired("Expired"), locked("Locked") }
+
 data class VtxoModel(
     val id: String, val amount: Long, val expiry: Long, val state: String, val kind: String,
     val exitDepth: Long, val exitWeight: Long, val registered: Boolean, val serverPubkey: String,
     val exitDelta: Long, val anchorPoint: String, val point: String, val expiring: Boolean, val tip: Long,
 ) {
     val expired get() = state != "Locked" && expiry <= tip
-    val status get() = when { state == "Locked" -> "Locked"; expired -> "Expired"; expiring -> "Expiring"; state == "Spendable" -> "Active"; else -> state }
+    val statusID get() = when { state == "Locked" -> VtxoStatus.locked; expired -> VtxoStatus.expired; expiring -> VtxoStatus.expiring; state == "Spendable" -> VtxoStatus.active; else -> null }
+    val status get() = statusID?.label ?: state
     val eligible get() = ExitRules.eligible(state, amount)
     val refreshable get() = state == "Spendable"
 }

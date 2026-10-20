@@ -2,17 +2,19 @@ import SwiftUI
 
 struct VtxosView: View {
     @State private var model = OnchainModel()
-    @State private var filter = "All"
+    @State private var filter: VtxoStatus?
     @State private var selecting = false
     @State private var selected = Set<String>()
-    private let filters = ["All", "Active", "Expiring", "Expired", "Locked"]
     private var visible: [VtxoModel] {
-        (model.overview?.vtxos ?? []).filter { filter == "All" || $0.status == filter }
+        (model.overview?.vtxos ?? []).filter { filter == nil || $0.statusID == filter }
     }
     var body: some View {
         List {
             Section {
-                Picker("Filter", selection: $filter) { ForEach(filters, id: \.self) { Text(LocalizedStringKey($0)).tag($0) } }
+                Picker("Filter", selection: $filter) {
+                    Text("All").tag(nil as VtxoStatus?)
+                    ForEach(VtxoStatus.allCases, id: \.self) { Text(LocalizedStringKey($0.label)).tag(Optional($0)) }
+                }
                 if let overview = model.overview {
                     OnchainAmountRow(title: "Total", sats: overview.vtxos.reduce(0) { $0 + $1.amount })
                     LabeledContent("VTXOs", value: "\(overview.vtxos.count)")
