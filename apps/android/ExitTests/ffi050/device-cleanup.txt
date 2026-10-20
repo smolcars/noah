@@ -1,0 +1,7 @@
+NoahFfi050Android4978
+OK
+
+Confirmed emulator-5592 absent and ports 5592/5593 closed before deletion.
+
+AVD 'NoahFfi050Android4978' deleted.Owned AVD directory and ini absent after deletion.
+Removed task-owned SDK archive/extraction (209752 KiB) and temporary logs/receipt scratch outside the worktree. Preserved worktree build output and shared caches.

@@ -358,3 +358,74 @@ Removed the temporary extracted SDK/JAR directory and private invoice, address,
 raw-attempt and driving-script files. Gradle output stays inside this worktree;
 shared Gradle/SDK caches and all other devices were left alone. Public summaries,
 verification logs and screenshots remain under the documented `/tmp` prefix.
+
+
+## bark-bolt-ffi 0.5.0 network receipts (2026-10-20)
+
+Android now pins verified release `68b88c73` / **0.5.0**. The supplied AAR and POM
+SHA-256 values match downloaded bytes; all four LOAD segments in each of
+arm64-v8a, armeabi-v7a and x86_64 are `0x4000`.
+[Artifact verification](ffi050/artifact-verification.txt).
+
+Ark→onchain `sendOnchain` / offboard receipts now query `Wallet.transactionStatus`
+by the exact returned txid. They show **Not yet seen by the network**, **In mempool**,
+or **Confirmed at block h**; notFound never means failed or unlocks a payment.
+The receipt refreshes while visible and supports Check status. BDK onchain-wallet
+receipts query their own `transactionStatus` as additional display evidence:
+existing cached-confirmation/reorg/competing-input and failed-broadcast locks still
+govern safety. Transport errors retain the last known receipt/status and show an
+error. Prepared offboards and durable Ark/offboard operation keys remain absent,
+so reviewed estimates, exact VTXO selection and conservative recovery remain.
+
+Live on owned API-35 emulator **NoahFfi050Android4978 / emulator-5592**, wallet
+**a9efc44c**, funded only through Core. Production SendController + SendJournal
+submitted **10,000 sats** from Ark to a fresh Core address. The exact receipt txid
+is `a74ed9841a2479601958fab04132b29fcda77fe885ff28e5b9a4cc7400a6dd8d`.
+Both the reopened real Send sheet and Core showed it **in mempool**. After exactly
+one `just generate 1`, the visible sheet refreshed automatically to **Payment
+confirmed / Confirmed at block 629**. Core reports one confirmation in block
+`21459fd807ab7ca0aabd72561ca241f7c3aeb67ea7838e72b16eb342f95ad321`.
+The txid and 10,000-sat recipient amount remained unchanged. Bark's movement fee
+shown in the receipt is **2,580 sats**; Core's funding transaction fee is **1,853
+sats**, vsize **185**. These are different fee scopes; offboards retain the existing
+movement-fee receipt convention.
+
+[Mempool receipt](ffi050/offboard-mempool.json), [visible sheet](ffi050/offboard-mempool.png),
+[Core mempool entry](ffi050/offboard-getmempoolentry.json),
+[confirmed receipt](ffi050/offboard-confirmed.json), [visible confirmation](ffi050/offboard-confirmed.png),
+[Core confirmation](ffi050/offboard-confirmed-core.json). Core evidence contains
+amounts, txids, outpoints and statuses, without signed transaction bytes.
+
+Prepared amount/MAX boarding, exact Core comparisons, Auto-Board reserve,
+terminal exit reopening and cleanup are recorded in
+[Android ExitTests](../ExitTests/README.md#bark-bolt-ffi-050-adoption-2026-10-20).
+
+Required full check ran once:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**1,376 tests in 63 suites passed; zero failures, errors or skips**, with APK
+assembly successful (**59 seconds**). [JUnit totals](ffi050/junit-summary.json).
+Earlier targeted Send/M6/session verification passed **820 tests**, and the final
+M6 model/operation checks and instrumentation-source compilation passed. A final
+receipt-only display addition (showing the prepared Ark fee/net/total alongside
+the chain fee) was separately compiled/assembled after the full run.
+
+Added deterministic JUnit coverage includes exact review/submission identity,
+durable txid-before-submit, outcomes and retry locks, Auto-Board reduced-gross
+reserve, typed construction failures, two-minute expiry, late generations/errors,
+coalesced cancellation/discard, accepted-cache persistence repair, crash recovery
+by exact network/pending/cached identity, claimed/canceled SDK rows and chain
+status/reorg/error preservation. Shared RN fixtures remain unchanged.
+
+Limits: live failed/notAttempted/cache-write/transport faults and a killed process
+mid-broadcast were not induced in the shared stack; deterministic tests cover
+those cases. A new live claimed exit was not mined through its 144-block timelock;
+claimed-row and claim-receipt status behavior is covered in JUnit. No physical
+phone, iOS, server, RN or recurring-payment code was changed.
+
+The fingerprint-scoped live harness passed **6 stage executions**, zero failures/skips: create, auto-review, cancel-cycle, cancel-reopen, offboard and offboard-status. The last stage reopened the final APK and retained the same txid / Confirmed at block 629 receipt. The two board submissions and Auto-Board decline also ran through the real Compose UI.
+
+Cleanup completed: verified `adb -s emulator-5592 emu avd name` was **NoahFfi050Android4978**, shut down that Device-panel device, confirmed its serial absent and ports closed, then deleted its AVD. Both AVD directory and ini are absent. Removed the task-owned SDK download/extraction and scratch files outside this worktree; shared Gradle/Android caches and all other devices/containers remain intact. [Cleanup evidence](../ExitTests/ffi050/device-cleanup.txt).

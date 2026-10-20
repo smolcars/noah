@@ -1,0 +1,15 @@
+{
+  "tests": 1376,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "suites": 63,
+  "onchain": {
+    "suites": 6,
+    "tests": 239
+  },
+  "send": {
+    "suites": 15,
+    "tests": 563
+  }
+}

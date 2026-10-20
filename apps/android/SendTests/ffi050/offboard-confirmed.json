@@ -1,0 +1,17 @@
+{
+  "amount": 10000,
+  "txid": "a74ed9841a2479601958fab04132b29fcda77fe885ff28e5b9a4cc7400a6dd8d",
+  "paymentHash": null,
+  "movementID": 5,
+  "amountIsPending": false,
+  "status": "confirmed",
+  "fee": 2580,
+  "proof": "submitReturnedTxid",
+  "broadcastRetryPending": false,
+  "confirmedConflictTxid": null,
+  "chainStatus": {
+    "kind": "confirmed",
+    "height": 629
+  },
+  "statusError": null
+}

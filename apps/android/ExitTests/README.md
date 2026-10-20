@@ -238,3 +238,96 @@ were deleted. TalkBack/device UI and external destinations were not exercised
 with live funds; ownership/execution use production seams with fake-wallet tests.
 
 2026-10-20 claim-destination regressions (base `1aa9a618`): deferred prefill success/failure preserves edits, failed-fetch retry and empty-review/execution rejection, exact reviewed/drained/journaled destinations, and zero drain/broadcast calls for both ownership flips, ownership errors and invalid/wrong-network addresses; targeted **23 passed** per run (3 runs), full JVM suite once **1,358 passed in 61 suites**, zero failures/errors/skips; no application bug or live-funded claim.
+
+## bark-bolt-ffi 0.5.0 adoption (2026-10-20)
+
+This section supersedes the estimated-boarding and app-discovery limitations above.
+Based on native-rewrite `211ecdf2`; Android pins release tag `68b88c73`.
+Published AAR/POM hashes match the supplied SHA256SUMS; every LOAD segment in all
+three ABIs is `0x4000`. [Artifact verification](../SendTests/ffi050/artifact-verification.txt).
+
+Manual amount boarding now prepares `Amount(gross)`; MAX prepares confirmed-only
+`DrainAll`. Review and submission use the same signed transaction. The review
+shows gross, net Ark receives, both fee legs, total leaving the onchain wallet,
+signed vsize and input count. Auto-Board remains a persisted, one-shot confirmation
+prompt with a 5,000-sat reserve. Its exact reserve is confirmed minus prepared gross
+minus signed chain fee; an inadequate reserve discards and reduces gross once.
+No hidden or expired review retains its preparation. The two-minute lifetime,
+pause/back/disposal, wallet-change cleanup and late-result generations follow Send.
+
+M6 fsyncs the prepared txid before submit. Accepted receipts retain exact fees and
+identity; failed delivery says Noah will keep retrying and cannot be acknowledged
+to clear the lock. Explicit notAttempted and audited first-submit invalidated-ID/
+input/parameter errors allow another review. Unknown outcomes remain uncertain.
+If accepted-board cache persistence fails, discard retains the handle and retries
+submission with that same process-local ID before discarding. It never creates a
+replacement board. Typed minimum, small-coin/input-count, unavailable/reserved,
+changed and not-yet-synced failures have fixed user copy.
+
+Read-only Check status uses exact txids, transactionStatus, Bark pending boards,
+board movement output/anchor identity and cached transactions. No amount matching,
+sync or broadcast is added to Check status. Missing network evidence never proves
+non-delivery. Board and claim receipts keep last known status on transport errors.
+Legacy journals still decode; prepared offboards and durable generic operation
+keys remain unavailable (handoff 19), so existing conservative workarounds remain.
+
+The exit overview/history now comes from `listAllExits(includeHistory = true,
+includeTransactions = false)`, including exact SDK amounts. Direct details use
+`getExitStatus` and its amount, with no separate VTXO lookup. Noah's old index is
+not read for discovery; pre-mutation index writes remain compatible with older
+app versions. Existing discovery files need no migration or deletion.
+
+Live device: owned **NoahFfi050Android4978**, Android 15/API 35 arm64, explicitly
+launched as **emulator-5592**. Disposable wallet fingerprint **a9efc44c**. Funded
+**100,000 sats** through `just bcli sendtoaddress` and one block, txid
+`a78b668588a5a56955f794302d71b984c99806b3cc20bbc7e9a5afed8c673d48`.
+No Lightning funding, container lifecycle changes or other devices were used.
+Six blocks were explicitly mined by this task: funding 1, amount-board change 1,
+MAX-board completion 3, offboard confirmation 1. Other agents also advanced the
+shared chain; its complete height increase is not attributed to this task.
+
+Both boards were approved through the real Compose review, driven with the
+Device-panel agent-device session. Bitcoin Core independently agrees:
+
+| Board | Gross / funding output | Ark fee | Ark receives | Onchain fee (review / Core) | vsize (review / Core) | Inputs | Total leaving |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Amount | 30,000 | 330 | 29,670 | 155 / 155 | 154 / 154 | 1 | 30,155 |
+| MAX | 69,733 | 330 | 69,403 | 112 / 112 | 111 / 111 | 1 | 69,845 |
+
+Amount txid `fd9bba351987a5b6ce3c8de8f8f4a158535baae8515b1c7e797a8286f5da6f5e`;
+outputs 30,000 funding + 69,845 change. MAX txid
+`cc91a96b393faec7db1edf63b60cedc3181c1543edd0181638b8a4d05b61ff86`;
+one 69,733-sat funding output, no change. Both receipts said In mempool and retained
+the prepared txid/fee. Public evidence: [amount review](ffi050/amount-review.png),
+[journal](ffi050/amount-board.json), [Core mempool](ffi050/amount-getmempoolentry.json),
+[outputs](ffi050/amount-getrawtransaction.json); [MAX review](ffi050/max-review.png),
+[journal](ffi050/max-board.json), [Core mempool](ffi050/max-getmempoolentry.json),
+[outputs](ffi050/max-getrawtransaction.json). Core evidence omits signed bytes.
+
+Auto-Board's real Home prompt showed **64,637 gross / 64,307 net**, **330 Ark fee**,
+**155 chain fee**, **154 vB / 1 input**, **64,792 total**, **5,053 reserve** from
+69,845 confirmed. Chose **No, turn off**; Settings was unchecked and the operation
+journal stayed empty. A separate opt-in production preparation verified that same
+reserve and discarded without submission. [Review](ffi050/auto-review.png),
+[prepared values](ffi050/auto-review.json), [unchanged journal](ffi050/auto-declined-journal.json).
+
+The opt-in `Ffi050LiveTest` canceled both boarded VTXOs without a daemon (to win
+before broadcast), asserted their removal from the active list, then reopened in
+a separate instrumentation invocation. It removed Noah's discovery index before
+reading the production overview. Both persisted SDK rows remained: **29,670** and
+**69,403 sats**, **Canceled**, each with **Started → Canceled**. No exit blocks were
+needed. [Cancel cycle](ffi050/cancel-cycle.json), [reopen listing](ffi050/cancel-reopen.json).
+Claimed terminal rows, exact amounts without a VTXO lookup, and claim-receipt chain
+statuses are tested in JUnit; a fresh live 144-block claim cycle was not repeated.
+
+
+Verification: **1,376 JVM tests / 63 suites, zero failures/errors/skips**, required
+full test + APK build once in **59 seconds**; [full totals](../SendTests/ffi050/junit-summary.json).
+Targeted Send/M6/session tests previously passed 820 cases. Android instrumentation
+sources compiled. Real preparation/board/receipt/exit evidence above uses an
+explicitly opted-in, fingerprint-checked disposable wallet; fault/crash outcomes
+are deterministic tests rather than induced shared-stack failures.
+
+The fingerprint-scoped live harness passed **6 stage executions**, zero failures/skips: create, auto-review, cancel-cycle, cancel-reopen, offboard and offboard-status. The last stage reopened the final APK and retained the same txid / Confirmed at block 629 receipt. The two board submissions and Auto-Board decline also ran through the real Compose UI.
+
+Cleanup completed: verified `adb -s emulator-5592 emu avd name` was **NoahFfi050Android4978**, shut down that Device-panel device, confirmed its serial absent and ports closed, then deleted its AVD. Both AVD directory and ini are absent. Removed the task-owned SDK download/extraction and scratch files outside this worktree; shared Gradle/Android caches and all other devices/containers remain intact. [Cleanup evidence](ffi050/device-cleanup.txt).

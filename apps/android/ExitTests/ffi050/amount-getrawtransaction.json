@@ -1,0 +1,26 @@
+{
+  "txid": "fd9bba351987a5b6ce3c8de8f8f4a158535baae8515b1c7e797a8286f5da6f5e",
+  "hash": "3047b55347b0f40ddfeb4e110f635c84441382de8bd78070021fdafe560f5a32",
+  "size": 205,
+  "vsize": 154,
+  "weight": 616,
+  "inputs": [
+    {
+      "txid": "a78b668588a5a56955f794302d71b984c99806b3cc20bbc7e9a5afed8c673d48",
+      "vout": 0,
+      "sequence": 4294967293
+    }
+  ],
+  "outputs": [
+    {
+      "index": 0,
+      "sats": 30000,
+      "address": "bcrt1ptarm4ess5e0ek7s88y6dv9wx2y7qw5v4g2yvfktmal6vfqc5fepsrre97p"
+    },
+    {
+      "index": 1,
+      "sats": 69845,
+      "address": "bcrt1p2cqdvw7cx2a0a69ew3w0ja5exr0ylnnxfh23tamv8fp5tgt8yyeqknrjd2"
+    }
+  ]
+}

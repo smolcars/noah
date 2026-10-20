@@ -1,0 +1,21 @@
+{
+  "txid": "cc91a96b393faec7db1edf63b60cedc3181c1543edd0181638b8a4d05b61ff86",
+  "hash": "088f9a1947778399ecd3fdd820915eb5b6389bc806bc7301195cf7e67e35baf2",
+  "size": 162,
+  "vsize": 111,
+  "weight": 444,
+  "inputs": [
+    {
+      "txid": "fd9bba351987a5b6ce3c8de8f8f4a158535baae8515b1c7e797a8286f5da6f5e",
+      "vout": 1,
+      "sequence": 4294967293
+    }
+  ],
+  "outputs": [
+    {
+      "index": 0,
+      "sats": 69733,
+      "address": "bcrt1pqs34yasv2usr0v7y64xnf0t9s3aa002va0878zzkv6z0s42nps5qwumvpn"
+    }
+  ]
+}
