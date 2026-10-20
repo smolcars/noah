@@ -28,7 +28,7 @@ object L10n {
         val localized = context(context)
         val id = localized.resources.getIdentifier(resourceName(source), "plurals", context.packageName)
         require(id != 0) { "Missing plural resource: $source" }
-        return localized.resources.getQuantityString(id, count, count, *arguments)
+        return localized.resources.getQuantityString(id, count, java.text.NumberFormat.getIntegerInstance(localized.resources.configuration.locales[0]).format(count), *arguments)
     }
 }
 
@@ -44,5 +44,5 @@ fun trPlural(source: String, count: Int, vararg arguments: Any): String {
     val resources = LocalResources.current
     val locale = LocalConfiguration.current.locales[0]
     val id = resources.getIdentifier(L10n.resourceName(source), "plurals", com.noahwallet.BuildConfig.APPLICATION_ID)
-    return String.format(locale, resources.getQuantityString(id, count), count, *arguments)
+    return String.format(locale, resources.getQuantityString(id, count), java.text.NumberFormat.getIntegerInstance(locale).format(count), *arguments)
 }

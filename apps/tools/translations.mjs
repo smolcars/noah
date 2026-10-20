@@ -35,7 +35,7 @@ export function format(text, names, platform, quantity) {
   return (names.length ? text.replaceAll('%', '%%') : text).replace(variablePattern, (_, name) => {
     const index = names.indexOf(name);
     if (index < 0) throw new Error(`Unknown placeholder ${name}: ${text}`);
-    return `%${index + 1}$${name === quantity ? (platform === 'ios' ? 'lld' : 'd') : (platform === 'ios' ? '@' : 's')}`;
+    return `%${index + 1}$${platform === 'ios' ? (name === quantity ? 'lld' : '@') : 's'}`;
   });
 }
 export async function extract() {

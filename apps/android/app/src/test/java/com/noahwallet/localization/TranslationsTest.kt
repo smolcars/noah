@@ -83,10 +83,11 @@ class TranslationsTest {
                 val entry = plural.jsonObject
                 val source = entry.getValue("source").jsonPrimitive.content
                 val forms = entry.getValue("translations").jsonObject.getValue(locale).jsonObject
-                for (count in listOf(1, 2, 5)) {
+                for (count in listOf(0, 1, 2, 5, 1_000_000)) {
                     val category = if (locale in listOf("en", "es", "sv") && count == 1) "one" else "other"
+                    val displayed = if (count == 1_000_000) when (locale) { "es" -> "1.000.000"; "sv" -> "1\u00a0000\u00a0000"; else -> "1,000,000" } else count.toString()
                     val expected = (forms[category] ?: forms.getValue("other")).jsonPrimitive.content
-                        .replace("{_gt_value_4}", count.toString()).replace("{_gt_value_3}", " · suffix")
+                        .replace("{_gt_value_4}", displayed).replace("{_gt_value_3}", " · suffix")
                     val actual = if (source.contains("{_gt_value_3}")) L10n.plural(context, source, count, " · suffix") else L10n.plural(context, source, count)
                     assertEquals("$locale/$count/$source", expected, actual)
                 }

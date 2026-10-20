@@ -11,14 +11,14 @@ test('placeholder indices follow source order even when translations reorder the
   expect(format('{recipient}: {amount}', ['amount', 'recipient'], 'android')).toBe('%2$s: %1$s');
   expect(() => format('{unknown}', [], 'ios')).toThrow();
 });
-test('plural variants become native plural resources with a numeric argument', () => {
+test('plural selection stays numeric while Android display counts are strings', () => {
   const node = { t: 'Plural', d: { t: 'p', b: { one: 'One place', other: [{ v: 'v', k: 'count' }, ' places'] } } };
   const catalogs = Object.fromEntries(['en', 'es', 'ja', 'ko', 'sv'].map(locale => [locale, { id: node }]));
   const all = entries(catalogs);
   expect(all[0].quantity).toBe('count');
   const catalog = JSON.parse(iosCatalog(all, []));
   expect(catalog.strings['{count} places'].localizations.en.variations.plural.other.stringUnit.value).toBe('%1$lld places');
-  expect(androidCatalog(all, 'en')).toContain('<item quantity="other">"%1$d places"</item>');
+  expect(androidCatalog(all, 'en')).toContain('<item quantity="other">"%1$s places"</item>');
   expect(resourceName('Cancel')).toBe(resourceName('Cancel'));
 });
 test('missing translations and unknown variables fail generation', () => {
