@@ -7,6 +7,45 @@ private let restoreSettingsCheckpoints = ["journal", "previousMoved", "installed
     + (1...6).map { "initializing\($0)" } + (1...9).map { "settling\($0)" }
 
 struct RestoreSettingsRecoveryTests {
+    @Test(arguments: [false, true])
+    func explicitResumeRetriesSettingsCompletion(stillFailing: Bool) async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appending(path: "restore-resume-\(UUID())")
+        let preferences = root.appending(path: "preferences")
+        let settings = try SettingsStorage(rootPath: preferences.appending(path: "mmkv").path)
+        let location = WalletDataLocation(variant: .regtest, documentsDirectory: root)
+        let tx = RestoreTransaction(location: location)
+        defer { chmod(preferences.path, 0o700); try? fm.removeItem(at: root) }
+        try tx.prepare()
+        try fm.createDirectory(at: tx.staged, withIntermediateDirectories: true)
+        try Data("committed".utf8).write(to: tx.staged.appending(path: "db.sqlite"))
+        try tx.begin(seed: "committed seed"); try tx.markCommitting(); try tx.finish()
+        #expect(chmod(preferences.path, 0o500) == 0)
+        tx.completeSettings(settings)
+        #expect(tx.settingsPending)
+        #expect(chmod(preferences.path, 0o700) == 0)
+        let item = KeychainPassword(service: "com.noah.tests.restore-resume.\(UUID())", account: "noah")
+        let session = WalletSession(variant: .regtest, location: location)
+        let lifecycle = WalletLifecycle(dependencies: .init(session: session, location: location, seed: item,
+            authToken: item, settings: settings, scratch: ScratchSpace(root: root.appending(path: "scratch")),
+            appGroup: nil, deregister: {}))
+        try await lifecycle.suspend()
+        if stillFailing { #expect(chmod(preferences.path, 0o500) == 0) }
+        do {
+            try lifecycle.resume()
+            #expect(!stillFailing)
+            #expect(!tx.settingsPending)
+            #expect(settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == false)
+            #expect(RecurringAutomationAuthority(directory: location.directory).allowed())
+        } catch {
+            #expect(stillFailing)
+            #expect(error.localizedDescription.contains("settings can't be saved yet"))
+            #expect(tx.settingsPending)
+            #expect(!RecurringAutomationAuthority(directory: location.directory).allowed())
+            #expect(await !session.isOpen)
+        }
+    }
+
     @MainActor @Test func transactionSettlesBeforeFailedPreferenceCompletion() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory.appending(path: "restore-completion-\(UUID())")

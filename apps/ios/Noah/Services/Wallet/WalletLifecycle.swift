@@ -8,6 +8,7 @@ struct WalletLifecycle: Sendable {
         /// An interrupted restore must be settled first (relaunch).
         case waitingForSecureStorage
         case restorePending
+        case restoreSettingsUnavailable
         case temporaryFiles
         case backupBusy
 
@@ -17,6 +18,7 @@ struct WalletLifecycle: Sendable {
             case .backupBusy: "Noah is still finishing a backup. Try again in a moment."
             case .temporaryFiles: "Noah couldn't remove temporary wallet files. Restart Noah and try again."
             case .restorePending: "Restart Noah to settle the pending restore before deleting."
+            case .restoreSettingsUnavailable: "Restored wallet settings can't be saved yet. Try Resume again when storage is available. Recurring payments remain stopped."
             }
         }
     }
@@ -67,7 +69,9 @@ struct WalletLifecycle: Sendable {
 
     /// Clears the flag; the caller then opens the wallet as at launch.
     func resume() throws {
-        guard !RestoreTransaction(location: dependencies.location).settingsPending else { throw SettingsStorage.OpenError() }
+        let transaction = RestoreTransaction(location: dependencies.location)
+        transaction.completeSettings(dependencies.settings)
+        guard !transaction.settingsPending else { throw Failure.restoreSettingsUnavailable }
         try authority()?.resume()
         try setSuspended(false)
     }

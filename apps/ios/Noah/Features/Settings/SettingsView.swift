@@ -135,7 +135,11 @@ struct SettingsView: View {
         guard !busy else { return }; busy = true; error = nil
         Task {
             defer { busy = false }
-            do { try await action() } catch { self.error = "Couldn't update this setting. Please try again." }
+            do { try await action() }
+            catch {
+                self.error = (error as? WalletLifecycle.Failure) == .restoreSettingsUnavailable
+                    ? error.localizedDescription : "Couldn't update this setting. Please try again."
+            }
         }
     }
 }
