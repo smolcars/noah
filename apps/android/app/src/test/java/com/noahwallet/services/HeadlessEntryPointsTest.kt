@@ -54,7 +54,9 @@ class HeadlessEntryPointsTest {
     }
     @Test fun recurringReminderWorkerRequiresOnboardingAndDoesNotOpenWallets() {
         val code = source("recurring/RecurringNotifications")
-        assertTrue(code.contains("wallet?.isInitialized == false"))
+        assertTrue(code.contains("LaunchState.existingWallet"))
+        assertTrue(code.contains(".executor.reminderSchedule("))
+        assertTrue(source("recurring/RecurringRuntime").contains("wallet?.isInitialized != false"))
         assertFalse(code.contains("ensureWalletOpen")); assertFalse(code.contains("ensureOpen"))
     }
     private fun cachedWidget(path: String? = null) {
