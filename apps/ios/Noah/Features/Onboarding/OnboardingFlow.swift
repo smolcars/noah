@@ -3,7 +3,7 @@ import SwiftUI
 /// Welcome → beta → recovery phrase → emergency email → Lightning address → Home.
 struct OnboardingFlow: View {
     enum Step: Hashable {
-        case beta, mnemonic, email, lightning, restore
+        case beta, mnemonic, email, lightning, restore, language
     }
 
     @Environment(AppModel.self) private var model
@@ -24,6 +24,8 @@ struct OnboardingFlow: View {
                         LightningAddressView(onContinue: { Task { await model.finishOnboarding() } })
                     case .restore:
                         RestoreWalletScreen()
+                    case .language:
+                        PreferenceView(kind: .language)
                     }
                 }
         }
@@ -40,6 +42,14 @@ private struct WelcomeView: View {
 
     var body: some View {
         VStack(spacing: 32) {
+            HStack {
+                Spacer()
+                NavigationLink(value: OnboardingFlow.Step.language) {
+                    Label("Language", systemImage: "globe")
+                }
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("onboarding-language")
+            }
             Spacer()
             VStack(spacing: 12) {
                 Text("Welcome to Noah")

@@ -4,6 +4,20 @@ import Testing
 
 @Suite(.serialized)
 struct TranslationsTests {
+    @MainActor @Test func welcomeLanguageSelectionNeedsNoWallet() throws {
+        let previous = UserDefaults.standard.string(forKey: LegacyLocale.key)
+        defer { UserDefaults.standard.set(previous, forKey: LegacyLocale.key) }
+        let root = FileManager.default.temporaryDirectory.appending(path: "welcome-language-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = AppModel(settings: try SettingsStorage(rootPath: root.path))
+        model.setLanguage("es")
+        #expect(model.localeIdentifier == "es")
+        #expect(LegacyLocale.read() == "es")
+        #expect(model.summary == nil)
+        #expect(model.phase == .launching)
+        #expect(OnboardingFlow.Step.language != .beta)
+    }
+
     struct Input: Decodable { let locale: String; let source: String; let args: [String] }
     struct Coverage: Decodable {
         struct Platform: Decodable { let used: [String] }
