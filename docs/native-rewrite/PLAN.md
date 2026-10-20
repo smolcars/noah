@@ -106,7 +106,14 @@ MapLibre native, offline snapshot, search, location, clustering, merchant detail
 - iOS keychain accessibility policy review (ThisDeviceOnly).
 
 ### Cutover
-Parity audit vs RN, TestFlight + Play internal/closed tracks on the same listings, monitor heartbeats/push delivery/migration telemetry, staged rollout, then retire `client/`, nitro modules, ts-rs (once RN is gone).
+Order agreed with the user on 2026-10-20:
+1. Adaptive layouts: test landscape on the iPhone Duo simulator (iOS 27.1) and on Android tablets.
+2. Design how translations are handled going forward (source of truth, workflow).
+3. The design pass.
+4. Signet test builds from CI: an APK, plus a Diawi link for iOS, matching today's RN signet flow.
+5. In days to weeks: TestFlight + Play internal/closed tracks on the same listings, monitoring of heartbeats, push delivery and migration telemetry, then a staged rollout.
+
+`client/` stays in the repo after the native apps ship, until we're confident in the rewrite. Deleting it, with the Nitro modules and ts-rs, is a later, separate decision.
 
 ## Working method
 - RN regtest app running beside the native app for screen-by-screen reference.
