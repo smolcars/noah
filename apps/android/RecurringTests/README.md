@@ -38,6 +38,33 @@ Targeted `--tests "*Recurring*"`: **1,453 tests / 14 suites**, zero failures,
 errors or skips. An earlier new-test compile failed on a parenthesis in fixture
 construction; it ran zero tests and was corrected before this passing run.
 
+## Storage strictness — preservation and final verification (2026-10-20)
+
+Unsupported rows preserve JSON values, unknown fields and numeric tokens across
+rewrites. **Formatting is not preserved**: object spacing/indentation may change.
+This is accepted because RN reads parsed JSON values. Reads do not rewrite bytes;
+invalid envelopes remain byte-for-byte unchanged. No formatting code changed.
+
+The required full command ran **once**, after the final Android code/test change:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**2,842 tests / 75 suites passed**, zero failures/errors/skips, including **1,451
+recurring package cases**. Regtest APK assembly passed in the same **2m 36s** run.
+All Gradle invocations used `--max-workers=2`; iterations used `--tests "*Recurring*"`.
+`NIX_CONFIG='eval-cache = false'` avoided the shared Nix evaluation-cache lock
+without changing shared configuration. Logs/count summaries remain under
+`/private/tmp/noah-recurring-strict-5fec2083-android-`.
+
+The real RN writer was rerun read-only from this worktree with installed
+dependencies via `NODE_PATH`; it reproduced the 11 original rows and version 0
+exactly (only the shared native expectations map differs). No Android emulator,
+physical Pixel 6 or Docker was accessed. No funded payment, physical notification
+or upgrade test was run. Fee policy, launch/seed/upgrade code and other stores
+are unchanged. iOS verification/owned-simulator cleanup is recorded in its README.
+
 ## Round-3 final cross-platform fixes (2026-10-20)
 
 Base: `feat/native-rewrite` local HEAD `95cd6af0`.
