@@ -100,7 +100,8 @@ class RecurringLoadingTest {
                 assertFalse(run.isCompleted); assertFalse(repeat.isCompleted)
                 assertEquals(if (boundary == "consumption") 1 else 0, w.wallet.calls)
                 if (boundary == "consumption") {
-                    assertTrue(w.controller.locked)
+                    assertFalse(w.controller.locked)
+                    assertTrue(w.journalRaw!!.contains("\"outcome\":\"succeeded\""))
                     assertFalse(w.journalRaw!!.contains("\"consumed\":true"))
                 } else {
                     if (boundary == "inFlight") assertNotNull(w.journalRaw)

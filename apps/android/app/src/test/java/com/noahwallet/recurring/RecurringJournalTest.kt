@@ -10,7 +10,7 @@ import java.util.UUID
 
 class RecurringJournalTest {
     private val binding = RecurringStore.Binding(SendIdentity("wallet", "regtest"), UUID.randomUUID().toString())
-    @Test fun v2KeepsExactIndicesAcrossAttemptReplacementAndReopen() {
+    @Test fun v3KeepsExactIndicesAcrossAttemptReplacementAndReopen() {
         var raw: String? = null
         fun journal() = RecurringJournal(File("unused"), { raw }, { raw = it })
         val revision = UUID.randomUUID().toString()
@@ -26,7 +26,7 @@ class RecurringJournalTest {
         assertFalse(reopened.consumed(binding.copy(wallet = SendIdentity("other", "regtest")), "rent", 1000, revision, 3))
         assertFalse(reopened.consumed(binding, "other", 1000, revision, 3))
         val root = RecurringStore.json.parseToJsonElement(raw!!).jsonObject
-        assertEquals(2, root.getValue("version").jsonPrimitive.int)
+        assertEquals(3, root.getValue("version").jsonPrimitive.int)
         assertEquals(listOf(JsonPrimitive(3)), root.getValue("consumedIndices").jsonArray.single().jsonObject.getValue("indices").jsonArray.toList())
         assertTrue(root.getValue("legacyUncertainty").jsonArray.isEmpty())
     }
@@ -35,7 +35,7 @@ class RecurringJournalTest {
         var raw = RecurringStore.json.encodeToString(mapOf("rent" to failed))
         val journal = RecurringJournal(File("unused"), { raw }, { raw = it })
         journal.load()
-        assertEquals(2, RecurringStore.json.parseToJsonElement(raw).jsonObject.getValue("version").jsonPrimitive.int)
+        assertEquals(3, RecurringStore.json.parseToJsonElement(raw).jsonObject.getValue("version").jsonPrimitive.int)
         val reopened = RecurringJournal(File("unused"), { raw }, { raw = it })
         reopened.save(failed.copy(policyRevision = UUID.randomUUID().toString()))
         assertTrue(reopened.legacyUncertain(binding, "rent"))

@@ -8,7 +8,7 @@ import org.junit.Test
 class RecurringSettlementRollbackTest {
     @Test fun rollbackMismatchMustStillAcknowledgeProvenPaidReceipt() = runBlocking {
         val w = RecurringWorld(this); w.add(); val active = w.raw
-        w.beforeJournalWrite = { if (it.contains("\"consumed\":true")) w.sendJournal.fail = true }
+        w.beforeJournalWrite = { if (it.contains("\"outcome\":\"succeeded\"")) w.sendJournal.fail = true }
         w.executor.execute()
         assertEquals(1, w.wallet.calls)
         assertTrue(w.controller.locked)
@@ -21,10 +21,10 @@ class RecurringSettlementRollbackTest {
     }
     @Test fun consumedReceiptCanBeAcknowledgedWithLatchedPolicyWriteFailure() = runBlocking {
         val w = RecurringWorld(this); w.add()
-        w.beforeJournalWrite = { if (it.contains("\"consumed\":true")) { w.sendJournal.fail = true; w.mmkvFails = true } }
+        w.beforeJournalWrite = { if (it.contains("\"outcome\":\"succeeded\"")) { w.sendJournal.fail = true; w.mmkvFails = true } }
         w.executor.execute()
         assertTrue(w.controller.locked)
-        assertTrue(w.journal.load().getValue("rent").policyApplied)
+        assertFalse(w.journal.load().getValue("rent").historyApplied)
         assertTrue(runCatching { w.store.load() }.isFailure)
         w.beforeJournalWrite = {}; w.sendJournal.fail = false; w.mmkvFails = false
         w.executor.checkStatus("rent")

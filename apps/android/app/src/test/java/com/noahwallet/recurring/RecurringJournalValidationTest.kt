@@ -77,7 +77,7 @@ class RecurringJournalValidationTest(private val kind: String) {
                 "missingWatermark" -> root["consumed"] = JsonArray(emptyList())
                 "missingField" -> root.remove("consumedIndices")
                 "stringVersion" -> root["version"] = JsonPrimitive("2")
-                "futureVersion" -> root["version"] = JsonPrimitive(3)
+                "futureVersion" -> root["version"] = JsonPrimitive(4)
                 "v1", "v1Revision" -> root["version"] = JsonPrimitive(1)
             }
             if (kind == "v1Revision") root["revisions"] = JsonArray(listOf(JsonObject(indices + ("throughIndex" to JsonPrimitive(-1)))))

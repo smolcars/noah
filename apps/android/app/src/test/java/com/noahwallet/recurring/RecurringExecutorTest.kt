@@ -308,6 +308,7 @@ class RecurringExecutorTest {
                 val original = w.add(start).copy(status = status, nativeRevision = UUID.randomUUID().toString())
                 w.store.upsert(original)
                 w.journalRaw = """{"version":2,"attempts":{},"consumed":[],"consumedIndices":[],"legacyUncertainty":[${RecurringStore.json.encodeToString(RecurringJournal.Scope(w.binding, "rent"))}]}"""
+                w.journal.load() // Finish the in-place v2 upgrade before checking refused mutations.
                 val raw = w.raw; val journal = w.journalRaw
                 for (action in listOf<suspend () -> Unit>({ w.executor.resume("rent") },
                     { w.executor.save(original.copy(label = "Edited", startAt = 3000), editing = true) },
@@ -387,7 +388,7 @@ class RecurringExecutorTest {
         raw = RecurringStore.json.encodeToString(mapOf("rent" to a))
         val j = RecurringJournal(File("unused"), { raw }, { raw = it })
         j.save(a.copy(plan = a.plan.copy(scheduledFor = 2000), consumed = false, resolved = false, policyRevision = UUID.randomUUID().toString()))
-        assertTrue(raw!!.contains("\"version\":2")); assertTrue(j.consumed(binding, "rent", 1000)); assertTrue(j.consumed(binding, "rent", 2000))
+        assertTrue(raw!!.contains("\"version\":3")); assertTrue(j.consumed(binding, "rent", 1000)); assertTrue(j.consumed(binding, "rent", 2000))
     }
     @Test fun failedLegacyMigrationCannotOverwriteConsumption() {
         val binding = RecurringStore.Binding(SendIdentity("wallet", "regtest"), UUID.randomUUID().toString())
