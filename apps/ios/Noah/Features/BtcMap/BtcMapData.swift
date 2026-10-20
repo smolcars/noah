@@ -162,7 +162,7 @@ struct BtcMapDetail: Sendable {
     }
 }
 
-enum BtcMapError: Error { case invalidData, resourceLimit, http(Int) }
+enum BtcMapError: Error, Equatable { case invalidData, resourceLimit, http(Int) }
 
 extension BtcMapSnapshot {
     init(from decoder: Decoder) throws {

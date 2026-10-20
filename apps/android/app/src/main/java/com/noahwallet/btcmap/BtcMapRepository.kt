@@ -26,6 +26,7 @@ class BtcMapRepository(
     private val fetch: suspend (HttpUrl) -> String = ::download,
     private val write: (File, String) -> Unit = ::atomicWrite,
     private val retryDelay: Long = 1000,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val snapshotLock = Mutex()
     private val syncLock = Mutex()
@@ -45,9 +46,9 @@ class BtcMapRepository(
         }
     }
 
-    suspend fun sync(now: Long = System.currentTimeMillis()): BtcMapSnapshot = withContext(Dispatchers.IO) {
+    suspend fun sync(now: Long = clock()): BtcMapSnapshot = withContext(Dispatchers.IO) {
         syncLock.withLock {
-            if (oversizedSync?.let { now - it < BtcMapLimits.cooldown } == true) throw BtcMapResourceLimit()
+            if (oversizedSync?.let { now - it in 0 until BtcMapLimits.cooldown } == true) throw BtcMapResourceLimit()
             val current = load()
             if (lastSync?.let { now - it in 0 until 300_000 } == true) return@withLock current
             val result = try { retry {
@@ -61,6 +62,7 @@ class BtcMapRepository(
                 merged
             } } catch (limit: BtcMapResourceLimit) { oversizedSync = now; throw limit }
             snapshotLock.withLock { snapshot = result }
+            oversizedSync = null
             lastSync = now
             result
         }
@@ -73,9 +75,9 @@ class BtcMapRepository(
         CitySearch.search(values, query, bias = bias)
     }
 
-    suspend fun detail(place: BtcMapPlace, now: Long = System.currentTimeMillis()): BtcMapDetail = withContext(Dispatchers.IO) {
+    suspend fun detail(place: BtcMapPlace, now: Long = clock()): BtcMapDetail = withContext(Dispatchers.IO) {
         detailLock.withLock {
-            if (oversizedDetails[place.id]?.let { now - it < BtcMapLimits.cooldown } == true) throw BtcMapResourceLimit()
+            if (oversizedDetails[place.id]?.let { now - it in 0 until BtcMapLimits.cooldown } == true) throw BtcMapResourceLimit()
             details[place.id]?.takeIf { now - it.first in 0 until 900_000 }?.let { return@withLock it.second }
             val result = try { retry {
                 coroutineScope {
@@ -84,6 +86,7 @@ class BtcMapRepository(
                     BtcMapDetail.parse(data.await(), comments.await()).also { require(it.place.id == place.id) }
                 }
             } } catch (limit: BtcMapResourceLimit) { oversizedDetails[place.id] = now; throw limit }
+            oversizedDetails.remove(place.id)
             details[place.id] = now to result
             result
         }

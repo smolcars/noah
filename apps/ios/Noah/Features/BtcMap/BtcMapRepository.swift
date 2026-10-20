@@ -15,6 +15,7 @@ actor BtcMapRepository {
     private let bundleURL: URL?
     private let citiesURL: URL?
     private let fetch: Fetch
+    private let clock: @Sendable () -> Date
     private var snapshot: BtcMapSnapshot?
     private var cities: [CitySearchEntry]?
     private var syncTask: Task<BtcMapSnapshot, Error>?
@@ -27,11 +28,13 @@ actor BtcMapRepository {
     init(cacheURL: URL = URL.documentsDirectory.appending(path: "btcmap-places-v1.btcmap"),
          bundleURL: URL? = Bundle.main.url(forResource: "places", withExtension: "btcmap"),
          citiesURL: URL? = Bundle.main.url(forResource: "cities", withExtension: "geonames"),
-         fetch: @escaping Fetch = BtcMapRepository.download) {
+         fetch: @escaping Fetch = BtcMapRepository.download,
+         clock: @escaping @Sendable () -> Date = { .now }) {
         self.cacheURL = cacheURL
         self.bundleURL = bundleURL
         self.citiesURL = citiesURL
         self.fetch = fetch
+        self.clock = clock
     }
 
     func load() throws -> BtcMapSnapshot {
@@ -46,11 +49,12 @@ actor BtcMapRepository {
         return bundled
     }
 
-    func sync(now: Date = .now) async throws -> BtcMapSnapshot {
+    func sync(now: Date? = nil) async throws -> BtcMapSnapshot {
+        let now = now ?? clock()
         if let syncTask { return try await syncTask.value }
-        if let oversizedSync, now.timeIntervalSince(oversizedSync) < 300 { throw BtcMapError.resourceLimit }
+        if let oversizedSync, (0..<300).contains(now.timeIntervalSince(oversizedSync)) { throw BtcMapError.resourceLimit }
         let current = try load()
-        if let lastSync, now.timeIntervalSince(lastSync) < 300 { return current }
+        if let lastSync, (0..<300).contains(now.timeIntervalSince(lastSync)) { return current }
         let url = Self.syncURL(since: current.generatedAt)
         let fetch = fetch
         let cacheURL = cacheURL
@@ -72,6 +76,7 @@ actor BtcMapRepository {
         do { result = try await task.value }
         catch BtcMapError.resourceLimit { oversizedSync = now; throw BtcMapError.resourceLimit }
         snapshot = result
+        oversizedSync = nil
         lastSync = now
         return result
     }
@@ -84,9 +89,10 @@ actor BtcMapRepository {
         return CitySearch.search(cities ?? [], query: query, bias: bias)
     }
 
-    func detail(for place: BtcMapPlace, now: Date = .now) async throws -> BtcMapDetail {
-        if let failed = oversizedDetails[place.id], now.timeIntervalSince(failed) < 300 { throw BtcMapError.resourceLimit }
-        if let cached = details[place.id], now.timeIntervalSince(cached.0) < 900 { return cached.1 }
+    func detail(for place: BtcMapPlace, now: Date? = nil) async throws -> BtcMapDetail {
+        let now = now ?? clock()
+        if let failed = oversizedDetails[place.id], (0..<300).contains(now.timeIntervalSince(failed)) { throw BtcMapError.resourceLimit }
+        if let cached = details[place.id], (0..<900).contains(now.timeIntervalSince(cached.0)) { return cached.1 }
         if let task = detailTasks[place.id] { return try await task.value }
         let fetch = fetch
         let task = Task {
@@ -102,6 +108,7 @@ actor BtcMapRepository {
         let result: BtcMapDetail
         do { result = try await task.value }
         catch BtcMapError.resourceLimit { oversizedDetails[place.id] = now; throw BtcMapError.resourceLimit }
+        oversizedDetails[place.id] = nil
         details[place.id] = (now, result)
         return result
     }

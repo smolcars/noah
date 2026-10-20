@@ -107,6 +107,34 @@ class BtcMapLimitsTest {
         assertEquals(3, requests)
     }
 
+    @Test fun clockRollbackExpiresSyncAndPerMerchantOversizeCooldowns() = runBlocking {
+        var now = 1000L
+        var requests = 0
+        var reject = true
+        val repository = BtcMapRepository(File(folder.root, "cache"), { snapshot() }, { "" }, {
+            requests++
+            if (reject) throw BtcMapResourceLimit()
+            if (it.encodedPath.endsWith("/places")) "[]" else place
+        }, retryDelay = 0, clock = { now })
+        val merchant = repository.load().places.single()
+        limit { runBlocking { repository.sync() } }
+        limit { runBlocking { repository.detail(merchant) } }
+        now = 999
+        reject = false
+        repository.sync()
+        repository.detail(merchant)
+        assertEquals(4, requests)
+        now = 1001
+        repository.sync()
+        repository.detail(merchant)
+        assertEquals(4, requests)
+        // Successful caches must also expire after a backward clock jump.
+        now = 998
+        repository.sync()
+        repository.detail(merchant)
+        assertEquals(6, requests)
+    }
+
     @Test fun mergedRecordLimitIsCheckedBeforeWritingOrAdvancingCursor() = runBlocking {
         val places = (1..BtcMapLimits.records).joinToString(",") { place.replace("\"id\":1", "\"id\":$it") }
         val original = snapshot(places)

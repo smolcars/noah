@@ -37,6 +37,52 @@ struct BtcMapLimitsTests {
         }
     }
 
+    private final class Clock: @unchecked Sendable {
+        private let lock = NSLock()
+        private var date = Date(timeIntervalSince1970: 1000)
+        func now() -> Date { lock.withLock { date } }
+        func advance(_ seconds: Double) { lock.withLock { date.addTimeInterval(seconds) } }
+    }
+
+    @Test func clockRollbackExpiresSyncAndPerMerchantOversizeCooldowns() async throws {
+        actor Requests {
+            var count = 0
+            var reject = true
+            func allow() { reject = false }
+            func fetch(_ url: URL, place: Data) throws -> Data {
+                count += 1
+                if reject { throw BtcMapError.resourceLimit }
+                return url.path.hasSuffix("/places") ? Data("[]".utf8) : place
+            }
+        }
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let raw = Data(#"{"schemaVersion":1,"generatedAt":"today","source":"btcmap.org","places":[{"id":1,"lat":1,"lon":2,"icon":"cafe","name":"Cafe","updated_at":"today"}]}"#.utf8)
+        let cache = folder.appending(path: "places")
+        try raw.write(to: cache)
+        let clock = Clock()
+        let requests = Requests()
+        let place = try #require(BtcMapSnapshot.parse(raw).places.first)
+        let placeData = try JSONEncoder().encode(place)
+        let repository = BtcMapRepository(cacheURL: cache, fetch: { try await requests.fetch($0, place: placeData) }, clock: { clock.now() })
+        await #expect(throws: BtcMapError.resourceLimit) { try await repository.sync() }
+        await #expect(throws: BtcMapError.resourceLimit) { try await repository.detail(for: place) }
+        clock.advance(-1)
+        await requests.allow()
+        _ = try await repository.sync()
+        _ = try await repository.detail(for: place)
+        #expect(await requests.count == 4)
+        clock.advance(2)
+        _ = try await repository.sync()
+        _ = try await repository.detail(for: place)
+        #expect(await requests.count == 4)
+        clock.advance(-3)
+        _ = try await repository.sync()
+        _ = try await repository.detail(for: place)
+        #expect(await requests.count == 6)
+    }
+
     @Test func limitsRejectBytesRecordsAndStrings() throws {
         #expect(throws: (any Error).self) { try BtcMapLimits.check(Data(count: BtcMapLimits.bytes + 1)) }
         try BtcMapLimits.check(String(repeating: "x", count: BtcMapLimits.stringBytes))
