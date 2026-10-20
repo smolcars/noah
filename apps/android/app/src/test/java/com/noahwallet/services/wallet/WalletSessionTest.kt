@@ -218,7 +218,7 @@ class WalletSessionTest {
             val execution = async { world.executor.execute() }; entered.await()
             val lifecycle = WalletLifecycle(session, location, setSuspended = { world.allowed = !it }, deregister = {},
                 readSeed = { com.noahwallet.services.storage.SecretResult.NotFound }, deleteSeed = {}, clearToken = {},
-                clearSettings = {}, clearWidget = {}, sweepScratch = {}, stopAutomation = { world.generation = java.util.UUID.randomUUID().toString() })
+                clearSettings = {}, clearWidget = {}, sweepScratch = {}, syncIdentityDirectory = {}, stopAutomation = { world.generation = java.util.UUID.randomUUID().toString() })
             assertTrue(runCatching { if (delete) lifecycle.delete() else lifecycle.suspend() }.isFailure)
             assertTrue(world.allowed); assertNotNull(world.generation)
             gate.complete(Unit); execution.await()
