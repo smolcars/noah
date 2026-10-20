@@ -21,7 +21,6 @@ struct UnilateralExitView: View {
                 )
                 Text("Reading this screen and estimating fees never broadcasts an exit.").foregroundStyle(
                     NoahColor.mutedForeground)
-                Text(OnchainFailure.exitProgressUnavailable.errorDescription!).font(NoahFont.footnote)
                 if let overview = model.overview {
                     OnchainAmountRow(title: "Pending exit value", sats: overview.pendingTotal)
                     OnchainAmountRow(title: "Confirmed onchain funds", sats: overview.confirmed)
@@ -57,9 +56,9 @@ struct UnilateralExitView: View {
             if !pending.isEmpty {
                 Section("Progress") {
                     Text(
-                        "View broadcast costs for all pending exits. Manual progression requires a wallet update."
+                        "Noah progresses exits automatically. You can also progress all pending exits manually."
                     )
-                    Button("Review exit broadcast fees") {
+                    Button("Progress Exits") {
                         Task { await model.review(.progress, ids: pending.map(\.id)) }
                     }
                     .disabled(model.locked)
@@ -197,6 +196,7 @@ struct ExitTransactionRow: View {
 }
 
 struct ExitDepositSheet: View {
+    @Environment(AppModel.self) private var app
     let broadcastFee: UInt64
     @Environment(\.dismiss) private var dismiss
     @State private var address: String?
@@ -223,7 +223,10 @@ struct ExitDepositSheet: View {
             .settingsStyle("Deposit Onchain Funds")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .task {
-                do { address = try await WalletSession.shared.exitDepositAddress() } catch {
+                do {
+                    guard !app.isWalletSuspended else { throw OnchainFailure.unavailable }
+                    address = try await app.session.exitDepositAddress()
+                } catch {
                     self.error =
                         "Couldn't load a deposit address. Close and try again when the wallet is ready."
                 }

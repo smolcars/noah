@@ -38,7 +38,7 @@ struct SettingsView: View {
                 row("Board to Ark", "Manually move onchain bitcoin into Ark.") { BoardArkView() }
                 Toggle(isOn: Binding(get: { transaction.isAutoBoardingEnabled }, set: setAutoBoard)) {
                     SettingsLabel(title: "Auto-Board to Ark", detail: threshold.map {
-                        "Ask to board to Ark when onchain balance can cover \(max($0, 20_000)) sats, estimated fees, and a 5,000 sats reserve."
+                        "Ask to board to Ark when onchain balance can cover \(max($0, 20_000)) sats, estimated fees, and an estimated 5,000 sats reserve. The final fee may be higher if more coins are needed."
                     } ?? "Auto-board threshold unavailable")
                 }
                 if WalletLock.available || lock.policy.enabled {
@@ -117,7 +117,10 @@ struct SettingsView: View {
             guard taps > 0 else { return }
             do { try await Task.sleep(for: .seconds(2)); taps = 0 } catch {}
         }
-        .task { threshold = try? await model.session.boardingMinimum() }
+        .task(id: model.isWalletSuspended) {
+            guard !model.isWalletSuspended else { return }
+            threshold = try? await model.session.boardingMinimum()
+        }
     }
 
     private func row<Content: View>(_ title: String, _ detail: String, @ViewBuilder destination: () -> Content) -> some View {

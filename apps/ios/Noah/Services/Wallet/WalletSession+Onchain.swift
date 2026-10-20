@@ -97,7 +97,7 @@ extension WalletSession {
             let chainFee = BoardingRules.onchainFee(
                 satsPerKwu: try await handles.onchain.feeRates().regularSatPerKwu)
             guard balance > chainFee else { throw OnchainFailure.invalid }
-            // MAX pins a fixed gross amount, avoiding boardAll's unreviewed pending inputs.
+            quote.boardAll = requested == 0 ? true : nil
             let amount = requested == 0 ? balance - chainFee : requested
             guard amount > 0, amount <= 2_100_000_000_000_000, amount <= balance - chainFee else {
                 throw OnchainFailure.invalid
@@ -175,15 +175,10 @@ extension WalletSession {
     func executeOnchain(_ quote: OnchainQuote, journal: OnchainOperationJournal = .shared)
         async throws -> String
     {
-        // FFI handoff 17: runDaemon automatically broadcasts/retries exits. Never promise
-        // tracking-only registration until the SDK can disable that process durably.
-        guard quote.action != .startExit && quote.action != .progress else {
-            throw OnchainFailure.exitProgressUnavailable
-        }
         return try await withOpenWallet { handles in
             guard ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
             let fresh = try await Self.onchainQuote(
-                handles, action: quote.action, ids: quote.ids, amount: quote.amount,
+                handles, action: quote.action, ids: quote.ids, amount: quote.boardAll == true ? 0 : quote.amount,
                 destination: quote.destination, automatic: quote.automatic)
             guard quote.matches(fresh), ExitRules.current(reviewedAt: quote.createdAt) else {
                 throw OnchainFailure.changed
@@ -191,17 +186,33 @@ extension WalletSession {
             return try await journal.perform(quote) {
                 switch quote.action {
                 case .board:
-                    let board = try await handles.wallet.boardAmount(amountSats: quote.amount)
+                    let board: PendingBoard
+                    if quote.boardAll == true {
+                        board = try await handles.wallet.boardAll()
+                    } else {
+                        board = try await handles.wallet.boardAmount(amountSats: quote.amount)
+                    }
+                    // A receipt must survive even when the optional fee lookup fails after submission.
+                    let fee = try? await handles.onchain.transactions().first { $0.txid == board.txid }?.onchainFeeSats
                     return OnchainReceipt(
-                        message: "Boarding submitted. Funds become spendable after the board completes.",
-                        txid: board.txid)
+                        message: "Boarding submitted. Funds become spendable after the board completes."
+                            + (fee.map { " Actual onchain fee: \($0) sats." } ?? " Actual onchain fee is not yet available."),
+                        txid: board.txid, onchainFee: fee)
                 case .refresh:
                     let round = try await handles.wallet.refreshVtxosDelegated(vtxoIds: quote.ids)
                     return OnchainReceipt(
                         message: round.map { "Refresh submitted to delegated round \($0.id)." }
                             ?? "No refresh round was needed.")
-                case .startExit, .progress:
-                    throw OnchainFailure.exitProgressUnavailable
+                case .startExit:
+                    try await handles.wallet.startExitForVtxos(vtxoIds: quote.ids)
+                    return "Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance."
+                case .progress:
+                    let statuses = try await handles.wallet.progressExits(feeRateSatPerVb: quote.feeRate)
+                    let failures = statuses.filter { $0.error != nil }.count
+                    return OnchainReceipt(
+                        message: failures == 0
+                            ? "Exits progressed. Transactions may have been broadcast or fee-bumped."
+                            : "Exit progression returned \(failures) errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.")
                 case .claim:
                     let claim = try await handles.wallet.drainExits(
                         vtxoIds: quote.ids, address: quote.destination!, feeRateSatPerVb: nil)

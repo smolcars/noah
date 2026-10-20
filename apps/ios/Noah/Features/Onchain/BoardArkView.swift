@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct BoardArkView: View {
+    @Environment(AppModel.self) private var app
     @State private var model = OnchainModel()
     @State private var amount = ""
     @State private var minimum: UInt64?
@@ -30,7 +31,10 @@ struct BoardArkView: View {
         .settingsStyle("Board to Ark")
         .scrollDismissesKeyboard(.interactively)
         .modifier(OnchainScreen(model: model))
-        .task { minimum = try? await WalletSession.shared.boardingMinimum() }
+        .task {
+            guard !app.isWalletSuspended else { return }
+            minimum = try? await app.session.boardingMinimum()
+        }
         .onChange(of: amount) { _, _ in model.invalidate() }
     }
 }

@@ -218,11 +218,12 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] M5 regtest build, lifecycle/storage regression tests and isolated funded-emulator acceptance — Android (`apps/android/SettingsTests/README.md`)
 
 ## M6 — Onchain & exits
-- [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, 5,000-sat reserve — iOS; fixed-amount MAX, estimated onchain fees (prepared boarding awaits FFI 18)
+- [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt (prepared boarding awaits FFI 18, same priority as 14)
 - [x] VTXOsScreen + VTXODetailScreen + delegated refresh review dialog — iOS
 - [x] Emergency-exit read-only overview/estimates, quote < 30 s, 330-sat eligibility, deposit sheet, claim/cancel reviews — iOS
 - [x] ExitVtxoDetailScreen + terminal canceled timeline; 187 RN-derived fee/cancellation/timeline/coordination/boarding fixtures — iOS
-- [ ] Starting/progressing exits — iOS blocked on FFI 17: daemon automatically broadcasts/CPFPs and cannot enforce manual progression; UI and service reject these mutations
+- [x] Starting/progressing exits — iOS RN parity: explicit start review explains automatic background broadcasts/fee bumps and onchain fees; manual Progress Exits review, cancel until final broadcast, claim reviews; optional manual-daemon policy is P2 FFI 17
+- [x] Suspended wallet gates — iOS Settings M6 rows remain navigable like RN; M6 screen actions/queries, Home refresh, boarding minimum/address queries and Auto-Board perform no wallet operations
 - [ ] Durable operation reconciliation after an ambiguous M6 submission — FFI 19; iOS preserves the attempt and blocks resubmission
 - [ ] Full live exit broadcast/claim/cancel lifecycle — iOS (estimates only verified; see `apps/ios/ExitTests/README.md`)
 - [ ] BoardArkScreen, auto-boarding, VTXOs/details/refresh, all exit screens — Android

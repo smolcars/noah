@@ -103,7 +103,9 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
             }
             .refreshable {
+                guard !model.isWalletSuspended else { return }
                 await model.sync()
+                guard !model.isWalletSuspended else { return }
                 await history.refresh(currency: model.preferredCurrency)
             }
             .sheet(isPresented: Binding(get: { selectedID != nil }, set: { if !$0 { selectedID = nil } })) {

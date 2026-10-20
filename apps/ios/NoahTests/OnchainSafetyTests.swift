@@ -55,6 +55,17 @@ struct OnchainJournalTests {
         try await restarted.acknowledge()
         #expect(try await restarted.load() == nil)
     }
+    @Test func boardingReceiptRecordsActualFeeAndReadsOldJournals() throws {
+        let receipt = OnchainReceipt(message: "Submitted", txid: "txid", onchainFee: 1543)
+        let restored = try JSONDecoder().decode(OnchainReceipt.self, from: JSONEncoder().encode(receipt))
+        #expect(restored.onchainFee == 1543)
+        let old = try JSONDecoder().decode(OnchainReceipt.self, from: Data(#"{"message":"Submitted","txid":"txid"}"#.utf8))
+        #expect(old.onchainFee == nil)
+        var json = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(Self.quote)) as? [String: Any])
+        json.removeValue(forKey: "boardAll")
+        let quote = try JSONDecoder().decode(OnchainQuote.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(quote.boardAll == nil)
+    }
     @Test func quotePinsWalletSelectionDestinationAndBothFees() {
         let original = Self.quote
         var changed = original
@@ -74,6 +85,12 @@ struct OnchainJournalTests {
         #expect(!original.matches(changed))
         changed = original
         changed.confirmed += 1
+        #expect(!original.matches(changed))
+        changed = original
+        changed.boardAll = true
+        #expect(!original.matches(changed))
+        changed = original
+        changed.automatic = true
         #expect(!original.matches(changed))
         #expect(!ExitRules.current(reviewedAt: Date().addingTimeInterval(-30)))
     }
@@ -152,6 +169,27 @@ struct OnchainModelTests {
         #expect(model.quote == nil)
         #expect(await calls.mutations == 0)
     }
+    @Test func exitReviewRequiresConfirmationAndSuspensionPreventsSubmission() async {
+        let calls = Calls()
+        var d = dependencies(calls)
+        d.quote = { action, ids, _, _ in
+            var quote = OnchainJournalTests.quote
+            quote.action = action
+            quote.ids = ids
+            return quote
+        }
+        let model = OnchainModel(dependencies: d)
+        for action in [OnchainAction.startExit, .progress] {
+            await model.review(action, ids: ["vtxo"])
+            #expect(await calls.mutations == (action == .startExit ? 0 : 1))
+            await model.confirm()
+        }
+        #expect(await calls.mutations == 2)
+        await model.review(.startExit, ids: ["vtxo"])
+        await calls.setReady(false)
+        await model.confirm()
+        #expect(await calls.mutations == 2)
+    }
     @Test func expiredQuoteRequiresReviewAgain() async {
         let calls = Calls()
         var d = dependencies(calls)
@@ -169,16 +207,13 @@ struct OnchainModelTests {
 }
 
 struct ExitSDKPolicyTests {
-    @Test func startAndProgressBlockedBeforeOpeningWalletOrWritingAttempt() async {
+    @Test func startAndProgressUseTheWalletBoundary() async {
         let session = WalletSession()
         for action in [OnchainAction.startExit, .progress] {
             var quote = OnchainJournalTests.quote
             quote.action = action
-            do {
+            await #expect(throws: WalletSession.SessionError.notOpen) {
                 _ = try await session.executeOnchain(quote)
-                Issue.record("SDK policy must block exit broadcasts")
-            } catch OnchainFailure.exitProgressUnavailable {} catch {
-                Issue.record("Must reject before reaching the closed session: \(error)")
             }
         }
     }

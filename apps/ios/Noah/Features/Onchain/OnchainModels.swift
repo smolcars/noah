@@ -80,6 +80,8 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     var feeRate: UInt64?
     var createdAt = Date()
     var automatic = false
+    // Optional so journals written before MAX used boardAll remain readable.
+    var boardAll: Bool?
     var net: UInt64 { ExitRules.received(amount: amount, claimFee: fee) }
     var totalFee: UInt64 { fee + chainFee }
     var fundable: Bool { confirmed >= chainFee }
@@ -92,16 +94,14 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     func matches(_ other: Self) -> Bool {
         inputs.matches(other.inputs) && fee == other.fee
             && chainFee == other.chainFee && confirmed == other.confirmed && feeRate == other.feeRate
+            && automatic == other.automatic && boardAll == other.boardAll
     }
 }
 
 enum OnchainFailure: LocalizedError {
-    case unavailable, changed, invalid, uncertain, busy, cancellationRefused, claimFeeChanged,
-        exitProgressUnavailable
+    case unavailable, changed, invalid, uncertain, busy, cancellationRefused, claimFeeChanged
     var errorDescription: String? {
         switch self {
-        case .exitProgressUnavailable:
-            "Starting and progressing exits are unavailable in this SDK version: its daemon can broadcast automatically. You can estimate fees and inspect existing exits. A wallet update is required for confirmation-controlled exit progression."
         case .unavailable: "Wait for the wallet to be ready, then refresh."
         case .changed:
             "The wallet or fees changed, or the quote expired. Review again before confirming."
@@ -121,9 +121,11 @@ enum OnchainFailure: LocalizedError {
 struct OnchainReceipt: Codable, Sendable, ExpressibleByStringLiteral {
     var message: String
     var txid: String?
-    init(message: String, txid: String? = nil) {
+    var onchainFee: UInt64?
+    init(message: String, txid: String? = nil, onchainFee: UInt64? = nil) {
         self.message = message
         self.txid = txid
+        self.onchainFee = onchainFee
     }
     init(stringLiteral value: String) { message = value }
     init(from decoder: Decoder) throws {
@@ -133,6 +135,7 @@ struct OnchainReceipt: Codable, Sendable, ExpressibleByStringLiteral {
             let values = try decoder.container(keyedBy: CodingKeys.self)
             message = try values.decode(String.self, forKey: .message)
             txid = try values.decodeIfPresent(String.self, forKey: .txid)
+            onchainFee = try values.decodeIfPresent(UInt64.self, forKey: .onchainFee)
         }
     }
 }

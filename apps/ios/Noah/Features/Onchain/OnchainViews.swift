@@ -24,6 +24,9 @@ struct OnchainStatusSection: View {
                 OnchainAmountRow(title: "Reviewed amount", sats: attempt.quote.amount)
                 Text(attempt.quote.createdAt, style: .date).font(NoahFont.footnote)
                 Text(attempt.receipt?.message ?? OnchainFailure.uncertain.errorDescription!).textSelection(.enabled)
+                if let fee = attempt.receipt?.onchainFee {
+                    OnchainAmountRow(title: "Actual onchain fee", sats: fee)
+                }
                 if let txid = attempt.receipt?.txid {
                     ExitTransactionRow(title: "Transaction ID", txid: txid)
                     Button("Copy transaction ID") { UIPasteboard.general.string = txid }
@@ -48,12 +51,14 @@ struct OnchainReviewSheet: View {
         NavigationStack {
             List {
                 Section {
-                    OnchainAmountRow(title: "Amount selected", sats: quote.amount)
+                    OnchainAmountRow(
+                        title: quote.action == .board ? "Estimated boarding amount" : "Amount selected",
+                        sats: quote.amount)
                     if !quote.ids.isEmpty { LabeledContent("VTXOs selected", value: "\(quote.ids.count)") }
                     if quote.action != .cancel {
                         OnchainAmountRow(
                             title: quote.action == .board
-                                ? "Ark boarding fee"
+                                ? "Estimated Ark boarding fee"
                                 : quote.action == .refresh ? "Refresh fee" : "Estimated claim fee", sats: quote.fee)
                         if quote.action == .board || quote.action == .startExit || quote.action == .progress {
                             OnchainAmountRow(
@@ -61,7 +66,7 @@ struct OnchainReviewSheet: View {
                                     ? "Estimated onchain fee" : "Estimated broadcast fees", sats: quote.chainFee)
                         }
                         OnchainAmountRow(
-                            title: quote.action == .board ? "Ark balance receives" : "Amount after fee",
+                            title: quote.action == .board ? "Estimated Ark balance receives" : "Amount after fee",
                             sats: quote.net)
                     }
                     if let destination = quote.destination {
@@ -88,10 +93,6 @@ struct OnchainReviewSheet: View {
                             )
                         }
                     }
-                    if quote.action == .startExit || quote.action == .progress {
-                        Text(OnchainFailure.exitProgressUnavailable.errorDescription!).foregroundStyle(
-                            NoahColor.destructive)
-                    }
                     Button(
                         role: quote.action == .startExit || quote.action == .progress || quote.action == .claim
                             ? .destructive : nil
@@ -100,7 +101,6 @@ struct OnchainReviewSheet: View {
                     } label: {
                         Text(quote.action.title)
                     }
-                    .disabled(quote.action == .startExit || quote.action == .progress)
                     .accessibilityIdentifier("onchain-confirm")
                 }
             }
@@ -119,12 +119,13 @@ struct OnchainReviewSheet: View {
     private var explanation: String {
         switch quote.action {
         case .board:
-            "Move onchain bitcoin into Ark. The onchain fee is an estimate and the final fee may differ. Funds become spendable after the board completes."
+            "Move onchain bitcoin into Ark. Fees and received amounts are estimates. The final fee may be higher if more coins are needed. Funds become spendable after the board completes."
+                + (quote.boardAll == true ? " MAX boards all available onchain funds, including spendable pending funds. The final boarding amount may differ from this estimate." : "")
         case .refresh: "This refreshes the selected VTXOs in a delegated Ark round."
         case .startExit:
-            "Broadcast fees are paid separately from confirmed onchain funds; only the claim fee is deducted from the recovered value. This is a read-only estimate."
+            "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."
         case .progress:
-            "This is a read-only estimate for all pending exits. Cancellation is possible only before the final exit transaction is broadcast."
+            "This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process. Fees are paid from your onchain balance. Cancellation is possible only before the final exit transaction is broadcast."
         case .claim:
             "This broadcasts the claim transaction. Earlier broadcast fees are not deducted again."
         case .cancel:
@@ -136,9 +137,11 @@ struct OnchainReviewSheet: View {
 /// Shared review presentation also invalidates quotes on backgrounding or navigation.
 struct OnchainScreen: ViewModifier {
     @Environment(\.scenePhase) private var phase
+    @Environment(AppModel.self) private var app
     let model: OnchainModel
     func body(content: Content) -> some View {
         content
+            .disabled(app.isWalletSuspended)
             .task {
                 await model.load()
                 while !Task.isCancelled {
@@ -151,6 +154,9 @@ struct OnchainScreen: ViewModifier {
                 await model.load()
             }
             .onChange(of: phase) { _, _ in model.invalidate() }
+            .onChange(of: app.isWalletSuspended) { _, suspended in
+                if suspended { model.invalidate() }
+            }
             .onDisappear { model.invalidate() }
             .sheet(item: Binding(get: { model.quote }, set: { if $0 == nil { model.invalidate() } })) {
                 quote in
