@@ -11,7 +11,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
 
-/** RN's version-0 Zustand envelope. Invalid bytes are preserved and stop every mutation. */
+/** RN's version-0 Zustand envelope. Unsupported rows stay visible; invalid envelopes stop mutations. */
 class RecurringStore(private val read: () -> String?, private val write: (String) -> Unit) {
     constructor(settings: SettingsStorage) : this({ settings.string(key) }, { raw ->
         settings.set(raw, key); settings.sync(); check(settings.string(key) == raw) { "Unable to save recurring payments" }
@@ -30,13 +30,25 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     fun load(): State = synchronized(lock) { decode(envelope()) }
     private fun decode(envelope: JsonObject): State {
         val state = envelope.getValue("state").jsonObject
-        val schedules = json.decodeFromJsonElement<Map<String, RecurringPayment>>(state.getValue("schedules"))
-        require(schedules.all { it.key == it.value.id && it.value.validPolicy }) { "A saved recurring payment is invalid. Sending is stopped." }
+        val schedules = state.getValue("schedules").jsonObject.mapValues { (id, raw) ->
+            val decoded = runCatching { json.decodeFromJsonElement<RecurringPayment>(raw) }.getOrNull()
+            if (decoded != null && decoded.id == id && decoded.validPolicy) decoded
+            else {
+                val fields = raw as? JsonObject
+                // The original JSON remains authoritative for rows native code cannot represent.
+                (decoded ?: RecurringPayment(id, (fields?.get("label") as? JsonPrimitive)?.contentOrNull ?: "Saved recurring payment",
+                    (fields?.get("destination") as? JsonPrimitive)?.contentOrNull.orEmpty(),
+                    (fields?.get("destinationType") as? JsonPrimitive)?.contentOrNull.orEmpty(),
+                    (fields?.get("amountSat") as? JsonPrimitive)?.longOrNull ?: 0,
+                    interval = RecurringInterval("month", 1), startAt = 0, createdAt = 0, updatedAt = 0))
+                    .copy(id = id, status = "needs_attention", lastError = RecurringPayment.unsupportedMessage, unsupportedStorage = true)
+            }
+        }
         val binding = state["nativeWalletBinding"]?.takeUnless { it == JsonNull }?.let { json.decodeFromJsonElement<Binding>(it) }
         binding?.let { require(it.wallet.fingerprint.isNotBlank() && it.wallet.network.isNotBlank()); UUID.fromString(it.instance) }
         // RN may store amounts above native approval limits; retain each row and its original bytes.
         val visible = schedules.mapValues { (_, schedule) ->
-            if (schedule.amountSat > RecurringPayment.maximumAmount) schedule.copy(status = "needs_attention", lastError = RecurringPayment.amountLimitMessage)
+            if (!schedule.unsupportedStorage && schedule.amountSat > RecurringPayment.maximumAmount) schedule.copy(status = "needs_attention", lastError = RecurringPayment.amountLimitMessage)
             else schedule
         }
         return State(visible, state["serverSyncPending"]?.jsonPrimitive?.booleanOrNull ?: true, binding)
@@ -51,8 +63,11 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     fun bind(binding: Binding) = change { it["nativeWalletBinding"] = json.encodeToJsonElement(binding); it["serverSyncPending"] = JsonPrimitive(true) }
     fun upsert(schedule: RecurringPayment) = change { state ->
         val schedules = state.getValue("schedules").jsonObject.toMutableMap()
-        val previous = schedules[schedule.id]?.jsonObject.orEmpty()
-        schedules[schedule.id] = JsonObject(previous + json.encodeToJsonElement(schedule).jsonObject)
+        val previous = (schedules[schedule.id] as? JsonObject).orEmpty()
+        schedules[schedule.id] = if (schedule.unsupportedStorage) {
+            check(schedules.containsKey(schedule.id)) { RecurringPayment.unsupportedMessage }
+            schedules.getValue(schedule.id)
+        } else JsonObject(previous + json.encodeToJsonElement(schedule).jsonObject)
         state["schedules"] = JsonObject(schedules); state["serverSyncPending"] = JsonPrimitive(true)
     }
     /** Compare and replace under the same process-wide MMKV gate as pause/cancel/edit. */

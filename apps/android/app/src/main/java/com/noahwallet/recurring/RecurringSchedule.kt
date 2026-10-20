@@ -12,13 +12,15 @@ import java.util.TimeZone
 @Serializable data class RecurringPayment(
     val id: String, val label: String, val destination: String, val destinationType: String, val amountSat: Long,
     val comment: String = "", val interval: RecurringInterval, val startAt: Long,
-    val endAt: Long? = null, val maxOccurrences: Int? = null, val nativeRevision: String? = null,
+    val endAt: Long? = null, val maxOccurrences: Long? = null, val nativeRevision: String? = null,
     val status: String = "active", val nextOccurrenceIndex: Int = 0, val nextRunAt: Long? = startAt,
     val occurrencesPaid: Int = 0, val consecutiveFailures: Int = 0, val lastError: String? = null,
     val retryNotBefore: Long? = null, val inFlight: InFlight? = null, val runs: List<Run> = emptyList(),
     val createdAt: Long, val updatedAt: Long,
+    @kotlinx.serialization.Transient val unsupportedStorage: Boolean = false,
 ) {
     companion object {
+        const val unsupportedMessage = "Noah can't safely read this schedule. Cancel it and explicitly approve a new recurring payment."
         const val maximumAmount = 2_100_000_000_000_000L
         const val amountLimitMessage = "This amount exceeds 21 million BTC. Cancel this schedule and approve a new payment within the limit."
     }
@@ -34,6 +36,7 @@ import java.util.TimeZone
         (maxOccurrences == null || maxOccurrences >= 1) && nextOccurrenceIndex in 0..1_000_000 &&
         occurrencesPaid >= 0 && consecutiveFailures >= 0
     fun validateInput(now: Long) {
+        require(!unsupportedStorage) { unsupportedMessage }
         require(label.isNotBlank() && label.length <= 64) { "Give this payment a short name (max 64 characters)." }
         require(amountSat in 1..maximumAmount) { "Enter a whole amount in sats, up to 21 million BTC." }
         require(validPolicy) { "Enter an Ark address, Lightning address or BOLT12 offer and a valid interval." }

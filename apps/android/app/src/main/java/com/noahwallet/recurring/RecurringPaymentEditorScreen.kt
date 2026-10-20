@@ -46,7 +46,7 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
         return RecurringPayment(original?.id ?: UUID.randomUUID().toString(), label.trim().ifEmpty { (destination?.first ?: "").take(32) },
             destination?.first ?: "", destination?.second ?: "ark", amount.trim().takeIf { it.matches(Regex("[0-9]+")) }?.toLongOrNull() ?: 0,
             comment = if (destination?.second == "lnurl") comment.take(140).trim() else "", interval = interval, startAt = start,
-            endAt = if (endMode == "date") through else null, maxOccurrences = if (endMode == "count") count.toIntOrNull() ?: 0 else null,
+            endAt = if (endMode == "date") through else null, maxOccurrences = if (endMode == "count") count.toLongOrNull() ?: 0 else null,
             runs = original?.runs.orEmpty(), createdAt = original?.createdAt ?: now, updatedAt = now)
     }
     SettingsColumn {

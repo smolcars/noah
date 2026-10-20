@@ -46,7 +46,7 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
             }
             SelectionContainer { Text(s.destination, style = MaterialTheme.typography.bodySmall) }
             Text("${s.amountSat} sats", style = MaterialTheme.typography.headlineMedium)
-            Text("${s.interval.description} · ${s.occurrencesPaid} paid" + (s.maxOccurrences?.let { " of $it" } ?: ""))
+            if (!s.unsupportedStorage) Text("${s.interval.description} · ${s.occurrencesPaid} paid" + (s.maxOccurrences?.let { " of $it" } ?: ""))
             if (s.status == "active") s.nextRunAt?.let { Text("Next payment: ${recurringDate(it)}") }
             s.endAt?.let { Text("Ends: ${recurringDay(it)}") }
             s.runs.firstOrNull()?.let { Text("Last attempt: ${recurringDate(it.attemptedAt)} (${when (it.status) { "success" -> "Successful"; "skipped" -> "Skipped"; else -> "Failed" }})", style = MaterialTheme.typography.bodySmall) }

@@ -197,6 +197,7 @@ class RecurringExecutor(private val d: Dependencies,
         boundState()
         synchronized(RecurringStore.lock) {
             val schedule = d.store.load().schedules[id] ?: return
+            check(!schedule.unsupportedStorage) { RecurringPayment.unsupportedMessage }
             check(schedule.amountSat <= RecurringPayment.maximumAmount) { RecurringPayment.amountLimitMessage }
             check(schedule.inFlight == null && schedule.status != "needs_attention") { "Check your transaction history, then confirm the destructive override before resuming." }
             if (schedule.status != "completed") d.store.upsert(schedule.resume(d.now(), d.zone()))
@@ -208,6 +209,7 @@ class RecurringExecutor(private val d: Dependencies,
         if (!confirmed) return
         check(!running); boundState()
         val schedule = d.store.load().schedules[id] ?: return
+        check(!schedule.unsupportedStorage) { RecurringPayment.unsupportedMessage }
         check(schedule.amountSat <= RecurringPayment.maximumAmount) { RecurringPayment.amountLimitMessage }
         val entry = d.journal.load()[id]
         check(!d.journal.legacyUncertain(d.binding(), id)) { RecurringJournal.legacyMessage }
@@ -222,7 +224,7 @@ class RecurringExecutor(private val d: Dependencies,
         changed()
     }
     private fun refreshDates() {
-        for (schedule in boundState().schedules.values.filter { it.status != "completed" }) {
+        for (schedule in boundState().schedules.values.filter { it.status != "completed" && !it.unsupportedStorage }) {
             val next = schedule.next(schedule.nextOccurrenceIndex, d.zone())
             if (next != schedule.nextRunAt) d.store.updateIf(schedule, schedule.copy(nextRunAt = next))
         }

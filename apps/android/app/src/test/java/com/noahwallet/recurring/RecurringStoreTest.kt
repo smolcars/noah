@@ -51,9 +51,64 @@ class RecurringStoreTest {
         }
     }
     @Test fun invalidCorruptAndFutureStoresNeverBecomeEmptyOrWritable() {
-        for (invalid in listOf("{", "{}", fixture().replace("\"version\":0", "\"version\":2"), fixture().replace("\"amountSat\":50000", "\"amountSat\":-1"), fixture().replace("\"id\":\"rent\"", "\"id\":\"other\""))) {
+        for (invalid in listOf("{", "{}", fixture().replace("\"version\":0", "\"version\":2"))) {
             var writes = 0; val store = RecurringStore({ invalid }, { writes++ })
             assertTrue(runCatching { store.load() }.isFailure); assertTrue(runCatching { store.remove("rent") }.isFailure); assertEquals(0, writes)
+        }
+    }
+    @Test fun rnWriterCountsUseLongAndUnsupportedRowsRetainTheirOriginalJson() {
+        var raw = javaClass.getResource("/recurring-rn-range.json")!!.readText()
+        val original = raw
+        val store = RecurringStore({ raw }, { raw = it })
+        val schedules = store.load().schedules
+        assertEquals(11, schedules.size)
+        for ((id, count) in listOf("count-0" to 1L, "count-1" to 3_000_000_000L,
+            "count-2" to 9_007_199_254_740_991L, "count-3" to 9_223_372_036_854_775_000L)) {
+            val schedule = schedules.getValue(id)
+            assertEquals(count, schedule.maxOccurrences)
+            assertEquals("active", schedule.status)
+            assertFalse(schedule.unsupportedStorage)
+            assertEquals("pay", schedule.plan(1000).kind)
+        }
+        val unsupported = schedules.filterKeys { it !in setOf("count-0", "count-1", "count-2", "count-3") }
+        assertEquals(7, unsupported.size)
+        assertEquals(original, raw)
+        for (schedule in unsupported.values) {
+            assertEquals("needs_attention", schedule.status)
+            assertEquals(RecurringPayment.unsupportedMessage, schedule.lastError)
+            assertTrue(schedule.unsupportedStorage)
+            assertEquals("idle", schedule.plan(1000).kind)
+            assertTrue(runCatching { schedule.validateInput(1000) }.isFailure)
+        }
+        val before = Json.parseToJsonElement(raw).jsonObject.getValue("state").jsonObject.getValue("schedules")
+        store.setPending(false)
+        for (schedule in unsupported.values) store.upsert(schedule.copy(updatedAt = 123))
+        val after = Json.parseToJsonElement(raw).jsonObject.getValue("state").jsonObject.getValue("schedules")
+        assertEquals(before, after)
+        assertEquals(11, RecurringStore({ raw }, { raw = it }).load().schedules.size)
+        store.remove("count-4")
+        assertEquals(10, store.load().schedules.size)
+    }
+    @Test fun unsupportedRowsNeverHideHealthySchedulesAndRetainUnknownFields() {
+        for (replacement in listOf("\"amountSat\":-1", "\"maxOccurrences\":1e100", "\"nextOccurrenceIndex\":3000000000", "\"startAt\":1000.5")) {
+            val root = Json.parseToJsonElement(fixture()).jsonObject
+            val state = root.getValue("state").jsonObject
+            val rent = state.getValue("schedules").jsonObject.getValue("rent").jsonObject
+            val field = Json.parseToJsonElement("{$replacement}").jsonObject
+            val unsupported = JsonObject(rent + field + ("unknown" to buildJsonObject { put("keep", true) }))
+            var raw = JsonObject(root + ("futureEnvelope" to JsonPrimitive(7)) + ("state" to JsonObject(state +
+                ("futureState" to JsonPrimitive(true)) + ("schedules" to JsonObject(mapOf("rent" to unsupported,
+                    "healthy" to JsonObject(rent + ("id" to JsonPrimitive("healthy"))))))))).toString()
+            val store = RecurringStore({ raw }, { raw = it })
+            assertEquals("needs_attention", store.load().schedules.getValue("rent").status)
+            store.upsert(store.load().schedules.getValue("rent").copy(status = "paused"))
+            store.upsert(store.load().schedules.getValue("healthy").copy(status = "paused"))
+            val saved = Json.parseToJsonElement(raw).jsonObject
+            assertEquals(unsupported, saved.getValue("state").jsonObject.getValue("schedules").jsonObject.getValue("rent"))
+            assertEquals(JsonPrimitive(7), saved["futureEnvelope"])
+            assertEquals(JsonPrimitive(true), saved.getValue("state").jsonObject["futureState"])
+            store.remove("rent")
+            assertEquals(setOf("healthy"), store.load().schedules.keys)
         }
     }
     @Test fun failedWriteLatchesSendingOff() {

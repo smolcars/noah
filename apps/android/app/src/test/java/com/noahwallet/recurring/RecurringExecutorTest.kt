@@ -73,6 +73,28 @@ class RecurringExecutorTest {
         w.executor.cancel(oversized.id)
         assertEquals(setOf("rent"), w.store.load().schedules.keys)
     }
+    @Test fun rnWideCountsPayAndUnsupportedRowsStayStoppedAndCancellable() = runBlocking {
+        val w = RecurringWorld(this)
+        w.raw = javaClass.getResource("/recurring-rn-range.json")!!.readText()
+        w.store.bind(w.binding)
+        w.executor.execute(); w.executor.execute()
+        assertEquals(4, w.wallet.calls)
+        assertEquals(11, w.executor.schedules.size)
+        assertEquals(3_000_000_000L, w.store.load().schedules.getValue("count-1").maxOccurrences)
+        assertEquals(1, w.store.load().schedules.getValue("count-1").occurrencesPaid)
+        for (schedule in w.executor.schedules.filter { it.unsupportedStorage }) {
+            for (action in listOf<suspend () -> Unit>({ w.executor.resume(schedule.id) },
+                { w.executor.overrideAndResume(schedule.id, true) }, { w.executor.save(schedule, editing = true) })) {
+                val raw = w.raw
+                assertTrue(runCatching { action() }.isFailure)
+                assertEquals(raw, w.raw)
+            }
+            w.executor.cancel(schedule.id)
+        }
+        assertEquals(0, w.audits)
+        assertEquals(4, w.store.load().schedules.size)
+        assertEquals(4, w.wallet.calls)
+    }
     @Test fun newAndEditedApprovalsRejectAmountsAboveTheLimit() = runBlocking {
         val w = RecurringWorld(this); val original = w.add()
         for (editing in listOf(false, true)) {
