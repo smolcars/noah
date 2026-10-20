@@ -15,8 +15,12 @@ struct AppLogTests {
     ]
 
     @Test func redactionPerformance() {
-        EndpointLogPrivacy.register("https://scaling-privacy.example/api/fakeScaleToken")
-        for (name, unit) in Self.performanceInputs {
+        for index in 0..<1000 {
+            EndpointLogPrivacy.register("https://scaling-privacy-\(index).example/api/fakeScale\(index)")
+        }
+        let authorities = [("other authorities", "https://unrelated-scaling.example/other "),
+                           ("registered authorities", "https://scaling-privacy-999.example/other ")]
+        for (name, unit) in Self.performanceInputs + authorities {
             assertRedactionScales(name, unit, redact: LogFile.redact)
             assertRedactionScales("boundary " + name, unit, redact: EndpointLogPrivacy.redact)
         }
