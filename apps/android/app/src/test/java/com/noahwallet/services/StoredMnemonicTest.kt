@@ -23,6 +23,15 @@ class StoredMnemonicTest {
         }
     }
 
+    @Test fun validNoncanonicalRNBackupPasswordStaysByteIdentical() {
+        val canonical = vector(12)
+        val stored = " \n" + canonical.uppercase().replace(" ", "\u3000") + "\t"
+        val result = StoredMnemonic.validate(SecretResult.Found(stored))
+        assertTrue("Validation must preserve the RN backup password", result is SecretResult.Found && result.value == stored)
+        assertEquals(SecretFailure.seedConflict, (StoredMnemonic.agree(listOf(result,
+            SecretResult.Found(canonical))) as SecretResult.Unavailable).reason)
+    }
+
     @Test fun everySeedSourceMustAgreeAndInvalidSeedsAreNeverWritten() = runBlocking {
         for (current in listOf(SecretResult.NotFound, SecretResult.Found(vector(12)), SecretResult.Found(""),
             SecretResult.Unavailable(SecretFailure.invalidCiphertext))) {

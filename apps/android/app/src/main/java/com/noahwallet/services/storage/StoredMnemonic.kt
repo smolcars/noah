@@ -31,8 +31,9 @@ object StoredMnemonic {
         } finally { entropy.fill(0) }
     }
 
+    // Backup encryption uses the exact RN credential string; validation must not rewrite it.
     fun validate(result: SecretResult): SecretResult = when (result) {
-        is SecretResult.Found -> normalize(result.value)?.let { SecretResult.Found(it) }
+        is SecretResult.Found -> normalize(result.value)?.let { SecretResult.Found(result.value) }
             ?: SecretResult.Unavailable(SecretFailure.invalidMnemonic)
         else -> result
     }

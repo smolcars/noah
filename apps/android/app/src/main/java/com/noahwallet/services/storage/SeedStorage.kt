@@ -27,13 +27,13 @@ class SeedStorage internal constructor(
     }
 
     suspend fun save(value: String, keepUnverifiedWrite: Boolean = false): SecretResult = migrationLock.withLock {
-        val normalized = StoredMnemonic.normalize(value)
-            ?: return@withLock SecretResult.Unavailable(SecretFailure.invalidMnemonic)
+        if (StoredMnemonic.normalize(value) == null)
+            return@withLock SecretResult.Unavailable(SecretFailure.invalidMnemonic)
         when (val current = readUnlocked()) {
             is SecretResult.Unavailable -> current
-            is SecretResult.Found -> if (current.value != normalized) SecretResult.Unavailable(SecretFailure.seedConflict)
-                else native.save(normalized, keepUnverifiedWrite)
-            SecretResult.NotFound -> native.save(normalized, keepUnverifiedWrite)
+            is SecretResult.Found -> if (current.value != value) SecretResult.Unavailable(SecretFailure.seedConflict)
+                else native.save(value, keepUnverifiedWrite)
+            SecretResult.NotFound -> native.save(value, keepUnverifiedWrite)
         }
     }
 

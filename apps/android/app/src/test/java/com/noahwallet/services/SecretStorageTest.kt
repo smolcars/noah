@@ -151,6 +151,16 @@ class SecretStorageTest {
         }
     }
 
+    @Test fun migrationPreservesTheVerbatimRNBackupPassword() = runBlocking {
+        val stored = " \n" + secret.uppercase().replace(" ", "\u3000") + "\t"
+        val native = NativeSecretStore("test", FakeKeys(), FakeFile())
+        val storage = SeedStorage(native) { SecretResult.Found(stored) }
+        assertTrue("Read changed backup password", (storage.read() as? SecretResult.Found)?.value == stored)
+        assertTrue("Save changed backup password", (storage.save(stored) as? SecretResult.Found)?.value == stored)
+        assertTrue("Migration changed backup password", (native.read() as? SecretResult.Found)?.value == stored)
+        assertEquals(SecretFailure.seedConflict, (storage.save(secret) as SecretResult.Unavailable).reason)
+    }
+
     @Test fun migrationVerifiesBeforeUseAndKeepsLegacyOnFailure() = runBlocking {
         val keys = FakeKeys()
         val file = FakeFile()
