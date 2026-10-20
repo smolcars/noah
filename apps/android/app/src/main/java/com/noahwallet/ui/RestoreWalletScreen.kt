@@ -6,20 +6,15 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -32,12 +27,13 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
     val focus = LocalFocusManager.current
     val input = remember { RecoveryPhraseInput() }
     var revision by remember { mutableIntStateOf(0) }
+    var clearGeneration by remember { mutableIntStateOf(0) }
     // Only plain remember: Android saved-instance state must never contain recovery words.
     var focused by remember { mutableStateOf<Int?>(null) }
     val requesters = remember { List(12) { FocusRequester() } }
     val flow = model.restore
     val blocked = model.busy || !flow.canLeave
-    fun clear() { input.clear(); focused = null; revision++; focus.clearFocus() }
+    fun clear() { focus.clearFocus(); input.clear(); focused = null; revision++; clearGeneration++ }
     fun leave() { clear(); flow.clearIssue(); model.step = "welcome" }
     BackHandler { if (!blocked && !useStoredSeed) leave() }
     DisposableEffect(activity, lifecycle) {
@@ -57,26 +53,22 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
             "Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."
         else "Enter your 12 words in order, or paste the whole phrase into any word field.")
         if (!useStoredSeed && !blocked) {
+            key(clearGeneration) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 repeat(6) { row ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         repeat(2) { column ->
                             val index = row * 2 + column
-                            OutlinedTextField(words[index], {
+                            RecoveryWordField(words[index], index, {
                                 input.update(it, index); revision++; flow.clearIssue()
-                            }, label = { Text("Word ${index + 1}") }, singleLine = true,
-                                isError = words[index].isNotEmpty() && words[index] !in RecoveryPhraseInput.wordList,
-                                keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Password,
-                                    imeAction = if (index == 11) ImeAction.Done else ImeAction.Next),
-                                keyboardActions = KeyboardActions(
-                                    onNext = { requesters[index + 1].requestFocus() }, onDone = { focus.clearFocus() }),
+                            }, onFocus = { focused = index },
+                                onNext = { if (index < 11) requesters[index + 1].requestFocus() },
                                 modifier = Modifier.weight(1f).focusRequester(requesters[index])
-                                    .onFocusChanged { if (it.isFocused) focused = index }
-                                    .testTag("restore-word-${index + 1}")
-                                    .semantics { password() })
+                                    .testTag("restore-word-${index + 1}"))
                         }
                     }
                 }
+            }
             }
             Text("${input.wordCount} of 12 words", style = MaterialTheme.typography.bodySmall)
             focused?.let { index ->
@@ -100,6 +92,7 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
         if (flow.issue?.requiresRestart != true) NoahButton("Restore Wallet", !blocked && (useStoredSeed || input.isComplete)) {
             focus.clearFocus()
             if (!useStoredSeed && !RecoveryPhraseInput.isValid(input.phrase)) {
+                clear()
                 flow.reject(RestoreIssue.invalidPhrase)
             } else {
                 val phrase = if (useStoredSeed) null else input.phrase

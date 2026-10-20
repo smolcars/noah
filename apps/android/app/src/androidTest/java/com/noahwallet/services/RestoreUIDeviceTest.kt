@@ -156,10 +156,30 @@ class RestoreUIDeviceTest {
             waitFor("Phrase input returns") { find(automation.rootInActiveWindow) { it.isEditable && it.isPassword } != null }
             stage = "clear phrase on background"
             enterPhrase(phrase)
+            fun firstField(view: android.view.View): RecoveryWordEditText? {
+                if (view is RecoveryWordEditText) return view
+                if (view is android.view.ViewGroup) for (i in 0 until view.childCount)
+                    firstField(view.getChildAt(i))?.let { return it }
+                return null
+            }
+            var oldField: RecoveryWordEditText? = null
+            instrumentation.runOnMainSync { oldField = firstField(activity!!.window.decorView) }
+            assertNotNull(oldField)
             automation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME)
             waitFor("Activity backgrounded") { !activity!!.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) }
             context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             waitFor("Phrase cleared on background") { text("0 of 12 words") != null }
+            instrumentation.runOnMainSync {
+                val fresh = checkNotNull(firstField(activity!!.window.decorView))
+                assertTrue("Security clear recreates native fields", fresh !== oldField)
+                fresh.requestFocus()
+                fresh.onKeyShortcut(android.view.KeyEvent.KEYCODE_Z,
+                    android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_Z).let {
+                        android.view.KeyEvent(0, 0, it.action, it.keyCode, 0, android.view.KeyEvent.META_CTRL_ON)
+                    })
+                assertTrue("Hardware Undo cannot restore cleared words", fresh.text.isEmpty())
+            }
+            assertNotNull(text("0 of 12 words"))
             enterPhrase(phrase)
             // No screenshots, screen dumps, clipboard persistence, shell arguments or assertion diffs contain the phrase.
             stage = "submit restore UI"
@@ -211,6 +231,53 @@ class RestoreUIDeviceTest {
         }
     }
 
+
+    @Test fun platformPasswordNodesEventsAndImeArePrivate() {
+        optIn()
+        val activity = launch().first
+        val events = java.util.concurrent.CopyOnWriteArrayList<android.view.accessibility.AccessibilityEvent>()
+        val resolver = context.contentResolver
+        val setting = android.provider.Settings.Secure.ACCESSIBILITY_SPEAK_PASSWORD
+        val previous = android.provider.Settings.Secure.getString(resolver, setting)
+        automation.adoptShellPermissionIdentity(android.Manifest.permission.WRITE_SECURE_SETTINGS)
+        try {
+            android.provider.Settings.Secure.putInt(resolver, setting, 0)
+            lateinit var field: RecoveryWordEditText
+            instrumentation.runOnMainSync {
+                field = RecoveryWordEditText(activity, 0)
+                activity.setContentView(field)
+                field.requestFocus()
+            }
+            automation.setOnAccessibilityEventListener { event ->
+                if (event.eventType == android.view.accessibility.AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED)
+                    events.add(android.view.accessibility.AccessibilityEvent.obtain(event))
+            }
+            instrumentation.runOnMainSync { field.setText("abandon") }
+            waitFor("Password change event delivered") { events.any { it.isPassword } }
+            val node = checkNotNull(find(automation.rootInActiveWindow) { it.isEditable && it.isPassword })
+            assertTrue("Password node text is redacted", node.text?.contains("abandon") != true)
+            assertTrue("Word position remains accessible", node.hintText?.contains("Word 1") == true)
+            assertTrue("Editing remains available", node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT })
+            assertTrue("Password event text and beforeText are redacted", events.all { event ->
+                event.text.none { it.contains("abandon") } && event.beforeText?.contains("abandon") != true
+            })
+            instrumentation.runOnMainSync {
+                val info = android.view.inputmethod.EditorInfo()
+                field.onCreateInputConnection(info)
+                assertTrue(info.imeOptions and android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0)
+                assertTrue(info.inputType and android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS != 0)
+                assertTrue(info.inputType and android.text.InputType.TYPE_MASK_VARIATION == android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD)
+                assertFalse(field.isSaveEnabled)
+                field.setText("")
+            }
+        } finally {
+            automation.setOnAccessibilityEventListener(null)
+            android.provider.Settings.Secure.putString(resolver, setting, previous)
+            automation.dropShellPermissionIdentity()
+            instrumentation.runOnMainSync { activity.finish() }
+            events.forEach { it.recycle() }
+        }
+    }
 
     @Test fun interruptedJournalAndWaitingSecretNeverOfferCreation() = runBlocking<Unit> {
         optIn()
