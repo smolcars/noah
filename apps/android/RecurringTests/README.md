@@ -3,6 +3,82 @@
 Initial implementation base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
 Kotlin / Compose, API 24 minimum, bark-bolt-ffi **0.4.0**.
 
+## Round-3 correctness fixes (2026-10-20)
+
+Base: `feat/native-rewrite` at `f4ba6620`, bark-bolt-ffi **0.5.0**. That base
+already includes the Android restore-preparation authority wiring that the older
+round-2 notes below handed off to the background owner.
+
+RN import requires all 20 keys written by
+`client/src/lib/recurringSchedule.ts:131-156` (`createRecurringPayment`): `id`,
+`label`, `destination`, `destinationType`, `amountSat`, `comment`, `interval`,
+`startAt`, `endAt`, `maxOccurrences`, `status`, `nextOccurrenceIndex`, `nextRunAt`,
+`occurrencesPaid`, `consecutiveFailures`, `lastError`, `inFlight`, `runs`,
+`createdAt`, `updatedAt`. `interval.unit` / `interval.every`, in-flight fields and
+run fields retain their typed decoder requirements. Nullable keys must be present;
+`retryNotBefore` is optional, as declared in `client/src/types/recurringPayment.ts`
+and omitted by the initial factory. `nativeRevision` is a native extension.
+`client/src/store/recurringPaymentStore.ts:57-62` stores the complete row, while
+execution helpers preserve these fields through object spreads.
+
+`apps/fixtures/recurring-rn-required-fields.json` contains one deletion per
+mandatory key plus an executable control without `retryNotBefore`. The missing
+status case starts from a paused policy; the missing index case retains RN success
+history for occurrence 0. The other fields come from the shared RN range fixture.
+Both platforms assert identical classifications before ledger bootstrap, no
+submission/consumption for unsupported rows, refusal of resume/edit, exact row
+bytes through binding, pending writes, pause and a copied display-model write,
+reopen and cancellation. Android now retains unchanged original row slices rather
+than reserializing their whitespace; iOS already retained raw slices. Unknown
+nested values, escaped quotes and braces are included in the fixture.
+
+Terminal settlement reads the underlying policy with ledger protection, omitting
+only the temporary automation display overlay. A successful submitted payment
+still consumes/applies once during suspension; explicit wallet resume reveals its
+active advanced policy. Genuine paused/needs-attention policy state, error,
+failure count and backoff survive. Binding/revision checks, consumption before
+policy writes, application claims and exact receipt acknowledgement remain intact.
+
+Clock-triggered work checks wallet admission before authority access. Protected
+reads resolve the live wallet binding before touching authority or policy files;
+Welcome has no wallet to bootstrap or mark failed. iOS's equivalent AppDelegate
+clock callbacks are covered through the shared executor without changing
+AppDelegate. Established missing/corrupt authority and interrupted writes still
+retain their failure latches, including explicit-resume refusal. No latch is
+cleared by the new admission checks.
+
+Permanent regressions: `RecurringRNRequiredFieldsTests.swift` /
+`RecurringRNRequiredFieldsTest.kt`, `RecurringRound3RegressionTests.swift` /
+`RecurringRound3RegressionTest.kt`, and `RecurringOnboardingTests.swift` /
+`RecurringOnboardingTest.kt`. Archived probes came from
+`/private/tmp/noah-r2-review-{ios-probes.swift,android-probes.kt}`. Android baseline:
+**23 tests / 22 failures / 1 pass** (20 malformed row cases plus both probes).
+iOS baseline: **2 definitions / 22 expanded cases / 6 failures / 16 passes**
+(five missing nullable keys plus suspension). The added iOS onboarding parity
+probe separately failed **1/1** before its fix.
+
+Android verification: strict import/store/timestamp/version **43 tests**; suspension
+and existing settlement suites passed, including genuine pause/failure under the
+durable suspension authority; onboarding/authority/loading **9 tests**. Final
+recurring-focused run: **1,519 tests / 30 suites / 0 failures/errors/skips**.
+The required full JVM/APK command ran once after the last Android code change:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**3,001 tests / 104 suites / 0 failures/errors/skips**, APK assembly succeeded,
+**3m 27s**. Every Gradle invocation used `--max-workers=2`; platform runs were
+serialized. Nix reported shared evaluation-cache contention but completed.
+Logs, baseline XML, focused counts and all final XML remain under
+`/private/tmp/noah-r3-android-*`. No emulator, physical device, Docker, funded
+payment, real push delivery or real power cut was used. No Android build/test
+process remained active after completion. iOS verification and owned-simulator
+cleanup are recorded in its notes.
+
+Round-3 Android commits: `849f8af4` (strict import + shared fixture), `4be5d951`
+(settlement beneath suspension), `97d6e95c` (pre-onboarding admission).
+
 ## Round-2 money-path fixes (2026-10-20)
 
 Base: `feat/native-rewrite` at `4f7228c5`; bark-bolt-ffi **0.5.0**.

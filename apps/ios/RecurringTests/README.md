@@ -3,6 +3,103 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Round-3 correctness fixes (2026-10-20)
+
+Base: `feat/native-rewrite` at `f4ba6620`, bark-bolt-ffi **0.5.0**. That base
+already includes the Android restore-preparation authority wiring that the older
+round-2 notes below handed off to the background owner.
+
+RN import requires all 20 keys written by
+`client/src/lib/recurringSchedule.ts:131-156` (`createRecurringPayment`): `id`,
+`label`, `destination`, `destinationType`, `amountSat`, `comment`, `interval`,
+`startAt`, `endAt`, `maxOccurrences`, `status`, `nextOccurrenceIndex`, `nextRunAt`,
+`occurrencesPaid`, `consecutiveFailures`, `lastError`, `inFlight`, `runs`,
+`createdAt`, `updatedAt`. `interval.unit` / `interval.every`, in-flight fields and
+run fields retain their typed decoder requirements. Nullable keys must be present;
+`retryNotBefore` is optional, as declared in `client/src/types/recurringPayment.ts`
+and omitted by the initial factory. `nativeRevision` is a native extension.
+`client/src/store/recurringPaymentStore.ts:57-62` stores the complete row, while
+execution helpers preserve these fields through object spreads.
+
+`apps/fixtures/recurring-rn-required-fields.json` contains one deletion per
+mandatory key plus an executable control without `retryNotBefore`. The missing
+status case starts from a paused policy; the missing index case retains RN success
+history for occurrence 0. The other fields come from the shared RN range fixture.
+Both platforms assert identical classifications before ledger bootstrap, no
+submission/consumption for unsupported rows, refusal of resume/edit, exact row
+bytes through binding, pending writes, pause and a copied display-model write,
+reopen and cancellation. Android now retains unchanged original row slices rather
+than reserializing their whitespace; iOS already retained raw slices. Unknown
+nested values, escaped quotes and braces are included in the fixture.
+
+Terminal settlement reads the underlying policy with ledger protection, omitting
+only the temporary automation display overlay. A successful submitted payment
+still consumes/applies once during suspension; explicit wallet resume reveals its
+active advanced policy. Genuine paused/needs-attention policy state, error,
+failure count and backoff survive. Binding/revision checks, consumption before
+policy writes, application claims and exact receipt acknowledgement remain intact.
+
+Clock-triggered work checks wallet admission before authority access. Protected
+reads resolve the live wallet binding before touching authority or policy files;
+Welcome has no wallet to bootstrap or mark failed. iOS's equivalent AppDelegate
+clock callbacks are covered through the shared executor without changing
+AppDelegate. Established missing/corrupt authority and interrupted writes still
+retain their failure latches, including explicit-resume refusal. No latch is
+cleared by the new admission checks.
+
+Permanent regressions: `RecurringRNRequiredFieldsTests.swift` /
+`RecurringRNRequiredFieldsTest.kt`, `RecurringRound3RegressionTests.swift` /
+`RecurringRound3RegressionTest.kt`, and `RecurringOnboardingTests.swift` /
+`RecurringOnboardingTest.kt`. Archived probes came from
+`/private/tmp/noah-r2-review-{ios-probes.swift,android-probes.kt}`. Android baseline:
+**23 tests / 22 failures / 1 pass** (20 malformed row cases plus both probes).
+iOS baseline: **2 definitions / 22 expanded cases / 6 failures / 16 passes**
+(five missing nullable keys plus suspension). The added iOS onboarding parity
+probe separately failed **1/1** before its fix.
+
+iOS's added pre-onboarding probe also failed before its fix: **1 definition /
+1 failure / 0 skipped**, with the newly created wallet retaining the process
+failure latch. Strict import/range/store checks then passed **11 definitions /
+40 expanded cases / 3 suites**. The broader focused run passed **94 of 95
+definitions / 215 expanded passes**; its only failing definition (nine expanded
+cases) exposed an existing timestamp fixture whose healthy control used Swift
+`JSONEncoder`, omitting required RN null keys. That fixture now fills those keys
+before corrupting one timestamp; no production parsing exception was added.
+The corrected fixture plus all three new suites passed **6 definitions /
+35 expanded cases / 4 suites / 0 failures/skips**.
+
+All Xcode runs use Nix, generated project files, normal code signing,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, disabled parallel testing and
+automatic diagnostic collection, and owned DerivedData under `/private/tmp`.
+Individual baseline test selectors include their trailing `()`; other focused
+runs select whole suites. Nix cache contention slowed startup; later calls use
+`NIX_CONFIG='eval-cache = false'`. No settings storage/quarantine, launch gate,
+AppModel Continue, WalletSession, PushJobs, AppDelegate or AppLog code changed.
+
+Full **NoahTests ran once after the last code/test change**, with no suite
+exclusions: **665 total / 642 passed / 23 opt-in skipped / 0 failed**, **132
+suites**; **959 expanded passes / 23 skipped**, 92.620 seconds of test execution.
+The Android required final command passed **3,001 tests / 104 suites** and APK
+assembly; see its notes for the exact command and logs.
+
+Owned simulator **Noah Recurring R3 Sol e4680eee**, iPhone 17 / iOS 27.0, UDID
+**A26B00B9-7E90-4015-9C51-6EE8C0A22674**: exact name/UDID/type and **Shutdown**
+state confirmed immediately before deletion; absence verified afterward. The
+Device panel returned `No device A26B00B9-7E90-4015-9C51-6EE8C0A22674 on host local`
+twice, so Xcode drove only that simctl-verified owned UDID. Removed owned
+`/private/tmp/noah-r3-sol-dd` DerivedData and all **six** owned result bundles
+after exporting every summary/test tree. Receipt: `/private/tmp/noah-r3-cleanup.json`.
+Logs and exported JSON remain under `/private/tmp/noah-r3-ios-*`.
+
+No owned build/test process remains active. No protected/shared simulator,
+Android emulator, physical device, Docker, server or RN code was touched. These
+are deterministic storage/executor tests; no funded payment, physical push or
+real power cut is claimed. All three requested correctness findings are fixed.
+
+Round-3 iOS commits: `f8ae2d03` (required RN null keys), `6baeb6d9` (settlement
+beneath suspension), `97fa4cc6` (pre-onboarding admission), `6221ab61` (RN-compatible
+timestamp fixture).
+
 ## Round-2 money-path fixes (2026-10-20)
 
 Base: `feat/native-rewrite` at `4f7228c5`; bark-bolt-ffi **0.5.0**.
