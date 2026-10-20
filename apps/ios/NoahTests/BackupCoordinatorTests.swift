@@ -99,6 +99,41 @@ struct BackupCoordinatorTests {
         Issue.record("condition never became true")
     }
 
+    @Test func deletionTimeoutDoesNotAbandonAnUncooperativePass() async throws {
+        let world = World()
+        let clock = ManualClock()
+        let coordinator = BackupCoordinator(dependencies: world.dependencies(clock: clock))
+        world.hold()
+        await coordinator.schedule(.manual, immediate: true)
+        await eventually { world.isHolding }
+        world.eligible = false
+        await #expect(throws: WalletLifecycle.Failure.backupBusy) {
+            try await coordinator.settleForDeletion(timeout: .milliseconds(20))
+        }
+        #expect(world.isHolding)
+        #expect(world.state.lastBackupAt == nil)
+        world.releaseHeld()
+        try await coordinator.settleForDeletion()
+        #expect(!world.isHolding)
+    }
+
+    @Test func deletionCancelsACooperativeUploadAndBoundsItsResourceTimeout() async throws {
+        let world = World()
+        let clock = ManualClock()
+        var dependencies = world.dependencies(clock: clock)
+        dependencies.perform = { _, _ in
+            try await clock.sleep(.seconds(600))
+            return .init(backupId: nil, snapshotSha256: "unused", uploaded: false)
+        }
+        let coordinator = BackupCoordinator(dependencies: dependencies)
+        await coordinator.schedule(.manual, immediate: true)
+        await eventually { await clock.pending == [.seconds(600)] }
+        world.eligible = false
+        try await coordinator.settleForDeletion(timeout: .seconds(1))
+        #expect(await clock.pending.isEmpty)
+        #expect(BackupService.uploadSession.configuration.timeoutIntervalForResource == 60)
+    }
+
     @Test func settleWaitsForActiveUploadAndItsFinalStateWrite() async throws {
         let clock = ManualClock()
         let world = World()

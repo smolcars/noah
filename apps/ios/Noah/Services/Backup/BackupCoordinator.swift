@@ -84,6 +84,22 @@ actor BackupCoordinator {
         cancelScheduled()
     }
 
+    /// Cancellation reaches URLSession uploads; a non-cooperative native pass stays owned
+    /// by the coordinator and deletion fails without touching its files or seed.
+    func settleForDeletion(timeout: Duration = .seconds(30)) async throws {
+        cancelScheduled()
+        guard let inFlight else { return }
+        inFlight.cancel()
+        let waiter = Task { try await Self.value(of: inFlight) }
+        let deadline = Task {
+            do { try await Task.sleep(for: timeout); waiter.cancel() }
+            catch { }
+        }
+        defer { deadline.cancel(); cancelScheduled() }
+        do { _ = try await waiter.value }
+        catch { throw WalletLifecycle.Failure.backupBusy }
+    }
+
     /// `flushBackup`: runs now and returns once every request made before
     /// this call is covered by a finished pass. A cancelled caller (a push
     /// out of background time) stops waiting at once; the pass itself goes

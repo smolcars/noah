@@ -18,7 +18,13 @@ struct BackupService: Sendable {
     /// Snapshots and zip staging are plaintext: each operation gets its own
     /// folder, removed afterwards and swept at launch if the app died.
     var scratch: ScratchSpace = .shared
-    var uploadSession: URLSession = .shared
+    static let uploadSession: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 60
+        configuration.timeoutIntervalForResource = 60
+        return URLSession(configuration: configuration)
+    }()
+    var uploadSession: URLSession = Self.uploadSession
 
     func registerBackup() async throws {
         _ = try await client.updateBackupSettings(body: .json(.init(backupEnabled: true))).ok

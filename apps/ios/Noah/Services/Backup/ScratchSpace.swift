@@ -13,7 +13,6 @@ final class ScratchSpace: Sendable {
         var live: Set<String> = []
         var operations = 0
         var deleting = false
-        var waiters: [CheckedContinuation<Void, Error>] = []
     }
     private let state = Mutex(State())
 
@@ -22,31 +21,24 @@ final class ScratchSpace: Sendable {
             guard !value.deleting else { throw CocoaError(.fileWriteNoPermission) }
             value.operations += 1
         }
-        defer {
-            let waiters = state.withLock { value in
-                value.operations -= 1
-                guard value.operations == 0 else { return [CheckedContinuation<Void, Error>]() }
-                let waiters = value.waiters
-                value.waiters = []
-                return waiters
-            }
-            waiters.forEach { $0.resume() }
-        }
+        defer { state.withLock { $0.operations -= 1 } }
         return try await body()
     }
 
-    func drainForWalletDeletion() async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            do {
-                let ready = try state.withLock { value in
-                    guard !value.deleting else { throw CocoaError(.fileWriteFileExists) }
-                    value.deleting = true
-                    if value.operations == 0 { return true }
-                    value.waiters.append(continuation)
-                    return false
-                }
-                if ready { continuation.resume() }
-            } catch { continuation.resume(throwing: error) }
+    func drainForWalletDeletion(timeout: Duration = .seconds(30)) async throws {
+        try state.withLock { value in
+            guard !value.deleting else { throw CocoaError(.fileWriteFileExists) }
+            value.deleting = true
+        }
+        do {
+            let deadline = ContinuousClock.now + timeout
+            while state.withLock({ $0.operations != 0 }) {
+                guard ContinuousClock.now < deadline else { throw WalletLifecycle.Failure.backupBusy }
+                try await Task.sleep(for: .milliseconds(20))
+            }
+        } catch {
+            finishWalletDeletion()
+            throw error
         }
     }
 

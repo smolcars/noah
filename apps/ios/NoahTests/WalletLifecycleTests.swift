@@ -29,13 +29,14 @@ struct WalletLifecycleTests {
         session: WalletSession, settings: SettingsStorage, seed: KeychainPassword, token: KeychainPassword,
         scratch: ScratchSpace? = nil,
         mutation: WalletMutationGate = .shared,
-        settleBackground: @escaping @Sendable () async -> Void = {},
+        drainTimeout: Duration = .seconds(30),
+        settleBackground: @escaping @Sendable () async throws -> Void = {},
         deregister: @escaping @Sendable () async throws -> Void = {}
     ) -> WalletLifecycle {
         WalletLifecycle(dependencies: .init(
             session: session, location: location, seed: seed, authToken: token, settings: settings,
-            scratch: scratch ?? ScratchSpace(root: root.appending(path: "scratch")), appGroup: nil, mutation: mutation,
-            deregister: deregister, settleBackground: settleBackground))
+            scratch: scratch ?? ScratchSpace(root: root.appending(path: "scratch")), appGroup: nil, mutation: mutation, drainTimeout: drainTimeout,
+            deregister: deregister, settleBackground: { _ in try await settleBackground() }))
     }
 
     private func makeSettings() throws -> SettingsStorage {
@@ -222,6 +223,37 @@ struct WalletLifecycleTests {
             #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
             try await relaunched.recoverDeletion()
         }
+    }
+
+    @Test func timedOutExportKeepsWalletIntactAndDeletionCanRetry() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try writeBarkDatabase()
+        let settings = try makeSettings()
+        let (seed, token) = items()
+        defer { seed.remove(); token.remove() }
+        try seed.save("current wallet"); try token.save("token")
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let scratch = ScratchSpace(root: root.appending(path: "scratch"))
+        let gate = Gate()
+        let exporting = Task { try await scratch.withFolder("export") { folder in
+            try Data("plaintext".utf8).write(to: folder.appending(path: "snapshot.sqlite"))
+            await gate.enter()
+        } }
+        while await gate.calls == 0 { await Task.yield() }
+        let deletion = lifecycle(session: session, settings: settings, seed: seed, token: token,
+                                 scratch: scratch, drainTimeout: .milliseconds(20))
+        await #expect(throws: WalletLifecycle.Failure.backupBusy) { try await deletion.delete() }
+        #expect(location.databaseExists)
+        #expect(seed.read() == .found("current wallet"))
+        #expect(token.read() == .found("token"))
+        #expect(suspended(settings) == false)
+        #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
+        // The failed drain released its gate; later exports and explicit deletion still work.
+        try await scratch.withFolder("retry-export") { _ in }
+        await gate.release()
+        try await exporting.value
+        try await deletion.delete()
+        #expect(seed.read() == .notFound)
     }
 
     @Test func queuedRecoveryCannotDeleteTheReplacementWallet() async throws {

@@ -8,9 +8,11 @@ struct WalletLifecycle: Sendable {
         /// An interrupted restore must be settled first (relaunch).
         case restorePending
         case temporaryFiles
+        case backupBusy
 
         var errorDescription: String? {
             switch self {
+            case .backupBusy: "Noah is still finishing a backup. Try again in a moment."
             case .temporaryFiles: "Noah couldn't remove temporary wallet files. Restart Noah and try again."
             case .restorePending: "Restart Noah to settle the pending restore before deleting."
             }
@@ -26,9 +28,10 @@ struct WalletLifecycle: Sendable {
         var scratch: ScratchSpace
         var appGroup: String?
         var mutation: WalletMutationGate = .shared
+        var drainTimeout: Duration = .seconds(30)
         /// Best effort, like RN (`/v0/deregister`).
         var deregister: @Sendable () async throws -> Void
-        var settleBackground: @Sendable () async -> Void = {}
+        var settleBackground: @Sendable (Duration) async throws -> Void = { _ in }
         var walletChanged: @Sendable () async -> Void = { await SendPaymentController.shared.reloadForWalletChange() }
     }
 
@@ -82,8 +85,9 @@ struct WalletLifecycle: Sendable {
         var ownsScratch = false
         defer { if ownsScratch { dependencies.scratch.finishWalletDeletion() } }
         do {
-            await dependencies.settleBackground()
-            try await dependencies.scratch.drainForWalletDeletion()
+            let deadline = ContinuousClock.now + dependencies.drainTimeout
+            try await dependencies.settleBackground(dependencies.drainTimeout)
+            try await dependencies.scratch.drainForWalletDeletion(timeout: ContinuousClock.now.duration(to: deadline))
             ownsScratch = true
             try await dependencies.session.closeSettled()
             let reservation = try await dependencies.session.reserve()
@@ -162,6 +166,6 @@ extension WalletLifecycle.Dependencies {
             scratch: .shared,
             appGroup: services.variant.appGroup,
             deregister: { _ = try await services.client.deregister().ok },
-            settleBackground: { await services.backupCoordinator.settle() })
+            settleBackground: { try await services.backupCoordinator.settleForDeletion(timeout: $0) })
     }
 }

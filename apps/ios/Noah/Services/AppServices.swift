@@ -37,7 +37,7 @@ final class AppServices: Sendable {
             authToken: KeychainPassword.serverAuthToken(for: variant), settings: .shared,
             scratch: .shared, appGroup: variant.appGroup,
             deregister: { _ = try await client.deregister().ok },
-            settleBackground: { await coordinator.settle() }))
+            settleBackground: { try await coordinator.settleForDeletion(timeout: $0) }))
         restoreRecovery = RestoreRecovery {
             try await lifecycle.recoverDeletionLocked()
             return try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: seed)
