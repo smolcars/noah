@@ -22,6 +22,13 @@ class SendOffboardTest {
         assertEquals(9783L, actual.amount); assertEquals(217L, actual.fee); assertFalse(actual.amountIsPending)
         assertEquals(receipt, SendReconciliation.offboardReceipt(receipt, payment, listOf(candidate("exact"), candidate("exact"))))
     }
+    @Test fun historyDifferencesRemainPossibleMatchesWithoutExactIdentity() {
+        val payment = SendPayment(address, "onchain", 1234, SendSource.onchain)
+        val attempt = SendAttempt(payment = payment, snapshot = SendSnapshot(bdkTxids = emptySet()))
+        val transaction = WalletTransaction("historical", tx(1234), 100u, -1334, null, false)
+        assertEquals(SendResolution.PossibleTransactions(listOf("historical")), SendReconciliation.onchain(attempt, listOf(transaction)))
+        assertEquals(SendResolution.Uncertain, SendReconciliation.onchain(attempt, listOf(transaction.copy(txHex = tx(1235)))))
+    }
     @Test fun strictOutputReaderRejectsTruncatedAndWrongAddressEvidence() {
         assertEquals(1234L, SendTransaction.amount(address, tx(1234)))
         assertTrue(runCatching { SendTransaction.amount(address, tx(1234).dropLast(2)) }.isFailure)

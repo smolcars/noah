@@ -76,7 +76,10 @@ class SendSafetyTest {
     }
     @Test fun allReceiptRailsSurviveRestartAndForeignWalletIsDiscarded() = runBlocking {
         val cases = listOf(arkPayment to SendReceipt(1000, proof = SendReceipt.Proof.submitReturnedArkSuccess),
-            chainPayment to SendReceipt(1000, txid = "exact", fee = 10, proof = SendReceipt.Proof.preparedTxid))
+            chainPayment to SendReceipt(1000, txid = "exact", fee = 10, proof = SendReceipt.Proof.preparedTxid),
+            chainPayment.copy(source = SendSource.offchain) to SendReceipt(1000, txid = "offboard", proof = SendReceipt.Proof.submitReturnedTxid)) +
+            listOf("lightning", "lnurl", "offer").map { method -> SendPayment(invoice(), method, 1000) to SendReceipt(1000,
+                paymentHash = PaymentEncoding.invoice(invoice())!!.hash, movementID = 1u, fee = 83, proof = SendReceipt.Proof.actualMovement) }
         for ((payment, receipt) in cases) {
             val wallet = FakeSendWallet(); val journal = TestJournal().apply { attempt = SendAttempt(walletIdentity = wallet.owner, payment = payment, receipt = receipt) }
             val restarted = controller(wallet, journal, this); restarted.reloadForWalletChange(); assertEquals(SendController.State.succeeded, restarted.state)
