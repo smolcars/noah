@@ -1,0 +1,41 @@
+# RN's SwiftUI switches have no testID. Match their 1/0 accessibility value.
+# Center each row so its switch is above the floating tab bar.
+appId: com.noahwallet.regtest
+---
+- launchApp
+- tapOn: "Home"
+- tapOn: "Open settings"
+- scrollUntilVisible:
+    element:
+      text: "Auto-Board to Ark"
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    when:
+      visible:
+        rightOf: "Auto-Board to Ark"
+        text: "1"
+    commands:
+      - tapOn:
+          rightOf: "Auto-Board to Ark"
+          text: "1"
+- assertVisible:
+    rightOf: "Auto-Board to Ark"
+    text: "0"
+- scrollUntilVisible:
+    element:
+      text: "Mailbox Notifications"
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    when:
+      visible:
+        rightOf: "Mailbox Notifications"
+        text: "1"
+    commands:
+      - tapOn:
+          rightOf: "Mailbox Notifications"
+          text: "1"
+- assertVisible:
+    rightOf: "Mailbox Notifications"
+    text: "0"

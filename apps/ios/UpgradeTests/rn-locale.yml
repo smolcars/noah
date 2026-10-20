@@ -1,0 +1,11 @@
+# Set the locale last, after every English RN selector has been used.
+appId: com.noahwallet.regtest
+---
+- launchApp
+- tapOn: "Home"
+- tapOn: "Open settings"
+- tapOn:
+    id: "settings-language"
+- tapOn:
+    id: "language-option-sv"
+- stopApp

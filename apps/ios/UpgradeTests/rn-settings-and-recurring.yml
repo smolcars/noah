@@ -1,0 +1,69 @@
+# Uses RN controls only. The first payment remains tomorrow, so upgrading
+# must preserve the policy without executing it.
+appId: com.noahwallet.regtest
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn:
+    text: "Close"
+    optional: true
+- tapOn: "Home"
+- tapOn: "Open settings"
+- tapOn:
+    id: "settings-bitcoinUnit"
+- tapOn:
+    id: "bitcoin-unit-option-sats"
+- tapOn:
+    id: "settings-currency"
+- tapOn:
+    id: "currency-option-EUR"
+- tapOn:
+    id: "settings-profile"
+- tapOn: "Edit name"
+- tapOn:
+    id: "profile-name-input"
+- inputText: "Upgrade safety"
+- tapOn: "Save name"
+- tapOn:
+    id: "profile-back-button"
+- runFlow: rn-disable-automation.yml
+- scrollUntilVisible:
+    element:
+      text: 'v0\..*'
+    direction: DOWN
+- repeat:
+    times: 5
+    commands:
+      - tapOn: 'v0\..*'
+- scrollUntilVisible:
+    element:
+      id: "settings-recurring-payments"
+    direction: UP
+- tapOn:
+    id: "settings-recurring-payments"
+- tapOn:
+    id: "recurring-new-button"
+- tapOn:
+    id: "recurring-label-input"
+- inputText: "Upgrade safety rule"
+- tapOn:
+    id: "recurring-recipient-input"
+- inputText: ${RECURRING_DESTINATION}
+- tapOn:
+    id: "recurring-amount-input"
+- inputText: "1000"
+- scrollUntilVisible:
+    element:
+      id: "recurring-save-button"
+    direction: DOWN
+- tapOn:
+    id: "recurring-save-button"
+- extendedWaitUntil:
+    visible: "Upgrade safety rule"
+    timeout: 15000
+- tapOn: "Receive"
+- tapOn:
+    id: "receive-qr-button"
+- tapOn:
+    id: "receive-copy-onchain"
+- tapOn: "Close payment details"

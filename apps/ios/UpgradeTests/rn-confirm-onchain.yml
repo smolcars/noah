@@ -1,0 +1,24 @@
+appId: com.noahwallet.regtest
+---
+- stopApp
+- launchApp
+- tapOn: "Home"
+- tapOn: "Toggle balance details"
+- scrollUntilVisible:
+    element:
+      text: "Confirmed"
+    direction: DOWN
+    centerElement: true
+- extendedWaitUntil:
+    visible:
+      text: "10,000 sats"
+      rightOf: "Confirmed"
+    timeout: 30000
+- assertVisible: "Confirmed"
+- scrollUntilVisible:
+    element:
+      text: "Hide wallet balance"
+    direction: UP
+    centerElement: true
+- tapOn: "Hide wallet balance"
+- stopApp

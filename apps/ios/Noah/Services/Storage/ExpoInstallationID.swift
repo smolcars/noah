@@ -21,6 +21,14 @@ enum ExpoInstallationID {
 
     private static let lock = NSLock()
 
+    /// Inspect continuity without manufacturing an ID on unsupported devices.
+    static func existing(
+        bundleIdentifier: String = Bundle.main.bundleIdentifier ?? "",
+        defaults: UserDefaults = .standard
+    ) throws -> String? {
+        try lock.withLock { try read(bundleIdentifier: bundleIdentifier) ?? defaults.string(forKey: key) }
+    }
+
     /// Returns the stored ID, migrating the legacy UserDefaults value or
     /// creating a new one exactly like Expo does. Throws instead of creating a
     /// replacement when the Keychain is unreadable (e.g. before first unlock).
