@@ -77,6 +77,13 @@ actor BackupCoordinator {
         cancelRetry()
     }
 
+    /// Suspension gates new passes before this drains the complete upload and state write.
+    func settle() async {
+        cancelScheduled()
+        if let inFlight { _ = await inFlight.value }
+        cancelScheduled()
+    }
+
     /// `flushBackup`: runs now and returns once every request made before
     /// this call is covered by a finished pass. A cancelled caller (a push
     /// out of background time) stops waiting at once; the pass itself goes

@@ -29,10 +29,18 @@ final class AppServices: Sendable {
             guard case .found(let mnemonic) = seed.read() else { throw SeedUnavailable() }
             return mnemonic
         })
-        backupCoordinator = BackupCoordinator(dependencies: .live(service: backups, session: session))
+        let coordinator = BackupCoordinator(dependencies: .live(service: backups, session: session))
+        backupCoordinator = coordinator
         let location = WalletDataLocation(variant: variant)
+        let lifecycle = WalletLifecycle(dependencies: .init(
+            session: session, location: location, seed: seed,
+            authToken: KeychainPassword.serverAuthToken(for: variant), settings: .shared,
+            scratch: .shared, appGroup: variant.appGroup,
+            deregister: { _ = try await client.deregister().ok },
+            settleBackground: { await coordinator.settle() }))
         restoreRecovery = RestoreRecovery {
-            try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: seed)
+            try await lifecycle.recoverDeletion()
+            return try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: seed)
         }
     }
 

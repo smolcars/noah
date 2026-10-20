@@ -99,6 +99,25 @@ struct BackupCoordinatorTests {
         Issue.record("condition never became true")
     }
 
+    @Test func settleWaitsForActiveUploadAndItsFinalStateWrite() async throws {
+        let clock = ManualClock()
+        let world = World()
+        let coordinator = BackupCoordinator(dependencies: world.dependencies(clock: clock))
+        world.hold()
+        await coordinator.schedule(.manual, immediate: true)
+        await eventually { world.isHolding }
+        world.eligible = false
+        let finished = FakeSeed(nil)
+        let settling = Task { await coordinator.settle(); try? finished.save("settled") }
+        try await Task.sleep(for: .milliseconds(20))
+        #expect(finished.current == nil)
+        world.releaseHeld()
+        await settling.value
+        #expect(finished.current == "settled")
+        #expect(world.state.lastBackupStatus == .success)
+        #expect(await clock.pending.isEmpty)
+    }
+
     @Test func debouncedRequestsShareOnePass() async throws {
         let clock = ManualClock()
         let world = World()

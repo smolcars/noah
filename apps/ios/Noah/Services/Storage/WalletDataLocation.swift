@@ -11,6 +11,10 @@ struct WalletDataLocation: Sendable {
             path: "noah-data-\(variant.rawValue)", directoryHint: .isDirectory)
     }
 
+    var deletionMarker: URL {
+        directory.deletingLastPathComponent().appending(path: ".\(directory.lastPathComponent)-deleting")
+    }
+
     var database: URL { directory.appending(path: "db.sqlite", directoryHint: .notDirectory) }
 
     /// Restore workspace (`RestoreTransaction`): next to the datadir, so on

@@ -177,7 +177,8 @@ private struct DeleteWalletSheet: View {
                             try await model.deleteWallet()
                             dismiss()
                         } catch {
-                            failure = String(localized: "The wallet couldn't be deleted. Nothing was removed if a restore is still being settled; restart Noah and try again.")
+                            failure = (error as? WalletLifecycle.Failure)?.errorDescription
+                                ?? "The wallet couldn't be deleted. Restart Noah and try again."
                             deleting = false
                         }
                     }

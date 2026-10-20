@@ -239,6 +239,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 - [x] M5 round-2 A1: hide/lock Android credential handoffs without changing their valid generation; invalidate unexpected resume and exported singleTask relaunch; API 28 direct `am start` regression plus JVM state-machine tests
 
+- [x] M5 round-2 A2/A3 — iOS: await backup passes/exports, check scratch and retained-share cleanup before database removal, preserve/reopen the wallet on cleanup failure, and finish durable marked deletion at UI/headless launch; ordering/relaunch/gate regressions
+
 ## M6 — Onchain & exits
 - [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt with txid-only read refresh/relaunch reconciliation for missing fees (prepared boarding awaits FFI 18, same priority as 14)
 - [x] VTXOsScreen + VTXODetailScreen + delegated refresh review dialog — iOS

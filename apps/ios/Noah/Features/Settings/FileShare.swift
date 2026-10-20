@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Owns a scratch folder until the activity controller is dismissed.
-final class SharedFile {
+final class SharedFile: Sendable {
     let url: URL
     private let folder: URL
     init(url: URL, folder: URL) { self.url = url; self.folder = folder }
@@ -34,13 +34,15 @@ struct ExportDatabaseView: View {
                     Task {
                         defer { busy = false }
                         do {
-                            let folder = try ScratchSpace.shared.makeFolder("share-backup")
-                            do {
-                                let url = folder.appending(path: "noah-\(AppVariant.current.rawValue).noahbackup")
-                                _ = try await AppServices.shared.backupService.exportEncryptedBackup(to: url)
-                                file = SharedFile(url: url, folder: folder)
-                                sharing = true
-                            } catch { ScratchSpace.shared.discard(folder); throw error }
+                            file = try await ScratchSpace.shared.withOperation {
+                                let folder = try ScratchSpace.shared.makeFolder("share-backup")
+                                do {
+                                    let url = folder.appending(path: "noah-\(AppVariant.current.rawValue).noahbackup")
+                                    _ = try await AppServices.shared.backupService.exportEncryptedBackup(to: url)
+                                    return SharedFile(url: url, folder: folder)
+                                } catch { ScratchSpace.shared.discard(folder); throw error }
+                            }
+                            sharing = true
                         } catch { self.error = "Couldn't export your database. Please try again." }
                     }
                 }
@@ -77,15 +79,19 @@ struct LogView: View {
         }
     }
     private func share() {
-        do {
-            let folder = try ScratchSpace.shared.makeFolder("share-logs")
+        Task {
             do {
-                let url = folder.appending(path: "noah.log")
-                // Snapshot the redacted rotating files, so sharing cannot race rotation.
-                try LogFile.shared.lines().joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
-                file = SharedFile(url: url, folder: folder)
+                file = try await ScratchSpace.shared.withOperation {
+                    let folder = try ScratchSpace.shared.makeFolder("share-logs")
+                    do {
+                        let url = folder.appending(path: "noah.log")
+                        // Snapshot the redacted rotating files, so sharing cannot race rotation.
+                        try LogFile.shared.lines().joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+                        return SharedFile(url: url, folder: folder)
+                    } catch { ScratchSpace.shared.discard(folder); throw error }
+                }
                 sharing = true
-            } catch { ScratchSpace.shared.discard(folder); throw error }
-        } catch { self.error = "Couldn't share logs. Please try again." }
+            } catch { self.error = "Couldn't share logs. Please try again." }
+        }
     }
 }

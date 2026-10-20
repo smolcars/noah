@@ -24,8 +24,8 @@ struct RootView: View {
                 }
             case .restoreIncomplete:
                 LaunchMessageView(
-                    title: "Restore didn't finish",
-                    message: "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again.")
+                    title: model.walletError == nil ? "Restore didn't finish" : "Wallet cleanup didn't finish",
+                    message: LocalizedStringKey(model.walletError ?? "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."))
             }
         }
         .accessibilityHidden(model.phase == .wallet && lock.policy.locked)

@@ -4,9 +4,17 @@ import WidgetKit
 /// Settings' danger-zone actions, ported from RN `useSuspendWallet` and
 /// `useDeleteWallet`, run through the session's lifecycle rules.
 struct WalletLifecycle: Sendable {
-    enum Failure: Error, Equatable {
+    enum Failure: LocalizedError, Equatable {
         /// An interrupted restore must be settled first (relaunch).
         case restorePending
+        case temporaryFiles
+
+        var errorDescription: String? {
+            switch self {
+            case .temporaryFiles: "Noah couldn't remove temporary wallet files. Restart Noah and try again."
+            case .restorePending: "Restart Noah to settle the pending restore before deleting."
+            }
+        }
     }
 
     struct Dependencies: Sendable {
@@ -19,6 +27,7 @@ struct WalletLifecycle: Sendable {
         var appGroup: String?
         /// Best effort, like RN (`/v0/deregister`).
         var deregister: @Sendable () async throws -> Void
+        var settleBackground: @Sendable () async -> Void = {}
     }
 
     let dependencies: Dependencies
@@ -41,25 +50,52 @@ struct WalletLifecycle: Sendable {
         try setSuspended(false)
     }
 
-    /// Removes this wallet from the device: deregisters (best effort),
-    /// closes the wallet, then under a reservation deletes its files, and
-    /// only after them its seed, so a crash in between leaves a seed that
-    /// can be restored from backup rather than wallet data without a seed.
-    /// Then local state (MMKV, sign-in token, widget data) is cleared.
-    func delete() async throws {
-        let log = AppLog("walletLifecycle")
-        do {
-            try await dependencies.deregister()
-        } catch {
-            log.w("Deregistration failed while deleting the wallet: \(SafeErrorDescription.of(error))")
+    /// Finish a committed deletion before launch inspects the seed and datadir.
+    func recoverDeletion() async throws {
+        if FileManager.default.fileExists(atPath: dependencies.location.deletionMarker.path) {
+            try await delete()
         }
-        try await dependencies.session.closeSettled()
-        let reservation = try await dependencies.session.reserve()
+    }
+
+    /// Drain operations and clean temporary files before committing deletion.
+    /// Once the marker is durable, files precede secrets and relaunch finishes any interruption.
+    func delete() async throws {
+        let wasSuspended = dependencies.settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == true
+        try setSuspended(true)
+        var ownsScratch = false
+        defer { if ownsScratch { dependencies.scratch.finishWalletDeletion() } }
         do {
-            try deleteLocalWallet()
-            await dependencies.session.release(reservation)
+            await dependencies.settleBackground()
+            try await dependencies.scratch.drainForWalletDeletion()
+            ownsScratch = true
+            try await dependencies.session.closeSettled()
+            let reservation = try await dependencies.session.reserve()
+            do {
+                guard !dependencies.location.restorePending else { throw Failure.restorePending }
+                do { try dependencies.scratch.sweepForWalletDeletion() }
+                catch { throw Failure.temporaryFiles }
+                let marker = dependencies.location.deletionMarker
+                if !FileManager.default.fileExists(atPath: marker.path) {
+                    try Data([1]).write(to: marker, options: .atomic)
+                    let handle = try FileHandle(forWritingTo: marker)
+                    try handle.synchronize()
+                    try handle.close()
+                    try RestoreTransaction.fullSync(marker.deletingLastPathComponent())
+                }
+                do { try await dependencies.deregister() }
+                catch { AppLog("walletLifecycle").w("Deregistration failed while deleting the wallet") }
+                try deleteLocalWallet()
+                try FileManager.default.removeItem(at: marker)
+                try RestoreTransaction.fullSync(marker.deletingLastPathComponent())
+                await dependencies.session.release(reservation)
+            } catch {
+                await dependencies.session.release(reservation)
+                throw error
+            }
         } catch {
-            await dependencies.session.release(reservation)
+            if !FileManager.default.fileExists(atPath: dependencies.location.deletionMarker.path) {
+                try? setSuspended(wasSuspended)
+            }
             throw error
         }
     }
@@ -74,7 +110,6 @@ struct WalletLifecycle: Sendable {
         if fileManager.fileExists(atPath: location.restoreDirectory.path) {
             try fileManager.removeItem(at: location.restoreDirectory)
         }
-        try dependencies.scratch.sweepForWalletDeletion()
         try RestoreTransaction.fullSync(location.directory.deletingLastPathComponent())
         try dependencies.seed.deleteWalletSeed()
         dependencies.authToken.remove()
@@ -103,6 +138,7 @@ extension WalletLifecycle.Dependencies {
             settings: .shared,
             scratch: .shared,
             appGroup: services.variant.appGroup,
-            deregister: { _ = try await services.client.deregister().ok })
+            deregister: { _ = try await services.client.deregister().ok },
+            settleBackground: { await services.backupCoordinator.settle() })
     }
 }

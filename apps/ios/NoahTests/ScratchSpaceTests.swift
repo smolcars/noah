@@ -25,6 +25,17 @@ struct ScratchSpaceTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
     }
 
+    @Test func deletionGateRejectsNewExportsAndASecondDeletionUntilReleased() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let scratch = ScratchSpace(root: root)
+        try await scratch.drainForWalletDeletion()
+        #expect(throws: (any Error).self) { try scratch.makeFolder("late-share") }
+        await #expect(throws: (any Error).self) { try await scratch.withFolder("late-export") { _ in } }
+        await #expect(throws: (any Error).self) { try await scratch.drainForWalletDeletion() }
+        scratch.finishWalletDeletion()
+        try await scratch.withFolder("new-wallet") { _ in }
+    }
+
     @Test func checkedSweepRefusesActivePlaintext() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let scratch = ScratchSpace(root: root)

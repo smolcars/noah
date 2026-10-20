@@ -26,11 +26,14 @@ struct WalletLifecycleTests {
 
     private func lifecycle(
         session: WalletSession, settings: SettingsStorage, seed: KeychainPassword, token: KeychainPassword,
+        scratch: ScratchSpace? = nil,
+        settleBackground: @escaping @Sendable () async -> Void = {},
         deregister: @escaping @Sendable () async throws -> Void = {}
     ) -> WalletLifecycle {
         WalletLifecycle(dependencies: .init(
             session: session, location: location, seed: seed, authToken: token, settings: settings,
-            scratch: ScratchSpace(root: root.appending(path: "scratch")), appGroup: nil, deregister: deregister))
+            scratch: scratch ?? ScratchSpace(root: root.appending(path: "scratch")), appGroup: nil,
+            deregister: deregister, settleBackground: settleBackground))
     }
 
     private func makeSettings() throws -> SettingsStorage {
@@ -146,6 +149,10 @@ struct WalletLifecycleTests {
             try await lifecycle(session: session, settings: settings, seed: seed, token: token).delete()
         }
         #expect(FileManager.default.fileExists(atPath: snapshot.path))
+        #expect(location.databaseExists)
+        #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
+        #expect(suspended(settings) == false)
+        #expect(WalletLifecycle.Failure.temporaryFiles.errorDescription == "Noah couldn't remove temporary wallet files. Restart Noah and try again.")
         #expect(seed.read() == .found("seed words"))
         #expect(token.read() == .found("jwt"))
         #expect(settings.string(forKey: PersistedWalletState.key) != nil)
@@ -153,6 +160,64 @@ struct WalletLifecycleTests {
         try await lifecycle(session: session, settings: settings, seed: seed, token: token).delete()
         #expect(!FileManager.default.fileExists(atPath: snapshot.path))
         #expect(seed.read() == .notFound)
+    }
+
+    @Test func deletionDrainsExportBeforeScratchAndDatabaseAndRemovesRetainedShare() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try writeBarkDatabase()
+        let settings = try makeSettings()
+        let (seed, token) = items()
+        defer { seed.remove(); token.remove() }
+        try seed.save("seed words")
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let scratch = ScratchSpace(root: root.appending(path: "scratch"))
+        let retained = try scratch.makeFolder("share-backup")
+        try Data("encrypted".utf8).write(to: retained.appending(path: "wallet.noahbackup"))
+        let gate = Gate()
+        let exporting = Task {
+            try await scratch.withFolder("export") { folder in
+                try Data("plaintext".utf8).write(to: folder.appending(path: "snapshot.sqlite"))
+                await gate.enter()
+                #expect(location.databaseExists)
+                #expect(seed.read() == .found("seed words"))
+            }
+        }
+        while await gate.calls == 0 { await Task.yield() }
+        let deleting = Task { try await lifecycle(session: session, settings: settings, seed: seed, token: token, scratch: scratch).delete() }
+        let deadline = ContinuousClock.now + .seconds(5)
+        while suspended(settings) != true, ContinuousClock.now < deadline { await Task.yield() }
+        #expect(location.databaseExists)
+        #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
+        await gate.release()
+        try await exporting.value
+        try await deleting.value
+        #expect(!FileManager.default.fileExists(atPath: retained.path))
+        #expect(!location.databaseExists)
+        #expect(seed.read() == .notFound)
+    }
+
+    @Test func relaunchFinishesEveryDestructiveBoundary() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let settings = try makeSettings()
+        let (seed, token) = items()
+        defer { seed.remove(); token.remove() }
+        for stage in 0...3 {
+            try writeBarkDatabase()
+            try seed.save("seed words"); try token.save("jwt")
+            try Data([1]).write(to: location.deletionMarker)
+            if stage >= 1 { try FileManager.default.removeItem(at: location.directory) }
+            if stage >= 2 { try seed.deleteWalletSeed() }
+            if stage >= 3 { token.remove(); settings.removeAll() }
+            let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+            let relaunched = lifecycle(session: session, settings: settings, seed: seed, token: token)
+            try await relaunched.recoverDeletion()
+            #expect(seed.read() == .notFound)
+            #expect(token.read() == .notFound)
+            #expect(settings.string(forKey: PersistedWalletState.key) == nil)
+            #expect(!location.databaseExists)
+            #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
+            try await relaunched.recoverDeletion()
+        }
     }
 
     @Test func deleteGoesAheadWhenDeregistrationFails() async throws {

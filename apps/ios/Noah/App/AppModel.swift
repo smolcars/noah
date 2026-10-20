@@ -88,9 +88,14 @@ final class AppModel {
             }
         } catch {
             log.e("Couldn't settle an interrupted restore: \(Self.describe(error))")
+            walletError = (error as? WalletLifecycle.Failure)?.errorDescription
+            if walletError == nil, FileManager.default.fileExists(atPath: WalletDataLocation(variant: variant).deletionMarker.path) {
+                walletError = "Noah couldn't finish deleting your wallet. Restart Noah to try again."
+            }
             phase = .restoreIncomplete
             return
         }
+        isWalletSuspended = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == true
         let state = LaunchState.current(variant: variant)
         switch state {
         case .existingWallet:
@@ -253,8 +258,12 @@ final class AppModel {
             running.task.cancel()
             backupTriggers = nil
         }
-        await AppServices.shared.backupCoordinator.cancelScheduled()
-        try await lifecycle.delete()
+        do { try await lifecycle.delete() }
+        catch {
+            isWalletSuspended = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == true
+            if !isWalletSuspended { await openExistingWallet() }
+            throw error
+        }
         summary = nil
         walletError = nil
         isWalletSuspended = false
