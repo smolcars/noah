@@ -25,7 +25,8 @@ import java.util.Locale
 @Composable
 fun HomeBanners(app: AppModel, refresh: Int) {
     var backup by remember { mutableStateOf(PersistedBackupState()) }
-    var version by remember { mutableStateOf<AppVersionInfo?>(app.server.versionInfo) }
+    val version by app.server.versionChanges.collectAsState()
+    LaunchedEffect(app.server) { app.server.checkVersionOnce() }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var retrying by remember { mutableStateOf(false) }
     var rounds by remember { mutableStateOf<List<PendingRoundStatus>>(emptyList()) }
@@ -39,7 +40,6 @@ fun HomeBanners(app: AppModel, refresh: Int) {
             while (isActive) {
                 now = System.currentTimeMillis()
                 backup = PersistedBackupState.decode(app.settings.string(PersistedBackupState.key))
-                version = app.server.versionInfo
                 delay(1000)
             }
         }

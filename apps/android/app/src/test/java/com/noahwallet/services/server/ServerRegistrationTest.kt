@@ -14,6 +14,37 @@ class ServerRegistrationTest {
     private val response = """{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK","user_status":"active"}"""
     private val device = DevicePayload(appVersion = "0.2.0", appBuild = "100")
 
+    @Test fun stalledVersionCheckDoesNotBlockRegistrationOrEmailAndRunsOnce() = runBlocking {
+        val values = mutableMapOf<String, String>()
+        val store = ServerStateStorage(values::get, { k, v -> values[k] = v })
+        val entered = CompletableDeferred<Unit>()
+        val finish = CompletableDeferred<Unit>()
+        var checks = 0
+        val engine = MockEngine { request ->
+            val body = when (request.url.encodedPath) {
+                "/v0/app_version" -> {
+                    checks++; entered.complete(Unit); finish.await()
+                    """{"update_required":true,"minimum_required_version":"9.0.0"}"""
+                }
+                "/v0/register" -> response
+                else -> """{"success":true,"message":"Sent"}"""
+            }
+            respond(body, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+        ServerClient.make("https://example.test", engine = engine).use { client ->
+            val service = ServerRegistration(client, store, { "ark-test" }, { device }, warn = {})
+            val check = launch { service.checkVersionOnce() }
+            entered.await()
+            withTimeout(2000) { service.ensureRegistered(); assertFalse(service.sendEmail("a@example.com")) }
+            assertTrue(service.state.isRegisteredWithServer == true)
+            assertFalse(check.isCompleted)
+            finish.complete(Unit); check.join()
+            (1..5).map { async { service.checkVersionOnce() } }.awaitAll()
+            assertEquals(1, checks)
+            assertTrue(service.versionChanges.value?.updateRequired == true)
+        }
+    }
+
     @Test fun mailboxRefreshMatchesIOSDefaultsThresholdAndReregistration() = runBlocking {
         val values = mutableMapOf<String, String>()
         val storage = ServerStateStorage(values::get, { k, v -> values[k] = v })
@@ -101,7 +132,7 @@ class ServerRegistrationTest {
         ServerClient.make("https://example.test", engine = engine).use { client ->
             val service = ServerRegistration(client, store, { "ark-test" }, { device }, { ServerAuthTest.now }, {})
             (1..10).map { async { service.ensureRegistered() } }.awaitAll()
-            assertEquals(listOf("/v0/app_version", "/v0/register"), paths)
+            assertEquals(listOf("/v0/register"), paths)
             assertEquals(true, service.state.isRegisteredWithServer)
             assertEquals(true, service.state.isBackupEnabled)
             assertEquals(false, service.state.isEmailVerified)
@@ -116,7 +147,7 @@ class ServerRegistrationTest {
         }
     }
 
-    @Test fun checksVersionOnRegisteredFastPathAndOnlyRecordsSuccessfulReports() = runBlocking {
+    @Test fun independentVersionFailureIsCachedAndOnlyRecordsSuccessfulReports() = runBlocking {
         val values = mutableMapOf<String, String>()
         val store = ServerStateStorage(values::get, { k, v -> values[k] = v })
         store.update { it.copy(isRegisteredWithServer = true) }
@@ -136,6 +167,7 @@ class ServerRegistrationTest {
         ServerClient.make("https://example.test", engine = engine).use { client ->
             val service = ServerRegistration(client, store, { error("Already registered") }, { device }, { time }, {})
             service.ensureRegistered(); service.ensureRegistered()
+            service.checkVersionOnce(); service.checkVersionOnce()
             assertEquals(listOf("/v0/app_version"), paths)
             val before = service.state
             try { service.reportLastLogin(); fail("expected failure") } catch (_: ServerFailure) { }
@@ -166,6 +198,7 @@ class ServerRegistrationTest {
         }
         ServerClient.make("https://example.test", engine = engine).use { client ->
             val service = ServerRegistration(client, store, { "ark-test" }, { device }, warn = {})
+            service.checkVersionOnce()
             try { service.ensureRegistered(); fail("expected failure") } catch (_: ServerFailure) { }
             assertNull(service.state.isRegisteredWithServer)
             assertEquals(true, service.versionInfo?.updateRequired)

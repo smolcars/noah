@@ -5,6 +5,8 @@ import com.noahwallet.api.generated.models.*
 import com.noahwallet.services.storage.ServerStateStorage
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -18,21 +20,26 @@ class ServerRegistration(
     private val mailboxAuthorization: suspend (Long) -> AuthorizeMailboxPayload = { throw ServerFailure("Wallet unavailable") },
 ) {
     val state get() = storage.state
-    @Volatile var versionInfo: AppVersionInfo? = null
-        private set
+    private val version = MutableStateFlow<AppVersionInfo?>(null)
+    val versionChanges = version.asStateFlow()
+    val versionInfo get() = version.value
+    private val versionCheck = Mutex()
     private val registration = Mutex()
     private val reporting = Mutex()
     private val mailbox = Mutex()
     private var checkedVersion = false
 
-    suspend fun ensureRegistered() = registration.withLock {
+    suspend fun checkVersionOnce() = versionCheck.withLock {
         if (!checkedVersion) {
             try {
-                versionInfo = V0AppVersionClient(client).checkAppVersion(AppVersionCheckPayload(device().appVersion ?: "0.0.1")).value()
+                version.value = V0AppVersionClient(client).checkAppVersion(AppVersionCheckPayload(device().appVersion ?: "0.0.1")).value()
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { warn("Failed to check app version, allowing app to continue") }
             checkedVersion = true
         }
+    }
+
+    suspend fun ensureRegistered() = registration.withLock {
         if (state.isRegisteredWithServer == true) return@withLock
         val info = device()
         val response = V0RegisterClient(client).register(RegisterPayload(
