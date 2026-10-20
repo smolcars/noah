@@ -75,8 +75,40 @@ class LogFile(private val directory: File) {
         const val maxFiles = 4
         const val maxLines = 4000
         private val lock = Any()
-        private val mnemonicShape = Regex("\\b[a-z]{3,8}(?:\\s+[a-z]{3,8}){11,}\\b")
-        fun redact(message: String): String = mnemonicShape.replace(message, "[redacted]")
+        private const val maxMessageBytes = 16 * 1024
+        private val bip39 = requireNotNull(LogFile::class.java.getResourceAsStream("/bip39-english.txt"))
+            .bufferedReader().use { it.readLines().toSet() }
+        private val words = Regex("[A-Za-z]+")
+        private val sensitivePatterns = listOf(
+            """(?is)\b(?:[\w.-]*(?:token|secret|signature|authorization|password)[\w.-]*|mnemonic|seed(?:[_ -]?phrase)?|private[_ -]?key|privkey|preimage|authorization|password|key|x-amz-[\w-]+)["']?\s*[:=({\[].*""",
+            """(?i)\bhttps?://[^\s<>"']*\?[^\s<>"']*""",
+            """(?i)\bhttps?%3a%2f%2f[^\s<>"']*""",
+            """(?i)\bBearer\s+[A-Za-z0-9._~+/-]+=*|\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}""",
+            """(?i)\bExpo(?:nent)?PushToken\[[^\]]*\]""",
+            """\b(?:[xt]prv[1-9A-HJ-NP-Za-km-z]{20,}|[59][1-9A-HJ-NP-Za-km-z]{50}|[KLc][1-9A-HJ-NP-Za-km-z]{51})\b""",
+        ).map(::Regex)
+
+        fun redact(message: String): String {
+            if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return "[oversized log message omitted]"
+            var result = message
+            for (pattern in sensitivePatterns) result = pattern.replace(result, "[redacted]")
+            val matches = words.findAll(result).toList()
+            val runs = mutableListOf<IntRange>()
+            var start = 0
+            var count = 0
+            for ((index, word) in matches.withIndex()) {
+                if (word.value.lowercase(Locale.ROOT) in bip39) {
+                    if (count == 0) start = index
+                    count++
+                } else {
+                    if (count >= 12) runs += matches[start].range.first..matches[index - 1].range.last
+                    count = 0
+                }
+            }
+            if (count >= 12) runs += matches[start].range.first..matches.last().range.last
+            for (range in runs.asReversed()) result = result.replaceRange(range, "[redacted]")
+            return result
+        }
         @Volatile private var instance: LogFile? = null
         fun shared(context: Context): LogFile = instance ?: synchronized(lock) {
             instance ?: LogFile(File(context.applicationContext.cacheDir, "noah_logs")).also { instance = it }
