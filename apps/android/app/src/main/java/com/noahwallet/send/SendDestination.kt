@@ -41,6 +41,20 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
             }
             return SendDestination()
         }
+        /** Bound untrusted decimal work before scaling; keep native platforms within exact Decimal precision. */
+        private fun uriAmount(value: String): BigDecimal? {
+            if (value.length > 96 || !Regex("^[+]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]{1,2})?$").matches(value)) return null
+            val parts = value.lowercase().split('e')
+            val mantissa = parts[0]
+            val exponent = parts.getOrNull(1)?.toIntOrNull() ?: 0
+            val scale = mantissa.substringAfter('.', "").length - exponent
+            if (mantissa.count { it in '0'..'9' } > 32 || exponent !in -32..32 || scale !in -32..32) return null
+            return try {
+                val btc = value.toBigDecimalOrNull() ?: return null
+                if (btc < BigDecimal.ZERO || btc > BigDecimal(21000000)) null
+                else btc.movePointRight(8).setScale(0, RoundingMode.HALF_UP)
+            } catch (_: ArithmeticException) { null }
+        }
         private fun uri(value: String, network: String): SendDestination {
             val parts = value.drop(8).split('?', limit = 2); val methods = linkedMapOf<String, String>()
             val errors = mutableListOf<String>(); val seen = mutableSetOf<String>(); var amount: BigDecimal? = null; var invalid = false
@@ -62,8 +76,8 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
                 if (lower in listOf("amount", "label", "message") && !seen.add(lower)) { errors.add("Multiple $lower parameters not allowed"); invalid = true; continue }
                 when (lower) {
                     "amount" -> {
-                        val btc = decoded.toBigDecimalOrNull()
-                        if (btc != null && btc >= BigDecimal.ZERO && btc <= BigDecimal(21000000) && ',' !in decoded) amount = btc.multiply(BigDecimal(100000000)).setScale(0, RoundingMode.HALF_UP)
+                        val sats = uriAmount(decoded)
+                        if (sats != null) amount = sats
                         else { errors.add("Invalid amount format"); invalid = true }
                     }
                     "ark" -> add(decoded, "ark")

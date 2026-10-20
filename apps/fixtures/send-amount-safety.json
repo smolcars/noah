@@ -1,0 +1,905 @@
+{
+  "description": "Native Send amount safety vectors: ASCII decimal syntax, at most 32 mantissa digits, exponent and effective scale in -32...32, 0...21 million BTC, half-up satoshi rounding. Shared by Android and iOS.",
+  "cases": [
+    {
+      "name": "valid amount '0'",
+      "input": {
+        "amount": "0"
+      },
+      "expected": {
+        "valid": true,
+        "sats": null
+      }
+    },
+    {
+      "name": "valid amount '1'",
+      "input": {
+        "amount": "1"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "100000000"
+      }
+    },
+    {
+      "name": "valid amount '21000000'",
+      "input": {
+        "amount": "21000000"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "2100000000000000"
+      }
+    },
+    {
+      "name": "valid amount '0.00001'",
+      "input": {
+        "amount": "0.00001"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "1000"
+      }
+    },
+    {
+      "name": "valid amount '0.00000001'",
+      "input": {
+        "amount": "0.00000001"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "1"
+      }
+    },
+    {
+      "name": "valid amount '0.000000005'",
+      "input": {
+        "amount": "0.000000005"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "1"
+      }
+    },
+    {
+      "name": "valid amount '0.000000004'",
+      "input": {
+        "amount": "0.000000004"
+      },
+      "expected": {
+        "valid": true,
+        "sats": null
+      }
+    },
+    {
+      "name": "valid amount '0.000000009'",
+      "input": {
+        "amount": "0.000000009"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "1"
+      }
+    },
+    {
+      "name": "valid amount '0.0000000000000000000000000000001'",
+      "input": {
+        "amount": "0.0000000000000000000000000000001"
+      },
+      "expected": {
+        "valid": true,
+        "sats": null
+      }
+    },
+    {
+      "name": "valid amount '1.23456789'",
+      "input": {
+        "amount": "1.23456789"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "123456789"
+      }
+    },
+    {
+      "name": "valid amount '1.234567895'",
+      "input": {
+        "amount": "1.234567895"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "123456790"
+      }
+    },
+    {
+      "name": "valid amount '+1'",
+      "input": {
+        "amount": "+1"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "100000000"
+      }
+    },
+    {
+      "name": "valid amount '.1'",
+      "input": {
+        "amount": ".1"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "10000000"
+      }
+    },
+    {
+      "name": "valid amount '1.'",
+      "input": {
+        "amount": "1."
+      },
+      "expected": {
+        "valid": true,
+        "sats": "100000000"
+      }
+    },
+    {
+      "name": "valid amount '1e-8'",
+      "input": {
+        "amount": "1e-8"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "1"
+      }
+    },
+    {
+      "name": "valid amount '1E-8'",
+      "input": {
+        "amount": "1E-8"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "1"
+      }
+    },
+    {
+      "name": "valid amount '1e+1'",
+      "input": {
+        "amount": "1e+1"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "1000000000"
+      }
+    },
+    {
+      "name": "valid amount '1e0'",
+      "input": {
+        "amount": "1e0"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "100000000"
+      }
+    },
+    {
+      "name": "valid amount '0e32'",
+      "input": {
+        "amount": "0e32"
+      },
+      "expected": {
+        "valid": true,
+        "sats": null
+      }
+    },
+    {
+      "name": "valid amount '1e-32'",
+      "input": {
+        "amount": "1e-32"
+      },
+      "expected": {
+        "valid": true,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid mantissa over 32 digits",
+      "input": {
+        "amount": "0.00000000000000000000000000000001"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "valid amount '21000000.00000000'",
+      "input": {
+        "amount": "21000000.00000000"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "2100000000000000"
+      }
+    },
+    {
+      "name": "valid amount '20999999.99999999'",
+      "input": {
+        "amount": "20999999.99999999"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "2099999999999999"
+      }
+    },
+    {
+      "name": "valid amount '1.0000000000000000000000000000000'",
+      "input": {
+        "amount": "1.0000000000000000000000000000000"
+      },
+      "expected": {
+        "valid": true,
+        "sats": "100000000"
+      }
+    },
+    {
+      "name": "invalid amount ''",
+      "input": {
+        "amount": ""
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '-1'",
+      "input": {
+        "amount": "-1"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '-0'",
+      "input": {
+        "amount": "-0"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '-0.000000001'",
+      "input": {
+        "amount": "-0.000000001"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '21000000.00000001'",
+      "input": {
+        "amount": "21000000.00000001"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '21000001'",
+      "input": {
+        "amount": "21000001"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount 'NaN'",
+      "input": {
+        "amount": "NaN"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount 'nan'",
+      "input": {
+        "amount": "nan"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount 'Infinity'",
+      "input": {
+        "amount": "Infinity"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '-Infinity'",
+      "input": {
+        "amount": "-Infinity"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '+Infinity'",
+      "input": {
+        "amount": "+Infinity"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1abc'",
+      "input": {
+        "amount": "1abc"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e'",
+      "input": {
+        "amount": "1e"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e+'",
+      "input": {
+        "amount": "1e+"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e-'",
+      "input": {
+        "amount": "1e-"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0x10'",
+      "input": {
+        "amount": "0x10"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1,2'",
+      "input": {
+        "amount": "1,2"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1 2'",
+      "input": {
+        "amount": "1 2"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount ' 1'",
+      "input": {
+        "amount": " 1"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1 '",
+      "input": {
+        "amount": "1 "
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '١'",
+      "input": {
+        "amount": "١"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '１'",
+      "input": {
+        "amount": "１"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1٢'",
+      "input": {
+        "amount": "1٢"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1.２'",
+      "input": {
+        "amount": "1.２"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e２'",
+      "input": {
+        "amount": "1e２"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '∞'",
+      "input": {
+        "amount": "∞"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '.'",
+      "input": {
+        "amount": "."
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '+'",
+      "input": {
+        "amount": "+"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '++1'",
+      "input": {
+        "amount": "++1"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1..1'",
+      "input": {
+        "amount": "1..1"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1/2'",
+      "input": {
+        "amount": "1/2"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1\\\\n'",
+      "input": {
+        "amount": "1\\n"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1\\n'",
+      "input": {
+        "amount": "1\n"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1\\x00'",
+      "input": {
+        "amount": "1\u0000"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '99999999999999999999999999999999999999999999999999999999999999999999999999999999'",
+      "input": {
+        "amount": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0.000000000000000000000000000000000000000000000000000000000000000000000000000000'",
+      "input": {
+        "amount": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '00000000000000000000000000000000000000000000000000000000000000000000000000000000'",
+      "input": {
+        "amount": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1.00000000000000000000000000000000'",
+      "input": {
+        "amount": "1.00000000000000000000000000000000"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e-2147483648'",
+      "input": {
+        "amount": "1e-2147483648"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0e-2147483648'",
+      "input": {
+        "amount": "0e-2147483648"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e-2147483647'",
+      "input": {
+        "amount": "1e-2147483647"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0e-2147483647'",
+      "input": {
+        "amount": "0e-2147483647"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e2147483647'",
+      "input": {
+        "amount": "1e2147483647"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0e2147483647'",
+      "input": {
+        "amount": "0e2147483647"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e2147483648'",
+      "input": {
+        "amount": "1e2147483648"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0e2147483648'",
+      "input": {
+        "amount": "0e2147483648"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e-100000'",
+      "input": {
+        "amount": "1e-100000"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0e-100000'",
+      "input": {
+        "amount": "0e-100000"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e100000'",
+      "input": {
+        "amount": "1e100000"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0e100000'",
+      "input": {
+        "amount": "0e100000"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e-999'",
+      "input": {
+        "amount": "1e-999"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0e-999'",
+      "input": {
+        "amount": "0e-999"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e999'",
+      "input": {
+        "amount": "1e999"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0e999'",
+      "input": {
+        "amount": "0e999"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e-99'",
+      "input": {
+        "amount": "1e-99"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0e-99'",
+      "input": {
+        "amount": "0e-99"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e99'",
+      "input": {
+        "amount": "1e99"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0e99'",
+      "input": {
+        "amount": "0e99"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e-33'",
+      "input": {
+        "amount": "1e-33"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0e-33'",
+      "input": {
+        "amount": "0e-33"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e33'",
+      "input": {
+        "amount": "1e33"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0e33'",
+      "input": {
+        "amount": "0e33"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1e0000000008'",
+      "input": {
+        "amount": "1e0000000008"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0e0000000008'",
+      "input": {
+        "amount": "0e0000000008"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '0.000000000000000000000000000000001'",
+      "input": {
+        "amount": "0.000000000000000000000000000000001"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    },
+    {
+      "name": "invalid amount '1.23456789012345678901234567890123'",
+      "input": {
+        "amount": "1.23456789012345678901234567890123"
+      },
+      "expected": {
+        "valid": false,
+        "sats": null
+      }
+    }
+  ]
+}
