@@ -119,7 +119,11 @@ fun LaunchGateView(model: AppModel) {
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             model.start()
-            if (model.open) model.services.startServerServices()
+            if (model.open) {
+                model.services.startServerServices()
+                model.services.syncInForeground(com.noahwallet.recurring.RecurringBudget())
+                model.refresh()
+            }
         }
     }
     val checking = !gatesReady && PlatformGateRules.launchResolved(state) && !model.customServerUnresponsive

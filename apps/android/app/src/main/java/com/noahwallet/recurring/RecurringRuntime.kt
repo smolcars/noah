@@ -41,7 +41,8 @@ class RecurringRuntime private constructor(context: Context) {
             }
         }, withWalletMutation = { services.lifecycle.withWalletMutation(it) }), scope)
     internal val foregroundRunner = RecurringForegroundRunner(scope, isOnboarded = services::isOnboarded) { budget ->
-        executor.execute(budget = budget)
+        services.syncInForeground(budget)
+        if (budget.available) executor.execute(budget = budget)
     }
     /** Protected load overlays policy rollback and durable automation stops; no wallet opening. */
     suspend fun hasDuePayments(now: Long = System.currentTimeMillis()): Boolean = withContext(Dispatchers.IO) {

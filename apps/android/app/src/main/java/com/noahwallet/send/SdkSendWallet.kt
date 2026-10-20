@@ -5,7 +5,8 @@ import com.noahwallet.services.wallet.ChainStatus
 
 /** Called only inside WalletSession's counted, cancellation-shielded Send reservation. */
 internal class SdkSendWallet(private val wallet: Wallet, private val onchain: OnchainWallet,
-    private val network: String, private val warn: (String) -> Unit) : SendWallet {
+    private val network: String, private val warn: (String) -> Unit,
+    private val synchronization: com.noahwallet.services.wallet.WalletSync = com.noahwallet.services.wallet.WalletSync()) : SendWallet {
     private val preparations = SendPreparations(onchain::discardPrepared, warn)
     override suspend fun retryDiscards() = preparations.retryDiscards()
     fun recipientService() = SendRecipientService(network, warn, arkServerKey = { wallet.arkInfo()?.serverPubkey }, validateArk = { wallet.validateArkoorAddress(it) })
@@ -176,7 +177,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
             return SendResolution.Paid(checkpoint.receipt(status, wallet.history(), payment, quote))
         }
         if (attempt.payment.method == "onchain" && (attempt.payment.source == SendSource.onchain || attempt.receipt?.txid != null)) {
-            return SendReconciliation.onchainStatus(attempt, sync = { onchain.sync() }, transactions = { onchain.transactions() },
+            return SendReconciliation.onchainStatus(attempt, sync = { synchronization.serialized { onchain.sync() } }, transactions = { onchain.transactions() },
                 offboardHistory = { wallet.history() }, status = { txid ->
                     ChainStatus.from(if (attempt.payment.source == SendSource.onchain) onchain.transactionStatus(txid) else wallet.transactionStatus(txid))
                 })
@@ -188,7 +189,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
             val movements = wallet.history()
             return SendReconciliation.ark(if (attempt.existingLightning != null) attempt.copy(snapshot = attempt.snapshot.copy(movementIDs = attempt.snapshot.movementIDs + movements.map { it.id })) else attempt, movements)
         }
-        wallet.sync()
+        synchronization.serialized { wallet.sync() }
         return SendReconciliation.ark(attempt, wallet.history())
     }
     override suspend fun discard(quote: SendQuote, includingClaimed: Boolean) {

@@ -269,6 +269,32 @@ class AppServices private constructor(private val context: Context) {
         }
     }
 
+    /** Foreground only: retain existing session/reservation rules and never open a wallet here. */
+    @OptIn(InternalCoroutinesApi::class)
+    suspend fun syncInForeground(budget: com.noahwallet.recurring.RecurringBudget) {
+        val cancellation = currentCoroutineContext().job.invokeOnCompletion(onCancelling = true, invokeImmediately = true) { cause ->
+            if (cause != null) budget.revoke()
+        }
+        try {
+            withContext(Dispatchers.IO + com.noahwallet.services.wallet.WalletExecutionBudget(budget)) {
+                com.noahwallet.services.wallet.WalletBackgroundActivity.withExclusiveAccess {
+                    lifecycle.withWalletMutation {
+                        currentCoroutineContext().ensureActive()
+                        val location = WalletDataLocation(context.filesDir, variant)
+                        val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
+                        if (!budget.available || !isOnboarded() || wallet?.isWalletSuspended == true ||
+                            location.restorePending || location.deletionMarker.exists() || !session.isOpen) return@withWalletMutation
+                        com.noahwallet.services.wallet.WalletBackgroundActivity.during {
+                            session.sync(includingLightningClaims = true)
+                        }
+                    }
+                }
+            }
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { /* The next foreground tick retries without provider diagnostics. */ }
+        finally { cancellation.dispose() }
+    }
+
     fun startServerServices() {
         scope.launch {
             try { com.noahwallet.services.background.PeriodicWork.reconcile(context, this@AppServices) }

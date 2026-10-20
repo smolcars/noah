@@ -44,6 +44,7 @@ class WalletSession internal constructor(
     }
 
     internal interface Handles {
+        val synchronization: WalletSync? get() = null
         val send: SendWallet get() = throw UnsupportedOperationException()
         suspend fun retrySendDiscards() {}
         suspend fun discardSendReviews() {}
@@ -135,6 +136,7 @@ class WalletSession internal constructor(
 
     private val lock = Any()
     private val sendMutation = Mutex()
+    private val syncFlight = WalletSync()
     private val changed = MutableStateFlow(0L)
     val walletChanges = changed.asStateFlow()
     private fun walletChanged() { changed.value += 1 }
@@ -330,7 +332,13 @@ class WalletSession internal constructor(
     }
 
     suspend fun summary(): Summary? = if (isOpen) withOpen { it.summary() } else null
-    suspend fun sync() { if (isOpen) withOpen { it.sync() } }
+    suspend fun sync(includingLightningClaims: Boolean = false) {
+        if (isOpen) withOpen { handles ->
+            val flight = handles.synchronization ?: syncFlight
+            if (includingLightningClaims) flight.run(handles::sync, handles::claimLightningReceives)
+            else flight.run(handles::sync)
+        }
+    }
 
     suspend fun transactionHistory(): List<HistoryTransaction> = withOpen { handles ->
         handles.history().filter(HistoryMapping::include).map { HistoryMapping.transaction(it) } +
@@ -571,7 +579,8 @@ class WalletSession internal constructor(
     }
 
     private class SdkHandles(val wallet: Wallet, val onchain: OnchainWallet, variant: String, warn: (String) -> Unit) : Handles {
-        override val send = SdkSendWallet(wallet, onchain, variant, warn)
+        override val synchronization = WalletSync()
+        override val send = SdkSendWallet(wallet, onchain, variant, warn, synchronization)
         override suspend fun retrySendDiscards() { send.retryDiscards(); m6.retryDiscards() }
         override suspend fun discardSendReviews() { send.discardAll(); m6.discardAll() }
         override val m6 = BarkOnchainAccess(wallet, onchain, warn)
@@ -630,7 +639,7 @@ class WalletSession internal constructor(
                 WalletBalance.Onchain(chain.confirmedSats, chain.pendingSats, chain.totalSats),
             ), wallet.history().size)
         }
-        override suspend fun sync() { onchain.sync(); wallet.sync() }
+        override suspend fun sync() { WalletSync.attemptAll({ onchain.sync() }, { wallet.sync() }) }
         override suspend fun maintenanceDelegated() { wallet.maintenanceDelegated() }
         override suspend fun bolt11Invoice(amountSats: ULong) = wallet.bolt11Invoice(amountSats, null).invoice
         override suspend fun claimLightningReceives() { wallet.tryClaimAllLightningReceives(false) }
