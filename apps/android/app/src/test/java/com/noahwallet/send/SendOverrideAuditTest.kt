@@ -29,7 +29,7 @@ class SendOverrideAuditTest {
                     assertArrayEquals(corrupt, directory.listFiles()!!.single { ".unreadable-" in it.name }.readBytes())
                 }
                 saved = value
-            }, store::append) { it(wallet) }, this)
+            }, auditOverride = store::append) { it(wallet) }, this)
             subject.reloadForWalletChange()
             subject.startNewPaymentAfterHistoryCheck(false)
             assertTrue(subject.locked); assertArrayEquals(corrupt, file.readBytes())
@@ -63,7 +63,7 @@ class SendOverrideAuditTest {
                     val subject = SendController(SendController.Dependencies({ saved }, {
                         if (failure == "remove") error("removal")
                         saved = it
-                    }, store::append) { it(FakeSendWallet()) }, this)
+                    }, auditOverride = store::append) { it(FakeSendWallet()) }, this)
                     subject.reloadForWalletChange(); subject.startNewPaymentAfterHistoryCheck(true)
                     assertTrue(failure, subject.locked); assertEquals(original, saved)
                     if (failure == "quarantine") assertEquals("corrupt", file.readText())

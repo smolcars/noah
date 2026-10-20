@@ -29,7 +29,7 @@ internal class TestJournal {
     var attempt: SendAttempt? = null; var fail = false; var failReceipt = false
     fun write(value: SendAttempt?) { if (fail || failReceipt && value?.receipt != null) error("disk"); attempt = value?.let { Json.decodeFromString<SendAttempt>(Json.encodeToString(it)) } }
 }
-internal fun controller(wallet: FakeSendWallet, journal: TestJournal, scope: CoroutineScope) = SendController(SendController.Dependencies({ journal.attempt }, journal::write, { journal.audits.add(it) }) { body -> withContext(NonCancellable) { body(wallet) } }, scope)
+internal fun controller(wallet: FakeSendWallet, journal: TestJournal, scope: CoroutineScope) = SendController(SendController.Dependencies({ journal.attempt }, journal::write, auditOverride = { journal.audits.add(it) }) { body -> withContext(NonCancellable) { body(wallet) } }, scope)
 internal val arkPayment = SendPayment("ark-address", "ark", 1000)
 internal val chainPayment = SendPayment("chain-address", "onchain", 1000, SendSource.onchain)
 internal val chainQuote = FakeSendWallet.quote.copy(prepared = SendPrepared("process-local", "exact", 143, 1))

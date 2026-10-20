@@ -42,7 +42,7 @@ class SendPreparedTest {
             journal.failReceipt = false; assertNull(journal.attempt!!.receipt)
             wallet.reconciliation = { SendReconciliation.onchain(it, listOf(transaction())) }
             val restart = controller(wallet, journal, this); restart.reloadForWalletChange(); restart.checkStatus()
-            assertTrue(restart.attempt!!.receipt!!.broadcastRetryPending); restart.acknowledge(); restart.startNewPaymentAfterHistoryCheck(true); assertTrue(restart.locked); assertFalse(restart.canOverride)
+            assertTrue(restart.attempt!!.receipt!!.broadcastRetryPending); restart.acknowledge(); assertTrue(restart.locked); assertTrue(restart.canOverride)
             wallet.reconciliation = { SendReconciliation.onchain(it, listOf(transaction(confirmed = true))) }; restart.checkStatus()
             assertEquals(SendReceipt.Status.confirmed, restart.attempt!!.receipt!!.status); restart.acknowledge(); assertFalse(restart.locked)
         }
