@@ -366,7 +366,8 @@ final class AppModel {
     func reRegisterWithServer() async throws {
         guard !isWalletSuspended else { throw BackupCoordinator.NotReady() }
         try await server.reRegister(loadWallet: {
-            try await AppServices.shared.openWalletInForeground(mnemonic: AppServices.shared.readMnemonic())
+            try await AppServices.shared.openWalletInForeground(mnemonic: AppServices.shared.readMnemonic(),
+                wait: EsploraOpenWait(), lateCompletion: { _ in })
         }, registerPush: {
             try await PushRegistration.shared.register().requireCompleted()
         })
