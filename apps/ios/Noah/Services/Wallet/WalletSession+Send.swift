@@ -82,6 +82,8 @@ extension WalletSession {
             switch payment.method {
             case "ark":
                 try await handles.wallet.sendArkoorPayment(arkAddress: payment.destination, amountSats: payment.amount)
+                // SDK 0.3.0 returns Void on success; persist that result, never infer it from history candidates.
+                receipt.proof = .submitReturnedArkSuccess
             case "lightning", "lnurl":
                 var resolved = payment
                 if payment.method == "lnurl" {

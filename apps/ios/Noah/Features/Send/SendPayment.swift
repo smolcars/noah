@@ -42,7 +42,7 @@ struct SendReceipt: Codable, Equatable, Sendable {
     var status: Status?
     var fee: UInt64?
     var proof: Proof?
-    enum Proof: String, Codable, Sendable { case submitReturnedTxid, actualMovement }
+    enum Proof: String, Codable, Sendable { case submitReturnedTxid, actualMovement, submitReturnedArkSuccess }
     enum Status: String, Codable, Sendable { case submitted, confirmed, unlocated }
     var amountDescription: String {
         amountIsPending == true ? "Recipient amount pending" : "\(amountIsEstimated == true ? "About " : "")\(amount) sats"
@@ -50,6 +50,9 @@ struct SendReceipt: Codable, Equatable, Sendable {
     var isSubmitted: Bool { txid != nil && status != .confirmed }
     func isProven(for payment: SendPayment, knownHash: String? = nil, alreadyPaid: Bool = false) -> Bool {
         switch proof {
+        case .submitReturnedArkSuccess:
+            return payment.method == "ark" && amount > 0 && amount == payment.amount
+                && txid == nil && paymentHash == nil && amountIsPending != true
         case .submitReturnedTxid:
             return payment.method == "onchain" && txid?.isEmpty == false
                 && (amount > 0 || (payment.max && payment.source == .offchain && amountIsPending == true))

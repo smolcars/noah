@@ -55,6 +55,71 @@ Refresh fills them when available. Older MAX receipts lacking actual-amount
 provenance are normalized to pending while preserving their submitted txid/lock.
 FFI item 14 now requests recipient amount/fee binding for prepared offboards.
 
+Direct Ark submission now persists `submitReturnedArkSuccess` only after the
+SDK's `sendArkoorPayment` returns success (0.3.0 returns Void). The loader accepts
+that proof only for the exact reviewed Ark amount. History candidates still
+cannot manufacture this provenance. A parameterized regression submits and
+serializes a successful attempt without Done, reloads it, verifies the same
+receipt remains locked, rejects a second submit, then clears only through Done
+for Ark, BOLT11, LNURL, offers, onchain and offboard. Cross-rail and wrong-amount
+Ark proofs are rejected; legacy migration remains conservative.
+
+Full final `NoahTests`: **291 tests, 278 passed, 13 opt-in skipped, 0 failed**,
+across **70 suites**; parameterized cases account for **323 passed individual
+runs**. All six close-before-Done rail cases pass. Dedicated simulator:
+`Noah Send Round 4 Fix 73185be8`, iPhone 17 / iOS 27.0, UUID
+`943CC723-49C8-4648-8438-622F6B21BCCB`. XcodeGen was regenerated after adding
+files; tests used Nix, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, no target exclusions,
+and `/tmp/noah-send-r4-fix-73185be8-dd`. Result:
+`/tmp/noah-send-r4-final-full.xcresult`. Targeted checkpoint tests also passed
+(8 tests / 10 individual runs), as did offboard/existing safety tests
+(29 tests / 54 individual runs).
+
+Live harness: **1 passed, 0 skipped, 0 failed**,
+`/tmp/noah-send-r4-live.xcresult`. A fresh disposable wallet received **20,000
+Ark sats once**, sent **1,000 Ark sats once**, and persisted the unacknowledged
+receipt with `proof: submitReturnedArkSuccess`. Bark receiver movement **35**
+independently reports successful receipt of 1,000 sats. After the harness exited,
+the real app reopened the receipt; it was then explicitly terminated while
+showing “Payment sent / 1000 sats” before Done and relaunched. Send still showed
+the same successful receipt and Done, with no destructive override. Sender
+history contained exactly one Ark send and balance remained 19,000 sats.
+
+After Done, the real composer selected Ark→onchain MAX. Accessibility snapshots
+verified “Recipient receives about 16441 sats”, “Estimated fee, 2559 sats”,
+“Total (reviewed coins), 19000 sats”, and the network-fee explanation. One Confirm
+submitted txid prefix `466906ef2469`. The receipt showed **Submitted**, **16,441
+sats**, and **Actual fee: 2,559 sats**, read from resulting movement **3** and
+its transaction metadata. Core independently reports **16,441 sats received,
+zero confirmations**. SQLite confirms the exact **four reviewed VTXO IDs** were
+consumed and recipient + fee = reviewed 19,000 sats. Live quote and actual agreed;
+the regression test exercises a changed fee/output. No block was mined and no
+Docker service was restarted or reconfigured.
+
+Evidence: `/tmp/noah-send-r4-ark-evidence.json`,
+`/tmp/noah-send-r4-offboard-evidence.json`, `/tmp/noah-send-r4-core-evidence.json`;
+AX snapshots and PNGs: `/tmp/noah-send-r4-ark-{before,after}-relaunch.{txt,png}`,
+`/tmp/noah-send-r4-offboard-{review,receipt}.{txt,png}`. No seeds, wallet data,
+invoices or runtime destinations are committed.
+
+Repeat on a fresh dedicated simulator with `TEST_RUNNER_NOAH_SEND_ROUND4_LIVE=1`
+and `TEST_RUNNER_NOAH_SEND_ARK_RECIPIENT` (a fresh Bark regtest address), selecting
+`-only-testing:NoahTests/SendRoundFourLiveTests/arkReceiptBeforeDone()`.
+Fund `Documents/send-round4-funding-address.txt` once with **20,000 sats** within
+180 seconds. The harness hosts the real receipt and writes
+`Documents/send-round4-ark-ready`; create `Documents/send-round4-finish` after
+inspection to finish without acknowledging. Reopen the actual app, open Send,
+kill/relaunch before Done and verify the receipt again. Then use the composer
+for Ark→onchain MAX to a fresh Core address and compare receipt/movement/Core.
+
+The dedicated simulator was shut down through the Device panel, its exact name,
+UUID and Shutdown state checked, then deleted. No other device was changed.
+
+Remaining verification limits: external LNURL/BOLT12 provider acceptance and
+camera hardware were not exercised live. Their payment guards use injected
+resolution/state and payment-call spies. FFI 14–16 remain SDK work; the app
+continues to label estimates/pending values and never infers network acceptance.
+
 ## Round-3 payment safety (2026-10-19)
 
 Full `NoahTests` target: **264 tests, 253 passed, 11 opt-in tests skipped,
