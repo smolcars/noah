@@ -1,0 +1,340 @@
+{
+  "description": "Public BIP39 zero-entropy vectors and synthetic credentials only. Both native loggers must produce identical output.",
+  "cases": [
+    {
+      "name": "mnemonic-lower",
+      "input": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "mnemonic-upper",
+      "input": "ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABOUT",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "mnemonic-mixed",
+      "input": "Abandon Abandon Abandon Abandon Abandon Abandon Abandon Abandon Abandon Abandon Abandon About",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "mnemonic-24",
+      "input": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "mnemonic-commas",
+      "input": "abandon,abandon,abandon,abandon,abandon,abandon,abandon,abandon,abandon,abandon,abandon,about",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "mnemonic-newlines",
+      "input": "abandon\nabandon\nabandon\nabandon\nabandon\nabandon\nabandon\nabandon\nabandon\nabandon\nabandon\nabout",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "mnemonic-punctuation",
+      "input": "abandon / abandon / abandon / abandon / abandon / abandon / abandon / abandon / abandon / abandon / abandon / about",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "mnemonic-json",
+      "input": "[\"abandon\", \"abandon\", \"abandon\", \"abandon\", \"abandon\", \"abandon\", \"abandon\", \"abandon\", \"abandon\", \"abandon\", \"abandon\", \"about\"]",
+      "expected": "[\"[redacted]\"]"
+    },
+    {
+      "name": "mnemonic-json24",
+      "input": "[\"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ABANDON\", \"ART\"]",
+      "expected": "[\"[redacted]\"]"
+    },
+    {
+      "name": "label-mnemonic",
+      "input": "mnemonic=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-seed",
+      "input": "seed=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-private_key",
+      "input": "private_key=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-privkey",
+      "input": "privkey=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-key",
+      "input": "key=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-signature",
+      "input": "signature=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-raw_signature",
+      "input": "raw_signature=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-preimage",
+      "input": "preimage=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-access_token",
+      "input": "access_token=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-push_token",
+      "input": "push_token=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-token_suffix",
+      "input": "token_suffix=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-myTokenValue",
+      "input": "myTokenValue=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-client_secret",
+      "input": "client_secret=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-secretSuffix",
+      "input": "secretSuffix=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-authorization",
+      "input": "authorization=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-password",
+      "input": "password=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-X-Amz-Credential",
+      "input": "X-Amz-Credential=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-X-Amz-Signature",
+      "input": "X-Amz-Signature=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-Signature",
+      "input": "Signature=fake-value",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "multiline-secret",
+      "input": "secret_key: [1, 2,\n3, 4]",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-prefixed-authorization",
+      "input": "http_authorization_header=fake",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "label-suffixed-password",
+      "input": "account_password_hash=fake",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "json-token",
+      "input": "{\"access_token\":\"fake-value\"}",
+      "expected": "{\"[redacted]"
+    },
+    {
+      "name": "jwt-bearer",
+      "input": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmYWtlIn0.ZmFrZS1zaWduYXR1cmU",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "jwt-bare",
+      "input": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmYWtlIn0.ZmFrZS1zaWduYXR1cmU",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "jwt-alternate-header",
+      "input": "ewogImFsZyI6IkhTMjU2In0.eyJzdWIiOiJmYWtlIn0.ZmFrZS1zaWduYXR1cmU",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "bearer-opaque",
+      "input": "Bearer fake-credential",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "private-testnet-uncompressed",
+      "input": "9AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "expo",
+      "input": "ExponentPushToken[fake-token]",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "expo-new",
+      "input": "ExpoPushToken[fake-token]",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "private-xprv",
+      "input": "xprvAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "private-tprv",
+      "input": "tprvAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "private-K",
+      "input": "KAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "private-L",
+      "input": "LAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "private-5",
+      "input": "5AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "private-c",
+      "input": "cAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "hex-private",
+      "input": "private_key=abababababababababababababababababababababababababababababababab",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "hex-signature",
+      "input": "raw_signature=cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "presigned",
+      "input": "backup https://bucket.invalid/archive?X-Amz-Credential=fake&X-Amz-Signature=fake",
+      "expected": "backup [redacted]"
+    },
+    {
+      "name": "presigned-signature",
+      "input": "https://bucket.invalid/archive?Signature=fake",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "encoded-url",
+      "input": "https%3A%2F%2Fbucket.invalid%2Farchive%3FSignature%3Dfake",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "address-email",
+      "input": "Verification code sent to alice@example.com",
+      "expected": "Verification code sent to [redacted]"
+    },
+    {
+      "name": "address-lightning",
+      "input": "Sending 1000 sat to lightning address alice@example.com",
+      "expected": "Sending 1000 sat to lightning address [redacted]"
+    },
+    {
+      "name": "address-mixed",
+      "input": "ALICE+wallet@sub.example.com",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "address-key-email",
+      "input": "email=fake",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "address-key-user.email",
+      "input": "user.email=fake",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "address-key-lightningAddress",
+      "input": "lightningAddress=fake",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "address-key-lightning_address",
+      "input": "lightning_address=fake",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "negative-words",
+      "input": "wallet loaded in three seconds after a successful sync and all services are running normally",
+      "expected": "wallet loaded in three seconds after a successful sync and all services are running normally"
+    },
+    {
+      "name": "negative-amount",
+      "input": "Sending 1000 sat",
+      "expected": "Sending 1000 sat"
+    },
+    {
+      "name": "negative-txid",
+      "input": "txid=abababababababababababababababababababababababababababababababab",
+      "expected": "txid=abababababababababababababababababababababababababababababababab"
+    },
+    {
+      "name": "negative-bare-hash",
+      "input": "abababababababababababababababababababababababababababababababab",
+      "expected": "abababababababababababababababababababababababababababababababab"
+    },
+    {
+      "name": "negative-ark",
+      "input": "ark1qtestaddress000000000000000000000000000000000000000000000",
+      "expected": "ark1qtestaddress000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "negative-url",
+      "input": "https://example.com/status",
+      "expected": "https://example.com/status"
+    },
+    {
+      "name": "negative-short-bip39",
+      "input": "abandon about ability able above absent absorb abstract absurd abuse access",
+      "expected": "abandon about ability able above absent absorb abstract absurd abuse access"
+    },
+    {
+      "name": "negative-token-word",
+      "input": "token refresh complete",
+      "expected": "token refresh complete"
+    },
+    {
+      "name": "negative-key-word",
+      "input": "public key loaded",
+      "expected": "public key loaded"
+    },
+    {
+      "name": "negative-version",
+      "input": "version 1.2.3",
+      "expected": "version 1.2.3"
+    }
+  ]
+}
