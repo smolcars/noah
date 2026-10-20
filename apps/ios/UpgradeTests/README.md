@@ -19,6 +19,12 @@ and leaves an empty native import marker through re-onboarding.
 See [the complete storage policy](../../android/UpgradeTests/STORES.md#settings-upgrade-policy--2026-10-20)
 for file format, sync ordering, notices, server verification and corruption rules.
 
+Committed restore recovery also repairs partial automation bootstrap only as a
+durable STOPPED authority, with state persisted before its initialized marker.
+Ordinary recurring admission remains fail closed. Explicit Resume retries pending
+restore settings first and surfaces the storage failure through Settings. See
+[restore recovery regression evidence](../RestoreTests/README.md#restore-recovery-review-round-3).
+
 
 Base: `feat/native-rewrite` at `c6283d16`. Run from the repository root in the
 Nix development shell, with XcodeGen on PATH:

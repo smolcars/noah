@@ -85,6 +85,26 @@ replays its existing completion receipt, including backup metadata and token
 invalidation. An explicit wallet resume cannot release the automation stop while
 the settings marker remains; completion itself does not automatically resume
 recurring payments.
+
+Restore settlement is the sole repair path for a missing, corrupt, mismatched or
+partially initialized automation authority: it atomically writes and syncs a new
+STOPPED state, then its matching initialized marker, before removing the restore
+journal. A crash between those writes keeps the restore recoverable and execution
+blocked. Ordinary authority bootstrap also persists state before the marker;
+a missing/corrupt member after bootstrap still fails closed for recurring reads
+and explicit resume. Only committed restore recovery may replace it, always
+stopped. Successful repair also releases an earlier in-process read-failure latch
+only after both files are durable.
+
+Explicit wallet resume retries settings completion before inspecting its pending
+marker. Android replays the metadata/token completion receipt under the same
+wallet mutation gate and checks both markers before releasing the stop. A failed
+retry retains suspension and the automation stop, and Settings shows:
+“Restored wallet settings can't be saved yet. Try Resume again when storage is
+available. Recurring payments remain stopped.” Persistence recovery permits the
+same Resume action to succeed, without a restart or foreground activation.
+See both platforms' `RestoreTests/README.md` for regression and process-death evidence.
+
 Interrupted creation with seed + DB therefore resumes onboarding; an existing
 wallet with missing/unreadable settings still opens Home. Default preferences
 mean biometric lock off, suspension cleared, balances visible, USD/bip177 display,

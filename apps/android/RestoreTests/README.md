@@ -256,3 +256,67 @@ Full-suite verification and disposable-simulator cleanup are recorded in
 `apps/android/SettingsTests/README.md`, round 5. No funded-wallet acceptance,
 Android instrumentation, physical-device keyboard-extension or VoiceOver session
 was rerun for this round.
+
+## Restore recovery review round 3
+
+Base: local `feat/native-rewrite` HEAD `8c878b0e`, 2026-10-20.
+
+Committed restore settlement now writes a durable STOPPED automation state before
+its matching initialized marker. It can replace marker-only, state-only, corrupt,
+mismatched and previously stopped authority files, including an in-process failed
+read latch, without touching the committed seed or database. Normal authority
+bootstrap also writes state first. Ordinary recurring reads and resume still
+reject incomplete/corrupt authority; only committed restore settlement can repair
+it, and completion never automatically releases the stop.
+
+Explicit Resume retries the committed settings marker and the existing completion
+receipt under the lifecycle mutation gate before checking either pending marker.
+Receipt replay still restores backup metadata and invalidates the auth token.
+Failed persistence retains suspension and the automation stop. The typed settings
+error reaches the Settings action handler instead of its generic fallback.
+
+Regression evidence:
+
+- Original authority behavior: **20 targeted JVM tests / 2 failed**. The new
+  partial-authority recovery and initialization-order tests failed. The original
+  resume guard also failed the new resume/receipt regression (with its callback
+  signature added for compilation, but its original body retained).
+- Fixed targeted suites: **47 JVM tests / 3 suites / zero failures or skips**.
+  Partial-authority recovery covers five states; resume covers success, settings
+  write failure, receipt metadata failure and a retained receipt.
+- **25 instrumented tests passed**, zero failures/skips: SettingsFailureTest,
+  MMKVRecoveryTest and AndroidStorageTest (**18**), plus the real-filesystem
+  restore/seed durability and atomic publication cases and WalletDatabaseDeviceTest
+  (**7**). The new resume case exercises actual unwritable settings directories,
+  recovered writes, suspension, retained receipts and restored backup metadata.
+- **27/27 process-death checkpoints recovered in fresh processes**: the nine
+  existing restore boundaries; marker-only/state-only/corrupt authorities; all six
+  file-sync/rename-directory-sync fences of authority bootstrap and stop; and all
+  nine settlement sync fences (settings marker, STOPPED state, authority marker,
+  restore marker removal, cleanup and journal removal). Preference writes remain
+  denied during recovery. The tests check the committed database, settled journal,
+  initialized Home admission flags, valid STOPPED authority, denied headless work,
+  and retry after permissions recover. Automation remains stopped after settings
+  completion. One recovery runner exited without reporting a result at
+  `initializing4`; the unchanged disk checkpoint passed on retry. No checkpoint
+  assertion failed.
+- Final required command completed after the last code change:
+
+  ```sh
+  nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
+  ```
+
+  **3,451 JVM tests / 121 suites / zero failures, errors or skips**; APK assembly
+  and instrumentation compilation passed, **BUILD SUCCESSFUL in 1m 22s**. One
+  earlier full invocation was canceled before completion to forward the new
+  user-facing error through the UI handler; it is not counted as a completed run.
+
+All device tests used the owned Android 15 Google APIs ARM64 AVD
+`NoahRestoreRecoverySol5610`, explicitly confirmed as `emulator-5610`, launched
+with `-port 5610 -no-window -no-snapshot`. These are isolated storage/restore
+fixtures and process termination tests, not funded-wallet UI or hardware power-loss
+tests. No physical device, shared emulator or Docker service was controlled.
+
+Cleanup: the AVD name was confirmed again before shutdown; `adb devices` confirmed
+`emulator-5610` was absent, and both the exact `.avd` directory and `.ini`
+registration were verified absent after deleting only `NoahRestoreRecoverySol5610`.
