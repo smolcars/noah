@@ -122,6 +122,8 @@ class LogFile(private val directory: File) {
             for (pattern in sensitivePatterns) result = pattern.replace(result, "[redacted]")
             val decomposed = Normalizer.normalize(result, Normalizer.Form.NFKD)
             val normalized = decomposed.lowercase(Locale.ROOT).replace("ß", "ss")
+            val skeleton = detectionSkeleton(normalized)
+            if (skeleton != normalized && containsMnemonic(skeleton)) return "[redacted]"
             val matches = words.findAll(normalized).toList()
             val runs = mutableListOf<IntRange>()
             var start = 0
@@ -141,6 +143,28 @@ class LogFile(private val directory: File) {
             for (range in runs.asReversed()) result = result.replaceRange(range, "[redacted]")
             return result
         }
+        // Unicode Default_Ignorable_Code_Point ranges, including supplementary format controls.
+        private val ignorableOrMark = Regex("""[\p{M}\u00AD\u061C\u115F-\u1160\u17B4-\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\uFFF0-\uFFF8\x{1BCA0}-\x{1BCA3}\x{1D173}-\x{1D17A}\x{E0000}-\x{E0FFF}]""")
+        private val latinConfusables = mapOf(
+            'a' to "аα", 'b' to "ьβ", 'c' to "сϲςσ", 'd' to "ԁ", 'e' to "еε", 'f' to "ғ",
+            'g' to "ɡ", 'h' to "һн", 'i' to "іι", 'j' to "ј", 'k' to "κк", 'l' to "ӏ",
+            'm' to "мμ", 'n' to "ո", 'o' to "оο", 'p' to "рρ", 's' to "ѕ", 't' to "тτ",
+            'u' to "υս", 'v' to "νѵ", 'w' to "ԝω", 'x' to "хχ", 'y' to "уγ", 'z' to "ζ",
+        ).flatMap { (latin, lookalikes) -> lookalikes.map { it to latin } }.toMap()
+
+        // For privacy detection only; wallet seed validation intentionally stays stricter.
+        private fun detectionSkeleton(normalized: String): String =
+            ignorableOrMark.replace(normalized, "").map { latinConfusables[it] ?: it }.joinToString("")
+
+        private fun containsMnemonic(normalized: String): Boolean {
+            var count = 0
+            for (word in words.findAll(normalized)) {
+                count = if (word.value in bip39) count + 1 else 0
+                if (count >= 12) return true
+            }
+            return false
+        }
+
         @Volatile private var instance: LogFile? = null
         fun shared(context: Context): LogFile = instance ?: synchronized(lock) {
             instance ?: LogFile(File(context.applicationContext.cacheDir, "noah_logs")).also { instance = it }

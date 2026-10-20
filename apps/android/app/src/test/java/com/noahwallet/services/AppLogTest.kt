@@ -25,6 +25,7 @@ class AppLogTest {
         }
     }
     @Test fun escapedCredentialsAreRedacted() { assertRedactionCases("r3-escaped-") }
+    @Test fun visuallyRecoverableMnemonicsAreRedacted() { assertRedactionCases("r3-skeleton-") }
 
     @Test fun prefixedHexSecretsFromRustAreRedacted() {
         assertRedactionCases("r2-label-")
