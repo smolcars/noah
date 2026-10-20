@@ -48,10 +48,13 @@ struct OnchainStatusSection: View {
                 }
                 if let status = attempt.receipt?.chainStatus { Text(status.message) }
                 if let error = attempt.chainStatusError { Text(error).foregroundStyle(NoahColor.destructive) }
-                if let txid = attempt.receipt?.txid {
+                // An uncertain board still has its exact journaled funding txid (Android parity).
+                if let txid = attempt.receipt?.txid ?? attempt.txid {
                     ExitTransactionRow(title: "Transaction ID", txid: txid)
                     Button("Copy transaction ID") { UIPasteboard.general.string = txid }
-                    Button("Refresh network status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
+                    if attempt.receipt != nil {
+                        Button("Refresh network status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
+                    }
                 }
                 if attempt.receipt?.broadcastRetryPending == true {
                     Button("Check status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
