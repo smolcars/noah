@@ -77,6 +77,7 @@ class RecurringExecutor(private val d: Dependencies,
         running = true; error = null
         try {
             requireStage(budget, caller)
+            storage { d.allowed() }
             val generation = storage { d.automationGeneration() }
             val durableGeneration = storage { d.store.automationGeneration() }
             requireStage(budget, caller)

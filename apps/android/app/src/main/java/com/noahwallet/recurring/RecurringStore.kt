@@ -27,8 +27,12 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     }
     private fun protected(state: State, automationOverlay: Boolean = true): State {
         val ledger = policyLedger ?: return state
-        val automationStopped = automationOverlay && automation?.allowed() == false
-        val stopped = runCatching { ledger.stopped(state.binding ?: policyBinding!!(), state.schedules) }.getOrElse { policyWarning(); state.schedules.keys }
+        // Resolve the live wallet first: Welcome has no authority to bootstrap or fail.
+        val owner = runCatching { policyBinding!!() }.getOrNull()
+        val stopped = if (owner == null) state.schedules.keys else runCatching {
+            ledger.stopped(state.binding ?: owner, state.schedules)
+        }.getOrElse { policyWarning(); state.schedules.keys }
+        val automationStopped = owner != null && automationOverlay && automation?.allowed() == false
         return state.copy(schedules = state.schedules.mapValues { (id, schedule) ->
             if ((id in stopped || automationStopped) && !schedule.unsupportedStorage) schedule.copy(status = "needs_attention", lastError = if (id in stopped) RecurringPolicyLedger.message else RecurringAutomationAuthority.message) else schedule
         })
