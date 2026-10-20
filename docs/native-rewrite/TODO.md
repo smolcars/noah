@@ -224,6 +224,9 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] BTC Map resource limits — iOS: streamed 32 MiB maximum, 100k records, 16 KiB strings, no immediate oversize retry and five-minute cooldown (measured payloads in `apps/ios/MapTests/README.md`)
 - [ ] Android M8: mirror transfer/record/string limits and oversize cooldown/cache preservation
 
+- [x] BTC Map review — iOS: permission requested only by Locate, accessible Places in view opens merchant details, viewport/focus city re-ranking, tested web/phone sanitization (`btc-map-review` shared vectors)
+- [ ] Android M8: request location only from explicit Locate (automatic centering uses existing grant); accessible visible-merchant list/detail navigation; re-rank city results on viewport/search reopening; consume `btc-map-review.json` URL/phone/bounds cases
+
 ## Cutover
 - [ ] Adaptive layouts (iPad / landscape / foldables) parity
 - [ ] Parity audit against RN, screen by screen

@@ -5,7 +5,11 @@ struct BtcMapView: View {
     @Environment(\.scenePhase) private var scenePhase
     @FocusState private var searchFocused: Bool
     @State private var wideLayout = false
+    @State private var showPlaces = false
+    @State private var placeFromList: BtcMapPlace?
     @State private var locatingTask: Task<Void, Never>?
+
+    private struct CitySearchRequest: Equatable { let query: String; let center: [Double]; let focused: Bool }
 
     var body: some View {
         GeometryReader { geometry in
@@ -49,9 +53,34 @@ struct BtcMapView: View {
                     .presentationBackgroundInteraction(.enabled(upThrough: .height(390)))
             }
         }
+        .sheet(isPresented: $showPlaces, onDismiss: {
+            if let placeFromList { model.select(placeFromList); self.placeFromList = nil }
+        }) {
+            let places = model.placesInView
+            NavigationStack {
+                List(places) { place in
+                    Button {
+                        placeFromList = place
+                        showPlaces = false
+                    } label: {
+                        Label { Text("\(place.name), \(place.category.label)") } icon: { Image(systemName: place.category.symbol) }
+                    }
+                }
+                .overlay { if places.isEmpty { ContentUnavailableView("No places in view", systemImage: "mappin.slash") } }
+                .navigationTitle("Places in view")
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showPlaces = false } } }
+            }
+        }
         .navigationTitle("Bitcoin Map")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Places in view", systemImage: "list.bullet") {
+                    searchFocused = false
+                    showPlaces = true
+                }
+                .accessibilityIdentifier("btc-map-places-in-view")
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Find places near me", systemImage: "location") {
                     searchFocused = false
@@ -67,7 +96,7 @@ struct BtcMapView: View {
         .tint(NoahColor.brand)
         .task { await model.load() }
         .task(id: model.isLoading) { await model.initialLocation() }
-        .task(id: model.query) { await model.searchCities() }
+        .task(id: CitySearchRequest(query: model.query, center: model.viewport.center, focused: searchFocused)) { await model.searchCities() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await model.refresh() } }
         }

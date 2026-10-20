@@ -145,7 +145,12 @@ struct BtcMapCanvas: UIViewRepresentable {
             let viewport = BtcMapViewport(center: [mapView.centerCoordinate.longitude, mapView.centerCoordinate.latitude], zoom: mapView.zoomLevel)
             // Defer observable writes out of UIViewRepresentable's update pass.
             let userInteraction = !reason.intersection([.gesturePan, .gesturePinch, .gestureRotate, .gestureZoomIn, .gestureZoomOut, .gestureOneFingerZoom]).isEmpty
-            Task { @MainActor [model] in model.record(viewport, userInteraction: userInteraction) }
+            let bounds = mapView.visibleCoordinateBounds
+            Task { @MainActor [model] in
+                model.visibleBounds = BtcMapBounds(west: bounds.sw.longitude, south: bounds.sw.latitude,
+                                                  east: bounds.ne.longitude, north: bounds.ne.latitude)
+                model.record(viewport, userInteraction: userInteraction)
+            }
         }
 
         @objc func tapped(_ tap: UITapGestureRecognizer) {

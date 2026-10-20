@@ -8,6 +8,12 @@ final class BtcMapModel {
     private(set) var nearby: [BtcMapPlace] = []
     private(set) var cities: [CitySearchEntry] = []
     private(set) var merchants: [BtcMapPlace] = []
+    var visibleBounds: BtcMapBounds?
+    var placesInView: [BtcMapPlace] {
+        guard let visibleBounds else { return [] }
+        return filtered.filter { visibleBounds.contains(lon: $0.lon, lat: $0.lat) }
+            .sorted { $0.name == $1.name ? $0.id < $1.id : $0.name < $1.name }
+    }
     private(set) var revision = 0
     private(set) var cameraRevision = 0
     private(set) var viewport: BtcMapViewport
@@ -106,13 +112,14 @@ final class BtcMapModel {
 
     func searchCities() async {
         let query = query
+        let center = viewport.center
         do {
-            let results = try await repository.searchCities(query, bias: viewport.center)
-            guard !Task.isCancelled, self.query == query else { return }
+            let results = try await repository.searchCities(query, bias: center)
+            guard !Task.isCancelled, self.query == query, viewport.center == center else { return }
             cities = results
             cityError = false
         } catch {
-            guard !Task.isCancelled, self.query == query else { return }
+            guard !Task.isCancelled, self.query == query, viewport.center == center else { return }
             cities = []
             cityError = true
         }
@@ -150,7 +157,7 @@ final class BtcMapModel {
         isLocating = true
         defer { isLocating = false }
         do {
-            let coordinates = try await location.locate()
+            let coordinates = try await location.locate(requestingPermission: !initial)
             guard !Task.isCancelled, !initial || !canPersist else { return }
             userLocation = coordinates
             selectedCity = nil

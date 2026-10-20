@@ -45,8 +45,7 @@ synthetic location. Never use a real user's location in test evidence.
 - The cache remains `Documents/btcmap-places-v1.btcmap`; viewport remains raw JSON
   under MMKV `btc-map-viewport-v1`. Invalid viewports are discarded. Writes are
   atomic; a malformed update never advances the cursor or replaces usable data.
-- Endpoints, requested fields, deletion patches, one retry, initial foreground
-  location, city/merchant ranking, categories and zoom levels follow RN. A local
+- Endpoints, requested fields, deletion patches, one retry for ordinary failures, city/merchant ranking, categories and zoom levels follow RN. A local
   snapshot loads immediately; sync refreshes on opening/foreground when stale.
 - OpenFreeMap liberty/dark styles, radius-46 clustering through zoom 14, orange
   merchant dots and cluster counts match RN. SF Symbols replace RN category/action
@@ -96,3 +95,17 @@ Oversize responses are canceled, never immediately retried, and put that sync
 or merchant detail request on a five-minute cooldown. Usable cached data and
 its sync cursor are preserved. Tests cover streamed overflow, exact byte
 boundaries, record/string limits, and cooldown/cache preservation.
+
+Location permission deliberately differs from RN: opening the map never asks
+for permission. Automatic initial centering uses an already-granted permission;
+only **Find places near me** requests a new grant. The permission policy is tested.
+
+**Places in view** is a native, VoiceOver-discoverable list of the filtered
+merchants inside the map's actual bounds (including dateline-crossing bounds).
+It includes clustered merchants and opens the same detail sheet/pane. City
+suggestions re-rank on viewport changes and search focus, with stale results
+rejected. `apps/fixtures/btc-map-review.json` defines 25 shared native cases for
+web/phone sanitization and viewport bounds; the Android map port should consume
+these alongside the existing map/city fixtures. Non-HTTP(S), hostless/malformed
+web links and phone strings containing letters or scheme/control characters
+are rejected; ordinary phone formatting spaces and punctuation are stripped.

@@ -97,7 +97,7 @@ struct BtcMapDetailView: View {
         if let website = fields["website"] { Button("Website", systemImage: "globe") { open(website) } }
         if let phone = fields["phone"] {
             Button("Call", systemImage: "phone") {
-                guard let encoded = phone.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed), let url = URL(string: "tel:\(encoded)") else { linkFailed = true; return }
+                guard let url = BtcMapLinks.phone(phone) else { linkFailed = true; return }
                 openURL(url) { if !$0 { linkFailed = true } }
             }
         }
@@ -109,7 +109,7 @@ struct BtcMapDetailView: View {
             .compactMap { fields[$0.0] == "yes" ? $0.1 : nil } + [fields["payment_provider"]].compactMap { $0 }
     }
     private func open(_ text: String) {
-        guard let url = URL(string: text), ["https", "http"].contains(url.scheme?.lowercased() ?? ""), url.host != nil else { linkFailed = true; return }
+        guard let url = BtcMapLinks.web(text) else { linkFailed = true; return }
         openURL(url) { if !$0 { linkFailed = true } }
     }
     private func parseDate(_ text: String) -> Date? {

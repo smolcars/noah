@@ -5,6 +5,7 @@ final class BtcMapLocation: NSObject, @preconcurrency CLLocationManagerDelegate 
     enum Failure: Error { case denied, unavailable }
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<[Double], Error>?
+    private var requestingPermission = false
     private var timeout: Task<Void, Never>?
 
     override init() {
@@ -13,13 +14,19 @@ final class BtcMapLocation: NSObject, @preconcurrency CLLocationManagerDelegate 
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
     }
 
-    func locate() async throws -> [Double] {
-        try await withTaskCancellationHandler {
+    static func mayLocate(status: CLAuthorizationStatus, requestingPermission: Bool) -> Bool {
+        status == .authorizedAlways || status == .authorizedWhenInUse || (status == .notDetermined && requestingPermission)
+    }
+
+    func locate(requestingPermission: Bool = true) async throws -> [Double] {
+        guard Self.mayLocate(status: manager.authorizationStatus, requestingPermission: requestingPermission) else { throw Failure.denied }
+        return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 guard self.continuation == nil else {
                     continuation.resume(throwing: Failure.unavailable)
                     return
                 }
+                self.requestingPermission = requestingPermission
                 self.continuation = continuation
                 timeout = Task { [weak self] in
                     do { try await Task.sleep(for: .seconds(30)) }
@@ -36,7 +43,9 @@ final class BtcMapLocation: NSObject, @preconcurrency CLLocationManagerDelegate 
     private func request() {
         guard continuation != nil else { return }
         switch manager.authorizationStatus {
-        case .notDetermined: manager.requestWhenInUseAuthorization()
+        case .notDetermined:
+            if requestingPermission { manager.requestWhenInUseAuthorization() }
+            else { finish(.failure(Failure.denied)) }
         case .authorizedAlways, .authorizedWhenInUse:
             if let location = manager.location, location.horizontalAccuracy >= 0,
                abs(location.timestamp.timeIntervalSinceNow) < 300 {

@@ -1,0 +1,240 @@
+{
+  "description": "Native map safety contract. Android M8 must consume alongside btc-map and city-search.",
+  "cases": [
+    {
+      "name": "web javascript:alert(1)",
+      "input": {
+        "operation": "web",
+        "text": "javascript:alert(1)"
+      },
+      "expected": null
+    },
+    {
+      "name": "web file:///tmp/wallet",
+      "input": {
+        "operation": "web",
+        "text": "file:///tmp/wallet"
+      },
+      "expected": null
+    },
+    {
+      "name": "web custom://merchant",
+      "input": {
+        "operation": "web",
+        "text": "custom://merchant"
+      },
+      "expected": null
+    },
+    {
+      "name": "web https://",
+      "input": {
+        "operation": "web",
+        "text": "https://"
+      },
+      "expected": null
+    },
+    {
+      "name": "web http:/path",
+      "input": {
+        "operation": "web",
+        "text": "http:/path"
+      },
+      "expected": null
+    },
+    {
+      "name": "web http:///path",
+      "input": {
+        "operation": "web",
+        "text": "http:///path"
+      },
+      "expected": null
+    },
+    {
+      "name": "web https://exa mple.com",
+      "input": {
+        "operation": "web",
+        "text": "https://exa mple.com"
+      },
+      "expected": null
+    },
+    {
+      "name": "web https://example.com/%zz",
+      "input": {
+        "operation": "web",
+        "text": "https://example.com/%zz"
+      },
+      "expected": null
+    },
+    {
+      "name": "web https://user@example.com",
+      "input": {
+        "operation": "web",
+        "text": "https://user@example.com"
+      },
+      "expected": null
+    },
+    {
+      "name": "web https://example.com/path?q=1",
+      "input": {
+        "operation": "web",
+        "text": "https://example.com/path?q=1"
+      },
+      "expected": "https://example.com/path?q=1"
+    },
+    {
+      "name": "web http://example.com",
+      "input": {
+        "operation": "web",
+        "text": "http://example.com"
+      },
+      "expected": "http://example.com"
+    },
+    {
+      "name": "phone '+1 (404) 555-0100'",
+      "input": {
+        "operation": "phone",
+        "text": "+1 (404) 555-0100"
+      },
+      "expected": "tel:+14045550100"
+    },
+    {
+      "name": "phone '404 555 0100'",
+      "input": {
+        "operation": "phone",
+        "text": "404 555 0100"
+      },
+      "expected": "tel:4045550100"
+    },
+    {
+      "name": "phone '1-800-FLOWERS'",
+      "input": {
+        "operation": "phone",
+        "text": "1-800-FLOWERS"
+      },
+      "expected": null
+    },
+    {
+      "name": "phone 'abc'",
+      "input": {
+        "operation": "phone",
+        "text": "abc"
+      },
+      "expected": null
+    },
+    {
+      "name": "phone ' + '",
+      "input": {
+        "operation": "phone",
+        "text": " + "
+      },
+      "expected": null
+    },
+    {
+      "name": "phone '12+34'",
+      "input": {
+        "operation": "phone",
+        "text": "12+34"
+      },
+      "expected": null
+    },
+    {
+      "name": "phone '123;456'",
+      "input": {
+        "operation": "phone",
+        "text": "123;456"
+      },
+      "expected": null
+    },
+    {
+      "name": "phone '123\\n456'",
+      "input": {
+        "operation": "phone",
+        "text": "123\n456"
+      },
+      "expected": null
+    },
+    {
+      "name": "phone 'tel:123'",
+      "input": {
+        "operation": "phone",
+        "text": "tel:123"
+      },
+      "expected": null
+    },
+    {
+      "name": "dateline bounds (175, 0)",
+      "input": {
+        "operation": "bounds",
+        "bounds": {
+          "west": 170,
+          "south": -20,
+          "east": -170,
+          "north": 20
+        },
+        "lon": 175,
+        "lat": 0
+      },
+      "expected": true
+    },
+    {
+      "name": "dateline bounds (-175, 0)",
+      "input": {
+        "operation": "bounds",
+        "bounds": {
+          "west": 170,
+          "south": -20,
+          "east": -170,
+          "north": 20
+        },
+        "lon": -175,
+        "lat": 0
+      },
+      "expected": true
+    },
+    {
+      "name": "dateline bounds (0, 0)",
+      "input": {
+        "operation": "bounds",
+        "bounds": {
+          "west": 170,
+          "south": -20,
+          "east": -170,
+          "north": 20
+        },
+        "lon": 0,
+        "lat": 0
+      },
+      "expected": false
+    },
+    {
+      "name": "dateline bounds (175, 30)",
+      "input": {
+        "operation": "bounds",
+        "bounds": {
+          "west": 170,
+          "south": -20,
+          "east": -170,
+          "north": 20
+        },
+        "lon": 175,
+        "lat": 30
+      },
+      "expected": false
+    },
+    {
+      "name": "dateline bounds (170, 20)",
+      "input": {
+        "operation": "bounds",
+        "bounds": {
+          "west": 170,
+          "south": -20,
+          "east": -170,
+          "north": 20
+        },
+        "lon": 170,
+        "lat": 20
+      },
+      "expected": true
+    }
+  ]
+}
