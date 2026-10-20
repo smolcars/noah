@@ -3,7 +3,7 @@ import Foundation
 
 /// Explicit public result fields; never serialize a wallet handle or an error object.
 enum DebugJSON {
-    static func ark(_ info: ArkInfo?) throws -> String { try format(info.map(value) ?? NSNull()) }
+    static func ark(_ info: ArkInfo?) throws -> String { try format(info.map { value($0) as Any } ?? NSNull()) }
     static func decoded(_ vtxo: Vtxo) throws -> String { try format(value(vtxo)) }
     static func imported(_ ids: [String]) throws -> String { try format(ids) }
     static func format(_ value: Any) throws -> String {
