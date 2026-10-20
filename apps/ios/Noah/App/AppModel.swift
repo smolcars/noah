@@ -58,10 +58,16 @@ final class AppModel {
     @ObservationIgnored private let creator: WalletCreator
     @ObservationIgnored private var recurringForeground: RecurringForegroundRunner?
     @ObservationIgnored private var started = false
+    @ObservationIgnored private var starting = false
+    @ObservationIgnored private let readLaunchState: () -> LaunchState
+    @ObservationIgnored private let settleRestore: @MainActor () async throws -> RestoreTransaction.Recovery
     @ObservationIgnored private var backupTriggers: (id: UUID, task: Task<Void, Never>)?
     @ObservationIgnored private let lifecycle = WalletLifecycle(dependencies: .live())
 
-    init() {
+    init(readLaunchState: @escaping () -> LaunchState = { .current() },
+         settleRestore: @escaping @MainActor () async throws -> RestoreTransaction.Recovery = { try await AppServices.shared.restoreRecovery.settle() }) {
+        self.readLaunchState = readLaunchState
+        self.settleRestore = settleRestore
         server = ServerRegistration(variant: .current, client: AppServices.shared.client)
         creator = WalletCreator(
             dependencies: .live(session: session, variant: variant, appVersion: appVersion))
@@ -81,11 +87,13 @@ final class AppModel {
 
     func start() async {
         // `.task` can run again if the root view is rebuilt; launch once.
-        guard !started else { return }
+        guard !started, !starting else { return }
+        starting = true
+        defer { starting = false }
         started = true
         do { try settings.requireCompatibleRNStores() }
         catch { phase = .blocked(.incompatibleStorage); return }
-        let initialState = LaunchState.current(variant: variant)
+        let initialState = readLaunchState()
         if initialState == .invalidSeed || initialState == .seedConflict {
             phase = .blocked(initialState)
             return
@@ -94,7 +102,7 @@ final class AppModel {
         // An interrupted restore must be settled before the datadir and seed
         // say anything about which wallet this is.
         do {
-            switch try await AppServices.shared.restoreRecovery.settle() {
+            switch try await settleRestore() {
             case .nothingPending: break
             case .rolledBack: log.w("Undid an interrupted restore")
             case .completed: log.w("Finished an interrupted restore")
@@ -112,7 +120,7 @@ final class AppModel {
             return
         }
         isWalletSuspended = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == true
-        let state = LaunchState.current(variant: variant)
+        let state = readLaunchState()
         switch state {
         case .existingWallet:
             resumeOnboarding = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized != true
@@ -372,7 +380,16 @@ final class AppModel {
         backupTriggers = (id, task)
     }
 
+    /// Unavailable is retryable; it must never become an absent seed/default wallet.
+    func retrySecureStorage() async {
+        guard phase == .blocked(.secureStorageUnavailable), !starting else { return }
+        started = false
+        phase = .launching
+        await start()
+    }
+
     func appBecameActive() async {
+        await retrySecureStorage()
         if UIApplication.shared.applicationState == .active { recurringForeground?.start() }
         if phase == .wallet {
             let wasBlocked = pushPermission.blocksWallet(initialized: true)
