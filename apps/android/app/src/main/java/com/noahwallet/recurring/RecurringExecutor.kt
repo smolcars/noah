@@ -49,6 +49,7 @@ class RecurringExecutor(private val d: Dependencies,
         val generation = d.automationGeneration()
         if (!d.journal.file.parentFile!!.isDirectory || d.binding() != owner || d.automationGeneration() != generation ||
             executionBinding != null && executionBinding != owner) throw NoWallet()
+        d.journal.bind(owner)
         return owner
     }
     private suspend fun <T> storage(block: () -> T): T = walletMutation {

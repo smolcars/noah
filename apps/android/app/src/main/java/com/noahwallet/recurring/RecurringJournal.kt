@@ -8,7 +8,7 @@ import java.io.File
 import java.util.UUID
 
 /** Independent of MMKV: consumed indices and timestamps survive revisions, zones and policy rollback. */
-class RecurringJournal(val file: File, private val read: () -> String? = { if (file.exists()) file.readText() else null },
+class RecurringJournal internal constructor(val file: File, private val read: () -> String? = { if (file.exists()) file.readText() else null },
     private val write: (String) -> Unit = { durableRecurringWrite(file, it.toByteArray(), ::syncDirectory) },
     private val quarantine: (ByteArray) -> Unit = { durableRecurringWrite(File("${file.path}.quarantine"), it) }) {
     @Serializable data class Entry(val binding: RecurringStore.Binding, val scheduleID: String, val plan: RecurringPayment.Plan,
@@ -45,6 +45,11 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
     private val json = RecurringStore.json
     val quarantineFile get() = File("${file.path}.quarantine")
     private var blocked = false
+    private var walletBinding: RecurringStore.Binding? = null
+    internal fun bind(binding: RecurringStore.Binding) = synchronized(this) {
+        if (walletBinding != null && walletBinding != binding) blocked = false
+        walletBinding = binding
+    }
     private fun persist(state: State) { try { write(json.encodeToString(state)) } catch (failure: Exception) { blocked = true; throw failure } }
     private fun state(): State {
         check(!blocked && !quarantineFile.exists()) { invalidMessage }
@@ -156,6 +161,16 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
         validate(state); persist(state)
     }
     companion object {
+        private val journals = mutableMapOf<String, RecurringJournal>()
+        /** One monitor and migration owner per canonical file, retained across all entry points. */
+        fun shared(file: File, binding: RecurringStore.Binding? = null): RecurringJournal =
+            shared(file, binding) { RecurringJournal(it) }
+        internal fun shared(file: File, binding: RecurringStore.Binding?, create: (File) -> RecurringJournal): RecurringJournal {
+            val journal = synchronized(journals) { journals.getOrPut(file.canonicalPath) { create(file.canonicalFile) } }
+            if (binding != null) journal.bind(binding)
+            return journal
+        }
+
         const val invalidMessage = "Recurring payment history needs attention. Its saved evidence has been preserved; sending remains stopped."
         private fun sameScope(a: RecurringStore.Binding, aID: String, b: RecurringStore.Binding, bID: String) =
             aID == bID && a.wallet == b.wallet && UUID.fromString(a.instance) == UUID.fromString(b.instance)

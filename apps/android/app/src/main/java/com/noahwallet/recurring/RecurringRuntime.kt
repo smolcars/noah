@@ -21,7 +21,7 @@ class RecurringRuntime private constructor(context: Context) {
     private val audit = SendOverrideAuditStore(File(location.directory, "noah-recurring-overrides.json"))
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     val executor = RecurringExecutor(RecurringExecutor.Dependencies(store,
-        RecurringJournal(File(location.directory, "noah-recurring-journal.json")), SendRuntime.shared(context).controller,
+        RecurringJournal.shared(File(location.directory, "noah-recurring-journal.json")), SendRuntime.shared(context).controller,
         ensureOpen = { services.ensureWalletOpen(walletMutationHeld = true) }, binding = { if (!location.databaseExists) throw RecurringExecutor.NoWallet(); RecurringStore.binding(location) },
         allowed = {
             requireAdmission(location, settings.persistedState<PersistedWalletState>(PersistedWalletState.key), services.recurringAutomationStorageFailed)

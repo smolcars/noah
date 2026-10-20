@@ -18,7 +18,7 @@ class SendRuntime private constructor(context: Context) {
     val controller = SendController(SendController.Dependencies(journal::read, journal::write, quarantineUnreadable = journal::quarantineUnreadable, auditOverride = audit::append, recurringReservation = { body -> session.withRecurringReservation(body) },
         recurringEvidence = { attempt, generation, walletGeneration, _, message ->
             val location = WalletDataLocation(context.filesDir, BuildConfig.APP_VARIANT)
-            RecurringJournal(File(location.directory, "noah-recurring-journal.json"))
+            RecurringJournal.shared(File(location.directory, "noah-recurring-journal.json"), RecurringStore.binding(location))
                 .record(attempt, generation, walletGeneration, message, RecurringStore.binding(location), System.currentTimeMillis())
         }) { body -> session.withSendReservation(body) })
     // Defer startup until Compose has applied state created by remember.
