@@ -47,6 +47,18 @@
     {
       "input": "https://EXAMPLE.com:443/",
       "endpoint": "https://example.com"
+    },
+    {
+      "input": "https://example.com/a/../api",
+      "endpoint": "https://example.com/api"
+    },
+    {
+      "input": "https://example.com:65536/api",
+      "endpoint": null
+    },
+    {
+      "input": "http://127.1:8080/api",
+      "endpoint": "http://127.0.0.1:8080/api"
     }
   ],
   "genesis": [

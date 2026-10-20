@@ -16,15 +16,37 @@ enum EsploraEndpoint {
         }
         guard url.user == nil, url.password == nil else { throw Failure(message: "The Esplora endpoint cannot include credentials.") }
         guard url.query == nil, url.fragment == nil else { throw Failure(message: "The Esplora endpoint cannot include a query string or fragment.") }
-        url.scheme = url.scheme?.lowercased(); url.host = host.lowercased()
+        guard url.port.map({ (0...65535).contains($0) }) ?? true else { throw Failure(message: "Enter a valid Esplora API URL.") }
+        url.scheme = url.scheme?.lowercased(); url.host = try ipv4Host(host.lowercased())
         if url.port == (url.scheme == "http" ? 80 : 443) { url.port = nil }
-        var path = url.percentEncodedPath.replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
+        var path = URL(string: url.string!)!.standardized.path(percentEncoded: true).replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
         for suffix in ["/blocks/tip/height", "/blocks/tip/hash", "/block-height/0"] where path.hasSuffix(suffix) {
             path.removeLast(suffix.count); break
         }
         url.percentEncodedPath = path
         guard let result = url.string else { throw Failure(message: "Enter a valid Esplora API URL.") }
         return result.replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
+    }
+    /// WHATWG's IPv4 numbers allow fewer than four components (127.1), hex and octal.
+    private static func ipv4Host(_ host: String) throws -> String {
+        var parts = host.split(separator: ".", omittingEmptySubsequences: false).map(String.init)
+        if parts.last == "" { parts.removeLast() }
+        func number(_ part: String) -> UInt64? {
+            if part.lowercased().hasPrefix("0x") { return UInt64(part.dropFirst(2), radix: 16) ?? (part.count == 2 ? 0 : nil) }
+            if part.count > 1, part.first == "0" { return UInt64(part.dropFirst(), radix: 8) }
+            return UInt64(part)
+        }
+        guard let last = parts.last,
+              number(last) != nil || last.range(of: "^[0-9]+$", options: .regularExpression) != nil else { return host }
+        let numbers = parts.compactMap(number)
+        guard numbers.count == parts.count, (1...4).contains(numbers.count),
+              numbers.dropLast().allSatisfy({ $0 <= 255 }),
+              numbers.last! < (UInt64(1) << (8 * (5 - numbers.count))) else {
+            throw Failure(message: "Enter a valid Esplora API URL.")
+        }
+        var address = numbers.last!
+        for (index, value) in numbers.dropLast().enumerated() { address += value << (8 * (3 - index)) }
+        return [24, 16, 8, 0].map { String((address >> $0) & 255) }.joined(separator: ".")
     }
     static func validateGenesis(_ value: String, variant: AppVariant) throws {
         guard variant != .regtest else { throw Failure(message: "Regtest wallets use Bitcoin Core instead of Esplora.") }

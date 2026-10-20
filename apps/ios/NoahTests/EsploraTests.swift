@@ -31,7 +31,7 @@ struct EsploraTests {
             var normalization: [URLCase]; var genesis: [Genesis]; var tipHeight: [Tip]
         }
         let fixture = try Fixtures.decode("esplora", as: Fixture.self)
-        #expect(fixture.normalization.count + fixture.genesis.count + fixture.tipHeight.count == 24)
+        #expect(fixture.normalization.count + fixture.genesis.count + fixture.tipHeight.count == 27)
         for test in fixture.normalization { #expect((try? EsploraEndpoint.normalize(test.input)) == test.endpoint) }
         for test in fixture.genesis { #expect(((try? EsploraEndpoint.validateGenesis(test.value, variant: AppVariant(rawValue: test.variant)!)) != nil) == test.valid) }
         for test in fixture.tipHeight { #expect(((try? EsploraEndpoint.validateTip(test.value)) != nil) == test.valid) }
