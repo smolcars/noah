@@ -10,9 +10,23 @@ import kotlin.coroutines.CoroutineContext
 class EsploraSettings(private val read: (String) -> String?, private val write: (String, String) -> Unit) {
     constructor(storage: SettingsStorage) : this(storage::string, { key, value -> storage.set(value, key) })
     @Serializable data class Selection(val endpoint: String? = null, val variant: String, val input: String? = null, val attention: String? = null)
-    @Serializable data class Record(val active: Selection, val pending: Selection? = null)
+    @Serializable data class Record(val active: Selection, val pending: Selection? = null, val logEndpoints: Set<String> = emptySet())
     fun record(): Record? = read(key)?.let { Json.decodeFromString<Record>(it) }
-    fun save(record: Record) = write(key, Json.encodeToString(record))
+    private fun endpoints(record: Record?): Set<String> = record?.let {
+        it.logEndpoints + listOfNotNull(it.active.endpoint, it.pending?.endpoint)
+    }.orEmpty()
+    fun save(record: Record) {
+        val protected = record.copy(logEndpoints = endpoints(record()) + endpoints(record))
+        write(key, Json.encodeToString(protected))
+        endpoints(protected).forEach(com.noahwallet.services.logging.EndpointLogPrivacy::register)
+    }
+    fun restoreLogPrivacy() { endpoints(record()).forEach(com.noahwallet.services.logging.EndpointLogPrivacy::register) }
+    fun protectLogPrivacy(endpoint: String?) {
+        if (endpoint == null) return
+        val record = checkNotNull(record())
+        if (endpoint !in record.logEndpoints) save(record.copy(logEndpoints = record.logEndpoints + endpoint))
+        com.noahwallet.services.logging.EndpointLogPrivacy.register(endpoint)
+    }
     val importedInput: String? get() = read("esplora-storage")?.let { raw ->
         runCatching { Json.parseToJsonElement(raw).jsonObject["state"]?.jsonObject?.get("endpointOverride")?.jsonPrimitive?.contentOrNull }.getOrNull()
     }
@@ -50,6 +64,12 @@ class EsploraSettings(private val read: (String) -> String?, private val write: 
         }
     }
     companion object {
+        /** Reset the selection while retaining protection for every retained log generation. */
+        internal fun retainingLogPrivacy(values: Map<String, String>): Map<String, String> {
+            val record = values[key]?.let { Json.decodeFromString<Record>(it) } ?: return emptyMap()
+            val history = record.logEndpoints + listOfNotNull(record.active.endpoint, record.pending?.endpoint)
+            return mapOf(key to Json.encodeToString(Record(Selection(variant = record.active.variant), logEndpoints = history)))
+        }
         const val key = "native-esplora-selection"
         const val importedAttention = "This imported endpoint needs attention. Test and save it before use."
     }

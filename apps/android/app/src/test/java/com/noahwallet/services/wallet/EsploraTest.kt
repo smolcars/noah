@@ -10,6 +10,7 @@ class EsploraTest {
     private class Memory {
         val values = mutableMapOf<String, String>()
         val store = EsploraSettings(values::get) { key, value -> values[key] = value }
+        fun selectionRecord() = store.record()?.let { EsploraSettings.Record(it.active, it.pending) }
         fun imported(input: String) { values["esplora-storage"] = buildJsonObject {
             put("state", buildJsonObject { put("endpointOverride", input) }); put("version", 0)
         }.toString() }
@@ -36,6 +37,37 @@ class EsploraTest {
             assertEquals(test.getValue("valid").jsonPrimitive.boolean, runCatching { EsploraEndpoint.validateTip(test.getValue("value").jsonPrimitive.content) }.isSuccess)
         }
     }
+    @Test fun retiredEndpointsAreDurableBeforeAndAfterSimulatedRestart() = runBlocking {
+        val root = java.nio.file.Files.createTempDirectory("privacy-settings").toFile()
+        val native = NativeSettingsFile(java.io.File(root, "settings.json"), sync = {})
+        try {
+            native.save(NativeSettingsFile.State())
+            fun settings(file: NativeSettingsFile) = EsploraSettings({ file.load().values[it] }) { key, value ->
+                file.save(file.load().copy(values = file.load().values + (key to value)))
+            }
+            val store = settings(native)
+            val retired = "https://retired-r3.example/api/retiredR3Opaque74"
+            store.save(EsploraSettings.Record(EsploraSettings.Selection(retired, "signet")))
+            store.save(EsploraSettings.Record(EsploraSettings.Selection(variant = "signet")))
+            val restarted = NativeSettingsFile(native.file, sync = {})
+            assertTrue(restarted.load().values.getValue(EsploraSettings.key).contains(retired))
+            restarted.save(restarted.load().copy(values = EsploraSettings.retainingLogPrivacy(restarted.load().values)))
+            val reset = settings(NativeSettingsFile(native.file, sync = {}))
+            assertNull(reset.record()!!.active.endpoint)
+            assertTrue(retired in reset.record()!!.logEndpoints)
+            // Seed a previous process's history without registering it in this process.
+            val cold = "https://cold-history-only.example/coldOpaqueRestart88"
+            val record = reset.record()!!.let { it.copy(logEndpoints = it.logEndpoints + cold) }
+            restarted.save(restarted.load().copy(values = mapOf(EsploraSettings.key to Json.encodeToString(record))))
+            val relaunched = settings(NativeSettingsFile(native.file, sync = {}))
+            relaunched.restoreLogPrivacy()
+            val logs = java.io.File(root, "logs").apply { mkdirs() }
+            java.io.File(logs, "noah.log.1").writeText("HTTP failure /coldOpaqueRestart88/fee-estimates")
+            val file = com.noahwallet.services.logging.LogFile(logs, executor = java.util.concurrent.Executor { it.run() })
+            assertFalse(file.lines().joinToString().contains("coldOpaqueRestart88"))
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun validationBoundsSilentDripAndOversizedResponses() = runBlocking {
         for (reply in listOf("silent", "drip", "oversized")) {
             java.net.ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
@@ -124,20 +156,20 @@ class EsploraTest {
             memory.store.change(candidate) { selection, commit ->
                 calls += selection.endpoint
                 if (selection == candidate) {
-                    assertEquals(EsploraSettings.Record(previous, candidate), memory.store.record())
+                    assertEquals(EsploraSettings.Record(previous, candidate), memory.selectionRecord())
                     throw EsploraEndpoint.Failure("fake failed open")
                 }
-                assertEquals(EsploraSettings.Record(previous), memory.store.record()); commit()
+                assertEquals(EsploraSettings.Record(previous), memory.selectionRecord()); commit()
             }
         }.exceptionOrNull()
         assertTrue(failure is EsploraEndpoint.Failure)
         assertEquals(listOf(candidate.endpoint, previous.endpoint), calls)
-        assertEquals(EsploraSettings.Record(previous), memory.store.record())
+        assertEquals(EsploraSettings.Record(previous), memory.selectionRecord())
     }
     @Test fun successfulReopenCommitsAfterOpening() = runBlocking {
         val memory = Memory(); memory.store.save(EsploraSettings.Record(previous))
-        memory.store.change(candidate) { _, commit -> assertEquals(previous, memory.store.record()!!.active); commit() }
-        assertEquals(EsploraSettings.Record(candidate), memory.store.record())
+        memory.store.change(candidate) { _, commit -> assertEquals(previous, memory.selectionRecord()!!.active); commit() }
+        assertEquals(EsploraSettings.Record(candidate), memory.selectionRecord())
     }
     @Test fun storageFailureReopensPreviousWithoutPublishingCandidate() = runBlocking {
         for (phase in listOf("pending", "commit")) {
@@ -154,7 +186,7 @@ class EsploraTest {
                 faulty.change(candidate) { selection, commit -> calls += selection.endpoint; commit() }
             }.exceptionOrNull() is EsploraEndpoint.Failure)
             assertEquals(if (phase == "pending") emptyList<String?>() else listOf(candidate.endpoint, previous.endpoint), calls)
-            assertEquals(EsploraSettings.Record(previous), memory.store.record())
+            assertEquals(EsploraSettings.Record(previous), memory.selectionRecord())
         }
     }
     @Test fun persistentStorageFailureStillReopensPreviousAndResolvesPending() = runBlocking {
@@ -191,6 +223,6 @@ class EsploraTest {
                 commit()
             }
         }.exceptionOrNull() is EsploraEndpoint.Failure)
-        assertEquals(EsploraSettings.Record(previous), memory.store.record())
+        assertEquals(EsploraSettings.Record(previous), memory.selectionRecord())
     }
 }

@@ -552,6 +552,7 @@ class WalletSession internal constructor(
                     ?: throw com.noahwallet.services.storage.SeedItem.Unavailable()
                 val opening = currentCoroutineContext()[EsploraOpening]
                 val endpoint = if (opening != null) opening.selection.endpoint else settings?.resolve(variant)
+                settings?.protectLogPrivacy(endpoint)
                 com.noahwallet.services.logging.EndpointLogPrivacy.register(endpoint)
                 val configuration = WalletConfiguration.effective(variant, endpoint)
                 val config = configuration.sdkConfig(WalletConfiguration.userAgent(variant, appVersion))

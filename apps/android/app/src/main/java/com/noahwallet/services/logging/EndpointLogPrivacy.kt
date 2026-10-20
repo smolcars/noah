@@ -4,6 +4,8 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /** Register before entering Rust: endpoint paths can be opaque credentials. */
 internal object EndpointLogPrivacy {
+    @Volatile private var unavailable = false
+    fun failClosed() { unavailable = true }
     private val origins = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val paths = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val urls = Regex("""(?i)\bhttps?://[^\s<>"']*""")
@@ -39,6 +41,7 @@ internal object EndpointLogPrivacy {
     }
 
     fun sanitize(text: String): String? {
+        if (unavailable) return "[custom-esplora]"
         // Exported lines include a bounded tag and timestamp as well as the message.
         if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[oversized log message omitted]"
         responseStatus.find(text)?.let { return "HttpResponse { status: ${it.groupValues[1]} }" }

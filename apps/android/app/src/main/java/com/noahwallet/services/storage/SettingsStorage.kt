@@ -77,7 +77,11 @@ class SettingsStorage(context: Context) {
     fun useDefaultEsplora(variant: String) = synchronized(openLock) {
         val record = com.noahwallet.services.wallet.EsploraSettings.Record(
             com.noahwallet.services.wallet.EsploraSettings.Selection(variant = variant))
-        val state = load().let { it.copy(values = it.values + (com.noahwallet.services.wallet.EsploraSettings.key to Json.encodeToString(record))) }
+        val state = load().let {
+            val retained = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(it.values)
+            val previous = retained[com.noahwallet.services.wallet.EsploraSettings.key]?.let { raw -> Json.decodeFromString<com.noahwallet.services.wallet.EsploraSettings.Record>(raw) }
+            it.copy(values = it.values + (com.noahwallet.services.wallet.EsploraSettings.key to Json.encodeToString(record.copy(logEndpoints = previous?.logEndpoints.orEmpty()))))
+        }
         try { persist(state) } catch (_: Exception) { fallback = state }
     }
     fun validateStores() { synchronized(openLock) { load() } }
@@ -95,7 +99,7 @@ class SettingsStorage(context: Context) {
     }
     fun removeAll() = synchronized(openLock) {
         val state = load()
-        try { persist(NativeSettingsFile.State(cleanupPending = true)) }
+        try { persist(NativeSettingsFile.State(values = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(state.values), cleanupPending = true)) }
         catch (failure: Exception) { fallback = state; throw failure }
         finishCleanup()
     }
@@ -104,7 +108,7 @@ class SettingsStorage(context: Context) {
         check(!root.exists() || root.deleteRecursively())
         syncDirectory(root.parentFile!!)
         MMKVUpgradeBackup(root, instanceID, backupRoot = backupRoot).deleteSnapshot()
-        persist(NativeSettingsFile.State()) // Keep the marker through re-onboarding.
+        persist(NativeSettingsFile.State(values = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(load().values))) // Keep log protection through re-onboarding.
     }
     /** Committed wallet recovery may publish flags in memory; durable completion retries later. */
     fun completeRestore(): Boolean = synchronized(openLock) {
