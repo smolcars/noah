@@ -109,3 +109,12 @@ web/phone sanitization and viewport bounds; the Android map port should consume
 these alongside the existing map/city fixtures. Non-HTTP(S), hostless/malformed
 web links and phone strings containing letters or scheme/control characters
 are rejected; ordinary phone formatting spaces and punctuation are stripped.
+
+Review-fix verification: full `NoahTests`, XcodeGen regeneration, arm64 / active
+architecture build on a dedicated iPhone 17 / iOS 27.0 simulator: **244 reported
+tests, 235 passed, 9 opt-in integration tests skipped, 0 failures** (265 passing
+invocations including parameterized cases). Live map preview synced 29,741
+merchants without a permission prompt. The accessibility tree exposed Places
+in view, merchant rows and the matching detail sheet after selection. Full
+spoken VoiceOver navigation and physical-device phone calls were not exercised.
+The dedicated simulator was deleted after verification.

@@ -76,3 +76,22 @@ clear the payload. Android Send remains a placeholder.
 Not exercised live: outgoing repeat, board/offboard/canceled-exit creation
 (covered by fixtures), actual foldable hardware or API 24–29. Regtest has no
 Esplora date lookup; that enrichment and merge are covered by model tests.
+
+## Review-fix verification (2026-10-19)
+
+The required `nix develop --command sh -c 'cd apps/android && ./gradlew
+:app:testRegtestDebugUnitTest :app:assembleRegtestDebug'` passed: **361 tests,
+0 failures, 0 errors, 0 skipped**, and the regtest debug APK assembled.
+History consumes 126 shared fixture cases (the original 107 plus 19 date,
+ordering and CSV regression cases), with 13 model tests and one export-expiry
+test. Both native platforms consume `history-regressions.json`; regenerate
+only the original RN fixtures with `generate-history.ts`.
+
+Confirmed chain rows without block times now sort by their single effective
+timestamp (epoch until enrichment), then height and ID. Optional enrichment
+uses one cancellable worker, incrementally publishes, and never holds Refresh
+or Export disabled after wallet loading. Android exports expire after 24 hours:
+cleanup runs at startup, before new exports, and through delayed WorkManager
+jobs (subject to OS scheduling); files are deleted immediately if sharing fails.
+iOS exports CSV data in memory and creates no app-owned file. No Android UI or
+share-receiver lifecycle run was performed for these fixes.
