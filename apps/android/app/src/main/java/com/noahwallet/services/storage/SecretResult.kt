@@ -11,7 +11,7 @@ sealed interface SecretResult {
 
 enum class SecretFailure {
     storageUnreadable, incompleteRecord, unsupportedCipher, missingKey,
-    invalidCiphertext, unexpectedAccount, migrationFailed,
+    invalidCiphertext, unexpectedAccount, migrationFailed, invalidMnemonic, seedConflict,
 }
 
 internal fun ByteArray.strictUtf8(): String = Charsets.UTF_8.newDecoder()

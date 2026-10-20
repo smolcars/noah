@@ -13,6 +13,9 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WalletRestorerTest {
+    companion object {
+        private val validSeed = List(11) { StoredMnemonic.wordList[0] }.plus(StoredMnemonic.wordList[3]).joinToString(" ")
+    }
     private class Boom : Exception()
     private class Handles : WalletSession.Handles {
         override fun notifications(): WalletSession.Notifications = error("unused")
@@ -60,7 +63,7 @@ class WalletRestorerTest {
             val source = File(root, "snapshot").apply { writeText("new wallet") }
             val encrypted = File(root, "backup")
             if (!encrypted.exists()) BackupArchive.seal(source,
-                BackupArchive.Manifest(2, "x", "sha", network, "abcd", null, null, 42), "new seed", encrypted, root) { complete, target -> Files.createLink(target.toPath(), complete.toPath()); Unit }
+                BackupArchive.Manifest(2, "x", "sha", network, "abcd", null, null, 42), validSeed, encrypted, root) { complete, target -> Files.createLink(target.toPath(), complete.toPath()); Unit }
             val legacyFile = File(root, "legacy")
             if (legacy) {
                 val bytes = java.io.ByteArrayOutputStream()
@@ -69,7 +72,7 @@ class WalletRestorerTest {
                     zip.write("new wallet".toByteArray()); zip.closeEntry()
                 }
                 legacyFile.writeBytes(java.util.Base64.getEncoder().encode(
-                    BackupCrypto.encrypt(bytes.toByteArray(), "new seed", BackupCrypto.Version.legacyDirectory)))
+                    BackupCrypto.encrypt(bytes.toByteArray(), validSeed, BackupCrypto.Version.legacyDirectory)))
             }
             val info = """{"backup_id":"b1","created_at":"x","encrypted_sha256":"${reportedHash ?: BackupArchive.sha256(encrypted)}","encrypted_size":${reportedSize ?: encrypted.length()},"format_version":2}"""
             return WalletRestorer("regtest", session, location, seed,
@@ -97,7 +100,7 @@ class WalletRestorerTest {
                 })
         }
         fun previous() {
-            assertEquals("old wallet", location.database.readText()); assertEquals("old seed", seed.value)
+            assertEquals("old wallet", location.database.readText()); assertTrue("Previous seed differs", seed.value == "old seed")
             assertTrue(location.restoreDirectory.listFiles().orEmpty().isEmpty())
         }
     }
@@ -108,7 +111,7 @@ class WalletRestorerTest {
     }
     @Test fun stagedDeletionUnlockRestoreAndDeleteUsesRealRestorePipeline() = runBlocking {
         for (pending in listOf(true, false)) world {
-            seed.value = "new seed"
+            seed.value = validSeed
             location.writeDeletionIdentity(seed.read()) {}
             check(location.directory.renameTo(location.deletionDirectory))
             val lifecycle = WalletLifecycle(session, location, setSuspended = {}, deregister = {}, readSeed = seed::read,
@@ -122,8 +125,8 @@ class WalletRestorerTest {
             if (pending) lifecycle.recoverRestoreAndDeletion { RestoreTransaction.Recovery.nothingPending }
             else check(location.deletionMarker.delete()) // Previous app discarded it but left staging and the seed.
             seed.onSave = { assertFalse(location.deletionDirectory.exists()) }
-            lifecycle.withWalletMutation { restorer().restore("new seed") }
-            assertEquals("new wallet", location.database.readText()); assertEquals("new seed", seed.value)
+            lifecycle.withWalletMutation { restorer().restore(validSeed) }
+            assertEquals("new wallet", location.database.readText()); assertTrue("Saved seed differs", validSeed == seed.value)
             assertFalse(location.deletionDirectory.exists())
             lifecycle.delete()
             assertNull(seed.value); assertFalse(location.directory.exists()); assertFalse(location.deletionMarker.exists())
@@ -132,64 +135,64 @@ class WalletRestorerTest {
 
     @Test fun completionReceiptIsWrittenBeforeInstallationAndItsFailureCannotCommit() = runBlocking { world {
         var recorded: WalletRestorer.Outcome? = null
-        val result = restorer().restore("new seed", beforeInstall = {
+        val result = restorer().restore(validSeed, beforeInstall = {
             assertEquals("old wallet", location.database.readText())
-            assertEquals("old seed", seed.value)
+            assertTrue("Previous seed differs", seed.value == "old seed")
             recorded = it
         })
         assertEquals(result, recorded)
     } }
     @Test fun failedCompletionReceiptLeavesOriginalWalletUntouched() = runBlocking { world {
-        assertTrue(runCatching { restorer().restore("new seed", beforeInstall = { throw Boom() }) }.exceptionOrNull() is Boom)
+        assertTrue(runCatching { restorer().restore(validSeed, beforeInstall = { throw Boom() }) }.exceptionOrNull() is Boom)
         previous()
     } }
     @Test fun legacyUsesSameReservedTransactionAndSeedCommit() = runBlocking { world {
         legacy = true
-        val outcome = restorer().restore("new seed")
+        val outcome = restorer().restore(validSeed)
         assertNull(outcome.backupId); assertNull(outcome.snapshotSha256)
-        assertEquals("new wallet", location.database.readText()); assertEquals("new seed", seed.value)
+        assertEquals("new wallet", location.database.readText()); assertTrue("Saved seed differs", validSeed == seed.value)
         assertFalse(location.restorePending)
     } }
     @Test fun corruptNewestFallsBackToRetainedBackup() = runBlocking { world {
         newestCorrupt = true
-        val outcome = restorer().restore("new seed")
+        val outcome = restorer().restore(validSeed)
         assertEquals("b1", outcome.backupId); assertEquals("new wallet", location.database.readText())
     } }
     @Test fun serverFailureNeverFallsBackToLegacyOrChangesWallet() = runBlocking { world {
         listFails = true
-        assertTrue(runCatching { restorer().restore("new seed") }.isFailure); previous()
+        assertTrue(runCatching { restorer().restore(validSeed) }.isFailure); previous()
     } }
     @Test fun failedOpenRollsBack() = runBlocking { world {
-        openerFails = true; assertTrue(runCatching { restorer().restore("new seed") }.exceptionOrNull() is Boom); previous()
+        openerFails = true; assertTrue(runCatching { restorer().restore(validSeed) }.exceptionOrNull() is Boom); previous()
     } }
     @Test fun holdsSessionForWholeRestoreAndCancellationWaitsForNative() = runBlocking { world {
         openerFails = true; val gate = CompletableDeferred<Unit>(); verifyGate = gate
         val restorer = restorer()
-        val restore = launch { runCatching { restorer.restore("new seed") } }
+        val restore = launch { runCatching { restorer.restore(validSeed) } }
         entered.await(); restore.cancel(); delay(20)
         assertFalse(restore.isCompleted); assertEquals("new wallet", location.database.readText()); assertTrue(location.restorePending)
         assertTrue(runCatching { session.reserve() }.isFailure)
         assertTrue(runCatching { session.ensureOpen("old seed", false, "test") }.isFailure)
         assertTrue(runCatching { session.close() }.isFailure)
-        assertTrue(runCatching { restorer.restore("new seed") }.isFailure)
+        assertTrue(runCatching { restorer.restore(validSeed) }.isFailure)
         assertNull(session.summary()); gate.complete(Unit); restore.join(); previous()
     } }
     @Test fun successCommitsAndReleasesSession() = runBlocking { world {
-        val result = restorer().restore("new seed")
+        val result = restorer().restore(validSeed)
         assertEquals("b1", result.backupId); assertFalse(result.cleanupPending)
-        assertEquals("new seed", seed.value); assertEquals("new wallet", location.database.readText())
+        assertTrue("Saved seed differs", validSeed == seed.value); assertEquals("new wallet", location.database.readText())
         assertFalse(session.isOpen); session.release(session.reserve()); assertFalse(location.restorePending)
     } }
     @Test fun failedSeedWriteRollsBack() = runBlocking { world {
-        seed.fail = true; assertTrue(runCatching { restorer().restore("new seed") }.isFailure); previous()
+        seed.fail = true; assertTrue(runCatching { restorer().restore(validSeed) }.isFailure); previous()
     } }
     @Test fun writeLandedDespiteErrorCommits() = runBlocking { world {
-        seed.fail = true; seed.lands = true; restorer().restore("new seed")
-        assertEquals("new seed", seed.value); assertEquals("new wallet", location.database.readText()); assertFalse(location.restorePending)
+        seed.fail = true; seed.lands = true; restorer().restore(validSeed)
+        assertTrue("Saved seed differs", validSeed == seed.value); assertEquals("new wallet", location.database.readText()); assertFalse(location.restorePending)
     } }
     @Test fun unknownSeedWaitsThenRecovers() = runBlocking { world {
         seed.fail = true; seed.lockAfterWrite = true
-        val error = runCatching { restorer().restore("new seed") }.exceptionOrNull() as WalletRestorer.Failure
+        val error = runCatching { restorer().restore(validSeed) }.exceptionOrNull() as WalletRestorer.Failure
         assertEquals(WalletRestorer.Reason.seedStateUnknown, error.reason); assertTrue(location.restorePending)
         assertEquals(RestoreTransaction.Recovery.waitingForSecret,
             WalletRestorer.recoverInterruptedRestore(session, location, seed, tx))
@@ -198,14 +201,14 @@ class WalletRestorerTest {
     } }
     @Test fun unknownSeedThatLandedFinishesOnRecovery() = runBlocking { world {
         seed.fail = true; seed.lands = true; seed.lockAfterWrite = true
-        assertTrue(runCatching { restorer().restore("new seed") }.isFailure); seed.unavailable = false
+        assertTrue(runCatching { restorer().restore(validSeed) }.isFailure); seed.unavailable = false
         assertEquals(RestoreTransaction.Recovery.completed, WalletRestorer.recoverInterruptedRestore(session, location, seed, tx))
-        assertEquals("new wallet", location.database.readText()); assertEquals("new seed", seed.value)
+        assertEquals("new wallet", location.database.readText()); assertTrue("Saved seed differs", validSeed == seed.value)
     } }
     /** Review finding: two launches (UI + push, or two push jobs) recovering at once both settle. */
     @Test fun concurrentLaunchRecoveriesBothSucceed() = runBlocking { world {
         seed.fail = true; seed.lands = true; seed.lockAfterWrite = true
-        assertTrue(runCatching { restorer().restore("new seed") }.isFailure); seed.unavailable = false
+        assertTrue(runCatching { restorer().restore(validSeed) }.isFailure); seed.unavailable = false
         assertTrue(location.restorePending)
         val inside = CompletableDeferred<Unit>()
         val proceed = java.util.concurrent.CountDownLatch(1)
@@ -234,22 +237,22 @@ class WalletRestorerTest {
         }
     } }
     @Test fun unreadableSeedTouchesNothing() = runBlocking { world {
-        seed.unavailable = true; assertTrue(runCatching { restorer().restore("new seed") }.isFailure)
+        seed.unavailable = true; assertTrue(runCatching { restorer().restore(validSeed) }.isFailure)
         seed.unavailable = false; previous()
     } }
     @Test fun sizeHashNetworkAndValidationFailuresPreserveOriginal() = runBlocking {
         for (kind in 0..3) world {
             when (kind) { 0 -> reportedSize = 64; 1 -> reportedHash = "0"; 2 -> network = "signet"; 3 -> validationFails = true }
-            assertTrue(runCatching { restorer().restore("new seed") }.isFailure); previous()
+            assertTrue(runCatching { restorer().restore(validSeed) }.isFailure); previous()
         }
     }
     @Test fun cleanupFailureNeverUndoesCommittedSeed() = runBlocking { world {
         var failCleanup = false
         val faulty = transaction(location) { if (failCleanup) throw Boom() }
         seed.onSave = { failCleanup = true }
-        val result = restorer(faulty).restore("new seed")
+        val result = restorer(faulty).restore(validSeed)
         assertTrue(result.cleanupPending)
-        assertEquals("new seed", seed.value)
+        assertTrue("Saved seed differs", validSeed == seed.value)
         assertEquals("new wallet", location.database.readText()); assertTrue(location.restorePending)
         WalletRestorer.recoverInterruptedRestore(session, location, seed, tx)
         assertFalse(location.restorePending); assertEquals("new wallet", location.database.readText())
@@ -267,10 +270,10 @@ class WalletRestorerTest {
     } }
     @Test fun failedVerificationTeardownQuarantinesFilesUntilClosed() = runBlocking { world {
         handles.stopFails = true
-        val failure = runCatching { restorer().restore("new seed") }.exceptionOrNull() as WalletSession.OpenError
+        val failure = runCatching { restorer().restore(validSeed) }.exceptionOrNull() as WalletSession.OpenError
         assertEquals(WalletSession.OpenFailure.teardownFailed, failure.reason)
         assertTrue(location.restorePending); assertFalse(session.isOpen)
-        assertEquals("new wallet", location.database.readText()); assertEquals("old seed", seed.value)
+        assertEquals("new wallet", location.database.readText()); assertTrue("Previous seed differs", seed.value == "old seed")
         assertTrue(runCatching { session.reserve() }.isFailure)
         handles.stopFails = false; session.close()
         WalletRestorer.recoverInterruptedRestore(session, location, seed, tx); previous()

@@ -17,10 +17,10 @@
     <string name="launch_seed_found_message">A recovery phrase from a previous install is stored on this device. Use it to restore your wallet from its backup.</string>
     <string name="launch_seed_needed">Recovery phrase needed</string>
     <string name="launch_seed_needed_message">Wallet data exists on this device but its recovery phrase could not be found.</string>
-    <string name="launch_unlock">Waiting for secure storage</string>
-    <string name="launch_unlock_message">Noah can\'t read its secure storage yet. Unlock your device to continue.</string>
+    <string name="launch_unlock">Wallet recovery required</string>
+    <string name="launch_unlock_message">Noah cannot safely read or verify saved wallet data. Unlock your device and retry. If this continues, keep Noah installed and contact support. Never share your recovery phrase. Your saved data has been kept.</string>
     <string name="launch_loading">Opening wallet</string>
     <string name="launch_loading_message">Please wait while Noah loads your wallet.</string>
     <string name="launch_open_failed">Unable to open wallet</string>
-    <string name="launch_open_failed_message">Your recovery phrase and wallet data have been kept. Return to Noah to retry.</string>
+    <string name="launch_open_failed_message">Noah could not verify this wallet against the saved recovery phrase. Keep Noah installed and contact support if retrying fails. Never share your recovery phrase. Your saved data has been kept.</string>
 </resources>

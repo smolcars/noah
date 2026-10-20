@@ -13,11 +13,20 @@ internal class LegacyPasswordReader(
     private val key: () -> SecretKey?,
     private val base64: (String) -> ByteArray,
     private val fallback: () -> SecretResult = { SecretResult.NotFound },
+    private val compareSeeds: Boolean = false,
     private val cipherFactory: (String) -> Cipher = { Cipher.getInstance(it) },
 ) {
     suspend fun read(): SecretResult = try {
-        val row = dataStore() ?: preferences()
-        if (row == null) fallback() else decrypt(row)
+        if (compareSeeds) {
+            StoredMnemonic.agree(listOf(
+                dataStore()?.let(::decrypt) ?: SecretResult.NotFound,
+                preferences()?.let(::decrypt) ?: SecretResult.NotFound,
+                fallback(),
+            ).map(StoredMnemonic::validate))
+        } else {
+            val row = dataStore() ?: preferences()
+            if (row == null) fallback() else decrypt(row)
+        }
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (_: Exception) {

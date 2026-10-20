@@ -212,6 +212,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
                 }
             } catch (failure: Exception) {
                 if (recovering) launchState = LaunchState.restoreIncomplete
+                else if (launchState == LaunchState.existingWallet) launchState = LaunchState.secureStorageUnavailable
                 error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage) failure.message else if (recovering) "Couldn't finish wallet recovery. Your wallet files have been kept. Please try again."
                     else "Couldn't open your wallet. Please try again."
             }

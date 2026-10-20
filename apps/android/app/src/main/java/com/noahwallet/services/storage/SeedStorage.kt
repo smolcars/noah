@@ -17,27 +17,25 @@ class SeedStorage internal constructor(
         { KeychainPassword.mnemonic(context, variant).read() },
     )
 
-    /**
-     * New store first; otherwise the RN app's seed, copied into the new store. A failed copy
-     * still returns the legacy seed (the copy is retried next time) so a storage hiccup can
-     * never lock the user out. An unreadable new store stays fail-closed: it may hold a newer
-     * seed than the legacy record (e.g. after a native restore).
-     */
-    suspend fun read(): SecretResult = migrationLock.withLock {
-        when (val current = native.read()) {
-            SecretResult.NotFound -> when (val old = legacy()) {
-                is SecretResult.Found -> {
-                    native.save(old.value)
-                    old
-                }
-                else -> old
-            }
-            else -> current
-        }
+    /** Read only: do not migrate until the SDK has verified the existing DB's seed fingerprint. */
+    suspend fun read(): SecretResult = migrationLock.withLock { readUnlocked() }
+
+    private suspend fun readUnlocked(): SecretResult {
+        val current = StoredMnemonic.validate(native.read())
+        if (current is SecretResult.Unavailable) return current
+        return StoredMnemonic.agree(listOf(current, StoredMnemonic.validate(legacy())))
     }
 
-    suspend fun save(value: String, keepUnverifiedWrite: Boolean = false): SecretResult =
-        migrationLock.withLock { native.save(value, keepUnverifiedWrite) }
+    suspend fun save(value: String, keepUnverifiedWrite: Boolean = false): SecretResult = migrationLock.withLock {
+        val normalized = StoredMnemonic.normalize(value)
+            ?: return@withLock SecretResult.Unavailable(SecretFailure.invalidMnemonic)
+        when (val current = readUnlocked()) {
+            is SecretResult.Unavailable -> current
+            is SecretResult.Found -> if (current.value != normalized) SecretResult.Unavailable(SecretFailure.seedConflict)
+                else native.save(normalized, keepUnverifiedWrite)
+            SecretResult.NotFound -> native.save(normalized, keepUnverifiedWrite)
+        }
+    }
 
     internal suspend fun delete(onlyIfValueIs: String) = migrationLock.withLock {
         native.delete(onlyIfValueIs)

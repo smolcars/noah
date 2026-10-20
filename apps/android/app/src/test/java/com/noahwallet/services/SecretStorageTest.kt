@@ -13,16 +13,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SecretStorageTest {
-    private val secret = "test-only-secret"
+    private val secret = List(11) { StoredMnemonic.wordList[0] }.plus(StoredMnemonic.wordList[3]).joinToString(" ")
     private val key = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
 
-    private fun row(gcm: Boolean, username: String = "noah"): Map<String, String> {
+    private fun row(gcm: Boolean, username: String = "noah", password: String = secret): Map<String, String> {
         fun encrypt(value: String): String {
             val cipher = Cipher.getInstance(if (gcm) "AES/GCM/NoPadding" else "AES/CBC/PKCS5Padding")
             cipher.init(Cipher.ENCRYPT_MODE, key)
             return Base64.getMimeEncoder().encodeToString(cipher.iv + cipher.doFinal(value.toByteArray()))
         }
-        return mapOf("u" to encrypt(username), "p" to encrypt(secret),
+        return mapOf("u" to encrypt(username), "p" to encrypt(password),
             "c" to if (gcm) "KeystoreAESGCM_NoAuth" else "KeystoreAESCBC")
     }
 
@@ -57,6 +57,20 @@ class SecretStorageTest {
         assertTrue(reader(data = valid, existing = null, fallback = fallback).read() is SecretResult.Unavailable)
         assertFalse(called)
         assertTrue(reader(data = valid, prefs = row(false, "wrong"), fallback = fallback).read() is SecretResult.Found)
+    }
+
+    @Test fun mnemonicComparesBothRNCiphersAndFallbackWithoutChoosingOne() = runBlocking {
+        val other = List(23) { StoredMnemonic.wordList[0] }.plus(StoredMnemonic.wordList[102]).joinToString(" ")
+        for (gcm in listOf(true, false)) {
+            fun compare(prefs: Map<String, String>, fallback: SecretResult) = LegacyPasswordReader(
+                { row(gcm) }, { prefs }, { key }, { Base64.getMimeDecoder().decode(it) }, { fallback },
+                compareSeeds = true, cipherFactory = { Cipher.getInstance(it.replace("PKCS7Padding", "PKCS5Padding")) })
+            assertFound(compare(row(!gcm), SecretResult.Found(secret)).read())
+            assertEquals(SecretFailure.seedConflict, (compare(row(!gcm, password = other), SecretResult.NotFound).read() as SecretResult.Unavailable).reason)
+            assertEquals(SecretFailure.seedConflict, (compare(row(!gcm), SecretResult.Found(other)).read() as SecretResult.Unavailable).reason)
+            assertEquals(SecretFailure.invalidMnemonic, (compare(row(!gcm, password = ""), SecretResult.NotFound).read() as SecretResult.Unavailable).reason)
+            assertTrue(compare(mapOf("c" to "broken"), SecretResult.NotFound).read() is SecretResult.Unavailable)
+        }
     }
 
     @Test fun unreadableDataStoreAndCancellationDoNotFallThrough() = runBlocking {
@@ -147,18 +161,21 @@ class SecretStorageTest {
         // A failed or corrupt copy still yields the legacy seed and leaves no file behind.
         file.failWrite = true
         assertFound(storage.read())
+        storage.save(secret)
         assertNull(file.bytes)
         file.failWrite = false
         file.corruptWrite = true
         assertFound(storage.read())
+        storage.save(secret)
         assertNull(file.bytes)
         // Once the copy works it is used from then on.
         file.corruptWrite = false
         assertFound(storage.read())
+        assertFound(storage.save(secret))
         assertTrue(file.bytes != null)
         val count = reads
         List(10) { async { assertFound(SeedStorage(native, legacy).read()) } }.awaitAll()
-        assertEquals(count, reads)
+        assertEquals(count + 10, reads)
     }
 
     @Test fun migrationNeverFallsBackFromUnreadableNativeOrLegacy() = runBlocking {

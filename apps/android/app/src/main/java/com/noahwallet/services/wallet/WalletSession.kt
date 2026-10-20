@@ -465,7 +465,9 @@ class WalletSession internal constructor(
         }
 
         private fun sdkOpener(variant: String, warn: (String) -> Unit): suspend (String, String, Boolean, String, Boolean) -> Handles =
-            { mnemonic, datadir, runDaemon, appVersion, create ->
+            { inputMnemonic, datadir, runDaemon, appVersion, create ->
+                val mnemonic = com.noahwallet.services.storage.StoredMnemonic.normalize(inputMnemonic)
+                    ?: throw com.noahwallet.services.storage.SeedItem.Unavailable()
                 val configuration = WalletConfiguration.base(variant)
                 val config = configuration.sdkConfig(WalletConfiguration.userAgent(variant, appVersion))
                 // Existing wallets go through the SDK's read-only identity check (properties,

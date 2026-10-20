@@ -172,6 +172,7 @@ class AppServices private constructor(private val context: Context) {
         val mnemonic = seed.read()
         check(mnemonic is SecretResult.Found && mnemonic.value.isNotEmpty()) { "Wallet seed unavailable" }
         session.ensureOpen(mnemonic.value, true, BuildConfig.VERSION_NAME)
+        seed.save(mnemonic.value)
     }
 
     fun startServerServices() {

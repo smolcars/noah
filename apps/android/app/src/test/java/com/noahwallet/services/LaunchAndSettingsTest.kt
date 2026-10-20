@@ -17,7 +17,7 @@ class LaunchAndSettingsTest {
                 input.getValue("walletDatabaseExists").jsonPrimitive.boolean,
             ).name)
         }
-        assertEquals(LaunchState.SeedStatus.absent, LaunchState.SeedStatus.from(SecretResult.Found("")))
+        assertEquals(LaunchState.SeedStatus.unavailable, LaunchState.SeedStatus.from(SecretResult.Found("")))
         assertEquals(LaunchState.SeedStatus.unavailable,
             LaunchState.SeedStatus.from(SecretResult.Unavailable(SecretFailure.missingKey)))
     }

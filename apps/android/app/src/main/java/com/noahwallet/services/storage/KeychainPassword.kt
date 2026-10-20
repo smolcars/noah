@@ -35,6 +35,7 @@ class KeychainPassword private constructor(
         },
         key = { AndroidSecretKeys().existing(service) },
         base64 = { Base64.decode(it, Base64.DEFAULT) },
+        compareSeeds = mnemonicVariant != null,
         fallback = { mnemonicVariant?.let { readEncryptedMnemonic(context, it) } ?: SecretResult.NotFound },
     ).read()
 

@@ -30,6 +30,86 @@
       "name": "keychain locked without data",
       "input": { "seed": "unavailable", "walletDatabaseExists": false },
       "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "invalid BIP39 word list without DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": false},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "invalid BIP39 word list with DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": true},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "invalid BIP39 checksum without DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": false},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "invalid BIP39 checksum with DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": true},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "unsupported word count without DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": false},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "unsupported word count with DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": true},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "empty stored seed without DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": false},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "empty stored seed with DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": true},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "RN DataStore and legacy preferences disagree without DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": false},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "RN DataStore and legacy preferences disagree with DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": true},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "RN and native seeds disagree without DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": false},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "RN and native seeds disagree with DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": true},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "fallback and RN seeds disagree without DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": false},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "fallback and RN seeds disagree with DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": true},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "corrupt secondary seed source without DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": false},
+      "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "corrupt secondary seed source with DB",
+      "input": {"seed": "unavailable", "walletDatabaseExists": true},
+      "expected": "secureStorageUnavailable"
     }
   ]
 }

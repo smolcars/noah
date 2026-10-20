@@ -62,7 +62,7 @@ class RestoreFlow(
 
     suspend fun run(phrase: String) {
         if (running || completed || issue?.requiresRestart == true) return
-        if (!RecoveryPhraseInput.isValid(phrase)) { issue = RestoreIssue.invalidPhrase; return }
+        if (com.noahwallet.services.storage.StoredMnemonic.normalize(phrase) == null) { issue = RestoreIssue.invalidPhrase; return }
         running = true; issue = null
         // The screen cannot cancel; a committed engine result must reach completion even if its owner clears.
         withContext(NonCancellable) {

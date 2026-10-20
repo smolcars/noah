@@ -38,6 +38,7 @@ class WalletRestorer(
 
     suspend fun restore(mnemonic: String, beforeInstall: (Outcome) -> Unit = {},
                         progress: (Step) -> Unit = {}): Outcome {
+        if (StoredMnemonic.normalize(mnemonic) == null) throw SeedItem.Unavailable()
         val reservation = session.reserve()
         try {
             check(!location.deletionMarker.exists()) { "Restart Noah to finish deleting the previous wallet" }
