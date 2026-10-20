@@ -173,8 +173,10 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
   - [ ] Newer-backup copy: list format 3 clearly asks for an update; internal envelope/manifest 3 and database schema 9999 safely refuse before installation but show generic retry-later copy. Opt-in failing `newerBackupsExplainUpdateRequired` tests retained on both platforms; restore code deliberately unchanged.
 
 ### 0.8 Translations
-- [ ] Tool: GT catalogs → `.xcstrings` + `strings.xml` for en/es/ja/ko/sv (placeholders, plurals, rich text flattened)
-- [ ] Background notification strings honour the persisted locale
+- [x] Tool: GT catalogs → `.xcstrings` + `strings.xml` for en/es/ja/ko/sv (placeholders, plurals, rich text flattened); deterministic regeneration and stale checks: `bun apps/tools/translations.mjs [--check]`
+- [x] Native UI uses RN source keys and the persisted `generaltranslation.locale` preference; language changes update UI resources immediately. Native-only English copy is inventoried in `apps/fixtures/translations-coverage.json`.
+- [x] Background notification strings honour the persisted locale and Bitcoin unit (push, recurring results and reminders).
+- [x] Shared RN-resolver fixture plus native catalog coverage, placeholder/plural, locale switching and background-locale tests. See `apps/tools/TRANSLATIONS.md`.
 
 ## M1 — Shell, onboarding, Home
 - [x] Launch gating: wallet check, onboarding vs main, push-permission gate, battery gate (Android), biometric lock overlay, beta warning — `RootView.swift:13`, `LaunchGateView.kt:124`, `PlatformGateRules.kt:10`; `LaunchStateTests` / `LaunchAndSettingsTest`, `PushPermissionTests`, `PlatformGateRulesTest.matchesRNTruthTable`, `SettingsFeaturesTest.launchBackgroundAndStaleAuthentication` (`879e0160`, `90bd4789`; existing platform-specific evidence below)
