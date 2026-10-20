@@ -15,6 +15,7 @@ struct RecurringJournal {
         var terminal: TerminalEvidence?
         var historyApplied: Bool?
         var released: Bool?
+        var policy: RecurringPayment?
         var key: String { "\(scheduleID):\(plan.occurrenceIndex!)" }
     }
     struct TerminalEvidence: Codable, Sendable {
@@ -124,6 +125,7 @@ struct RecurringJournal {
     private struct Header: Decodable { var version: Int }
     private struct V1: Decodable { var attempts: [String: Entry]; var consumed: [Watermark] }
     var file: URL
+    var persist: @Sendable (Data, URL) throws -> Void = { try RecurringStore.durableWrite($0, to: $1) }
     private func state() throws -> State {
         guard !FileManager.default.fileExists(atPath: quarantineFile.path) else { throw RecurringError.message(Self.invalidMessage) }
         guard FileManager.default.fileExists(atPath: file.path) else { return State() }
@@ -150,7 +152,7 @@ struct RecurringJournal {
                 migrated = try decoder.decode(State.self, from: bytes)
                 migrated.version = 3
                 // Old consumption claimed history before writing it: preserve it, never guess.
-                migrated.legacyUncertainty += migrated.attempts.values.filter { $0.consumed == true || $0.policyApplied == true }.map { Scope(binding: $0.binding, scheduleID: $0.scheduleID) }
+                migrated.legacyUncertainty += migrated.attempts.values.filter { $0.resolved || $0.consumed == true || $0.policyApplied == true }.map { Scope(binding: $0.binding, scheduleID: $0.scheduleID) }
             case 1:
                 let old = try decoder.decode(V1.self, from: bytes)
                 migrated = State(attempts: old.attempts, consumed: old.consumed)
@@ -171,16 +173,24 @@ struct RecurringJournal {
     }
     /// Called inside Send's owning wallet reservation, before publishing a terminal result.
     func record(_ attempt: SendPaymentController.Attempt, generation: Int, walletGeneration: Int,
-                outcome: TerminalEvidence.Outcome, message: String?, binding: RecurringStore.Binding) throws {
+                state: SendPaymentController.State, message: String?, binding: RecurringStore.Binding, now: Double) throws {
+        let outcome: TerminalEvidence.Outcome
+        switch state {
+        case .succeeded(let receipt) where receipt.broadcastRetryPending != true: outcome = .succeeded
+        case .alreadyPaid: outcome = .alreadyPaid
+        case .failed: outcome = .failed
+        default: outcome = .uncertain
+        }
         guard let key = attempt.recurringOccurrenceKey,
               var entry = try load().values.first(where: { $0.key == key && $0.binding == binding }),
               attempt.walletIdentity == binding.wallet else { throw RecurringError.message(Self.invalidMessage) }
+        guard try !legacyUncertain(binding: binding, scheduleID: entry.scheduleID) else { throw RecurringError.message(Self.legacyMessage) }
         if let old = entry.terminal {
             guard old.attempt.recurringAttemptID == attempt.recurringAttemptID else { throw RecurringError.message(Self.invalidMessage) }
             if old.outcome != .uncertain { return }
         }
         entry.terminal = .init(settlementID: entry.terminal?.settlementID ?? UUID(), attempt: attempt, generation: generation, walletGeneration: walletGeneration,
-                               outcome: outcome, message: message, recordedAt: RecurringPayment.now)
+                               outcome: outcome, message: message, recordedAt: now)
         try save(entry)
     }
     func load() throws -> [String: Entry] { try state().attempts }
@@ -198,7 +208,7 @@ struct RecurringJournal {
     }
     private func write(_ state: State) throws {
         try validate(state)
-        try RecurringStore.durableWrite(JSONEncoder().encode(state), to: file)
+        try persist(JSONEncoder().encode(state), file)
     }
     func save(_ entry: Entry) throws {
         var state = try state()
