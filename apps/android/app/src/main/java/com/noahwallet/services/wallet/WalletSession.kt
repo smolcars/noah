@@ -138,31 +138,42 @@ class WalletSession internal constructor(
     private val changed = MutableStateFlow(0L)
     val walletChanges = changed.asStateFlow()
     private fun walletChanged() { changed.value += 1 }
-    internal suspend fun <T> withSendReservation(block: suspend (SendWallet) -> T): T =
-        withOpen { handles -> sendMutation.withLock { block(handles.send) } }
+    internal suspend fun <T> withSendReservation(block: suspend (SendWallet) -> T): T {
+        val caller = currentCoroutineContext()
+        return withOpen { handles -> sendMutation.withLock {
+            caller.checkWalletAdmission()
+            block(handles.send)
+        } }
+    }
     // Block unrelated counted calls and close while unattended submission owns this wallet.
     private var exclusiveSend = false
-    internal suspend fun <T> withRecurringReservation(block: suspend (SendWallet) -> T): T = withContext(NonCancellable + Dispatchers.IO) {
-        val handles = synchronized(lock) {
-            if (exclusiveSend || isSuspended()) throw OpenError(OpenFailure.busy)
-            val open = (state as? State.Open)?.handles ?: throw SessionError()
-            exclusiveSend = true
-            open
-        }
-        var counted = false
-        try {
-            synchronized(lock) { drained }.await()
-            synchronized(lock) {
-                check((state as? State.Open)?.handles === handles)
-                if (runningCalls++ == 0) drained = CompletableDeferred()
-                counted = true
+    internal suspend fun <T> withRecurringReservation(block: suspend (SendWallet) -> T): T {
+        val caller = currentCoroutineContext()
+        caller.checkWalletAdmission()
+        return withContext(NonCancellable + Dispatchers.IO) {
+            val handles = synchronized(lock) {
+                if (exclusiveSend || isSuspended()) throw OpenError(OpenFailure.busy)
+                val open = (state as? State.Open)?.handles ?: throw SessionError()
+                exclusiveSend = true
+                open
             }
-            handles.retrySendDiscards()
-            block(handles.send)
-        } finally {
-            synchronized(lock) {
-                if (counted && --runningCalls == 0) drained.complete(Unit)
-                exclusiveSend = false
+            var counted = false
+            try {
+                synchronized(lock) { drained }.await()
+                synchronized(lock) {
+                    check((state as? State.Open)?.handles === handles)
+                    if (runningCalls++ == 0) drained = CompletableDeferred()
+                    counted = true
+                }
+                caller.checkWalletAdmission()
+                handles.retrySendDiscards()
+                caller.checkWalletAdmission()
+                block(handles.send)
+            } finally {
+                synchronized(lock) {
+                    if (counted && --runningCalls == 0) drained.complete(Unit)
+                    exclusiveSend = false
+                }
             }
         }
     }
@@ -218,9 +229,12 @@ class WalletSession internal constructor(
         if ((state as? State.Reserved)?.reservation !== reservation) throw OpenError(OpenFailure.busy)
     }
 
-    suspend fun verify(reservation: Reservation, mnemonic: String, appVersion: String) =
-        withContext(NonCancellable + Dispatchers.IO) {
+    suspend fun verify(reservation: Reservation, mnemonic: String, appVersion: String) {
+        val caller = currentCoroutineContext()
+        caller.checkWalletAdmission()
+        return withContext(NonCancellable + Dispatchers.IO) {
             synchronized(lock) { checkHeld(reservation); checkExistingDatabase() }
+            caller.checkWalletAdmission()
             val handles = opener(mnemonic, location.directory.path, false, appVersion, false)
             try { handles.stopDaemonWait(); handles.close() }
             catch (_: Throwable) {
@@ -229,21 +243,26 @@ class WalletSession internal constructor(
                 throw OpenError(OpenFailure.teardownFailed)
             }
         }
+    }
 
-    suspend fun createNew(mnemonic: String, runDaemon: Boolean, appVersion: String) = withContext(NonCancellable + Dispatchers.IO) {
+    suspend fun createNew(mnemonic: String, runDaemon: Boolean, appVersion: String) {
+        currentCoroutineContext().checkWalletAdmission()
         val reservation = reserve()
         try { createNew(reservation, mnemonic, runDaemon, appVersion) }
         finally { release(reservation) }
     }
 
-    suspend fun createNew(reservation: Reservation, mnemonic: String, runDaemon: Boolean, appVersion: String) =
-        withContext(NonCancellable + Dispatchers.IO) {
+    suspend fun createNew(reservation: Reservation, mnemonic: String, runDaemon: Boolean, appVersion: String) {
+        val caller = currentCoroutineContext()
+        caller.checkWalletAdmission()
+        return withContext(NonCancellable + Dispatchers.IO) {
             synchronized(lock) {
                 checkHeld(reservation)
                 if (location.restorePending) throw OpenError(OpenFailure.restorePending)
                 if (location.databaseExists) throw OpenError(OpenFailure.walletDatabaseExists)
                 check(location.directory.isDirectory || location.directory.mkdirs()) { "Cannot create wallet directory" }
             }
+            caller.checkWalletAdmission()
             val handles = opener(mnemonic, location.directory.path, runDaemon, appVersion, true)
             synchronized(lock) { openingSeedDigest = seedDigest(mnemonic) }
             try { handles.initializeAddress() }
@@ -257,6 +276,7 @@ class WalletSession internal constructor(
             }
             synchronized(lock) { state = State.Open(handles); walletChanged() }
         }
+    }
 
     private suspend fun beginOpen(
         mnemonic: String, runDaemon: Boolean, appVersion: String, create: Boolean, join: Boolean,

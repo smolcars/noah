@@ -11,6 +11,75 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WalletSessionTest {
+    @Test fun cancelledOrExpiredCallerCannotCreateOrVerify() = runBlocking {
+        for (operation in listOf("create", "reserved-create", "verify")) for (cancel in listOf(true, false)) withLocation { location ->
+            if (operation == "verify") bark(location)
+            var opened = false
+            val session = WalletSession("regtest", location,
+                inspect = { WalletDatabase.Properties("regtest", "abcd") },
+                opener = { _, _, _, _, _ -> opened = true; Handles() })
+            val reservation = if (operation == "create") null else session.reserve()
+            val budget = com.noahwallet.recurring.RecurringBudget()
+            launch(Dispatchers.IO + WalletExecutionBudget(budget)) {
+                if (cancel) currentCoroutineContext().cancel() else budget.revoke()
+                runCatching {
+                    when (operation) {
+                        "create" -> session.createNew("unused", false, "test")
+                        "reserved-create" -> session.createNew(reservation!!, "unused", false, "test")
+                        else -> session.verify(reservation!!, "unused", "test")
+                    }
+                }
+            }.join()
+            reservation?.let { session.release(it) }
+            session.closeSettled()
+            assertFalse("$operation admitted an opener (cancel=$cancel)", opened)
+        }
+    }
+
+    @Test fun recurringReservationRechecksCallerAfterCleanup() = runBlocking {
+        for (cancel in listOf(true, false)) withLocation { location ->
+            val entered = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            val handles = Handles().apply { beforeRetry = { entered.complete(Unit); release.await() } }
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test")
+            val budget = com.noahwallet.recurring.RecurringBudget()
+            var started = false
+            val caller = launch(Dispatchers.IO + WalletExecutionBudget(budget)) {
+                runCatching { session.withRecurringReservation { started = true } }
+            }
+            entered.await()
+            if (cancel) caller.cancel() else budget.revoke()
+            release.complete(Unit); caller.join()
+            session.close()
+            val reservation = session.reserve(); session.release(reservation)
+            assertFalse("Reserved body started after cleanup (cancel=$cancel)", started)
+        }
+    }
+
+    @Test fun sendReservationRechecksCallerAfterWaitingForAnotherSend() = runBlocking {
+        for (cancel in listOf(true, false)) withLocation { location ->
+            val entered = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> Handles() })
+            session.createNew("unused", false, "test")
+            val first = launch { session.withSendReservation { entered.complete(Unit); release.await() } }
+            entered.await()
+            val budget = com.noahwallet.recurring.RecurringBudget()
+            var started = false
+            withContext(Dispatchers.IO) {
+                // Same dispatcher + UNDISPATCHED runs through admission up to the held mutex.
+                val second = launch(WalletExecutionBudget(budget), start = CoroutineStart.UNDISPATCHED) {
+                    runCatching { session.withSendReservation { started = true } }
+                }
+                if (cancel) second.cancel() else budget.revoke()
+                release.complete(Unit); first.join(); second.join()
+            }
+            session.close()
+            assertFalse("Queued send started after cancellation/revocation", started)
+        }
+    }
+
     @Test fun cancelledCallerCannotAdmitNewNativeRead() = runBlocking {
         withLocation { location ->
             val handles = Handles()
