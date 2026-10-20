@@ -97,6 +97,7 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
     }
     suspend fun perform(quote: OnchainQuote, action: suspend ((String) -> Unit) -> OnchainReceipt): String = mutex.withLock {
         val previous = read()
+        if (previous.any { it.id == quote.id }) fail(OnchainFailure.changed)
         if (previous.any { it.quote.walletID == quote.walletID && it.blocks(quote.action, quote.ids) }) fail(OnchainFailure.busy)
         save(previous + Attempt(quote))
         try {

@@ -161,6 +161,13 @@ class OnchainJournalTest {
         journal.acknowledge(q.id)
         assertTrue(journal(file).loadAll().isEmpty())
     } }
+    @Test fun overriddenQuoteCannotReuseTheOriginalAttemptID() = runBlocking { fixture { _, journal ->
+        val q = quote(); uncertain(journal, q); journal.overrideUncertain(q.id)
+        var calls = 0
+        val error = runCatching { journal.perform(q) { calls++; OnchainReceipt("duplicate") } }.exceptionOrNull()
+        assertEquals(OnchainFailure.changed, (error as OnchainException).reason)
+        assertEquals(0, calls); assertEquals(1, journal.loadAll().size)
+    } }
     @Test fun historyIsWalletScopedAndRetainedAfterReopen() = runBlocking { fixture { file, _ ->
         val store = ExitHistoryStore(OnchainFile(file) {})
         store.remember(listOf("a", "a", "canceled", "claimed"), "wallet")

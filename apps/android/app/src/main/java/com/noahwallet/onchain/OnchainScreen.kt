@@ -3,7 +3,6 @@ package com.noahwallet.onchain
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -39,9 +38,15 @@ internal fun onchainDependencies(app: AppModel) = OnchainModel.Dependencies(
         app.session.executeOnchain(quote)
     } },
     attempts = { withContext(Dispatchers.IO) { app.session.onchainJournal.loadAll() } },
-    acknowledge = { withContext(Dispatchers.IO) { app.session.onchainJournal.acknowledge(it) } },
+    acknowledge = { id -> app.services.lifecycle.withWalletMutation {
+        if (!onchainReady(app)) fail(OnchainFailure.unavailable)
+        withContext(Dispatchers.IO) { app.session.onchainJournal.acknowledge(id) }
+    } },
     check = app.session::checkOnchainAttempt,
-    override = { withContext(Dispatchers.IO) { app.session.onchainJournal.overrideUncertain(it) } },
+    override = { id -> app.services.lifecycle.withWalletMutation {
+        if (!onchainReady(app)) fail(OnchainFailure.unavailable)
+        withContext(Dispatchers.IO) { app.session.onchainJournal.overrideUncertain(id) }
+    } },
     detail = app.session::exitDetail, refreshReceipts = app.session::refreshOnchainReceiptFees,
 )
 
@@ -81,8 +86,10 @@ internal fun OnchainScreen(app: AppModel, model: OnchainModel, content: @Composa
 
 @Composable
 internal fun AmountRow(app: AppModel, title: String, sats: Long) {
-    ListItem(headlineContent = { Text(title) }, supportingContent = { Text(BitcoinAmount.format(sats, app.amountUnit, java.util.Locale.forLanguageTag(app.localeIdentifier))) })
+    ListItem(headlineContent = { Text(title) }, supportingContent = { Text(amountText(app, sats)) })
 }
+internal fun amountText(app: AppModel, sats: Long) = BitcoinAmount.format(sats, app.amountUnit, java.util.Locale.forLanguageTag(app.localeIdentifier))
+
 @Composable
 internal fun DetailRow(title: String, value: String) {
     Text(title, style = MaterialTheme.typography.labelLarge)
@@ -118,11 +125,11 @@ private fun OnchainStatus(app: AppModel, model: OnchainModel) {
         }
         attempt.receipt?.onchainFee?.let { AmountRow(app, "Actual onchain fee", it) }
         (attempt.receipt?.txid ?: attempt.txid)?.let { TransactionRow(it) }
-        if (attempt.receipt != null) TextButton({ scope.launch { model.acknowledge(attempt.id) } }, enabled = !model.busy) { Text("Done") }
+        if (attempt.receipt != null) TextButton({ scope.launch { model.acknowledge(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text("Done") }
         else {
             Text("Noah checks again automatically as your wallet syncs.")
             TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text("Check status") }
-            if (attempt.overrideAudit == null) TextButton({ overrideID = attempt.id }, enabled = !model.busy) { Text("Override repeat protection…", color = MaterialTheme.colorScheme.error) }
+            if (attempt.overrideAudit == null) TextButton({ overrideID = attempt.id }, enabled = !model.busy && !app.isWalletSuspended) { Text("Override repeat protection…", color = MaterialTheme.colorScheme.error) }
         }
     }
     overrideID?.let { id -> AlertDialog(onDismissRequest = { overrideID = null },

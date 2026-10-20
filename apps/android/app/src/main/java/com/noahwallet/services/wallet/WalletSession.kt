@@ -9,6 +9,8 @@ import com.noahwallet.services.storage.WalletDataLocation
 import io.github.niteshbalusu11.bark.*
 import java.io.File
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -296,12 +298,12 @@ class WalletSession internal constructor(
         if (WalletBackgroundActivity.isRunning) throw OnchainException(OnchainFailure.unavailable)
         block(it)
     }
+    private val onchainMutation = Mutex()
     val onchainJournal = OnchainOperationJournal(File(location.directory, "noah-onchain-attempt.json"))
     private val exitHistory = ExitHistoryStore(File(location.directory, "noah-exit-history.json"))
     private fun onchainOperations(handles: Handles) = OnchainOperations(handles.m6, onchainJournal, exitHistory,
         ready = { !isSuspended() && !WalletBackgroundActivity.isRunning })
     suspend fun onchainOverview(): OnchainOverview = withM6 {
-        if (WalletBackgroundActivity.isRunning) throw OnchainException(OnchainFailure.unavailable)
         onchainOperations(it).overview(WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt())
     }
     suspend fun exitDetail(id: String): ExitModel? = withM6 { onchainOperations(it).detail(id) }
@@ -312,7 +314,9 @@ class WalletSession internal constructor(
         onchainOperations(it).quote(action, ids, amount, destination, automatic)
     }
     suspend fun autoBoardQuote(): OnchainQuote? = withM6 { onchainOperations(it).autoBoardQuote() }
-    suspend fun executeOnchain(quote: OnchainQuote): String = withM6 { onchainOperations(it).execute(quote) }
+    suspend fun executeOnchain(quote: OnchainQuote): String = withM6 { handles ->
+        onchainMutation.withLock { onchainOperations(handles).execute(quote) }
+    }
     suspend fun checkOnchainAttempt(id: String): Boolean = withM6 { onchainOperations(it).check(id) }
     suspend fun refreshOnchainReceiptFees() = withM6 { onchainOperations(it).refreshReceiptFees() }
 

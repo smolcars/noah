@@ -1,7 +1,5 @@
 package com.noahwallet.onchain
 
-import kotlinx.coroutines.CancellationException
-
 internal class OnchainOperations(
     private val wallet: OnchainWalletAccess, private val journal: OnchainOperationJournal,
     private val history: ExitHistoryStore, private val ready: () -> Boolean = { true },

@@ -78,6 +78,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
     suspend fun acknowledge(id: String) {
         if (busy) return
         try { dependencies.acknowledge(id); attempts = attempts.filter { it.id != id }; message = null }
+        catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { error = OnchainFailure.uncertain.text }
     }
     suspend fun checkStatus(id: String) {

@@ -41,7 +41,7 @@ fun VtxosScreen(app: AppModel) {
             if (selecting) Row {
                 Checkbox(vtxo.id in selected, { checked -> selected = if (checked) selected + vtxo.id else selected - vtxo.id; model.invalidate() }, enabled = vtxo.refreshable && !model.busy)
                 AmountRow(app, vtxo.status, vtxo.amount)
-            } else TextButton({ detailID = vtxo.id }, enabled = !model.busy) { Text("${vtxo.status} · ${vtxo.amount} sats · ${vtxo.id.take(12)}…") }
+            } else TextButton({ detailID = vtxo.id }, enabled = !model.busy) { Text("${vtxo.status} · ${amountText(app, vtxo.amount)} · ${vtxo.id.take(12)}…") }
             Text("Expires at block ${vtxo.expiry}")
         }
     }
@@ -71,9 +71,9 @@ private fun VtxoDetailScreen(app: AppModel, id: String, back: () -> Unit) {
 internal fun FilterMenu(selected: String, values: List<String>, change: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        TextButton({ open = true }) { Text("Filter: $selected") }
+        TextButton({ open = true }) { Text("Filter: ${ExitTimeline.labels[selected] ?: selected}") }
         DropdownMenu(open, onDismissRequest = { open = false }) {
-            values.forEach { value -> DropdownMenuItem(text = { Text(value) }, onClick = { change(value); open = false }) }
+            values.forEach { value -> DropdownMenuItem(text = { Text(ExitTimeline.labels[value] ?: value) }, onClick = { change(value); open = false }) }
         }
     }
 }

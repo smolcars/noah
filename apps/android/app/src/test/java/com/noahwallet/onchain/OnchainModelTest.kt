@@ -70,4 +70,14 @@ class OnchainModelTest {
         assertTrue(start.contains("estimates")); assertTrue(start.contains("final exit transaction is broadcast"))
         assertTrue(reviewExplanation(OnchainQuote(OnchainAction.progress, "wallet")).startsWith("This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process."))
     }
+    @Test fun backgroundCounterCountsOverlapsAndDrainsOnFailure() = runBlocking {
+        val first = CompletableDeferred<Unit>(); val second = CompletableDeferred<Unit>()
+        val entered1 = CompletableDeferred<Unit>(); val entered2 = CompletableDeferred<Unit>()
+        val a = launch { com.noahwallet.services.wallet.WalletBackgroundActivity.during { entered1.complete(Unit); first.await() } }
+        val b = launch { runCatching { com.noahwallet.services.wallet.WalletBackgroundActivity.during { entered2.complete(Unit); second.await(); error("failed push") } } }
+        entered1.await(); entered2.await(); assertTrue(com.noahwallet.services.wallet.WalletBackgroundActivity.isRunning)
+        first.complete(Unit); a.join(); assertTrue(com.noahwallet.services.wallet.WalletBackgroundActivity.isRunning)
+        second.complete(Unit); b.join(); assertFalse(com.noahwallet.services.wallet.WalletBackgroundActivity.isRunning)
+    }
+
 }

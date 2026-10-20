@@ -1,6 +1,6 @@
 package com.noahwallet.onchain
 
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -51,7 +51,9 @@ fun AutoBoardPrompt(app: AppModel) {
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { message = "Unable to estimate boarding fees. Use Settings → Board to Ark to try again." }
     }
-    message?.let { Text(it) }
+    message?.let { text -> AlertDialog(onDismissRequest = { message = null },
+        title = { Text("Board to Ark") }, text = { Text(text + " Your receipt is saved in Settings → Board to Ark.") },
+        confirmButton = { TextButton({ message = null }) { Text("OK") } }) }
     plan?.let { quote -> OnchainReview(app, quote,
         onDismiss = { markAttempted(); plan = null }, cancelTitle = "No, turn off",
         cancel = {

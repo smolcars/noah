@@ -3,6 +3,8 @@ package com.noahwallet.onchain
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -71,7 +73,7 @@ fun UnilateralExitScreen(app: AppModel) {
         FilterMenu(filter, listOf("All") + ExitTimeline.labels.keys.toList()) { filter = it }
         if (exits.isEmpty()) Text("No exits have been started.")
         exits.filter { filter == "All" || it.state == filter }.forEach { exit ->
-            TextButton({ detailID = exit.id }, enabled = !model.busy) { Text("${ExitTimeline.labels[exit.state] ?: exit.state} · ${exit.amount} sats · ${exit.id.take(12)}…") }
+            TextButton({ detailID = exit.id }, enabled = !model.busy) { Text("${ExitTimeline.labels[exit.state] ?: exit.state} · ${amountText(app, exit.amount)} · ${exit.id.take(12)}…") }
         }
     }
     if (deposit && !app.isWalletSuspended) ExitDepositSheet(app, depositFee) { deposit = false }
@@ -126,7 +128,7 @@ private fun ExitDepositSheet(app: AppModel, fee: Long, dismiss: () -> Unit) {
         catch (_: Exception) { error = "Couldn't load a deposit address. Close and try again when the wallet is ready." }
     }
     ModalBottomSheet(onDismissRequest = dismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Deposit Onchain Funds", style = MaterialTheme.typography.headlineSmall)
             if (fee > 0) AmountRow(app, "Suggested deposit", fee)
             Text("Broadcast fees are paid separately from confirmed onchain funds. Deposit bitcoin and wait for confirmation before progressing an exit. The amount required may vary.")
