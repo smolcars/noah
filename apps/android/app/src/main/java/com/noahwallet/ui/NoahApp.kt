@@ -109,7 +109,7 @@ fun NoahApp(model: AppModel) {
                         })
                 }
                 entry<SettingsDestination> { destination ->
-                    SettingsPage(model, destination) { next ->
+                    SettingsPage(model, destination, onBack = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }) { next ->
                         if (next == SettingsDestination.Settings && backStack.last() == SettingsDestination.UnifiedPush) backStack.removeAt(backStack.lastIndex)
                         else if (next == SettingsDestination.Profile && backStack.last() in listOf(SettingsDestination.Email, SettingsDestination.Lightning)) backStack.removeAt(backStack.lastIndex)
                         else backStack.add(next)

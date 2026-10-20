@@ -69,8 +69,19 @@ fun ProfileScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
 
 internal fun limitedProfileName(value: String): String = value.take(80).dropLastWhile { it.isHighSurrogate() }
 
+internal fun preferenceName(kind: SettingsDestination, code: String, locale: Locale): String = when (kind) {
+    SettingsDestination.Language -> Locale.forLanguageTag(code).getDisplayLanguage(Locale.forLanguageTag(code)).replaceFirstChar { it.titlecase() }
+    SettingsDestination.Currency -> Currency.getInstance(code).getDisplayName(locale)
+    else -> if (code == "sats") "Satoshis" else "Bitcoin (BIP-177)"
+}
+
+internal fun preferenceDetail(kind: SettingsDestination, code: String, locale: Locale): String =
+    if (kind == SettingsDestination.Unit) com.noahwallet.formatting.BitcoinAmount.format(1234,
+        com.noahwallet.formatting.BitcoinAmountUnit.valueOf(code), locale) else code.uppercase(Locale.ROOT)
+
 @Composable
-fun PreferenceScreen(model: AppModel, kind: SettingsDestination, onSelected: () -> Unit = {}) {
+fun PreferenceScreen(model: AppModel, kind: SettingsDestination, onSelected: () -> Unit) {
+    val locale = Locale.forLanguageTag(model.localeIdentifier)
     val options = when (kind) {
         SettingsDestination.Language -> listOf("en", "es", "ja", "ko", "sv")
         SettingsDestination.Currency -> FiatCurrency.supported.toList()
@@ -83,12 +94,8 @@ fun PreferenceScreen(model: AppModel, kind: SettingsDestination, onSelected: () 
     }
     SettingsColumn {
         options.forEach { code ->
-            val label = when (kind) {
-                SettingsDestination.Language -> Locale.forLanguageTag(code).getDisplayLanguage(Locale.forLanguageTag(code)).replaceFirstChar { it.titlecase() }
-                SettingsDestination.Currency -> Currency.getInstance(code).displayName
-                else -> if (code == "sats") "Satoshis" else "Bitcoin (BIP-177)"
-            }
-            SettingRow(label, code.uppercase() + if (selected == code) " · Selected" else "") {
+            val label = preferenceName(kind, code, locale)
+            SettingRow(label, preferenceDetail(kind, code, locale) + if (selected == code) " · ${tr("Selected")}" else "") {
                 model.action("Couldn't save your preference.") {
                     when (kind) {
                         SettingsDestination.Language -> model.setLanguage(code)

@@ -37,11 +37,11 @@ enum class SettingsDestination(val title: String) : NavKey {
 }
 
 @Composable
-fun SettingsPage(model: AppModel, destination: SettingsDestination, navigate: (SettingsDestination) -> Unit) {
+fun SettingsPage(model: AppModel, destination: SettingsDestination, onBack: () -> Unit, navigate: (SettingsDestination) -> Unit) {
     when (destination) {
         SettingsDestination.Settings -> SettingsScreen(model, navigate)
         SettingsDestination.Profile -> ProfileScreen(model, navigate)
-        SettingsDestination.Language, SettingsDestination.Currency, SettingsDestination.Unit -> PreferenceScreen(model, destination)
+        SettingsDestination.Language, SettingsDestination.Currency, SettingsDestination.Unit -> PreferenceScreen(model, destination, onBack)
         SettingsDestination.Backup -> BackupSettingsScreen(model)
         SettingsDestination.Seed -> MnemonicScreen(model, fromSettings = true)
         SettingsDestination.Ark -> ArkInfoScreen(model, navigate)
