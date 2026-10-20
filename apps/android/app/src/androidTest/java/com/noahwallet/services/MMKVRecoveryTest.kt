@@ -2,6 +2,9 @@ package com.noahwallet.services
 
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.cancel
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.services.storage.*
@@ -105,6 +108,23 @@ class MMKVRecoveryTest {
         assertTrue(runCatching { store.requireHealthy() }.isFailure)
         assertTrue(MMKVQuarantine(context.noBackupFilesDir, id).exists)
         assertNull(store.string("wallet-storage"))
+    }
+
+    @Test fun continueReloadsBiometricsAndBalanceHidingBeforeLaunch() = fixture { context, root ->
+        val initial = SettingsStorage(context)
+        val wallet = initial.persistedState<PersistedWalletState>("wallet-storage")!!
+        initial.setPersistedState(wallet.copy(isBiometricsEnabled = true), "wallet-storage", 0)
+        initial.set("""{"state":{"isHomeBalanceHidden":true},"version":0}""", "privacy-storage"); initial.sync()
+        closeForRestart(root); corrupt(root, "crc")
+        val blocked = SettingsStorage(context)
+        val model = com.noahwallet.ui.AppModel(app.applicationContext as android.app.Application, blocked)
+        assertFalse(model.walletLock.enabled); assertFalse(model.hidden)
+        instrumentation.runOnMainSync {
+            runBlocking { model.acknowledgeRecoveredSettings() }
+            assertTrue(model.walletLock.enabled); assertTrue(model.walletLock.locked); assertTrue(model.hidden)
+            assertFalse(model.open); assertNull(model.summary)
+            model.viewModelScope.cancel()
+        }
     }
 
     @Test fun emptyRecoveryRestoresTheImmutableBackupOnce() = fixture { context, root ->

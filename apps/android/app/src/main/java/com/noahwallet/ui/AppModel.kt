@@ -14,12 +14,11 @@ import com.noahwallet.services.backup.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 
-class AppModel(application: Application) : AndroidViewModel(application) {
+class AppModel(application: Application, val settings: SettingsStorage = SettingsStorage(application)) : AndroidViewModel(application) {
     val services = AppServices.shared(application)
     val session = services.session
     val server = services.registration
-    val settings = SettingsStorage(application)
-    val walletLock = com.noahwallet.ui.settings.WalletLock(settings)
+    var walletLock by mutableStateOf(com.noahwallet.ui.settings.WalletLock(settings)); private set
     private val creator = WalletCreator.live(application)
     var launchState by mutableStateOf<LaunchState?>(null); private set
     var open by mutableStateOf(false); private set
@@ -179,6 +178,25 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         server.refreshMailboxIfNeeded()
         services.reconcileBackupTriggers()
         com.noahwallet.services.push.PushRuntime(getApplication(), services).register()
+    }
+
+    /** Continue applies recovered protection before start() can publish wallet data. */
+    suspend fun acknowledgeRecoveredSettings() {
+        withContext(Dispatchers.IO) { settings.acknowledgeRecovery() }
+        reloadRecoveredSettings()
+        start()
+    }
+
+    internal fun reloadRecoveredSettings() {
+        settings.requireHealthy()
+        walletLock = com.noahwallet.ui.settings.WalletLock(settings)
+        hidden = (state("privacy-storage")["isHomeBalanceHidden"] as? JsonPrimitive)?.booleanOrNull ?: false
+        amountUnit = SettingsPreferences.amountUnit(settings.string("profile-storage"))
+        preferredCurrency = SettingsPreferences.preferredCurrency(settings.string("profile-storage"))
+        isWalletSuspended = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
+        localeIdentifier = LegacyLocale.read(getApplication()) ?: "en"
+        services.backupCoordinator.reloadStatus()
+        summary = null; error = null; open = false; onboarded = false; launchState = null
     }
 
     private var starting = false

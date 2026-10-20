@@ -119,6 +119,7 @@ fun LaunchGateView(model: AppModel) {
     androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.background) {
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().then(Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing))) {
             when {
+                model.walletLock.locked -> Unit // Keep wallet content out of the composition until authentication.
                 state == LaunchState.seedWithoutWalletData -> RestoreWalletScreen(model, useStoredSeed = true)
                 !PlatformGateRules.launchResolved(state) -> LaunchMessage(state, model.error != null, model::start, model)
                 !gatesReady -> LaunchMessage(null, false, model::start, model)
@@ -195,8 +196,7 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
                 if (owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) scope.launch {
                     acknowledging = true
                     try {
-                        withContext(Dispatchers.IO) { model.settings.acknowledgeRecovery() }
-                        retry()
+                        model.acknowledgeRecoveredSettings()
                     } catch (_: Exception) { model.error = "Settings still need recovery. Please try again." }
                     finally { acknowledging = false }
                 }
