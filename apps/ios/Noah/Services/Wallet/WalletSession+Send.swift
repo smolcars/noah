@@ -7,13 +7,13 @@ extension WalletSession {
         return try await withOpenWallet { handles in
             var resolved = payment
             if let invoice { resolved.destination = invoice; resolved.method = "lightning" }
-            var quote = try await Self.quote(resolved, handles: handles)
+            var quote = try await self.quote(resolved, handles: handles)
             if quote.prepared != nil { await self.retainSendReview(payment, quote: quote, onchain: handles.onchain) }
             quote.resolvedInvoice = invoice
             return quote
         }
     }
-    private static func quote(_ payment: SendPayment, handles: Handles) async throws -> SendQuote {
+    private func quote(_ payment: SendPayment, handles: Handles) async throws -> SendQuote {
         try SendMaxValidation.available(payment)
         guard payment.amount > 0 || payment.max else { throw SendFailure.invalid }
         guard payment.amount <= 2_100_000_000_000_000 else { throw SendFailure.invalid }
@@ -82,7 +82,10 @@ extension WalletSession {
             guard quote.amount > 0, quote.total <= available else { throw SendFailure.insufficient }
             quote.walletIdentity = try await Self.sendIdentity(handles)
         } catch {
-            if let prepared = quote.prepared { try? await handles.onchain.discardPrepared(id: prepared.id) }
+            if quote.prepared != nil {
+                retainSendReview(payment, quote: quote, onchain: handles.onchain)
+                await discardSend(quote)
+            }
             throw error
         }
         return quote
@@ -105,7 +108,7 @@ extension WalletSession {
             } else if checkpoint == nil {
                 var resolvedPayment = payment
                 if let invoice { resolvedPayment.destination = invoice; resolvedPayment.method = "lightning" }
-                var fresh = try await Self.quote(resolvedPayment, handles: handles)
+                var fresh = try await self.quote(resolvedPayment, handles: handles)
                 fresh.resolvedInvoice = invoice
                 guard fresh == quote else { throw SendFailure.feeChanged }
             }

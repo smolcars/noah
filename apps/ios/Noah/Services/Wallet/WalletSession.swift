@@ -160,8 +160,8 @@ actor WalletSession {
             state = .closing
             await stopObservers()
             await callsDrained()
-            await discardSendReviews()
             do {
+                try await discardSendReviews()
                 try await Task { try await handles.wallet.stopDaemonWait() }.value
             } catch {
                 state = .open(handles)
@@ -288,6 +288,7 @@ actor WalletSession {
         guard case .open(let handles) = state else { throw SessionError.notOpen }
         runningCalls += 1
         defer { callFinished() }
+        await retrySendDiscards()
         return try await Task { try await body(handles) }.value
     }
 
