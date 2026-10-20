@@ -1,12 +1,13 @@
 import SwiftUI
 
 struct OnchainAmountRow: View {
+    @Environment(\.locale) private var locale
     @Environment(AppModel.self) private var app
     let title: String
     let sats: UInt64
     var body: some View {
         LabeledContent(
-            title, value: BitcoinAmount.format(sats: Int64(clamping: sats), unit: app.amountUnit)
+            title, value: BitcoinAmount.format(sats: Int64(clamping: sats), unit: app.amountUnit, locale: locale)
         )
         .monospacedDigit()
     }

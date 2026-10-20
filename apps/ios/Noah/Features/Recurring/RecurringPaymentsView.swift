@@ -32,7 +32,7 @@ struct RecurringPaymentsView: View {
                                 .foregroundStyle(schedule.status == "needs_attention" ? NoahColor.destructive : NoahColor.mutedForeground)
                         }
                         Text(schedule.destination).font(NoahFont.footnote).textSelection(.enabled)
-                        Text("\(schedule.amountSat.formatted()) sats").font(NoahFont.title)
+                        Text("\(schedule.amountSat.formatted(.number.locale(locale))) sats").font(NoahFont.title)
                         Text("\(schedule.interval.description) · \(schedule.occurrencesPaid) paid" + (schedule.maxOccurrences.map { " of \($0)" } ?? ""))
                             .foregroundStyle(NoahColor.mutedForeground)
                         if schedule.status == "active", let next = schedule.nextRunAt {

@@ -27,7 +27,7 @@ struct BtcMapDetailView: View {
                             Text("Featured").font(NoahFont.footnote).foregroundStyle(NoahColor.brand)
                         }
                         if let location {
-                            Text(BtcMapDistance.format(BtcMapDistance.kilometers(from: location, to: place.center))).font(NoahFont.footnote)
+                            Text(BtcMapDistance.format(BtcMapDistance.kilometers(from: location, to: place.center), locale: locale)).font(NoahFont.footnote)
                         }
                         if let verified = merchant.verified_at { Text(L10n.text("Verified {date}", dateLabel(verified), locale: locale.identifier)).font(NoahFont.footnote).foregroundStyle(.secondary) }
                     }

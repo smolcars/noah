@@ -10,6 +10,15 @@ class SendRecipientTest {
         quote: suspend (SendPayment) -> SendQuote = { FakeSendWallet.quote }, discard: suspend (SendQuote) -> Unit = {}) =
         SendModel(controller(FakeSendWallet(), TestJournal(), scope), "regtest", resolve, quote, discard, scope)
     private fun route(destination: String) = SendRecipientRoute(destination, 1000, 10_000_000, 100, "old-ark", "https://example.com/callback".toHttpUrl(), "metadata")
+    @Test fun modelRetainsTypedFailureArgumentsForDisplay() = runBlocking {
+        val m = model(this)
+        m.setRecipient("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa")
+        m.acceptRecipient()
+        assertEquals(SendDestinationError.NetworkMismatch("regtest", "mainnet"), m.destinationError)
+        assertFalse(m.progress.recipientConfirmed)
+        m.setRecipient("a@example.com")
+        assertNull(m.destinationError)
+    }
     @Test fun destinationAssignmentClearsEveryDerivedValueSynchronously() = runBlocking {
         val m = model(this); m.setRecipient("a@example.com"); m.parsed = SendDestination("lnurl", 500.toBigDecimal()); m.amount = "500"; m.route = route(m.destination); m.comment = "old"; m.source = SendSource.offchain
         m.setRecipient("b@example.com")

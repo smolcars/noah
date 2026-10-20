@@ -37,6 +37,26 @@ struct TranslationsTests {
         }
     }
 
+    @MainActor @Test func sendModelRetainsFailureArgumentsForDisplay() async {
+        let model = SendModel(controller: SendPaymentTests().make(SendPaymentTests.Backend(), SendPaymentTests.Storage()))
+        model.destination = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+        await model.acceptRecipient()
+        let error = SendDestinationError.networkMismatch(expected: AppVariant.current.rawValue, actual: "mainnet")
+        #expect(model.destinationError == error)
+        #expect(!model.progress.recipientConfirmed)
+        for language in LegacyLocale.supported {
+            #expect(model.destinationError?.message(locale: language) == error.message(locale: language))
+        }
+    }
+
+    @Test func selectedLanguageControlsAmountsWithAnEnglishDevice() {
+        let selected = LegacyLocale.resolve(preference: "es", system: ["en-US"])
+        let locale = Locale(identifier: selected)
+        #expect(BitcoinAmount.format(sats: 1_234_567, unit: .sats, locale: locale) == "1.234.567 sats")
+        #expect(FiatCurrency.format(1_234_567.89, currency: "USD", locale: locale).contains("1.234.567,89"))
+        #expect(BtcMapDistance.format(12.3, locale: locale) == "12,3 km (7,6 mi)")
+    }
+
     @Test func everyUsedRNKeyResolvesInEveryLocale() throws {
         let fixture = try Fixtures.decode("translations-coverage", as: Coverage.self)
         let sources = try #require(fixture.coverage["ios"]?.used)

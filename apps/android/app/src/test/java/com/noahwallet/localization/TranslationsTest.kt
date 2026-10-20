@@ -37,6 +37,18 @@ class TranslationsTest {
         }
     }
 
+    @Test fun selectedLanguageControlsAmountsWithAnEnglishDevice() {
+        val previous = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.US)
+            language("es")
+            val locale = L10n.context(context).resources.configuration.locales[0]
+            assertEquals("1.234.567 sats", com.noahwallet.formatting.BitcoinAmount.format(1234567, BitcoinAmountUnit.sats, locale))
+            assertTrue(com.noahwallet.formatting.FiatCurrency.format(1234567.89, "USD", locale).contains("1.234.567,89"))
+            assertEquals("12,3 km (7,6 mi)", com.noahwallet.btcmap.BtcMapDistance.format(12.3, locale))
+        } finally { java.util.Locale.setDefault(previous) }
+    }
+
     @Test fun everyUsedRNKeyResolvesInEveryLocale() {
         val document = SharedFixtures.document("translations-coverage").jsonObject
         val sources = document.getValue("coverage").jsonObject.getValue("android").jsonObject.getValue("used").jsonArray

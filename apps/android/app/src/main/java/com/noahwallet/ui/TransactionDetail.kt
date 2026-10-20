@@ -82,7 +82,7 @@ private fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: 
         DetailValue("Route", if (row.type == "Lnurl") "Lightning address" else row.displayLabel)
         row.repeatPayment?.let { repeat ->
             if (repeat.amountMode == "FIAT" && repeat.fiatCurrency != null) repeat.amountInput.toDoubleOrNull()?.let {
-                DetailValue("Entered as", FiatCurrency.format(it, repeat.fiatCurrency))
+                DetailValue("Entered as", FiatCurrency.format(it, repeat.fiatCurrency, locale))
             }
             if (repeat.comment.isNotEmpty()) DetailValue("Message", repeat.comment)
         }

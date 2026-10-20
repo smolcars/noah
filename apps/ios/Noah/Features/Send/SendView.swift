@@ -341,6 +341,7 @@ struct SendConfirmation: View {
 }
 
 struct SendOutcomeView: View {
+    @Environment(\.locale) private var locale
     @Bindable var controller: SendPaymentController
     let done: () -> Void
     @State private var confirmOverride = false
@@ -360,9 +361,9 @@ struct SendOutcomeView: View {
                     )
                     if let progress = controller.attempt?.existingLightning {
                         Text(LocalizedStringKey(progress.message))
-                        Text("Fee for the existing payment: \(progress.fee.formatted()) sats")
+                        Text("Fee for the existing payment: \(progress.fee.formatted(.number.locale(locale))) sats")
                         if let reviewed = controller.attempt?.payment.amount, reviewed != progress.amount {
-                            Text("This differs from the \(reviewed.formatted()) sats you reviewed.")
+                            Text("This differs from the \(reviewed.formatted(.number.locale(locale))) sats you reviewed.")
                         }
                     }
                     if let receipt = controller.attempt?.receipt {
@@ -424,7 +425,7 @@ struct SendOutcomeView: View {
                     }
                 case .alreadyPaid(let receipt):
                     Text("Invoice already paid").font(NoahFont.title)
-                    Text("This invoice was already paid: \(receipt.amount.formatted()) sats")
+                    Text("This invoice was already paid: \(receipt.amount.formatted(.number.locale(locale))) sats")
                     if let fee = receipt.fee { Text("Fee: \(fee) sats") }
                     Text("No new payment was made for the amount you reviewed.")
                     NoahButton(title: "Done") {

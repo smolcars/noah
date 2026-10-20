@@ -144,7 +144,7 @@ fun BtcMapScreen(onClose: () -> Unit) {
                         items(results.inView, key = { it.id }) { place ->
                             TextButton({ model.select(place); focus.clearFocus() }, Modifier.fillMaxWidth()) {
                                 Text(place.name, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                model.userLocation?.let { Text(tr(BtcMapDistance.format(BtcMapDistance.kilometers(it, place.center))), style = MaterialTheme.typography.bodySmall) }
+                                model.userLocation?.let { Text(tr(BtcMapDistance.format(BtcMapDistance.kilometers(it, place.center), androidx.compose.ui.platform.LocalConfiguration.current.locales[0])), style = MaterialTheme.typography.bodySmall) }
                             }
                         }
                     }

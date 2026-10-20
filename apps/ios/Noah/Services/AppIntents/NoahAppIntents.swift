@@ -360,7 +360,7 @@ private struct NoahLightningInvoiceSnippetView: View {
       Label("Lightning Invoice", systemImage: "bolt.fill")
         .font(.headline)
 
-      Text("\(amountSats.formatted()) sats")
+      Text("\(amountSats.formatted(.number.locale(Locale(identifier: LegacyLocale.resolved())))) sats")
         .font(.title2.bold())
 
       Text(invoice)

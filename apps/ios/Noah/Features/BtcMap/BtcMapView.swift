@@ -203,7 +203,7 @@ struct BtcMapView: View {
                             Button { model.select(place) } label: {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(place.name).font(NoahFont.headline).lineLimit(1)
-                                    Text("\(L10n.text(place.category.label, locale: locale.identifier)) · \(BtcMapDistance.format(BtcMapDistance.kilometers(from: location, to: place.center)))")
+                                    Text("\(L10n.text(place.category.label, locale: locale.identifier)) · \(BtcMapDistance.format(BtcMapDistance.kilometers(from: location, to: place.center), locale: locale))")
                                         .font(NoahFont.footnote).foregroundStyle(.secondary)
                                 }
                                 .frame(width: 220, alignment: .leading).padding(14)

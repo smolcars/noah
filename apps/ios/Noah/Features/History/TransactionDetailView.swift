@@ -49,7 +49,7 @@ struct TransactionDetailView: View {
                     if let repeatPayment = transaction.repeatPayment {
                         if repeatPayment.amountMode == "FIAT", let currency = repeatPayment.fiatCurrency,
                            let amount = Double(repeatPayment.amountInput) {
-                            detail("Entered as", FiatCurrency.format(amount, currency: currency))
+                            detail("Entered as", FiatCurrency.format(amount, currency: currency, locale: locale))
                         }
                         if !repeatPayment.comment.isEmpty { detail("Message", repeatPayment.comment) }
                     }
