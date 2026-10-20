@@ -22,11 +22,11 @@ class RecurringExecutor(private val d: Dependencies,
         val withWalletMutation: suspend (suspend () -> Unit) -> Unit = { it() })
     init {
         d.store.protectPolicies(java.io.File("${d.journal.file.path}.policies"), binding = d.binding)
-        d.controller.persistRecurringEvidence = { attempt, generation, walletGeneration, state, message ->
+        d.controller.persistRecurringEvidence = { attempt, generation, walletGeneration, _, message ->
             check(d.journal.file.parentFile!!.isDirectory)
             val binding = d.binding()
             check(d.binding() == binding)
-            d.journal.record(attempt, generation, walletGeneration, state, message, binding, d.now())
+            d.journal.record(attempt, generation, walletGeneration, message, binding, d.now())
         }
     }
     data class Review(val schedule: RecurringPayment, val plan: RecurringPayment.Plan, val payment: SendPayment, val quote: SendQuote)
@@ -219,6 +219,8 @@ class RecurringExecutor(private val d: Dependencies,
     }
     private suspend fun markUncertain(entry: RecurringJournal.Entry, message: String? = controller.message) = storage {
         synchronized(RecurringStore.lock) {
+            val saved = d.journal.load()[entry.scheduleID]
+            if (saved == null || saved.resolved || saved.binding != entry.binding || saved.plan != entry.plan || saved.policyRevision != entry.policyRevision || saved.markedAt != entry.markedAt) return@storage
             if (d.binding() != entry.binding) return@storage
             val state = d.store.load()
             if (state.binding != entry.binding) return@storage
@@ -233,7 +235,7 @@ class RecurringExecutor(private val d: Dependencies,
         if (evidence.outcome == RecurringJournal.Outcome.uncertain) { markUncertain(entry, evidence.message); return }
         if (storage { d.binding() == entry.binding }) controller.releaseRecurring(evidence.attempt.recurringAttemptID, evidence.generation, evidence.walletGeneration, retainReceipt)
         var notification: RecurringPayment? = null
-        val released = storage {
+        storage {
             synchronized(RecurringStore.lock) {
                 if (d.binding() != entry.binding) return@storage false
                 var saved = d.journal.load()[entry.scheduleID] ?: return@storage false
@@ -270,7 +272,6 @@ class RecurringExecutor(private val d: Dependencies,
                 true
             }
         }
-        if (released) controller.releaseRecurring(evidence.attempt.recurringAttemptID, evidence.generation, evidence.walletGeneration, retainReceipt)
         notification?.let { d.notify(emptyList(), it) }
     }
     suspend fun checkStatus(id: String) {
@@ -341,6 +342,8 @@ class RecurringExecutor(private val d: Dependencies,
     suspend fun overrideAndResume(id: String, confirmed: Boolean) {
         if (!confirmed) return
         check(!running); boundState()
+        val pending = storage { d.journal.load()[id] }
+        if (pending?.terminal != null && pending.terminal.outcome != RecurringJournal.Outcome.uncertain) settle(pending)
         val schedule = storage { d.store.load().schedules[id] } ?: return
         check(!schedule.unsupportedStorage) { RecurringPayment.unsupportedMessage }
         check(schedule.amountSat <= RecurringPayment.maximumAmount) { RecurringPayment.amountLimitMessage }
@@ -353,7 +356,7 @@ class RecurringExecutor(private val d: Dependencies,
             check(!controller.locked) { "Unable to save the override confirmation. Sending remains locked." }
         }
         storage {
-            if (entry != null) d.journal.save(entry.copy(resolved = true, consumed = true))
+            if (entry != null) d.journal.save(entry.copy(resolved = true, consumed = true, historyApplied = entry.terminal != null, released = entry.terminal != null))
             check(d.store.updateIf(schedule, schedule.resume(d.now(), d.zone())))
         }
         changed()

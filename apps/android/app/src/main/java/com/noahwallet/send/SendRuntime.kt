@@ -16,10 +16,10 @@ class SendRuntime private constructor(context: Context) {
     private val journal = SendJournal(File(WalletDataLocation(context.filesDir, BuildConfig.APP_VARIANT).directory, "noah-send-attempt.json"))
     private val audit = SendOverrideAuditStore(File(WalletDataLocation(context.filesDir, BuildConfig.APP_VARIANT).directory, "noah-send-overrides.json"))
     val controller = SendController(SendController.Dependencies(journal::read, journal::write, quarantineUnreadable = journal::quarantineUnreadable, auditOverride = audit::append, recurringReservation = { body -> session.withRecurringReservation(body) },
-        recurringEvidence = { attempt, generation, walletGeneration, state, message ->
+        recurringEvidence = { attempt, generation, walletGeneration, _, message ->
             val location = WalletDataLocation(context.filesDir, BuildConfig.APP_VARIANT)
             RecurringJournal(File(location.directory, "noah-recurring-journal.json"))
-                .record(attempt, generation, walletGeneration, state, message, RecurringStore.binding(location), System.currentTimeMillis())
+                .record(attempt, generation, walletGeneration, message, RecurringStore.binding(location), System.currentTimeMillis())
         }) { body -> session.withSendReservation(body) })
     // Defer startup until Compose has applied state created by remember.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)

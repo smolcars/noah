@@ -257,7 +257,7 @@ class SendController(private val dependencies: Dependencies,
                     // The counted reservation prevents replacement until audit and removal are durable.
                     beforeRemove?.invoke()
                     audited = true
-                    if (attempt?.recurringOccurrenceKey != null && !recurringEvidenceDurable && beforeRemove == null) {
+                    if (attempt?.recurringOccurrenceKey != null && !recurringEvidenceDurable) {
                         val saved = attempt!!
                         val persist = persistRecurringEvidence ?: error("Recurring evidence storage unavailable")
                         persist(saved, generation, walletGeneration, state, message)

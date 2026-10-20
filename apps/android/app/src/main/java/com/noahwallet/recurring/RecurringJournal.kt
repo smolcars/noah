@@ -125,11 +125,11 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
         state.legacyUncertainty.forEach { scope(it.binding, it.scheduleID) }
     }
     /** Runs inside Send's wallet reservation before its terminal outcome is published. */
-    @Synchronized fun record(attempt: SendAttempt, generation: Int, walletGeneration: Int, state: SendController.State, message: String?, binding: RecurringStore.Binding, now: Long) {
-        val outcome = when (state) {
-            SendController.State.succeeded -> if (attempt.receipt?.broadcastRetryPending == false) Outcome.succeeded else Outcome.uncertain
-            SendController.State.alreadyPaid -> Outcome.alreadyPaid
-            SendController.State.failed -> Outcome.failed
+    @Synchronized fun record(attempt: SendAttempt, generation: Int, walletGeneration: Int, message: String?, binding: RecurringStore.Binding, now: Long) {
+        val outcome = when {
+            attempt.alreadyPaid != null -> Outcome.alreadyPaid
+            attempt.receipt?.let { !it.isUnresolved && !it.broadcastRetryPending } == true -> Outcome.succeeded
+            attempt.failed -> Outcome.failed
             else -> Outcome.uncertain
         }
         val entry = state().attempts.values.firstOrNull { it.key == attempt.recurringOccurrenceKey && it.binding == binding }
@@ -137,7 +137,7 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
         check(!legacyUncertain(binding, entry.scheduleID)) { legacyMessage }
         entry.terminal?.let {
             check(it.attempt.recurringAttemptID == attempt.recurringAttemptID) { invalidMessage }
-            if (it.outcome != Outcome.uncertain) return
+            if (it.outcome != Outcome.uncertain || it.outcome == outcome && it.attempt == attempt) return
         }
         save(entry.copy(terminal = TerminalEvidence(entry.terminal?.settlementID ?: UUID.randomUUID().toString(), attempt, generation, walletGeneration, outcome, message, now)))
     }
