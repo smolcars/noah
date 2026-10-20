@@ -36,7 +36,7 @@ fun CopyRow(title: String, value: String) {
 
 @Composable
 fun ProfileScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
-    var name by remember { mutableStateOf(SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.jsonPrimitive?.contentOrNull ?: "") }
+    var name by remember { mutableStateOf(limitedProfileName(SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.jsonPrimitive?.contentOrNull ?: "")) }
     var server by remember { mutableStateOf(model.server.state) }
     var key by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
@@ -48,7 +48,7 @@ fun ProfileScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
     }
     SettingsColumn {
         SectionTitle("Name")
-        OutlinedTextField(name, { name = it }, label = { Text(tr("Name")) }, modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = !model.busy)
+        OutlinedTextField(name, { name = limitedProfileName(it) }, label = { Text(tr("Name")) }, modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = !model.busy)
         NoahButton("Save", !model.busy) {
             model.action("Couldn't save your name.") { model.server.saveDisplayName(name); name = name.trim(); message = "Saved" }
         }
@@ -57,7 +57,8 @@ fun ProfileScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
         server.lightningAddress?.let { CopyRow("Lightning Address", it) }
         SettingRow("Edit Lightning Address") { navigate(SettingsDestination.Lightning) }
         SectionTitle("Emergency Email")
-        Text(tr(server.emailAddress ?: "No emergency email set"))
+        if (server.isEmailVerified == true && server.emailAddress != null) CopyRow("Address", server.emailAddress!!)
+        else Text(tr(server.emailAddress ?: "No emergency email set"))
         Text(tr(if (server.isEmailVerified == true) "Verified" else "Not verified"))
         SettingRow("Edit Emergency Email") { navigate(SettingsDestination.Email) }
         SectionTitle("Public Keys")
@@ -65,6 +66,8 @@ fun ProfileScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
         Nostr.npub(server.nostrPubkey).takeIf { it.isNotEmpty() }?.let { CopyRow("Nostr Public Key", it) }
     }
 }
+
+internal fun limitedProfileName(value: String): String = value.take(80).dropLastWhile { it.isHighSurrogate() }
 
 @Composable
 fun PreferenceScreen(model: AppModel, kind: SettingsDestination, onSelected: () -> Unit = {}) {

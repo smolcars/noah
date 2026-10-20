@@ -1,6 +1,9 @@
 package com.noahwallet.ui
 
 import com.noahwallet.localization.L10n
+import com.noahwallet.fixtures.SharedFixtures
+import com.noahwallet.ui.settings.limitedProfileName
+import kotlinx.serialization.json.jsonPrimitive
 import com.noahwallet.services.storage.LegacyLocale
 import org.junit.Assert.*
 import org.junit.Before
@@ -15,6 +18,12 @@ import org.robolectric.annotation.Config
 class AccountParityTest {
     private val context get() = RuntimeEnvironment.getApplication()
     @Before fun english() { context.getSharedPreferences("gt_store", 0).edit().putString(LegacyLocale.key, "en").commit() }
+
+    @Test fun profileNameLimitMatchesRN() {
+        for (item in SharedFixtures.load("profile-name")) {
+            assertEquals(item.name, item.expected.jsonPrimitive.content, limitedProfileName(item.input.jsonPrimitive.content))
+        }
+    }
 
     @Test fun replacementKeepsOldAddressAndCannotSkip() {
         val replacement = EmergencyEmailPresentation(false, true, "old@example.com")
