@@ -9,7 +9,7 @@
   "catalogEntries": 1287,
   "coverage": {
     "ios": {
-      "rnTranslated": 564,
+      "rnTranslated": 565,
       "nativeOnlyEnglish": 417,
       "nativeOnly": [
         "#{nativeValue1} · {nativeValue2} · {nativeValue3} sats",
@@ -551,6 +551,7 @@
         "Copy address: {value1}",
         "Copy payment details",
         "Copy the unified request or a specific payment method.",
+        "Copy {label}",
         "Could not open BTC Map",
         "Could not read the selected screenshot.",
         "Couldn’t create a request",

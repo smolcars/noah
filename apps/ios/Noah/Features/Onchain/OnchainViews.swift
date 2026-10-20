@@ -77,7 +77,7 @@ struct OnchainStatusSection: View {
             .alert(OnchainOperationJournal.OverrideAudit.titleText, isPresented: Binding(
                 get: { discardID == attempt.id }, set: { if !$0 { discardID = nil } })) {
                 Button("Keep attempt", role: .cancel) { discardID = nil }
-                Button(OnchainOperationJournal.OverrideAudit.confirmationText, role: .destructive) {
+                Button(LocalizedStringKey(OnchainOperationJournal.OverrideAudit.confirmationText), role: .destructive) {
                     discardID = nil
                     Task { await model.discardUncertain(attempt.id) }
                 }
@@ -164,7 +164,7 @@ struct OnchainReviewSheet: View {
             .settingsStyle(LocalizedStringKey(quote.action.title))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(cancelTitle) {
+                    Button(LocalizedStringKey(cancelTitle)) {
                         onCancel?()
                         dismiss()
                     }

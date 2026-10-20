@@ -60,7 +60,7 @@ struct HomeStatusBanners: View {
             }
         }
         if let message = home.backgroundMessage {
-            NoahCard { ProgressView(message).font(NoahFont.footnote).frame(maxWidth: .infinity) }
+            NoahCard { ProgressView(LocalizedStringKey(message)).font(NoahFont.footnote).frame(maxWidth: .infinity) }
         }
     }
 }

@@ -93,7 +93,7 @@ struct RecurringPaymentsView: View {
         } message: { Text("No more payments will be sent. Payments already sent can't be undone. An in-progress payment may still complete.") }
         .alert(SendOverrideAudit.titleText, isPresented: Binding(get: { overriding != nil }, set: { if !$0 { overriding = nil } })) {
             Button("Keep stopped", role: .cancel) { overriding = nil }
-            Button(RecurringExecutor.overrideConfirmation, role: .destructive) {
+            Button(LocalizedStringKey(RecurringExecutor.overrideConfirmation), role: .destructive) {
                 if let schedule = overriding { run { try await executor.overrideAndResume(schedule.id, confirmed: true) } }
                 overriding = nil
             }

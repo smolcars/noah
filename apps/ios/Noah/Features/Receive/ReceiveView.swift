@@ -108,7 +108,7 @@ struct ReceiveView: View {
                     }
                 } else if let error = model.baseError {
                     ContentUnavailableView {
-                        Label(model.baseErrorTitle, systemImage: "exclamationmark.circle")
+                        Label(LocalizedStringKey(model.baseErrorTitle), systemImage: "exclamationmark.circle")
                     } description: { Text(LocalizedStringKey(error)) } actions: {
                         NoahButton(title: "Retry") { Task { await model.start() } }
                     }

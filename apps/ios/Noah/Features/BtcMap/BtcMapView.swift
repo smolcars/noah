@@ -65,7 +65,7 @@ struct BtcMapView: View {
                         placeFromList = place
                         showPlaces = false
                     } label: {
-                        Label { Text("\(place.name), \(place.category.label)") } icon: { Image(systemName: place.category.symbol) }
+                        Label { Text("\(place.name), \(L10n.text(place.category.label, locale: locale.identifier))") } icon: { Image(systemName: place.category.symbol) }
                     }
                 }
                 .overlay { if places.isEmpty { ContentUnavailableView("No places in view", systemImage: "mappin.slash") } }
@@ -160,7 +160,7 @@ struct BtcMapView: View {
                     HStack(spacing: 8) {
                         ForEach(PlaceCategory.allCases, id: \.self) { category in
                             Button { model.category = category } label: {
-                                Label(category.label, systemImage: category.symbol)
+                                Label(LocalizedStringKey(category.label), systemImage: category.symbol)
                                     .font(NoahFont.footnote)
                                     .padding(.horizontal, 14).frame(minHeight: 44)
                                     .foregroundStyle(model.category == category ? Color.black : NoahColor.foreground)
@@ -203,7 +203,7 @@ struct BtcMapView: View {
                             Button { model.select(place) } label: {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(place.name).font(NoahFont.headline).lineLimit(1)
-                                    Text("\(place.category.label) · \(BtcMapDistance.format(BtcMapDistance.kilometers(from: location, to: place.center)))")
+                                    Text("\(L10n.text(place.category.label, locale: locale.identifier)) · \(BtcMapDistance.format(BtcMapDistance.kilometers(from: location, to: place.center)))")
                                         .font(NoahFont.footnote).foregroundStyle(.secondary)
                                 }
                                 .frame(width: 220, alignment: .leading).padding(14)

@@ -35,7 +35,7 @@ struct HomeView: View {
                     if !model.isWalletSuspended { UpdateWarningView() }
                     if let error = model.walletError {
                         NoahCard {
-                            Label(error, systemImage: "exclamationmark.triangle")
+                            Label(LocalizedStringKey(error), systemImage: "exclamationmark.triangle")
                                 .font(NoahFont.callout)
                                 .foregroundStyle(NoahColor.destructive)
                         }

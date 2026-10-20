@@ -106,14 +106,14 @@ struct TransactionDetailView: View {
         }
     }
 
-    private func detail(_ label: LocalizedStringKey, _ value: String, copyable: Bool = false) -> some View {
+    private func detail(_ label: String, _ value: String, copyable: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(label).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+                Text(LocalizedStringKey(label)).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
                 Spacer()
                 if copyable {
                     Button { copy(value) } label: { Image(systemName: "doc.on.doc").frame(minWidth: 44, minHeight: 44) }
-                        .accessibilityLabel(Text("Copy \(Text(label))"))
+                        .accessibilityLabel(Text(L10n.text("Copy {label}", L10n.text(label))))
                 }
             }
             Text(value).font(NoahFont.callout).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
@@ -122,15 +122,15 @@ struct TransactionDetailView: View {
         .padding(.vertical, 8)
     }
 
-    @ViewBuilder private func amountDetail(_ label: LocalizedStringKey, _ amount: Int64?) -> some View {
+    @ViewBuilder private func amountDetail(_ label: String, _ amount: Int64?) -> some View {
         if let amount { detail(label, BitcoinAmount.format(sats: amount, unit: app.amountUnit)) }
     }
-    @ViewBuilder private func destinations(_ label: LocalizedStringKey, _ values: [HistoryTransaction.Destination]?) -> some View {
+    @ViewBuilder private func destinations(_ label: String, _ values: [HistoryTransaction.Destination]?) -> some View {
         if let values, !values.isEmpty {
             detail(label, values.map { "\($0.destination) · \(BitcoinAmount.format(sats: $0.amount_sat, unit: app.amountUnit))" }.joined(separator: "\n"), copyable: true)
         }
     }
-    @ViewBuilder private func vtxos(_ label: LocalizedStringKey, _ values: [String]?) -> some View {
+    @ViewBuilder private func vtxos(_ label: String, _ values: [String]?) -> some View {
         if let values, !values.isEmpty { detail(label, values.joined(separator: "\n"), copyable: true) }
     }
     private func copy(_ value: String) {

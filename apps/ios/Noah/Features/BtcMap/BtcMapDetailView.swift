@@ -22,7 +22,7 @@ struct BtcMapDetailView: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(merchant.name).font(NoahFont.title)
-                        Label(place.category.label, systemImage: place.category.symbol).font(NoahFont.footnote).foregroundStyle(.secondary)
+                        Label(LocalizedStringKey(place.category.label), systemImage: place.category.symbol).font(NoahFont.footnote).foregroundStyle(.secondary)
                         if let boost = place.boosted_until, let date = parseDate(boost), date > .now {
                             Text("Featured").font(NoahFont.footnote).foregroundStyle(NoahColor.brand)
                         }

@@ -456,7 +456,7 @@ struct SendOutcomeView: View {
         }
         .alert(SendOverrideAudit.titleText, isPresented: $confirmOverride) {
             Button("Keep waiting", role: .cancel) {}
-            Button(SendOverrideAudit.confirmationText, role: .destructive) {
+            Button(LocalizedStringKey(SendOverrideAudit.confirmationText), role: .destructive) {
                 controller.startNewPaymentAfterHistoryCheck(confirmed: true)
                 if !controller.locked { done() }
             }

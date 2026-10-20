@@ -7,7 +7,9 @@ enum L10n {
 
     static func text(_ source: String, _ arguments: Any..., locale: String = LegacyLocale.resolved()) -> String {
         let english = localizedBundle("en").localizedString(forKey: source, value: source, table: nil)
-        let localized = localizedBundle(locale).localizedString(forKey: source, value: english, table: nil)
+        let candidate = localizedBundle(locale).localizedString(forKey: source, value: english, table: nil)
+        // Xcode emits the raw source key for untranslated target-language catalog entries.
+        let localized = candidate == source ? english : candidate
         // Avoid treating a native-only string containing a percent sign as a format string.
         guard !arguments.isEmpty else { return localized }
         return String(format: localized, locale: Locale(identifier: locale), arguments: arguments.map { String(describing: $0) })
