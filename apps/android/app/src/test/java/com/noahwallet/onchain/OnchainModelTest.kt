@@ -14,19 +14,20 @@ class OnchainModelTest {
         var entered: CompletableDeferred<Unit>? = null
         var attempts = emptyList<OnchainOperationJournal.Attempt>()
         var detailCalls = 0
+        val discarded = mutableListOf<OnchainQuote>()
         val overview = OnchainOverview("wallet", emptyList(), emptyList(), 100_000, 100, 0, null)
         fun dependencies() = OnchainModel.Dependencies(
             { ready }, { overview }, { action, ids, amount, destination ->
                 entered?.complete(Unit); gate?.await(); OnchainQuote(action, "wallet", ids, destination, amount)
             }, { calls++; "submitted" }, { attempts }, { id -> attempts = attempts.filter { it.id != id } },
-            { checks++; false }, {}, { id -> detailCalls++; ExitModel(id, 1, "Canceled", ExitDetails(), listOf("Start", "Canceled"), emptyList()) }, { receiptRefreshes++ })
+            { checks++; false }, {}, { id -> detailCalls++; ExitModel(id, 1, "Canceled", ExitDetails(), listOf("Start", "Canceled"), emptyList()) }, { receiptRefreshes++ }, discard = { discarded.add(it) })
     }
     @Test fun lateReviewCannotInstallAfterInputsOrReadinessChange() = runBlocking {
         val f = Fake().apply { gate = CompletableDeferred(); entered = CompletableDeferred() }
         val m = OnchainModel(f.dependencies())
         val request = launch { m.review(OnchainAction.board, amount = 30_000) }
         f.entered!!.await(); m.invalidate(); f.gate!!.complete(Unit); request.join()
-        assertNull(m.quote); assertEquals(0, f.calls)
+        assertNull(m.quote); assertEquals(0, f.calls); assertEquals(1, f.discarded.size)
         f.ready = false; m.review(OnchainAction.board); assertNull(m.quote)
     }
     @Test fun suspensionAfterReviewPreventsSubmissionAndClearsDetails() = runBlocking {

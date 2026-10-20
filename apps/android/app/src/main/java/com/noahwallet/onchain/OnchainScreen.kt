@@ -48,7 +48,7 @@ internal fun onchainDependencies(app: AppModel) = OnchainModel.Dependencies(
         withContext(Dispatchers.IO) { app.session.onchainJournal.overrideUncertain(id) }
     } },
     detail = app.session::exitDetail, refreshReceipts = app.session::refreshOnchainReceiptFees,
-    claimAddress = app.session::exitDepositAddress, claimOwnership = app.session::exitClaimDestinationIsMine,
+    claimAddress = app.session::exitDepositAddress, claimOwnership = app.session::exitClaimDestinationIsMine, discard = app.session::discardBoardReview,
 )
 
 @Composable
@@ -64,6 +64,14 @@ internal fun OnchainScreen(app: AppModel, model: OnchainModel, content: @Composa
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) model.invalidate() }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer); model.invalidate() }
+    }
+    LaunchedEffect(model, app.session) { app.session.walletChanges.collect { model.unavailable() } }
+    LaunchedEffect(model.quote) {
+        val held = model.quote ?: return@LaunchedEffect
+        if (held.preparedBoard != null) {
+            delay((held.createdAt + BoardPrepared.lifetimeMillis - System.currentTimeMillis()).coerceAtLeast(0))
+            if (model.quote == held) model.invalidate()
+        }
     }
     LaunchedEffect(model, app.isWalletSuspended) {
         if (app.isWalletSuspended) { model.unavailable(); return@LaunchedEffect }
@@ -124,13 +132,18 @@ private fun OnchainStatus(app: AppModel, model: OnchainModel) {
             Text("Repeat protection overridden: " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(audit.overriddenAt)))
             Text(audit.statusMessage); Text(audit.title); Text(audit.warning); Text(audit.confirmation)
         }
+        attempt.receipt?.chainStatus?.let { Text(it.text) }
+        attempt.receipt?.statusError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         attempt.receipt?.onchainFee?.let { AmountRow(app, "Actual onchain fee", it) }
         (attempt.receipt?.txid ?: attempt.txid)?.let { TransactionRow(it) }
-        if (attempt.receipt != null) TextButton({ scope.launch { model.acknowledge(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text("Done") }
+        if (attempt.receipt != null && !attempt.receipt.broadcastRetryPending) {
+            TextButton({ scope.launch { model.acknowledge(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text("Done") }
+            if (attempt.receipt.txid != null) TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text("Check status") }
+        }
         else {
             Text("Noah checks again automatically as your wallet syncs.")
             TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text("Check status") }
-            if (attempt.overrideAudit == null) TextButton({ overrideID = attempt.id }, enabled = !model.busy && !app.isWalletSuspended) { Text("Override repeat protection…", color = MaterialTheme.colorScheme.error) }
+            if (attempt.receipt == null && attempt.overrideAudit == null) TextButton({ overrideID = attempt.id }, enabled = !model.busy && !app.isWalletSuspended) { Text("Override repeat protection…", color = MaterialTheme.colorScheme.error) }
         }
     }
     overrideID?.let { id -> AlertDialog(onDismissRequest = { overrideID = null },
@@ -145,20 +158,25 @@ private fun OnchainStatus(app: AppModel, model: OnchainModel) {
 @Composable
 internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> Unit, confirm: () -> Unit,
     cancelTitle: String = "Cancel", cancel: () -> Unit = onDismiss) {
-    var current by remember(quote) { mutableStateOf(ExitRules.current(quote.createdAt)) }
-    LaunchedEffect(quote) { while (isActive && current) { delay(250); current = ExitRules.current(quote.createdAt) } }
+    var current by remember(quote) { mutableStateOf(quote.current()) }
+    LaunchedEffect(quote) { while (isActive && current) { delay(250); current = quote.current() } }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(quote.action.title, style = MaterialTheme.typography.headlineSmall)
-            AmountRow(app, if (quote.action == OnchainAction.board) "Estimated boarding amount" else "Amount selected", quote.amount)
+            AmountRow(app, if (quote.action == OnchainAction.board) "Amount boarded" else "Amount selected", quote.amount)
             if (quote.ids.isNotEmpty()) Text("VTXOs selected: ${quote.ids.size}")
             if (quote.action != OnchainAction.cancel) {
-                AmountRow(app, when (quote.action) { OnchainAction.board -> "Estimated Ark boarding fee"; OnchainAction.refresh -> "Refresh fee"; else -> "Estimated claim fee" }, quote.fee)
+                AmountRow(app, when (quote.action) { OnchainAction.board -> "Ark fee"; OnchainAction.refresh -> "Refresh fee"; else -> "Estimated claim fee" }, quote.fee)
                 if (quote.action in setOf(OnchainAction.board, OnchainAction.startExit, OnchainAction.progress))
-                    AmountRow(app, if (quote.action == OnchainAction.board) "Estimated onchain fee" else "Estimated broadcast fees", quote.chainFee)
-                AmountRow(app, if (quote.action == OnchainAction.board) "Estimated Ark balance receives" else "Amount after fee", quote.net)
+                    AmountRow(app, if (quote.action == OnchainAction.board) "Onchain fee" else "Estimated broadcast fees", quote.chainFee)
+                AmountRow(app, if (quote.action == OnchainAction.board) "Ark receives" else "Amount after fee", quote.net)
             }
-            if (quote.automatic) AmountRow(app, "Estimated onchain reserve", quote.confirmed - quote.amount - quote.chainFee)
+            quote.preparedBoard?.let { prepared ->
+                AmountRow(app, "Total leaving onchain wallet", quote.totalLeaving)
+                DetailRow("Signed transaction size", "${prepared.vsize} vB")
+                DetailRow("Inputs", "${prepared.inputs.size}")
+            }
+            if (quote.automatic) AmountRow(app, "Onchain reserve left", quote.confirmed - quote.amount - quote.chainFee)
             quote.destination?.let { DetailRow("Destination", it) }
             quote.externalDestinationWarning?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Text(reviewExplanation(quote))
@@ -173,8 +191,8 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
     }
 }
 internal fun reviewExplanation(quote: OnchainQuote): String = when (quote.action) {
-    OnchainAction.board -> "Move onchain bitcoin into Ark. Fees and received amounts are estimates. The final fee may be higher if more coins are needed. Funds become spendable after the board completes." +
-        (if (quote.boardAll) " MAX boards all available onchain funds, including spendable pending funds. The final boarding amount may differ from this estimate." else "")
+    OnchainAction.board -> "Move onchain bitcoin into Ark. The amounts and fees shown are exact for this prepared transaction. Funds become spendable after the board completes." +
+        (if (quote.boardAll) " MAX boards confirmed funds only; the onchain fee is deducted from that balance." else " The onchain fee is paid in addition to the boarding amount.")
     OnchainAction.refresh -> "This refreshes the selected VTXOs in a delegated Ark round."
     OnchainAction.startExit -> "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."
     OnchainAction.progress -> "This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process. Fees are paid from your onchain balance. Cancellation is possible only before the final exit transaction is broadcast."

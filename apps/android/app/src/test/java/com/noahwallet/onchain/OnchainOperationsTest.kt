@@ -24,6 +24,23 @@ class OnchainOperationsTest {
         var balance = 100_000L
         var fee = 330L
         var chainRate = 250L
+        var exactFee = 1543L
+        var submitOutcome: BroadcastOutcome = BroadcastOutcome.Accepted
+        var submitError: Exception? = null
+        var beforeSubmit: suspend () -> Unit = {}
+        lateinit var attemptFile: File
+        val preparations = mutableListOf<PreparedBoard>()
+        val discarded = mutableListOf<String>()
+        val bound = mutableMapOf<String, OnchainQuote>()
+        override suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard {
+            val gross = if (all) balance - exactFee else amount
+            return PreparedBoard("prepared-${preparations.size}", "board-tx", gross.toULong(), (gross - fee).toULong(), fee.toULong(), exactFee.toULong(), 199u, listOf(OutPoint("input", 0u))).also { preparations.add(it) }
+        }
+        override fun bindBoard(quote: OnchainQuote) { bound[quote.preparedBoard!!.id] = quote }
+        override fun claimBoard(quote: OnchainQuote) { if (bound[quote.preparedBoard!!.id] != quote) fail(OnchainFailure.changed) }
+        override suspend fun discardBoard(id: String, includingClaimed: Boolean) { discarded.add(id); bound.remove(id) }
+        override suspend fun allExits() = states.keys.mapNotNull { status(it) }
+        override suspend fun transactionStatus(txid: String): TransactionStatus = TransactionStatus.InMempool
         var items = listOf(Companion.vtxo("a"))
         var active = listOf<ExitVtxo>()
         var states = mutableMapOf<String, ExitState>()
@@ -40,15 +57,17 @@ class OnchainOperationsTest {
         override suspend fun vtxos() = items
         override suspend fun vtxo(id: String) = Companion.vtxo(id)
         override suspend fun exits() = active
-        override suspend fun status(id: String) = states[id]?.let { ExitTransactionStatus(id, it, listOf(ExitState.Start(100u), it), 0u, emptyList()) }
+        override suspend fun status(id: String) = states[id]?.let { ExitTransactionStatus(id, 30_000u, it, listOf(ExitState.Start(100u), it), 0u, emptyList()) }
         override suspend fun tip() = 100L
         override suspend fun expiring(threshold: UInt) = emptySet<String>()
         override suspend fun legacyExitIDs() = listOf("legacy")
         override suspend fun pendingTotal() = 0L
         override suspend fun claimableHeight(): Long? = null
-        override suspend fun board(amount: Long, all: Boolean): PendingBoard {
-            calls.add(if (all) "boardAll" else "board:$amount")
-            return PendingBoard(listOf("new"), amount.toULong(), "board-tx")
+        override suspend fun submitBoard(quote: OnchainQuote): BoardResult {
+            beforeSubmit()
+            calls.add("submit:${quote.preparedBoard!!.id}")
+            submitError?.let { throw it }
+            return BoardResult(quote.preparedBoard.txid, submitOutcome, listOf("new"))
         }
         override suspend fun transactions(): List<WalletTransaction> {
             calls.add("transactions")
@@ -68,39 +87,48 @@ class OnchainOperationsTest {
         try {
             val journal = OnchainOperationJournal(OnchainFile(File(root, "attempt")) {})
             val history = ExitHistoryStore(OnchainFile(File(root, "history")) {})
-            val wallet = Wallet()
+            val wallet = Wallet().apply { attemptFile = File(root, "attempt") }
             withTimeout(10_000) { body(wallet, OnchainOperations(wallet, journal, history), journal, history) }
         } finally { root.deleteRecursively() }
     }
-    @Test fun maxUsesBoardAllAndMissingActualFeeDoesNotLoseReceipt() = runBlocking { fixture { wallet, ops, journal, _ ->
+    @Test fun maxUsesExactConfirmedDrainAndJournalsTxidBeforeSubmit() = runBlocking { fixture { wallet, ops, journal, _ ->
         val quote = ops.quote(OnchainAction.board)
         assertTrue(quote.boardAll)
-        assertEquals(99_792L, quote.amount)
+        assertEquals(98_457L, quote.amount)
+        assertEquals(98_127L, quote.net)
+        assertEquals(1543L, quote.chainFee)
+        assertEquals(100_000L, quote.totalLeaving)
+        assertEquals(199L, quote.preparedBoard!!.vsize)
+        assertEquals(1, quote.preparedBoard.inputs.size)
+        wallet.beforeSubmit = {
+            val durable = kotlinx.serialization.json.Json.decodeFromString<List<OnchainOperationJournal.Attempt>>(wallet.attemptFile.readText()).single()
+            assertEquals("board-tx", durable.txid)
+            assertNull(durable.receipt)
+        }
         wallet.feesUnavailable = true
         ops.execute(quote)
-        assertEquals(listOf("boardAll", "transactions"), wallet.calls)
+        assertEquals(listOf("submit:prepared-0"), wallet.calls)
         assertEquals("board-tx", journal.loadAll().single().txid)
-        assertNull(journal.loadAll().single().receipt!!.onchainFee)
-        wallet.feesUnavailable = false
-        ops.refreshReceiptFees()
         assertEquals(1543L, journal.loadAll().single().receipt!!.onchainFee)
-        assertEquals(1, wallet.calls.count { it == "boardAll" })
+        assertEquals(listOf("prepared-0"), wallet.discarded)
+        assertEquals(1, wallet.preparations.size)
     } }
-    @Test fun automaticQuoteOnlyPlansWithEstimatedReserveAndThreshold() = runBlocking { fixture { wallet, ops, _, _ ->
+    @Test fun automaticQuoteRepreparesOnceAndShowsExactReserve() = runBlocking { fixture { wallet, ops, _, _ ->
         val quote = checkNotNull(ops.autoBoardQuote())
-        assertEquals(94_792L, quote.amount)
+        assertEquals(93_457L, quote.amount)
+        assertEquals(5000L, quote.reserveLeft)
         assertTrue(quote.automatic)
         assertFalse(quote.boardAll)
+        assertEquals(2, wallet.preparations.size)
+        assertEquals(listOf("prepared-0"), wallet.discarded)
         assertTrue(wallet.calls.isEmpty())
         wallet.balance = 25_537
         assertNull(ops.autoBoardQuote())
-        wallet.balance = 25_538
-        assertNotNull(ops.autoBoardQuote())
         assertTrue(wallet.calls.isEmpty())
     } }
     @Test fun staleChangedFeesBalanceIdentityAndInputsPreventAllMutations() = runBlocking { fixture { wallet, ops, journal, _ ->
         val quote = ops.quote(OnchainAction.board, amount = 30_000)
-        val invalid = listOf(quote.copy(createdAt = System.currentTimeMillis() - 30_000), quote.copy(walletID = "other"),
+        val invalid = listOf(quote.copy(createdAt = System.currentTimeMillis() - 120_000), quote.copy(walletID = "other"),
             quote.copy(fee = quote.fee + 1), quote.copy(chainFee = quote.chainFee + 1), quote.copy(confirmed = quote.confirmed + 1))
         for (q in invalid) assertTrue(runCatching { ops.execute(q) }.isFailure)
         val exit = ops.quote(OnchainAction.startExit, listOf("a"))
@@ -144,7 +172,7 @@ class OnchainOperationsTest {
         val overview = ops.overview(24u)
         assertEquals("Canceled", overview.exits.single().state)
         assertEquals(listOf("Start", "Canceled"), ops.detail("legacy")!!.timeline.map { it.state })
-        assertEquals(listOf("legacy"), history.ids("wallet"))
+        assertTrue(history.ids("wallet").isEmpty())
         assertTrue(wallet.calls.isEmpty())
     } }
     @Test fun reviewedDestinationIsDrainedAndJournaledForOwnAndExternalClaims() = runBlocking {
@@ -207,5 +235,56 @@ class OnchainOperationsTest {
         validateClaimDestination("bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202", "regtest")
         validateClaimDestination("tb1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq0l98cr", "signet")
     }
+
+    @Test fun explicitGrossIsNeverRebuiltAndReturnedFeesAreExact() = runBlocking { fixture { wallet, ops, journal, _ ->
+        val reviewed = ops.quote(OnchainAction.board, amount = 30_000)
+        assertEquals(30_000L, reviewed.amount); assertEquals(29_670L, reviewed.net)
+        assertEquals(31_543L, reviewed.totalLeaving)
+        assertFalse(reviewExplanation(reviewed).contains("estimate"))
+        wallet.chainRate = 2500 // The already signed draft remains the approved transaction.
+        ops.execute(reviewed)
+        assertEquals(1, wallet.preparations.size)
+        assertEquals(reviewed.chainFee, journal.loadAll().single().receipt!!.onchainFee)
+    } }
+    @Test fun outcomesAndTypedSubmissionErrorsKeepOnlyPotentialDeliveriesLocked() = runBlocking {
+        val cases = listOf<Any>(BroadcastOutcome.Accepted, BroadcastOutcome.Failed("transport"), BroadcastOutcome.NotAttempted("setup"),
+            BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND, BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE, BarkErrorCode.PREPARED_BOARD_CHANGED,
+            BarkErrorCode.PERSISTENCE, BarkErrorCode.OTHER, BarkErrorCode.INSUFFICIENT_FUNDS)
+        for (case in cases) fixture { wallet, ops, journal, _ ->
+            val reviewed = ops.quote(OnchainAction.board, amount = 30_000)
+            if (case is BroadcastOutcome) wallet.submitOutcome = case
+            else wallet.submitError = BarkError("never classify diagnostics", case as BarkErrorCode)
+            runCatching { ops.execute(reviewed) }
+            val noSubmission = case is BroadcastOutcome.NotAttempted || case in setOf(BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND, BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE, BarkErrorCode.PREPARED_BOARD_CHANGED)
+            assertEquals(case.toString(), noSubmission, journal.loadAll().isEmpty())
+            if (case is BroadcastOutcome.Failed) {
+                val attempt = journal.loadAll().single()
+                assertTrue(attempt.receipt!!.broadcastRetryPending)
+                assertTrue(attempt.receipt.message.contains("keep retrying"))
+                assertTrue(runCatching { journal.acknowledge(attempt.id) }.isFailure)
+            }
+            assertEquals(listOf(reviewed.preparedBoard!!.id), wallet.discarded)
+        }
+    }
+    @Test fun typedPreparationCopyAndTwoMinuteExpiry() {
+        val expected = mapOf(BarkErrorCode.BELOW_MINIMUM_BOARD_AMOUNT to OnchainFailure.belowMinimum,
+            BarkErrorCode.TOO_MANY_INPUTS to OnchainFailure.tooManyInputs,
+            BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE to OnchainFailure.reserved,
+            BarkErrorCode.PREPARED_BOARD_CHANGED to OnchainFailure.changed,
+            BarkErrorCode.UNSUPPORTED_OPERATION to OnchainFailure.notSynced)
+        expected.forEach { (code, reason) -> assertEquals(reason, boardFailure(BarkError("untrusted", code))) }
+        val quote = OnchainQuote(OnchainAction.board, "wallet", createdAt = 1000,
+            preparedBoard = BoardPrepared("id", "tx", 199, listOf(BoardInput("in", 0u))))
+        assertTrue(quote.current(120_999)); assertFalse(quote.current(121_000)); assertFalse(quote.current(999))
+    }
+    @Test fun persistedListingOwnsTerminalDiscoveryAndExactAmountsWithoutVtxoLookupOrAppIndex() = runBlocking { fixture { wallet, ops, _, history ->
+        wallet.states["imported-canceled"] = ExitState.Canceled(100u)
+        wallet.states["imported-claimed"] = ExitState.Claimed(101u, "claim-tx", BlockRef(101u, "block"))
+        assertTrue(wallet.active.isEmpty()); assertTrue(history.ids("wallet").isEmpty())
+        val all = ops.overview(24u).exits
+        assertEquals(setOf("Canceled", "Claimed"), all.map { it.state }.toSet())
+        assertTrue(all.all { it.amount == 30_000L && it.timeline.first().state == "Start" })
+        assertEquals(all, OnchainOperations(wallet, OnchainOperationJournal(OnchainFile(File(wallet.attemptFile.parentFile, "reopened")) {}), history).overview(24u).exits)
+    } }
 
 }

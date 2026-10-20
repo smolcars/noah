@@ -1,7 +1,7 @@
 package com.noahwallet.onchain
 
 import androidx.compose.runtime.*
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.*
 
 /** UI state never replays a mutation. Refresh reconciles cached evidence, including retained originals. */
 class OnchainModel(private val dependencies: Dependencies, private val detailID: String? = null) {
@@ -14,6 +14,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         val refreshReceipts: suspend () -> Unit,
         val claimAddress: suspend () -> String = { fail(OnchainFailure.unavailable) },
         val claimOwnership: suspend (String) -> Boolean = { fail(OnchainFailure.unavailable) },
+        val discard: suspend (OnchainQuote) -> Unit = {},
     )
     var overview by mutableStateOf<OnchainOverview?>(null); private set
     var exit by mutableStateOf<ExitModel?>(null); private set
@@ -50,7 +51,12 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         catch (_: Exception) { if (address == claimDestination) claimDestinationError = "Enter a valid Bitcoin address for this network when the wallet is ready." }
     }
     private var generation = 0
-    fun invalidate() { generation++; quote = null }
+    private val disposalScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    fun invalidate() {
+        generation++
+        quote?.let { held -> disposalScope.launch { dependencies.discard(held) } }
+        quote = null
+    }
     fun unavailable() { invalidate(); overview = null; exit = null }
     private fun visible(saved: List<OnchainOperationJournal.Attempt>) = saved.filter { it.overrideAudit?.acknowledgedAt == null }
     suspend fun load() {
@@ -60,7 +66,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             val saved = dependencies.attempts()
             attempts = visible(saved)
             if (!dependencies.ready()) { unavailable(); fail(OnchainFailure.unavailable) }
-            for (attempt in saved.filter { it.receipt == null }) {
+            for (attempt in saved.filter { it.receipt == null || it.receipt.txid != null }) {
                 try { dependencies.check(attempt.id) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { }
             }
             try { dependencies.refreshReceipts() } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { }
@@ -82,10 +88,12 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             if (!dependencies.ready()) fail(OnchainFailure.unavailable)
             attempts = visible(dependencies.attempts())
             if (attempts.any { it.blocks(action, ids) }) fail(OnchainFailure.busy)
-            val fresh = dependencies.quote(action, ids, amount, destination)
-            if (token == generation && dependencies.ready()) quote = fresh
+            val caller = currentCoroutineContext()
+            val fresh = withContext(NonCancellable) { dependencies.quote(action, ids, amount, destination) }
+            if (caller.isActive && token == generation && dependencies.ready()) quote = fresh
+            else withContext(NonCancellable) { dependencies.discard(fresh) }
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't estimate fees. Nothing was submitted. Review again when the wallet is ready." }
+        catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready." }
         finally { busy = false }
     }
     /** The view must present the quote and obtain explicit consent before calling this. */
@@ -94,11 +102,11 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         val reviewed = quote ?: return
         quote = null; busy = true; error = null
         try {
-            if (!dependencies.ready() || !ExitRules.current(reviewed.createdAt)) fail(OnchainFailure.changed)
+            if (!dependencies.ready() || !reviewed.current()) fail(OnchainFailure.changed)
             message = dependencies.execute(reviewed)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: OnchainFailure.uncertain.text }
-        finally { busy = false }
+        finally { withContext(NonCancellable) { dependencies.discard(reviewed) }; busy = false }
         val submissionError = error
         load()
         if (submissionError != null) error = submissionError

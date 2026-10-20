@@ -1,5 +1,8 @@
 package com.noahwallet.onchain
 
+import com.noahwallet.services.wallet.ChainStatus
+import io.github.niteshbalusu11.bark.*
+
 internal class OnchainOperations(
     private val wallet: OnchainWalletAccess, private val journal: OnchainOperationJournal,
     private val history: ExitHistoryStore, private val ready: () -> Boolean = { true },
@@ -9,32 +12,38 @@ internal class OnchainOperations(
         val tip = wallet.tip()
         val expiring = wallet.expiring(threshold)
         val vtxos = wallet.vtxos().map { vtxoModel(it, tip, expiring) }
-        history.remember(wallet.exits().map { it.vtxoId } + wallet.legacyExitIDs(), wallet.walletID)
-        val exits = history.ids(wallet.walletID).mapNotNull { detail(it) }
+        // SDK persisted rows cover live and terminal exits, including wallets imported without Noah's index.
+        val exits = wallet.allExits().map(::exitModel)
         return OnchainOverview(wallet.walletID, vtxos, exits, wallet.confirmed(), tip, wallet.pendingTotal(), wallet.claimableHeight())
     }
     suspend fun detail(id: String): ExitModel? {
         val status = wallet.status(id) ?: return null
+        return exitModel(status)
+    }
+    private fun exitModel(status: ExitTransactionStatus): ExitModel {
         val current = exitState(status.state)
         val past = status.history.orEmpty().map(::exitState)
-        history.remember(listOf(id), wallet.walletID)
-        return ExitModel(id, wallet.vtxo(id).amountSats.toLong(), current.first, current.second, past.map { it.first }, past.map { it.second })
+        return ExitModel(status.vtxoId, status.amountSats.toLong(), current.first, current.second, past.map { it.first }, past.map { it.second })
     }
     suspend fun autoBoardQuote(): OnchainQuote? {
+        if (!ready()) fail(OnchainFailure.unavailable)
         val minimum = wallet.minimum() ?: fail(OnchainFailure.unavailable)
         val balance = wallet.confirmed()
-        if (balance < BoardingRules.threshold(minimum)) return null
-        val chainFee = BoardingRules.onchainFee(wallet.regularSatPerKwu())
-        var grossMinimum = BoardingRules.threshold(minimum)
-        repeat(5) {
-            val fee = wallet.boardFee(grossMinimum)
-            if (fee.netAmountSats.toLong() < BoardingRules.threshold(minimum)) grossMinimum += BoardingRules.threshold(minimum) - fee.netAmountSats.toLong()
+        // This candidate is never displayed: review always uses the signed transaction's exact values.
+        val candidate = balance - BoardingRules.reserve - BoardingRules.onchainFee(wallet.regularSatPerKwu())
+        if (candidate < BoardingRules.threshold(minimum)) return null
+        var prepared = quote(OnchainAction.board, amount = candidate, automatic = true)
+        if (prepared.reserveLeft < BoardingRules.reserve) {
+            wallet.discardBoard(checkNotNull(prepared.preparedBoard).id)
+            val reduced = prepared.amount - (BoardingRules.reserve - prepared.reserveLeft)
+            if (reduced <= 0) return null
+            prepared = quote(OnchainAction.board, amount = reduced, automatic = true)
         }
-        if (balance < grossMinimum + chainFee + BoardingRules.reserve) return null
-        val gross = balance - chainFee - BoardingRules.reserve
-        val fee = wallet.boardFee(gross)
-        if (BoardingRules.autoAmount(balance, minimum, chainFee, fee.feeSats.toLong()) == null) return null
-        return quote(OnchainAction.board, amount = gross, automatic = true)
+        if (prepared.reserveLeft < BoardingRules.reserve || prepared.net < BoardingRules.threshold(minimum) || !ready()) {
+            wallet.discardBoard(checkNotNull(prepared.preparedBoard).id)
+            return null
+        }
+        return prepared
     }
     suspend fun quote(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0,
         destination: String? = null, automatic: Boolean = false): OnchainQuote {
@@ -44,15 +53,21 @@ internal class OnchainOperations(
         if (ids.distinct().size != ids.size) fail(OnchainFailure.invalid)
         when (action) {
             OnchainAction.board -> {
-                val minimum = wallet.minimum() ?: fail(OnchainFailure.unavailable)
-                val chainFee = BoardingRules.onchainFee(wallet.regularSatPerKwu())
-                if (balance <= chainFee) fail(OnchainFailure.invalid)
-                val gross = if (amount == 0L) balance - chainFee else amount
-                if (gross <= 0 || gross > 2_100_000_000_000_000L || gross > balance - chainFee) fail(OnchainFailure.invalid)
-                val fee = wallet.boardFee(gross)
-                if (fee.netAmountSats.toLong() < minimum) fail(OnchainFailure.invalid)
-                if (automatic && BoardingRules.autoAmount(balance, minimum, chainFee, fee.feeSats.toLong()) != gross) fail(OnchainFailure.changed)
-                quote = quote.copy(amount = fee.grossAmountSats.toLong(), fee = fee.feeSats.toLong(), chainFee = chainFee, boardAll = amount == 0L)
+                if (amount < 0 || amount > 2_100_000_000_000_000L) fail(OnchainFailure.invalid)
+                val rate = ((wallet.regularSatPerKwu() + 249) / 250).coerceAtLeast(1).toULong()
+                val prepared = try { wallet.prepareBoard(amount, amount == 0L, rate) }
+                    catch (error: BarkError) { throw OnchainException(boardFailure(error)) }
+                try {
+                    if (!ready() || prepared.grossSats > Long.MAX_VALUE.toULong() ||
+                        prepared.netSats + prepared.arkFeeSats != prepared.grossSats) fail(OnchainFailure.changed)
+                    quote = quote.copy(amount = prepared.grossSats.toLong(), fee = prepared.arkFeeSats.toLong(),
+                        chainFee = prepared.onchainFeeSats.toLong(), boardAll = amount == 0L, feeRate = rate.toLong(),
+                        preparedBoard = BoardPrepared(prepared.id, prepared.txid, prepared.vsize.toLong(), prepared.inputs.map { BoardInput(it.txid, it.vout) }))
+                    wallet.bindBoard(quote)
+                } catch (error: Exception) {
+                    wallet.discardBoard(prepared.id)
+                    throw error
+                }
             }
             OnchainAction.refresh, OnchainAction.startExit -> {
                 val selected = wallet.vtxos().filter { vtxoState(it.state) == "Spendable" && it.id in ids }
@@ -88,19 +103,32 @@ internal class OnchainOperations(
         return quote
     }
     suspend fun execute(reviewed: OnchainQuote): String {
-        if (!ready() || !ExitRules.current(reviewed.createdAt, now())) fail(OnchainFailure.changed)
-        val fresh = quote(reviewed.action, reviewed.ids, if (reviewed.boardAll) 0 else reviewed.amount, reviewed.destination, reviewed.automatic)
-        if (!ready() || !reviewed.matches(fresh) || !ExitRules.current(reviewed.createdAt, now())) fail(OnchainFailure.changed)
+        if (!ready() || !reviewed.current(now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
+        if (reviewed.action == OnchainAction.board) {
+            if (reviewed.preparedBoard == null) fail(OnchainFailure.changed)
+            if (reviewed.automatic && (wallet.confirmed() != reviewed.confirmed || reviewed.reserveLeft < BoardingRules.reserve)) fail(OnchainFailure.changed)
+            wallet.claimBoard(reviewed)
+        } else {
+            val fresh = quote(reviewed.action, reviewed.ids, reviewed.amount, reviewed.destination, reviewed.automatic)
+            if (!ready() || !reviewed.matches(fresh) || !reviewed.current(now())) fail(OnchainFailure.changed)
+        }
         if (reviewed.action in setOf(OnchainAction.startExit, OnchainAction.claim, OnchainAction.cancel)) history.remember(reviewed.ids, reviewed.walletID)
-        return journal.perform(reviewed) { recordTransaction ->
+        try { return journal.perform(reviewed) { recordTransaction ->
             when (reviewed.action) {
                 OnchainAction.board -> {
-                    val board = wallet.board(reviewed.amount, reviewed.boardAll)
-                    recordTransaction(board.txid)
-                    // Optional fee failure cannot turn a returned submission into an uncertain outcome.
-                    val fee = try { wallet.transactions().find { it.txid == board.txid }?.onchainFeeSats?.toLong() }
-                        catch (_: Exception) { null }
-                    OnchainReceipt(OnchainReceipt.boardingMessage(fee), board.txid, fee)
+                    // This save must complete before the first SDK call that can accept/broadcast the board.
+                    recordTransaction(checkNotNull(reviewed.preparedBoard).txid)
+                    val result = try { wallet.submitBoard(reviewed) }
+                    catch (error: BarkError) {
+                        if (error.code in setOf(BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND, BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE, BarkErrorCode.PREPARED_BOARD_CHANGED))
+                            throw BoardNotSubmitted(boardFailure(error))
+                        throw error
+                    }
+                    if (result.txid != reviewed.preparedBoard.txid) fail(OnchainFailure.uncertain)
+                    if (result.broadcast is BroadcastOutcome.NotAttempted) throw BoardNotSubmitted(OnchainFailure.constructionFailed)
+                    val retry = result.broadcast is BroadcastOutcome.Failed
+                    OnchainReceipt(if (retry) "Boarding submitted, but network delivery is unconfirmed. Noah will keep retrying the broadcast. Do not board again."
+                        else OnchainReceipt.boardingMessage(reviewed.chainFee), result.txid, reviewed.chainFee, retry)
                 }
                 OnchainAction.refresh -> OnchainReceipt(wallet.refresh(reviewed.ids)?.let { "Refresh submitted to delegated round ${it.id}." } ?: "No refresh round was needed.")
                 OnchainAction.startExit -> {
@@ -125,11 +153,13 @@ internal class OnchainOperations(
                     OnchainReceipt("Exit canceled. The VTXO remains spendable.")
                 }
             }
-        }
+        } } finally { reviewed.preparedBoard?.let { wallet.discardBoard(it.id, includingClaimed = true) } }
     }
     suspend fun check(id: String): Boolean = checkOnchainAttempt(id, journal, object : OnchainAttemptReads {
         override val walletID = wallet.walletID
         override suspend fun transactionIDs() = wallet.transactions().map { it.txid }.toSet()
+        override suspend fun transactionStatus(txid: String) = ChainStatus.from(wallet.transactionStatus(txid))
+        override suspend fun boardTransactionIDs() = wallet.boardTransactionIDs()
         override suspend fun vtxoState(id: String) = vtxoState(wallet.vtxo(id).state)
         override suspend fun exitState(id: String) = wallet.status(id)?.let { exitState(it.state).first }
     })

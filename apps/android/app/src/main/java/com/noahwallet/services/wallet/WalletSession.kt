@@ -489,9 +489,9 @@ class WalletSession internal constructor(
 
     private class SdkHandles(val wallet: Wallet, val onchain: OnchainWallet, variant: String, warn: (String) -> Unit) : Handles {
         override val send = SdkSendWallet(wallet, onchain, variant, warn)
-        override suspend fun retrySendDiscards() { send.retryDiscards() }
-        override suspend fun discardSendReviews() { send.discardAll() }
-        override val m6 = BarkOnchainAccess(wallet, onchain)
+        override suspend fun retrySendDiscards() { send.retryDiscards(); m6.retryDiscards() }
+        override suspend fun discardSendReviews() { send.discardAll(); m6.discardAll() }
+        override val m6 = BarkOnchainAccess(wallet, onchain, warn)
         override suspend fun arkInfo() = wallet.arkInfo()
         override fun mailboxAuthorization(expiry: Long) = wallet.mailboxAuthorizationAt(expiry)
         override suspend fun debug(action: DebugAction, input: String): String {

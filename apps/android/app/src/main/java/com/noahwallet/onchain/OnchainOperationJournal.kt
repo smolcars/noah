@@ -1,6 +1,7 @@
 package com.noahwallet.onchain
 
 import com.noahwallet.services.storage.syncDirectory
+import com.noahwallet.services.wallet.ChainStatus
 import io.github.niteshbalusu11.bark.BarkError
 import io.github.niteshbalusu11.bark.BarkErrorCode
 import java.io.File
@@ -57,11 +58,19 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
         }
     }
     data class Evidence(val walletID: String, val vtxoStates: Map<String, String> = emptyMap(),
-        val exitStates: Map<String, String?> = emptyMap(), val transactionIDs: Set<String> = emptySet()) {
+        val exitStates: Map<String, String?> = emptyMap(), val transactionIDs: Set<String> = emptySet(),
+        val chainStatuses: Map<String, ChainStatus> = emptyMap(), val boardTransactionIDs: Set<String> = emptySet()) {
         fun receipt(attempt: Attempt): OnchainReceipt? {
             if (walletID != attempt.quote.walletID) return null
-            if (attempt.txid != null && attempt.txid in transactionIDs)
-                return OnchainReceipt("The recorded transaction is in this wallet's transaction history.", attempt.txid)
+            if (attempt.txid != null && (attempt.txid in transactionIDs || attempt.txid in boardTransactionIDs ||
+                    chainStatuses[attempt.txid]?.kind in setOf(ChainStatus.Kind.inMempool, ChainStatus.Kind.confirmed))) {
+                val prepared = attempt.quote.preparedBoard
+                val status = chainStatuses[attempt.txid]
+                val retry = prepared != null && status?.kind != ChainStatus.Kind.confirmed
+                return OnchainReceipt(if (retry) "Boarding submitted, but delivery is unconfirmed. Noah will keep retrying the broadcast. Do not board again."
+                    else "The recorded transaction was found. Review its network status.", attempt.txid,
+                    prepared?.let { attempt.quote.chainFee }, retry, status)
+            }
             val ids = attempt.quote.ids
             if (ids.isEmpty()) return null
             val resolved = when (attempt.quote.action) {
@@ -105,7 +114,8 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
             save(read().map { if (it.id == quote.id) it.copy(receipt = receipt) else it })
             receipt.message
         } catch (error: Exception) {
-            val failure = OnchainSubmission.preBroadcast(error, quote.action)
+            val failure = if (quote.preparedBoard != null) (error as? BoardNotSubmitted)?.reason
+                else OnchainSubmission.preBroadcast(error, quote.action)
             if (failure != null) { save(read().filter { it.id != quote.id }); fail(failure) }
             fail(OnchainFailure.uncertain)
         }
@@ -126,9 +136,23 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
         }
         if (updated != attempts) save(updated)
     }
+    suspend fun refreshStatus(id: String, status: ChainStatus?, error: String? = null) = mutex.withLock {
+        val attempts = read()
+        val updated = attempts.map { attempt ->
+            val receipt = attempt.receipt
+            if (attempt.id != id || receipt == null) attempt else {
+                val confirmed = status?.kind == ChainStatus.Kind.confirmed
+                attempt.copy(receipt = receipt.copy(chainStatus = status ?: receipt.chainStatus, statusError = error,
+                    broadcastRetryPending = receipt.broadcastRetryPending && !confirmed,
+                    message = if (confirmed && attempt.quote.action == OnchainAction.board) OnchainReceipt.boardingMessage(receipt.onchainFee) else receipt.message))
+            }
+        }
+        if (updated != attempts) save(updated)
+    }
     suspend fun acknowledge(id: String, now: Long = System.currentTimeMillis()) = mutex.withLock {
         val attempts = read()
         val attempt = attempts.find { it.id == id && it.receipt != null } ?: fail(OnchainFailure.uncertain)
+        if (attempt.receipt?.broadcastRetryPending == true) fail(OnchainFailure.busy)
         save(if (attempt.overrideAudit == null) attempts.filter { it.id != id } else attempts.map {
             if (it.id == id) it.copy(overrideAudit = attempt.overrideAudit.copy(acknowledgedAt = now)) else it })
     }
@@ -144,18 +168,27 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
 interface OnchainAttemptReads {
     val walletID: String
     suspend fun transactionIDs(): Set<String>
+    suspend fun transactionStatus(txid: String): ChainStatus? = null
+    suspend fun boardTransactionIDs(): Set<String> = emptySet()
     suspend fun vtxoState(id: String): String
     suspend fun exitState(id: String): String?
 }
 suspend fun checkOnchainAttempt(id: String, journal: OnchainOperationJournal, reads: OnchainAttemptReads): Boolean {
     val attempt = journal.loadAll().find { it.id == id } ?: fail(OnchainFailure.changed)
     if (attempt.quote.walletID != reads.walletID) fail(OnchainFailure.changed)
+    val txid = attempt.receipt?.txid ?: attempt.txid
+    val status = try { txid?.let { reads.transactionStatus(it) } }
+        catch (error: Exception) { journal.refreshStatus(id, null, ChainStatus.errorText); throw error }
     val transactions = reads.transactionIDs()
+    val boards = if (attempt.quote.action == OnchainAction.board && txid != null) reads.boardTransactionIDs() else emptySet()
     val vtxos = mutableMapOf<String, String>()
     val exits = mutableMapOf<String, String?>()
     for (item in attempt.quote.ids) {
         if (attempt.quote.action == OnchainAction.refresh) vtxos[item] = reads.vtxoState(item)
         exits[item] = reads.exitState(item)
     }
-    return journal.reconcile(id, OnchainOperationJournal.Evidence(reads.walletID, vtxos, exits, transactions))
+    val resolved = journal.reconcile(id, OnchainOperationJournal.Evidence(reads.walletID, vtxos, exits, transactions,
+        if (txid != null && status != null) mapOf(txid to status) else emptyMap(), boards))
+    journal.refreshStatus(id, status)
+    return resolved || attempt.receipt != null
 }

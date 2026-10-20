@@ -23,7 +23,14 @@ internal interface OnchainWalletAccess {
     suspend fun boardFee(amount: Long): FeeEstimate = error("Unsupported")
     suspend fun refreshFee(ids: List<String>): FeeEstimate = error("Unsupported")
     suspend fun exitFee(ids: List<String>, destination: String?): EmergencyExitFeeEstimate = error("Unsupported")
-    suspend fun board(amount: Long, all: Boolean): PendingBoard = error("Unsupported")
+    suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard = error("Unsupported")
+    fun bindBoard(quote: OnchainQuote) {}
+    fun claimBoard(quote: OnchainQuote) {}
+    suspend fun submitBoard(quote: OnchainQuote): BoardResult = error("Unsupported")
+    suspend fun discardBoard(id: String, includingClaimed: Boolean = false) {}
+    suspend fun allExits(): List<ExitTransactionStatus> = error("Unsupported")
+    suspend fun transactionStatus(txid: String): TransactionStatus = error("Unsupported")
+    suspend fun boardTransactionIDs(): Set<String> = emptySet()
     suspend fun refresh(ids: List<String>): RoundState? = error("Unsupported")
     suspend fun start(ids: List<String>): Unit = error("Unsupported")
     suspend fun progress(feeRate: Long?): List<ExitProgressStatus> = error("Unsupported")
@@ -32,7 +39,10 @@ internal interface OnchainWalletAccess {
     suspend fun cancel(id: String): Boolean = error("Unsupported")
 }
 
-internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain: OnchainWallet) : OnchainWalletAccess {
+internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain: OnchainWallet, warn: (String) -> Unit) : OnchainWalletAccess {
+    private val preparations = BoardPreparations(wallet::discardPreparedBoard, { wallet.submitPreparedBoard(it); Unit }, warn)
+    suspend fun retryDiscards() = preparations.retryDiscards()
+    suspend fun discardAll() = preparations.discardAll()
     override val walletID get() = wallet.fingerprint()
     override suspend fun confirmed() = onchain.balance().confirmedSats.toLong()
     override suspend fun tip() = onchain.tipHeight().toLong()
@@ -55,7 +65,25 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     override suspend fun boardFee(amount: Long) = wallet.estimateBoardFee(amount.toULong())
     override suspend fun refreshFee(ids: List<String>) = wallet.estimateRefreshFee(ids)
     override suspend fun exitFee(ids: List<String>, destination: String?) = wallet.estimateEmergencyExitFee(ids, feeRateSatPerVb = null, destination = destination)
-    override suspend fun board(amount: Long, all: Boolean) = if (all) wallet.boardAll() else wallet.boardAmount(amount.toULong())
+    override suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard {
+        val prepared = wallet.prepareBoard(if (all) OnchainSendAmount.DrainAll else OnchainSendAmount.Amount(amount.toULong()), rate, true)
+        preparations.retain(prepared.id)
+        return prepared
+    }
+    override fun bindBoard(quote: OnchainQuote) = preparations.bind(quote)
+    override fun claimBoard(quote: OnchainQuote) = preparations.claim(quote)
+    override suspend fun submitBoard(quote: OnchainQuote): BoardResult {
+        preparations.consume(quote)
+        return wallet.submitPreparedBoard(checkNotNull(quote.preparedBoard).id)
+    }
+    override suspend fun discardBoard(id: String, includingClaimed: Boolean) = preparations.discard(id, includingClaimed)
+    override suspend fun allExits() = wallet.listAllExits(includeHistory = true, includeTransactions = false)
+    override suspend fun transactionStatus(txid: String) = wallet.transactionStatus(txid)
+    override suspend fun boardTransactionIDs(): Set<String> = wallet.pendingBoards().map { it.txid }.toSet() +
+        wallet.history().filter { it.subsystemName == "bark.board" }.flatMap { movement ->
+            // Board movement output IDs identify the funding transaction, never its amount.
+            movement.outputVtxoIds.mapNotNull { id -> runCatching { wallet.getVtxoById(id).anchorPoint.txid }.getOrNull() }
+        }
     override suspend fun refresh(ids: List<String>) = wallet.refreshVtxosDelegated(ids)
     override suspend fun start(ids: List<String>) = wallet.startExitForVtxos(ids)
     override suspend fun progress(feeRate: Long?) = wallet.progressExits(feeRate?.toULong())

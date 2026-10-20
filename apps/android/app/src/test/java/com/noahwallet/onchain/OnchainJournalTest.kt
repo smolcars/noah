@@ -1,6 +1,7 @@
 package com.noahwallet.onchain
 
 import io.github.niteshbalusu11.bark.*
+import com.noahwallet.services.wallet.ChainStatus
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.*
@@ -184,4 +185,60 @@ class OnchainJournalTest {
         file.delete()
         assertTrue(store.ids("wallet").isEmpty())
     } }
+    @Test fun preparedCrashRecoveryUsesExactNetworkPendingBoardOrMovementIDNeverAmount() = runBlocking {
+        for (source in listOf("mempool", "confirmed", "pending", "cached", "missing", "lookalike")) fixture { file, journal ->
+            val quote = quote().copy(chainFee = 199, preparedBoard = BoardPrepared("local", "exact", 199, listOf(BoardInput("input", 0u))))
+            runCatching { journal.perform(quote) { record -> record("exact"); error("process died") } }
+            val reopened = journal(file)
+            val status = when (source) {
+                "mempool" -> ChainStatus(ChainStatus.Kind.inMempool)
+                "confirmed" -> ChainStatus(ChainStatus.Kind.confirmed, 123)
+                else -> ChainStatus(ChainStatus.Kind.notFound)
+            }
+            val evidence = OnchainOperationJournal.Evidence("wallet",
+                transactionIDs = if (source == "cached") setOf("exact") else setOf("unrelated"),
+                chainStatuses = mapOf("exact" to status),
+                boardTransactionIDs = if (source == "pending") setOf("exact") else setOf("old-board"))
+            val resolved = reopened.reconcile(quote.id, evidence)
+            assertEquals(source, source !in listOf("missing", "lookalike"), resolved)
+            val receipt = reopened.loadAll().single().receipt
+            if (resolved) { assertEquals("exact", receipt!!.txid); assertEquals(199L, receipt.onchainFee); assertEquals(source != "confirmed", receipt.broadcastRetryPending) }
+            else assertNull(receipt)
+        }
+    }
+    @Test fun failedBoardKeepsLockOnNotFoundAndMempoolAndTransportErrorsKeepLastKnownStatus() = runBlocking { fixture { _, journal ->
+        val quote = quote().copy(chainFee = 199, preparedBoard = BoardPrepared("local", "exact", 199, emptyList()))
+        journal.perform(quote) { record -> record("exact"); OnchainReceipt("Noah will keep retrying", "exact", 199, true) }
+        val mempool = ChainStatus(ChainStatus.Kind.inMempool)
+        for (status in listOf(ChainStatus(ChainStatus.Kind.notFound), mempool)) {
+            journal.refreshStatus(quote.id, status)
+            assertTrue(journal.loadAll().single().receipt!!.broadcastRetryPending)
+            assertTrue(runCatching { journal.acknowledge(quote.id) }.isFailure)
+        }
+        journal.refreshStatus(quote.id, null, ChainStatus.errorText)
+        assertEquals(mempool, journal.loadAll().single().receipt!!.chainStatus)
+        assertEquals(ChainStatus.errorText, journal.loadAll().single().receipt!!.statusError)
+        journal.refreshStatus(quote.id, ChainStatus(ChainStatus.Kind.confirmed, 200))
+        val receipt = journal.loadAll().single().receipt!!
+        assertFalse(receipt.broadcastRetryPending); assertNull(receipt.statusError)
+        assertEquals("Confirmed at block 200", receipt.chainStatus!!.text)
+        journal.acknowledge(quote.id); assertTrue(journal.loadAll().isEmpty())
+    } }
+    @Test fun claimReceiptUsesNetworkStatusWithoutSyncAndPreservesErrors() = runBlocking { fixture { _, journal ->
+        val quote = quote(OnchainAction.claim, listOf("vtxo"))
+        journal.perform(quote) { record -> record("claim"); OnchainReceipt("Claim submitted", "claim") }
+        var failure = false
+        val reads = object : OnchainAttemptReads {
+            override val walletID = "wallet"
+            override suspend fun transactionIDs() = emptySet<String>()
+            override suspend fun transactionStatus(txid: String): ChainStatus { assertEquals("claim", txid); if (failure) error("offline"); return ChainStatus(ChainStatus.Kind.confirmed, 201) }
+            override suspend fun vtxoState(id: String) = "Exited"
+            override suspend fun exitState(id: String) = "Claimed"
+        }
+        assertTrue(checkOnchainAttempt(quote.id, journal, reads))
+        failure = true; assertTrue(runCatching { checkOnchainAttempt(quote.id, journal, reads) }.isFailure)
+        assertEquals(201L, journal.loadAll().single().receipt!!.chainStatus!!.height)
+        assertNotNull(journal.loadAll().single().receipt!!.statusError)
+    } }
+
 }
