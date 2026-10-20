@@ -94,7 +94,8 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
 }
 @Composable private fun RecurringDatePicker(label: String, value: Long, time: Boolean, enabled: Boolean, change: (Long) -> Unit) {
     val context = LocalContext.current
-    val covered = com.noahwallet.ui.LocalWalletPrivacy.current.covered
+    val privacy by rememberUpdatedState(com.noahwallet.ui.LocalWalletPrivacy.current)
+    val covered = privacy.covered
     var picker by remember { mutableStateOf<android.app.Dialog?>(null) }
     DisposableEffect(covered, picker) {
         if (covered) picker?.hide() else picker?.show()
@@ -107,12 +108,12 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
             calendar.set(year, month, day)
             if (time) { picker = TimePickerDialog(context, { _, hour, minute -> calendar.set(Calendar.HOUR_OF_DAY, hour); calendar.set(Calendar.MINUTE, minute); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0); change(calendar.timeInMillis) }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), android.text.format.DateFormat.is24HourFormat(context)).also { dialog ->
                 dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-                dialog.setOnDismissListener { if (picker === dialog) picker = null }; dialog.show()
+                dialog.setOnDismissListener { if (picker === dialog) picker = null }; if (!privacy.covered) dialog.show()
             } }
             else change(calendar.timeInMillis)
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).also { dialog ->
                 dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-                dialog.setOnDismissListener { if (picker === dialog) picker = null }; dialog.show()
+                dialog.setOnDismissListener { if (picker === dialog) picker = null }; if (!privacy.covered) dialog.show()
             }
     }, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(tr("$label: ${if (time) recurringDate(value) else recurringDay(value)}")) }
 }
