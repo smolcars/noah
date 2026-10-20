@@ -19,15 +19,11 @@ struct AppLog: Sendable {
         }
     }
 
-    private static let subsystem = Bundle.main.bundleIdentifier ?? "com.noahwallet"
-
     let tag: String
-    private let logger: Logger
     private let file: LogFile
 
     init(_ tag: String, file: LogFile = .shared) {
-        self.tag = LogFile.redact(tag)
-        self.logger = Logger(subsystem: Self.subsystem, category: self.tag)
+        self.tag = tag
         self.file = file
     }
 
@@ -38,14 +34,7 @@ struct AppLog: Sendable {
     func e(_ message: String) { log(.error, message) }
 
     func log(_ level: Level, _ message: String) {
-        let message = LogFile.redact(message)
-        switch level {
-        case .verbose, .debug: logger.debug("\(message, privacy: .public)")
-        case .info: logger.info("\(message, privacy: .public)")
-        case .warn: logger.warning("\(message, privacy: .public)")
-        case .error: logger.error("\(message, privacy: .public)")
-        }
-        file.append(level: level, tag: tag, message: message)
+        file.append(level: level, tag: tag, message: message, systemLog: true)
     }
 }
 
@@ -84,17 +73,27 @@ final class LogFile: @unchecked Sendable {
         self.queue = queue
     }
 
-    func append(level: AppLog.Level, tag: String, message: String, date: Date = Date()) {
-        let cleaned = Self.redact(message).trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "\n", with: "\n  ")
-        let tag = Self.redact(tag)
-        // Admission and queue ordering only. Rust callbacks never wait for filesystem work.
+    func append(level: AppLog.Level, tag: String, message: String, date: Date = Date(),
+                systemLog: Bool = false) {
+        // Only admission holds the lock; raw text stays in the bounded in-memory queue.
         lock.withLock {
             guard pending < capacity else { dropped += 1; return }
             enqueueDroppedMarker()
             pending += 1
             queue.async { [self] in
-                persist(level: level, tag: tag, message: cleaned, date: date)
+                let cleaned = Self.redact(message)
+                let safeTag = Self.redact(tag)
+                if systemLog {
+                    let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.noahwallet", category: safeTag)
+                    switch level {
+                    case .verbose, .debug: logger.debug("\(cleaned, privacy: .public)")
+                    case .info: logger.info("\(cleaned, privacy: .public)")
+                    case .warn: logger.warning("\(cleaned, privacy: .public)")
+                    case .error: logger.error("\(cleaned, privacy: .public)")
+                    }
+                }
+                persist(level: level, tag: safeTag, message: cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+                    .replacingOccurrences(of: "\n", with: "\n  "), date: date)
                 lock.withLock {
                     pending -= 1
                     if pending == 0 { enqueueDroppedMarker() }
@@ -243,13 +242,18 @@ final class LogFile: @unchecked Sendable {
             let source = views.last!
             let matches = jsonEscapes.matches(in: source, range: NSRange(source.startIndex..., in: source))
             if matches.isEmpty { return views }
-            let decoded = NSMutableString(string: source)
-            for match in matches.reversed() {
-                let token = (source as NSString).substring(with: match.range)
+            let original = source as NSString
+            var parts: [String] = []
+            var offset = 0
+            for match in matches {
+                let token = original.substring(with: match.range)
                 guard let value = try? JSONDecoder().decode(String.self, from: Data(("\"" + token + "\"").utf8)) else { return nil }
-                decoded.replaceCharacters(in: match.range, with: value)
+                parts.append(original.substring(with: NSRange(location: offset, length: match.range.location - offset)))
+                parts.append(value)
+                offset = match.range.upperBound
             }
-            views.append(decoded as String)
+            parts.append(original.substring(from: offset))
+            views.append(parts.joined())
         }
         let last = views.last!
         guard jsonEscapes.firstMatch(in: last, range: NSRange(last.startIndex..., in: last)) == nil else { return nil }
@@ -257,11 +261,19 @@ final class LogFile: @unchecked Sendable {
     }
 
     private static func redactPlain(_ message: String) -> String {
-        var result = urlUserinfo.stringByReplacingMatches(in: message,
-            range: NSRange(message.startIndex..., in: message), withTemplate: "$1[redacted]@")
-        for pattern in sensitivePatterns {
+        var result = replaceTokens(in: message, tokens: schemeTokens, pattern: urlUserinfo,
+                                   start: schemeStart, template: "$1[redacted]@")
+        result = redactLabels(result, addresses: true)
+        result = replaceEmails(result)
+        result = redactLabels(result, addresses: false)
+        result = replaceURLs(result)
+        for (index, pattern) in sensitivePatterns.enumerated() {
             result = pattern.stringByReplacingMatches(in: result,
                 range: NSRange(result.startIndex..., in: result), withTemplate: "[redacted]")
+            if index == 1 {
+                result = replaceTokens(in: result, tokens: jwtTokens, pattern: jwt)
+                result = replacePushTokens(result)
+            }
         }
         let decomposed = result.decomposedStringWithCompatibilityMapping
         let normalized = normalizeMnemonic(result)
@@ -272,9 +284,7 @@ final class LogFile: @unchecked Sendable {
         if !runs.isEmpty, decomposed != result || normalized.utf16.count != result.utf16.count {
             return "[redacted]"
         }
-        let clean = NSMutableString(string: result)
-        for range in runs.reversed() { clean.replaceCharacters(in: range, with: "[redacted]") }
-        return clean as String
+        return replacing(result, ranges: runs.map { ($0, "[redacted]") })
     }
 
     private static func normalizeMnemonic(_ text: String) -> String {
@@ -308,10 +318,11 @@ final class LogFile: @unchecked Sendable {
 
     private static func mnemonicRanges(in normalized: String) -> [NSRange] {
         let words = wordPattern.matches(in: normalized, range: NSRange(normalized.startIndex..., in: normalized))
+        let source = normalized as NSString
         var runs: [NSRange] = []
         var start = 0, count = 0
         for (index, word) in words.enumerated() {
-            let text = (normalized as NSString).substring(with: word.range).lowercased()
+            let text = source.substring(with: word.range)
             if bip39.contains(text) {
                 if count == 0 { start = index }
                 count += 1
@@ -361,19 +372,156 @@ final class LogFile: @unchecked Sendable {
         }
         return Set(text.split(whereSeparator: \.isWhitespace).map(String.init))
     }()
-    private static let jsonEscapes = try! NSRegularExpression(pattern: #"(?:\\u[0-9a-fA-F]{4})+|\\["\\/bfnrt]"#)
+    private static let jsonEscapes = try! NSRegularExpression(pattern: #"(?:\\u[0-9a-fA-F]{4})++|\\["\\/bfnrt]"#)
     private static let wordPattern = try! NSRegularExpression(pattern: #"[\p{L}\p{M}]+"#)
+    // Search once per maximal token, never again at every internal dot/hyphen boundary.
+    private static func replaceTokens(in text: String, tokens: NSRegularExpression,
+                                      pattern: NSRegularExpression, start: NSRegularExpression = boundary,
+                                      template: String = "[redacted]") -> String {
+        let full = NSRange(text.startIndex..., in: text)
+        let source = text as NSString
+        var consumed = 0
+        var replacements: [(NSRange, String)] = []
+        for token in tokens.matches(in: text, range: full) where token.range.location >= consumed {
+            if tokens === schemeTokens {
+                let end = token.range.upperBound
+                guard end + 3 <= source.length, source.substring(with: NSRange(location: end, length: 3)) == "://" else { continue }
+            }
+            guard let beginning = start.firstMatch(in: text, options: .withTransparentBounds, range: token.range),
+                  let match = pattern.firstMatch(in: text, options: [.anchored, .withTransparentBounds],
+                    range: NSRange(location: beginning.range.location, length: full.length - beginning.range.location)) else { continue }
+            replacements.append((match.range, pattern.replacementString(for: match, in: text, offset: 0, template: template)))
+            consumed = match.range.upperBound
+        }
+        return replacing(text, ranges: replacements)
+    }
+
+    private static func replacing(_ text: String, ranges: [(NSRange, String)]) -> String {
+        let source = text as NSString
+        var parts: [String] = []
+        var offset = 0
+        for (range, value) in ranges {
+            parts.append(source.substring(with: NSRange(location: offset, length: range.location - offset)))
+            parts.append(value)
+            offset = range.upperBound
+        }
+        parts.append(source.substring(from: offset))
+        return parts.joined()
+    }
+
+    private static func replaceURLs(_ text: String) -> String {
+        let source = text as NSString
+        let matches = urlTokens.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        return replacing(text, ranges: matches.compactMap { match in
+            source.substring(with: match.range).contains("?") ? (match.range, "[redacted]") : nil
+        })
+    }
+
+    private static func replacePushTokens(_ text: String) -> String {
+        let source = text as NSString
+        let matches = pushTokens.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        return replacing(text, ranges: matches.compactMap { match in
+            source.character(at: match.range.upperBound - 1) == 93 ? (match.range, "[redacted]") : nil
+        })
+    }
+
+    private static func replaceEmails(_ text: String) -> String {
+        let source = text as NSString
+        let full = NSRange(location: 0, length: source.length)
+        var replacements: [(NSRange, String)] = []
+        var consumed = 0
+        for token in emailTokens.matches(in: text, range: full) where token.range.location >= consumed {
+            guard let beginning = boundary.firstMatch(in: text, options: .withTransparentBounds, range: token.range),
+                  let local = emailLocal.firstMatch(in: text, options: [.anchored, .withTransparentBounds],
+                    range: NSRange(location: beginning.range.location, length: full.length - beginning.range.location)) else { continue }
+            var offset = local.range.upperBound
+            var end: Int?
+            var first = true
+            while let part = domainPart.firstMatch(in: text, options: .anchored,
+                range: NSRange(location: offset, length: full.length - offset)) {
+                if !first, let tld = domainTLD.firstMatch(in: text, options: [.anchored, .withTransparentBounds],
+                    range: NSRange(location: offset, length: full.length - offset)) { end = tld.range.upperBound }
+                first = false
+                offset = part.range.upperBound
+                guard offset < full.length, source.character(at: offset) == 46 else { break }
+                offset += 1
+            }
+            if let end {
+                replacements.append((NSRange(location: beginning.range.location, length: end - beginning.range.location), "[redacted]"))
+                consumed = end
+            }
+        }
+        return replacing(text, ranges: replacements)
+    }
+
+    private static func redactLabels(_ text: String, addresses: Bool) -> String {
+        let source = text as NSString
+        let full = NSRange(location: 0, length: source.length)
+        let keyword = addresses ? addressKeyword : credentialKeyword
+        let tail = addresses ? addressTail : credentialTail
+        for token in labelTokens.matches(in: text, range: full) {
+            guard let beginning = boundary.firstMatch(in: text, options: .withTransparentBounds, range: token.range) else { continue }
+            let label = source.substring(with: token.range).lowercased()
+            var ends: [Int] = []
+            // Only these labels can cross a literal space; all other separators are in the token.
+            let pairs = addresses ? [("lightning", "address")] : [("seed", "phrase"), ("priv", "key"), ("private", "key"), ("secret", "key")]
+            for (left, right) in pairs where label.hasSuffix(left) {
+                let end = token.range.upperBound
+                if end < source.length, source.character(at: end) == 32,
+                   let next = labelTokens.firstMatch(in: text, options: .anchored,
+                     range: NSRange(location: end + 1, length: source.length - end - 1)),
+                   source.substring(with: next.range).lowercased().hasPrefix(right) {
+                    ends.append(next.range.upperBound)
+                }
+            }
+            if keyword.firstMatch(in: label, range: NSRange(label.startIndex..., in: label)) != nil {
+                ends.append(token.range.upperBound)
+            }
+            for end in ends {
+                if tail.firstMatch(in: text, options: [.anchored, .withTransparentBounds],
+                    range: NSRange(location: end, length: source.length - end)) != nil {
+                    return source.substring(to: beginning.range.location) + "[redacted]"
+                }
+            }
+            if !addresses {
+                // Exact key/x-amz alternatives can start after a dot or hyphen inside the token.
+                let dot = source.range(of: ".", options: .backwards, range: token.range)
+                let start = dot.location == NSNotFound ? token.range.location : dot.upperBound
+                let range = NSRange(location: start, length: token.range.upperBound - start)
+                if let special = specialLabel.firstMatch(in: text, options: .withTransparentBounds, range: range),
+                   tail.firstMatch(in: text, options: [.anchored, .withTransparentBounds],
+                    range: NSRange(location: token.range.upperBound, length: source.length - token.range.upperBound)) != nil {
+                    return source.substring(to: special.range.location) + "[redacted]"
+                }
+            }
+        }
+        return text
+    }
+
+    private static let boundary = try! NSRegularExpression(pattern: #"\b"#)
+    private static let labelTokens = try! NSRegularExpression(pattern: #"[\w.-]+"#)
+    private static let specialLabel = try! NSRegularExpression(pattern: #"(?i)\b(?:key$|x-amz-[\w-]++)"#)
+    private static let addressKeyword = try! NSRegularExpression(pattern: #"email|lightning[_-]?address"#)
+    private static let credentialKeyword = try! NSRegularExpression(
+        pattern: #"mnemonic|seed|priv(?:ate)?[_-]?key|secret(?:[_-]?key)?|preimage|sig(?:nature)?|token|authorization|password"#)
+    private static let addressTail = try! NSRegularExpression(pattern: #"["']?\s*[:=]"#)
+    private static let credentialTail = try! NSRegularExpression(
+        pattern: #"["']?(?:\s*[:=({\[]|(?:\s+|["']\s*)["']?[A-Za-z0-9+/_=-]{16,})"#)
+    private static let schemeTokens = try! NSRegularExpression(pattern: #"(?i)[a-z0-9+.-]+"#)
+    private static let schemeStart = try! NSRegularExpression(pattern: #"(?i)\b[a-z]"#)
     private static let urlUserinfo = try! NSRegularExpression(
-        pattern: #"(?i)(\b[a-z][a-z0-9+.-]*://)[^\s/@<>"']+@"#)
+        pattern: #"(?i)(\b[a-z][a-z0-9+.-]*+://)[^\s/@<>"']++@"#)
+    private static let emailTokens = try! NSRegularExpression(pattern: #"(?i)[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+"#)
+    private static let emailLocal = try! NSRegularExpression(pattern: #"(?i)\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]++@"#)
+    private static let domainPart = try! NSRegularExpression(pattern: #"(?i)[A-Z0-9-]+"#)
+    private static let domainTLD = try! NSRegularExpression(pattern: #"(?i)[A-Z]{2,63}\b"#)
+    private static let jwtTokens = try! NSRegularExpression(pattern: #"[A-Za-z0-9_-]+"#)
+    private static let jwt = try! NSRegularExpression(pattern: #"\b[A-Za-z0-9_-]{8,}+\.[A-Za-z0-9_-]{8,}+\.[A-Za-z0-9_-]{8,}+"#)
+    private static let urlTokens = try! NSRegularExpression(pattern: #"(?i)\bhttps?://[^\s<>"']*+"#)
+    private static let pushTokens = try! NSRegularExpression(pattern: #"(?i)\bExpo(?:nent)?PushToken\[[^\]]*+(?:\]|$)"#)
     private static let sensitivePatterns = [
-        #"(?is)\b[\w.-]*(?:email|lightning[_ -]?address)[\w.-]*["']?\s*[:=].*"#,
-        #"(?i)\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,63}\b"#,
-        // Consume structured/multiline values too; never attempt to parse a credential's end.
-        #"(?is)\b(?:[\w.-]*(?:mnemonic|seed(?:[_ -]?phrase)?|priv(?:ate)?[_ -]?key|secret(?:[_ -]?key)?|preimage|sig(?:nature)?|token|authorization|password)[\w.-]*|key|x-amz-[\w-]+)["']?(?:\s*[:=({\[].*|(?:\s+|["']\s*)["']?[A-Za-z0-9+/_=-]{16,}.*)"#,
-        #"(?i)\bhttps?://[^\s<>"']*\?[^\s<>"']*"#,
         #"(?i)\bhttps?%3a%2f%2f[^\s<>"']*"#,
-        #"(?i)\bBearer\s+[A-Za-z0-9._~+/-]+=*|\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"#,
-        #"(?i)\bExpo(?:nent)?PushToken\[[^\]]*\]"#,
-        #"\b(?:[xt]prv[1-9A-HJ-NP-Za-km-z]{20,}|[59][1-9A-HJ-NP-Za-km-z]{50}|[KLc][1-9A-HJ-NP-Za-km-z]{51})\b"#,
+        #"(?i)\bBearer\s+[A-Za-z0-9._~+/-]++=*"#,
+        #"\b(?:[xt]prv[1-9A-HJ-NP-Za-km-z]{20,}+|[59][1-9A-HJ-NP-Za-km-z]{50}|[KLc][1-9A-HJ-NP-Za-km-z]{51})\b"#,
     ].map { try! NSRegularExpression(pattern: $0) }
 }

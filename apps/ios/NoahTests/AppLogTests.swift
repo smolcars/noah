@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 import Testing
 
@@ -5,6 +6,95 @@ import Testing
 
 struct AppLogTests {
     private let directory = FileManager.default.temporaryDirectory.appending(path: "logs-\(UUID().uuidString)")
+
+    private static let performanceInputs = [
+        ("punctuation", "!@#$%^&*()[]{}:;,?"), ("hyphen", "x-"), ("dot", "x."),
+        ("digit", "1234567890"), ("mixed", "wallet sync completed xyzzy "),
+        ("escaped", #"\u0078\u002e"#),
+    ]
+
+    @Test func redactionPerformance() {
+        LogFile.prepareRedaction()
+        _ = LogFile.redact("warmup")
+        for (name, unit) in Self.performanceInputs {
+            for size in [1024, 4096, 16384] {
+                let input = String(String(repeating: unit, count: (size + unit.count - 1) / unit.count).prefix(size))
+                let elapsed = (0..<3).map { _ in
+                    let started = ContinuousClock.now
+                    _ = LogFile.redact(input)
+                    return ContinuousClock.now - started
+                }.sorted()[1]
+                print("REDACTION \(name) \(size) \(elapsed)")
+                #expect(elapsed < .milliseconds(100), "\(name) \(size): \(elapsed)")
+            }
+        }
+    }
+
+    @Test @MainActor func mainActorAndSDKCallbacksOnlyEnqueueRawText() async {
+        let queue = DispatchQueue(label: "test.deferred-redaction")
+        queue.suspend()
+        let file = LogFile(directory: directory, capacity: 100, queue: queue)
+        // Warm admission; redaction and every sink must still be waiting on the suspended queue.
+        AppLog("warmup", file: file).i("warmup")
+        let sink = BarkLog(file: file)
+        var slowest = Duration.zero
+        for (_, unit) in Self.performanceInputs {
+            let input = String(String(repeating: unit, count: (16384 + unit.count - 1) / unit.count).prefix(16384))
+            let started = ContinuousClock.now
+            AppLog(input, file: file).e(input)
+            slowest = max(slowest, ContinuousClock.now - started)
+            let callbackStarted = ContinuousClock.now
+            sink.log(level: .error, target: input, message: input)
+            slowest = max(slowest, ContinuousClock.now - callbackStarted)
+        }
+        let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+        AppLog(phrase, file: file).e(phrase)
+        #expect(slowest < .milliseconds(5))
+        print("LOG ADMISSION main actor / SDK maximum \(slowest)")
+        #expect(!FileManager.default.fileExists(atPath: directory.path))
+        queue.resume()
+        let lines = await file.linesForExport()
+        #expect(lines.count == 14)
+        #expect(lines.last?.hasSuffix(" E [[redacted]] [redacted]") == true)
+    }
+
+    @Test func sdkErrorLoggingDefersInspectionButReportsStayRedacted() async {
+        let input = String(repeating: "x.", count: 8192)
+        let error = BarkError(message: input)
+        let started = ContinuousClock.now
+        let raw = SafeErrorDescription.forLogging(error)
+        #expect(ContinuousClock.now - started < .milliseconds(5))
+        #expect(raw == input)
+        #expect(SafeErrorDescription.of(BarkError(message: "token=fake-test-token")) == "[redacted]")
+        let file = LogFile(directory: directory)
+        AppLog("sdk", file: file).e(raw)
+        await file.flushAsync()
+        #expect(file.lines().last?.hasSuffix(input) == true)
+    }
+
+    @Test func tokenScanPreservesBoundaryAndTrailingPunctuationBehavior() {
+        for (input, expected) in [
+            ("foo@b.co.", "[redacted]."), ("foo@b.co-", "[redacted]-"),
+            ("-key=fake", "-[redacted]"), ("foo.key=fake", "foo.[redacted]"),
+            ("x-amz-foo.bar: ordinary", "x-amz-foo.bar: ordinary"),
+            ("seed phrase: fake", "[redacted]"), ("private keyStore: fake", "[redacted]"),
+            ("http://http://ordinary", "http://http://ordinary"),
+            ("ExpoPushToken[unfinished", "[redacted]"),
+        ] { #expect(LogFile.redact(input) == expected) }
+    }
+
+    @Test func failedTokenCandidatesStayBounded() {
+        // Missing terminators and repeated candidate keywords must not restart a suffix search.
+        for unit in ["seed.", "http://", "ExpoPushToken[", "x@x.", "xprv", "\\u0078!"] {
+            let input = String(String(repeating: unit, count: (16384 + unit.count - 1) / unit.count).prefix(16384))
+            let elapsed = (0..<3).map { _ in
+                let started = ContinuousClock.now
+                _ = LogFile.redact(input)
+                return ContinuousClock.now - started
+            }.sorted()[1]
+            #expect(elapsed < .milliseconds(100), "\(unit): \(elapsed)")
+        }
+    }
 
     @Test func sharedSecretRedactionVectors() throws {
         for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)

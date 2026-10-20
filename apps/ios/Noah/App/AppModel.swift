@@ -204,7 +204,7 @@ final class AppModel {
                     await self.openExistingWallet()
                 }).finish(outcome)
         } catch {
-            log.e("Restore failed: \(SafeErrorDescription.of(error))")
+            log.e("Restore failed: \(SafeErrorDescription.forLogging(error))")
             if let failure = error as? StoredSeed.Failure {
                 phase = .blocked(failure == .invalid ? .invalidSeed : .seedConflict)
             }
@@ -255,7 +255,7 @@ final class AppModel {
     }
 
     private static func describe(_ error: Error) -> String {
-        SafeErrorDescription.of(error)
+        SafeErrorDescription.forLogging(error)
     }
 
     private func openExistingWallet() async {

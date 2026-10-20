@@ -128,7 +128,7 @@ struct ReceiveView: View {
             if let rate, rate.isFinite, rate > 0 { btcPrice = rate }
         } catch {
             guard !Task.isCancelled else { return }
-            AppLog("receive").w("Fiat rate unavailable: \(SafeErrorDescription.of(error))")
+            AppLog("receive").w("Fiat rate unavailable: \(SafeErrorDescription.forLogging(error))")
         }
     }
 }
