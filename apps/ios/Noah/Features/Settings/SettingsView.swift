@@ -126,10 +126,6 @@ struct SettingsView: View {
     private func row<Content: View>(_ title: String, _ detail: String, @ViewBuilder destination: () -> Content) -> some View {
         NavigationLink(destination: destination) { SettingsLabel(title: title, detail: detail) }
     }
-    private func comingSoon(_ title: String, _ detail: String) -> some View {
-        SettingsLabel(title: title, detail: detail == "Coming soon" ? detail : detail + "\nComing soon")
-            .foregroundStyle(NoahColor.mutedForeground).accessibilityAddTraits(.isStaticText)
-    }
     private func setAutoBoard(_ enabled: Bool) {
         transaction.setAutoBoarding(enabled)
         do { try SettingsStorage.shared.setPersistedState(transaction, key: PersistedTransactionState.key, version: PersistedTransactionState.version) }

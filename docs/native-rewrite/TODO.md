@@ -306,10 +306,15 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] BoardArkScreen, auto-boarding, VTXOs/details/refresh, all exit screens — Android
 
 ## M7 — Recurring payments
-- [ ] Schedule math (local calendar, DST, month-end) — fixtures from recurring tests
-- [ ] Executor (latest due only, before-send markers, no ambiguous retry, re-check pause/cancel)
-- [ ] RecurringPaymentsScreen + RecurringPaymentEditorScreen
-- [ ] Server wake sync
+- [x] Schedule math (local calendar, DST, month-end) — iOS; 1,260 RN-generated shared calendar cases, 36 policy cases, RN storage fixture
+- [x] RN MMKV persistence/migration — iOS; lossless version-0 envelope, fail-closed reads/writes, wallet fingerprint/network + local-instance binding
+- [x] Executor — iOS; latest due only, fsynced before-send/consumed markers, existing Send quote/checkpoint/journal/reconciliation, exclusive cancellation-shielded session hold, final pause/cancel/edit/suspension/identity checks, uncertain outcomes and audited destructive override
+- [x] RecurringPaymentsScreen + RecurringPaymentEditorScreen — iOS; Settings row, create/edit, preview, pause/resume/cancel, last-run and uncertain status
+- [x] Foreground + `recurring_payment_due` through existing push jobs and `AppServices.ensureWalletOpen` — iOS; restore/deletion gates, asynchronous reminders/results
+- [x] Server wake sync — iOS; generated authenticated client, serialized replacement payloads, durable pending retry flag
+- [x] Live regtest + full NoahTests evidence — iOS; exactly one 1,000-sat Ark send across push/foreground/repeat/pause/cancel; 405 total / 388 passed / 17 opt-in skipped / 0 failed, 88 suites; `apps/ios/RecurringTests/README.md`
+- [ ] Physical recurring-wake delivery, timed local reminder delivery, external LNURL/BOLT12 live acceptance and funded RN-recurring upgrade — iOS
+- [ ] Schedule math/executor, MMKV, screens, triggers and server wake sync — Android (shared recurring fixtures ready)
 
 ## M8 — BTC Map
 - [x] MapLibre native map, themed styles, clustering — iOS, Android
