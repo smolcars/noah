@@ -428,17 +428,18 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 ## Cutover
 - [ ] Finish adaptive layouts (iPad / landscape / foldables) parity outside the existing History/BTC Map split panes (`TransactionsView.swift:15`, `TransactionDetail.kt:28`, both BTC Map screens; `2fa4e026`, `062ac351`). Home/Receive/Send/QR/settings still need RN adaptive-flow comparison and wide-window acceptance
 - [ ] Complete the RN screen-by-screen behaviour audit beyond the recorded M1/M2, History, Send/M6 and recurring reviews; resolve the gaps below and verify the remaining flows on both platforms
-  - Home: both native headers show only total balance; RN also exposes pending balance and expandable Ark/onchain bucket details (`client/src/screens/HomeScreen.tsx:317,353,363`, `HomeView.swift:196`, `HomeScreen.kt:89`). Native Home also lacks RN's background-job-in-progress strip
-  - iOS Home/History repeat callback selects Send but never consumes `pendingRepeatPayment` (`RootView.swift:90,105,141`); finish recipient prefill/revalidation. Android is already wired (`NoahApp.kt:55`, M3)
-  - Send: while a refresh round awaits confirmation, Send shows "0 sats available in Ark" without saying why (both apps; Home already shows pending-in-round funds)
+  - [x] Home: pending balance, expandable Ark/onchain details, balance masking, and a background-job strip on both platforms. All SDK Ark buckets remain counted; onchain immature funds are shown separately. See [behaviour-parity verification](behavior-parity-2026-10-20.md)
+  - [ ] Home onchain detail sub-buckets: FFI 0.5.0 exposes only `confirmedSats`, `pendingSats` (trusted + untrusted), and `totalSats`. Both apps show combined "Pending"; exact RN "Trusted Pending" / "Untrusted Pending" rows require an FFI API extension
+  - [x] iOS Home/History repeat handoff consumes once when editable, clears the old route, restores amount/currency/comment, and returns to normal recipient validation and confirmation
+  - [x] Send and Home explain the amount pending in a round and that it becomes available after the round confirms; available balances update together
   - History: refresh movements (`bark.round:refresh`) fall through to the "Onchain" label, the same as RN; consider a Refresh label in the design pass
-  - Send/Board (FFI 0.5.0 verification, 2026-10-20) — align, both safe today:
-    - Receipt refresh: Android refreshes visible Send receipts every 10 s and after submission; iOS only on load or on request.
-    - Network-status copy: iOS adds explanations and repeat-payment warnings; Android uses short labels.
-    - Lookup errors: iOS saves Send lookup errors with the receipt, while Android shows a transient message. M6 does the opposite.
-    - Boarding typed-error copy differs: insufficient funds, minimum amount, reserved inputs, failed broadcast and `notAttempted`.
-    - Boarding receipts: Android shows net Ark amount and total leaving next to the fees; iOS shows only the fee rows.
-    - Incomplete probe cleanup: iOS stops before re-preparing; Android re-prepares and relies on SDK reservations to reject it.
+  - Send/Board (FFI 0.5.0 verification, 2026-10-20):
+    - [x] Receipt refresh: Android's immediate/10-second visible Send receipt refresh on both platforms; iOS observation cancels when the tab, scene, receipt, or wallet is unavailable
+    - [x] Network-status copy: iOS explanations and repeat-payment warnings on both platforms; asserted against `apps/fixtures/payment-status-copy.json`
+    - [x] Lookup errors: recoverable in-memory messages remain beside the receipt with a status retry, clear on success, and are excluded from persisted Send/Board evidence; exact txids and previous evidence/locks survive failures
+    - [x] Boarding typed errors: one wording table for insufficient confirmed funds, minimum Ark amount, reserved inputs, unsynced wallet, too many inputs, failed broadcast, and `notAttempted`; shared fixture above
+    - [x] Boarding receipts: Android's net Ark amount and total leaving next to fees on both platforms; total uses an actual onchain fee when known, otherwise the reviewed fee
+    - [x] Incomplete probe cleanup: iOS's stop-before-reprepare rule on both platforms; Android checks its retained preparation handle after cleanup, independent of SDK rejection
 - [ ] Publish native builds to the existing TestFlight + Play internal listings and verify release-candidate upgrades on physical iOS, GMS Android and non-GMS Android. Debug RN→native identity/seed/token upgrades already passed on iPhone 17 and Pixel 6 (`apps/ios/UpgradeTests/README.md:138`, `apps/android/UpgradeTests/DEVICE.md:70`); non-GMS distributor/device acceptance and native store-track releases are not evidenced
 - [ ] Monitor heartbeats, push delivery, migration telemetry; staged rollout
 - [ ] Retire `client/`, Nitro modules, ts-rs

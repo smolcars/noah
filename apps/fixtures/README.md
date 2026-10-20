@@ -17,6 +17,15 @@ smoke test; future domains should exercise actual shared behavior.
 Android adds this directory to its test resources. `SharedFixtures.load("domain")`
 parses the envelope and returns named cases without depending on the working directory.
 
+Home/Send/Board cutover parity: `home-balance-details.json` specifies every SDK
+balance bucket, including immature coins and all pending Ark operations; both platforms
+assert the same rows and hidden amounts. FFI 0.5.0 reports onchain pending as one
+combined value, so the fixture deliberately does not invent trusted/untrusted values.
+`payment-status-copy.json` holds the chosen common network/retry/boarding wording and
+two board receipt totals (reviewed fee fallback and actual fee). Both platforms assert
+that table; lookup failures are transient display state and never durable evidence.
+These two fixtures are hand-specified from the RN Home rules and the cutover decisions.
+
 M6 boarding/exits: run `bun --tsconfig-override client/tsconfig.json
 apps/fixtures/tools/generate-exits.ts` from the repository root. The generator imports
 RN's `exitFeeEstimate`, `exitTimeline`, `useExitOverview`, and `buildAutoBoardPlan`;
