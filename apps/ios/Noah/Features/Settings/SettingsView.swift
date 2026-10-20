@@ -38,7 +38,7 @@ struct SettingsView: View {
                 row("Board to Ark", "Manually move onchain bitcoin into Ark.") { BoardArkView() }
                 Toggle(isOn: Binding(get: { transaction.isAutoBoardingEnabled }, set: setAutoBoard)) {
                     SettingsLabel(title: "Auto-Board to Ark", detail: threshold.map {
-                        "Ask to board to Ark when onchain balance can cover \(max($0, 20_000)) sats, estimated fees, and an estimated 5,000 sats reserve. The final fee may be higher if more coins are needed."
+                        "Ask to board to Ark when onchain balance can cover \(max($0, 20_000)) sats plus fees while leaving at least 5,000 sats onchain. Confirm the exact fees and reserve before boarding."
                     } ?? "Auto-board threshold unavailable")
                 }
                 if WalletLock.available || lock.policy.enabled {

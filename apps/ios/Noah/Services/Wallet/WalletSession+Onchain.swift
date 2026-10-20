@@ -332,8 +332,8 @@ extension WalletSession {
         }
     }
 
-    /// Cached evidence only: even BDK sync may rebroadcast already-authorized transactions.
-    // Bark's daemon keeps these reads fresh; an inconclusive check must remain unresolved.
+    /// Cached wallet evidence plus read-only chain status; never BDK sync or rebroadcast.
+    // An absent txid or inconclusive check must remain unresolved.
     func checkOnchainAttempt(_ id: UUID, journal: OnchainOperationJournal = .shared) async throws -> Bool {
         try await withOpenWallet { handles in
             try await Self.checkOnchainAttempt(id, journal: journal, reads: .init(

@@ -344,6 +344,7 @@ struct SendOutcomeView: View {
                     }
                     if let receipt = controller.attempt?.receipt {
                         Text(receipt.conflictDescription ?? "Noah can’t find this transaction right now. Its confirmation may no longer be trackable in-app. Check a block explorer.")
+                        if let status = receipt.chainStatus { Text(status.message) }
                         transactionDetails(receipt)
                     }
                     NoahButton(title: "Check payment status", isLoading: controller.checking) {

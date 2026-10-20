@@ -80,9 +80,9 @@ struct AutoBoardingService: View {
                         defer { busy = false }
                         defer { Task { await app.session.discardBoard(quote) } }
                         do {
-                            guard !app.isWalletSuspended, phase == .active,
-                                PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled,
-                                !(await WalletBackgroundActivity.shared.isRunning)
+                            guard !(await WalletBackgroundActivity.shared.isRunning),
+                                !app.isWalletSuspended, phase == .active,
+                                PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled
                             else { throw OnchainFailure.unavailable }
                             message = try await app.session.executeOnchain(quote)
                             // Keep the receipt for fee reconciliation and explicit Done in Board to Ark.

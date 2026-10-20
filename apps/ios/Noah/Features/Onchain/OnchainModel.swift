@@ -130,11 +130,11 @@ final class OnchainModel {
             let token = generation
             if let detailID {
                 let detail = try await dependencies.detail(detailID)
-                guard token == generation, await dependencies.ready() else { return }
+                guard await dependencies.ready(), token == generation else { return }
                 exit = detail
             }
             let latest = try await dependencies.overview()
-            guard token == generation, await dependencies.ready() else { return }
+            guard await dependencies.ready(), token == generation else { return }
             overview = latest
             error = statusFailed ? "Couldn't check network status. Showing the last known status." : nil
         } catch {
@@ -158,7 +158,7 @@ final class OnchainModel {
             attempts = try await dependencies.attempt().filter { $0.overrideAudit?.acknowledgedAt == nil }
             guard !attempts.contains(where: { $0.blocks(action, ids: ids) }) else { throw OnchainFailure.busy }
             let fresh = try await dependencies.quote(action, ids, amount, destination)
-            guard generation == token, !Task.isCancelled, await dependencies.ready() else {
+            guard await dependencies.ready(), generation == token, !Task.isCancelled else {
                 await dependencies.discardReview(fresh)
                 return
             }
@@ -180,11 +180,12 @@ final class OnchainModel {
         guard !busy, let quote else { return }
         self.quote = nil
         expiry?.cancel()
+        let token = generation
         busy = true
         error = nil
         defer { busy = false }
         do {
-            guard await dependencies.ready(), quote.isCurrent else {
+            guard await dependencies.ready(), generation == token, quote.isCurrent else {
                 throw OnchainFailure.changed
             }
             message = try await dependencies.execute(quote)
