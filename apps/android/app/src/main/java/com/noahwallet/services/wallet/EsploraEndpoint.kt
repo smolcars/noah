@@ -11,12 +11,16 @@ import java.util.concurrent.TimeUnit
 object EsploraEndpoint {
     class Failure(message: String) : Exception(message)
     fun normalize(value: String): String {
-        val trimmed = value.trim()
+        val trimmed = value.trim().filterNot { it == '\t' || it == '\n' || it == '\r' }.replace('\\', '/')
         if (trimmed.isEmpty()) throw Failure("Enter an Esplora API endpoint.")
         val input = if (Regex("^https?://", RegexOption.IGNORE_CASE).containsMatchIn(trimmed)) trimmed else "https://$trimmed"
+        if (!Regex("^https?://[^/]", RegexOption.IGNORE_CASE).containsMatchIn(input) || Regex("%(?![0-9a-fA-F]{2})").containsMatchIn(input))
+            throw Failure("Enter a valid Esplora API URL.")
+        val authority = input.substringAfter("://").substringBefore('/').substringBefore('?').substringBefore('#')
+        if ('@' in authority) throw Failure("The Esplora endpoint cannot include credentials.")
         val url = input.toHttpUrlOrNull() ?: throw Failure("Enter a valid Esplora API URL.")
         if (url.username.isNotEmpty() || url.password.isNotEmpty()) throw Failure("The Esplora endpoint cannot include credentials.")
-        if (url.query != null || url.fragment != null) throw Failure("The Esplora endpoint cannot include a query string or fragment.")
+        if (!url.query.isNullOrEmpty() || !url.fragment.isNullOrEmpty()) throw Failure("The Esplora endpoint cannot include a query string or fragment.")
         var path = url.encodedPath.trimEnd('/')
         listOf("/blocks/tip/height", "/blocks/tip/hash", "/block-height/0").firstOrNull { path.endsWith(it) }?.let { path = path.dropLast(it.length) }
         return url.newBuilder().host(ipv4Host(url.host)).encodedPath(path.ifEmpty { "/" }).build().toString().trimEnd('/')
