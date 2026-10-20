@@ -219,6 +219,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 - [x] M5 review A2: Android mailbox authorization refresh at startup/resume and after re-registration, preserving opt-out and iOS's 60-day renewal / 89-day expiry; registration regression tests
 
+- [x] M5 review A3: checked scratch cleanup and directory durability before deleting secrets on both platforms; undeletable plaintext preserves seed/token/settings
+
 ## M6 — Onchain & exits
 - [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt (prepared boarding awaits FFI 18, same priority as 14)
 - [x] VTXOsScreen + VTXODetailScreen + delegated refresh review dialog — iOS

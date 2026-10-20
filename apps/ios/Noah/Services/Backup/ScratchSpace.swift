@@ -32,6 +32,22 @@ final class ScratchSpace: Sendable {
         }
     }
 
+    /// Refuse deletion while plaintext is live, and propagate removal/durability failures before seed deletion.
+    func sweepForWalletDeletion() throws {
+        try inUse.withLock { live in
+            guard live.isEmpty else { throw CocoaError(.fileWriteFileExists) }
+            let fm = FileManager.default
+            if fm.fileExists(atPath: root.path) {
+                for name in try fm.contentsOfDirectory(atPath: root.path) {
+                    try fm.removeItem(at: root.appending(path: name))
+                }
+                try RestoreTransaction.fullSync(root)
+            }
+            let parent = root.deletingLastPathComponent()
+            if fm.fileExists(atPath: parent.path) { try RestoreTransaction.fullSync(parent) }
+        }
+    }
+
     /// For share-sheet lifetimes; the caller must discard after dismissal.
     func makeFolder(_ purpose: String) throws -> URL {
         let name = "\(purpose)-\(UUID().uuidString)"

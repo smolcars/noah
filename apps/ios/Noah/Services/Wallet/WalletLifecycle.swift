@@ -74,7 +74,8 @@ struct WalletLifecycle: Sendable {
         if fileManager.fileExists(atPath: location.restoreDirectory.path) {
             try fileManager.removeItem(at: location.restoreDirectory)
         }
-        dependencies.scratch.sweepAbandoned()
+        try dependencies.scratch.sweepForWalletDeletion()
+        try RestoreTransaction.fullSync(location.directory.deletingLastPathComponent())
         try dependencies.seed.deleteWalletSeed()
         dependencies.authToken.remove()
         dependencies.settings.removeAll()

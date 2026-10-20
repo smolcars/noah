@@ -25,6 +25,18 @@ struct ScratchSpaceTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
     }
 
+    @Test func checkedSweepRefusesActivePlaintext() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let scratch = ScratchSpace(root: root)
+        let folder = try scratch.makeFolder("backup")
+        let snapshot = folder.appending(path: "snapshot.sqlite")
+        try Data("plaintext".utf8).write(to: snapshot)
+        #expect(throws: (any Error).self) { try scratch.sweepForWalletDeletion() }
+        #expect(FileManager.default.fileExists(atPath: snapshot.path))
+        scratch.discard(folder)
+        try scratch.sweepForWalletDeletion()
+    }
+
     @Test func sweepRemovesAbandonedFoldersButNotOnesInUse() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let scratch = ScratchSpace(root: root)

@@ -19,6 +19,7 @@ class WalletLifecycleTest {
         var deregisterFails = false
         var seedFails = false
         var syncFails = false
+        var sweepScratch: () -> Unit = { events.add("scratch") }
         val events = mutableListOf<String>()
         val session = WalletSession("regtest", location, inspect = { WalletDatabase.Properties("regtest", "abcd") },
             isSuspended = { suspended }, opener = { _, _, _, _, _ -> error("Open refused") })
@@ -34,7 +35,7 @@ class WalletLifecycleTest {
             }, clearToken = { assertFalse(seed); token = false; events.add("token") },
             clearSettings = { assertFalse(token); settings = false; events.add("settings") },
             clearWidget = { assertFalse(settings); widget = false; events.add("widget") },
-            sweepScratch = { events.add("scratch") },
+            sweepScratch = { sweepScratch() },
             syncFiles = { if (syncFails) error("Directory sync failed"); events.add("sync") })
         fun files() { location.directory.mkdirs(); location.database.writeText("fake"); location.restoreDirectory.mkdirs() }
         fun clean() { root.deleteRecursively() }
@@ -99,6 +100,26 @@ class WalletLifecycleTest {
             assertFalse(world.location.directory.exists())
             val hold = world.session.reserve(); world.session.release(hold)
         } finally { world.clean() }
+    }
+
+    @Test fun undeletablePlaintextPreservesSeedAndRetrySyncsScratchDirectories() = runBlocking {
+        val world = World()
+        val scratchRoot = File(world.root, "scratch").apply { mkdirs() }
+        val folder = File(scratchRoot, "abandoned").apply { mkdir() }
+        val snapshot = File(folder, "snapshot.sqlite").apply { writeText("plaintext") }
+        val synced = mutableListOf<File>()
+        val scratch = com.noahwallet.services.backup.ScratchSpace(scratchRoot) { synced.add(it) }
+        try {
+            world.files(); world.sweepScratch = scratch::sweepForWalletDeletion
+            check(folder.setWritable(false, false))
+            assertTrue(runCatching { world.lifecycle().delete() }.isFailure)
+            assertTrue(snapshot.exists()); assertTrue(world.seed); assertTrue(world.token); assertTrue(world.settings)
+            assertTrue(synced.isEmpty())
+            check(folder.setWritable(true, true))
+            world.lifecycle().delete()
+            assertFalse(snapshot.exists()); assertFalse(world.seed)
+            assertEquals(listOf(scratchRoot, world.root), synced)
+        } finally { folder.setWritable(true, true); world.clean() }
     }
 
     @Test fun failedSeedDeletionKeepsTokenAndSettings() = runBlocking {

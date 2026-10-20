@@ -127,6 +127,34 @@ struct WalletLifecycleTests {
         await session.release(next)
     }
 
+    @Test func undeletableScratchPreservesSecretsAndLocalState() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try writeBarkDatabase()
+        let settings = try makeSettings()
+        settings.set(#"{"state":{"isInitialized":true},"version":0}"#, forKey: PersistedWalletState.key)
+        let (seed, token) = items()
+        defer { seed.remove(); token.remove() }
+        try seed.save("seed words"); try token.save("jwt")
+        let folder = root.appending(path: "scratch/abandoned")
+        let snapshot = folder.appending(path: "snapshot.sqlite")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data("plaintext".utf8).write(to: snapshot)
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: folder.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: folder.path) }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        await #expect(throws: (any Error).self) {
+            try await lifecycle(session: session, settings: settings, seed: seed, token: token).delete()
+        }
+        #expect(FileManager.default.fileExists(atPath: snapshot.path))
+        #expect(seed.read() == .found("seed words"))
+        #expect(token.read() == .found("jwt"))
+        #expect(settings.string(forKey: PersistedWalletState.key) != nil)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: folder.path)
+        try await lifecycle(session: session, settings: settings, seed: seed, token: token).delete()
+        #expect(!FileManager.default.fileExists(atPath: snapshot.path))
+        #expect(seed.read() == .notFound)
+    }
+
     @Test func deleteGoesAheadWhenDeregistrationFails() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try writeBarkDatabase()

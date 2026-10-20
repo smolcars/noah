@@ -261,7 +261,7 @@ struct RestoreTransaction: Sendable {
 
     /// `F_FULLFSYNC` (survives power loss); plain `fsync` only where the file
     /// system doesn't support it. Real I/O errors are reported.
-    private static func fullSync(_ url: URL) throws {
+    static func fullSync(_ url: URL) throws {
         let descriptor = Darwin.open(url.path, O_RDONLY)
         guard descriptor >= 0 else { throw Failure.syncFailed(errno) }
         defer { Darwin.close(descriptor) }

@@ -106,7 +106,7 @@ class AppServices private constructor(private val context: Context) {
             check(context.getSharedPreferences("gt_store", Context.MODE_PRIVATE).edit().clear().commit())
         },
         clearWidget = { com.noahwallet.services.push.WidgetDataWriter.clear(context, variant) },
-        sweepScratch = scratch::sweepAbandoned,
+        sweepScratch = scratch::sweepForWalletDeletion,
         settleBackground = {
             reconcileBackupTriggers()
             backupCoordinator.settle()

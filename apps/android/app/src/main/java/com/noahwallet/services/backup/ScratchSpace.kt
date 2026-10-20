@@ -4,7 +4,10 @@ import java.io.File
 import java.util.UUID
 
 /** Per-operation plaintext; launch sweeps abandoned folders without touching live operations. */
-class ScratchSpace(val root: File) {
+class ScratchSpace(val root: File, private val syncDirectory: (File) -> Unit = { directory ->
+    val descriptor = android.system.Os.open(directory.path, android.system.OsConstants.O_RDONLY, 0)
+    try { android.system.Os.fsync(descriptor) } finally { android.system.Os.close(descriptor) }
+}) {
     private val inUse = mutableSetOf<String>()
     suspend fun <T> withFolder(purpose: String, body: suspend (File) -> T): T {
         val folder = makeFolder(purpose)
@@ -26,6 +29,17 @@ class ScratchSpace(val root: File) {
     fun discard(folder: File) = synchronized(inUse) {
         folder.deleteRecursively(); inUse.remove(folder.name)
     }
+    /** Deletion must fail before erasing the seed if any plaintext survives or is still in use. */
+    fun sweepForWalletDeletion() = synchronized(inUse) {
+        check(inUse.isEmpty()) { "Scratch operations are still active" }
+        if (root.exists()) {
+            val folders = root.listFiles() ?: error("Cannot inspect scratch files")
+            folders.forEach { check(it.deleteRecursively()) { "Cannot delete scratch files" } }
+            syncDirectory(root)
+        }
+        root.parentFile?.takeIf { it.exists() }?.let(syncDirectory)
+    }
+
     fun sweepAbandoned() = synchronized(inUse) {
         root.listFiles()?.filter { it.name !in inUse }?.forEach { it.deleteRecursively() }
         Unit
