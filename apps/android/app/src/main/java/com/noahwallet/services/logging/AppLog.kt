@@ -3,6 +3,7 @@ package com.noahwallet.services.logging
 import android.content.Context
 import android.util.Log
 import java.io.File
+import java.text.Normalizer
 import java.text.SimpleDateFormat
 import java.util.ArrayDeque
 import java.util.Date
@@ -78,7 +79,7 @@ class LogFile(private val directory: File) {
         private const val maxMessageBytes = 16 * 1024
         private val bip39 = requireNotNull(LogFile::class.java.getResourceAsStream("/bip39-english.txt"))
             .bufferedReader().use { it.readLines().toSet() }
-        private val words = Regex("[A-Za-z]+")
+        private val words = Regex("[\\p{L}\\p{M}]+")
         private val sensitivePatterns = listOf(
             """(?is)\b[\w.-]*(?:email|lightning[_ -]?address)[\w.-]*["']?\s*[:=].*""",
             """(?i)\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,63}\b""",
@@ -94,7 +95,9 @@ class LogFile(private val directory: File) {
             if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return "[oversized log message omitted]"
             var result = message
             for (pattern in sensitivePatterns) result = pattern.replace(result, "[redacted]")
-            val matches = words.findAll(result).toList()
+            val decomposed = Normalizer.normalize(result, Normalizer.Form.NFKD)
+            val normalized = decomposed.lowercase(Locale.ROOT).replace("ß", "ss")
+            val matches = words.findAll(normalized).toList()
             val runs = mutableListOf<IntRange>()
             var start = 0
             var count = 0
@@ -108,6 +111,8 @@ class LogFile(private val directory: File) {
                 }
             }
             if (count >= 12) runs += matches[start].range.first..matches.last().range.last
+            // Compatibility expansion/case folding may invalidate offsets into the original.
+            if (runs.isNotEmpty() && (decomposed != result || normalized.length != result.length)) return "[redacted]"
             for (range in runs.asReversed()) result = result.replaceRange(range, "[redacted]")
             return result
         }

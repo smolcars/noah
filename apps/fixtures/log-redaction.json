@@ -425,6 +425,51 @@
       "name": "r2-label-seed-phrase",
       "input": "SDK failure: wallet_seed phrase: abababababababababababababababababababababababababababababababab",
       "expected": "SDK failure: [redacted]"
+    },
+    {
+      "name": "r2-mnemonic-fullwidth",
+      "input": "failed to import: ａｂａｎｄｏｎ ａｂａｎｄｏｎ ａｂａｎｄｏｎ ａｂａｎｄｏｎ ａｂａｎｄｏｎ ａｂａｎｄｏｎ ａｂａｎｄｏｎ ａｂａｎｄｏｎ ａｂａｎｄｏｎ ａｂａｎｄｏｎ ａｂａｎｄｏｎ ａｂｏｕｔ",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r2-mnemonic-mathematical",
+      "input": "failed to import: 𝐚𝐛𝐚𝐧𝐝𝐨𝐧 𝐚𝐛𝐚𝐧𝐝𝐨𝐧 𝐚𝐛𝐚𝐧𝐝𝐨𝐧 𝐚𝐛𝐚𝐧𝐝𝐨𝐧 𝐚𝐛𝐚𝐧𝐝𝐨𝐧 𝐚𝐛𝐚𝐧𝐝𝐨𝐧 𝐚𝐛𝐚𝐧𝐝𝐨𝐧 𝐚𝐛𝐚𝐧𝐝𝐨𝐧 𝐚𝐛𝐚𝐧𝐝𝐨𝐧 𝐚𝐛𝐚𝐧𝐝𝐨𝐧 𝐚𝐛𝐚𝐧𝐝𝐨𝐧 𝐚𝐛𝐨𝐮𝐭",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r2-mnemonic-circled",
+      "input": "failed to import: ⓐⓑⓐⓝⓓⓞⓝ ⓐⓑⓐⓝⓓⓞⓝ ⓐⓑⓐⓝⓓⓞⓝ ⓐⓑⓐⓝⓓⓞⓝ ⓐⓑⓐⓝⓓⓞⓝ ⓐⓑⓐⓝⓓⓞⓝ ⓐⓑⓐⓝⓓⓞⓝ ⓐⓑⓐⓝⓓⓞⓝ ⓐⓑⓐⓝⓓⓞⓝ ⓐⓑⓐⓝⓓⓞⓝ ⓐⓑⓐⓝⓓⓞⓝ ⓐⓑⓞⓤⓣ",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r2-negative-cyrillic",
+      "input": "аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbout",
+      "expected": "аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbout"
+    },
+    {
+      "name": "r2-negative-dotless",
+      "input": "abılıty abılıty abılıty abılıty abılıty abılıty abılıty abılıty abılıty abılıty abılıty abılıty",
+      "expected": "abılıty abılıty abılıty abılıty abılıty abılıty abılıty abılıty abılıty abılıty abılıty abılıty"
+    },
+    {
+      "name": "r2-negative-combining",
+      "input": "ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábout",
+      "expected": "ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábout"
+    },
+    {
+      "name": "r2-negative-bitcoin",
+      "input": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+      "expected": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+    },
+    {
+      "name": "r2-negative-ark",
+      "input": "ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy",
+      "expected": "ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy"
+    },
+    {
+      "name": "r2-negative-invoice",
+      "input": "lnbc1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq50gw7z",
+      "expected": "lnbc1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq50gw7z"
     }
   ]
 }
