@@ -24,7 +24,7 @@ final class OnchainModel {
                     let state = SettingsStorage.shared.persistedState(
                         PersistedWalletState.self, key: PersistedWalletState.key)
                     return await ExitRules.ready(
-                        initialized: state?.isInitialized == true, loaded: session.isOpen,
+                        initialized: state?.isInitialized != false, loaded: session.isOpen,
                         suspended: state?.isWalletSuspended == true,
                         background: WalletBackgroundActivity.shared.isRunning)
                 }, overview: { try await session.onchainOverview() },

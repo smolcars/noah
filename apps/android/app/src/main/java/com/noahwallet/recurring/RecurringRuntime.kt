@@ -46,7 +46,7 @@ class RecurringRuntime private constructor(context: Context) {
     }
     fun foreground() { scope.launch { executor.execute() } }
     fun timeChanged() { scope.launch {
-        if (settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isInitialized != true) return@launch
+        if (!services.isOnboarded()) return@launch
         executor.timeChanged(); executor.execute()
     } }
     suspend fun execute(budget: RecurringBudget = RecurringBudget()) = withContext(Dispatchers.Main) { executor.execute(budget = budget) }

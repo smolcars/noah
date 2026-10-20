@@ -27,7 +27,7 @@ import kotlinx.coroutines.*
 
 fun onchainReady(app: AppModel): Boolean {
     val persisted = app.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
-    return ExitRules.ready(persisted?.isInitialized == true, app.session.isOpen,
+    return ExitRules.ready(persisted?.isInitialized != false, app.session.isOpen,
         app.isWalletSuspended || persisted?.isWalletSuspended == true, WalletBackgroundActivity.isRunning)
 }
 internal fun onchainDependencies(app: AppModel) = OnchainModel.Dependencies(
