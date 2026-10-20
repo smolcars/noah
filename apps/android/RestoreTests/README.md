@@ -1,31 +1,45 @@
 # Android restore UI verification
 
-Based on `feat/native-rewrite` at `391ada96` (bark-bolt-ffi 0.4.0), 2026-10-19.
+Based on `feat/native-rewrite` at `e0fcab52` (bark-bolt-ffi 0.4.0), 2026-10-19.
+The initial implementation evidence below is retained separately from the review pass.
 
 Welcome → Restore Wallet accepts 12 numbered words, local BIP39 suggestions,
 whole-phrase paste in any field, compatibility/case/whitespace normalization and
 checksum validation. Incorrect paste lengths preserve existing entries and explain
 what to change. `FLAG_SECURE` protects this screen; no input is saved in instance
-state. Leaving, backgrounding and submitting discard the entered words.
+state. Leaving, backgrounding and submitting discard the entered words and recreate the
+whole native field subtree, dropping its undo history. Platform password EditTexts
+mask node text and text-change events according to Android password policy, keep
+word-position labels and editing actions, disable saved state/autofill/content
+capture, and request no suggestions or personalized IME learning. Prefix-derived
+suggestion buttons are excluded from accessibility. Accepted whole-phrase paste
+is removed from the clipboard only while its content matches; background and exit
+repeat that conditional cleanup. This deliberately improves on RN restore.
 
 Engine steps map to fetching, validating, installing the wallet and verifying
 recovery-phrase storage. Fixed messages cover every engine reason, missing backup,
 wrong network, damaged download, authentication and connectivity problems. A
 post-commit error blocks both retry and Back and explicitly says the backup was
-restored and Noah must restart. Completion saves onboarding flags, seeds
+restored and Noah must restart. A metadata-only, fsynced completion receipt is written before installation via an
+optional engine callback (commit/rollback rules are unchanged). It survives engine
+journal cleanup and replays after launch recovery; rollback or no installation
+discards it. Completion saves onboarding flags, seeds
 `backup-storage`, settles pending cleanup, clears the server token, opens the
-wallet and starts server services in that order. Successful deletion resets the
+wallet and starts server services, then removes the receipt. The lifecycle mutation
+gate covers restore eligibility through completion, before session reservation. Successful deletion resets the
 in-memory restore flow for a subsequent wallet.
 
 Seed-only launch offers the stored-phrase recovery screen without displaying the
-phrase. Restore and deletion markers block onboarding regardless of database/seed
+phrase, an explicit Resume Recovery action while suspended, and a typed confirmed
+Delete Wallet fallback. Restore/deletion actions disable during restore and pending
+recovery. The enabled Restore control uses the same eligibility guard as the model. Restore and deletion markers block onboarding regardless of database/seed
 presence; recovery runs before launch inspection. Waiting for an unreadable secret
 keeps the journal and wallet files and asks the user to unlock. Existing data,
 suspended wallets and active sessions cannot enter onboarding restore. Neither RN
 nor iOS Backup & Restore Settings offers restore over an installed wallet, so the
 existing Android backup toggle/manual upload/list/delete/export controls remain.
 
-## Automated verification
+## Initial implementation verification
 
 The Android JVM cases mirror the reviewed iOS `RestoreUITests.swift`: normalization,
 paste lengths, suggestions, dictionary/count/checksum validation, all issue reasons,
@@ -33,7 +47,9 @@ completion ordering, legacy and missing-ID outcomes, unresolved/thrown cleanup a
 failed state writes. Additional cases cover duplicate submission, cancellation,
 post-commit retry blocking, reset after deletion and all launch-marker combinations.
 `apps/fixtures/restore-phrase.json` contains only public BIP39 vectors; Android reads
-it from the existing shared-fixture loader. iOS's equivalent tests remain unchanged.
+it from the existing shared-fixture loader. iOS now also clears its input on
+background/submit/exit, recreates fields, disables UIKit undo retention and clears
+matching pasted content; native field and isolated-pasteboard tests cover those fixes.
 
 Targeted checks: **22 JVM tests passed** across four suites; no failures or skips.
 
@@ -43,12 +59,12 @@ Final full command (run once after targeted/device iteration):
 nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
 ```
 
-Final result: **548 JVM tests**, **40 suites**, **0 failures / 0 errors / 0 skips**.
+Initial full result: **548 JVM tests**, **40 suites**, **0 failures / 0 errors / 0 skips**.
 Regtest debug APK assembly and instrumentation Kotlin compilation passed.
 `BUILD SUCCESSFUL in 1m 29s`; full suite ran once. Existing deprecation warnings
 remain; no new dependencies or verification-metadata changes were needed.
 
-## Live device evidence
+## Initial live device evidence
 
 Created Android 15 Google APIs ARM64 AVD **NoahRestoreUI1c474**, explicitly mapped
 with `adb -s emulator-5592 emu avd name` to **emulator-5592**. Built the opt-in
@@ -107,19 +123,95 @@ saved accessibility trees. The test injects the phrase directly into a private
 field with the platform accessibility text action, then presses the real Restore
 button. It waits for Compose accessibility updates instead of racing recomposition.
 
-## Differences and limits
+## Initial differences and limits
 
-The input matches reviewed native iOS behavior. RN currently has a freeform
+Android masks entered words using platform password fields; iOS keeps its existing
+visible local fields with undo disabled. RN currently has a freeform
 multiline field and no local word suggestions. Android uses its existing
-IME-resizing scroll form, a password keyboard (with visible entered words and
-private accessibility semantics), `FLAG_SECURE` and an indeterminate stage bar.
+IME-resizing scroll form, platform password fields (masked text and platform
+password accessibility behavior), `FLAG_SECURE` and an indeterminate stage bar.
 Its BIP39 checksum uses the bundled English list and JDK SHA-256 so the same logic
 runs in JVM tests without JNI; the live test also checks SDK-generated phrases.
 
-The live wallet is unfunded: balance **0 sats**, **0 movements**, with exact balance
-bucket and wallet fingerprint comparison. Funded restore, direct iOS ↔ Android
-restore, physical devices, API 24–34/36–37, actual hardware storage loss and a live
-post-commit filesystem-cleanup failure remain unverified. The engine's existing
+The initial live wallet was unfunded: balance **0 sats**, **0 movements**, with exact balance
+bucket and wallet fingerprint comparison. The review run below adds funded restore and iOS privacy coverage. Direct
+iOS ↔ Android restore, physical devices, API 24–34/36–37, actual hardware
+storage loss and a live post-commit filesystem-cleanup failure remain unverified. The engine's existing
 crash/storage tests and the new completion state tests cover the latter behavior
 with injected failures. No Docker service, protected emulator, physical Pixel or
 iOS simulator was controlled for this task.
+
+## Review regression coverage
+
+- Platform node text, hint/word position, editing actions, actual password text-change
+  events with system speak-passwords disabled, and native EditorInfo flags.
+- Background field identity replacement followed by hardware Ctrl+Z; matching
+  clipboard removal after accepted paste and preservation of unrelated replacement.
+- Controlled deletion drain → queued restore → held completion gate interleaving.
+- Durable receipt replay at engine-return, flags, backup seeding, cleanup, token,
+  wallet-open and receipt-removal boundaries; rollback/no-install/waiting-secret
+  and unreadable-record cases; callback failure before installation.
+- Seed-only suspended recovery, disabled Restore until Resume Recovery, confirmed
+  deletion back to Welcome, and existing interrupted/waiting-secret launch cases.
+- Real Ktor offline backup-list and login conversions retain a safe connectivity
+  category without retaining transport exceptions or their private details.
+
+For the funded opt-in case, add `-e noahRestoreFunded 1` to the instrumentation
+command. On the owned emulator only, read the public Ark address from
+`run-as com.noahwallet.regtest cat files/restore-funding-address.txt`, pay it once
+through `just bark send '<address>' '12000 sats'`, then let the test continue.
+It waits up to three minutes for funds, checks a nonzero balance and movements,
+backs up to port 3100, wipes, restores, and compares every balance bucket and the
+full mapped movement list for typed-phrase and stored-seed recovery. No phrase is
+exported to a file, shell argument, screenshot or accessibility-tree artifact.
+
+## Review verification — 2026-10-19
+
+Base: `e0fcab52`; Android 15 ARM64 AVD **NoahRestoreReview0dc6**, explicitly
+mapped to **emulator-5594**; iPhone 17 / iOS 27.0 simulator
+**Noah Restore Review 0dc6** (`C0D892B5-FB05-467B-902B-D31C0067A6CB`).
+
+- Requested Android full command, run once after targeted/device iteration:
+  **563 JVM tests / 42 suites / 0 failures / 0 errors / 0 skips**.
+  Regtest debug APK assembly and Android instrumentation compilation passed;
+  **BUILD SUCCESSFUL in 1m 2s**. Targeted checks while iterating included
+  **54 JVM tests / 9 suites / 0 failures** and engine receipt-hook regressions.
+- Full iOS NoahTests, run once with code signing enabled and DerivedData under
+  `/private/tmp`: **350 total / 334 passed / 16 opt-in skipped / 0 failed**,
+  **80 suites** (396 expanded passes in xcresult). Targeted privacy/phrase run:
+  **6 tests / 2 suites / 0 failures**. The owned simulator and DerivedData,
+  including xcresults, were verified, shut down/deleted and removed afterward.
+- Final Android device class: **4 tests passed / 0 failures**, **42.353 seconds**.
+  It covers actual native password node text and text-change events with speak
+  passwords disabled, safe labels/edit actions, IME flags, background field
+  replacement plus Ctrl+Z, paste/clipboard behavior, missing-backup errors,
+  suspended seed-only resume, confirmed deletion and interrupted launch gates.
+- Funded Android run: **12,000 regtest sats / 1 movement** delivered once from
+  the existing Bark wallet via `just bark send '<public address>' '12000 sats'`.
+  No mining or Docker lifecycle changes were needed. The port-3100 encrypted
+  backup was uploaded, local wallet wiped, and both typed-phrase and stored-seed
+  restores passed fingerprint, every balance bucket and full mapped movement
+  comparisons. Backup-storage seeding, cleared engine journal and server restart
+  also passed. All throwaway server snapshots and local wallet state were removed.
+
+The funded four-case iteration passed its three non-accessibility cases but failed
+an event-observation assertion. An earlier privacy iteration also timed out waiting
+for a programmatic edit event. The final test explicitly subscribes to all event
+types, waits for field attachment and uses real key input; it requires an actual
+password text-change event and checks its text/beforeText. Its isolated rerun passed
+(**1 test, 2.617 seconds**), then all four final cases passed together. Failed
+iterations are not counted as passing runs. The final all-case rerun used an
+unfunded wallet; the funded case above was already verified.
+
+No recovery phrase was logged, written to saved-instance state, exported to disk,
+or captured in a screenshot/accessibility-tree artifact. No protected emulator,
+physical Pixel, shared iOS simulator or Docker service lifecycle was controlled.
+The owned Android emulator was identity-checked, shut down and deleted; temporary
+command/emulator logs and all owned build output outside the worktree were removed.
+
+Remaining limits: real TalkBack gestures/audio and the system speak-passwords opt-in
+were not exercised; the tests inspect the actual platform node/event boundary with
+that setting disabled. API 24–28 clipboard fallback, physical devices, live process
+kill at every completion boundary, direct cross-platform restore and real storage
+faults remain unverified. Completion crash/failure boundaries are deterministic
+JVM tests with a real metadata receipt file and injected failures.

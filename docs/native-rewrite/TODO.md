@@ -111,6 +111,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Restore — Android (same journal semantics; durable seed read-back, launch recovery, failure/race tests)
 - [x] Restore UI (RestoreWalletScreen); seed `backup-storage` after a restore (`BackupCoordinator.seedRestored`) — iOS
 - [x] Restore UI — Android (private 12-word input/paste/suggestions, staged progress, fixed issue mapping, commit-safe completion and `backup-storage` seeding; saved-phrase and pending-journal launch gates)
+- [x] Restore review — Android: platform password accessibility/IME policy, generation-based undo disposal, conditional pasted-clipboard clearing, shared lifecycle gate, durable completion replay, confirmed deletion fallback, explicit suspended recovery and typed connectivity errors; iOS undo/background/clipboard fixes too (RN clipboard gap deliberately improved)
+- [x] Restore review verification: Android 563 JVM tests / 42 suites, APK + instrumentation compilation; four Android 15 device cases and funded 12,000-sat / one-movement typed/stored-seed restores; iOS 350 total / 334 passed / 16 opt-in skipped / 0 failures, 80 suites; each full suite once, owned devices/artifacts removed — `apps/android/RestoreTests/README.md`
 - [x] Backup coordinator: single in-flight, 5 s debounce, generation counter, backoff 15 s → 15 min with jitter, suspension gates; `backup-storage` with RN's actions; triggers from wallet state changes (session-owned), foreground and push — iOS
 - [x] Backup coordinator — Android (generation counter, manual-clock tests, foreground/state-change/push triggers)
 - [x] v1 legacy extraction, bounded streaming download, startup scratch sweep and Auto Backup/device-transfer exclusions — Android
