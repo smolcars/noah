@@ -18,10 +18,31 @@ internal object EndpointLogPrivacy {
         }
         origin(endpoint)?.let(origins::add)
     }
-    fun redact(text: String): String {
+    fun redact(text: String): String = sanitize(text) ?: "[redacted]"
+
+    private val recordStart = Regex("""^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [VDIWE] \[""")
+    /** Keep continuation lines with their endpoint/error context, including historical files. */
+    fun redactLogLines(lines: List<String>): List<String> {
+        val result = mutableListOf<String>()
+        val record = mutableListOf<String>()
+        fun flush() {
+            if (record.isEmpty()) return
+            result += redact(record.joinToString("\n")).lines()
+            record.clear()
+        }
+        for (line in lines) {
+            if (recordStart.containsMatchIn(line)) flush()
+            record += line
+        }
+        flush()
+        return result
+    }
+
+    fun sanitize(text: String): String? {
         // Exported lines include a bounded tag and timestamp as well as the message.
         if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[oversized log message omitted]"
-        val views = LogFile.decodedViews(text, percentEncoded = true) ?: return "[redacted]"
+        responseStatus.find(text)?.let { return "HttpResponse { status: ${it.groupValues[1]} }" }
+        val views = LogFile.decodedViews(text, percentEncoded = true) ?: return null
         for (view in views) {
             responseStatus.find(view)?.let { return "HttpResponse { status: ${it.groupValues[1]} }" }
         }

@@ -110,12 +110,12 @@ class LogFile(
         for (index in maxFiles downTo 0) {
             val file = File(directory, if (index == 0) fileName else "$fileName.$index")
             if (!file.isFile) continue
-            file.useLines { sequence -> sequence.forEach {
+            EndpointLogPrivacy.redactLogLines(file.readLines()).forEach {
                 if (lines.size == maxLines) lines.removeFirst()
                 lines.addLast(it)
-            } }
+            }
         }
-        return lines.map(EndpointLogPrivacy::redact)
+        return lines.toList()
     }
 
     private fun barrier(): CompletableFuture<Void> = synchronized(admission) {
@@ -179,7 +179,7 @@ class LogFile(
         /** Uncertain decoding and oversized messages have no telemetry admission path. */
         internal fun redactForTelemetry(message: String): String? {
             if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return null
-            val safe = EndpointLogPrivacy.redact(message)
+            val safe = EndpointLogPrivacy.sanitize(message) ?: return null
             val views = decodedViews(safe) ?: return null
             if (views.drop(1).any { redactPlain(it) != it }) return "[redacted]"
             return redactPlain(safe)

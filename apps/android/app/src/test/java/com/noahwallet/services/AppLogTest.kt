@@ -16,17 +16,21 @@ import kotlinx.coroutines.runBlocking
 
 class AppLogTest {
     @Test fun redactionPerformance() {
-        for ((name, unit) in performanceInputs) assertRedactionScales(name, unit)
+        com.noahwallet.services.logging.EndpointLogPrivacy.register("https://scaling-privacy.example/api/fakeScaleToken")
+        for ((name, unit) in performanceInputs) {
+            assertRedactionScales(name, unit, LogFile::redact)
+            assertRedactionScales("boundary $name", unit, com.noahwallet.services.logging.EndpointLogPrivacy::redact)
+        }
     }
 
-    private fun assertRedactionScales(name: String, unit: String) {
+    private fun assertRedactionScales(name: String, unit: String, redact: (String) -> String = LogFile::redact) {
         val inputs = listOf(1024, 16384).map { size -> unit.repeat((size + unit.length - 1) / unit.length).take(size) }
-        inputs.forEach { LogFile.redact(it) } // Warm regexes, dictionaries and the JIT before sampling.
+        inputs.forEach { redact(it) } // Warm regexes, dictionaries and the JIT before sampling.
         val samples = inputs.map { mutableListOf<Long>() }
         repeat(5) {
             inputs.forEachIndexed { index, input ->
                 val start = System.nanoTime()
-                LogFile.redact(input)
+                redact(input)
                 samples[index] += System.nanoTime() - start
             }
         }
@@ -40,7 +44,8 @@ class AppLogTest {
     private val performanceInputs = listOf(
         "punctuation" to "!@#$%^&*()[]{}:;,?", "hyphen" to "x-", "dot" to "x.",
         "digit" to "1234567890", "mixed" to "wallet sync completed xyzzy ",
-        "escaped" to "\\u0078\\u002e",
+        "escaped" to "\\u0078\\u002e", "entities" to "&#x78;&#46;",
+        "provider body" to """HttpResponse { status: 404, message: "fake" }""",
     )
 
     @Test fun callerOnlyEnqueuesAndEverySinkWaitsForRedaction() = withFile { directory, _ ->
@@ -63,7 +68,7 @@ class AppLogTest {
         assertTrue(sinks.isEmpty())
         assertFalse(directory.resolve("noah.log").exists())
         while (tasks.isNotEmpty()) tasks.removeFirst().run()
-        assertEquals(8, sinks.size)
+        assertEquals(10, sinks.size)
         assertEquals("[[redacted]] [redacted]", sinks.last())
         assertFalse(directory.resolve("noah.log").readText().contains(phrase))
     }
