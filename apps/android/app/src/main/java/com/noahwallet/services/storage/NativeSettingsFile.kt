@@ -9,8 +9,8 @@ import kotlinx.serialization.json.*
 internal class NativeSettingsFile(val file: File,
     private val sync: (File) -> Unit = ::syncDirectory,
     private val step: (String) -> Unit = {}) {
-    data class State(val values: Map<String, String> = emptyMap(), val admittedKeys: Set<String> = emptySet(),
-        val recoveryPending: Boolean = false, val cleanupPending: Boolean = false)
+    data class State(val values: Map<String, String> = emptyMap(), val settingsNoticePending: Boolean = false,
+        val recurringNoticePending: Boolean = false, val cleanupPending: Boolean = false)
     val exists get() = file.exists()
 
     fun load(): State {
@@ -21,19 +21,17 @@ internal class NativeSettingsFile(val file: File,
         val payload = string(root.getValue("payload"))
         check(string(root.getValue("sha256")) == digest(payload))
         val state = Json.parseToJsonElement(payload).jsonObject
-        check(state.keys == setOf("values", "admittedKeys", "recoveryPending", "cleanupPending"))
+        check(state.keys == setOf("values", "settingsNoticePending", "recurringNoticePending", "cleanupPending"))
         val values = state.getValue("values").jsonObject.mapValues { string(it.value) }
-        val keys = state.getValue("admittedKeys").jsonArray.map(::string)
-        check(keys.distinct().size == keys.size && keys.all { it in values })
         fun boolean(key: String): Boolean = state.getValue(key).jsonPrimitive.let { check(!it.isString); it.boolean }
-        return State(values, keys.toSet(), boolean("recoveryPending"), boolean("cleanupPending"))
+        return State(values, boolean("settingsNoticePending"), boolean("recurringNoticePending"), boolean("cleanupPending"))
     }
 
     fun save(state: State) {
         val payload = buildJsonObject {
             put("values", JsonObject(state.values.toSortedMap().mapValues { JsonPrimitive(it.value) }))
-            put("admittedKeys", JsonArray(state.admittedKeys.sorted().map(::JsonPrimitive)))
-            put("recoveryPending", state.recoveryPending)
+            put("settingsNoticePending", state.settingsNoticePending)
+            put("recurringNoticePending", state.recurringNoticePending)
             put("cleanupPending", state.cleanupPending)
         }.toString()
         val data = buildJsonObject { put("version", 1); put("payload", payload); put("sha256", digest(payload)) }.toString()

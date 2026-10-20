@@ -3,161 +3,93 @@ package com.noahwallet.services.storage
 import android.content.Context
 import com.tencent.mmkv.MMKV
 import com.tencent.mmkv.MMKVLogLevel
-import com.tencent.mmkv.MMKVHandler
-import com.tencent.mmkv.MMKVRecoverStrategic
-import com.noahwallet.services.logging.AppLog
 import java.io.File
+import kotlinx.serialization.json.*
 
-class SettingsStorage private constructor(private val context: Context, acknowledgingRecovery: Boolean) {
-    constructor(context: Context) : this(context, false)
-    private val rootPath = File(context.filesDir, "mmkv").absolutePath
-    private val mmkv: MMKV? get() = synchronized(openLock) { opened[rootPath] }
-    private val quarantine = MMKVQuarantine(context.noBackupFilesDir, instanceID)
-    private val backup = MMKVUpgradeBackup(File(context.filesDir, "mmkv"), instanceID, backupRoot = context.noBackupFilesDir)
+/** MMKV is only opened on a verified disposable snapshot; native writes use one atomic file. */
+class SettingsStorage(context: Context) {
+    private val root = File(context.filesDir, "mmkv")
+    private val backupRoot = context.noBackupFilesDir
+    internal val nativeFile = NativeSettingsFile(File(backupRoot, "settings.native.json"))
 
-    init {
-        synchronized(openLock) {
-            if (opened.containsKey(rootPath)) opened[rootPath]
-            else {
-                val log = AppLog(context, "mmkv")
-                var store: MMKV? = null
-                try {
-                    val recovery = RecoveryHandler(log, quarantine)
-                    MMKV.initialize(context.applicationContext, rootPath, null, MMKVLogLevel.LevelWarning, recovery)
-                    check(File(rootPath).isDirectory || File(rootPath).mkdirs())
-                    MMKVIntegrity.quarantineBeforeOpen(File(rootPath), instanceID, quarantine)
-                    backup.prepare()
-                    MMKVIntegrity.quarantineBeforeOpen(File(rootPath), instanceID, quarantine)
-                    val retired = backup.retiredKeys
-                    val snapshot = if (retired == null) snapshotInventory(backup, quarantine) else null
-                    recovery.didRecover = false
-                    store = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, rootPath))
-                    if (snapshot != null) {
-                        val valid = runCatching { validate(store!!, snapshot.keys); check(snapshot.readable) }.isSuccess
-                        if (!valid || quarantine.exists && (!backup.restored || recovery.didRecover)) {
-                            store.close(); store = null
-                            check(!backup.restored)
-                            backup.restore()
-                            MMKVIntegrity.quarantineBeforeOpen(File(rootPath), instanceID, quarantine)
-                            log.w("Restoring pre-native settings backup after incomplete recovery")
-                            store = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, rootPath))
-                        }
-                        validate(store, snapshot.keys)
-                        check(snapshot.readable)
-                    } else validate(store, retired.orEmpty())
-                    quarantine.requireDurable()
-                    if (retired != null && quarantine.exists && !acknowledgingRecovery) throw RecoveryRequired()
-                    backup.retire(rnKeys(store))
-                    quarantine.clear()
-                    recoveryRequired.remove(rootPath)
-                    store
-                } catch (failure: Exception) {
-                    if (failure is RecoveryRequired) recoveryRequired.add(rootPath)
-                    else recoveryRequired.remove(rootPath)
-                    store?.close()
-                    log.e("Settings unavailable; original files preserved. Restart Noah to retry or contact support.")
-                    null
-                }.also { opened[rootPath] = it }
-            }
+    init { synchronized(openLock) {
+        check(backupRoot.isDirectory || backupRoot.mkdirs())
+        if (nativeFile.exists) {
+            if (runCatching { nativeFile.load() }.isFailure) nativeFile.save(NativeSettingsFile.State(settingsNoticePending = true))
+        } else {
+            val backup = MMKVUpgradeBackup(root, instanceID, backupRoot = backupRoot)
+            val state = runCatching {
+                backup.prepare()
+                if (!backup.hasContent) NativeSettingsFile.State() else backup.inspectSnapshot { scratch ->
+                    check(File(scratch, instanceID).isFile && File(scratch, "$instanceID.crc").isFile)
+                    check(MMKVIntegrity.verifies(scratch, instanceID))
+                    MMKV.initialize(context.applicationContext, scratch.path, null, MMKVLogLevel.LevelNone, null)
+                    val snapshot = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, scratch.path))
+                    try {
+                        importValues(snapshot.allKeys().orEmpty().associateWith { key ->
+                            runCatching { RNStoreCodec.storedString(true, snapshot.decodeBytes(key)) }.getOrNull()
+                        })
+                    } finally { snapshot.close() }
+                }
+            }.getOrElse { NativeSettingsFile.State(settingsNoticePending = true) }
+            nativeFile.save(state)
         }
-    }
+        finishCleanup()
+    } }
 
-    class RecoveryRequired : Exception("Settings were recovered from an older state")
-    val recoveryNeedsAcknowledgement get() = synchronized(openLock) { rootPath in recoveryRequired }
-    /** Called only by the resumed foreground launch gate's Continue action. */
-    fun acknowledgeRecovery() = synchronized(openLock) {
-        check(recoveryNeedsAcknowledgement && quarantine.exists)
-        opened.remove(rootPath)
-        SettingsStorage(context, true).requireHealthy()
+    class Unavailable : Exception("Native settings write failed")
+    fun requireHealthy() { synchronized(openLock) { load() } }
+    private fun load(): NativeSettingsFile.State = try { nativeFile.load() } catch (_: Exception) {
+        NativeSettingsFile.State(settingsNoticePending = true).also(nativeFile::save)
     }
-    class Unavailable : Exception("Wallet settings need recovery. Restart Noah to retry or contact support; wallet files have been kept.")
-    fun requireHealthy() {
-        if (recoveryNeedsAcknowledgement) throw RecoveryRequired()
-        if (mmkv == null) throw Unavailable()
-        validate(mmkv!!, backup.retiredKeys.orEmpty())
-        quarantine.requireDurable()
-        if (quarantine.exists) throw RecoveryRequired()
-    }
-    fun string(key: String): String? = synchronized(openLock) {
-        if (quarantine.exists || quarantine.writeFailed) return@synchronized null
-        val store = mmkv ?: return@synchronized null
-        val value = if (key in RNStoreCodec.versions) RNStoreCodec.storedString(store.containsKey(key), store.decodeBytes(key))
-            else store.decodeString(key)
-        if (quarantine.exists || quarantine.writeFailed) null else value
-    }
+    fun string(key: String): String? = synchronized(openLock) { load().values[key] }
     fun set(value: String, key: String) = synchronized(openLock) {
-        validateStores()
-        val keys = rnKeys(mmkv!!).toMutableList()
-        if (key in RNStoreCodec.versions && key !in keys) keys.add(key)
-        backup.retire(keys)
-        val preserved = if (key in RNStoreCodec.versions) RNStoreCodec.merge(key, string(key), value) else value
-        check(mmkv!!.encode(key, preserved))
+        val state = load()
+        val preserved = if (key in RNStoreCodec.versions) RNStoreCodec.merge(key, state.values[key], value) else value
+        nativeFile.save(state.copy(values = state.values + (key to preserved)))
     }
-    fun validateStores() {
-        requireHealthy()
-        // Wallet-storage already missing at first open resumes onboarding with the existing wallet.
-        // Losing an admitted key later blocks above.
+    fun validateStores() = requireHealthy()
+    // set() commits synchronously; retain this API for automation callers.
+    fun sync() = requireHealthy()
+    fun takeUpgradeNotices(): List<String> = synchronized(openLock) {
+        val state = load()
+        val notices = listOfNotNull(settingsNotice.takeIf { state.settingsNoticePending }, recurringNotice.takeIf { state.recurringNoticePending })
+        if (notices.isNotEmpty()) nativeFile.save(state.copy(settingsNoticePending = false, recurringNoticePending = false))
+        notices
     }
-    fun sync() { requireHealthy(); mmkv!!.sync() }
-    fun removeAll() = synchronized(openLock) { requireHealthy(); backup.markReset(); mmkv!!.clearAll(); mmkv!!.sync(); backup.deleteSnapshot() }
-    inline fun <reified State> persistedState(key: String): State? =
-        string(key)?.let { PersistedStateCodec.decode<State>(it) }
-    inline fun <reified State> setPersistedState(state: State, key: String, version: Int) =
-        set(PersistedStateCodec.encode(state, version), key)
+    fun removeAll() = synchronized(openLock) {
+        nativeFile.save(NativeSettingsFile.State(cleanupPending = true))
+        finishCleanup()
+    }
+    private fun finishCleanup() {
+        if (!nativeFile.load().cleanupPending) return
+        listOf(instanceID, "$instanceID.crc").forEach { name -> File(root, name).let { check(!it.exists() || it.delete()) } }
+        if (root.exists()) syncDirectory(root)
+        MMKVUpgradeBackup(root, instanceID, backupRoot = backupRoot).deleteSnapshot()
+        nativeFile.save(NativeSettingsFile.State()) // Keep the marker through re-onboarding.
+    }
+    inline fun <reified State> persistedState(key: String): State? = string(key)?.let { PersistedStateCodec.decode<State>(it) }
+    inline fun <reified State> setPersistedState(state: State, key: String, version: Int) = set(PersistedStateCodec.encode(state, version), key)
 
     companion object {
         const val instanceID = "noah-wallet-storage"
+        const val settingsNotice = "Some settings couldn't be carried over from the previous version. Please check Settings, including security, currency and Esplora server."
+        const val recurringNotice = "Recurring payments need to be set up again after this update."
+        const val emptyRecurring = """{"state":{"schedules":{},"serverSyncPending":true},"version":0}"""
         private val openLock = Any()
-        private val opened = mutableMapOf<String, MMKV?>()
-        private val recoveryRequired = mutableSetOf<String>()
-        private fun rnKeys(store: MMKV) = RNStoreCodec.versions.keys.filter(store::containsKey)
-        private data class SnapshotInventory(val keys: List<String>, val readable: Boolean)
-        private fun snapshotInventory(backup: MMKVUpgradeBackup, quarantine: MMKVQuarantine): SnapshotInventory {
-            if (!backup.hasContent) return SnapshotInventory(emptyList(), true)
-            return backup.inspectSnapshot { root ->
-                MMKVIntegrity.quarantineBeforeOpen(root, instanceID, quarantine)
-                val snapshot = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, root.path))
-                try {
-                    val keys = rnKeys(snapshot)
-                    SnapshotInventory(keys, keys.isNotEmpty() && runCatching { validate(snapshot, keys) }.isSuccess)
-                } finally { snapshot.close() }
+        internal fun importValues(source: Map<String, String?>): NativeSettingsFile.State {
+            val values = mutableMapOf<String, String>()
+            var settingsNotice = source.isEmpty()
+            var recurringNotice = false
+            source.forEach { (key, raw) ->
+                if (key == "recurring-payment-storage") {
+                    val schedules = runCatching { Json.parseToJsonElement(checkNotNull(raw)).jsonObject.getValue("state").jsonObject.getValue("schedules").jsonObject }.getOrNull()
+                    if (schedules?.isEmpty() != true) { recurringNotice = true; values[key] = emptyRecurring }
+                } else if (raw == null || key in RNStoreCodec.versions && runCatching { RNStoreCodec.validateStoredValue(key, raw) }.isFailure) {
+                    settingsNotice = true
+                } else values[key] = raw
             }
+            return NativeSettingsFile.State(values, settingsNotice, recurringNotice)
         }
-        private fun validate(store: MMKV, requiredKeys: List<String>) {
-            if (!requiredKeys.all(store::containsKey)) throw Unavailable()
-            RNStoreCodec.versions.keys.filter { it != "esplora-storage" }.forEach { key ->
-                RNStoreCodec.storedString(store.containsKey(key), store.decodeBytes(key))?.let { RNStoreCodec.validateStoredValue(key, it) }
-            }
-        }
-    }
-}
-
-private class RecoveryHandler(private val log: AppLog, private val quarantine: MMKVQuarantine) : MMKVHandler {
-    var didRecover = false
-    override fun onMMKVCRCCheckFail(mmapID: String): MMKVRecoverStrategic {
-        protectRecovery()
-        didRecover = true
-        log.w("CRC check failed; recovering settings")
-        return MMKVRecoverStrategic.OnErrorRecover
-    }
-    override fun onMMKVFileLengthError(mmapID: String): MMKVRecoverStrategic {
-        protectRecovery()
-        didRecover = true
-        log.w("File length check failed; recovering settings")
-        return MMKVRecoverStrategic.OnErrorRecover
-    }
-    private fun protectRecovery() {
-        // MMKV 2.4.3 has only recover/discard; both rewrite files. Never return on failed durability.
-        if (!quarantine.recordRecovery()) {
-            android.os.Process.killProcess(android.os.Process.myPid())
-            Runtime.getRuntime().halt(1)
-            error("Cannot safely recover settings")
-        }
-    }
-    override fun wantLogRedirecting() = true
-    override fun mmkvLog(level: MMKVLogLevel, file: String, line: Int, function: String, message: String) {
-        // MMKV diagnostics may contain keys/values; only fixed messages reach the redacting logger.
-        if (level == MMKVLogLevel.LevelError) log.e("MMKV reported a storage error")
-        else if (level == MMKVLogLevel.LevelWarning) log.w("MMKV reported a storage warning")
     }
 }
