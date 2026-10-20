@@ -259,15 +259,16 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                     try dependencies.write(saved)
                 }
                 attempt = saved
-                state = saved.alreadyPaid.map(State.alreadyPaid)
+                let outcome = saved.alreadyPaid.map(State.alreadyPaid)
                     ?? saved.receipt.map { $0.isUnresolved ? .uncertain : .succeeded($0) }
                     ?? (saved.failed ? .failed : .uncertain)
                 message = saved.failureMessage ?? saved.receipt?.chainStatusError
                 if saved.recurringOccurrenceKey != nil {
                     guard let persistRecurringEvidence else { throw SendFailure.unresolved }
-                    try persistRecurringEvidence(saved, generation, walletGeneration, state, message)
+                    try persistRecurringEvidence(saved, generation, walletGeneration, outcome, message)
                     recurringEvidenceDurable = true
                 }
+                state = outcome
             }
         } catch {
             state = .storageBlocked

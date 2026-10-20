@@ -39,6 +39,26 @@ import Testing
         #expect(try h.store.load().schedules[s.id]?.runs.filter { $0.status == "success" }.count == 1)
     }
 
+    @Test func restoredSuccessIsPublishedOnlyAfterOccurrenceHandoff() async throws {
+        let h = try RecurringExecutorTests.Harness()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        let s = try await paidButUnsettled(h)
+        let persist = try #require(h.controller.persistRecurringEvidence)
+        var called = false
+        h.controller.persistRecurringEvidence = { attempt, generation, walletGeneration, outcome, message in
+            called = true
+            if case .succeeded = h.controller.state { Issue.record("Restored success preceded its durable handoff") }
+            try persist(attempt, generation, walletGeneration, outcome, message)
+        }
+        h.controller.reloadForWalletChange()
+        #expect(called)
+        if case .succeeded = h.controller.state {} else { Issue.record("Expected recovered receipt") }
+        h.controller.acknowledge()
+        await h.executor.execute(); await h.executor.checkStatus(s.id)
+        #expect(try h.store.load().schedules[s.id]?.occurrencesPaid == 1)
+        #expect(h.calls.withLock { $0 } == 1)
+    }
+
     @Test func replacementSendMustNotOverwriteUnsettledPaidEvidence() async throws {
         let h = try RecurringExecutorTests.Harness()
         defer { try? FileManager.default.removeItem(at: h.directory) }
