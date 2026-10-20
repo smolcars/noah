@@ -2,7 +2,13 @@ import Foundation
 import Testing
 @testable import Noah
 
-struct AccountParityTests {
+@MainActor struct AccountParityTests {
+    @Test func profileNameLimitMatchesRN() throws {
+        for item in try Fixtures.load("profile-name", input: String.self, expected: String.self) {
+            #expect(ProfileView.limitedName(item.input) == item.expected, "\(item.name)")
+        }
+    }
+
     @Test func verifiedReplacementExplainsTheOldAddressStaysActive() {
         #expect(EmergencyEmailView.explanation(fromOnboarding: false, verified: true, email: "old@example.com", locale: "en") ==
             "Your current email, old@example.com, will stay active until the new email is verified.")

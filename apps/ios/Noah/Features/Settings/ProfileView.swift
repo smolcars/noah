@@ -67,6 +67,7 @@ struct ProfileView: View {
         Form {
             Section("Name") {
                 TextField("Name", text: $name).focused($focus, equals: .name).submitLabel(.done)
+                    .onChange(of: name) { _, value in name = Self.limitedName(value) }
                     .onSubmit { save() }.accessibilityIdentifier("profile-name-input")
                 Button(busy ? "Saving..." : "Save", action: save).disabled(busy)
                 if let message { Text(LocalizedStringKey(message)).font(NoahFont.footnote) }
@@ -76,7 +77,11 @@ struct ProfileView: View {
                 Button("Edit Lightning Address") { showIdentity = true }
             }
             Section("Emergency Email") {
-                Text(LocalizedStringKey(model.server.state.emailAddress ?? "No emergency email set"))
+                if model.server.state.isEmailVerified == true, let email = model.server.state.emailAddress {
+                    CopySettingRow(title: "Address", value: email)
+                } else {
+                    Text(LocalizedStringKey(model.server.state.emailAddress ?? "No emergency email set"))
+                }
                 Text(LocalizedStringKey(model.server.state.isEmailVerified == true ? "Verified" : "Not verified")).font(NoahFont.footnote)
                 Button("Edit Emergency Email") { showEmail = true }
             }
@@ -93,7 +98,7 @@ struct ProfileView: View {
         .navigationDestination(isPresented: $showEmail) { EmergencyEmailView(fromOnboarding: false) { showEmail = false } }
         .navigationDestination(isPresented: $showIdentity) { LightningAddressView { showIdentity = false } }
         .task {
-            name = SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.displayName ?? ""
+            name = Self.limitedName(SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.displayName ?? "")
             do {
                 // RN displays the server identity's offline derivation, not the wallet's hardened key.
                 key = try ServerClient.loginKey(variant: model.variant, mnemonic: AppServices.shared.readMnemonic())
@@ -101,6 +106,14 @@ struct ProfileView: View {
             } catch { message = "Couldn't refresh your profile. Please try again." }
         }
     }
+    nonisolated static func limitedName(_ value: String) -> String {
+        var length = 0
+        return String(value.prefix { character in
+            length += String(character).utf16.count
+            return length <= 80
+        })
+    }
+
     private func save() {
         guard !busy else { return }; busy = true; message = nil; focus = nil
         Task {
