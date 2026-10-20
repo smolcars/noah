@@ -65,11 +65,12 @@ extension WalletSession {
         return quote
     }
     func prepareSend(_ payment: SendPayment, quote: SendQuote) async throws -> SendSnapshot {
-        try await withOpenWallet { handles in
+        let invoice = payment.method == "lnurl" ? try await SendRecipientService.invoice(payment, session: self) : nil
+        return try await withOpenWallet { handles in
             let fresh = try await Self.quote(payment, handles: handles)
             guard fresh == quote else { throw SendFailure.feeChanged }
             return SendSnapshot(movementIDs: Set(try await handles.wallet.history().map(\.id)),
-                                bdkTxids: Set(try await handles.onchain.transactions().map(\.txid)))
+                                bdkTxids: Set(try await handles.onchain.transactions().map(\.txid)), resolvedInvoice: invoice)
         }
     }
     func submitSend(_ payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot) async throws -> SendReceipt {
@@ -81,26 +82,27 @@ extension WalletSession {
             switch payment.method {
             case "ark":
                 try await handles.wallet.sendArkoorPayment(arkAddress: payment.destination, amountSats: payment.amount)
-            case "lightning":
-                let fixed = PaymentEncoding.invoice(payment.destination)?.sats.map { $0 > 0 } ?? false
-                guard let hash = PaymentEncoding.invoice(payment.destination)?.hash else { throw SendFailure.invalid }
+            case "lightning", "lnurl":
+                var resolved = payment
+                if payment.method == "lnurl" {
+                    guard let invoice = snapshot.resolvedInvoice else { throw SendFailure.invalid }
+                    try SendRecipientService.validateInvoice(invoice, amount: payment.amount, metadata: nil)
+                    resolved.destination = invoice
+                    resolved.method = "lightning"
+                }
+                let invoice = resolved.destination
+                let fixed = PaymentEncoding.invoice(invoice)?.sats.map { $0 > 0 } ?? false
+                guard let hash = PaymentEncoding.invoice(invoice)?.hash else { throw SendFailure.invalid }
                 lightning = try await SendLightningSubmission.submit(
-                    payment: payment, state: try await handles.wallet.lightningSendState(paymentHash: hash),
+                    payment: resolved, state: try await handles.wallet.lightningSendState(paymentHash: hash),
                     movements: try await handles.wallet.history()) {
                         try await handles.wallet.payLightningInvoice(
-                            invoice: payment.destination, amountSats: fixed ? nil : payment.amount, wait: true)
+                            invoice: invoice, amountSats: fixed ? nil : payment.amount, wait: true)
                     }
             case "offer":
-                lightning = try await handles.wallet.payLightningOffer(
-                    offer: payment.destination, amountSats: payment.amount, wait: true)
-            case "lnurl":
-                if SendDestination.isLightningAddress(payment.destination) {
-                    lightning = try await handles.wallet.payLightningAddress(
-                        lightningAddress: payment.destination, amountSats: payment.amount, comment: payment.comment,
-                        wait: true)
-                } else {
-                    lightning = try await handles.wallet.payLnurl(
-                        lnurl: payment.destination, amountSats: payment.amount, comment: payment.comment, wait: true)
+                lightning = try await SendLightningSubmission.offer(pending: try await handles.wallet.pendingLightningSends()) {
+                    try await handles.wallet.payLightningOffer(
+                        offer: payment.destination, amountSats: payment.amount, wait: true)
                 }
             case "onchain":
                 if payment.source == .onchain {
@@ -169,7 +171,7 @@ extension WalletSession {
                 _ = try? await handles.onchain.sync()
                 return try SendReconciliation.onchain(attempt, transactions: try await handles.onchain.transactions())
             }
-            if attempt.payment.method == "lightning", let hash = attempt.paymentHash {
+            if ["lightning", "lnurl"].contains(attempt.payment.method), let hash = attempt.paymentHash {
                 // Status checks must not drive an inherited checkpoint with an unreviewed amount.
                 let state = try await handles.wallet.lightningSendState(paymentHash: hash)
                 if case .inProgress(let send) = state {
@@ -239,6 +241,11 @@ enum SendOnchainSubmission {
 
 /// The pinned Bark resumes checkpoints without checking the newly supplied amount.
 enum SendLightningSubmission {
+    static func offer(pending: [LightningSend], pay: @Sendable () async throws -> LightningSendStatus) async throws -> LightningSendStatus {
+        // The SDK resolves offers internally, so their hash cannot be inspected before Bark resumes a checkpoint.
+        guard pending.isEmpty else { throw SendFailure.lightningInProgress }
+        return try await pay()
+    }
     static func submit(
         payment: SendPayment, state: LightningSendStatus, movements: [Movement],
         pay: @Sendable () async throws -> LightningSendStatus

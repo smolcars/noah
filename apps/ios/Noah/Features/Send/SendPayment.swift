@@ -58,11 +58,13 @@ struct SendReceipt: Codable, Equatable, Sendable {
 struct SendSnapshot: Codable, Sendable {
     var movementIDs: Set<UInt32>
     var bdkTxids: Set<String>?
+    var resolvedInvoice: String?
 }
 enum SendFailure: LocalizedError {
-    case invalid, insufficient, expired, ownAddress, feeChanged, unresolved, onchainMaxUnavailable, fundsChanged, constructionFailed
+    case invalid, insufficient, expired, ownAddress, feeChanged, unresolved, onchainMaxUnavailable, fundsChanged, constructionFailed, lightningInProgress
     var errorDescription: String? {
         switch self {
+        case .lightningInProgress: "Another Lightning payment is still in progress. Try again once it completes."
         case .onchainMaxUnavailable: "Sending your entire onchain balance isn’t available yet. Enter an amount instead."
         case .constructionFailed: "The transaction could not be built. No payment was submitted. Review the amount and fee."
         case .fundsChanged: "The available funds changed. Review the payment again."
@@ -175,7 +177,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
             do {
                 let snapshot = try await dependencies.prepare(payment, quote)
                 let pending = Attempt(payment: payment, snapshot: snapshot,
-                                      paymentHash: payment.method == "lightning" ? PaymentEncoding.invoice(payment.destination)?.hash : nil, quote: quote)
+                                      paymentHash: PaymentEncoding.invoice(snapshot.resolvedInvoice ?? (payment.method == "lightning" ? payment.destination : ""))?.hash, quote: quote)
                 try dependencies.write(pending)
                 attempt = pending
             } catch {
@@ -191,6 +193,10 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                 finish(.inProgress(error.progress))
             } catch let error as SendAlreadyPaid {
                 finish(.alreadyPaid(error.receipt))
+            } catch SendFailure.lightningInProgress {
+                attempt?.failureMessage = SendFailure.lightningInProgress.errorDescription
+                message = SendFailure.lightningInProgress.errorDescription
+                finish(.uncertain)
             } catch let error as SendNotSubmitted {
                 attempt?.failureMessage = error.reason.errorDescription
                 message = error.reason.errorDescription

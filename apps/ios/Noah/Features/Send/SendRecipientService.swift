@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 struct SendRecipientRoute: Sendable {
@@ -6,9 +7,13 @@ struct SendRecipientRoute: Sendable {
     var maxMsat: UInt64
     var commentAllowed: Int
     var arkAddress: String?
+    var callback: URL?
+    var metadata: String?
 }
 enum SendRecipientService {
-    static func resolve(_ destination: String, session: WalletSession = .shared) async throws -> SendRecipientRoute {
+    typealias Fetch = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+    static func resolve(_ destination: String, session: WalletSession = .shared,
+                        fetch: Fetch = { try await URLSession.shared.data(for: $0) }) async throws -> SendRecipientRoute {
         var endpoint: URLComponents?
         if SendDestination.isLightningAddress(destination) {
             let parts = destination.lowercased().split(separator: "@")
@@ -24,7 +29,7 @@ enum SendRecipientService {
             endpoint?.queryItems = items + [URLQueryItem(name: "ark", value: key)]
         }
         guard let url = endpoint?.url else { throw SendFailure.invalid }
-        let (data, response) = try await URLSession.shared.data(for: URLRequest(url: url, timeoutInterval: 20))
+        let (data, response) = try await fetch(URLRequest(url: url, timeoutInterval: 20))
         struct Response: Decodable {
             let tag: String
             let callback: String
@@ -32,17 +37,52 @@ enum SendRecipientService {
             let maxSendable: UInt64
             let commentAllowed: Int?
             let ark: String?
+            let metadata: String?
         }
         guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 65536 else { throw SendFailure.invalid }
         let decoded = try JSONDecoder().decode(Response.self, from: data)
-        guard decoded.tag == "payRequest", let callback = URL(string: decoded.callback), callback.scheme == "https",
+        guard decoded.tag == "payRequest", let callback = URL(string: decoded.callback), callback.scheme == "https", callback.host != nil,
             decoded.minSendable <= decoded.maxSendable
         else { throw SendFailure.invalid }
         var ark: String?
         if let address = decoded.ark, (try? await session.validateSendArkAddress(address)) == true { ark = address }
         return SendRecipientRoute(
             destination: SendDestination.cleaned(destination).lowercased(), minMsat: decoded.minSendable, maxMsat: decoded.maxSendable,
-            commentAllowed: max(0, decoded.commentAllowed ?? 0), arkAddress: ark)
+            commentAllowed: max(0, decoded.commentAllowed ?? 0), arkAddress: ark,
+            callback: callback, metadata: decoded.metadata)
+    }
+    /// Resolve without paying: Bark's payLnurl/payLightningAddress can resume an old checkpoint.
+    static func invoice(_ payment: SendPayment, session: WalletSession = .shared,
+                        fetch: Fetch = { try await URLSession.shared.data(for: $0) }) async throws -> String {
+        let route = try await resolve(payment.destination, session: session, fetch: fetch)
+        let (msat, overflow) = payment.amount.multipliedReportingOverflow(by: 1000)
+        guard !overflow, msat >= route.minMsat, msat <= route.maxMsat,
+              let callback = route.callback,
+              var components = URLComponents(url: callback, resolvingAgainstBaseURL: false)
+        else { throw SendFailure.invalid }
+        var items = (components.queryItems ?? []).filter { !["amount", "comment"].contains($0.name) }
+        items.append(URLQueryItem(name: "amount", value: String(msat)))
+        // Like RN/Bark, forward the comment; the provider enforces commentAllowed.
+        items.append(URLQueryItem(name: "comment", value: payment.comment))
+        components.queryItems = items
+        guard let url = components.url else { throw SendFailure.invalid }
+        let (data, response) = try await fetch(URLRequest(url: url, timeoutInterval: 20))
+        struct Response: Decodable { let pr: String }
+        guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 65536 else { throw SendFailure.invalid }
+        let invoice = try JSONDecoder().decode(Response.self, from: data).pr
+        try validateInvoice(invoice, amount: payment.amount, metadata: route.metadata)
+        return invoice
+    }
+    static func validateInvoice(_ value: String, amount: UInt64, metadata: String?) throws {
+        let parsed = SendDestination.parse(value)
+        guard parsed.destinationType == "lightning", parsed.error == nil,
+              let invoice = PaymentEncoding.invoice(value), invoice.sats == Decimal(amount)
+        else { throw SendFailure.invalid }
+        guard invoice.expires > Date() else { throw SendFailure.expired }
+        // Pinned Bark treats metadata binding as a warning (LUD-06); keep RN parity.
+        if let metadata, invoice.descriptionHash != SHA256.hash(data: Data(metadata.utf8)).map({ String(format: "%02x", $0) }).joined() {
+            AppLog("send").w("LNURL invoice description hash does not commit to endpoint metadata")
+        }
     }
     static func suggestionQuery(_ destination: String, domain: String) -> String? {
         let value = SendDestination.cleaned(destination).lowercased()

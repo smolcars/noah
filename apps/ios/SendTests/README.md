@@ -32,6 +32,19 @@ suite was excluded. Swift Testing's parameterized cases account for 269 passed
 individual runs. The pre-fix regression run failed both missing-BDK-history and
 wrong-destination-amount assertions; both pass after the fix.
 
+## Round-4 payment safety (2026-10-19)
+
+LNURL and Lightning addresses resolve the callback invoice in the app, persist it
+and its hash before submission, validate exact amount/network/expiry, then use
+the BOLT11 read-only checkpoint guard and payment API. Comments and callback
+query parameters are preserved. Like pinned Bark/RN, metadata hash mismatches
+warn without rejecting the invoice (LUD-06). The app never calls SDK payLnurl or
+payLightningAddress. Offers cannot expose their invoice hash before SDK payment;
+any pending Lightning checkpoint blocks the offer before pay, with explicit copy
+and a durable uncertain lock. Regression spies assert zero payment calls for an
+LNURL checkpoint collision and an unrelated pending checkpoint before an offer;
+normal BOLT11/resolved LNURL and empty-checkpoint offer paths still call pay once.
+
 ## Round-3 payment safety (2026-10-19)
 
 Full `NoahTests` target: **264 tests, 253 passed, 11 opt-in tests skipped,

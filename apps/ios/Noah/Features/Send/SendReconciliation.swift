@@ -44,7 +44,7 @@ enum SendReconciliation {
             return .uncertain
         }
         let hash =
-            payment.method == "lightning"
+            ["lightning", "lnurl"].contains(payment.method)
             ? attempt.paymentHash ?? PaymentEncoding.invoice(payment.destination)?.hash : nil
         let candidates = movements.filter { movement in
             guard matches(movement, payment: payment, hash: hash) else { return false }
