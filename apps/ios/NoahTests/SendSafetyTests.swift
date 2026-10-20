@@ -302,11 +302,11 @@ import Testing
         storage.attempt = try roundTrip(#require(storage.attempt))
         let missing = controller(storage) { try SendReconciliation.onchain($0, transactions: []) }
         await missing.checkStatus()
-        #expect(missing.state == .uncertain && !missing.canOverride)
+        #expect(missing.state == .uncertain && missing.canOverride)
         #expect(missing.attempt?.receipt?.txid == "new")
         #expect(missing.attempt?.receipt?.status == .unlocated)
         missing.acknowledge()
-        missing.startNewPaymentAfterHistoryCheck(confirmed: true)
+        missing.startNewPaymentAfterHistoryCheck(confirmed: false)
         #expect(missing.locked && storage.attempt?.receipt?.txid == "new")
         storage.attempt = try roundTrip(#require(storage.attempt))
         let confirmed = try transaction(confirmed: true)

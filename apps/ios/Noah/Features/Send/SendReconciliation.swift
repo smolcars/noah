@@ -119,6 +119,17 @@ enum SendReconciliation {
         throws
         -> SendPaymentController.Resolution
     {
+        let originalTxid = attempt.receipt?.txid ?? attempt.broadcastingTxid
+        let original = transactions.first { $0.txid == originalTxid }
+        let inputs = attempt.quote?.prepared.flatMap { $0.txid == originalTxid ? $0.inputs : nil }
+            ?? original.flatMap { try? SendTransaction.parse(hex: $0.txHex).inputs }
+        let conflict = inputs.flatMap { inputs in
+            transactions.first { tx in
+                guard tx.txid != originalTxid, tx.confirmation != nil,
+                      let parsed = try? SendTransaction.parse(hex: tx.txHex) else { return false }
+                return !Set(inputs).isDisjoint(with: parsed.inputs)
+            }?.txid
+        }
         if var receipt = attempt.receipt, [.submitReturnedTxid, .preparedTxid].contains(receipt.proof), let txid = receipt.txid {
             if let tx = transactions.first(where: { $0.txid == txid }) {
                 receipt.status = tx.confirmation == nil ? .submitted : .confirmed
@@ -128,16 +139,19 @@ enum SendReconciliation {
                 // External offboards aren't in BDK's wallet history (FFI handoff item 15).
                 receipt.status = attempt.payment.source == .offchain ? .submitted : .unlocated
             }
+            receipt.confirmedConflictTxid = conflict
+            if conflict != nil { receipt.status = .conflicted }
             return .paid(receipt)
         }
         if let txid = attempt.broadcastingTxid, let quote = attempt.quote,
            quote.prepared?.txid == txid, attempt.payment.method == "onchain", attempt.payment.source == .onchain {
-            guard let tx = transactions.first(where: { $0.txid == txid }) else { return .uncertain }
+            guard original != nil || conflict != nil else { return .uncertain }
             return .paid(.init(amount: quote.amount, txid: txid,
-                               status: tx.confirmation == nil ? .submitted : .confirmed,
+                               status: conflict != nil ? .conflicted : original?.confirmation == nil ? .submitted : .confirmed,
                                fee: quote.fee, proof: .preparedTxid,
                                // BDK records the spend before submission; cached presence cannot prove acceptance.
-                               broadcastRetryPending: tx.confirmation == nil ? true : nil))
+                               broadcastRetryPending: original?.confirmation == nil ? true : nil,
+                               confirmedConflictTxid: conflict))
         }
         // Legacy journals have no exact pre-broadcast identity; retain their conservative evidence path.
         guard attempt.payment.method == "onchain", attempt.payment.source == .onchain, !attempt.payment.max,
@@ -160,12 +174,24 @@ enum SendReconciliation {
     }
 }
 
-/// Read only the outputs of BDK's consensus transaction; malformed evidence must never unlock Send.
+/// Parse BDK's consensus transaction; malformed evidence must never unlock Send.
 enum SendTransaction {
+    struct Input: Codable, Equatable, Hashable, Sendable {
+        var txid: String
+        var vout: UInt32
+    }
     static func amount(to address: String, hex: String) throws -> UInt64 {
-        guard let script = PaymentEncoding.bitcoinScript(address), hex.count % 2 == 0 else {
-            throw SendFailure.unresolved
+        guard let script = PaymentEncoding.bitcoinScript(address) else { throw SendFailure.unresolved }
+        var amount: UInt64 = 0
+        for output in try parse(hex: hex).outputs where output.script == script {
+            let (sum, overflow) = amount.addingReportingOverflow(output.amount)
+            guard !overflow else { throw SendFailure.unresolved }
+            amount = sum
         }
+        return amount
+    }
+    static func parse(hex: String) throws -> (inputs: [Input], outputs: [(amount: UInt64, script: [UInt8])]) {
+        guard hex.count % 2 == 0 else { throw SendFailure.unresolved }
         var bytes: [UInt8] = []
         var index = hex.startIndex
         while index < hex.endIndex {
@@ -196,21 +222,19 @@ enum SendTransaction {
         if witness { _ = try take(2) }
         let inputs = try size()
         guard inputs > 0 else { throw SendFailure.unresolved }
+        var outpoints: [Input] = []
         for _ in 0..<inputs {
-            _ = try take(36)
+            let txid = try take(32).reversed().map { String(format: "%02x", $0) }.joined()
+            outpoints.append(.init(txid: txid, vout: UInt32(try integer(4))))
             _ = try take(size())
             _ = try take(4)
         }
-        var amount: UInt64 = 0
+        var parsedOutputs: [(UInt64, [UInt8])] = []
         let outputs = try size()
         for _ in 0..<outputs {
             let value = try integer(8)
             let outputScript = try take(size())
-            if outputScript == script {
-                let (sum, overflow) = amount.addingReportingOverflow(value)
-                guard !overflow else { throw SendFailure.unresolved }
-                amount = sum
-            }
+            parsedOutputs.append((value, outputScript))
         }
         if witness {
             for _ in 0..<inputs {
@@ -220,6 +244,6 @@ enum SendTransaction {
         }
         _ = try take(4)
         guard cursor == bytes.count else { throw SendFailure.unresolved }
-        return amount
+        return (outpoints, parsedOutputs)
     }
 }

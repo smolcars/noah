@@ -47,8 +47,13 @@ struct SendReceipt: Codable, Equatable, Sendable {
     var fee: UInt64?
     var proof: Proof?
     var broadcastRetryPending: Bool?
+    var confirmedConflictTxid: String?
     enum Proof: String, Codable, Sendable { case preparedTxid, submitReturnedTxid, actualMovement, submitReturnedArkSuccess }
-    enum Status: String, Codable, Sendable { case submitted, confirmed, unlocated }
+    enum Status: String, Codable, Sendable { case submitted, confirmed, unlocated, conflicted }
+    var isUnresolved: Bool { status == .unlocated || status == .conflicted }
+    var conflictDescription: String? {
+        confirmedConflictTxid.map { "This transaction cannot confirm on the current chain: a confirmed different transaction (\($0)) spends one of its inputs." }
+    }
     var amountDescription: String {
         amountIsPending == true ? "Recipient amount pending" : "\(amountIsEstimated == true ? "About " : "")\(amount) sats"
     }
@@ -149,6 +154,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         var identity: (() throws -> SendWalletIdentity)?
         var discard: @Sendable (SendQuote) async -> Void = { _ in }
         var withReservation: @Sendable (@escaping @MainActor @Sendable () async -> Void) async throws -> Void = { await $0() }
+        var auditOverride: (SendOverrideAudit) throws -> Void = { _ in }
     }
     enum Resolution: Sendable, Equatable {
         case uncertain
@@ -228,7 +234,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                 }
                 attempt = saved
                 state = saved.alreadyPaid.map(State.alreadyPaid)
-                    ?? saved.receipt.map { $0.status == .unlocated ? .uncertain : .succeeded($0) }
+                    ?? saved.receipt.map { $0.isUnresolved ? .uncertain : .succeeded($0) }
                     ?? (saved.failed ? .failed : .uncertain)
                 message = saved.failureMessage
             }
@@ -324,11 +330,16 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         do {
             let resolution = try await dependencies.reconcile(attempt)
             guard generation == self.generation else { return }
+            message = nil
             finish(resolution)
         } catch {
             guard generation == self.generation else { return }
-            finish(.uncertain)
-            message = "Unable to check payment status. It may have been sent. Do not pay again."
+            // A failed refresh says nothing about the last proven outcome or missing history.
+            let offline = (error as? URLError)?.code == .notConnectedToInternet
+            let freshness = offline ? "Couldn't check the latest status — you're offline. Showing the last known status."
+                : "Couldn't check the latest status. Showing the last known status."
+            message = freshness + (attempt.receipt == nil || attempt.receipt?.broadcastRetryPending == true
+                ? " This payment may still complete. Do not pay again." : "")
         }
     }
     private func finish(_ resolution: Resolution) {
@@ -350,7 +361,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
             state = .uncertain
         case .paid(let receipt):
             attempt.receipt = receipt
-            state = receipt.status == .unlocated ? .uncertain : .succeeded(receipt)
+            state = receipt.isUnresolved ? .uncertain : .succeeded(receipt)
         case .alreadyPaid(let receipt):
             attempt.alreadyPaid = receipt
             state = .alreadyPaid(receipt)
@@ -366,11 +377,24 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     }
     var canOverride: Bool {
         if unboundJournal { return !checking }
-        guard state == .uncertain, !checking, let attempt, attempt.receipt == nil else { return false }
-        return true
+        guard !checking, attempt != nil else { return false }
+        if state == .uncertain { return true }
+        if case .succeeded(let receipt) = state { return receipt.broadcastRetryPending == true }
+        return false
+    }
+    var overrideWarning: String {
+        [attempt?.receipt?.conflictDescription, SendOverrideAudit.warningText].compactMap { $0 }.joined(separator: "\n\n")
     }
     func startNewPaymentAfterHistoryCheck(confirmed: Bool) {
         guard confirmed, canOverride else { return }
+        do {
+            try dependencies.auditOverride(.init(txid: attempt?.receipt?.txid ?? attempt?.broadcastingTxid,
+                                                walletIdentity: attempt?.walletIdentity, warning: overrideWarning,
+                                                statusMessage: message))
+        } catch {
+            message = "Unable to save the override confirmation. Sending remains locked."
+            return
+        }
         clearAttempt()
     }
     func acknowledge() {
@@ -423,6 +447,7 @@ extension SendPaymentController.Dependencies {
                 return .init(fingerprint: properties.fingerprint, network: properties.network)
             },
             discard: { await session.discardSend($0, includingClaimed: true) },
-            withReservation: { try await session.withSendReservation($0) })
+            withReservation: { try await session.withSendReservation($0) },
+            auditOverride: { try SendOverrideAudit.append($0, to: location.directory.appending(path: "noah-send-overrides.json")) })
     }
 }

@@ -340,7 +340,7 @@ struct SendOutcomeView: View {
                         }
                     }
                     if let receipt = controller.attempt?.receipt {
-                        Text("Noah can’t find this transaction right now. Its confirmation may no longer be trackable in-app. Check a block explorer.")
+                        Text(receipt.conflictDescription ?? "Noah can’t find this transaction right now. Its confirmation may no longer be trackable in-app. Check a block explorer.")
                         transactionDetails(receipt)
                     }
                     NoahButton(title: "Check payment status", isLoading: controller.checking) {
@@ -360,10 +360,6 @@ struct SendOutcomeView: View {
                     ForEach(controller.attempt?.possibleTxids ?? [], id: \.self) { txid in
                         Text("This transaction may be your payment: \(txid)")
                             .textSelection(.enabled)
-                    }
-                    if controller.canOverride {
-                        Button("I've checked my history, start a new payment") { confirmOverride = true }
-                            .accessibilityIdentifier("send-override")
                     }
                 case .succeeded(let receipt):
                     Image(systemName: "checkmark.circle.fill").font(.system(size: 64)).foregroundStyle(NoahColor.success)
@@ -425,17 +421,21 @@ struct SendOutcomeView: View {
                     )
                 case .ready: EmptyView()
                 }
+                if controller.canOverride {
+                    Button("I've checked my history, start a new payment", role: .destructive) { confirmOverride = true }
+                        .accessibilityIdentifier("send-override")
+                }
                 if let message = controller.message { Text(message).font(NoahFont.callout) }
             }.padding(24).multilineTextAlignment(.center).frame(maxWidth: .infinity)
         }
-        .alert("You could pay twice", isPresented: $confirmOverride) {
+        .alert(SendOverrideAudit.titleText, isPresented: $confirmOverride) {
             Button("Keep waiting", role: .cancel) {}
-            Button("Start a new payment anyway", role: .destructive) {
+            Button(SendOverrideAudit.confirmationText, role: .destructive) {
                 controller.startNewPaymentAfterHistoryCheck(confirmed: true)
                 if !controller.locked { done() }
             }
         } message: {
-            Text("This payment may still complete. Check your full wallet history and confirm with the recipient first. Starting another payment can send the money twice and cannot undo the first payment.")
+            Text(controller.overrideWarning)
         }
     }
     @ViewBuilder private func transactionDetails(_ receipt: SendReceipt) -> some View {

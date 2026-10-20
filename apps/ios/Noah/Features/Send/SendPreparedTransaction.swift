@@ -7,6 +7,7 @@ struct SendPreparedTransaction: Codable, Equatable, Sendable {
     var txid: String
     var vsize: UInt64
     var inputCount: Int
+    var inputs: [SendTransaction.Input]?
     var createdAt: Date = Date()
     static let reviewLifetime: TimeInterval = 120
     var isCurrent: Bool { Date().timeIntervalSince(createdAt) < Self.reviewLifetime }
@@ -16,5 +17,6 @@ struct SendPreparedTransaction: Codable, Equatable, Sendable {
         txid = transaction.txid
         vsize = transaction.vsize
         inputCount = transaction.inputs.count
+        inputs = transaction.inputs.map { .init(txid: $0.txid, vout: $0.vout) }
     }
 }

@@ -57,7 +57,7 @@ import Testing
         try await SendPaymentTests.waitUntil { controller.state != .submitting }
         #expect(controller.state == .succeeded(receipt))
         controller.acknowledge()
-        #expect(controller.locked && !controller.canOverride)
+        #expect(controller.locked && controller.canOverride)
         let restarted = SendPaymentController(dependencies: .init(
             prepare: { _, _ in Issue.record("must not prepare again"); throw SendFailure.unresolved },
             pay: { _, _, _ in Issue.record("must not broadcast again"); throw SendFailure.unresolved },
@@ -114,7 +114,7 @@ import Testing
         }
         await recovered.checkStatus()
         #expect(recovered.state == .uncertain && recovered.locked)
-        #expect(recovered.message == "Unable to check payment status. It may have been sent. Do not pay again.")
+        #expect(recovered.message?.contains("Couldn't check the latest status — you're offline") == true)
         recovered.acknowledge()
         #expect(storage.attempt != nil)
 
@@ -125,8 +125,8 @@ import Testing
         await recovered.checkStatus()
         #expect(recovered.attempt?.receipt?.broadcastRetryPending == true)
         recovered.acknowledge()
-        recovered.startNewPaymentAfterHistoryCheck(confirmed: true)
-        #expect(recovered.locked && !recovered.canOverride && storage.attempt != nil)
+        recovered.startNewPaymentAfterHistoryCheck(confirmed: false)
+        #expect(recovered.locked && recovered.canOverride && storage.attempt != nil)
 
         let restarted = SendSafetyTests().controller(storage) { _ in await backend.reconcile() }
         restarted.acknowledge()
