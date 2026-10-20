@@ -2,7 +2,10 @@ import Foundation
 
 /// Noah server per variant (`getServerEndpoint` in `client/src/constants.ts`).
 enum ServerEndpoint {
-    static func baseURL(for variant: AppVariant, environment: [String: String] = ProcessInfo.processInfo.environment) -> URL {
+    static func baseURL(
+        for variant: AppVariant, environment: [String: String] = ProcessInfo.processInfo.environment,
+        info: [String: Any]? = Bundle.main.infoDictionary
+    ) -> URL {
         switch variant {
         case .mainnet: return URL(string: "https://noahwallet.io")!
         case .signet: return URL(string: "https://signet.noahwallet.io")!
@@ -11,7 +14,26 @@ enum ServerEndpoint {
             if let override = environment["NOAH_REGTEST_SERVER_URL"], let url = URL(string: override) {
                 return url
             }
-            return URL(string: "http://localhost:3000")!
+            return RegtestHost.serverURL(info: info) ?? URL(string: "http://localhost:3000")!
         }
+    }
+}
+
+/// Regtest endpoints baked in at build time, so a physical device can reach the
+/// stack on a developer's machine: `xcodebuild NOAH_REGTEST_HOST=192.168.x.y
+/// NOAH_REGTEST_SERVER_URL=http://192.168.x.y:3000`. Mirrors RN's
+/// EXPO_PUBLIC_REGTEST_URL / EXPO_PUBLIC_REGTEST_SERVER_URL and Android's -PnoahRegtestHost.
+enum RegtestHost {
+    static func host(info: [String: Any]? = Bundle.main.infoDictionary) -> String {
+        nonEmpty(info?["NoahRegtestHost"]) ?? "localhost"
+    }
+
+    static func serverURL(info: [String: Any]? = Bundle.main.infoDictionary) -> URL? {
+        nonEmpty(info?["NoahRegtestServerURL"]).flatMap(URL.init(string:))
+    }
+
+    private static func nonEmpty(_ value: Any?) -> String? {
+        guard let value = (value as? String)?.trimmingCharacters(in: .whitespaces), !value.isEmpty else { return nil }
+        return value
     }
 }

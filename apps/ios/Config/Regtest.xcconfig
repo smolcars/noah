@@ -10,3 +10,8 @@ NOAH_APP_GROUP = group.com.noahwallet.regtest
 NOAH_URL_SCHEME = com.noahwallet.regtest
 NOAH_WIDGET_BUNDLE_ID = com.noahwallet.regtest.NoahWidgetRegtest
 NOAH_WIDGET_KIND = NoahWidgetRegtest
+
+// Regtest hosts. Defaults match the simulator; for a physical device pass
+// NOAH_REGTEST_HOST=<lan-ip> NOAH_REGTEST_SERVER_URL=<url> to xcodebuild.
+NOAH_REGTEST_HOST = localhost
+NOAH_REGTEST_SERVER_URL =

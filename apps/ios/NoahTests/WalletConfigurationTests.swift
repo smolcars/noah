@@ -22,4 +22,23 @@ struct WalletConfigurationTests {
         #expect(WalletConfiguration.base(for: .regtest).esplora == nil)
         #expect(WalletConfiguration.userAgent(variant: .signet, version: "0.2.0") == "noah-signet-ios/0.2.0")
     }
+
+    @Test func regtestHostsCanBeBakedInForPhysicalDevices() {
+        let lan = WalletConfiguration.base(for: .regtest, regtestHost: "192.168.6.67")
+        #expect(lan.arkServer == "http://192.168.6.67:3535")
+        #expect(lan.bitcoind == "http://192.168.6.67:18443")
+        #expect(RegtestHost.host(info: ["NoahRegtestHost": "192.168.6.67"]) == "192.168.6.67")
+        // Unset build settings expand to "", which must keep the simulator defaults.
+        #expect(RegtestHost.host(info: ["NoahRegtestHost": ""]) == "localhost")
+        #expect(RegtestHost.host(info: nil) == "localhost")
+        #expect(ServerEndpoint.baseURL(for: .regtest, environment: [:], info: ["NoahRegtestServerURL": ""])
+            == URL(string: "http://localhost:3000"))
+        #expect(ServerEndpoint.baseURL(for: .regtest, environment: [:], info: ["NoahRegtestServerURL": "http://192.168.6.67:3000"])
+            == URL(string: "http://192.168.6.67:3000"))
+        #expect(ServerEndpoint.baseURL(for: .regtest, environment: ["NOAH_REGTEST_SERVER_URL": "http://10.1.1.1:3000"],
+                                       info: ["NoahRegtestServerURL": "http://192.168.6.67:3000"]) == URL(string: "http://10.1.1.1:3000"))
+        // Only regtest reads the override.
+        #expect(ServerEndpoint.baseURL(for: .mainnet, environment: [:], info: ["NoahRegtestServerURL": "http://192.168.6.67:3000"])
+            == URL(string: "https://noahwallet.io"))
+    }
 }

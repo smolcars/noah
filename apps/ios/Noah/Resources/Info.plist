@@ -6,6 +6,12 @@
 	<string>$(NOAH_APP_VARIANT)</string>
 	<key>NoahAppGroup</key>
 	<string>$(NOAH_APP_GROUP)</string>
+	<key>NoahRegtestHost</key>
+	<string>$(NOAH_REGTEST_HOST)</string>
+	<key>NoahRegtestServerURL</key>
+	<string>$(NOAH_REGTEST_SERVER_URL)</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>$(NOAH_DISPLAY_NAME) uses your local network only to reach a development server on your computer.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

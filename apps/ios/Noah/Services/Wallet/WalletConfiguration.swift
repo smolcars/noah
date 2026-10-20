@@ -32,7 +32,7 @@ struct WalletConfiguration: Equatable, Sendable {
     /// sat/kvB → sat/kwu.
     var fallbackFeeRateSatPerKwu: UInt64 { fallbackFeeRateSatPerKvb / 4 }
 
-    static func base(for variant: AppVariant) -> WalletConfiguration {
+    static func base(for variant: AppVariant, regtestHost: String = RegtestHost.host()) -> WalletConfiguration {
         switch variant {
         case .mainnet:
             WalletConfiguration(
@@ -57,8 +57,8 @@ struct WalletConfiguration: Equatable, Sendable {
         case .regtest:
             WalletConfiguration(
                 network: .regtest,
-                arkServer: "http://localhost:3535",
-                bitcoind: "http://localhost:18443",
+                arkServer: "http://\(regtestHost):3535",
+                bitcoind: "http://\(regtestHost):18443",
                 bitcoindUser: "second",
                 bitcoindPass: "ark",
                 vtxoRefreshExpiryThreshold: 24,
