@@ -3,6 +3,64 @@
 Initial implementation base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
 Kotlin / Compose, API 24 minimum, bark-bolt-ffi **0.4.0**.
 
+## Live admission and numeric token review fixes (2026-10-20)
+
+Base: `feat/native-rewrite` at `10c0b996`, bark-bolt-ffi **0.5.0**.
+
+`RecurringRuntime.requireAdmission` requires `WalletDataLocation.databaseExists`
+and `isInitialized != false` before the executor reads automation authority.
+This matches `AppServices.isOnboarded()`, which already guards the clock callback
+and foreground timer. The common predicate also covers direct foreground/screen
+execution and FCM/UnifiedPush/WorkManager via PushRuntime → PushJobs → runtime
+execution. Missing wallets skip quietly; no authority failure is created or
+cleared. Existing storage-health, suspension, restore/deletion, binding, generation
+and final synchronous Send checks retain their behavior.
+
+`RecurringLiveAdmissionTest` uses that production predicate with a temporary
+wallet location and deterministic Send/binding dependencies. For missing, false
+and true initialization flags, Welcome clock + execute callbacks cannot write
+wallet files; a directory alone is insufficient. After creating the database
+fixture, only explicit false needs onboarding completion. A new schedule then
+pays exactly once across clock, automatic and manual execution. Before the database
+guard: **3 tests / 3 failures**; afterward: **3 passes**.
+
+`RecurringStore.requireNumericTokens` validates every policy number before typed
+decoding, including nullable times/count, interval, in-flight and run-history
+numbers. Quoted numbers and fractions stop the whole row without replacing its
+original bytes. The shared `apps/fixtures/recurring-rn-numeric-types.json` has
+**18 quoted + 18 fractional cases + 1 executable integer control**. These are
+malformed native codec probes derived from the existing RN-shaped fixture,
+not RN writer output. Both platforms consume the same classifications through
+`RecurringRNRequiredFieldsTest(s)`: no execution/consumption, no edit/resume,
+byte-exact preservation through binding/pending/pause/display-copy writes and
+reopen, and cancellation. RN schedules still **never import** on native upgrade.
+
+Adapted review sources: `/private/tmp/noah-r3-review-RecurringReviewProbeTest.kt`
+and the matching Swift probe. The supplied variant probes informed nested/type
+coverage; unrelated suspension probes were already covered and need no new fix.
+Numeric baseline: **58 tests / 18 failures / 40 passes** (the seven reported fields
+plus eleven nullable/nested fields). The focused store/timestamp run passed
+**78 tests / 3 suites**; final recurring/headless run passed **1,572 / 31 suites**.
+All passing runs had zero failures/errors/skips. Existing ambiguity, stop/failure
+latches, idempotent settlement, pause/cancel/edit/delete, wallet replacement and
+explicit-reapproval regressions remain green.
+
+The required final command ran **once after the last Android code/test change**:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**3,047 tests / 107 suites / zero failures, errors or skips**; APK assembly passed
+in the same **2m 49s** run. All Gradle calls used `--max-workers=2` and Nix, with
+`NIX_CONFIG='eval-cache = false'` to avoid the shared evaluation-cache lock.
+Logs, baseline XML, full XML and count JSON remain under
+`/private/tmp/noah-r4-008f-android-*`. No emulator, physical device, Docker, funded
+payment, physical push or real power cut was used. No active Android build/test
+process remains. iOS verification and owned-simulator cleanup are in its notes.
+
+Commits: `56e4100f` (numeric tokens + fixture), `9f1fddcb` (live admission).
+
 ## Round-3 correctness fixes (2026-10-20)
 
 Base: `feat/native-rewrite` at `f4ba6620`, bark-bolt-ffi **0.5.0**. That base

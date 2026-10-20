@@ -3,6 +3,75 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Live admission and numeric token review fixes (2026-10-20)
+
+Base: `feat/native-rewrite` at `10c0b996`, bark-bolt-ffi **0.5.0**.
+
+The real `RecurringExecutor.Dependencies.live` admission closure now requires
+`WalletDataLocation.databaseExists` before any automation authority read, while
+retaining `isInitialized != false` (missing still admits an existing wallet).
+No-wallet clock/timezone and execution callbacks skip quietly without latching
+or clearing authority failures. `boundState` gates date refresh; `run` gates
+execution before reading the durable generation. AppDelegate clock/timezone,
+AppModel startup/minute/activation, PushJobs and BackgroundScheduler all reach
+these common entries. Restore/deletion, suspension, storage health, wallet binding,
+stop generations and the final synchronous Send guard remain intact.
+
+`RecurringOnboardingTests.liveAdmissionSkipsWelcomeThenRunsTheCreatedWallet`
+keeps the actual live admission closure, with an injectable temporary location
+and deterministic binding/Send/network edges. It exercises missing, false and
+true initialization flags: Welcome clock + execution callbacks, directory-only
+refusal, creation of the database fixture, explicit-false refusal, and a newly
+approved schedule paying exactly once across repeated clock/automatic/manual
+triggers. No real SDK payment is used. Before the fix: **1 definition / 3 failed
+expanded cases / 13 failed assertions**; missing/true flags poisoned the future
+wallet authority and prevented its schedule from running. Afterward all three
+cases pass without error, authority latch, duplicate payment or lost consumption.
+
+The numeric review needs no iOS parser change. Both platforms now consume
+`apps/fixtures/recurring-rn-numeric-types.json` through their existing required-field
+regression harness: **18 quoted + 18 fractional cases + 1 executable number
+control**, including nullable, interval, in-flight and history fields. Unsupported
+rows cannot execute, resume or edit; their original row bytes survive binding,
+pending/pause/display-copy writes and reopen, and cancellation remains possible.
+These are native codec probes derived from the RN-shaped fixture; they do not
+change the upgrade policy: **RN recurring schedules never import**.
+
+Adapted review sources: `/private/tmp/noah-r3-review-RecurringReviewProbeTests.swift`
+and its Kotlin counterpart; the supplied type variants informed coverage.
+The baseline run passed all **58 required-field/numeric cases** plus the old
+onboarding test: **3 definitions / 62 expanded cases / 1 failed definition /
+3 failed expanded cases**, zero skips. Focused verification after the fix passed
+**74 definitions / 186 expanded cases / 12 suites**, zero failures/skips, including
+executor, authority, stop/failure latches, settlement, reapproval and rollback.
+
+Full **NoahTests ran once after the last code/test change**, with no exclusions:
+**662 total / 640 passed / 22 opt-in skipped / 0 failed**, **133 suites**;
+**993 expanded passes / 22 skipped**, **168.066 seconds** of test execution.
+Every Xcode run used Nix, `xcodegen generate`, normal code signing,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, disabled parallel testing and
+automatic diagnostic collection, and owned DerivedData under `/private/tmp`.
+Targeted runs selected whole suites. One initial package-resolution startup was
+interrupted to correct its selector before tests ran. The environment-only
+`NIX_CONFIG='eval-cache = false'` avoids shared evaluation-cache contention.
+Android's required final JVM/APK command also passed; see its notes.
+
+Owned simulator **Noah Recurring R4 Sol 008f**, iPhone 17 / iOS 27.0, UDID
+**81C88342-4391-4BBA-8A0B-4832D27D430A**: exact name/UDID/type and **Shutdown**
+state confirmed before deletion; absence verified afterward. The Device panel
+returned `No device 81C88342-4391-4BBA-8A0B-4832D27D430A on host local` twice;
+Xcode used only that simctl-verified owned UDID. Removed owned
+`/private/tmp/noah-r4-008f-dd` and all **three** result bundles after exporting
+summaries/test trees. Cleanup receipt: `/private/tmp/noah-r4-008f-cleanup.json`.
+Logs, XML, exported JSON and counts remain under `/private/tmp/noah-r4-008f-*`.
+
+No active build/test process remains. Protected/shared devices, physical devices,
+Android emulators, Docker, server, client, settings storage/onboarding ordering
+and UI files were untouched. No funded payment, physical push, UI acceptance or
+real power cut was attempted; opt-in integrations retain their environment gates.
+
+Commits: `7dd1ac3d` (live admission), `3743384d` (shared numeric parity coverage).
+
 ## Round-3 correctness fixes (2026-10-20)
 
 Base: `feat/native-rewrite` at `f4ba6620`, bark-bolt-ffi **0.5.0**. That base
