@@ -3,6 +3,98 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## MMKV policy rollback safety (2026-10-20)
+
+Base: `feat/native-rewrite` at `fce8f757`, retaining revision-bound settlement
+from `19d8de9f` / `8e2d2e4b`. Fix: `8b27e8ac`.
+
+The permanent unpaid pause/cancel/edit probes restore the earlier active MMKV
+snapshot after committing the change. Before the fix: **1 definition / 3 expanded cases / 9 failed assertions**, each paying once. They now make zero payments,
+including repeated manual runs, and retain a visible `needs_attention` row.
+Editing changes both recipient and amount; the older, larger policy cannot run.
+
+`noah-recurring-journal.json.policies` is a version-1 JSON ledger beside the
+occurrence journal in the wallet datadir. Its header contains the bootstrap
+binding and monotonic generation. Entries are keyed by SHA-256 of the full wallet
+binding (instance UUID + fingerprint/network), followed by schedule ID; each stores
+that binding/ID, generation, native revision, status and SHA-256 of the complete
+known row. A deleted entry has status `deleted` and no digest. Keeping the known
+row digest also protects skipped indices, backoff and failure state without adding
+fields to RN's version-0 MMKV envelope. Replacements have independent entries;
+old-wallet tombstones remain authoritative for their own binding.
+
+First protected load durably writes `.policies.initialized` **before** the initial
+ledger, without changing MMKV. Both documents retain the matching bootstrap
+binding. A crash after the marker, a missing/corrupt ledger or marker, or an unknown
+row after bootstrap stops execution; none silently imports again. For every
+mutation, the ledger temp file is synced, atomically renamed and its directory
+synced **before** the MMKV write/flush/readback and UI success. The iOS helper now
+syncs the temp file before rename as well. Even cancelling a row already missing
+from MMKV writes a tombstone. Existing approved policies cannot be overwritten
+from a mismatching snapshot, including through destructive override; cancellation
+and a newly approved schedule remain possible when the ledger is healthy.
+
+Every protected store read validates the ledger and overlays mismatching rows as
+`needs_attention`, retaining their original MMKV bytes and a fixed redacted
+message. Date refresh and marker recovery skip these rows so they cannot bless a
+rollback; independent occurrence-journal validation still runs. Stop generations,
+storage health/write-failure latches, final synchronous submission guards,
+consumption-before-advancement and revision-bound settlement remain in force.
+Missing/corrupt durable evidence stays stopped; MMKV cannot repair it. Removing
+both the wallet datadir and recurring MMKV state through the existing production
+wallet deletion also removes the ledger/marker and instance token.
+
+Enforcement paths (relative to `apps/ios/Noah/`):
+
+- Common policy gate: `Features/Recurring/RecurringStore.swift:27` / `:99`;
+  write-ahead mutation: `:100` / `:110`; cancel tombstone: `:139`;
+  temp-file and directory syncing: `:173`.
+- Executor attaches protection at `Features/Recurring/RecurringExecutor.swift:41`;
+  launch recovery and pre/post-quote reads use `:58` / `:62` / `:106`.
+- Foreground minute and launch/activation: `App/AppModel.swift:84` / `:408` /
+  `:440`; push: `Services/Push/PushJobs.swift:154`; BGTask:
+  `Services/Background/BackgroundScheduler.swift:100`. All share that executor.
+- Manual due runner uses `Features/Recurring/RecurringExecutor.swift:106`;
+  attended review uses `:267`; the last synchronous guarded Send check rereads the
+  protected store at `:172`, immediately before payment. Settlement/status reads
+  also remain protected.
+- Production deletion removes the containing datadir via
+  `Services/Wallet/WalletLifecycle.swift:207` / `:221`; no new lifecycle path.
+
+Permanent coverage includes the three review probes, rollback during final Send
+preparation, resume/skip rollback, bootstrap once, unknown rows after bootstrap,
+missing/corrupt ledger and marker, interrupted bootstrap, ledger-before-MMKV
+ordering and interruption, MMKV-ahead-of-ledger refusal, tombstones when a row is
+present or missing, binding separation, and production wallet deletion/recreation.
+The prior journal corruption/zone/revision tests still pass; where both policy
+rollback and journal corruption exist, policy attention remains the visible reason
+while the journal's independent quarantine is verified. Unsupported RN rows stay
+lossless and cancellable; healthy approvals remain independently executable.
+
+Focused executor/ledger/store/journal/reservation/background/foreground/lifecycle
+run: **89 definitions / 181 expanded runs / 9 suites**; additional RN numeric,
+version, legacy, fee, parity and calendar run: **26 definitions / 79 expanded runs /
+7 suites**. Both passed with zero failures/skips. Full **NoahTests ran once**,
+without suite exclusions: **617 total / 594 passed / 23 opt-in skipped / 0 failed**,
+**123 suites**; **864 passed / 23 skipped expanded runs**. Every Xcode run used
+Nix, generated project files, normal signing, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`,
+`-jobs 2`, disabled parallel testing/diagnostic collection, and DerivedData under
+`/private/tmp`. Initial targeted compile attempts caught and corrected the Swift
+throwing-expression and nested actor-isolation errors before the passing runs.
+
+Owned simulator **Noah Recurring Policy Sol db76c70d**, iPhone 17 / iOS 27.0,
+UDID **72910FF9-DD42-40DC-ABE6-9A64A730850C**: exact name/UDID and **Shutdown**
+state confirmed before deletion, absence verified afterward. Its DerivedData and
+all **seven** owned `.xcresult` bundles were removed after exporting summaries,
+test trees or compile-failure build records. Logs, exported JSON and cleanup
+receipt remain under `/private/tmp/noah-policy-db76c70d-*`.
+
+New rollback tests inject old snapshots deterministically; this does not claim a
+real power cut, a funded payment, live push transport or physical-device testing.
+No protected/shared devices, Android emulators, physical devices, Docker, server,
+RN client, MMKV opening/backup code, logging implementations, WalletSession opening
+or Android AppServices files were modified.
+
 ## Journal revision settlement (2026-10-20)
 
 Base: `feat/native-rewrite` at `172446b6`. Fix: `85b8e45e`.

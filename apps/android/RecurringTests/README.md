@@ -3,6 +3,94 @@
 Initial implementation base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
 Kotlin / Compose, API 24 minimum, bark-bolt-ffi **0.4.0**.
 
+## MMKV policy rollback safety (2026-10-20)
+
+Base: `feat/native-rewrite` at `fce8f757`, retaining revision-bound settlement
+from `19d8de9f` / `8e2d2e4b`. Fix: `7e8e0741`.
+
+The permanent unpaid pause/cancel/edit probes restore the earlier active MMKV
+snapshot after committing the change. Before the fix: **3 tests / 3 failures**, each paying once. They now make zero payments,
+including repeated manual runs, and retain a visible `needs_attention` row.
+Editing changes both recipient and amount; the older, larger policy cannot run.
+
+`noah-recurring-journal.json.policies` is a version-1 JSON ledger beside the
+occurrence journal in the wallet datadir. Its header contains the bootstrap
+binding and monotonic generation. Entries are keyed by SHA-256 of the full wallet
+binding (instance UUID + fingerprint/network), followed by schedule ID; each stores
+that binding/ID, generation, native revision, status and SHA-256 of the complete
+known row. A deleted entry has status `deleted` and no digest. Keeping the known
+row digest also protects skipped indices, backoff and failure state without adding
+fields to RN's version-0 MMKV envelope. Replacements have independent entries;
+old-wallet tombstones remain authoritative for their own binding.
+
+First protected load durably writes `.policies.initialized` **before** the initial
+ledger, without changing MMKV. Both documents retain the matching bootstrap
+binding. A crash after the marker, a missing/corrupt ledger or marker, or an unknown
+row after bootstrap stops execution; none silently imports again. For every
+mutation, the ledger temp file is synced, atomically renamed and its directory
+synced **before** the MMKV write/flush/readback and UI success. The iOS helper now
+syncs the temp file before rename as well. Even cancelling a row already missing
+from MMKV writes a tombstone. Existing approved policies cannot be overwritten
+from a mismatching snapshot, including through destructive override; cancellation
+and a newly approved schedule remain possible when the ledger is healthy.
+
+Every protected store read validates the ledger and overlays mismatching rows as
+`needs_attention`, retaining their original MMKV bytes and a fixed redacted
+message. Date refresh and marker recovery skip these rows so they cannot bless a
+rollback; independent occurrence-journal validation still runs. Stop generations,
+storage health/write-failure latches, final synchronous submission guards,
+consumption-before-advancement and revision-bound settlement remain in force.
+Missing/corrupt durable evidence stays stopped; MMKV cannot repair it. Removing
+both the wallet datadir and recurring MMKV state through the existing production
+wallet deletion also removes the ledger/marker and instance token.
+
+Enforcement paths (relative to `apps/android/app/src/main/java/com/noahwallet/`):
+
+- Common policy gate: `recurring/RecurringStore.kt:27` / `:43`; write-ahead
+  mutation: `:69` / `:74`; cancel tombstone: `:91`.
+- Executor attaches protection at `recurring/RecurringExecutor.kt:21`;
+  launch/trigger and post-quote reads use `:43` / `:46`. Foreground/minute runner
+  and launch share `recurring/RecurringRuntime.kt:44` / `:47` / `:49`.
+- FCM/WorkManager share `services/push/PushRuntime.kt:25` and
+  `services/push/PushJobs.kt:70`; both reach the same runtime/executor gate.
+- Manual due runner uses `recurring/RecurringExecutor.kt:70`; attended review
+  uses `:188`; the last synchronous guarded Send check rereads the protected store
+  at `:111`, immediately before submission. Settlement reads also remain protected.
+- Deletion clears the containing datadir through
+  `services/wallet/WalletLifecycle.kt:150` / `:153`; no new lifecycle path.
+
+Permanent coverage includes the three review probes, rollback during final Send
+preparation, resume/skip rollback, bootstrap once, unknown rows after bootstrap,
+missing/corrupt ledger and marker, interrupted bootstrap, ledger-before-MMKV
+ordering and interruption, MMKV-ahead-of-ledger refusal, tombstones when a row is
+present or missing, binding separation, and production wallet deletion/recreation.
+The prior journal corruption/zone/revision tests still pass; where both policy
+rollback and journal corruption exist, policy attention remains the visible reason
+while the journal's independent quarantine is verified. Unsupported RN rows stay
+lossless and cancellable; healthy approvals remain independently executable.
+
+Focused recurring + wallet-lifecycle run: **1,496 tests / 16 suites**, zero
+failures/errors/skips. Final JVM/APK check ran **once**, after the final production
+change, with no test filters:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**2,927 tests / 90 suites passed**, zero failures/errors/skips; regtest APK assembly
+passed in the same **2m 11s** invocation. All Gradle calls used `--max-workers=2`.
+The new ledger tests use real temp-file/rename/file-sync operations with injected
+directory-sync callbacks for JVM execution; a throwing callback also proves that
+an unconfirmed directory sync cannot permit an MMKV commit. No Android emulator
+or device was opened. Raw logs and JSON summaries remain under
+`/private/tmp/noah-policy-db76c70d-*`.
+
+New rollback tests inject old snapshots deterministically; this does not claim a
+real power cut, a funded payment, live push transport or physical-device testing.
+No protected/shared devices, Android emulators, physical devices, Docker, server,
+RN client, MMKV opening/backup code, logging implementations, WalletSession opening
+or Android AppServices files were modified.
+
 ## Journal revision settlement (2026-10-20)
 
 Base: `feat/native-rewrite` at `172446b6`. Fix: `6c4c8faa`.
