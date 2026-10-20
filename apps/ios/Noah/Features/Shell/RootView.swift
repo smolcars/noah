@@ -60,6 +60,7 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { lock.background() }
             if phase == .active {
+                model.localeIdentifier = LegacyLocale.resolved()
                 Task {
                     if model.phase == .wallet && lock.policy.locked { await lock.unlock() }
                     await model.appBecameActive()
@@ -119,6 +120,7 @@ struct WalletTabs: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                model.localeIdentifier = LegacyLocale.resolved()
                 Task { await history.refresh(currency: app.preferredCurrency) }
             }
         }

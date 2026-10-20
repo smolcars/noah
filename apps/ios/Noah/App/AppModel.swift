@@ -31,7 +31,7 @@ final class AppModel {
     private(set) var preferredCurrency: String
     /// Settings → suspend: nothing opens the wallet until it is resumed.
     private(set) var isWalletSuspended: Bool
-    var localeIdentifier = LegacyLocale.read() ?? "en"
+    var localeIdentifier = LegacyLocale.resolved()
 
     func updateProfile(_ change: (inout PersistedProfileState) -> Void) throws {
         var profile = settings.persistedState(PersistedProfileState.self, key: PersistedProfileState.key) ?? .init()
@@ -43,7 +43,7 @@ final class AppModel {
 
     func setLanguage(_ code: String) {
         UserDefaults.standard.set(code, forKey: LegacyLocale.key)
-        localeIdentifier = code
+        localeIdentifier = LegacyLocale.resolved()
     }
 
     /// Closing a session ends its streams, even when its wallet identity stays the same.
@@ -248,7 +248,7 @@ final class AppModel {
             walletError = nil
         } catch {
             log.e("Failed to read wallet summary: \(Self.describe(error))")
-            walletError = String(localized: "Couldn't load your balance.")
+            walletError = L10n.text("Couldn't load your balance.")
         }
     }
 
@@ -289,7 +289,7 @@ final class AppModel {
                 return
             }
             log.e("Failed to open wallet: \(Self.describe(error))")
-            walletError = String(localized: "Couldn't open your wallet.")
+            walletError = L10n.text("Couldn't open your wallet.")
             return
         }
         if phase == .wallet { await pushPermission.refresh() }

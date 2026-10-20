@@ -77,6 +77,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onResume() {
+        model?.refreshLocale()
         model?.walletLock?.resumed()
         super.onResume()
         model?.let { current -> lifecycleScope.launch(Dispatchers.IO) {
@@ -103,7 +104,7 @@ class MainActivity : FragmentActivity() {
             if (current.walletLock.enabled) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             val recurring = withContext(Dispatchers.IO) { com.noahwallet.recurring.RecurringRuntime.shared(this@MainActivity) }
             lifecycle.addObserver(recurring.foregroundRunner)
-            setContent { NoahTheme { LaunchGateView(current) } }
+            setContent { com.noahwallet.localization.LocalizedContent(current.localeIdentifier) { NoahTheme { LaunchGateView(current) } } }
         }
     }
 }

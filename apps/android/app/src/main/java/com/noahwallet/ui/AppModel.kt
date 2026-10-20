@@ -35,7 +35,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         private set
     var isWalletSuspended by mutableStateOf(settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true)
         private set
-    var localeIdentifier by mutableStateOf(com.noahwallet.services.storage.LegacyLocale.read(application) ?: "en")
+    var localeIdentifier by mutableStateOf(com.noahwallet.services.storage.LegacyLocale.resolved(application))
         private set
 
     private val restoreLocation = WalletDataLocation(application.filesDir, BuildConfig.APP_VARIANT)
@@ -136,10 +136,12 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         if (key == "preferredCurrency") preferredCurrency = SettingsPreferences.preferredCurrency(settings.string("profile-storage"))
     }
 
+    fun refreshLocale() { localeIdentifier = com.noahwallet.services.storage.LegacyLocale.resolved(getApplication()) }
+
     fun setLanguage(code: String) {
         check(getApplication<Application>().getSharedPreferences("gt_store", android.content.Context.MODE_PRIVATE).edit()
             .putString(com.noahwallet.services.storage.LegacyLocale.key, code).commit())
-        localeIdentifier = code
+        localeIdentifier = com.noahwallet.services.storage.LegacyLocale.resolved(getApplication())
     }
 
     suspend fun suspendWallet() {
