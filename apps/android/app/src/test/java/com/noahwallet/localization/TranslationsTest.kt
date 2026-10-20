@@ -20,6 +20,15 @@ class TranslationsTest {
     @Before fun reset() { context.getSharedPreferences("gt_store", 0).edit().clear().commit() }
     private fun language(code: String) { context.getSharedPreferences("gt_store", 0).edit().putString(LegacyLocale.key, code).commit() }
 
+    @Test fun welcomeLanguageNeedsNoWalletState() {
+        language("ja")
+        assertEquals("ja", LegacyLocale.read(context))
+        assertEquals("ja", LegacyLocale.resolved(context))
+        assertNotEquals("Welcome to Noah", L10n.text(context, "Welcome to Noah"))
+        language("sv")
+        assertEquals("sv", L10n.context(context).resources.configuration.locales[0].language)
+    }
+
     @Test fun mixedNetworkURIIsRejectedInEveryLanguageAndErrorsRerender() {
         val invoice = SharedFixtures.load("send-utils").first { it.name == "destination 5" }.input.jsonObject.getValue("destination").jsonPrimitive.content
         val uri = "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?lightning=$invoice"

@@ -28,11 +28,17 @@ import com.noahwallet.BuildConfig
 import com.noahwallet.services.server.LightningIdentity
 import com.noahwallet.services.server.Nostr
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Onboarding(model: AppModel) {
+    var choosingLanguage by rememberSaveable { mutableStateOf(false) }
+    if (choosingLanguage) ModalBottomSheet(onDismissRequest = { choosingLanguage = false }) {
+        com.noahwallet.ui.settings.PreferenceScreen(model, com.noahwallet.ui.settings.SettingsDestination.Language) { choosingLanguage = false }
+    }
     BackHandler { if (!model.busy && model.restore.canLeave && model.step in listOf("beta", "restore")) model.step = "welcome" }
     when (model.step) {
         "welcome" -> NoahForm("Welcome to Noah") {
+            TextButton({ choosingLanguage = true }) { Text(tr("Language")) }
             Spacer(Modifier.height(80.dp))
             Text(tr("Create a new wallet or restore an existing one."))
             NoahButton("Create Wallet") { model.step = "beta" }

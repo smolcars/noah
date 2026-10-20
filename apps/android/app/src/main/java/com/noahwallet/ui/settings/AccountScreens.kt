@@ -67,7 +67,7 @@ fun ProfileScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
 }
 
 @Composable
-fun PreferenceScreen(model: AppModel, kind: SettingsDestination) {
+fun PreferenceScreen(model: AppModel, kind: SettingsDestination, onSelected: () -> Unit = {}) {
     val options = when (kind) {
         SettingsDestination.Language -> listOf("en", "es", "ja", "ko", "sv")
         SettingsDestination.Currency -> FiatCurrency.supported.toList()
@@ -92,6 +92,7 @@ fun PreferenceScreen(model: AppModel, kind: SettingsDestination) {
                         SettingsDestination.Currency -> model.preference("preferredCurrency", code)
                         else -> model.preference("bitcoinAmountUnit", code)
                     }
+                    onSelected()
                 }
             }
         }
