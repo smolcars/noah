@@ -81,6 +81,56 @@ import Testing
         #expect(model.route == nil)
     }
 
+    @Test(arguments: ["exit", "background", "discard", "recipient", "reset", "cancel"])
+    func latePreparationIsDiscarded(reason: String) async throws {
+        var completion: CheckedContinuation<SendQuote, any Error>?
+        var discarded: [SendQuote] = []
+        let model = SendModel(controller: freshController(), quotePayment: { _ in
+            try await withCheckedThrowingContinuation { completion = $0 }
+        }, discardQuote: { discarded.append($0) })
+        model.amount = "1000"
+        model.destination = SendSafetyTests().address
+        model.parsed = .init(destinationType: "onchain")
+        model.progress.selectedRail = .onchain
+        model.source = .onchain
+        let pending = Task { await model.review() }
+        try await SendPaymentTests.waitUntil { completion != nil }
+        #expect(model.busy && model.quote == nil)
+        switch reason {
+        case "recipient": model.destination = "another recipient"
+        case "reset": model.reset()
+        case "cancel": pending.cancel()
+        default:
+            // SendView uses this same path for exit, backgrounding and review dismissal.
+            model.showReview = false
+            model.discardReview()
+        }
+        let reviewed = SendPreparedTests.quote
+        completion?.resume(returning: reviewed)
+        await pending.value
+        #expect(discarded == [reviewed])
+        #expect(model.quote == nil && model.payment == nil && !model.showReview && !model.busy)
+        #expect(model.error == nil)
+    }
+
+    @Test func latePreparationErrorDoesNotChangeExitedFlow() async throws {
+        var completion: CheckedContinuation<SendQuote, any Error>?
+        let model = SendModel(controller: freshController(), quotePayment: { _ in
+            try await withCheckedThrowingContinuation { completion = $0 }
+        })
+        model.amount = "1000"
+        model.destination = SendSafetyTests().address
+        model.parsed = .init(destinationType: "onchain")
+        model.progress.selectedRail = .onchain
+        model.source = .onchain
+        let pending = Task { await model.review() }
+        try await SendPaymentTests.waitUntil { completion != nil }
+        model.reset()
+        completion?.resume(throwing: SendFailure.insufficient)
+        await pending.value
+        #expect(model.stage == .amount && model.error == nil && !model.showReview && !model.busy)
+    }
+
     @Test func onchainMaxRequiresConfirmedCoins() async {
         let model = SendModel(controller: freshController())
         model.onchainBalance = 0

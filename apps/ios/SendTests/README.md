@@ -1,6 +1,6 @@
 # Native Send verification
 
-## Round-6 broadcast recovery (2026-10-19)
+## Round-6 broadcast recovery and review lifetime (2026-10-19)
 
 Crash recovery from a prepared/broadcasting journal treats an exact but
 unconfirmed cached transaction as **Submitted, awaiting broadcast** with
@@ -20,6 +20,38 @@ Regression coverage includes a crash before receipt save, a failed-broadcast
 receipt write error, relaunch with a failed sync, unconfirmed exact-txid recovery,
 Done/override refusal, another restart and confirmation finally enabling Done.
 No recovery test can call payment submission.
+
+Every review discard now increments a generation, even while its quote is still
+nil. SendView's existing exit/background/dismissal paths and recipient/reset
+changes therefore invalidate preparation already in flight. A late result from
+an older generation is discarded immediately through the session's
+`discardPrepared` path and cannot reopen review. Late errors cannot modify the
+new flow. Suspended-preparation regressions cover exit, background, discard,
+recipient change, reset and cancellation, plus an error after reset; a discard
+spy verifies the exact returned prepared quote is released before the request
+finishes. These are model/controller tests, not live crash or lifecycle UI tests.
+
+Before the fixes, the recovery run failed **2 of 5 tests** (the direct crash
+assertion and both cases of the restart test), and the review run failed
+**2 of 11 tests** (exit/background/discard cases and the stale-error test).
+The recovery suite passed in the latter run after its fix.
+
+Final targeted Send verification: **61 tests / 103 individual runs**, all passed,
+**9 suites**, zero failures/skips. The full `NoahTests` suite ran **once** after
+the final code changes, with no suite or target exclusions: **351 total,
+335 passed, 16 opt-in skipped, 0 failed**, across **79 suites**;
+parameterized execution reports **403 passed / 16 skipped** individual runs.
+
+All runs used Nix, XcodeGen, normal simulator code signing,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, and disabled parallel testing.
+Dedicated device: **Noah Send R6 Sol f375e3d1**, iPhone 17 / iOS 27.0,
+UDID `51E00223-3DE7-4FEB-BDEF-6753F9D727FB`. DerivedData:
+`/private/tmp/noah-send-r6-f375-dd`; result prefix:
+`/private/tmp/noah-send-r6-f375-{recovery-red,review-red,targeted,full}.xcresult`.
+Summary JSON exports and logs use the same prefix. The simulator's exact identity
+and Shutdown state were checked before deletion; its DerivedData and result
+bundles were removed after exporting summaries. No other device or shared stack
+was changed. No new funded live test was run in this round.
 
 ## FFI 0.4.0 adoption (2026-10-19)
 

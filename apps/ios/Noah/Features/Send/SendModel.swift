@@ -26,6 +26,7 @@ import Observation
         }
     }
     private var recipientRevision = 0
+    private var reviewGeneration = 0
     var comment = ""
     var useFiat = false
     var btcPrice: Double?
@@ -50,13 +51,16 @@ import Observation
     private let session: WalletSession
     private let resolveRecipient: (String) async throws -> SendRecipientRoute
     private let quotePayment: (SendPayment) async throws -> SendQuote
+    private let discardQuote: (SendQuote) async -> Void
     init(session: WalletSession = .shared, controller: SendPaymentController = .shared,
          resolveRecipient: ((String) async throws -> SendRecipientRoute)? = nil,
-         quotePayment: ((SendPayment) async throws -> SendQuote)? = nil) {
+         quotePayment: ((SendPayment) async throws -> SendQuote)? = nil,
+         discardQuote: ((SendQuote) async -> Void)? = nil) {
         self.session = session
         self.controller = controller
         self.resolveRecipient = resolveRecipient ?? { try await SendRecipientService.resolve($0, session: session) }
         self.quotePayment = quotePayment ?? { try await session.quoteSend($0) }
+        self.discardQuote = discardQuote ?? { await session.discardSend($0) }
     }
     var isMax: Bool { progress.entry == .max }
     var sats: UInt64 {
@@ -231,7 +235,7 @@ import Observation
     func review() async {
         discardReview()
         busy = true
-        let revision = recipientRevision
+        let generation = reviewGeneration
         defer { busy = false }
         do {
             guard let rail = progress.selectedRail else { throw SendFailure.invalid }
@@ -274,14 +278,15 @@ import Observation
             }
             try SendMaxValidation.available(payment)
             let reviewed = try await quotePayment(payment)
-            guard !Task.isCancelled, revision == recipientRevision else {
-                await session.discardSend(reviewed)
+            guard !Task.isCancelled, generation == reviewGeneration else {
+                await discardQuote(reviewed)
                 return
             }
             quote = reviewed
             self.payment = payment
             showReview = true
         } catch {
+            guard !Task.isCancelled, generation == reviewGeneration else { return }
             self.error =
                 (error as? SendFailure)?.errorDescription
                 ?? "Unable to prepare this payment. Check the destination and available funds."
@@ -289,7 +294,8 @@ import Observation
         }
     }
     func discardReview() {
-        if let quote { Task { await session.discardSend(quote) } }
+        reviewGeneration += 1
+        if let quote { Task { await discardQuote(quote) } }
         quote = nil
     }
     func reset() {

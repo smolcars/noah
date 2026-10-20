@@ -191,6 +191,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Expose broadcast/chain status for offboards (FFI 15); replace weak Ark/offboard history correlation with durable operation IDs (FFI 16)
 - [x] Adopt bark-bolt-ffi 0.4.0 — iOS: signed onchain fee/amount/vsize/input-count review, two-minute expiry and lifecycle discard, confirmed-only MAX, exact txid journaled before `broadcastPrepared`, explicit broadcast outcomes, typed call-specific Send/M6 errors; round-5 Lightning checkpoint identity/amount/fee guards remain valid. Verification: `apps/ios/SendTests/README.md`
 - [x] Round-6 Send crash recovery — iOS: unconfirmed prepared/broadcasting journals retain the broadcast-retry lock until confirmation; failed reconciliation sync surfaces an error and cannot upgrade cached evidence; crash-before-receipt and failed-receipt-write restart regressions. Verification: `apps/ios/SendTests/README.md`
+- [x] Round-6 Send review lifetime — iOS: discard/exit/background/recipient changes invalidate in-flight reviews with a generation token; late preparations immediately discard their reserved inputs, and stale errors cannot alter the new flow. Suspended-preparation regressions: `apps/ios/SendTests/README.md`
+- [x] Round-6 verification — iOS: targeted Send 61 tests / 103 individual runs passed; full NoahTests once, 351 total / 335 passed / 16 opt-in skipped / 0 failed (403 passed individual runs), 79 suites; isolated simulator and build/result artifacts cleaned. `apps/ios/SendTests/README.md`
 - [ ] Adopt bark-bolt-ffi 0.4.0 prepared sends and typed errors — Android Send (dependency already pinned)
 - [ ] External LNURL/BOLT12 provider acceptance and camera hardware verification — iOS
 
