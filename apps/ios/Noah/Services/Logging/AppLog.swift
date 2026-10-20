@@ -174,7 +174,7 @@ final class LogFile: @unchecked Sendable {
     static func isSensitiveKey(_ field: String) -> Bool {
         let key = field.lowercased().filter(\.isLetter)
         return key == "key" || ["mnemonic", "seed", "privatekey", "privkey", "secret", "signature",
-            "preimage", "authorization", "password", "token", "xamz"].contains { key.contains($0) }
+            "preimage", "authorization", "password", "token", "xamz", "email", "lightningaddress"].contains { key.contains($0) }
     }
 
     private static let bip39: Set<String> = {
@@ -186,6 +186,8 @@ final class LogFile: @unchecked Sendable {
     }()
     private static let wordPattern = try! NSRegularExpression(pattern: "[A-Za-z]+")
     private static let sensitivePatterns = [
+        #"(?is)\b[\w.-]*(?:email|lightning[_ -]?address)[\w.-]*["']?\s*[:=].*"#,
+        #"(?i)\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,63}\b"#,
         // Consume structured/multiline values too; never attempt to parse a credential's end.
         #"(?is)\b(?:[\w.-]*(?:token|secret|signature|authorization|password)[\w.-]*|mnemonic|seed(?:[_ -]?phrase)?|private[_ -]?key|privkey|preimage|authorization|password|key|x-amz-[\w-]+)["']?\s*[:=({\[].*"#,
         #"(?i)\bhttps?://[^\s<>"']*\?[^\s<>"']*"#,

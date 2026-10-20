@@ -37,8 +37,31 @@ struct AppTelemetryTests {
         let nested = try #require(clean.extra?["nested"] as? [String: Any])
         #expect(nested.values.allSatisfy { $0 as? String == "[redacted]" })
         let unchecked = Event(level: .error)
-        unchecked.user = User(userId: "test")
-        unchecked.user?.data = ["words": words]
+        unchecked.transaction = String(decoding: try JSONSerialization.data(withJSONObject: words), as: UTF8.self)
+        #expect(AppTelemetry.scrub(unchecked) == nil)
+    }
+
+    @Test func addressesAndNestedIdentityFieldsAreScrubbed() throws {
+        let text = "Sending 1000 sat to lightning address alice@example.com"
+        let event = Event(level: .error)
+        event.message = SentryMessage(formatted: text)
+        event.extra = ["nested": [["user": ["email": "fake"], "lightningAddress": "fake"]]]
+        event.user = User(userId: "test")
+        event.user?.email = "alice@example.com"
+        event.user?.data = ["lightning_address": "fake"]
+        event.exceptions = [Exception(value: text, type: "WalletError")]
+        let crumb = Breadcrumb(level: .info, category: "test")
+        crumb.message = text
+        crumb.setData(value: ["email": "fake", "lightningAddress": "fake"], key: "nested")
+        event.breadcrumbs = [crumb]
+        let clean = try #require(AppTelemetry.scrub(event))
+        let serialized = String(decoding: try JSONSerialization.data(withJSONObject: clean.serialize()), as: UTF8.self)
+        #expect(!serialized.contains("alice@example.com"))
+        #expect(!serialized.contains("fake"))
+        #expect(clean.user?.email == "[redacted]")
+        #expect(clean.message?.formatted == "Sending 1000 sat to lightning address [redacted]")
+        let unchecked = Event(level: .error)
+        unchecked.transaction = text
         #expect(AppTelemetry.scrub(unchecked) == nil)
     }
 

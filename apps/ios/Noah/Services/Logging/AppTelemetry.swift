@@ -46,6 +46,12 @@ enum AppTelemetry {
             clean.params = message.params?.map(LogFile.redact)
             event.message = clean
         }
+        if let user = event.user {
+            if user.email != nil { user.email = "[redacted]" }
+            user.username = user.username.map(LogFile.redact)
+            user.name = user.name.map(LogFile.redact)
+            user.data = user.data.map(scrubFields)
+        }
         event.extra = event.extra.map(scrubFields)
         event.context = event.context?.mapValues(scrubFields)
         event.tags = event.tags.map { scrubFields($0).compactMapValues { $0 as? String } }

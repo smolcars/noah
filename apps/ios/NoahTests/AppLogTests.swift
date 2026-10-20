@@ -18,6 +18,16 @@ struct AppLogTests {
         }
     }
 
+    @Test func sharedAddressRedactionVectors() throws {
+        for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
+            where fixture.name.hasPrefix("address-") {
+            #expect(LogFile.redact(fixture.input) == fixture.expected, "\(fixture.name)")
+            let file = LogFile(directory: directory)
+            file.append(level: .info, tag: "fixture", message: fixture.input)
+            #expect(file.lines().last?.hasSuffix(fixture.expected) == true, "persistence \(fixture.name)")
+        }
+    }
+
     @Test func writesReactNativeLineFormat() throws {
         let file = LogFile(directory: directory)
         let date = Date(timeIntervalSince1970: 0)
