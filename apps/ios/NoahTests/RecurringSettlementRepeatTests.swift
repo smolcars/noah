@@ -15,9 +15,15 @@ import Testing
         await h.executor.checkStatus(original.id)
         #expect(try h.store.load().schedules[original.id]?.occurrencesPaid == 1)
         #expect(h.controller.locked)
+        let applied = try h.store.load().schedules[original.id], notices = h.notified
         h.writeRemovalFails = false
         await h.executor.checkStatus(original.id)
         #expect(try h.store.load().schedules[original.id]?.occurrencesPaid == 1, "one paid occurrence must create one history entry")
+        #expect(try h.store.load().schedules[original.id] == applied)
+        #expect(h.notified == notices)
+        #expect(try h.journal.load()[original.id]?.policyApplied == true)
+        #expect(!h.controller.locked)
+        #expect(h.calls.withLock { $0 } == 1)
     }
 
 }
