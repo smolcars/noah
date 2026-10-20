@@ -1,0 +1,23 @@
+# SpringBoard placement happens while the RN extension is still installed.
+appId: com.apple.springboard
+---
+- pressKey: Home
+# Blank wallpaper has no accessibility element.
+- longPressOn:
+    point: "50%,70%"
+- tapOn:
+    text: "Edit Home Screen"
+    optional: true
+- tapOn: "Edit"
+- tapOn: "Add Widget"
+- tapOn: "Noah-Regtest"
+- waitForAnimationToEnd:
+    timeout: 5000
+# WidgetKit's gallery sheet is visible but absent from Maestro's SpringBoard
+# hierarchy on iOS 27. Its Add Widget button is anchored at the bottom.
+- tapOn:
+    point: "50%,90%"
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 15000
+- tapOn: "Done"

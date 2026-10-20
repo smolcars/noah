@@ -1,0 +1,5 @@
+# Do not add another widget: the RN-placed instance must still be present.
+appId: com.apple.springboard
+---
+- pressKey: Home
+- waitForAnimationToEnd
