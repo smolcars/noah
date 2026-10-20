@@ -230,9 +230,11 @@ final class LogFile: @unchecked Sendable {
 
     /// Nil means inspection was uncertain; telemetry must omit the message.
     static func redactForTelemetry(_ message: String) -> String? {
-        guard message.utf8.count <= maxMessageBytes, let views = decodedViews(message) else { return nil }
+        guard message.utf8.count <= maxMessageBytes else { return nil }
+        let safe = EndpointLogPrivacy.redact(message)
+        guard let views = decodedViews(safe) else { return nil }
         for view in views.dropFirst() where redactPlain(view) != view { return "[redacted]" }
-        return redactPlain(message)
+        return redactPlain(safe)
     }
 
     // Decoding loses source offsets, so a hit in any decoded view omits the entire message.
@@ -425,9 +427,9 @@ final class LogFile: @unchecked Sendable {
     private static func replaceURLs(_ text: String) -> String {
         let source = text as NSString
         let matches = urlTokens.matches(in: text, range: NSRange(text.startIndex..., in: text))
-        return EndpointLogPrivacy.redact(replacing(text, ranges: matches.compactMap { match in
+        return replacing(text, ranges: matches.compactMap { match in
             source.substring(with: match.range).contains("?") ? (match.range, "[redacted]") : nil
-        }))
+        })
     }
 
     private static func replacePushTokens(_ text: String) -> String {

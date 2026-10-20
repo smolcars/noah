@@ -9,9 +9,9 @@ enum EndpointLogPrivacy {
         "scripthash", "utxo", "chain", "mempool", "block", "blocks", "block-height", "tip", "height", "hash",
         "header", "txids", "txid", "merkle-proof", "merkleblock-proof", "fee-estimates", "recent"]
     private static let urls = try! NSRegularExpression(pattern: #"(?i)\bhttps?://[^\s<>"']*"#)
-    // esplora-client 0.12.3 Display uses Rust Debug: retain the error variant and HTTP status.
-    private static let responseBodies = try! NSRegularExpression(
-        pattern: #"(HttpResponse \{ status: [0-9]+, message: )"(?:\\.|[^"\\]++)*+""#)
+    // Admit only the SDK error type/status, never provider-controlled response text.
+    private static let responseStatus = try! NSRegularExpression(
+        pattern: #"HttpResponse(?:\s*\{\s*status:\s*|\()([0-9]{3})\b"#)
 
     static func register(_ endpoint: String?) {
         guard let endpoint, let url = URLComponents(string: endpoint), let origin = origin(endpoint) else { return }
@@ -28,17 +28,17 @@ enum EndpointLogPrivacy {
         url.path = ""; url.query = nil; url.fragment = nil; url.user = nil; url.password = nil
         return url.string
     }
-    static func sdkMessage(_ text: String) -> String {
-        guard text.utf8.count <= LogFile.maxMessageBytes else { return "[oversized log message omitted]" }
-        return redact(responseBodies.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text),
-            withTemplate: "$1\"[provider response omitted]\""))
-    }
     static func redact(_ text: String) -> String {
         let (registered, sensitive) = lock.withLock { (origins, paths) }
-        guard !registered.isEmpty else { return text }
         // Exported lines include a bounded tag and timestamp as well as the message.
         guard text.utf8.count <= 2 * LogFile.maxMessageBytes + 128 else { return "[oversized log message omitted]" }
         guard let views = LogFile.decodedViews(text, percentEncoded: true) else { return "[redacted]" }
+        for view in views {
+            if let match = responseStatus.firstMatch(in: view, range: NSRange(view.startIndex..., in: view)) {
+                return "HttpResponse { status: " + (view as NSString).substring(with: match.range(at: 1)) + " }"
+            }
+        }
+        guard !registered.isEmpty else { return text }
         var result = text
         for (index, view) in views.enumerated() {
             var clean = view

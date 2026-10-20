@@ -65,7 +65,7 @@ struct BarkLogTests {
         BarkLog(file: file).log(level: .warn, target: "bark::onchain", message:
             #"fee estimation failed: HttpResponse { status: 404, message: "No route: /unknown/fakeUnregisteredCredential; \"nested\"" }; caused by: upstream unavailable"#)
         #expect(file.lines().first?.hasSuffix(
-            #"fee estimation failed: HttpResponse { status: 404, message: "[provider response omitted]" }; caused by: upstream unavailable"#) == true)
+            "HttpResponse { status: 404 }") == true)
     }
 
     @Test func mapsEveryLevelAndMatchesRNVerbosity() {

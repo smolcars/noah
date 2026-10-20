@@ -69,7 +69,7 @@ struct EsploraSettingsScreen: View {
                 message = selection.endpoint == nil ? "The wallet is now using Noah's default Esplora endpoint." : "The wallet is now using the new Esplora endpoint."
             } catch is EsploraOpenWait.Timeout {
                 error = L10n.text("The server isn't responding; switching back…")
-            } catch { self.error = error.localizedDescription }
+            } catch { self.error = LogFile.redact(error.localizedDescription) }
             await model.walletConfigurationChanged()
         }
     }
