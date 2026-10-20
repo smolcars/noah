@@ -22,14 +22,68 @@ xcodegen generate
 xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest \
   -destination "platform=iOS Simulator,id=$SEND_SIMULATOR" \
   -derivedDataPath build/DerivedData test \
-  -skip-testing:NoahTests/UpgradeCompatibilityTests
+  ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -parallel-testing-enabled NO
 ```
 
-The final xcresult reports **194 tests: 189 passed, 5 opt-in tests skipped,
-0 failures** (41 suites) on iOS 27 / Swift 6. The separately enabled live
-stale-route test also passed (1/1). Upgrade tests remain excluded; opt-in live suites
-retain their own gates. Pre-commit checks include client lint, compiler lint,
-148 RN unit tests, typecheck, and Rust formatting.
+The round-2 full `NoahTests` xcresult reports **246 tests: 236 passed,
+10 opt-in tests skipped, 0 failures** (56 suites) on a dedicated iPhone 17,
+iOS 27.0 simulator, built with `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`. No target or
+suite was excluded. Swift Testing's parameterized cases account for 269 passed
+individual runs. The pre-fix regression run failed both missing-BDK-history and
+wrong-destination-amount assertions; both pass after the fix.
+
+## Round-2 payment safety (2026-10-19)
+
+- Onchain-wallet MAX is disabled in the UI, quote/review and submission paths.
+  The only app call to BDK drain was removed. Offchain MAX still submits precisely
+  the reviewed VTXO IDs.
+- Empty canonical BDK history never proves non-submission. No matches, mismatched
+  amounts, multiple exact matches, old MAX attempts without receipts, malformed
+  evidence and missing snapshots remain locked. A single new outgoing transaction
+  paying exactly the reviewed amount can establish Submitted; only confirmation
+  establishes Confirmed.
+- The pinned FFI exposes a message-only `BarkError`, not typed error variants.
+  Only the exact outer address/network, fee-validation and transaction-building
+  contexts from `OnchainWallet.send` prove pre-recording failure. Source links
+  accompany the allowlist. Persistence, unknown and nested backend errors remain
+  uncertain; history absence never substitutes for this proof.
+- BOLT11 reconciliation and returned Lightning successes read actual movement
+  destination amounts and fees. A successful movement in the pre-submit snapshot
+  is **Invoice already paid**, with its real amount, not a new success. Pending
+  hash recovery also checks amount; mismatches remain uncertain.
+- Refresh revalidates confirmed onchain receipts too. A reorg can move them back
+  to Submitted, or to an uncertain “can't find” outcome. The recorded txid survives
+  refresh and restart; missing evidence cannot enable retry or delete that record.
+  External offboards stay Submitted with explicit in-app tracking limitations.
+  Mainnet/signet receipts link to the same explorers as History; regtest has no
+  public explorer link.
+- Round-1 BDK failures inferred from absence and BOLT11 receipts with unverified
+  amounts reopen uncertain. All new journal fields remain optional.
+- Send tests use deadline polling rather than fixed completion waits. Receipt
+  write-failure injection no longer races the async payment. The receive-close
+  test accepts cancellation while still asserting no completion and successful
+  session reservation after close.
+
+Live round-2 sanity check: **1 test passed, 0 skipped, 0 failures** on the
+`Noah Send Round 2` simulator, through production quote, journal, controller and
+SDK submission code. A fresh disposable wallet received 10,000 Ark sats once,
+then sent 1,000 sats to Bark (receiver movement 32, successful, zero fee) and
+paid a fresh CLN BOLT11 invoice for 2,000 sats (hash prefix `778e6e4c5862`). CLN
+reported paid with 2,000,000 msat received. Each submission produced exactly one
+new successful sender movement; the Lightning receipt fee matched its movement.
+No blocks were mined and no services restarted. The simulator is deleted after
+verification. No wallet data, seeds, invoices or runtime destinations are committed.
+
+To repeat this opt-in test on a fresh dedicated simulator, pass
+`TEST_RUNNER_NOAH_SEND_ROUND2_LIVE=1`, `TEST_RUNNER_NOAH_SEND_ARK_RECIPIENT`, and
+`TEST_RUNNER_NOAH_SEND_INVOICE` (a fresh 2,000-sat regtest BOLT11) to xcodebuild,
+with `-only-testing:NoahTests/SendRoundTwoLiveTests`. The test publishes its fresh
+Ark address in the app's `Documents/send-round2-funding-address.txt`; fund it once
+with `just bark send "<address>" "10000 sats"` within 120 seconds. It never retries
+submissions, and requires an empty default regtest wallet directory. This test
+uses real wallet operations but does not exercise the SwiftUI controls.
+
+The historical acceptance runs below predate the disabling of onchain MAX.
 
 ## Payment-safety verification (2026-10-19)
 
@@ -123,13 +177,15 @@ Reconciliation follows the rail and strength of identity:
 
 - Onchain-wallet sends use only BDK transactions, never Ark movements. Both Ark
   movement IDs and BDK txids are snapshotted before submission. A new outgoing
-  transaction paying the destination proves submission; missing BDK evidence
-  after a thrown SDK error proves construction failed, because bark records
-  before broadcast. Malformed/unreadable evidence and old journals without a
-  BDK snapshot stay locked. A persist error can leave the transaction in BDK
+  transaction paying exactly the reviewed amount establishes submission only
+  when it is the sole exact candidate. Missing BDK evidence stays uncertain:
+  canonical history can evict a transaction that was already broadcast.
+  Malformed/unreadable evidence and old journals without a BDK snapshot stay locked. A persist error can leave the transaction in BDK
   memory, so reconciliation reads transactions even if sync fails.
-- BOLT11 uses only its pre-known payment hash. Successful is terminal success;
-  failed/canceled permits a new payment; pending remains locked.
+- BOLT11 uses its pre-known hash plus the movement's actual amount. A successful
+  pre-existing movement is already paid; a new exact-amount success uses actual
+  amounts/fees. Failed/canceled with the reviewed amount permits a new payment;
+  pending or mismatched amounts remain locked.
 - Ark, offers, Lightning addresses/LNURL and offboards use weak correlation:
   source, subsystem/kind, destination, exact amount (except MAX), new movement ID
   and creation time. Candidates are shown within the uncertain screen. A weak
@@ -139,10 +195,10 @@ Reconciliation follows the rail and strength of identity:
   the first payment may still complete. Failed marker removal keeps Send locked.
   The native History tab is still a placeholder; candidate evidence is therefore
   displayed directly here. FFI item 16 replaces this weak matching/override limit.
-- A returned txid is persisted as **Submitted — it may take a moment to reach
-  the network**, never as proof of broadcast. BDK confirmation upgrades the
-  receipt on refresh. An external offboard may remain Submitted until FFI item
-  15 exposes chain-source status; absent BDK history cannot undo a receipt.
+- A returned txid is persisted as **Submitted**, never as proof of broadcast.
+  Refresh can upgrade or downgrade confirmation, preserving the txid even when
+  history disappears. An external offboard may remain Submitted until FFI item
+  15 exposes chain-source status; copy explicitly explains this limitation.
 
 The journal also persists the reviewed quote (including MAX VTXO IDs), method,
 source, destination, amount, start time and BOLT11 hash. Pre-fix journals with weak terminal outcomes are reopened as
@@ -153,19 +209,15 @@ LNURL recipient before any substitution is allowed.
 
 MAX safeguards until FFI item 14:
 
-- Onchain MAX requires total == confirmed at quote time and immediately before
-  `drain`, inside the same counted wallet call. The latter check also requires
-  balance == reviewed total. Pending funds or changed balance refuse submission.
+- Onchain MAX is unavailable. Separate balance/drain locks cannot prevent daemon
+  sync from discovering additional funds between review and spending.
 - Offchain MAX quotes `estimateOffboardFee(address:vtxoIds:)` for the exact
   spendable IDs, rechecks that set before submission, and calls `offboardVtxos`
   with precisely the reviewed IDs. Added, removed or replaced IDs require review.
-- The SDK still has no prepared onchain transaction / atomic coin-control API.
-  A sync can race between the last balance read and Rust coin selection. The
-  conservative gate implements the available mitigation, not an atomic guarantee.
 - `feeRates()` is sat/kwu; integer sat/vB rounds up. Exact BDK construction fees
-  are unavailable, so the 208-vbyte fee remains explicitly approximate. A failed
-  construction with no recorded transaction now unlocks with honest copy instead
-  of permanently blocking Send.
+  remain blocked on prepared sends, so the 208-vbyte estimate for entered amounts
+  stays explicitly approximate. Only a proven pre-recording SDK error unlocks
+  automatically; missing history never does.
 
 Regression tests use fake dependencies and SDK value objects for route changes,
 late resolution, MAX balance/set changes, strong and weak identity, unrelated
