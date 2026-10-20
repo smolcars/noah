@@ -7,10 +7,10 @@ import java.io.File
 import kotlinx.serialization.json.*
 
 /** MMKV is only opened on a verified disposable snapshot; native writes use one atomic file. */
-class SettingsStorage(context: Context) {
+class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syncDirectory) {
     private val root = File(context.filesDir, "mmkv")
     private val backupRoot = context.noBackupFilesDir
-    internal val nativeFile = NativeSettingsFile(File(backupRoot, "settings.native.json"))
+    internal val nativeFile = NativeSettingsFile(File(backupRoot, "settings.native.json"), sync = sync)
 
     private var fallback: NativeSettingsFile.State?
         get() = fallbacks[nativeFile.file.path]
@@ -22,7 +22,7 @@ class SettingsStorage(context: Context) {
             if (nativeFile.exists || fallback != null) {
                 load()
             } else {
-                val backup = MMKVUpgradeBackup(root, instanceID, backupRoot = backupRoot)
+                val backup = MMKVUpgradeBackup(root, instanceID, backupRoot = backupRoot, sync = sync)
                 val state = runCatching {
                     backup.prepare()
                     if (!backup.hasContent) NativeSettingsFile.State() else backup.inspectSnapshot { scratch ->
@@ -36,14 +36,14 @@ class SettingsStorage(context: Context) {
                             })
                         } finally { snapshot.close() }
                     }
-                }.getOrElse { NativeSettingsFile.State(settingsNoticePending = true) }
+                }.getOrElse { NativeSettingsFile.State(values = mapOf(com.noahwallet.services.wallet.EsploraSettings.historyUnavailableKey to "1"), settingsNoticePending = true) }
                 fallback = state
                 persist(state)
             }
             if (fallback != null) persist(load())
             finishCleanup()
         } catch (_: Exception) {
-            if (fallback == null) fallback = NativeSettingsFile.State(settingsNoticePending = true)
+            if (fallback == null) fallback = NativeSettingsFile.State(values = mapOf(com.noahwallet.services.wallet.EsploraSettings.historyUnavailableKey to "1"), settingsNoticePending = true)
         }
     } }
 
@@ -55,7 +55,7 @@ class SettingsStorage(context: Context) {
     private fun load(): NativeSettingsFile.State {
         fallback?.let { return it }
         return try { nativeFile.load() } catch (_: Exception) {
-            val defaults = NativeSettingsFile.State(settingsNoticePending = true)
+            val defaults = NativeSettingsFile.State(values = mapOf(com.noahwallet.services.wallet.EsploraSettings.historyUnavailableKey to "1"), settingsNoticePending = true)
             fallback = defaults
             runCatching { persist(defaults) }
             defaults
@@ -106,8 +106,8 @@ class SettingsStorage(context: Context) {
     private fun finishCleanup() {
         if (!load().cleanupPending) return
         check(!root.exists() || root.deleteRecursively())
-        syncDirectory(root.parentFile!!)
-        MMKVUpgradeBackup(root, instanceID, backupRoot = backupRoot).deleteSnapshot()
+        sync(root.parentFile!!)
+        MMKVUpgradeBackup(root, instanceID, backupRoot = backupRoot, sync = sync).deleteSnapshot()
         persist(NativeSettingsFile.State(values = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(load().values))) // Keep log protection through re-onboarding.
     }
     /** Committed wallet recovery may publish flags in memory; durable completion retries later. */

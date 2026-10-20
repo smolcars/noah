@@ -20,7 +20,10 @@ class EsploraSettings(private val read: (String) -> String?, private val write: 
         write(key, Json.encodeToString(protected))
         endpoints(protected).forEach(com.noahwallet.services.logging.EndpointLogPrivacy::register)
     }
-    fun restoreLogPrivacy() { endpoints(record()).forEach(com.noahwallet.services.logging.EndpointLogPrivacy::register) }
+    fun restoreLogPrivacy() {
+        check(read(historyUnavailableKey) == null) { "Esplora log history unavailable" }
+        endpoints(record()).forEach(com.noahwallet.services.logging.EndpointLogPrivacy::register)
+    }
     fun protectLogPrivacy(endpoint: String?) {
         if (endpoint == null) return
         val record = checkNotNull(record())
@@ -66,11 +69,14 @@ class EsploraSettings(private val read: (String) -> String?, private val write: 
     companion object {
         /** Reset the selection while retaining protection for every retained log generation. */
         internal fun retainingLogPrivacy(values: Map<String, String>): Map<String, String> {
-            val record = values[key]?.let { Json.decodeFromString<Record>(it) } ?: return emptyMap()
+            val retained = values.filterKeys { it == historyUnavailableKey }
+            val record = values[key]?.let { Json.decodeFromString<Record>(it) } ?: return retained
             val history = record.logEndpoints + listOfNotNull(record.active.endpoint, record.pending?.endpoint)
-            return mapOf(key to Json.encodeToString(Record(Selection(variant = record.active.variant), logEndpoints = history)))
+            return retained + (key to Json.encodeToString(Record(Selection(variant = record.active.variant), logEndpoints = history)))
         }
         const val key = "native-esplora-selection"
+        // Unknown history stays unknown for the installation lifetime, including resets.
+        internal const val historyUnavailableKey = "native-esplora-history-unavailable"
         const val importedAttention = "This imported endpoint needs attention. Test and save it before use."
     }
 }
