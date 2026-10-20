@@ -17,6 +17,9 @@ class PeriodicJobs(private val d: Dependencies) {
         val widgetSummary: suspend () -> Unit,
         val widgetExpiry: suspend () -> Unit,
         val publishWidget: suspend () -> Unit,
+        val maintenance: suspend () -> Unit,
+        val backupEnabled: () -> Boolean,
+        val backup: suspend () -> Unit,
     )
 
     suspend fun run(kind: PeriodicWork.Kind, budget: RecurringBudget, stopped: () -> Boolean = { false }) =
@@ -35,9 +38,17 @@ class PeriodicJobs(private val d: Dependencies) {
                     val recurringDue = d.recurringDue()
                     checkStage(); d.ensureWalletOpen()
                     checkStage(); d.sync()
+                    if (kind == PeriodicWork.Kind.maintenance) {
+                        checkStage(); d.maintenance()
+                    }
                     checkStage()
                     if (recurringDue) withContext(NonCancellable) { d.recurring(budget) }
                     checkStage()
+                    if (kind == PeriodicWork.Kind.maintenance && d.backupEnabled()) {
+                        checkStage()
+                        // Retain ownership until BackupCoordinator's detached pass settles.
+                        withContext(NonCancellable) { d.backup() }
+                    }
                     checkStage(); d.widgetSummary()
                     checkStage(); d.widgetExpiry()
                     checkStage(); d.publishWidget()
