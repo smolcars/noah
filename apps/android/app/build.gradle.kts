@@ -1,10 +1,25 @@
+import com.android.build.api.artifact.SingleArtifact
 import java.util.Properties
+import java.util.UUID
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.google.services)
+}
+
+abstract class SentryMappingMetadata : DefaultTask() {
+    @get:InputFile @get:PathSensitive(PathSensitivity.NONE)
+    abstract val mappingFile: RegularFileProperty
+    @get:OutputDirectory abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction fun generate() {
+        // Bind metadata to the actual R8 output, including incremental builds.
+        val uuid = UUID.nameUUIDFromBytes(mappingFile.get().asFile.readBytes())
+        val directory = outputDirectory.get().asFile.apply { mkdirs() }
+        directory.resolve("sentry-debug-meta.properties").writeText("io.sentry.ProguardUuids=$uuid\n")
+    }
 }
 
 val localProperties = Properties().apply {
@@ -29,6 +44,7 @@ val missingReleaseSigningKeys = releaseSigningKeys.filter {
 val releaseStoreFile = localProperties.getProperty("MYAPP_RELEASE_STORE_FILE")
     ?.trim()?.takeIf { it.isNotEmpty() }?.let { file(it) }
 val hasReleaseSigningConfig = missingReleaseSigningKeys.isEmpty() && releaseStoreFile?.exists() == true
+val unsignedRelease = providers.gradleProperty("noahUnsignedRelease").orNull == "true"
 val useCiDebugSigning = providers.environmentVariable("CI_DEBUG_SIGNING").orNull == "true"
 
 // Preserve RN's hard stop: mainnet release must never fall back to the debug key.
@@ -37,10 +53,11 @@ gradle.taskGraph.whenReady {
         val taskName = it.name.lowercase()
         "mainnetrelease" in taskName && "clean" !in taskName && taskName != "premainnetreleasebuild"
     }
-    if (mainnetReleaseRequested && !hasReleaseSigningConfig) {
+    if (mainnetReleaseRequested && !hasReleaseSigningConfig && !unsignedRelease) {
         throw GradleException(
             "Mainnet release builds require release signing; refusing to use debug signing. " +
-                "Check MYAPP_RELEASE_* in apps/android/local.properties and the keystore path.",
+                "Check MYAPP_RELEASE_* in apps/android/local.properties and the keystore path, " +
+                "or use -PnoahUnsignedRelease=true for an unsigned verification artifact.",
         )
     }
 }
@@ -117,7 +134,10 @@ android {
     buildTypes {
         debug { signingConfig = signingConfigs.getByName("debug") }
         release {
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             signingConfig = when {
+                unsignedRelease -> null
                 hasReleaseSigningConfig -> signingConfigs.getByName("release")
                 useCiDebugSigning -> signingConfigs.getByName("debug")
                 else -> null
@@ -187,4 +207,25 @@ dependencies {
     testImplementation(libs.ktor.client.mock)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)
+}
+
+// Regtest never uploads telemetry or mappings. Local release builds only generate metadata.
+androidComponents.onVariants(androidComponents.selector().withBuildType("release")) { variant ->
+    if (variant.productFlavors.any { it.second == "regtest" }) return@onVariants
+    val capitalized = variant.name.replaceFirstChar { it.uppercase() }
+    val metadata = tasks.register<SentryMappingMetadata>("generate${capitalized}SentryMappingMetadata") {
+        mappingFile.set(variant.artifacts.get(SingleArtifact.OBFUSCATION_MAPPING_FILE))
+        outputDirectory.set(layout.buildDirectory.dir("generated/sentry/${variant.name}/assets"))
+    }
+    variant.sources.assets?.addGeneratedSourceDirectory(metadata, SentryMappingMetadata::outputDirectory)
+    val upload = tasks.register<Exec>("upload${capitalized}SentryMapping") {
+        dependsOn(metadata)
+        onlyIf { providers.environmentVariable("CI").orNull in listOf("true", "1") }
+        commandLine("sh", rootProject.file("scripts/upload-sentry-mapping.sh"),
+            metadata.get().mappingFile.get().asFile,
+            metadata.get().outputDirectory.file("sentry-debug-meta.properties").get().asFile)
+    }
+    tasks.matching { it.name in listOf("assemble$capitalized", "bundle$capitalized") }.configureEach {
+        dependsOn(upload)
+    }
 }
