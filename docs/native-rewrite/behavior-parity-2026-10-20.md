@@ -43,7 +43,10 @@ RootView changed only for repeat handoff and Send visibility.
 4. **Send during a refresh round.** Send and Home show the pending-in-round amount
    and explain that these funds become available after the round confirms. Zero pending
    funds show no explanation. Spendable amounts update with the same summary as the
-   explanation; Home continues to mask the explanation's amount when hidden.
+   explanation; Home continues to mask the explanation's amount when hidden. Send does
+   not mask it: like RN, "Hide wallet balance" (`isHomeBalanceHidden`) applies to Home
+   only, and Send already shows the spendable amount unmasked because the user needs it
+   to pay (`client/src/screens/HomeScreen.tsx` is RN's only reader).
    - iOS: `apps/ios/Noah/Features/Send/SendView.swift:159`,
      `apps/ios/Noah/Features/Home/HomeView.swift:261`.
    - Android: `apps/android/app/src/main/java/com/noahwallet/ui/SendScreen.kt:120`,
