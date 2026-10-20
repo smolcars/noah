@@ -15,6 +15,28 @@ struct TranslationsTests {
         let plurals: [Entry]
     }
 
+    @Test func mixedNetworkURIIsRejectedInEveryLanguageAndErrorsRerender() throws {
+        let defaults = UserDefaults.standard
+        let preference = defaults.string(forKey: LegacyLocale.key)
+        defer { defaults.set(preference, forKey: LegacyLocale.key) }
+        let fixture = try #require(Fixtures.load("send-utils", input: SendFixtureTests.ParseInput.self,
+                                                expected: SendFixtureTests.ParseExpected.self).first { $0.name == "destination 5" })
+        let uri = "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?lightning=\(fixture.input.destination)"
+        let expected = SendDestinationError.invalidMethods([.paymentMethodNetworkMismatch(expected: "mainnet", actual: "testnet")])
+        for language in LegacyLocale.supported {
+            defaults.set(language, forKey: LegacyLocale.key)
+            let parsed = SendDestination.parse(uri, network: "mainnet")
+            #expect(parsed.destinationType == nil && parsed.bip321 == nil)
+            #expect(parsed.error == expected)
+            let cached = SendDestination.parse(fixture.input.destination, network: "mainnet")
+            defaults.set("en", forKey: LegacyLocale.key)
+            #expect(cached.error?.message() == "Network mismatch: expected mainnet, got testnet")
+            defaults.set(language, forKey: LegacyLocale.key)
+            #expect(cached.error?.message() == L10n.text("Network mismatch: expected {expected}, got {actual}", "mainnet", "testnet", locale: language))
+            if language != "en" { #expect(cached.error?.message() != "Network mismatch: expected mainnet, got testnet") }
+        }
+    }
+
     @Test func everyUsedRNKeyResolvesInEveryLocale() throws {
         let fixture = try Fixtures.decode("translations-coverage", as: Coverage.self)
         let sources = try #require(fixture.coverage["ios"]?.used)

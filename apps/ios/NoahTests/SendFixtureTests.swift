@@ -4,16 +4,23 @@ import Testing
 
 struct SendFixtureTests {
     struct ParseInput: Decodable { let destination: String; let network: String }
-    struct ParseExpected: Decodable { let valid: Bool }
+    struct ParseExpected: Decodable {
+        let valid: Bool
+        let destinationType: String?
+        let amount: Decimal?
+        var isAmountEditable: Bool? = nil
+        let error: String?
+        let bip321: [String: String]?
+    }
     @Test func destinationsMatchRN() throws {
         for fixture in try Fixtures.load("send-utils", input: ParseInput.self, expected: ParseExpected.self) {
             #expect((SendDestination.parse(fixture.input.destination, network: fixture.input.network).destinationType != nil) == fixture.expected.valid)
         }
-        for fixture in try Fixtures.load("send-utils", input: ParseInput.self, expected: SendDestination.self) {
+        for fixture in try Fixtures.load("send-utils", input: ParseInput.self, expected: ParseExpected.self) {
             let actual = SendDestination.parse(fixture.input.destination, network: fixture.input.network)
             #expect(actual.destinationType == fixture.expected.destinationType, "\(fixture.name)")
             #expect(actual.amount == fixture.expected.amount, "\(fixture.name)")
-            #expect(actual.isAmountEditable == fixture.expected.isAmountEditable, "\(fixture.name)")
+            #expect(actual.isAmountEditable == (fixture.expected.isAmountEditable ?? true), "\(fixture.name)")
             #expect(actual.bip321 == fixture.expected.bip321, "\(fixture.name)")
             // Parser-library wording is not a contract; rejection and error presence are.
             #expect((actual.error != nil) == (fixture.expected.error != nil), "\(fixture.name)")

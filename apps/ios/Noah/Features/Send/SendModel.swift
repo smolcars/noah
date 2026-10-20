@@ -41,7 +41,12 @@ import Observation
     var onchainBalance: UInt64 = 0
     var onchainTotal: UInt64 = 0
     var suggestions: [String] = []
-    var error: String?
+    var destinationError: SendDestinationError?
+    private var errorSource: String?
+    var error: String? {
+        get { destinationError?.message(locale: "en") ?? errorSource }
+        set { destinationError = nil; errorSource = newValue }
+    }
     var busy = false
     var resolvingRecipient = false
     var quote: SendQuote?
@@ -151,7 +156,8 @@ import Observation
         progress.recipientConfirmed = false
         progress.railConfirmed = false
         guard let type = parsed.destinationType, parsed.error == nil else {
-            error = parsed.error ?? "Enter a valid Bitcoin, Lightning, or Ark destination."
+            error = "Enter a valid Bitcoin, Lightning, or Ark destination."
+            destinationError = parsed.error
             return
         }
         if isMax && (!SendFlow.canMax(type: type, request: parsed.bip321) || parsed.amount != nil) {

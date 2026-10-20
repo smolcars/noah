@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SendView: View {
+    @Environment(\.locale) private var locale
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppModel.self) private var app
     @State private var model: SendModel
@@ -114,7 +115,7 @@ struct SendView: View {
                     }
                 }
                 if let error = model.error {
-                    Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive).accessibilityIdentifier("send-error")
+                    Text(model.destinationError?.message(locale: locale.identifier) ?? L10n.text(error, locale: locale.identifier)).foregroundStyle(NoahColor.destructive).accessibilityIdentifier("send-error")
                 }
             }.padding(24)
         }

@@ -1,10 +1,10 @@
 import Foundation
 
-struct SendDestination: Equatable, Sendable, Codable {
+struct SendDestination: Equatable, Sendable {
     var destinationType: String?
     var amount: Decimal?
     var isAmountEditable = true
-    var error: String?
+    var error: SendDestinationError?
     var bip321: [String: String]?
 
     static func cleaned(_ value: String) -> String {
@@ -32,7 +32,7 @@ struct SendDestination: Equatable, Sendable, Codable {
         if let invoice = PaymentEncoding.invoice(value) {
             guard matches(invoice.network, network, type: "lightning") else { return mismatch(invoice.network, network) }
             if let amount = invoice.sats, amount > 0, amount < 1 {
-                return Self(destinationType: "lightning", error: "Invoice amount is less than 1 satoshi.")
+                return Self(destinationType: "lightning", error: .subSatoshiInvoice)
             }
             return Self(destinationType: "lightning", amount: invoice.sats.flatMap { $0 >= 1 ? $0 : nil }, isAmountEditable: (invoice.sats ?? 0) < 1)
         }
@@ -52,7 +52,7 @@ struct SendDestination: Equatable, Sendable, Codable {
         return Self()
     }
     private static func mismatch(_ actual: String, _ expected: String) -> Self {
-        Self(error: L10n.text("Network mismatch: expected {expected}, got {actual}", expected, actual))
+        Self(error: .networkMismatch(expected: expected, actual: actual))
     }
     /// Match the bounded Android decimal domain before Foundation's permissive prefix parser.
     private static func uriAmount(_ value: String) -> Decimal? {
@@ -76,49 +76,78 @@ struct SendDestination: Equatable, Sendable, Codable {
     }
     private static func uri(_ value: String, network: String) -> Self {
         let parts = value.dropFirst(8).split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
-        var methods: [String: String] = [:], errors: [String] = [], seen: Set<String> = []
+        var methods: [String: String] = [:], errors: [SendDestinationError] = [], seen: Set<String> = []
         var amount: Decimal?, invalid = false
         func add(_ raw: String, type: String) {
             let parsed = parse(raw, network: network)
             if parsed.destinationType == type {
                 methods[["ark":"arkAddress", "lightning":"lightningInvoice", "offer":"offer", "onchain":"onchainAddress"][type]!] = raw
-            } else if let error = parsed.error, error.hasPrefix("Network mismatch") {
-                errors.append("Payment method " + error.prefix(1).lowercased() + error.dropFirst()); invalid = true
+            } else if case .networkMismatch(let expected, let actual) = parsed.error {
+                errors.append(.paymentMethodNetworkMismatch(expected: expected, actual: actual)); invalid = true
             } else if type == "offer" {
-                errors.append("Invalid BOLT12 offer: Invalid checksum")
+                errors.append(.invalidOffer)
             }
         }
         if let address = parts.first, !address.isEmpty {
-            if PaymentEncoding.bitcoinNetwork(String(address)) == nil { errors.append("Invalid bitcoin address"); invalid = true }
+            if PaymentEncoding.bitcoinNetwork(String(address)) == nil { errors.append(.invalidBitcoinAddress); invalid = true }
             else { add(String(address), type: "onchain") }
         }
         if parts.count > 1 {
             for pair in parts[1].split(separator: "&", omittingEmptySubsequences: false) {
                 let pair = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
                 guard let key = pair.first.flatMap({ String($0).removingPercentEncoding }),
-                      let decoded = (pair.count > 1 ? String(pair[1]) : "").removingPercentEncoding else { return Self(error: "Invalid BIP-321 URI") }
+                      let decoded = (pair.count > 1 ? String(pair[1]) : "").removingPercentEncoding else { return Self(error: .invalidURI) }
                 let lower = key.lowercased()
                 if ["amount", "label", "message"].contains(lower), !seen.insert(lower).inserted {
-                    errors.append("Multiple \(lower) parameters not allowed"); invalid = true; continue
+                    errors.append(.duplicateParameter(lower)); invalid = true; continue
                 }
                 switch lower {
                 case "amount":
                     if let sats = uriAmount(decoded) {
                         amount = sats
-                    } else { errors.append("Invalid amount format"); invalid = true }
+                    } else { errors.append(.invalidAmount); invalid = true }
                 case "ark": add(decoded, type: "ark")
                 case "lightning": add(decoded, type: "lightning")
                 case "lno": add(decoded, type: "offer")
                 case "bc", "tb", "tbs", "bcrt":
                     let expected = ["bc":"mainnet","tb":"testnet","tbs":"signet","bcrt":"regtest"][lower]!
                     if let actual = PaymentEncoding.bitcoinNetwork(decoded), matches(actual, expected, type: "onchain") { add(decoded, type: "onchain") }
-                    else { errors.append("Address network mismatch for \(lower) parameter"); invalid = true }
+                    else { errors.append(.addressNetworkMismatch(lower)); invalid = true }
                 case "label", "message", "pop": break
-                default: if lower.hasPrefix("req-") { errors.append("Unknown required parameter: \(key)"); invalid = true }
+                default: if lower.hasPrefix("req-") { errors.append(.unknownRequiredParameter(key)); invalid = true }
                 }
             }
         }
-        if invalid || methods.isEmpty { return Self(error: errors.isEmpty ? "No valid payment methods found" : errors.joined(separator: ", ")) }
+        if invalid || methods.isEmpty { return Self(error: errors.isEmpty ? .noPaymentMethods : .invalidMethods(errors)) }
         return Self(destinationType: "bip321", amount: amount.flatMap { $0 > 0 ? $0 : nil }, isAmountEditable: (amount ?? 0) <= 0, bip321: methods)
+    }
+}
+
+/// Parser failures stay language independent, including arguments and combined URI failures.
+indirect enum SendDestinationError: LocalizedError, Equatable, Sendable {
+    case networkMismatch(expected: String, actual: String)
+    case paymentMethodNetworkMismatch(expected: String, actual: String)
+    case subSatoshiInvoice, invalidOffer, invalidBitcoinAddress, invalidURI, invalidAmount, noPaymentMethods
+    case duplicateParameter(String), addressNetworkMismatch(String), unknownRequiredParameter(String)
+    case invalidMethods([SendDestinationError])
+
+    var errorDescription: String? { message() }
+    func message(locale: String = LegacyLocale.resolved()) -> String {
+        switch self {
+        case .networkMismatch(let expected, let actual):
+            L10n.text("Network mismatch: expected {expected}, got {actual}", expected, actual, locale: locale)
+        case .paymentMethodNetworkMismatch(let expected, let actual):
+            L10n.text("Payment method network mismatch: expected {expected}, got {actual}", expected, actual, locale: locale)
+        case .subSatoshiInvoice: L10n.text("Invoice amount is less than 1 satoshi.", locale: locale)
+        case .invalidOffer: L10n.text("Invalid BOLT12 offer: Invalid checksum", locale: locale)
+        case .invalidBitcoinAddress: L10n.text("Invalid bitcoin address", locale: locale)
+        case .invalidURI: L10n.text("Invalid BIP-321 URI", locale: locale)
+        case .invalidAmount: L10n.text("Invalid amount format", locale: locale)
+        case .noPaymentMethods: L10n.text("No valid payment methods found", locale: locale)
+        case .duplicateParameter(let key): L10n.text("Multiple {parameter} parameters not allowed", key, locale: locale)
+        case .addressNetworkMismatch(let key): L10n.text("Address network mismatch for {parameter} parameter", key, locale: locale)
+        case .unknownRequiredParameter(let key): L10n.text("Unknown required parameter: {key}", key, locale: locale)
+        case .invalidMethods(let errors): errors.map { $0.message(locale: locale) }.joined(separator: ", ")
+        }
     }
 }

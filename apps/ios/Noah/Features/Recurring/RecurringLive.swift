@@ -44,7 +44,7 @@ enum RecurringRecipient {
     static func resolve(_ raw: String) throws -> (destination: String, type: String) {
         let cleaned = SendDestination.cleaned(raw)
         let parsed = SendDestination.parse(cleaned)
-        guard parsed.error == nil else { throw RecurringError.message(parsed.error!) }
+        if let error = parsed.error { throw error }
         switch parsed.destinationType {
         case "ark", "offer": return (cleaned, parsed.destinationType!)
         case "lnurl": return (cleaned.lowercased(), "lnurl")
