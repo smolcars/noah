@@ -1,0 +1,1 @@
+1b3e4bd4cbf9d6daebc0540f18717f78f0cc1e298e53d6643dc3215b7a36f897  apps/android/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk

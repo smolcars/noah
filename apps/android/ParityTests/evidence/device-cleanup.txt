@@ -1,0 +1,5 @@
+NoahAndroidParity5596
+OK
+Confirmed emulator-5596 is absent and console port 5596 is closed before deletion.
+
+AVD 'NoahAndroidParity5596' deleted.Confirmed the owned AVD directory and .ini are removed.
