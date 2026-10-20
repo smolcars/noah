@@ -49,7 +49,7 @@ struct BtcMapDetailView: View {
                     } label: {
                         Label(address, systemImage: copied ? "checkmark" : "doc.on.doc")
                             .multilineTextAlignment(.leading)
-                    }.buttonStyle(.plain).accessibilityLabel(copied ? "Address copied" : L10n.text("Copy address: {value1}", address, locale: locale.identifier))
+                    }.buttonStyle(.plain).accessibilityLabel(Text(LocalizedStringKey(copied ? "Address copied" : L10n.text("Copy address: {value1}", address, locale: locale.identifier))))
                 }
                 if let hours = fields["opening_hours"] { Label(hours, systemImage: "clock").font(NoahFont.callout) }
                 if let description = fields["description"] { Text(description).font(NoahFont.callout) }

@@ -120,7 +120,6 @@ struct WalletTabs: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                model.localeIdentifier = LegacyLocale.resolved()
                 Task { await history.refresh(currency: app.preferredCurrency) }
             }
         }

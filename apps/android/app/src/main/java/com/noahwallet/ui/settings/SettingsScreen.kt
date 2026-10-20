@@ -81,12 +81,13 @@ fun SectionTitle(title: String) {
 
 @Composable
 fun SettingToggle(title: String, detail: String, checked: Boolean, enabled: Boolean, change: (Boolean) -> Unit) {
+    val localizedTitle = tr(title)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f).padding(end = 12.dp)) {
             Text(tr(title), style = MaterialTheme.typography.bodyLarge)
             if (detail.isNotEmpty()) Text(tr(detail), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Switch(checked, change, enabled = enabled, modifier = Modifier.semantics { contentDescription = title })
+        Switch(checked, change, enabled = enabled, modifier = Modifier.semantics { contentDescription = localizedTitle })
     }
 }
 

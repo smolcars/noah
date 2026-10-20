@@ -60,8 +60,9 @@ private fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: 
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            val closeLabel = tr("Close payment details")
             Text(tr("Payment details"), Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-            TextButton(onClose, Modifier.semantics { contentDescription = "Close payment details" }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(tr("Close")) }
+            TextButton(onClose, Modifier.semantics { contentDescription = closeLabel }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(tr("Close")) }
         }
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(painterResource(transactionIcon(row)), null, Modifier.size(36.dp), tint = transactionColor(row))
@@ -128,10 +129,11 @@ private fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: 
 private fun CopyButton(label: String, value: String) {
     val context = LocalContext.current
     var copied by remember(value) { mutableStateOf(false) }
+    val copyLabel = tr("Copy {label}", tr(label))
     TextButton({
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label, value))
         copied = true
-    }, Modifier.semantics { contentDescription = "Copy $label" }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(tr(if (copied) "Copied" else "Copy $label")) }
+    }, Modifier.semantics { contentDescription = copyLabel }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(if (copied) tr("Copied") else copyLabel) }
 }
 @Composable
 private fun DetailValue(label: String, value: String, copyable: Boolean = false) {

@@ -180,6 +180,7 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
 
 @Composable
 internal fun ReceiveQR(uri: String, actionLabel: String = "Show payment details", onClick: () -> Unit) {
+    val localizedActionLabel = tr(actionLabel)
     val bitmap = remember(uri) {
         runCatching {
             val matrix = QRCodeWriter().encode(uri, BarcodeFormat.QR_CODE, 840, 840,
@@ -192,10 +193,10 @@ internal fun ReceiveQR(uri: String, actionLabel: String = "Show payment details"
             }.asImageBitmap()
         }.getOrNull()
     }
-    Box(Modifier.sizeIn(maxWidth = 302.dp).aspectRatio(1f).clip(RoundedCornerShape(28.dp)).background(Color.White).clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = actionLabel, onClick = onClick).clearAndSetSemantics {
-        contentDescription = actionLabel
+    Box(Modifier.sizeIn(maxWidth = 302.dp).aspectRatio(1f).clip(RoundedCornerShape(28.dp)).background(Color.White).clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = localizedActionLabel, onClick = onClick).clearAndSetSemantics {
+        contentDescription = localizedActionLabel
         role = Role.Button
-        this.onClick(label = actionLabel) { onClick(); true }
+        this.onClick(label = localizedActionLabel) { onClick(); true }
     }, contentAlignment = Alignment.Center) {
         if (bitmap != null) {
             Image(bitmap, null, Modifier.fillMaxSize())

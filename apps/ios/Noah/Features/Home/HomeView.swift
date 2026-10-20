@@ -252,7 +252,7 @@ private struct BalanceHeader: View {
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
             }
-            .accessibilityLabel(isHidden ? "Show wallet balance" : "Hide wallet balance")
+            .accessibilityLabel(Text(LocalizedStringKey(isHidden ? "Show wallet balance" : "Hide wallet balance")))
         }
             if let balance {
                 if balance.pendingSats > 0 {

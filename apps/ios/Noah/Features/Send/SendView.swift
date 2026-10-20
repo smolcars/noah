@@ -267,7 +267,7 @@ struct AmountKeypad: View {
                     Text(key).font(NoahFont.inter(28, .medium, relativeTo: .title)).frame(
                         maxWidth: .infinity, minHeight: 56)
                 }
-                .disabled(key.isEmpty).accessibilityLabel(key == "⌫" ? "Delete digit" : key)
+                .disabled(key.isEmpty).accessibilityLabel(Text(LocalizedStringKey(key == "⌫" ? "Delete digit" : key)))
                 .accessibilityIdentifier("send-key-\(key)")
             }
         }
