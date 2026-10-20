@@ -34,6 +34,30 @@ class SettingsFeaturesTest {
         policy.authenticated(policy.generation); assertFalse(policy.locked)
     }
 
+    @Test fun unlockedSettingsHandoffHidesWalletAndUnexpectedResumeRejectsLateSuccess() {
+        val policy = BiometricLockPolicy(true)
+        policy.authenticated(policy.generation)
+        val request = policy.generation
+        policy.credentialStarted(); policy.stopped()
+        assertTrue(policy.locked)
+        assertEquals(request, policy.generation)
+        policy.resumed()
+        policy.credentialFinished(); policy.authenticated(request)
+        assertTrue(policy.locked)
+        assertNotEquals(request, policy.generation)
+    }
+
+    @Test fun validSettingsCredentialResultBeforeResumeUnlocksSameGeneration() {
+        val policy = BiometricLockPolicy(true)
+        policy.authenticated(policy.generation)
+        val request = policy.generation
+        policy.credentialStarted(); policy.stopped()
+        assertTrue(policy.locked)
+        policy.credentialFinished(); policy.resumed(); policy.authenticated(request)
+        assertEquals(request, policy.generation)
+        assertFalse(policy.locked)
+    }
+
     @Test fun screenshotBoundedAndMimeChecked() {
         val png = byteArrayOf(0x89.toByte(), 0x50, 0x4e, 0x47, 13, 10, 26, 10).copyOf(FeedbackDraft.maximumScreenshotBytes)
         assertEquals("image/png", FeedbackDraft.imageType(png))

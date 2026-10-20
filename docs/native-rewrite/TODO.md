@@ -237,6 +237,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 - [x] M5 review verification: 385 Android JVM tests; regtest APK + instrumentation compilation; two API 28 device privacy/onboarding cases; full iOS NoahTests (247 passed, 10 opt-in skipped) — evidence in `apps/android/SettingsTests/README.md`
 
+- [x] M5 round-2 A1: hide/lock Android credential handoffs without changing their valid generation; invalidate unexpected resume and exported singleTask relaunch; API 28 direct `am start` regression plus JVM state-machine tests
+
 ## M6 — Onchain & exits
 - [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt with txid-only read refresh/relaunch reconciliation for missing fees (prepared boarding awaits FFI 18, same priority as 14)
 - [x] VTXOsScreen + VTXODetailScreen + delegated refresh review dialog — iOS

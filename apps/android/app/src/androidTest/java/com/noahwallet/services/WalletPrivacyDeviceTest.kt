@@ -89,6 +89,47 @@ class WalletPrivacyDeviceTest {
         }
     }
 
+    @Test fun directRelaunchDuringSettingsCredentialHandoffShowsLockAndRejectsRequest() {
+        optIn(); assumeTrue(Build.VERSION.SDK_INT == 28)
+        val settings = SettingsStorage(context)
+        assertFalse(WalletDataLocation(context.filesDir, "regtest").hasAnyData)
+        settings.setPersistedState(PersistedWalletState(isBiometricsEnabled = true), PersistedWalletState.key, 0)
+        settings.sync()
+        val activity = instrumentation.startActivitySync(intent()) as MainActivity
+        lateinit var model: AppModel
+        instrumentation.runOnMainSync { model = ViewModelProvider(activity)[AppModel::class.java] }
+        try {
+            instrumentation.runOnMainSync { model.viewModelScope.launch { model.walletLock.unlock(activity) } }
+            waitFor { model.walletLock.authenticating && activity.lifecycle.currentState == Lifecycle.State.CREATED }
+            enterPIN()
+            waitFor { !model.walletLock.authenticating && !model.walletLock.locked }
+            val started = model.walletLock.generation
+            var revealed = false
+            instrumentation.runOnMainSync {
+                model.viewModelScope.launch { revealed = model.walletLock.authenticate(activity, "Show recovery phrase") }
+            }
+            waitFor { model.walletLock.authenticating && activity.lifecycle.currentState == Lifecycle.State.CREATED }
+            assertTrue("handoff hides an already unlocked wallet", model.walletLock.locked)
+            assertEquals(started, model.walletLock.generation)
+            shell("am start -W -n ${context.packageName}/com.noahwallet.MainActivity")
+            waitFor { activity.lifecycle.currentState == Lifecycle.State.RESUMED }
+            assertTrue("direct relaunch: locked=${model.walletLock.locked}, authenticating=${model.walletLock.authenticating}, generation=${model.walletLock.generation}, started=$started", model.walletLock.locked)
+            assertNotEquals("unexpected direct relaunch invalidates the request", started, model.walletLock.generation)
+            waitFor { matches(automation.rootInActiveWindow) { it.text?.contains("Noah is Locked") == true } }
+            waitFor { !model.walletLock.authenticating }
+            assertFalse("Settings cannot reveal the phrase", revealed)
+            assertTrue(model.walletLock.locked)
+            instrumentation.runOnMainSync { model.viewModelScope.launch { model.walletLock.unlock(activity) } }
+            waitFor { model.walletLock.authenticating && activity.lifecycle.currentState == Lifecycle.State.CREATED }
+            enterPIN()
+            waitFor { !model.walletLock.authenticating && !model.walletLock.locked }
+        } finally {
+            instrumentation.runOnMainSync { activity.finish() }
+            settings.setPersistedState(PersistedWalletState(isBiometricsEnabled = false), PersistedWalletState.key, 0)
+            settings.sync()
+        }
+    }
+
     @Test fun onboardingPhraseReloadsAfterHomeWithoutExposingWordsToTestOutput() = runBlocking {
         optIn()
         val seed = SeedStorage(context, "regtest")

@@ -14,10 +14,11 @@ class BiometricLockPolicy(enabled: Boolean) {
     var locked = enabled; private set
     var generation = 0; private set
     var confirmingCredential = false; private set
-    fun credentialStarted() { confirmingCredential = true }
+    fun credentialStarted() { confirmingCredential = true; locked = true }
     fun credentialFinished() { confirmingCredential = false }
     fun stopped() { if (!confirmingCredential) background() }
-    fun background() { confirmingCredential = false; generation++; if (enabled) locked = true }
+    fun resumed() { if (confirmingCredential) background() }
+    fun background() { confirmingCredential = false; generation++; if (enabled || locked) locked = true }
     fun authenticated(generation: Int) { if (this.generation == generation) locked = false }
     fun setEnabled(value: Boolean) { enabled = value; locked = false }
 }
@@ -31,7 +32,13 @@ class WalletLock(private val settings: SettingsStorage) {
     var generation by mutableIntStateOf(0); private set
     private var prompt: BiometricPrompt? = null
 
-    fun credentialStarted() { if (authenticating) policy.credentialStarted() }
+    fun credentialStarted() {
+        if (authenticating) { policy.credentialStarted(); locked = policy.locked }
+    }
+
+    // Activity results arrive before resume; any other return invalidates the pending request.
+    fun credentialReturned(success: Boolean) { if (success) policy.credentialFinished() else background() }
+    fun resumed() { if (policy.confirmingCredential) background() }
 
     fun stopped() {
         if (!policy.confirmingCredential) background()
@@ -61,7 +68,10 @@ class WalletLock(private val settings: SettingsStorage) {
                 request.authenticate(BiometricPrompt.PromptInfo.Builder().setTitle(reason)
                     .setAllowedAuthenticators(authenticators).build())
             }
-            (passed && started == generation).also { if (!it) error = "Authentication failed. Please try again." }
+            (passed && started == generation).also {
+                if (it) { policy.authenticated(started); locked = policy.locked }
+                else error = "Authentication failed. Please try again."
+            }
         } finally { policy.credentialFinished(); prompt = null; authenticating = false }
     }
 

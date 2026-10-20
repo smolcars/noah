@@ -17,6 +17,7 @@ import com.noahwallet.ui.LaunchGateView
 import com.noahwallet.ui.NoahTheme
 
 class MainActivity : FragmentActivity() {
+    private var credentialRequestCode: Int? = null
     private val model by lazy { ViewModelProvider(this)[AppModel::class.java] }
     private val backgroundReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -30,9 +31,25 @@ class MainActivity : FragmentActivity() {
     @Suppress("DEPRECATION")
     override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
         if (Build.VERSION.SDK_INT < 29 && intent.action == "android.app.action.CONFIRM_DEVICE_CREDENTIAL") {
+            credentialRequestCode = requestCode
             model.walletLock.credentialStarted()
         }
         super.startActivityForResult(intent, requestCode, options)
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (credentialRequestCode == requestCode) {
+            credentialRequestCode = null
+            model.walletLock.credentialReturned(resultCode == RESULT_OK)
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        // An exported singleTask relaunch can dismiss credential UI without a background broadcast.
+        model.walletLock.background()
+        super.onNewIntent(intent)
     }
 
     override fun onDestroy() {
@@ -41,6 +58,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onResume() {
+        model.walletLock.resumed()
         super.onResume()
         com.noahwallet.services.AppServices.shared(this).reconcileBackupTriggers(foreground = true)
     }
