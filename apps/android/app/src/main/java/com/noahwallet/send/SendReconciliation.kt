@@ -1,6 +1,7 @@
 package com.noahwallet.send
 
 import io.github.niteshbalusu11.bark.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.*
 import com.noahwallet.history.HistoryRules
 import com.noahwallet.services.wallet.ChainStatus
@@ -78,7 +79,12 @@ object SendReconciliation {
             SendResolution.Paid(offboardReceipt(receipt, attempt.payment, offboardHistory()))
         }
         val txid = (resolution as? SendResolution.Paid)?.receipt?.txid ?: return resolution
-        return withChainStatus(resolution, attempt.payment.source, status(txid))
+        return try { withChainStatus(resolution, attempt.payment.source, status(txid)) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) {
+            // The optional chain lookup must not discard newer BDK reorg or conflict evidence.
+            SendResolution.Paid(resolution.receipt.copy(statusError = ChainStatus.errorText))
+        }
     }
     fun onchain(attempt: SendAttempt, transactions: List<WalletTransaction>): SendResolution {
         val receipt = attempt.receipt

@@ -1,5 +1,6 @@
 package com.noahwallet.send
 
+import com.noahwallet.services.wallet.ChainStatus
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.Json
 import org.junit.Assert.*
@@ -33,6 +34,50 @@ class SendConflictTest {
             restart.startNewPaymentAfterHistoryCheck(true); assertFalse(restart.locked)
             assertEquals(subject.attempt, journal.audits.single().originalEvidence)
             assertTrue(journal.audits.single().warning.contains("replacement")); assertEquals(0, wallet.calls)
+        }
+    }
+    @Test fun evictionDowngradeSurvivesLaterStatusErrorAndCannotBeAcknowledged() = runBlocking {
+        assertDowngradeSurvivesStatusLookup(conflict = false)
+    }
+    @Test fun confirmedConflictDowngradeSurvivesLaterStatusErrorAndCannotBeAcknowledged() = runBlocking {
+        assertDowngradeSurvivesStatusLookup(conflict = true)
+    }
+    private suspend fun CoroutineScope.assertDowngradeSurvivesStatusLookup(conflict: Boolean) {
+        for (network in listOf(null) + ChainStatus.Kind.entries) {
+            val wallet = FakeSendWallet(); val journal = TestJournal()
+            val lastKnown = ChainStatus(ChainStatus.Kind.confirmed, 100)
+            journal.attempt = roundTrip(SendAttempt(walletIdentity = wallet.owner, payment = chainPayment, quote = quote(),
+                receipt = SendReceipt(1000, txid = "exact", status = SendReceipt.Status.confirmed,
+                    proof = SendReceipt.Proof.preparedTxid, chainStatus = lastKnown)))
+            val trace = mutableListOf<String>()
+            wallet.reconciliation = { saved -> SendReconciliation.onchainStatus(saved,
+                sync = { trace.add("sync") },
+                transactions = { trace.add("transactions"); if (conflict) listOf(competing()) else emptyList() },
+                offboardHistory = { error("Not an offboard") }, status = { txid ->
+                    trace.add("status:$txid")
+                    if (network == null) error("offline")
+                    ChainStatus(network, 200)
+                }) }
+            val subject = controller(wallet, journal, this)
+            subject.reloadForWalletChange(); subject.checkStatus()
+            assertEquals(listOf("sync", "transactions", "status:exact"), trace)
+            val receipt = journal.attempt!!.receipt!!
+            assertEquals(if (conflict) SendReceipt.Status.conflicted else SendReceipt.Status.unlocated, receipt.status)
+            assertEquals(if (conflict) "replacement" else null, receipt.confirmedConflictTxid)
+            assertEquals(if (network == null) lastKnown else ChainStatus(network, 200), receipt.chainStatus)
+            assertEquals(if (network == null) ChainStatus.errorText else null, receipt.statusError)
+            assertEquals(journal.attempt, subject.attempt)
+            subject.acknowledge(); assertTrue(subject.locked)
+            val restart = controller(wallet, journal, this); restart.reloadForWalletChange()
+            assertEquals(receipt, restart.attempt!!.receipt)
+            restart.acknowledge(); assertTrue(restart.locked)
+            // A later successful lookup clears only the warning, never the BDK downgrade.
+            wallet.reconciliation = { SendReconciliation.withChainStatus(SendResolution.Paid(it.receipt!!),
+                SendSource.onchain, ChainStatus(ChainStatus.Kind.notFound)) }
+            restart.checkStatus(); assertNull(journal.attempt!!.receipt!!.statusError)
+            assertEquals(receipt.status, journal.attempt!!.receipt!!.status)
+            restart.acknowledge(); assertTrue(restart.locked)
+            assertEquals(0, wallet.calls)
         }
     }
     @Test fun onlyDifferentConfirmedWellFormedSharedOutpointsProveConflict() {
