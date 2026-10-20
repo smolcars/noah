@@ -61,7 +61,7 @@ internal fun OnchainScreen(app: AppModel, model: OnchainModel, content: @Composa
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val scope = rememberCoroutineScope()
     DisposableEffect(model, lifecycle) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) model.invalidate() }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_PAUSE) model.invalidate() }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer); model.invalidate() }
     }

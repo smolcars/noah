@@ -93,7 +93,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             if (caller.isActive && token == generation && dependencies.ready()) quote = fresh
             else withContext(NonCancellable) { dependencies.discard(fresh) }
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready." }
+        catch (failure: Exception) { if (token == generation) error = (failure as? OnchainException)?.message ?: "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready." }
         finally { busy = false }
     }
     /** The view must present the quote and obtain explicit consent before calling this. */

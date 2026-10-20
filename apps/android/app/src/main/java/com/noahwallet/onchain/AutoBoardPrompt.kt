@@ -39,8 +39,8 @@ fun AutoBoardPrompt(app: AppModel) {
     } catch (_: Exception) { message = "Couldn't save auto-board state."; false }
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) { releasePlan() }
-            if (event == Lifecycle.Event.ON_START) generation++
+            if (event == Lifecycle.Event.ON_PAUSE) { releasePlan() }
+            if (event == Lifecycle.Event.ON_RESUME) generation++
         }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer); releasePlan() }
@@ -53,20 +53,20 @@ fun AutoBoardPrompt(app: AppModel) {
     }
     LaunchedEffect(app.summary?.balance?.onchain?.confirmed, app.isWalletSuspended, generation) {
         if (app.isWalletSuspended) { if (plan != null) releasePlan(); return@LaunchedEffect }
-        if (busy || plan != null || !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return@LaunchedEffect
+        if (busy || plan != null || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
+        val token = generation
         try {
             if (!AutoBoardRules.shouldPrompt(enabled(), attempted(), onchainReady(app), app.summary?.balance?.onchain?.confirmed?.toLong() ?: 0, false)) return@LaunchedEffect
             val blocking = withContext(Dispatchers.IO) { app.session.onchainJournal.loadAll().any { it.blocks(OnchainAction.board, emptyList()) } }
             if (blocking) return@LaunchedEffect
-            val token = generation
             val caller = currentCoroutineContext()
             val quote = withContext(NonCancellable) { app.session.autoBoardQuote() }
             if (quote != null) {
-                if (caller.isActive && token == generation && enabled() && !attempted() && onchainReady(app) && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) plan = quote
+                if (caller.isActive && token == generation && enabled() && !attempted() && onchainReady(app) && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) plan = quote
                 else app.session.discardBoardReview(quote)
             }
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: Exception) { message = (failure as? OnchainException)?.message ?: "Unable to prepare boarding. Use Settings → Board to Ark to try again." }
+        catch (failure: Exception) { if (token == generation) message = (failure as? OnchainException)?.message ?: "Unable to prepare boarding. Use Settings → Board to Ark to try again." }
     }
     message?.let { text -> AlertDialog(onDismissRequest = { message = null },
         title = { Text("Board to Ark") }, text = { Text(text + " Check Settings → Board to Ark for operation status.") },
@@ -84,7 +84,7 @@ fun AutoBoardPrompt(app: AppModel) {
                 scope.launch {
                     try {
                         message = app.services.lifecycle.withWalletMutation {
-                            if (!enabled() || !onchainReady(app) || !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) fail(OnchainFailure.unavailable)
+                            if (!enabled() || !onchainReady(app) || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) fail(OnchainFailure.unavailable)
                             app.session.executeOnchain(quote)
                         }
                         app.refresh()

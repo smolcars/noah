@@ -12,7 +12,6 @@ internal interface OnchainWalletAccess {
     suspend fun vtxo(id: String): Vtxo = error("Unsupported")
     suspend fun exits(): List<ExitVtxo> = error("Unsupported")
     suspend fun status(id: String): ExitTransactionStatus? = error("Unsupported")
-    suspend fun legacyExitIDs(): List<String> = error("Unsupported")
     suspend fun pendingTotal(): Long = error("Unsupported")
     suspend fun claimableHeight(): Long? = error("Unsupported")
     suspend fun transactions(): List<WalletTransaction> = error("Unsupported")
@@ -20,7 +19,6 @@ internal interface OnchainWalletAccess {
     suspend fun destinationIsMine(address: String): Boolean = error("Unsupported")
     suspend fun minimum(): Long? = error("Unsupported")
     suspend fun regularSatPerKwu(): Long = error("Unsupported")
-    suspend fun boardFee(amount: Long): FeeEstimate = error("Unsupported")
     suspend fun refreshFee(ids: List<String>): FeeEstimate = error("Unsupported")
     suspend fun exitFee(ids: List<String>, destination: String?): EmergencyExitFeeEstimate = error("Unsupported")
     suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard = error("Unsupported")
@@ -51,7 +49,6 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     override suspend fun vtxo(id: String) = wallet.getVtxoById(id)
     override suspend fun exits() = wallet.getExitVtxos()
     override suspend fun status(id: String) = wallet.getExitStatus(id, includeHistory = true, includeTransactions = false)
-    override suspend fun legacyExitIDs() = wallet.history().filter { it.subsystemName == "bark.exit" }.flatMap { it.inputVtxoIds + it.exitedVtxoIds }
     override suspend fun pendingTotal() = wallet.pendingExitsTotalSats().toLong()
     override suspend fun claimableHeight() = wallet.allExitsClaimableAtHeight()?.toLong()
     override suspend fun transactions() = onchain.transactions()
@@ -62,7 +59,6 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     }
     override suspend fun minimum() = wallet.arkInfo()?.minBoardAmountSats?.toLong()
     override suspend fun regularSatPerKwu() = onchain.feeRates().regularSatPerKwu.toLong()
-    override suspend fun boardFee(amount: Long) = wallet.estimateBoardFee(amount.toULong())
     override suspend fun refreshFee(ids: List<String>) = wallet.estimateRefreshFee(ids)
     override suspend fun exitFee(ids: List<String>, destination: String?) = wallet.estimateEmergencyExitFee(ids, feeRateSatPerVb = null, destination = destination)
     override suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard {

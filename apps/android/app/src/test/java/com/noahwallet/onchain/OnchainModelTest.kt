@@ -13,12 +13,13 @@ class OnchainModelTest {
         var gate: CompletableDeferred<Unit>? = null
         var entered: CompletableDeferred<Unit>? = null
         var attempts = emptyList<OnchainOperationJournal.Attempt>()
+        var failPreparation = false
         var detailCalls = 0
         val discarded = mutableListOf<OnchainQuote>()
         val overview = OnchainOverview("wallet", emptyList(), emptyList(), 100_000, 100, 0, null)
         fun dependencies() = OnchainModel.Dependencies(
             { ready }, { overview }, { action, ids, amount, destination ->
-                entered?.complete(Unit); gate?.await(); OnchainQuote(action, "wallet", ids, destination, amount)
+                entered?.complete(Unit); gate?.await(); if (failPreparation) fail(OnchainFailure.notSynced); OnchainQuote(action, "wallet", ids, destination, amount)
             }, { calls++; "submitted" }, { attempts }, { id -> attempts = attempts.filter { it.id != id } },
             { checks++; false }, {}, { id -> detailCalls++; ExitModel(id, 1, "Canceled", ExitDetails(), listOf("Start", "Canceled"), emptyList()) }, { receiptRefreshes++ }, discard = { discarded.add(it) })
     }
@@ -29,6 +30,13 @@ class OnchainModelTest {
         f.entered!!.await(); m.invalidate(); f.gate!!.complete(Unit); request.join()
         assertNull(m.quote); assertEquals(0, f.calls); assertEquals(1, f.discarded.size)
         f.ready = false; m.review(OnchainAction.board); assertNull(m.quote)
+    }
+    @Test fun latePreparationFailureCannotOverwriteBackgroundOrWalletChange() = runBlocking {
+        val f = Fake().apply { gate = CompletableDeferred(); entered = CompletableDeferred(); failPreparation = true }
+        val m = OnchainModel(f.dependencies())
+        val request = launch { m.review(OnchainAction.board, amount = 30_000) }
+        f.entered!!.await(); m.unavailable(); f.gate!!.complete(Unit); request.join()
+        assertNull(m.quote); assertNull(m.error); assertEquals(0, f.calls)
     }
     @Test fun suspensionAfterReviewPreventsSubmissionAndClearsDetails() = runBlocking {
         val f = Fake(); val m = OnchainModel(f.dependencies(), "canceled")

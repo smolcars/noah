@@ -46,21 +46,20 @@ class OnchainOperationsTest {
         var states = mutableMapOf<String, ExitState>()
         var calls = mutableListOf<String>()
         var feesUnavailable = false
+        var forbidVtxoLookup = false
         var claimFee = 1295L
         var broadcastError: Exception? = null
         override suspend fun confirmed() = balance
         override suspend fun minimum() = 10_000L
         override suspend fun regularSatPerKwu() = chainRate
-        override suspend fun boardFee(amount: Long) = FeeEstimate(amount.toULong(), fee.toULong(), (amount - fee).toULong(), emptyList())
         override suspend fun refreshFee(ids: List<String>) = FeeEstimate(30_000u, 269u, 29_731u, ids)
         override suspend fun exitFee(ids: List<String>, destination: String?) = EmergencyExitFeeEstimate(7630u, 1295u, 8925u, 10u, 2u)
         override suspend fun vtxos() = items
-        override suspend fun vtxo(id: String) = Companion.vtxo(id)
+        override suspend fun vtxo(id: String): Vtxo { check(!forbidVtxoLookup); return Companion.vtxo(id) }
         override suspend fun exits() = active
         override suspend fun status(id: String) = states[id]?.let { ExitTransactionStatus(id, 30_000u, it, listOf(ExitState.Start(100u), it), 0u, emptyList()) }
         override suspend fun tip() = 100L
         override suspend fun expiring(threshold: UInt) = emptySet<String>()
-        override suspend fun legacyExitIDs() = listOf("legacy")
         override suspend fun pendingTotal() = 0L
         override suspend fun claimableHeight(): Long? = null
         override suspend fun submitBoard(quote: OnchainQuote): BoardResult {
@@ -278,6 +277,7 @@ class OnchainOperationsTest {
         assertTrue(quote.current(120_999)); assertFalse(quote.current(121_000)); assertFalse(quote.current(999))
     }
     @Test fun persistedListingOwnsTerminalDiscoveryAndExactAmountsWithoutVtxoLookupOrAppIndex() = runBlocking { fixture { wallet, ops, _, history ->
+        wallet.forbidVtxoLookup = true
         wallet.states["imported-canceled"] = ExitState.Canceled(100u)
         wallet.states["imported-claimed"] = ExitState.Claimed(101u, "claim-tx", BlockRef(101u, "block"))
         assertTrue(wallet.active.isEmpty()); assertTrue(history.ids("wallet").isEmpty())
