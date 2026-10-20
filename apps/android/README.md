@@ -439,11 +439,94 @@ there is no Firebase fallback on a non-GMS device. Settings UI is still pending.
 
 Both transports run maintenance (with correlated status), invoice creation/submission,
 claim + local receive notification, heartbeat and correlated backup jobs. Recurring
-wakes remain log-only until M7.
+wakes call the shared recurring executor with its existing submission budget.
 Widget updates preserve the six Long keys read by `NoahWidgetProvider`, including
 `-999` for no VTXO expiry. Existing `default` and `noah-push-default` channels are
 never recreated or reconfigured. Notification copy currently uses English and BIP177,
 as the native locale/profile UI ports remain pending.
+
+### Periodic background work (2026-10-20)
+
+`PeriodicWork` adds two unique WorkManager requests, both with connected-network
+constraints and no charging, idle, exact-alarm or expedited requirement:
+
+- `noah-wallet-refresh`: 15 minutes, initially delayed 15 minutes; sync, execute
+  due recurring payments, refresh the widget's summary/expiry and publish it.
+- `noah-wallet-maintenance`: 6 hours, initially delayed 6 hours; the same stages,
+  plus delegated maintenance after sync and enabled-only backup after recurring.
+
+`KEEP` preserves pending/running IDs and next dates on launch. WorkManager's own
+persistent database and boot/package-replacement receivers restore scheduling;
+there is no additional boot receiver. Eligible onboarding/startup reconciles before
+server registration, so a registration outage cannot prevent local scheduling.
+Committed wallet deletion cancels both requests before deleting the seed; another
+completed onboarding enqueues fresh requests. Suspended/ineligible wakes do no work.
+Android may defer either interval under Doze, battery optimization or constraints.
+The existing battery screen and persisted prompt/skip state are unchanged; these
+workers neither request nor require an exemption.
+
+Admission uses the existing `AppServices.ensureWalletOpen` headless path: healthy
+storage, Home launch decision (readable agreeing valid seed and existing wallet DB),
+`isInitialized != false`, `isOnboarded()`, no suspension, restore/deletion journal or
+automation-storage failure. Headless work never saves/migrates seeds or performs
+restore/deletion recovery. The lifecycle gate still precedes RestoreRecovery and
+session reservations; nested opening passes `walletMutationHeld = true`.
+
+Before opening the wallet, `RecurringRuntime.hasDuePayments` reads the existing
+protected store: valid active policies with `nextRunAt <= now` and elapsed retry
+backoff. Policy-ledger rollback/corruption and durable authority stops overlay those
+policies as needing attention. With nothing due, the recurring stage is skipped;
+it adds no wallet open, sync or network request. Refresh's independent sync/widget
+stages still run. This intentionally replaces RN's once-per-24-hour Android fallback
+with more timely execution when a wake push is missed. The server's
+`recurring_payment_due` push remains primary. Advisory reminders are unchanged.
+The only execution path is `RecurringRuntime.execute(budget)` → existing executor
+and Send reservations: final binding/policy/authority checks, durable occurrence
+consumption and ambiguous-outcome protection remain authoritative and unchanged.
+
+Push and periodic jobs share a queue, while all wallet calls retain the existing
+counted/exclusive session reservations. A periodic run carries the same monotonic
+25-second `RecurringBudget.push()` as push work. Every independent stage checks
+cancellation, WorkManager stop and budget; widget summary, expiry and publication
+have separate checks. CoroutineWorker's final `onStopped` cancels its coroutine;
+a cancellation hook revokes the budget immediately, including during shielded
+recurring/backup settlement. Foreground entry also revokes synchronously, refuses
+new periodic runs and waits for existing runs outside the lifecycle gate before
+startup/resume wallet work. Native calls already admitted and detached recurring/
+backup work settle before the queue/activity flag is released. Workers never
+return `retry()` after an ambiguous wallet result; a later interval starts fresh
+admission through the same durable executor, rather than replaying a submission.
+
+Periodic verification on base `aea99fe4`, owned API 35 Google APIs ARM64 AVD
+`NoahPeriodic_aea99_5604`, explicitly launched with `-port 5604 -no-window -no-snapshot`:
+
+- **16 new focused JVM tests passed**, including WorkManager TestDriver scheduling,
+  stable IDs/dates, network constraints, cancellation during a shielded stage,
+  real wallet-lifecycle deletion/re-onboarding, all admission refusals, each
+  stop/budget stage boundary, foreground settlement, protected-policy due checks,
+  and the existing executor's one-payment/ambiguous-outcome behavior.
+- **One instrumentation test passed** on `emulator-5604`: both production worker
+  kinds returned success for an empty wallet without creating a wallet/seed;
+  TestDriver then ran both persisted periodic requests and verified dedup/cancel.
+  This proves WorkManager/headless refusal, not a funded native maintenance run.
+- Final requested command passed with **3,072 tests / 113 suites / zero failures,
+  errors or skips**, APK assembly and instrumentation Kotlin compilation:
+  `nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'`.
+  The first full run had seven stale source-wiring assertion failures after the
+  shared admission extraction; those assertions were updated, all 13 wiring
+  tests passed narrowly, and the final command was rerun successfully. No runtime
+  or device-test behavior changed in that correction.
+- Logs/results: `/private/tmp/noah-periodic-{focused,full-initial,wiring,final,device-test}.log`
+  and `/private/tmp/noah-periodic-results.json`. The exact AVD name was confirmed,
+  shutdown requested, device absence and closed ports 5604/5605 verified, then
+  that AVD deleted and its `.ini`/`.avd` absence verified. Single-use final Gradle
+  processes stopped; shared devices and builds were untouched.
+
+No live funded wallet, server wake delivery, real 15-minute/6-hour wait, reboot,
+package replacement or Doze measurement was attempted. Scheduling persistence uses
+WorkManager's platform implementation; the regression uses its official test driver.
+No iOS, server, RN, settings-storage internals, executor, ledger or authority code
+changed. Client/server hooks were skipped for these native-only commits.
 
 ### Push verification (2026-10-19)
 
