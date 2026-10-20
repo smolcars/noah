@@ -258,6 +258,65 @@ import Testing
         #expect(h.calls.withLock { $0 } == 1)
         #expect(try h.store.load().schedules[original.id]?.status == "needs_attention")
     }
+    @Test func consumedMonthlyIndexSurvivesRollbackAndZoneChange() async throws {
+        let h = try Harness()
+        var schedule = RecurringScheduleTests.schedule(start: 1_772_337_600_000)
+        schedule.destinationType = "ark"; schedule.destination = "ark-test-destination"
+        h.zone.withLock { $0 = TimeZone(identifier: "America/New_York")! }
+        h.clock.withLock { $0 = 1_774_753_200_000 }
+        #expect(schedule.plan(now: h.clock.withLock { $0 }, zone: h.zone.withLock { $0 }).occurrenceIndex == 1)
+        try h.store.upsert(schedule)
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 1)
+        try h.store.upsert(schedule)
+        h.zone.withLock { $0 = .gmt }
+        h.clock.withLock { $0 = 1_775_016_000_000 }
+        #expect(schedule.plan(now: h.clock.withLock { $0 }, zone: .gmt).scheduledFor == 1_775_016_000_000)
+        h.rebuild(); await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 1)
+        #expect(try h.store.load().schedules[schedule.id]?.status == "needs_attention")
+    }
+
+    @Test(arguments: [false, true]) func consumedIndexSurvivesDSTAndZoneRollback(fall: Bool) async throws {
+        let h = try Harness()
+        let start = ISO8601DateFormatter().date(from: fall ? "2026-10-31T16:00:00Z" : "2026-03-07T17:00:00Z")!.timeIntervalSince1970 * 1000
+        var schedule = RecurringScheduleTests.schedule(start: start)
+        schedule.interval = .init(unit: "day", every: 1)
+        schedule.destinationType = "ark"; schedule.destination = "ark-test-destination"
+        schedule.nextOccurrenceIndex = 1
+        let ny = TimeZone(identifier: "America/New_York")!
+        let from = fall ? TimeZone.gmt : ny, to = fall ? ny : TimeZone.gmt
+        let paidAt = schedule.occurrence(1, zone: from), shifted = schedule.occurrence(1, zone: to)
+        #expect(shifted - paidAt == 3_600_000)
+        h.zone.withLock { $0 = from }; h.clock.withLock { $0 = paidAt }
+        try h.store.upsert(schedule); await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 1)
+        try h.store.upsert(schedule)
+        h.zone.withLock { $0 = to }; h.clock.withLock { $0 = shifted }
+        h.rebuild(); await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 1)
+        #expect(try h.store.load().schedules[schedule.id]?.status == "needs_attention")
+    }
+    @Test func consumedIndexSurvivesZoneRollbackAcrossPolicyRevisions() async throws {
+        let h = try Harness()
+        var revisionA = RecurringScheduleTests.schedule(start: 1_772_337_600_000)
+        revisionA.destinationType = "ark"; revisionA.destination = "ark-test-destination"
+        revisionA.nativeRevision = UUID()
+        h.zone.withLock { $0 = TimeZone(identifier: "America/New_York")! }
+        h.clock.withLock { $0 = 1_774_753_200_000 }
+        try h.store.upsert(revisionA); await h.executor.execute()
+        var revisionB = revisionA
+        revisionB.startAt = h.clock.withLock { $0 } + 1; revisionB.nextRunAt = revisionB.startAt
+        try await h.executor.save(revisionB, editing: true)
+        h.clock.withLock { $0 += 1 }; await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 2)
+        try h.store.upsert(revisionA)
+        h.zone.withLock { $0 = .gmt }; h.clock.withLock { $0 = 1_775_016_000_000 }
+        h.rebuild(); await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 2)
+        #expect(try h.store.load().schedules[revisionA.id]?.status == "needs_attention")
+    }
+
     @Test func explicitEditCreatesNewPolicyWithoutReusingConsumedOccurrence() async throws {
         let h = try Harness(); let original = try h.add()
         await h.executor.execute()
@@ -320,9 +379,67 @@ import Testing
         _ = try h.journal.load()
         var new = old; new.consumed = nil; new.policyRevision = UUID()
         try h.journal.save(new)
-        #expect(try h.journal.consumed(binding: owner, scheduleID: schedule.id, at: h.now))
+        #expect(try h.journal.consumed(binding: owner, scheduleID: schedule.id, at: h.now, policyRevision: nil, occurrenceIndex: old.plan.occurrenceIndex!))
         var otherWallet = owner; otherWallet.instance = UUID()
-        #expect(try !h.journal.consumed(binding: otherWallet, scheduleID: schedule.id, at: h.now))
+        #expect(try !h.journal.consumed(binding: otherWallet, scheduleID: schedule.id, at: h.now, policyRevision: nil, occurrenceIndex: old.plan.occurrenceIndex!))
+    }
+
+    @Test(arguments: [false, true]) func oldJournalMigrationRetainsUnknownRevisionHistory(v1: Bool) async throws {
+        let h = try Harness(); let schedule = try h.add()
+        let owner = h.owner.withLock { $0 }
+        try h.store.bind(owner)
+        var old = RecurringJournal.Entry(binding: owner, scheduleID: schedule.id,
+                                         plan: schedule.plan(now: h.now), markedAt: h.now, policyRevision: UUID())
+        old.resolved = true; old.consumed = true
+        let attempts = try JSONSerialization.jsonObject(with: JSONEncoder().encode([schedule.id: old]))
+        let binding = try JSONSerialization.jsonObject(with: JSONEncoder().encode(owner))
+        let bytes: Data
+        if v1 {
+            bytes = try JSONSerialization.data(withJSONObject: ["version": 1, "attempts": attempts,
+                "consumed": [["binding": binding, "scheduleID": schedule.id, "through": h.now]]])
+        } else { bytes = try JSONEncoder().encode([schedule.id: old]) }
+        try bytes.write(to: h.journal.file)
+        _ = try h.journal.load()
+        let migrated = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: h.journal.file)) as? [String: Any])
+        #expect(migrated["version"] as? Int == 2)
+        let indices = try #require(migrated["consumedIndices"] as? [[String: Any]])
+        #expect(indices.first?["indices"] as? [Int] == [old.plan.occurrenceIndex!])
+        #expect(indices.first?["policyRevision"] as? String == old.policyRevision?.uuidString)
+        var replacement = old; replacement.consumed = nil; replacement.policyRevision = UUID()
+        try h.journal.save(replacement)
+        // No timestamp/index for this rolled-back revision survives in the old journal.
+        h.clock.withLock { $0 += 10 * 86_400_000 }
+        h.zone.withLock { $0 = .gmt }
+        h.rebuild(); await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 0)
+        #expect(try h.store.load().schedules[schedule.id]?.status == "needs_attention")
+        #expect(try h.journal.consumed(binding: owner, scheduleID: schedule.id, at: h.now + 1,
+                                     policyRevision: old.policyRevision, occurrenceIndex: old.plan.occurrenceIndex!))
+        var other = owner; other.instance = UUID()
+        #expect(try !h.journal.consumed(binding: other, scheduleID: schedule.id, at: h.now + 1,
+                                      policyRevision: old.policyRevision, occurrenceIndex: old.plan.occurrenceIndex!))
+    }
+    @Test func v2IndexScopeDoesNotBlockFreshRevisionOrWallet() throws {
+        let h = try Harness(); let schedule = try h.add(); let owner = h.owner.withLock { $0 }
+        var entry = RecurringJournal.Entry(binding: owner, scheduleID: schedule.id,
+                                           plan: schedule.plan(now: h.now), markedAt: h.now, policyRevision: UUID())
+        entry.resolved = true; entry.consumed = true
+        try h.journal.save(entry)
+        let index = entry.plan.occurrenceIndex!
+        #expect(try h.journal.consumed(binding: owner, scheduleID: schedule.id, at: h.now + 1,
+                                     policyRevision: entry.policyRevision, occurrenceIndex: index))
+        #expect(try !h.journal.consumed(binding: owner, scheduleID: schedule.id, at: h.now + 1,
+                                      policyRevision: UUID(), occurrenceIndex: index))
+        #expect(try h.journal.consumed(binding: owner, scheduleID: schedule.id, at: h.now,
+                                     policyRevision: UUID(), occurrenceIndex: 0))
+        var other = owner; other.instance = UUID()
+        #expect(try !h.journal.consumed(binding: other, scheduleID: schedule.id, at: h.now,
+                                      policyRevision: entry.policyRevision, occurrenceIndex: index))
+        entry.plan.occurrenceIndex = index + 1; entry.plan.scheduledFor = h.now + 1
+        try h.journal.save(entry); try h.journal.save(entry)
+        let json = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: h.journal.file)) as? [String: Any])
+        let indices = try #require(json["consumedIndices"] as? [[String: Any]])
+        #expect(indices.first?["indices"] as? [Int] == [index, index + 1])
     }
 
     @Test(arguments: ["ark", "lnurl", "offer", "lightning"]) func variableOrExcessiveFeesNeedApprovalAndNeverConsume(method: String) async throws {

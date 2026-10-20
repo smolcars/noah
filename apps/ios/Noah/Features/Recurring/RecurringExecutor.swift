@@ -73,7 +73,8 @@ import Observation
             if planning.status == "needs_approval" { planning.status = "active" }
             let plan = planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: true)
             let consumed = try plan.scheduledFor.map { at in
-                try d.journal.consumed(binding: state.binding!, scheduleID: schedule.id, at: at)
+                try d.journal.consumed(binding: state.binding!, scheduleID: schedule.id, at: at,
+                                       policyRevision: schedule.nativeRevision, occurrenceIndex: plan.occurrenceIndex!)
             } ?? false
             if (schedule.inFlight != nil || pendingMarker || consumed), schedule.status != "needs_attention" {
                 schedule.status = "needs_attention"
