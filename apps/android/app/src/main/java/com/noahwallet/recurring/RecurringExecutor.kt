@@ -165,7 +165,7 @@ class RecurringExecutor(private val d: Dependencies,
             d.store.upsert(stopped); d.notify(emptyList(), stopped)
         }
     }
-    private suspend fun settle(entry: RecurringJournal.Entry, original: RecurringPayment, retainReceipt: Boolean = false) {
+    private suspend fun settle(entry: RecurringJournal.Entry, original: RecurringPayment?, retainReceipt: Boolean = false) {
         // Own this exact outcome before storage can suspend and the UI can start another attempt.
         val attempt = controller.attempt ?: return
         val outcome = controller.state
@@ -179,10 +179,11 @@ class RecurringExecutor(private val d: Dependencies,
         var policyFailure: Exception? = null
         val settled = storage {
             synchronized(RecurringStore.lock) {
-                if (d.binding() != entry.binding || d.store.load().binding != entry.binding) return@storage false
+                if (d.binding() != entry.binding) return@storage false
                 val saved = d.journal.load()[entry.scheduleID]
                 if (saved?.binding != entry.binding || saved.plan != entry.plan || saved.policyRevision != entry.policyRevision || saved.markedAt != entry.markedAt) return@storage false
                 if (saved.policyApplied) return@storage true
+                if (d.store.load().binding != entry.binding) return@storage false
                 // Claim application with consumption: interruption may stop advancement, never repeat it.
                 d.journal.save(entry.copy(resolved = true, consumed = paid, policyApplied = true))
                 try {
@@ -199,7 +200,7 @@ class RecurringExecutor(private val d: Dependencies,
                         else -> latest.failure(entry.plan, message ?: "No payment was submitted.", true, d.now())
                     }
                     d.store.upsert(result); d.notify(emptyList(), result)
-                } else if (success && original.nativeRevision == entry.policyRevision) d.notify(emptyList(), original.copy(status = "active").success(entry.plan, d.now(), d.zone()))
+                } else if (success && original != null && original.nativeRevision == entry.policyRevision) d.notify(emptyList(), original.copy(status = "active").success(entry.plan, d.now(), d.zone()))
                 } catch (failure: Exception) { policyFailure = failure }
             }
             true
@@ -208,9 +209,11 @@ class RecurringExecutor(private val d: Dependencies,
         if (policyFailure != null) error = RecurringPolicyLedger.message
     }
     suspend fun checkStatus(id: String) {
+        if (running) return
         try {
             val entry = storage { d.journal.load()[id] } ?: return
-            val schedule = storage { d.store.load().schedules[id] } ?: return
+            val schedule = storage { runCatching { d.store.load().schedules[id] }.getOrNull() }
+            if (schedule == null && !entry.policyApplied) return
             controller.checkStatus(); settle(entry, schedule)
         } catch (_: Exception) { error = "Unable to check this payment. Sending remains stopped." }
         reload()
