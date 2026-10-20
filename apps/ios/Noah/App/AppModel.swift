@@ -49,6 +49,7 @@ final class AppModel {
 
     let variant = AppVariant.current
     let session = WalletSession.shared
+    let versionCheck = AppVersionCheck()
     let pushPermission = PushPermissionModel()
     let server: ServerRegistration
     private let log = AppLog("app")

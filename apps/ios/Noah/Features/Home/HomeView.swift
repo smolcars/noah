@@ -14,6 +14,7 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 28) {
+                    if !model.isWalletSuspended { UpdateWarningView() }
                     if let error = model.walletError {
                         NoahCard {
                             Label(error, systemImage: "exclamationmark.triangle")
@@ -102,6 +103,7 @@ struct HomeView: View {
                 .frame(maxWidth: 640)
                 .frame(maxWidth: .infinity)
             }
+            .task { await model.versionCheck.checkOnce() }
             .refreshable {
                 guard !model.isWalletSuspended else { return }
                 await model.sync()

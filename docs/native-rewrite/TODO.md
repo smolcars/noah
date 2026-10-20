@@ -172,7 +172,8 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [ ] HomeScreen: fiat, recent 3 transactions, shortcuts, banners, facts
 - [x] HomeScreen: recent 3 transactions, View all, transaction detail — iOS
 - [ ] Banners: backup status, auto-boarding, pending round, email verification, update warning
-- [ ] App version check
+- [x] App version check — iOS (`/v0/app_version`, current version once per process, no retry, failure allows use, Home warning + variant TestFlight link; no blocking update screen, as in RN)
+- [ ] App version check — Android
 
 - [x] Launch gating (including unfinished onboarding), Navigation 3 tabs, create/beta/secure mnemonic, emergency email and Lightning identity — Android
 - [x] Derive key 0 before fresh-wallet registration and persist `staticVtxoPubkey` — Android
