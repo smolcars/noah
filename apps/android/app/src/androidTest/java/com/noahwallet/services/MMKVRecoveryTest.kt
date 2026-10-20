@@ -98,6 +98,15 @@ class MMKVRecoveryTest {
         }
     }
 
+    @Test fun lazyReloadAfterCacheEvictionKeepsQuarantineTarget() = fixture { context, root ->
+        val store = SettingsStorage(context)
+        val raw = MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!
+        raw.clearMemoryCache(); corrupt(root, "crc")
+        assertTrue(runCatching { store.requireHealthy() }.isFailure)
+        assertTrue(MMKVQuarantine(context.noBackupFilesDir, id).exists)
+        assertNull(store.string("wallet-storage"))
+    }
+
     @Test fun emptyRecoveryRestoresTheImmutableBackupOnce() = fixture { context, root ->
         val backup = MMKVUpgradeBackup(root, id, backupRoot = context.noBackupFilesDir); backup.prepare()
         val original = File(root, id).readBytes()

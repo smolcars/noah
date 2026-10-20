@@ -73,12 +73,17 @@ class SettingsStorage private constructor(private val context: Context, acknowle
     class Unavailable : Exception("Wallet settings need recovery. Restart Noah to retry or contact support; wallet files have been kept.")
     fun requireHealthy() {
         if (recoveryNeedsAcknowledgement) throw RecoveryRequired()
-        if (mmkv == null || quarantine.exists) throw Unavailable()
+        if (mmkv == null) throw Unavailable()
         validate(mmkv!!, backup.retiredKeys.orEmpty())
+        quarantine.requireDurable()
+        if (quarantine.exists) throw RecoveryRequired()
     }
-    fun string(key: String): String? = if (quarantine.exists) null else mmkv?.let { store ->
-        if (key in RNStoreCodec.versions) RNStoreCodec.storedString(store.containsKey(key), store.decodeBytes(key))
-        else store.decodeString(key)
+    fun string(key: String): String? = synchronized(openLock) {
+        if (quarantine.exists || quarantine.writeFailed) return@synchronized null
+        val store = mmkv ?: return@synchronized null
+        val value = if (key in RNStoreCodec.versions) RNStoreCodec.storedString(store.containsKey(key), store.decodeBytes(key))
+            else store.decodeString(key)
+        if (quarantine.exists || quarantine.writeFailed) null else value
     }
     fun set(value: String, key: String) = synchronized(openLock) {
         validateStores()
@@ -130,16 +135,24 @@ class SettingsStorage private constructor(private val context: Context, acknowle
 private class RecoveryHandler(private val log: AppLog, private val quarantine: MMKVQuarantine) : MMKVHandler {
     var didRecover = false
     override fun onMMKVCRCCheckFail(mmapID: String): MMKVRecoverStrategic {
-        quarantine.recordRecovery()
+        protectRecovery()
         didRecover = true
         log.w("CRC check failed; recovering settings")
         return MMKVRecoverStrategic.OnErrorRecover
     }
     override fun onMMKVFileLengthError(mmapID: String): MMKVRecoverStrategic {
-        quarantine.recordRecovery()
+        protectRecovery()
         didRecover = true
         log.w("File length check failed; recovering settings")
         return MMKVRecoverStrategic.OnErrorRecover
+    }
+    private fun protectRecovery() {
+        // MMKV 2.4.3 has only recover/discard; both rewrite files. Never return on failed durability.
+        if (!quarantine.recordRecovery()) {
+            android.os.Process.killProcess(android.os.Process.myPid())
+            Runtime.getRuntime().halt(1)
+            error("Cannot safely recover settings")
+        }
     }
     override fun wantLogRedirecting() = true
     override fun mmkvLog(level: MMKVLogLevel, file: String, line: Int, function: String, message: String) {
