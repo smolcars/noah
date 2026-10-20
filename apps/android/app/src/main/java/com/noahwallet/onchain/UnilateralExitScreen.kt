@@ -53,9 +53,8 @@ fun UnilateralExitScreen(app: AppModel) {
         Text("VTXOs below 330 sats cannot exit onchain.")
         TextButton({ selected = eligible.map { it.id }.toSet(); model.invalidate() }, enabled = !model.busy) { Text("Select all eligible VTXOs") }
         eligible.forEach { vtxo ->
-            Row {
-                Checkbox(vtxo.id in selected, { checked -> selected = if (checked) selected + vtxo.id else selected - vtxo.id; model.invalidate() }, enabled = !model.busy)
-                AmountRow(app, vtxo.id.take(12) + "…", vtxo.amount)
+            VtxoSelectionRow(vtxo.id, amountText(app, vtxo.amount), vtxo.status, vtxo.id in selected, !model.busy) { checked ->
+                selected = if (checked) selected + vtxo.id else selected - vtxo.id; model.invalidate()
             }
         }
         if (eligible.isEmpty()) Text("No eligible spendable VTXOs.")

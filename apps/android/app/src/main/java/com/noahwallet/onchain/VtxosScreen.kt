@@ -38,9 +38,8 @@ fun VtxosScreen(app: AppModel) {
         if (visible.isEmpty() && !model.loading) Text("No VTXOs in this view.")
         visible.forEach { vtxo ->
             HorizontalDivider()
-            if (selecting) Row {
-                Checkbox(vtxo.id in selected, { checked -> selected = if (checked) selected + vtxo.id else selected - vtxo.id; model.invalidate() }, enabled = vtxo.refreshable && !model.busy)
-                AmountRow(app, vtxo.status, vtxo.amount)
+            if (selecting) VtxoSelectionRow(vtxo.id, amountText(app, vtxo.amount), vtxo.status, vtxo.id in selected, vtxo.refreshable && !model.busy) { checked ->
+                selected = if (checked) selected + vtxo.id else selected - vtxo.id; model.invalidate()
             } else TextButton({ detailID = vtxo.id }, enabled = !model.busy) { Text("${vtxo.status} · ${amountText(app, vtxo.amount)} · ${vtxo.id.take(12)}…") }
             Text("Expires at block ${vtxo.expiry}")
         }
