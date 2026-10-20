@@ -26,7 +26,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AndroidStorageTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
-    private val secret = "instrumentation-only-secret"
+    // Public BIP39 zero-entropy vector: the stores now accept only valid mnemonics.
+    private val secret = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 
     @Test fun realKeystoreAtomicPersistenceAndMissingKey() {
         val alias = "noah.test.${UUID.randomUUID()}"
