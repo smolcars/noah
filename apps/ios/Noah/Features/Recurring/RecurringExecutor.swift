@@ -3,6 +3,7 @@ import Foundation
 import Observation
 
 @MainActor @Observable final class RecurringExecutor {
+    struct NoWallet: Error {}
     struct Dependencies {
         var store: RecurringStore
         var journal: RecurringJournal
@@ -205,7 +206,8 @@ import Observation
             try refreshDates()
             await syncServer()
             await d.refresh()
-        } catch { self.error = error.localizedDescription }
+        } catch is NoWallet { return }
+        catch { self.error = error.localizedDescription }
         await d.notifications((try? d.store.load().schedules.values.map { $0 }) ?? [], nil)
     }
     private func markUncertain(_ entry: RecurringJournal.Entry, message: String? = nil) async throws {
@@ -389,6 +391,7 @@ import Observation
     }
     func timeChanged() async {
         do { try refreshDates(); await changed() }
+        catch is NoWallet { return }
         catch { self.error = error.localizedDescription }
     }
     private func changed() async {

@@ -9,8 +9,8 @@ extension RecurringExecutor {
 
 extension RecurringExecutor.Dependencies {
     @MainActor static func live(services: AppServices = .shared, settings: SettingsStorage = .shared,
-                                controller: SendPaymentController = .shared) -> Self {
-        let location = WalletDataLocation(variant: services.variant)
+                                controller: SendPaymentController = .shared, location: WalletDataLocation? = nil) -> Self {
+        let location = location ?? WalletDataLocation(variant: services.variant)
         let store = RecurringStore(settings: settings)
         return .init(store: store,
                      journal: .init(file: location.directory.appending(path: "noah-recurring-journal.json")),
@@ -18,6 +18,7 @@ extension RecurringExecutor.Dependencies {
                      ensureOpen: { try await services.ensureWalletOpen() },
                      binding: { try RecurringStore.binding(location: location) },
                      allowed: {
+                         guard location.databaseExists else { throw RecurringExecutor.NoWallet() }
                          guard !location.restorePending, !FileManager.default.fileExists(atPath: location.deletionMarker.path),
                                settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized != false,
                                settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended != true else { throw AppServices.WalletSuspended() }
