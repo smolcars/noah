@@ -4,6 +4,12 @@ on:
   pull_request:
     paths:
       - "apps/**"
+      - "apps/tools/**"
+      - "client/src/**"
+      - "client/gt.config.json"
+      - "client/package.json"
+      - "package.json"
+      - "bun.lock"
       - "api/**"
       - "server/**"
       - "Cargo.toml"
@@ -67,6 +73,15 @@ jobs:
         with:
           primary-key: nix-native-api-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-native-api-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Install locked Bun dependencies
+        run: nix develop .#android-ci --command bun install --frozen-lockfile
+
+      - name: Test translation generator
+        run: nix develop .#android-ci --command bun test apps/tools/translations.test.mjs
+
+      - name: Check native translation drift
+        run: nix develop .#android-ci --command bun apps/tools/translations.mjs --check
 
       - name: Cache Swift generator
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
