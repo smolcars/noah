@@ -176,15 +176,6 @@ class OnchainJournalTest {
         assertEquals(OnchainFailure.changed, (error as OnchainException).reason)
         assertEquals(0, calls); assertEquals(1, journal.loadAll().size)
     } }
-    @Test fun historyIsWalletScopedAndRetainedAfterReopen() = runBlocking { fixture { file, _ ->
-        val store = ExitHistoryStore(OnchainFile(file) {})
-        store.remember(listOf("a", "a", "canceled", "claimed"), "wallet")
-        store.remember(listOf("other"), "other-wallet")
-        assertEquals(listOf("a", "canceled", "claimed"), ExitHistoryStore(OnchainFile(file) {}).ids("wallet"))
-        assertTrue(store.ids("restored-wallet").isEmpty())
-        file.delete()
-        assertTrue(store.ids("wallet").isEmpty())
-    } }
     @Test fun preparedCrashRecoveryUsesExactNetworkPendingBoardOrMovementIDNeverAmount() = runBlocking {
         for (source in listOf("mempool", "confirmed", "pending", "cached", "missing", "lookalike")) fixture { file, journal ->
             val quote = quote().copy(chainFee = 199, preparedBoard = BoardPrepared("local", "exact", 199, listOf(BoardInput("input", 0u))))

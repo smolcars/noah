@@ -325,8 +325,7 @@ class WalletSession internal constructor(
     }
     private val onchainMutation = Mutex()
     val onchainJournal = OnchainOperationJournal(File(location.directory, "noah-onchain-attempt.json"))
-    private val exitHistory = ExitHistoryStore(File(location.directory, "noah-exit-history.json"))
-    private fun onchainOperations(handles: Handles) = OnchainOperations(handles.m6, onchainJournal, exitHistory,
+    private fun onchainOperations(handles: Handles) = OnchainOperations(handles.m6, onchainJournal,
         ready = { !isSuspended() && !WalletBackgroundActivity.isRunning })
     suspend fun onchainOverview(): OnchainOverview = withM6 {
         onchainOperations(it).overview(WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt())

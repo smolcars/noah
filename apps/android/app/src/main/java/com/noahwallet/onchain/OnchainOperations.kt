@@ -6,7 +6,7 @@ import kotlinx.coroutines.*
 
 internal class OnchainOperations(
     private val wallet: OnchainWalletAccess, private val journal: OnchainOperationJournal,
-    private val history: ExitHistoryStore, private val ready: () -> Boolean = { true },
+    private val ready: () -> Boolean = { true },
     private val now: () -> Long = System::currentTimeMillis,
 ) {
     suspend fun overview(threshold: UInt): OnchainOverview {
@@ -117,7 +117,6 @@ internal class OnchainOperations(
             val fresh = quote(reviewed.action, reviewed.ids, reviewed.amount, reviewed.destination, reviewed.automatic)
             if (!ready() || !reviewed.matches(fresh) || !reviewed.current(now())) fail(OnchainFailure.changed)
         }
-        if (reviewed.action in setOf(OnchainAction.startExit, OnchainAction.claim, OnchainAction.cancel)) history.remember(reviewed.ids, reviewed.walletID)
         try { return journal.perform(reviewed) { recordTransaction ->
             when (reviewed.action) {
                 OnchainAction.board -> {

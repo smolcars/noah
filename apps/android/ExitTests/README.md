@@ -274,8 +274,8 @@ keys remain unavailable (handoff 19), so existing conservative workarounds remai
 The exit overview/history now comes from `listAllExits(includeHistory = true,
 includeTransactions = false)`, including exact SDK amounts. Direct details use
 `getExitStatus` and its amount, with no separate VTXO lookup. Noah's old index is
-not read for discovery; pre-mutation index writes remain compatible with older
-app versions. Existing discovery files need no migration or deletion.
+not read for discovery. Round 1 also removes pre-mutation index writes and the
+unused store; existing discovery files are ignored and need no migration or deletion.
 
 Live device: owned **NoahFfi050Android4978**, Android 15/API 35 arm64, explicitly
 launched as **emulator-5592**. Disposable wallet fingerprint **a9efc44c**. Funded
@@ -350,3 +350,14 @@ output fee. Regressions cover initially insufficient funds, 100,000 sats with
 edges, construction failures, cancellation at both preparations and readiness
 loss. Targeted OnchainOperationsTest, BoardPreparationsTest and OnchainModelTest:
 **40 tests passed, zero failures/errors/skips**. No live device was used.
+
+### Retired exit index
+
+Start/claim/cancel no longer read or write Noah's legacy exit index. The unused
+store and session wiring are removed; no read-only migration bridge is needed
+because SDK listAllExits already includes terminal history and exact amounts.
+Legacy files are left untouched. A corrupt-index regression executes all three
+operations and reads the SDK overview without parsing or modifying that file.
+The obsolete index-storage unit test was replaced by operation coverage.
+OnchainOperationsTest, OnchainJournalTest and WalletSessionTest: **61 tests passed**,
+zero failures/errors/skips.

@@ -58,6 +58,7 @@ class OnchainOperationsTest {
         var forbidVtxoLookup = false
         var claimFee = 1295L
         var broadcastError: Exception? = null
+        var cancelResult = false
         override suspend fun confirmed() = balance
         override suspend fun minimum() = 10_000L
         override suspend fun regularSatPerKwu() = chainRate
@@ -83,20 +84,20 @@ class OnchainOperationsTest {
             return listOf(WalletTransaction("board-tx", "", 1543u, -30_000, null, false))
         }
         override suspend fun start(ids: List<String>) { calls.add("start"); ids.forEach { states[it] = ExitState.Start(100u) } }
-        override suspend fun cancel(id: String): Boolean { calls.add("cancel"); return false }
+        override suspend fun cancel(id: String): Boolean { calls.add("cancel"); return cancelResult }
         override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction { drainDestinations.add(destination); calls.add("drain"); return ExitClaimTransaction("psbt", claimFee.toULong()) }
         override suspend fun broadcastClaim(psbt: String): String { calls.add("broadcast"); broadcastError?.let { throw it }; return "claim-tx" }
         companion object {
             fun vtxo(id: String, amount: ULong = 30_000u) = Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), id, amount, 500u, "pubkey", VtxoState.Spendable, 1u, 500u, true)
         }
     }
-    private suspend fun fixture(body: suspend (Wallet, OnchainOperations, OnchainOperationJournal, ExitHistoryStore) -> Unit) {
+    private suspend fun fixture(body: suspend (Wallet, OnchainOperations, OnchainOperationJournal, File) -> Unit) {
         val root = Files.createTempDirectory("m6-ops").toFile()
         try {
             val journal = OnchainOperationJournal(OnchainFile(File(root, "attempt")) {})
-            val history = ExitHistoryStore(OnchainFile(File(root, "history")) {})
+            val history = File(root, "noah-exit-history.json")
             val wallet = Wallet().apply { attemptFile = File(root, "attempt") }
-            withTimeout(10_000) { body(wallet, OnchainOperations(wallet, journal, history), journal, history) }
+            withTimeout(10_000) { body(wallet, OnchainOperations(wallet, journal), journal, history) }
         } finally { root.deleteRecursively() }
     }
     @Test fun maxUsesExactConfirmedDrainAndJournalsTxidBeforeSubmit() = runBlocking { fixture { wallet, ops, journal, _ ->
@@ -187,9 +188,9 @@ class OnchainOperationsTest {
         assertTrue(wallet.bound.isEmpty()); assertTrue(wallet.calls.isEmpty())
     } }
     @Test fun automaticSizingDiscardsOnErrorCancellationAndLostReadiness() = runBlocking {
-        for (stage in listOf(1, 2)) for (outcome in listOf("error", "cancel", "not-ready")) fixture { wallet, _, journal, history ->
+        for (stage in listOf(1, 2)) for (outcome in listOf("error", "cancel", "not-ready")) fixture { wallet, _, journal, _ ->
             var ready = true
-            val ops = OnchainOperations(wallet, journal, history, ready = { ready })
+            val ops = OnchainOperations(wallet, journal, ready = { ready })
             wallet.afterBind = {
                 if (wallet.preparations.size == stage) when (outcome) {
                     "error" -> error("bind failed")
@@ -226,7 +227,7 @@ class OnchainOperationsTest {
         assertTrue(wallet.calls.isEmpty()); assertTrue(wallet.states.isEmpty())
         val message = ops.execute(quote)
         assertTrue(message.contains("automatically")); assertEquals(listOf("start"), wallet.calls)
-        assertTrue("a" in history.ids("wallet")); assertNotNull(journal.loadAll().single().receipt)
+        assertFalse(history.exists()); assertNotNull(journal.loadAll().single().receipt)
     } }
     @Test fun duplicateIDsDustAndPartialProgressAreRefused() = runBlocking { fixture { wallet, ops, _, _ ->
         assertTrue(runCatching { ops.quote(OnchainAction.refresh, listOf("a", "a")) }.isFailure)
@@ -251,12 +252,30 @@ class OnchainOperationsTest {
         assertEquals(OnchainFailure.cancellationRefused, (runCatching { ops.execute(quote) }.exceptionOrNull() as OnchainException).reason)
         assertTrue(journal.loadAll().isEmpty()); assertEquals(listOf("cancel"), wallet.calls)
     } }
+    @Test fun corruptLegacyIndexCannotBlockStartClaimOrCancel() = runBlocking {
+        for (action in listOf(OnchainAction.startExit, OnchainAction.claim, OnchainAction.cancel)) fixture { wallet, ops, journal, legacy ->
+            legacy.writeText("{corrupt legacy index")
+            val state = if (action == OnchainAction.claim) ExitState.Claimable(100u, BlockRef(100u, "hash"), null) else ExitState.Start(100u)
+            wallet.active = listOf(ExitVtxo("a", 30_000u, state, action == OnchainAction.claim))
+            wallet.states["a"] = state; wallet.cancelResult = true
+            val quote = ops.quote(action, listOf("a"), destination = if (action == OnchainAction.claim) "address" else null)
+            ops.execute(quote)
+            assertEquals(when (action) {
+                OnchainAction.startExit -> listOf("start")
+                OnchainAction.claim -> listOf("drain", "broadcast")
+                else -> listOf("cancel")
+            }, wallet.calls)
+            assertNotNull(journal.loadAll().single().receipt)
+            assertEquals("{corrupt legacy index", legacy.readText())
+            assertEquals(30_000L, ops.overview(24u).exits.single().amount)
+        }
+    }
     @Test fun terminalDetailsAndLegacyDiscoveryWorkWithEmptyActiveList() = runBlocking { fixture { wallet, ops, _, history ->
         wallet.states["legacy"] = ExitState.Canceled(100u)
         val overview = ops.overview(24u)
         assertEquals("Canceled", overview.exits.single().state)
         assertEquals(listOf("Start", "Canceled"), ops.detail("legacy")!!.timeline.map { it.state })
-        assertTrue(history.ids("wallet").isEmpty())
+        assertTrue(!history.exists())
         assertTrue(wallet.calls.isEmpty())
     } }
     @Test fun reviewedDestinationIsDrainedAndJournaledForOwnAndExternalClaims() = runBlocking {
@@ -384,11 +403,11 @@ class OnchainOperationsTest {
         wallet.forbidVtxoLookup = true
         wallet.states["imported-canceled"] = ExitState.Canceled(100u)
         wallet.states["imported-claimed"] = ExitState.Claimed(101u, "claim-tx", BlockRef(101u, "block"))
-        assertTrue(wallet.active.isEmpty()); assertTrue(history.ids("wallet").isEmpty())
+        assertTrue(wallet.active.isEmpty()); assertTrue(!history.exists())
         val all = ops.overview(24u).exits
         assertEquals(setOf("Canceled", "Claimed"), all.map { it.state }.toSet())
         assertTrue(all.all { it.amount == 30_000L && it.timeline.first().state == "Start" })
-        assertEquals(all, OnchainOperations(wallet, OnchainOperationJournal(OnchainFile(File(wallet.attemptFile.parentFile, "reopened")) {}), history).overview(24u).exits)
+        assertEquals(all, OnchainOperations(wallet, OnchainOperationJournal(OnchainFile(File(wallet.attemptFile.parentFile, "reopened")) {})).overview(24u).exits)
     } }
 
 }
