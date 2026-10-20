@@ -24,6 +24,8 @@ class AppLogTest {
             assertTrue("persistence ${case.name}", file.lines().last().endsWith(expected))
         }
     }
+    @Test fun escapedCredentialsAreRedacted() { assertRedactionCases("r3-escaped-") }
+
     @Test fun prefixedHexSecretsFromRustAreRedacted() {
         assertRedactionCases("r2-label-")
         assertRedactionCases("r2-separator-")

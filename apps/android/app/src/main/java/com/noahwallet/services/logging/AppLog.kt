@@ -92,8 +92,32 @@ class LogFile(private val directory: File) {
             """\b(?:[xt]prv[1-9A-HJ-NP-Za-km-z]{20,}|[59][1-9A-HJ-NP-Za-km-z]{50}|[KLc][1-9A-HJ-NP-Za-km-z]{51})\b""",
         ).map(::Regex)
 
+        private val jsonEscapes = Regex("""(?:\\u[0-9a-fA-F]{4})+|\\["\\/bfnrt]""")
+
         fun redact(message: String): String {
             if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return "[oversized log message omitted]"
+            var view = message
+            repeat(4) {
+                var uncertain = false
+                val decoded = jsonEscapes.replace(view) { match ->
+                    try {
+                        kotlinx.serialization.json.Json.decodeFromString<String>("\"${match.value}\"")
+                    } catch (_: Exception) {
+                        uncertain = true
+                        ""
+                    }
+                }
+                if (uncertain) return "[redacted]"
+                if (decoded == view) return redactPlain(message)
+                if (redactPlain(decoded) != decoded) return "[redacted]"
+                view = decoded
+            }
+            if (jsonEscapes.containsMatchIn(view)) return "[redacted]"
+            return redactPlain(message)
+        }
+
+        // Decoded views cannot preserve source offsets; their hits omit the whole message.
+        private fun redactPlain(message: String): String {
             var result = urlUserinfo.replace(message) { "${it.groupValues[1]}[redacted]@" }
             for (pattern in sensitivePatterns) result = pattern.replace(result, "[redacted]")
             val decomposed = Normalizer.normalize(result, Normalizer.Form.NFKD)
