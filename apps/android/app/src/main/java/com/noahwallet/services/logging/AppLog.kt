@@ -169,7 +169,7 @@ class LogFile(
 
         private val jsonEscapes = Regex("""(?:\\u[0-9a-fA-F]{4})++|\\["\\/bfnrt]""")
 
-        private val encodedEscapes = Regex(jsonEscapes.pattern + """|(?:%[0-9a-fA-F]{2})+|&(?:#[xX][0-9a-fA-F]+|#[0-9]+|amp|quot|apos|lt|gt|colon|sol);""")
+        private val encodedEscapes = Regex(jsonEscapes.pattern + """|(?:%[0-9a-fA-F]{2})+|&(?:#[xX][0-9a-fA-F]+;?|#[0-9]+;?|[A-Za-z][A-Za-z0-9]*;)""")
 
         fun redact(message: String): String {
             if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return "[oversized log message omitted]"
@@ -196,7 +196,7 @@ class LogFile(
                         if (match.value.startsWith("%")) java.net.URLDecoder.decode(match.value, Charsets.UTF_8).also {
                             if (it.contains('\uFFFD')) uncertain = true
                         } else if (match.value.startsWith("&")) {
-                            val entity = match.value.drop(1).dropLast(1)
+                            val entity = match.value.drop(1).removeSuffix(";")
                             val code = when {
                                 entity.startsWith("#x", true) -> entity.drop(2).toIntOrNull(16)
                                 entity.startsWith("#") -> entity.drop(1).toIntOrNull()

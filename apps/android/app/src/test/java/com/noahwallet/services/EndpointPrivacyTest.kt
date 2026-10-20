@@ -26,6 +26,15 @@ class EndpointPrivacyTest {
         }
     }
 
+    @Test fun unknownHTMLEntitiesAndUnterminatedNumericEntitiesCannotExposeHosts() {
+        EndpointLogPrivacy.register("https://fakeentitycredential91.example.com/api")
+        val unknown = "https://fakeentitycredential91&period;example&period;com/api"
+        assertEquals("[redacted]", LogFile.redact(unknown))
+        assertNull(LogFile.redactForTelemetry(unknown))
+        val numeric = "https:&#47&#47fakeentitycredential91.example.com/api"
+        assertEquals("[custom-esplora]", LogFile.redact(numeric))
+    }
+
     @Test fun providerBodiesAreRemovedAtEveryBoundaryAndHistoricalExport() {
         val input = """HttpResponse { status: 404, message: "Account: &#x66;akeBodyCredential83" }"""
         val expected = "HttpResponse { status: 404 }"
