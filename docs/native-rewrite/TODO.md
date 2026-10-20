@@ -205,6 +205,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Repeat-payment metadata and History callback → recipient prefill with full revalidation — Android
 - [x] Live emulator Ark/BOLT11, exact entered-amount onchain send, confirmed-only MAX, Back/reprepare and kill/relaunch before Done — Android; full verification 993 JUnit cases passed / 0 failed / 0 skipped, APK and instrumentation Kotlin compile passed. Evidence and limits: `apps/android/SendTests/README.md`
 - [ ] External LNURL/BOLT12 provider acceptance and camera hardware verification — iOS
+- [x] Real Pixel 6 Send — Android: BOLT11 2,000 + 1,000 sats paid to CLN, with fees matching captaind's Lightning schedule; exact prepared onchain send matches Bitcoin Core (142 vB, 143 sats) and confirms in-app; Lightning result sheet now reads "Payment sent" (iOS parity). `apps/android/SendTests/README.md`
 
 ## M4 — History
 - [x] TransactionsScreen (filters, pull refresh, CSV export of filtered list) — iOS
@@ -333,6 +334,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 ## Cutover
 - [ ] Adaptive layouts (iPad / landscape / foldables) parity
 - [ ] Parity audit against RN, screen by screen
+  - Send: while a refresh round awaits confirmation, Send shows "0 sats available in Ark" without saying why (both apps; Home already shows pending-in-round funds)
+  - History: refresh movements (`bark.round:refresh`) fall through to the "Onchain" label, the same as RN; consider a Refresh label in the design pass
 - [ ] TestFlight + Play internal track on existing listings; upgrade test on real devices (iOS, GMS Android, non-GMS Android)
 - [ ] Monitor heartbeats, push delivery, migration telemetry; staged rollout
 - [ ] Retire `client/`, Nitro modules, ts-rs

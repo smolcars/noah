@@ -215,14 +215,14 @@ internal fun keypadInput(amount: String, key: String, decimal: Boolean): String 
         SendController.State.submitting -> "Sending…"
         SendController.State.alreadyPaid -> "Invoice already paid"
         SendController.State.failed -> "Payment not sent"
-        SendController.State.succeeded -> if (receipt?.status == SendReceipt.Status.confirmed) "Payment confirmed" else "Payment submitted"
+        SendController.State.succeeded -> if (receipt?.status == SendReceipt.Status.confirmed) "Payment confirmed" else if (receipt?.txid != null) "Payment submitted" else "Payment sent"
         SendController.State.storageBlocked -> "Payment status unavailable"
         else -> "Payment may have been sent"
     }) {
         if (controller.state == SendController.State.submitting) CircularProgressIndicator()
         receipt?.let {
             Text(if (it.amountIsPending) "Recipient amount pending" else "${it.amount} sats", style = MaterialTheme.typography.displaySmall)
-            ReviewRow("Status", when (it.status) { SendReceipt.Status.confirmed -> "Confirmed"; SendReceipt.Status.unlocated -> "Unable to locate"; SendReceipt.Status.conflicted -> "Conflicted"; SendReceipt.Status.submitted -> "Submitted" })
+            if (it.txid != null) ReviewRow("Status", when (it.status) { SendReceipt.Status.confirmed -> "Confirmed"; SendReceipt.Status.unlocated -> "Unable to locate"; SendReceipt.Status.conflicted -> "Conflicted"; SendReceipt.Status.submitted -> "Submitted" })
             it.fee?.let { fee -> ReviewRow("Actual fee", "$fee sats") }
             it.txid?.let { txid -> SelectionContainer { Text(txid, style = MaterialTheme.typography.bodySmall) } }
             it.conflictDescription?.let { description -> Text(description) }

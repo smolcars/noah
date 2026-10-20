@@ -1,5 +1,30 @@
 # Android native Send (M3) verification
 
+## Real Pixel 6 Send (2026-10-20)
+
+Regtest debug APK on the Pixel 6 (`26011FDF600649`, Android 17), installed with
+`install -r` over the upgraded wallet, against the local stack through adb reverse.
+
+- **Locked VTXOs were a pending refresh, not a bug.** All six VTXOs (96,234 sats)
+  showed Locked and Send offered 0 sats in Ark. The wallet had joined captaind
+  round `a4c0b6e3…` (6 inputs, 96,234 sats, 150-sat refresh fee); regtest had not
+  mined since. After one block, Bark settled it with no app action: one Active
+  VTXO of 96,084 sats, expiring at block 1091.
+- **BOLT11, 2,000 sats.** The 83-sat review fee matches captaind's Lightning
+  schedule (75 base + 4,000 ppm at 479 blocks to expiry). The CLN invoice shows
+  `paid` with 2,000,000 msat received, and History shows Lightning −2,000,
+  Successful. The Ark balance went from 96,084 to 94,001.
+- **Exact onchain send, 10,000 sats.** Sent from 50,000 sats funded in one input,
+  at 1 sat/vB. The review showed a 143-sat fee, 142 vB and 1 input. Bitcoin Core's
+  mempool entry for `b1277a35…` agrees: vsize 142, weight 568, fee 143 sats.
+  Outputs are 10,000 sats to the Core address and 39,857 sats change. After one
+  block, Check status showed Payment confirmed.
+- **Fix: Lightning result sheet.** The sheet read "Payment submitted / Status:
+  Submitted" after a preimage-proven Lightning payment. It now says "Payment
+  sent" and shows the chain Status row only for receipts with a txid, matching
+  iOS. A second payment (1,000 sats, 79-sat fee = 75 + 4) confirmed this on the
+  device, and CLN shows that invoice paid.
+
 ## Review follow-up: padded URI amounts and final verification (2026-10-20)
 
 The Send-only decimal parser now removes insignificant integer leading zeros and
