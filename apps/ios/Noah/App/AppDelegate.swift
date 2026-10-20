@@ -1,3 +1,4 @@
+import AppIntents
 import UIKit
 import UserNotifications
 
@@ -12,6 +13,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         AppTelemetry.start()
         SettingsStorage.bootstrap()
         BackgroundScheduler.shared.register()
+        NoahAppShortcuts.updateAppShortcutParameters()
         Task { await BackgroundScheduler.shared.schedule() }
         UNUserNotificationCenter.current().delegate = self
         // Before any push handler can start a backup: plaintext left by a

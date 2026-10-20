@@ -16,7 +16,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 ### 0.2 Project scaffolding
 - [x] `apps/ios`: XcodeGen spec, SwiftPM deps, schemes `Noah` / `Noah-Signet` / `Noah-Regtest`, xcconfigs, bundle IDs `com.noahwallet.{mainnet,signet,regtest}`, entitlements (aps, app groups), URL schemes, Info.plist background modes
 - [x] iOS widget extension reused from `client/ios/SharedWidget` (one target, per-variant bundle ID + kind from xcconfig)
-- [ ] iOS App Intents ported from `client/ios/SharedAppIntents` onto `WalletService` (needs 0.3)
+- [x] iOS App Intents ported from `client/ios/SharedAppIntents` onto the shared `WalletSession`: all nine identifiers, parameters and Siri phrases preserved; receive/balance only, read-only seed admission
 - [x] iOS `processing`/`fetch` background modes + per-bundle `BGTaskSchedulerPermittedIdentifiers` in XcodeGen (0.6 background tasks)
 - [x] `apps/android`: Gradle KTS, version catalog, flavors `mainnet`/`signet`/`regtest`, same applicationIds, signing config, `google-services.json` per flavor, minSdk 24
 - [x] Android component names unchanged: launcher `com.noahwallet.MainActivity`, widget receivers `com.noahwallet.widgets.NoahWidget{Mainnet,Signet,Regtest}Provider` (+ same `@xml/noah_widget_*_info`)
