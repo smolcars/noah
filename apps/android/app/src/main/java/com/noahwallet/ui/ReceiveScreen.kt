@@ -173,7 +173,7 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
 }
 
 @Composable
-private fun ReceiveQR(uri: String, onClick: () -> Unit) {
+internal fun ReceiveQR(uri: String, onClick: () -> Unit) {
     val bitmap = remember(uri) {
         runCatching {
             val matrix = QRCodeWriter().encode(uri, BarcodeFormat.QR_CODE, 840, 840,
