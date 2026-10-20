@@ -23,6 +23,7 @@ import java.util.Locale
 
 @Composable
 fun HomeBanners(app: AppModel, refresh: Int) {
+    val background by com.noahwallet.services.wallet.WalletBackgroundActivity.changes.collectAsState()
     val backup by app.services.backupCoordinator.statusChanges.collectAsState()
     val version by app.server.versionChanges.collectAsState()
     LaunchedEffect(app.server) { withContext(Dispatchers.IO) { app.server.checkVersionOnce() } }
@@ -68,6 +69,13 @@ fun HomeBanners(app: AppModel, refresh: Int) {
             Text(if (active.size == 1) "Round in progress" else "Rounds in progress", style = MaterialTheme.typography.titleMedium)
             Text(if (active.size == 1) "Round #${active[0].roundId} ${active[0].status.name.lowercase().replaceFirstChar(Char::uppercase)}" else "${active.size} rounds pending")
             TextButton({ showRounds = true }) { Text("View") }
+        }
+    }
+    background.message?.let { message ->
+        Card(Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                CircularProgressIndicator(Modifier.size(20.dp)); Text(message)
+            }
         }
     }
     if (showRounds && active.isNotEmpty()) PendingRoundsSheet(active) { showRounds = false }

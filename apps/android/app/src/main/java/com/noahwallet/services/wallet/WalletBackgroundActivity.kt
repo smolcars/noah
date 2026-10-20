@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 object WalletBackgroundActivity {
     data class Status(val count: Int = 0, val completions: Long = 0) {
         val isRunning get() = count > 0
+        val message get() = if (isRunning) "Background task in progress..." else null
     }
     private val lock = Any()
     private val status = MutableStateFlow(Status())
