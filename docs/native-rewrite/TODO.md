@@ -184,6 +184,9 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Derive key 0 before fresh-wallet registration and persist `staticVtxoPubkey` — Android
 - [x] Home first pass: full balance, persisted unit/privacy, pull-to-sync, variant and email banner; Inter/light/dark theme — Android
 - [x] Notification permission and existing push registration after onboarding — Android
+- [x] PushNotificationsRequiredScreen: physical-device DENIED gate, request/recheck/settings, foreground recheck; seed recovery takes precedence and biometric overlay remains above all gates — Android
+- [x] BatteryOptimizationScreen: after email (or UnifiedPush), one-time initialized-wallet fallback, per-app exemption/list/app-settings fallback, foreground auto-continue and persisted Skip — Android
+- [x] UnifiedPushScreen: non-GMS onboarding and Settings, saved/connected distributor selection, endpoint polling/copy, backend registration, Skip/Continue — Android (connector storage and `noah-<variant>` preserved; deliberate improvement: 30 s timeout permits retry instead of leaving RN’s spinner stuck)
 
 ## M2 — Receive
 - [x] ReceiveScreen (BIP-321 unified QR, amount/description sheet, copy sheet, share, completion subscriptions) — iOS

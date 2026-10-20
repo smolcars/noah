@@ -31,6 +31,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
+import com.noahwallet.ui.launch.*
+import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.R
 import com.noahwallet.services.launch.LaunchState
 
@@ -55,17 +57,41 @@ fun LaunchGateView() {
         onDispose { }
     }
     var permissionRequested by rememberSaveable { mutableStateOf(false) }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        PushWork.register(context)
+    var requesting by remember { mutableStateOf(false) }
+    var permissionStatus by remember { mutableStateOf(PlatformGateRules.Permission.checking) }
+    var gateRevision by remember { mutableStateOf(0) }
+    fun refreshPermission() {
+        runCatching { PlatformAccess.permission(context) }.onSuccess { permissionStatus = it }
+        gateRevision++
     }
-    LaunchedEffect(model.onboarded) {
-        if (model.onboarded) {
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        requesting = false; refreshPermission(); PushWork.register(context)
+    }
+    fun requestPermission() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            check(context.getSharedPreferences("expo.modules.permissions.asked", android.content.Context.MODE_PRIVATE).edit()
+                .putBoolean(Manifest.permission.POST_NOTIFICATIONS, true).commit())
+            requesting = true; permissionRequested = true
+            permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else PlatformAccess.openSettings(activity)
+    }
+    LaunchedEffect(model.onboarded, model.walletLock.locked) {
+        if (model.onboarded && !model.walletLock.locked) {
             PushNotifications.ensureChannels(context)
-            if (Build.VERSION.SDK_INT >= 33 && !permissionRequested && !PushNotifications.permissionGranted(context)) {
-                permissionRequested = true
-                permission.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
+            refreshPermission()
+            if (PlatformAccess.physical() && permissionStatus == PlatformGateRules.Permission.undetermined && !permissionRequested) requestPermission()
         }
+    }
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) refreshPermission()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val platformGate = remember(model.onboarded, permissionStatus, gateRevision) {
+        PlatformGateRules.gate(model.onboarded, PlatformAccess.physical(), permissionStatus,
+            PlatformAccess.batteryEnabled(context), model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.hasSeenBatteryOptimizationPrompt == true)
     }
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -77,7 +103,12 @@ fun LaunchGateView() {
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().then(Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing))) {
             when {
                 state == LaunchState.seedWithoutWalletData -> RestoreWalletScreen(model, useStoredSeed = true)
-                (model.open || model.isWalletSuspended) && model.onboarded -> NoahApp(model)
+                state != LaunchState.onboarding && state != LaunchState.existingWallet -> LaunchMessage(state, model.error != null, model::start, model)
+                (model.open || model.isWalletSuspended) && model.onboarded -> when (platformGate) {
+                    PlatformGateRules.Gate.push -> PushNotificationsRequiredScreen(requesting, ::requestPermission, ::refreshPermission)
+                    PlatformGateRules.Gate.battery -> BatteryOptimizationScreen(model) { gateRevision++ }
+                    null -> NoahApp(model)
+                }
                 state == LaunchState.onboarding || (model.open && !model.onboarded) -> Onboarding(model)
                 else -> LaunchMessage(state, model.error != null, model::start, model)
             }

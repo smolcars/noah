@@ -21,6 +21,17 @@ class UnifiedPushRegistration(context: Context, variant: String = BuildConfig.AP
         check(prefs.edit().remove("endpoint_$instance").remove("endpoint").commit())
     }
 
+    data class Distributor(val id: String, val name: String, val saved: Boolean, val connected: Boolean)
+    fun distributors(): List<Distributor> {
+        val saved = UnifiedPush.getSavedDistributor(context)
+        val connected = UnifiedPush.getAckDistributor(context)
+        return UnifiedPush.getDistributors(context).map { id ->
+            val name = runCatching { context.packageManager.getApplicationLabel(context.packageManager.getApplicationInfo(id, 0)).toString() }.getOrDefault(id)
+            Distributor(id, name, id == saved, id == connected)
+        }
+    }
+    fun select(id: String) { UnifiedPush.saveDistributor(context, id) }
+
     fun register(): String? {
         val distributors = UnifiedPush.getDistributors(context)
         val saved = UnifiedPush.getSavedDistributor(context)

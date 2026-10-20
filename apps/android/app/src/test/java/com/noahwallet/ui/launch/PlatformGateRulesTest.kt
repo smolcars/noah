@@ -1,0 +1,24 @@
+package com.noahwallet.ui.launch
+
+import com.noahwallet.fixtures.SharedFixtures
+import kotlinx.serialization.json.*
+import org.junit.Assert.*
+import org.junit.Test
+
+class PlatformGateRulesTest {
+    @Test fun matchesRNTruthTable() {
+        SharedFixtures.load("platform-gates").forEach { case ->
+            val input = case.input.jsonObject
+            fun flag(key: String) = input.getValue(key).jsonPrimitive.boolean
+            assertEquals(case.name, case.expected.jsonPrimitive.contentOrNull, PlatformGateRules.gate(
+                flag("initialized"), flag("physical"), PlatformGateRules.Permission.valueOf(input.getValue("permission").jsonPrimitive.content),
+                flag("batteryEnabled"), flag("batterySeen"))?.name)
+        }
+    }
+    @Test fun emailOnboardingRouting() {
+        assertEquals("unified-push", PlatformGateRules.afterEmail(true, true))
+        assertEquals("unified-push", PlatformGateRules.afterEmail(true, false))
+        assertEquals("battery", PlatformGateRules.afterEmail(false, true))
+        assertEquals("lightning", PlatformGateRules.afterEmail(false, false))
+    }
+}

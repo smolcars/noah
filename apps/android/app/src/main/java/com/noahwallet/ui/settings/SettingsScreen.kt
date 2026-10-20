@@ -30,7 +30,7 @@ enum class SettingsDestination(val title: String) : NavKey {
     Backup("Backup & Restore"), Seed("Your Recovery Phrase"), Ark("Ark Info"), Export("Export Database"),
     Logs("Logs"), Feedback("Send Feedback"), Story("Noah's Ark Story"), Debug("Debug"),
     Recurring("Recurring payments"), Vtxos("VTXOs"), Board("Board to Ark"), Exits("Emergency Exit"),
-    Email("Emergency Email"), Lightning("Lightning Address"), Battery("Battery Optimization"),
+    Email("Emergency Email"), Lightning("Lightning Address"), Battery("Battery Optimization"), UnifiedPush("UnifiedPush"),
 }
 
 @Composable
@@ -50,6 +50,7 @@ fun SettingsPage(model: AppModel, destination: SettingsDestination, navigate: (S
         SettingsDestination.Email -> EmergencyEmailScreen(model) { navigate(SettingsDestination.Profile) }
         SettingsDestination.Lightning -> LightningScreen(model) { navigate(SettingsDestination.Profile) }
         SettingsDestination.Battery -> BatteryScreen()
+        SettingsDestination.UnifiedPush -> com.noahwallet.ui.launch.UnifiedPushScreen(fromOnboarding = false) { navigate(SettingsDestination.Settings) }
         SettingsDestination.Recurring -> com.noahwallet.recurring.RecurringPaymentsScreen(model)
         SettingsDestination.Vtxos -> com.noahwallet.onchain.VtxosScreen(model)
         SettingsDestination.Board -> com.noahwallet.onchain.BoardArkScreen(model)
@@ -135,6 +136,7 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
                 server = model.server.state
             }
         }
+        if (com.noahwallet.ui.launch.PlatformAccess.unifiedPush(LocalContext.current)) SettingRow("UnifiedPush", "Configure push notifications") { navigate(SettingsDestination.UnifiedPush) }
         SettingRow("Battery Optimization", "Allow background wallet notifications") { navigate(SettingsDestination.Battery) }
         SectionTitle("Debug")
         SettingRow("Show Logs", "Application logs") { navigate(SettingsDestination.Logs) }

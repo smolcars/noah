@@ -44,7 +44,11 @@ fun Onboarding(model: AppModel) {
             NoahButton("I decline", !model.busy, secondary = true) { model.step = "welcome" }
         }
         "mnemonic" -> MnemonicScreen(model)
-        "email" -> EmergencyEmailScreen(model) { model.step = "lightning" }
+        "email" -> EmergencyEmailScreen(model) { model.step = com.noahwallet.ui.launch.PlatformGateRules.afterEmail(
+            com.noahwallet.ui.launch.PlatformAccess.unifiedPush(model.getApplication()),
+            com.noahwallet.ui.launch.PlatformAccess.batteryEnabled(model.getApplication())) }
+        "unified-push" -> com.noahwallet.ui.launch.UnifiedPushScreen(fromOnboarding = true) { model.step = "battery" }
+        "battery" -> com.noahwallet.ui.launch.BatteryOptimizationScreen(model) { model.step = "lightning" }
         "lightning" -> LightningScreen(model)
     }
 }
