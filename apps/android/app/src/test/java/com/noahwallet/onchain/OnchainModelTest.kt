@@ -80,4 +80,25 @@ class OnchainModelTest {
         second.complete(Unit); b.join(); assertFalse(com.noahwallet.services.wallet.WalletBackgroundActivity.isRunning)
     }
 
+    @Test fun claimDestinationPrefillsRestoresAndIgnoresLateOwnership() = runBlocking {
+        val f = Fake()
+        val gate = CompletableDeferred<Boolean>()
+        val entered = CompletableDeferred<Unit>()
+        val deps = OnchainModel.Dependencies({ f.ready }, { f.overview }, { _, _, _, _ -> error("unused") },
+            { error("must not submit") }, { emptyList() }, {}, { false }, {}, { null }, {},
+            claimAddress = { "fresh-wallet-address" }, claimOwnership = { address ->
+                if (address == "cold-storage") { entered.complete(Unit); gate.await() } else true
+            })
+        val m = OnchainModel(deps)
+        m.useWalletClaimAddress(); assertEquals("fresh-wallet-address", m.claimDestination)
+        m.checkClaimDestination(); assertEquals(true, m.claimDestinationIsMine)
+        m.editClaimDestination("cold-storage")
+        val pending = launch { m.checkClaimDestination() }
+        entered.await(); m.useWalletClaimAddress(); gate.complete(false); pending.join()
+        assertEquals("fresh-wallet-address", m.claimDestination); assertNull(m.claimDestinationIsMine)
+        m.checkClaimDestination(); assertEquals(true, m.claimDestinationIsMine)
+        m.editClaimDestination("cold-storage"); m.checkClaimDestination(); assertEquals(false, m.claimDestinationIsMine)
+        f.ready = false; m.checkClaimDestination(); assertNull(m.claimDestinationIsMine); assertNotNull(m.claimDestinationError)
+    }
+
 }

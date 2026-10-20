@@ -25,7 +25,7 @@ fun UnilateralExitScreen(app: AppModel) {
     }
     val model = rememberOnchainModel(app)
     var selected by remember { mutableStateOf(setOf<String>()) }
-    var destination by rememberSaveable { mutableStateOf("") }
+    val destination = model.claimDestination
     var filter by rememberSaveable { mutableStateOf("All") }
     var deposit by remember { mutableStateOf(false) }
     var depositFee by remember { mutableLongStateOf(0) }
@@ -34,6 +34,10 @@ fun UnilateralExitScreen(app: AppModel) {
     val eligible = model.overview?.vtxos.orEmpty().filter { it.eligible }
     val pending = exits.filter { it.state !in ExitTimeline.terminal }
     LaunchedEffect(model.quote) { model.quote?.let { depositFee = it.chainFee } }
+    LaunchedEffect(model.overview?.walletID) {
+        if (model.overview != null && destination.isEmpty()) model.useWalletClaimAddress()
+    }
+    LaunchedEffect(destination, app.isWalletSuspended, model.overview?.walletID) { model.checkClaimDestination() }
     OnchainScreen(app, model) {
         Text("Emergency Exit", style = MaterialTheme.typography.headlineSmall)
         Text("Recover your Ark funds onchain if the Ark server is unavailable. Exits require confirmed onchain funds for broadcast fees and a timelock before claiming.")
@@ -64,7 +68,12 @@ fun UnilateralExitScreen(app: AppModel) {
         }
         if (exits.any { it.claimable }) {
             Text("Claim recovered funds", style = MaterialTheme.typography.titleLarge)
-            OutlinedTextField(destination, { destination = it; model.invalidate() }, label = { Text("Bitcoin destination address") }, singleLine = true, enabled = !model.busy)
+            OutlinedTextField(destination, model::editClaimDestination, label = { Text("Bitcoin destination address") },
+                supportingText = { Text(model.claimDestinationError ?: if (model.claimDestinationIsMine == false)
+                    "This address isn't in your Noah wallet. The claimed funds will be sent there." else "") },
+                isError = model.claimDestinationError != null || model.claimDestinationIsMine == false,
+                singleLine = true, enabled = !model.busy)
+            TextButton({ scope.launch { model.useWalletClaimAddress() } }, enabled = !model.busy) { Text("Use my Noah wallet address") }
             Button({ scope.launch { model.review(OnchainAction.claim, exits.filter { it.claimable }.map { it.id }, destination = destination.trim()) } },
                 enabled = !model.busy && destination.isNotBlank()) { Text("Review claim") }
         }

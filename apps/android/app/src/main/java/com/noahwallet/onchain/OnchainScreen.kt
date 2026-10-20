@@ -48,6 +48,7 @@ internal fun onchainDependencies(app: AppModel) = OnchainModel.Dependencies(
         withContext(Dispatchers.IO) { app.session.onchainJournal.overrideUncertain(id) }
     } },
     detail = app.session::exitDetail, refreshReceipts = app.session::refreshOnchainReceiptFees,
+    claimAddress = app.session::exitDepositAddress, claimOwnership = app.session::exitClaimDestinationIsMine,
 )
 
 @Composable
@@ -158,6 +159,7 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
                 AmountRow(app, if (quote.action == OnchainAction.board) "Estimated Ark balance receives" else "Amount after fee", quote.net)
             }
             quote.destination?.let { DetailRow("Destination", it) }
+            quote.externalDestinationWarning?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Text(reviewExplanation(quote))
             if (quote.action in setOf(OnchainAction.startExit, OnchainAction.progress, OnchainAction.claim)) {
                 ExitRules.warning(quote.amount, quote.fee, quote.totalFee, quote.action == OnchainAction.claim)?.let { Text(it, color = MaterialTheme.colorScheme.error) }

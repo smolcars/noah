@@ -70,6 +70,7 @@ internal class OnchainOperations(
                 val selected = eligible.filter { it.vtxoId in ids }
                 if (ids.isEmpty() || selected.size != ids.size || (action == OnchainAction.progress && eligible.map { it.vtxoId }.toSet() != ids.toSet())) fail(OnchainFailure.changed)
                 if (action == OnchainAction.claim && destination.isNullOrBlank()) fail(OnchainFailure.invalid)
+                if (action == OnchainAction.claim) quote = quote.copy(destinationIsMine = wallet.destinationIsMine(checkNotNull(destination)))
                 val fee = wallet.exitFee(ids, destination)
                 quote = quote.copy(amount = selected.sumOf { it.amountSats.toLong() }, fee = fee.claimFeeSats.toLong(),
                     chainFee = if (action == OnchainAction.claim) 0 else fee.exitBroadcastFeeSats.toLong(),

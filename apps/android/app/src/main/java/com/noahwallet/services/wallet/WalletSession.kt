@@ -306,6 +306,7 @@ class WalletSession internal constructor(
     }
     suspend fun exitDetail(id: String): ExitModel? = withM6 { onchainOperations(it).detail(id) }
     suspend fun exitDepositAddress(): String = withM6 { it.m6.depositAddress() }
+    suspend fun exitClaimDestinationIsMine(address: String): Boolean = withM6 { it.m6.destinationIsMine(address) }
     suspend fun boardingMinimum(): Long? = withM6 { it.m6.minimum() }
     suspend fun quoteOnchain(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0,
         destination: String? = null, automatic: Boolean = false): OnchainQuote = withM6 {

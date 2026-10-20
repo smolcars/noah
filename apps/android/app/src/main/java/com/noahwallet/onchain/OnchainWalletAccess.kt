@@ -17,6 +17,7 @@ internal interface OnchainWalletAccess {
     suspend fun claimableHeight(): Long? = error("Unsupported")
     suspend fun transactions(): List<WalletTransaction> = error("Unsupported")
     suspend fun depositAddress(): String = error("Unsupported")
+    suspend fun destinationIsMine(address: String): Boolean = error("Unsupported")
     suspend fun minimum(): Long? = error("Unsupported")
     suspend fun regularSatPerKwu(): Long = error("Unsupported")
     suspend fun boardFee(amount: Long): FeeEstimate = error("Unsupported")
@@ -45,6 +46,10 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     override suspend fun claimableHeight() = wallet.allExitsClaimableAtHeight()?.toLong()
     override suspend fun transactions() = onchain.transactions()
     override suspend fun depositAddress() = onchain.newAddress()
+    override suspend fun destinationIsMine(address: String): Boolean {
+        validateClaimDestination(address, com.noahwallet.BuildConfig.APP_VARIANT)
+        return onchain.isMine(address)
+    }
     override suspend fun minimum() = wallet.arkInfo()?.minBoardAmountSats?.toLong()
     override suspend fun regularSatPerKwu() = onchain.feeRates().regularSatPerKwu.toLong()
     override suspend fun boardFee(amount: Long) = wallet.estimateBoardFee(amount.toULong())
@@ -89,4 +94,11 @@ internal fun exitState(value: ExitState): Pair<String, ExitDetails> {
         is ExitState.VtxoSwept -> "VtxoSwept" to ExitDetails(kind = "vtxo-swept", tip_height = value.tipHeight.toLong())
         is ExitState.Canceled -> "Canceled" to ExitDetails(kind = "canceled", tip_height = value.tipHeight.toLong())
     }
+}
+
+internal fun validateClaimDestination(address: String, network: String) {
+    val actual = com.noahwallet.send.PaymentEncoding.bitcoinNetwork(address)
+    if (actual == null || !(actual == network || actual == "testnet" &&
+            (network == "signet" || network == "regtest" && !address.startsWith("tb1", ignoreCase = true))))
+        fail(OnchainFailure.invalid)
 }

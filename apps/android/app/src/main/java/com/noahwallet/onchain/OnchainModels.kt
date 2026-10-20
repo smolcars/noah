@@ -15,8 +15,11 @@ data class OnchainQuote(
     val destination: String? = null, val amount: Long = 0, val fee: Long = 0,
     val chainFee: Long = 0, val confirmed: Long = 0, val feeRate: Long? = null,
     val createdAt: Long = System.currentTimeMillis(), val automatic: Boolean = false,
+    val destinationIsMine: Boolean? = null,
     val boardAll: Boolean = false, val id: String = UUID.randomUUID().toString(),
 ) {
+    val externalDestinationWarning get() = if (action == OnchainAction.claim && destinationIsMine == false)
+        "This address isn't in your Noah wallet. The claimed funds will be sent there." else null
     val net get() = ExitRules.received(amount, fee)
     val totalFee get() = fee + chainFee
     val fundable get() = confirmed >= chainFee

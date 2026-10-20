@@ -10,6 +10,9 @@ import org.junit.Test
 class OnchainOperationsTest {
     private class Wallet : OnchainWalletAccess {
         override val walletID = "wallet"
+        var mine = true
+        var validDestination = true
+        override suspend fun destinationIsMine(address: String): Boolean { if (!validDestination) fail(OnchainFailure.invalid); return mine }
         var balance = 100_000L
         var fee = 330L
         var chainRate = 250L
@@ -136,4 +139,32 @@ class OnchainOperationsTest {
         assertEquals(listOf("legacy"), history.ids("wallet"))
         assertTrue(wallet.calls.isEmpty())
     } }
+    @Test fun externalClaimsAreAllowedAndDestinationOwnershipIsRecheckedBeforeSubmission() = runBlocking { fixture { wallet, ops, journal, _ ->
+        wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))
+        val own = ops.quote(OnchainAction.claim, listOf("a"), destination = "own-address")
+        assertEquals(true, own.destinationIsMine); assertNull(own.externalDestinationWarning)
+        wallet.mine = false
+        assertEquals(OnchainFailure.changed, (runCatching { ops.execute(own) }.exceptionOrNull() as OnchainException).reason)
+        assertTrue(wallet.calls.isEmpty()); assertTrue(journal.loadAll().isEmpty())
+        val external = ops.quote(OnchainAction.claim, listOf("a"), destination = "cold-storage")
+        assertEquals(false, external.destinationIsMine)
+        assertEquals("This address isn't in your Noah wallet. The claimed funds will be sent there.", external.externalDestinationWarning)
+        wallet.validDestination = false
+        assertTrue(runCatching { ops.execute(external) }.isFailure)
+        assertTrue(wallet.calls.isEmpty()); assertTrue(journal.loadAll().isEmpty())
+        wallet.validDestination = true
+        ops.execute(external)
+        assertEquals(listOf("drain", "broadcast"), wallet.calls)
+        assertEquals("cold-storage", journal.loadAll().single().quote.destination)
+    } }
+    @Test fun destinationValidationRejectsMalformedWrongNetworkAndPaymentURIs() {
+        val mainnet = "1BoatSLRHtKNngkdXEeobR76b53LETtpyT"
+        validateClaimDestination(mainnet, "mainnet")
+        for (address in listOf(mainnet, "invalid", "bitcoin:$mainnet", "tb1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq0l98cr"))
+            assertTrue(runCatching { validateClaimDestination(address, "regtest") }.isFailure)
+        validateClaimDestination("mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn", "regtest")
+        validateClaimDestination("bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202", "regtest")
+        validateClaimDestination("tb1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq0l98cr", "signet")
+    }
+
 }

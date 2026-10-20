@@ -12,6 +12,8 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         val acknowledge: suspend (String) -> Unit, val check: suspend (String) -> Boolean,
         val override: suspend (String) -> Unit, val detail: suspend (String) -> ExitModel?,
         val refreshReceipts: suspend () -> Unit,
+        val claimAddress: suspend () -> String = { fail(OnchainFailure.unavailable) },
+        val claimOwnership: suspend (String) -> Boolean = { fail(OnchainFailure.unavailable) },
     )
     var overview by mutableStateOf<OnchainOverview?>(null); private set
     var exit by mutableStateOf<ExitModel?>(null); private set
@@ -21,6 +23,32 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
     var attempts by mutableStateOf<List<OnchainOperationJournal.Attempt>>(emptyList()); private set
     var message by mutableStateOf<String?>(null); private set
     var error by mutableStateOf<String?>(null); private set
+    var claimDestination by mutableStateOf(""); private set
+    var claimDestinationIsMine by mutableStateOf<Boolean?>(null); private set
+    var claimDestinationError by mutableStateOf<String?>(null); private set
+    fun editClaimDestination(value: String) {
+        claimDestination = value; claimDestinationIsMine = null; claimDestinationError = null; invalidate()
+    }
+    suspend fun useWalletClaimAddress() {
+        val previous = claimDestination
+        try {
+            if (!dependencies.ready()) fail(OnchainFailure.unavailable)
+            val address = dependencies.claimAddress()
+            if (previous == claimDestination && dependencies.ready()) editClaimDestination(address)
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { claimDestinationError = "Couldn't load a Noah wallet address. Try again when the wallet is ready." }
+    }
+    suspend fun checkClaimDestination() {
+        val address = claimDestination
+        claimDestinationIsMine = null; claimDestinationError = null
+        if (address.isBlank()) return
+        try {
+            if (!dependencies.ready()) fail(OnchainFailure.unavailable)
+            val mine = dependencies.claimOwnership(address.trim())
+            if (address == claimDestination && dependencies.ready()) claimDestinationIsMine = mine
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { if (address == claimDestination) claimDestinationError = "Enter a valid Bitcoin address for this network when the wallet is ready." }
+    }
     private var generation = 0
     fun invalidate() { generation++; quote = null }
     fun unavailable() { invalidate(); overview = null; exit = null }
