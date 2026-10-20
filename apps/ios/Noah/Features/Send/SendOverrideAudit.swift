@@ -7,14 +7,27 @@ struct SendOverrideAudit: Codable, Sendable {
     var overriddenAt = Date()
     var txid: String?
     var walletIdentity: SendWalletIdentity?
+    var ownershipUnverified: Bool?
+    var candidates: [SendCandidate]?
+    var possibleTxids: [String]?
     var title = Self.titleText
     var warning: String
     var confirmation = Self.confirmationText
     var statusMessage: String?
 
     static func append(_ audit: Self, to file: URL) throws {
-        var audits = FileManager.default.fileExists(atPath: file.path)
-            ? try JSONDecoder().decode([Self].self, from: Data(contentsOf: file)) : []
+        var audits: [Self] = []
+        if FileManager.default.fileExists(atPath: file.path) {
+            do {
+                audits = try JSONDecoder().decode([Self].self, from: Data(contentsOf: file))
+            } catch {
+                var quarantine = file.appendingPathExtension("unreadable-\(UUID().uuidString)")
+                try FileManager.default.moveItem(at: file, to: quarantine)
+                var values = URLResourceValues()
+                values.isExcludedFromBackup = true
+                try quarantine.setResourceValues(values)
+            }
+        }
         audits.append(audit)
         try JSONEncoder().encode(Array(audits.suffix(100))).write(
             to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])

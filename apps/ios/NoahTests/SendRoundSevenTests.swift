@@ -187,10 +187,5 @@ import Testing
         let audit = try #require(JSONDecoder().decode([SendOverrideAudit].self, from: Data(contentsOf: file)).first)
         #expect(audit.txid == "exact" && audit.warning == SendOverrideAudit.warningText)
         #expect(audit.title == SendOverrideAudit.titleText && audit.confirmation == SendOverrideAudit.confirmationText)
-        // A corrupt audit must block forgetting, rather than silently replacing the history.
-        try Data("corrupt".utf8).write(to: file)
-        let restarted = SendPaymentController(dependencies: dependencies)
-        restarted.startNewPaymentAfterHistoryCheck(confirmed: true)
-        #expect(restarted.locked)
     }
 }

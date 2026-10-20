@@ -172,7 +172,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     private(set) var message: String?
     private(set) var checking = false
     private var task: Task<Void, Never>?
-    private var unboundJournal = false
+    private var unboundJournal: Attempt?
     private var generation = 0
     var locked: Bool { state != .ready }
 
@@ -186,7 +186,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         attempt = nil
         state = .ready
         message = nil
-        unboundJournal = false
+        unboundJournal = nil
         do {
             attempt = try dependencies.read()
             if var saved = attempt {
@@ -195,7 +195,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                     guard let owner = saved.walletIdentity else {
                         // No historic identity/epoch proves ownership. Never display or drive this journal.
                         attempt = nil
-                        unboundJournal = true
+                        unboundJournal = saved
                         state = .uncertain
                         message = "This legacy payment has no wallet identity. Check your history and recipient before discarding it."
                         return
@@ -376,7 +376,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         }
     }
     var canOverride: Bool {
-        if unboundJournal { return !checking }
+        if unboundJournal != nil { return !checking }
         guard !checking, attempt != nil else { return false }
         if state == .uncertain { return true }
         if case .succeeded(let receipt) = state { return receipt.broadcastRetryPending == true }
@@ -387,9 +387,13 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     }
     func startNewPaymentAfterHistoryCheck(confirmed: Bool) {
         guard confirmed, canOverride else { return }
+        let evidence = attempt ?? unboundJournal
         do {
-            try dependencies.auditOverride(.init(txid: attempt?.receipt?.txid ?? attempt?.broadcastingTxid,
-                                                walletIdentity: attempt?.walletIdentity, warning: overrideWarning,
+            try dependencies.auditOverride(.init(txid: evidence?.receipt?.txid ?? evidence?.alreadyPaid?.txid ?? evidence?.broadcastingTxid,
+                                                walletIdentity: evidence?.walletIdentity,
+                                                ownershipUnverified: evidence?.walletIdentity == nil,
+                                                candidates: evidence?.candidates, possibleTxids: evidence?.possibleTxids,
+                                                warning: overrideWarning,
                                                 statusMessage: message))
         } catch {
             message = "Unable to save the override confirmation. Sending remains locked."
@@ -411,7 +415,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         do {
             try dependencies.write(nil)
             attempt = nil
-            unboundJournal = false
+            unboundJournal = nil
             state = .ready
             message = nil
         } catch { message = "Unable to save payment status." }
