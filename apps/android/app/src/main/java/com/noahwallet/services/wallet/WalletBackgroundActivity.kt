@@ -12,6 +12,7 @@ object WalletBackgroundActivity {
     }
     private val lock = Any()
     private val jobs = Mutex()
+    suspend fun <T> withExclusiveAccess(block: suspend () -> T): T = jobs.withLock { block() }
     suspend fun <T> exclusive(block: suspend () -> T): T = jobs.withLock { during(block) }
     private val status = MutableStateFlow(Status())
     val changes = status.asStateFlow()

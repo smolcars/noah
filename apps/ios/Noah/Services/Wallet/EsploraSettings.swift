@@ -61,8 +61,8 @@ struct EsploraSettings: Sendable {
     func change(to candidate: Selection,
                 reopen: @Sendable (Selection, @escaping @Sendable () throws -> Void) async throws -> Void) async throws {
         let previous = selection(for: AppVariant(rawValue: candidate.variant)!)
-        try save(Record(active: previous, pending: candidate))
         do {
+            try save(Record(active: previous, pending: candidate))
             try await reopen(candidate) { try save(Record(active: candidate)) }
         } catch {
             // Keep pending if rollback storage fails: cold launch still selects active.

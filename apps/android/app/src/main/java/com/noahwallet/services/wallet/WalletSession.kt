@@ -462,8 +462,11 @@ class WalletSession internal constructor(
         close()
     }
 
-    suspend fun close() = withContext(NonCancellable + Dispatchers.IO) {
+    suspend fun close(refuseRunning: Boolean = false) = withContext(NonCancellable + Dispatchers.IO) {
         val handles = synchronized(lock) {
+            if (refuseRunning && (runningCalls != 0 || exclusiveSend)) {
+                throw EsploraEndpoint.Failure("Wait for the current wallet operation to finish before changing the endpoint.")
+            }
             if (exclusiveSend) throw OpenError(OpenFailure.busy)
             when (val current = state) {
                 State.Closed -> return@withContext
@@ -496,6 +499,19 @@ class WalletSession internal constructor(
                 synchronized(lock) { state = State.Closed; walletChanged() }
             }
         }
+    }
+
+    /** Reservation remains exclusive until the settings commit has completed. */
+    internal suspend fun reopen(reservation: Reservation, mnemonic: String, appVersion: String, commit: () -> Unit) {
+        synchronized(lock) { checkHeld(reservation); checkExistingDatabase() }
+        val handles = opener(mnemonic, location.directory.path, true, appVersion, false)
+        try { commit() }
+        catch (failure: Exception) {
+            try { handles.stopDaemonWait(); handles.close() }
+            catch (_: Exception) { synchronized(lock) { state = State.Quarantined(handles) }; throw OpenError(OpenFailure.teardownFailed) }
+            throw failure
+        }
+        synchronized(lock) { openingSeedDigest = seedDigest(mnemonic); state = State.Open(handles); walletChanged() }
     }
 
     companion object {

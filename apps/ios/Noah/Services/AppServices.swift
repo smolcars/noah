@@ -6,6 +6,8 @@ import Foundation
 final class AppServices: Sendable {
     static let shared = AppServices(variant: .current)
 
+    private static let configurationAccess = WalletMutationGate()
+
     let variant: AppVariant
     let session: WalletSession
     let tokens: AuthTokenProvider
@@ -70,6 +72,12 @@ final class AppServices: Sendable {
     }
 
     func withBackgroundWallet<T: Sendable>(_ operation: @escaping @Sendable () async throws -> T) async throws -> T {
+        try await Self.configurationAccess.withLock { [self] in
+            try await withBackgroundWalletLocked(operation)
+        }
+    }
+
+    private func withBackgroundWalletLocked<T: Sendable>(_ operation: @escaping @Sendable () async throws -> T) async throws -> T {
         await WalletBackgroundActivity.shared.begin()
         do {
             let result = try await session.withBackgroundAccess(operation, settle: { [self] in await backupCoordinator.settle() })
@@ -78,6 +86,40 @@ final class AppServices: Sendable {
         } catch {
             await WalletBackgroundActivity.shared.end()
             throw error
+        }
+    }
+
+    func switchEsploraEndpoint(_ input: String?) async throws {
+        let endpoint: String?
+        if let input { endpoint = try await EsploraEndpoint.validate(input, variant: variant) }
+        else if let defaultEndpoint = WalletConfiguration.base(for: variant).esplora {
+            endpoint = try await EsploraEndpoint.validate(defaultEndpoint, variant: variant)
+        } else { endpoint = nil }
+        guard variant != .regtest else { throw EsploraEndpoint.Failure(message: "Regtest wallets use Bitcoin Core instead of Esplora.") }
+        let candidate = EsploraSettings.Selection(endpoint: endpoint == WalletConfiguration.base(for: variant).esplora ? nil : endpoint,
+            variant: variant.rawValue)
+        // Background owners finish before acquiring the lifecycle gate; new jobs wait here.
+        try await Self.configurationAccess.withLock { [self] in
+            try await restoreRecovery.withSettled { [self] in
+                guard await session.isOpen,
+                      SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended != true else {
+                    throw EsploraEndpoint.Failure(message: "Open your wallet before changing the endpoint.")
+                }
+                let mnemonic = try readMnemonic()
+                try await session.closeForConfigurationChange()
+                let reservation = try await session.reserve()
+                do {
+                    try await EsploraSettings().change(to: candidate) { [self] selection, commit in
+                        try await EsploraOpening.$selection.withValue(selection) {
+                            try await session.reopen(reservation, mnemonic: mnemonic, appVersion: appVersion, commit: commit)
+                        }
+                    }
+                    await session.release(reservation)
+                } catch {
+                    await session.release(reservation)
+                    throw error
+                }
+            }
         }
     }
 

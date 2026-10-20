@@ -37,8 +37,10 @@ class EsploraSettings(private val read: (String) -> String?, private val write: 
     /** The caller owns the lifecycle gate and a closed-session reservation across both attempts. */
     suspend fun change(candidate: Selection, reopen: suspend (Selection, () -> Unit) -> Unit) {
         val previous = selection(candidate.variant)
-        save(Record(previous, candidate))
-        try { reopen(candidate) { save(Record(candidate)) } }
+        try {
+            save(Record(previous, candidate))
+            reopen(candidate) { save(Record(candidate)) }
+        }
         catch (failure: Exception) {
             save(Record(previous))
             try { reopen(previous) {} }

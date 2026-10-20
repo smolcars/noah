@@ -287,6 +287,15 @@ actor RestoreRecovery {
         self.recover = recover
     }
 
+    /// Lifecycle → recovery → session; do not call settle() from inside this gate.
+    func withSettled<T: Sendable>(_ operation: @escaping @Sendable () async throws -> T) async throws -> T {
+        try await mutation.withLock { [self] in
+            let result = try await recover()
+            guard result != .waitingForKeychain else { throw WalletLifecycle.Failure.waitingForSecureStorage }
+            return try await operation()
+        }
+    }
+
     func settle() async throws -> RestoreTransaction.Recovery {
         let previous = tail
         let pass = Task { [recover] in

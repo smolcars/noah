@@ -203,6 +203,38 @@ class AppServices private constructor(private val context: Context) {
         if (foreground) walletOpener.openInForeground() else walletOpener.ensureOpen()
     }
 
+    suspend fun switchEsploraEndpoint(input: String?) {
+        val endpoint = (input ?: com.noahwallet.services.wallet.WalletConfiguration.base(variant).esplora)?.let {
+            com.noahwallet.services.wallet.EsploraEndpoint.validate(it, variant)
+        }
+        if (variant == "regtest") throw com.noahwallet.services.wallet.EsploraEndpoint.Failure("Regtest wallets use Bitcoin Core instead of Esplora.")
+        val store = com.noahwallet.services.wallet.EsploraSettings(settings)
+        val candidate = com.noahwallet.services.wallet.EsploraSettings.Selection(
+            endpoint = endpoint?.takeUnless { it == com.noahwallet.services.wallet.WalletConfiguration.base(variant).esplora }, variant = variant)
+        com.noahwallet.services.background.PeriodicExecution.awaitIdle()
+        com.noahwallet.services.wallet.WalletBackgroundActivity.withExclusiveAccess {
+            lifecycle.withWalletMutation {
+                if (recoverRestore(walletMutationHeld = true) == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
+                if (!session.isOpen || settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
+                    throw com.noahwallet.services.wallet.EsploraEndpoint.Failure("Open your wallet before changing the endpoint.")
+                }
+                val mnemonic = (seed.read() as? SecretResult.Found)?.value ?: throw SeedItem.Unavailable()
+                // The detached interval owns both settings and handles until success or rollback.
+                withContext(NonCancellable + Dispatchers.IO) {
+                    session.close(refuseRunning = true)
+                    val reservation = session.reserve()
+                    try {
+                        store.change(candidate) { selection, commit ->
+                            withContext(com.noahwallet.services.wallet.EsploraOpening(selection)) {
+                                session.reopen(reservation, mnemonic, BuildConfig.VERSION_NAME, commit)
+                            }
+                        }
+                    } finally { session.release(reservation) }
+                }
+            }
+        }
+    }
+
     fun startServerServices() {
         scope.launch {
             try { com.noahwallet.services.background.PeriodicWork.reconcile(context, this@AppServices) }

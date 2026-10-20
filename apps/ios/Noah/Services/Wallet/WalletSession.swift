@@ -234,6 +234,30 @@ actor WalletSession {
         }
     }
 
+    /// Refuse all counted work (including send, board, exit and recurring settlement).
+    /// close changes state before its first await, so no new operation can enter.
+    func closeForConfigurationChange() async throws {
+        guard runningCalls == 0, !sendReserved, !exclusiveSend else {
+            throw EsploraEndpoint.Failure(message: "Wait for the current wallet operation to finish before changing the endpoint.")
+        }
+        try await close()
+    }
+
+    /// Keep the reservation until the new configuration is durably committed.
+    func reopen(_ reservation: Reservation, mnemonic: String, appVersion: String,
+                commit: @Sendable () throws -> Void) async throws {
+        try checkHeld(reservation)
+        try checkExistingDatabase()
+        let handles = try await Task { try await opener(mnemonic, location.directory.path, true, appVersion, false) }.value
+        do { try commit() }
+        catch {
+            do { try await Task { try await handles.wallet.stopDaemonWait() }.value }
+            catch { state = .open(handles); throw OpenError.teardownFailed }
+            throw error
+        }
+        state = .open(handles)
+    }
+
     /// `close`, after waiting for an open already in progress (suspend,
     /// delete). Still `busy` while a reservation is held.
     func closeSettled() async throws {
