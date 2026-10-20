@@ -37,12 +37,15 @@ struct WalletLifecycle: Sendable {
         var walletChanged: @Sendable () async -> Void = { await SendPaymentController.shared.reloadForWalletChange() }
     }
 
+    static let automationStopKey = "native-recurring-automation-stop-generation"
+
     let dependencies: Dependencies
 
     /// The flag is persisted first, so nothing (UI, push, background work)
     /// opens the wallet again; then the wallet is closed, after an open
     /// already in progress. If closing fails the flag is put back.
     func suspend() async throws {
+        try stopAutomation()
         try setSuspended(true)
         do {
             try await dependencies.session.closeSettled()
@@ -118,10 +121,16 @@ struct WalletLifecycle: Sendable {
     /// Drain operations and clean temporary files before committing deletion.
     /// Once the marker is durable, files precede secrets and relaunch finishes any interruption.
     func delete() async throws {
+        try stopAutomation()
         try await dependencies.mutation.withLock { try await deleteLocked() }
     }
 
+    private func stopAutomation() throws {
+        try dependencies.settings.setDurably(UUID().uuidString, forKey: Self.automationStopKey)
+    }
+
     private func deleteLocked() async throws {
+        try stopAutomation()
         let wasSuspended = dependencies.settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == true
         try setSuspended(true)
         var ownsScratch = false

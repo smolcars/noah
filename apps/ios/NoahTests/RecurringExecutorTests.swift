@@ -20,6 +20,7 @@ import Testing
         var saved: SendPaymentController.Attempt?
         var writeReceiptFails = false
         var ambiguous = false
+        var reservation: (@MainActor (@escaping @MainActor @Sendable () async -> Void) async throws -> Void)?
         var preflight: (@MainActor () async throws -> Void)?
         var beforePay: (@MainActor () async throws -> Void)?
         var afterPay: (@MainActor () async throws -> Void)?
@@ -53,6 +54,7 @@ import Testing
                     saved = $0
                 },
                 identity: { owner.withLock { $0.wallet } },
+                withRecurringReservation: { [self] work in try await reserve(work) },
                 guardedPay: { [self] payment, _, _, guardPolicy in
                     try await beforePayment()
                     try guardPolicy()
@@ -68,7 +70,10 @@ import Testing
                     try await beforeQuote()
                     return (SendPayment(destination: schedule.destination, method: "ark", amount: schedule.amountSat),
                             .init(amount: schedule.amountSat, fee: 0, total: schedule.amountSat, walletIdentity: owner.withLock { $0.wallet }))
-                }, now: { [now] in now }, sync: { [self] entries in try await sync(entries) }))
+                }, automationGeneration: { [settings] in settings.string(forKey: WalletLifecycle.automationStopKey) }, now: { [now] in now }, sync: { [self] entries in try await sync(entries) }))
+        }
+        func reserve(_ work: @escaping @MainActor @Sendable () async -> Void) async throws {
+            if let reservation { try await reservation(work) } else { await work() }
         }
         func beforePrepare() async throws {}
         func beforeQuote() async throws { try await preflight?() }

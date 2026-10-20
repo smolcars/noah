@@ -92,9 +92,10 @@ struct SendSnapshot: Codable, Sendable {
     var checkpoint: SendLightningCheckpoint?
 }
 enum SendFailure: LocalizedError {
-    case invalid, insufficient, expired, ownAddress, feeChanged, unresolved, fundsChanged, constructionFailed, lightningInProgress
+    case invalid, insufficient, expired, ownAddress, feeChanged, unresolved, fundsChanged, constructionFailed, lightningInProgress, recurringStopped
     var errorDescription: String? {
         switch self {
+        case .recurringStopped: "Recurring payment stopped before submission. No payment was sent."
         case .lightningInProgress: "Another Lightning payment is still in progress. Try again once it completes."
         case .constructionFailed: "The transaction could not be built. No payment was submitted. Review the amount and fee."
         case .fundsChanged: "The available funds changed. Review the payment again."

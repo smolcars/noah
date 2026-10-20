@@ -21,6 +21,7 @@ extension RecurringExecutor.Dependencies {
                                wallet.isInitialized == true, wallet.isWalletSuspended != true else { throw AppServices.WalletSuspended() }
                      },
                      quote: { try await RecurringRecipient.quote($0, session: services.session) },
+                     automationGeneration: { settings.string(forKey: WalletLifecycle.automationStopKey) },
                      sync: { entries in
                          guard settings.persistedState(PersistedServerState.self, key: PersistedServerState.key)?.isRegisteredWithServer == true else { throw RecurringError.message("Register this wallet before syncing recurring payments.") }
                          _ = try await services.client.syncRecurringPayments(body: .json(.init(schedules: entries))).ok

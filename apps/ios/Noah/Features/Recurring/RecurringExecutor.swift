@@ -10,6 +10,7 @@ import Observation
         var binding: @Sendable () throws -> RecurringStore.Binding
         var allowed: @Sendable () throws -> Void
         var quote: @Sendable (RecurringPayment) async throws -> (SendPayment, SendQuote)
+        var automationGeneration: @Sendable () -> String? = { nil }
         var now: @Sendable () -> Double = { RecurringPayment.now }
         var sync: @Sendable ([Components.Schemas.RecurringPaymentScheduleEntry]) async throws -> Void = { _ in }
         var notifications: @Sendable ([RecurringPayment], RecurringPayment?) async -> Void = { _, _ in }
@@ -73,6 +74,7 @@ import Observation
         error = nil
         defer { running = false; reload() }
         do {
+            let automationGeneration = d.automationGeneration()
             try await d.ensureOpen()
             let initial = try boundState()
             try await recoverMarkers(initial)
@@ -106,13 +108,14 @@ import Observation
                     schedule.updatedAt = d.now()
                     try d.store.upsert(schedule)
                     let marked = schedule
-                    let store = d.store, binding = d.binding, allowed = d.allowed
+                    let store = d.store, binding = d.binding, allowed = d.allowed, generation = d.automationGeneration
                     await d.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key) {
-                        try allowed()
+                        do { try allowed() } catch { throw SendNotSubmitted(reason: .recurringStopped) }
                         let state = try store.load()
-                        guard state.binding == (try binding()), state.binding == entry.binding,
+                        guard generation() == automationGeneration,
+                              state.binding == (try binding()), state.binding == entry.binding,
                               state.schedules[id] == marked, marked.status == "active" else {
-                            throw SendNotSubmitted(reason: .unresolved)
+                            throw SendNotSubmitted(reason: .recurringStopped)
                         }
                     }
                     try await settle(entry, original: marked)

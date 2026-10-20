@@ -46,4 +46,34 @@ import Testing
         try await session.withOpenWallet { _ in () }
         try await session.closeSettled()
     }
+    @Test(arguments: [false, true]) func failedSuspendOrDeleteStillRevokesPendingExecution(delete: Bool) async throws {
+        let h = try RecurringExecutorTests.Harness()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        let location = WalletDataLocation(variant: .regtest, documentsDirectory: h.directory)
+        let session = WalletSession(variant: .regtest, location: location)
+        try await session.createNew(mnemonic: generateMnemonic(), runDaemon: false, appVersion: "test")
+        let lifecycle = WalletLifecycle(dependencies: .init(
+            session: session, location: location,
+            seed: KeychainPassword(service: "recurring-race-\(UUID())", account: "test"),
+            authToken: KeychainPassword(service: "recurring-token-\(UUID())", account: "test"),
+            settings: h.settings, scratch: ScratchSpace(root: h.directory.appending(path: "scratch")),
+            appGroup: nil, mutation: WalletMutationGate(), deregister: {}, walletChanged: {}))
+        h.reservation = { try await session.withSendReservation($0, exclusive: true) }
+        h.beforePay = {
+            await #expect(throws: WalletSession.OpenError.busy) {
+                if delete { try await lifecycle.delete() } else { try await lifecycle.suspend() }
+            }
+            #expect(h.settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == false)
+        }
+        let schedule = try h.add()
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 0)
+        #expect(!h.controller.locked)
+        #expect(try h.journal.load()[schedule.id]?.resolved == true)
+        #expect(try h.journal.load()[schedule.id]?.consumed != true)
+        #expect(try h.store.load().schedules[schedule.id]?.inFlight == nil)
+        #expect(h.settings.string(forKey: WalletLifecycle.automationStopKey) != nil)
+        try await session.closeSettled()
+    }
+
 }
