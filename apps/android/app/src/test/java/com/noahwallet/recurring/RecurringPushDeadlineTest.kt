@@ -15,6 +15,16 @@ class RecurringPushDeadlineTest {
             release.complete(Unit); withTimeout(2000) { settled.await() }
         } finally { release.complete(Unit); scope.cancel() }
     }
+    @Test fun revokedBackgroundBudgetCannotStartWalletOpen() = runBlocking {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val budget = RecurringBudget().apply { revoke() }
+        var opened = false
+        try {
+            runCatching { RecurringPushDeadline(scope).run(budget) { opened = true } }
+            assertFalse(opened)
+        } finally { scope.cancel() }
+    }
+
     @Test fun callerCancellationRevokesSubmissionBudgetWithoutCancellingSettlement() = runBlocking {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>(); val settled = CompletableDeferred<Unit>()

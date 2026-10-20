@@ -64,6 +64,15 @@ class PushJobsTest {
         assertTrue(runCatching { jobs.handle(NotificationDataBackupTrigger("k1")) }.isFailure)
         assertEquals(listOf("open", "backup-report:k1:false"), events)
     }
+    @Test fun cancelledBackgroundEntryCannotStartWalletOpen() = runBlocking {
+        val work = launch(start = CoroutineStart.UNDISPATCHED) {
+            currentCoroutineContext().cancel()
+            assertTrue(runCatching { jobs.handle(NotificationDataMaintenance("k1")) }.exceptionOrNull() is CancellationException)
+        }
+        work.join()
+        assertTrue(events.isEmpty())
+    }
+
     @Test fun cancellationDoesNotBecomeAReportedFailure() = runBlocking {
         cancelled = true
         assertTrue(runCatching { jobs.handle(NotificationDataMaintenance("k1")) }.exceptionOrNull() is CancellationException)

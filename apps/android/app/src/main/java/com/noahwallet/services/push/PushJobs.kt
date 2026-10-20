@@ -2,6 +2,8 @@ package com.noahwallet.services.push
 
 import com.noahwallet.api.generated.models.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /** The two transports share routing, including status reporting when wallet open fails. */
 class PushJobs(private val dependencies: Dependencies) {
@@ -26,6 +28,7 @@ class PushJobs(private val dependencies: Dependencies) {
     }
 
     private suspend fun handleNotification(notification: NotificationData) {
+        currentCoroutineContext().ensureActive()
         val d = dependencies
         when (notification) {
             is NotificationDataMaintenance -> {
@@ -68,7 +71,12 @@ class PushJobs(private val dependencies: Dependencies) {
                 if (failure != null) throw failure
             }
             is NotificationDataRecurringPaymentDue -> com.noahwallet.recurring.RecurringPushDeadline().run { budget ->
-                d.ensureWalletOpen(); d.recurring(budget)
+                currentCoroutineContext().ensureActive()
+                if (!budget.available) throw CancellationException()
+                d.ensureWalletOpen()
+                currentCoroutineContext().ensureActive()
+                if (!budget.available) throw CancellationException()
+                d.recurring(budget)
             }
         }
     }

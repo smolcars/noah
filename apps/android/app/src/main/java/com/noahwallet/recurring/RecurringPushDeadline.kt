@@ -6,7 +6,10 @@ import kotlinx.coroutines.*
 class RecurringPushDeadline(private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
     private val timeoutMillis: Long = 25_000) {
     suspend fun run(budget: RecurringBudget = RecurringBudget.push(), block: suspend (RecurringBudget) -> Unit) {
-        val work = scope.async { block(budget) }
+        val work = scope.async {
+            if (!budget.available) throw CancellationException()
+            block(budget)
+        }
         try { withTimeoutOrNull(timeoutMillis) { work.await() } }
         finally { budget.revoke() }
     }
