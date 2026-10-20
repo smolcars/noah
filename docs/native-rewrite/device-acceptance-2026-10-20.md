@@ -22,12 +22,18 @@ Backend: local regtest stack plus a Noah server on port 3100 with real Expo cred
 
 The LNURL mock was a throwaway HTTPS server on the Mac with a three-day test CA. `localtest.me` resolves to 127.0.0.1, and the Pixel used `adb reverse tcp:443`. The Pixel ran a local-only build whose `regtestDebug` network config trusted that CA. The build was removed and the normal APK reinstalled afterwards. The simulator trusted the CA via `simctl keychain add-root-cert`.
 
-## Not yet verified on hardware
+## iPhone, second session (user present for the passcode, Face ID and camera)
 
-These need iPhone UI automation, which asks for the device passcode once per new test runner:
-- iOS recurring execution from a real local schedule;
-- iOS timed reminder;
-- iOS lock cover and app-switcher snapshot;
-- Face ID gating of the recovery phrase.
+| Check | Result |
+| --- | --- |
+| Recurring payment from a real local schedule | Pass, with one issue. A 6:50 PM monthly 500-sat schedule was saved and the app sent to the background at 18:43. The 18:50 sweep sent the push at 18:50:00.7; the receiver recorded exactly one 500-sat payment. Issue: the app log shows sync plus the arkoor send at 18:50:01–02, *before* `Handling recurring_payment_due push` (18:50:03.4). Some path other than the push job executed the payment after the push resumed the suspended process. Tracked as an open item. |
+| Timed local reminder | Pass. "Upcoming recurring payment: ₿ 300 to Reminder test iOS will be sent tomorrow" banner at 18:55. |
+| Biometric lock, app switcher, unlock | Pass. Enabling the lock asked for Face ID permission and Face ID. The app-switcher card showed "Noah is Locked" with no wallet content. Face ID prompted automatically on return, the Unlock button remains as a fallback, and the same Settings screen and scroll position came back. |
+| Recovery phrase Face ID gate | Pass. Opening the screen prompts Face ID automatically; success showed 12 words (never screenshotted or logged). Cancel left 0 words and the "Authenticate to view your seed phrase" button. |
+| Camera QR | Pass both ways. The iPhone scanned the Pixel's receive QR and the Pixel scanned the iPhone's; both offered Ark/On-chain for the unified request. |
 
-Camera QR scanning on either phone needs someone to point the camera. Physical iOS LNURL needs a trusted certificate, which can't be installed without the passcode.
+Also observed: Home shows "Backup failed: CancellationError" after background/foreground transitions. A cancelled backup is presented as a failure with a raw error type. Tracked as an open item.
+
+## Not verified on hardware
+
+Physical iOS LNURL: needs a trusted certificate, which can't be installed without the passcode. Covered on the simulator instead.

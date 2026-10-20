@@ -125,6 +125,10 @@ final class RegtestDriverTests: XCTestCase {
                 XCTAssertTrue(field.waitForExistence(timeout: 15))
                 field.tap()
                 field.typeText(parts.count > 1 ? parts[1] : "")
+            case "tapxy":
+                // Screen points from the top-left, for system popovers outside the app's tree.
+                let xy = argument.split(separator: ":").compactMap { Double($0) }
+                app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: xy[0], dy: xy[1])).tap()
             case "swipeup": app.swipeUp()
             case "swipedown": app.swipeDown()
             case "home": XCUIDevice.shared.press(.home)
