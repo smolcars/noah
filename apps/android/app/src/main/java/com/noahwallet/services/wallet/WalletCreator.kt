@@ -97,7 +97,17 @@ class WalletCreator(private val dependencies: Dependencies) {
                 removeAttemptFiles = location::removeAttemptFiles,
                 generateMnemonic = ::generateMnemonic,
                 openExisting = { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) },
-                reserve = session::reserve,
+                reserve = {
+                    val reservation = session.reserve()
+                    try {
+                        // The reservation excludes deletion while staging is checked and removed.
+                        location.removeDiscardedDeletionData()
+                        reservation
+                    } catch (failure: Exception) {
+                        session.release(reservation)
+                        throw failure
+                    }
+                },
                 release = session::release,
                 createNew = { reservation, mnemonic -> session.createNew(reservation, mnemonic, true, BuildConfig.VERSION_NAME) },
             ))

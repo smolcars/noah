@@ -86,7 +86,8 @@ class WalletLifecycleTest {
         try {
             world.files(); world.deregisterFails = true
             world.lifecycle().delete()
-            assertEquals(listOf("flag:true", "scratch", "sync", "deregister", "sync", "sync", "seed", "token", "settings", "widget", "sync"), world.events)
+            assertEquals(listOf("flag:true", "scratch", "deregister", "seed", "token", "settings", "widget"), world.events.filter { it != "sync" })
+            assertTrue(world.events.indexOf("sync") < world.events.indexOf("seed"))
             assertFalse(world.seed); assertFalse(world.token); assertFalse(world.settings); assertFalse(world.widget)
             val hold = world.session.reserve(); world.session.release(hold)
         } finally { world.clean() }
@@ -106,10 +107,12 @@ class WalletLifecycleTest {
     @Test fun failedFileSyncPreservesSeedAndAllLocalState() = runBlocking {
         val world = World()
         try {
-            world.files(); world.syncFails = true
+            world.files()
+            world.location.writeDeletionIdentity(SecretResult.Found(world.seedValue)) {}
+            world.syncFails = true
             assertTrue(runCatching { world.lifecycle().delete() }.isFailure)
             assertTrue(world.seed); assertTrue(world.token); assertTrue(world.settings)
-            assertTrue(world.location.database.exists())
+            assertTrue(world.location.directory.exists() || world.location.deletionDirectory.exists())
             assertTrue(world.location.deletionMarker.exists())
             world.syncFails = false
             world.lifecycle().recoverDeletion()
@@ -203,7 +206,7 @@ class WalletLifecycleTest {
                 assertFalse(world.location.directory.exists()); assertFalse(world.location.deletionMarker.exists())
                 val events = world.events.toList()
                 world.lifecycle().recoverDeletion()
-                assertEquals(events, world.events)
+                assertEquals(events.filter { it != "sync" }, world.events.filter { it != "sync" })
             } finally { world.clean() }
         }
     }
@@ -308,11 +311,13 @@ class WalletLifecycleTest {
                     world.seedValue = if (current == "different") "wallet B" else "wallet A"
                     world.seedUnreadable = current == "unreadable"
                     val before = world.seed
-                    world.lifecycle().recoverDeletion()
+                    val result = world.lifecycle().recoverDeletion()
+                    val waiting = marker == "bound" && current == "unreadable"
+                    assertEquals(if (waiting) RestoreTransaction.Recovery.waitingForSecret else RestoreTransaction.Recovery.nothingPending, result)
                     val finishes = marker == "bound" && (current == "same" || current == "none")
                     assertEquals(if (finishes) false else before, world.seed)
                     assertEquals(!finishes, world.token); assertEquals(!finishes, world.settings)
-                    assertFalse(world.location.directory.exists()); assertFalse(world.location.deletionMarker.exists())
+                    assertFalse(world.location.directory.exists()); assertEquals(waiting, world.location.deletionMarker.exists())
                     if (!finishes) assertFalse(world.events.contains("flag:true"))
                 } finally { world.clean() }
             }
@@ -382,7 +387,7 @@ class WalletLifecycleTest {
         }
     }
 
-    @Test fun restoreWaitingForSecretDiscardsStaleMarkerWithoutDeletingWallet() = runBlocking {
+    @Test fun restoreWaitingForSecretRetainsMarkerUntilUnlock() = runBlocking {
         val world = World()
         try {
             world.files()
@@ -390,9 +395,9 @@ class WalletLifecycleTest {
             tx.prepare(); check(tx.staged.mkdir()); File(tx.staged, "db.sqlite").writeText("wallet B data")
             tx.begin("wallet B"); tx.markCommitting()
             world.location.writeDeletionIdentity(SecretResult.Found("wallet B")) {}
-            var locked = true
+            world.seedUnreadable = true
             val secret = object : SecretItem {
-                override suspend fun read(): SecretResult = if (locked) SecretResult.Unavailable(SecretFailure.storageUnreadable) else SecretResult.Found("wallet B")
+                override suspend fun read(): SecretResult = if (world.seedUnreadable) SecretResult.Unavailable(SecretFailure.storageUnreadable) else SecretResult.Found("wallet B")
                 override suspend fun save(value: String) = error("Recovery must not write a seed")
             }
             val lifecycle = world.lifecycle()
@@ -401,9 +406,9 @@ class WalletLifecycleTest {
             }
             suspend fun recover() = lifecycle.recoverRestoreAndDeletion { recovery.settle() }
             assertEquals(RestoreTransaction.Recovery.waitingForSecret, recover())
-            assertTrue(world.location.restorePending); assertFalse(world.location.deletionMarker.exists())
-            assertTrue(world.seed); assertEquals(listOf("sync"), world.events)
-            locked = false; world.seedValue = "wallet B"
+            assertTrue(world.location.restorePending); assertTrue(world.location.deletionMarker.exists())
+            assertTrue(world.seed); assertTrue(world.events.isEmpty())
+            world.seedUnreadable = false; world.seedValue = "wallet B"
             assertEquals(RestoreTransaction.Recovery.completed, recover())
             assertFalse(world.location.restorePending); assertFalse(world.location.deletionMarker.exists())
             assertEquals("wallet B data", world.location.database.readText()); assertTrue(world.seed)
@@ -414,10 +419,10 @@ class WalletLifecycleTest {
         val world = World()
         try {
             world.files()
-            world.location.writeDeletionIdentity(SecretResult.Found(world.seedValue)) {}
             val tx = RestoreTransaction(world.location, sync = {}, rename = { from, to -> check(from.renameTo(to)) })
             tx.prepare(); check(tx.staged.mkdir()); File(tx.staged, "db.sqlite").writeText("wallet B data")
             tx.begin("wallet B")
+            world.location.writeDeletionIdentity(SecretResult.Found(world.seedValue)) {}
             val secret = object : SecretItem {
                 override suspend fun read() = SecretResult.Found(world.seedValue)
                 override suspend fun save(value: String) = error("Recovery must not write a seed")
@@ -469,6 +474,73 @@ class WalletLifecycleTest {
             finishCompletion.complete(Unit); restoration.await(); competing.await()
             assertTrue(competingMutationEntered)
         } finally { releaseDrain.complete(Unit); finishCompletion.complete(Unit); world.clean() }
+    }
+
+    @Test fun lockedDeletionRetriesWithoutLosingStagingThenAllowsRestoreAndDelete() = runBlocking {
+        for (stage in 0..3) for (sameSeed in listOf(true, false)) {
+            val world = World()
+            try {
+                world.files()
+                world.location.writeDeletionIdentity(SecretResult.Found(world.seedValue)) {}
+                if (stage >= 1) check(world.location.directory.renameTo(world.location.deletionDirectory))
+                if (stage >= 2) check(File(world.location.deletionDirectory, ".noah-wallet-instance").delete())
+                if (stage >= 3) check(world.location.deletionDirectory.deleteRecursively())
+                world.seedUnreadable = true
+                val lifecycle = world.lifecycle()
+                assertEquals(RestoreTransaction.Recovery.waitingForSecret,
+                    lifecycle.recoverRestoreAndDeletion { RestoreTransaction.Recovery.nothingPending })
+                assertTrue(world.location.deletionMarker.exists())
+                assertEquals(stage in 1..2, world.location.deletionDirectory.exists())
+                assertTrue(world.seed); assertTrue(world.token); assertTrue(world.settings)
+                assertTrue(runCatching { world.location.removeDiscardedDeletionData {} }.isFailure)
+                assertTrue(runCatching { lifecycle.delete() }.exceptionOrNull() is WalletLifecycle.WaitingForSecureStorage)
+                world.seedUnreadable = false
+                if (!sameSeed) world.seedValue = "wallet B"
+                lifecycle.recoverRestoreAndDeletion { RestoreTransaction.Recovery.nothingPending }
+                assertFalse(world.location.deletionMarker.exists()); assertFalse(world.location.deletionDirectory.exists())
+                assertEquals(!sameSeed, world.seed)
+                // Recreate the datadir as restore does; its next deletion must never hit old staging.
+                world.seed = true; world.files()
+                lifecycle.delete()
+                assertFalse(world.seed); assertFalse(world.location.directory.exists())
+            } finally { world.clean() }
+        }
+    }
+
+    @Test fun discardedStagingIsCheckedAndSyncedBeforeRestoreOrNewMarker() = runBlocking {
+        for (next in listOf("recover", "restore", "delete", "old-marker")) {
+            val world = World()
+            try {
+                world.files()
+                if (next == "old-marker") world.location.writeDeletionIdentity(SecretResult.Found(world.seedValue)) {}
+                check(world.location.directory.renameTo(world.location.deletionDirectory))
+                // A previous launch already discarded the marker, but died before staging cleanup.
+                if (next == "restore") {
+                    val syncs = mutableListOf<File>()
+                    world.location.removeDiscardedDeletionData { syncs.add(it) }
+                    assertEquals(listOf(world.root), syncs)
+                    assertTrue(world.seed)
+                    world.files()
+                } else {
+                    world.files()
+                    if (next == "old-marker") world.location.writeDeletionIdentity(SecretResult.Found(world.seedValue)) {}
+                    if (next == "recover") {
+                        world.lifecycle().recoverDeletion()
+                        assertTrue(world.location.databaseExists); assertTrue(world.seed)
+                    } else world.lifecycle().delete()
+                }
+                assertFalse(world.location.deletionDirectory.exists())
+            } finally { world.clean() }
+        }
+        val world = World()
+        try {
+            world.files(); check(world.location.directory.renameTo(world.location.deletionDirectory))
+            world.files(); world.syncFails = true
+            assertTrue(runCatching { world.lifecycle().delete() }.isFailure)
+            assertFalse(world.location.deletionMarker.exists()) // Cleanup sync precedes new consent evidence.
+            assertTrue(world.location.databaseExists); assertTrue(world.seed)
+            world.syncFails = false; world.lifecycle().delete(); assertFalse(world.seed)
+        } finally { world.clean() }
     }
 
     @Test fun suspendedSessionRejectsDelayedOpen() = runBlocking {

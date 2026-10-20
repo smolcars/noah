@@ -16,7 +16,7 @@ import kotlinx.serialization.json.Json
 
 /** Journal is durable before renames; seed write is the sole commit point; journal is removed last. */
 class RestoreTransaction(
-    location: WalletDataLocation,
+    private val location: WalletDataLocation,
     private val sync: (File) -> Unit = ::syncFileOrDirectory,
     private val rename: (File, File) -> Unit = ::renameFile,
 ) {
@@ -38,6 +38,7 @@ class RestoreTransaction(
     fun prepare() {
         if (isPending) throw Failure(Reason.alreadyPending)
         if (previous.exists()) throw Failure(Reason.orphanedPreviousWallet)
+        location.removeDiscardedDeletionData(sync)
         ensureWorkspace(); removeScratch(); check(work.mkdir())
     }
     fun begin(mnemonic: String) {

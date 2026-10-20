@@ -32,6 +32,7 @@ class WalletLifecycle(
     private val drainTimeoutMillis: Long = 30_000,
     private val warn: (String) -> Unit = {},
 ) {
+    class WaitingForSecureStorage : Exception("Waiting for secure storage. Unlock your device and try again.")
     class RestorePending : Exception("Restart Noah to settle the pending restore before deleting")
     class BackupBusy : Exception("Noah is still finishing a backup. Try again in a moment.")
     class TemporaryFiles : Exception("Noah couldn't remove temporary wallet files. Restart Noah and try again.")
@@ -57,12 +58,17 @@ class WalletLifecycle(
         // Drop it durably before restore removes its journal: a crash after rollback
         // must not reauthorize deletion of the previous wallet on the next launch.
         if (location.restorePending) {
-            if (location.deletionMarker.exists()) discardDeletionMarker()
-            else syncFiles() // Retry a prior marker unlink whose directory sync failed.
+            if (location.deletionMarker.exists()) {
+                if (location.deletionStatus(readSeed()) == WalletDataLocation.DeletionStatus.waitingForSecret) {
+                    return RestoreTransaction.Recovery.waitingForSecret
+                }
+                discardDeletionMarker()
+            } else syncFiles() // Retry a prior marker unlink whose directory sync failed.
         }
+        if (!location.deletionMarker.exists()) location.removeDiscardedDeletionData { syncFiles() }
         val result = recoverRestore()
         if (result == RestoreTransaction.Recovery.waitingForSecret) return result
-        recoverDeletionLocked()
+        if (recoverDeletionLocked() == RestoreTransaction.Recovery.waitingForSecret) return RestoreTransaction.Recovery.waitingForSecret
         return result
     }
 
@@ -70,13 +76,19 @@ class WalletLifecycle(
         mutation.withLock { recoverDeletionLocked() }
     }
 
-    private suspend fun recoverDeletionLocked() {
-        if (!location.deletionMarker.exists()) return
-        if (!location.deletionMatchesWallet(readSeed())) {
-            discardDeletionMarker()
-            return
+    private suspend fun recoverDeletionLocked(): RestoreTransaction.Recovery {
+        if (location.deletionMarker.exists()) {
+            when (location.deletionStatus(readSeed())) {
+                WalletDataLocation.DeletionStatus.waitingForSecret -> return RestoreTransaction.Recovery.waitingForSecret
+                WalletDataLocation.DeletionStatus.mismatched -> discardDeletionMarker()
+                WalletDataLocation.DeletionStatus.matching -> {
+                    deleteLocked()
+                    return RestoreTransaction.Recovery.nothingPending
+                }
+            }
         }
-        deleteLocked()
+        location.removeDiscardedDeletionData { syncFiles() }
+        return RestoreTransaction.Recovery.nothingPending
     }
 
     private fun discardDeletionMarker() {
@@ -112,13 +124,25 @@ class WalletLifecycle(
                 if (location.restorePending) throw RestorePending()
                 try { sweepScratch() } catch (_: Exception) { throw TemporaryFiles() }
                 // The durable marker commits the deletion; every later launch finishes it.
-                if (!location.deletionMarker.exists() || !location.deletionMatchesWallet(readSeed())) {
-                    location.writeDeletionIdentity(readSeed(), syncIdentityDirectory)
+                val seed = readSeed()
+                if (location.deletionMarker.exists()) {
+                    when (location.deletionStatus(seed)) {
+                        WalletDataLocation.DeletionStatus.waitingForSecret -> throw WaitingForSecureStorage()
+                        WalletDataLocation.DeletionStatus.mismatched -> discardDeletionMarker()
+                        WalletDataLocation.DeletionStatus.matching -> Unit
+                    }
+                }
+                if (!location.deletionMarker.exists()) {
+                    if (seed is com.noahwallet.services.storage.SecretResult.Unavailable) throw WaitingForSecureStorage()
+                    location.removeDiscardedDeletionData { syncFiles() }
+                    location.writeDeletionIdentity(seed, syncIdentityDirectory)
                     syncFiles()
                 }
                 try { deregister() } catch (_: Exception) { warn("Deregistration failed while deleting wallet") }
                 if (location.directory.exists()) {
-                    check(!location.deletionDirectory.exists() && location.directory.renameTo(location.deletionDirectory)) { "Cannot stage wallet deletion" }
+                    // Also finishes an older app's committed marker over abandoned staging.
+                    check(!location.deletionDirectory.exists() || location.deletionDirectory.deleteRecursively()) { "Cannot delete prior staged wallet files" }
+                    check(location.directory.renameTo(location.deletionDirectory)) { "Cannot stage wallet deletion" }
                     syncFiles()
                 }
                 check(!location.deletionDirectory.exists() || location.deletionDirectory.deleteRecursively()) { "Cannot delete wallet files" }

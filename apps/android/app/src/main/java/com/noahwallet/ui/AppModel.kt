@@ -211,7 +211,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
                 }
             } catch (failure: Exception) {
                 if (recovering) launchState = LaunchState.restoreIncomplete
-                error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy) failure.message else if (recovering) "Couldn't finish wallet recovery. Your wallet files have been kept. Please try again."
+                error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage) failure.message else if (recovering) "Couldn't finish wallet recovery. Your wallet files have been kept. Please try again."
                     else "Couldn't open your wallet. Please try again."
             }
             finally { starting = false }
@@ -224,7 +224,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try { block() }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (failure: Exception) { error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy) failure.message else fallback }
+            catch (failure: Exception) { error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage) failure.message else fallback }
             finally { busy = false }
         }
     }

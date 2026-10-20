@@ -106,6 +106,30 @@ class WalletRestorerTest {
         // Each restore runs PBKDF2 (600k iterations) to seal and open; 10 s timed out on a loaded machine.
         try { withTimeout(60_000) { world.block() } } finally { world.root.deleteRecursively() }
     }
+    @Test fun stagedDeletionUnlockRestoreAndDeleteUsesRealRestorePipeline() = runBlocking {
+        for (pending in listOf(true, false)) world {
+            seed.value = "new seed"
+            location.writeDeletionIdentity(seed.read()) {}
+            check(location.directory.renameTo(location.deletionDirectory))
+            val lifecycle = WalletLifecycle(session, location, setSuspended = {}, deregister = {}, readSeed = seed::read,
+                deleteSeed = { seed.value = null }, clearToken = {}, clearSettings = {}, clearWidget = {}, sweepScratch = {},
+                syncFiles = {}, syncIdentityDirectory = {})
+            seed.unavailable = true
+            assertEquals(RestoreTransaction.Recovery.waitingForSecret,
+                lifecycle.recoverRestoreAndDeletion { RestoreTransaction.Recovery.nothingPending })
+            assertTrue(location.deletionMarker.exists()); assertTrue(location.deletionDirectory.exists())
+            seed.unavailable = false
+            if (pending) lifecycle.recoverRestoreAndDeletion { RestoreTransaction.Recovery.nothingPending }
+            else check(location.deletionMarker.delete()) // Previous app discarded it but left staging and the seed.
+            seed.onSave = { assertFalse(location.deletionDirectory.exists()) }
+            lifecycle.withWalletMutation { restorer().restore("new seed") }
+            assertEquals("new wallet", location.database.readText()); assertEquals("new seed", seed.value)
+            assertFalse(location.deletionDirectory.exists())
+            lifecycle.delete()
+            assertNull(seed.value); assertFalse(location.directory.exists()); assertFalse(location.deletionMarker.exists())
+        }
+    }
+
     @Test fun completionReceiptIsWrittenBeforeInstallationAndItsFailureCannotCommit() = runBlocking { world {
         var recorded: WalletRestorer.Outcome? = null
         val result = restorer().restore("new seed", beforeInstall = {
