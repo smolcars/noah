@@ -24,6 +24,7 @@ actor WalletCreator {
     }
 
     struct Dependencies: Sendable {
+        var mutation: WalletMutationGate = .shared
         var readSeed: @Sendable () -> KeychainPassword.ReadResult
         var saveSeed: @Sendable (String) throws -> Void
         var deleteSeed: @Sendable (_ onlyIfValueIs: String) -> Void
@@ -59,7 +60,7 @@ actor WalletCreator {
         if let inFlight {
             return try await inFlight.value
         }
-        let attempt = Task { try await run() }
+        let attempt = Task { try await dependencies.mutation.withLock { try await self.run() } }
         inFlight = attempt
         defer { inFlight = nil }
         try await attempt.value
@@ -125,7 +126,12 @@ extension WalletCreator.Dependencies {
         let seedItem = KeychainPassword.mnemonic(for: variant)
         let location = WalletDataLocation(variant: variant)
         return Self(
-            readSeed: { seedItem.read() },
+            readSeed: {
+                guard !FileManager.default.fileExists(atPath: location.deletionMarker.path) else {
+                    return .unavailable(errSecInteractionNotAllowed)
+                }
+                return seedItem.read()
+            },
             saveSeed: { try seedItem.save($0) },
             deleteSeed: { seedItem.delete(onlyIfValueIs: $0) },
             walletDataExists: { location.hasAnyData },

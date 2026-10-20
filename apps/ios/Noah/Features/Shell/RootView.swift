@@ -4,6 +4,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @State private var lock = WalletLock()
+    @State private var showingDelete = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -28,6 +29,13 @@ struct RootView: View {
                     message: LocalizedStringKey(model.walletError ?? "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."))
             }
         }
+        .safeAreaInset(edge: .bottom) {
+            if model.phase == .blocked(.seedWithoutWalletData) || model.phase == .blocked(.walletDataWithoutSeed) {
+                Button("Delete Wallet", role: .destructive) { showingDelete = true }
+                    .padding()
+            }
+        }
+        .sheet(isPresented: $showingDelete) { DeleteWalletSheet() }
         .accessibilityHidden(model.phase == .wallet && lock.policy.locked)
         .environment(lock)
         .environment(\.locale, Locale(identifier: model.localeIdentifier))

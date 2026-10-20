@@ -15,6 +15,36 @@ struct WalletDataLocation: Sendable {
         directory.deletingLastPathComponent().appending(path: ".\(directory.lastPathComponent)-deleting")
     }
 
+    var deletionDirectory: URL {
+        directory.deletingLastPathComponent().appending(path: ".\(directory.lastPathComponent)-deleting-data")
+    }
+
+    /// Local instance identity: intentionally excluded from backup snapshots.
+    var instanceIdentity: URL { directory.appending(path: ".noah-wallet-instance") }
+
+    func writeDeletionIdentity() throws {
+        let fm = FileManager.default
+        let identity = Data(UUID().uuidString.utf8)
+        if fm.fileExists(atPath: directory.path) {
+            try identity.write(to: instanceIdentity, options: .atomic)
+            let handle = try FileHandle(forWritingTo: instanceIdentity)
+            try handle.synchronize()
+            try handle.close()
+            try RestoreTransaction.fullSync(directory)
+        }
+        try identity.write(to: deletionMarker, options: .atomic)
+    }
+
+    func deletionMatchesWallet() throws -> Bool {
+        let marker = try Data(contentsOf: deletionMarker)
+        let legacy = marker == Data([1])
+        guard legacy || UUID(uuidString: String(decoding: marker, as: UTF8.self)) != nil else { return false }
+        guard FileManager.default.fileExists(atPath: directory.path) else { return true }
+        // A legacy marker cannot establish ownership of a populated datadir.
+        guard !legacy, FileManager.default.fileExists(atPath: instanceIdentity.path) else { return false }
+        return try Data(contentsOf: instanceIdentity) == marker
+    }
+
     var database: URL { directory.appending(path: "db.sqlite", directoryHint: .notDirectory) }
 
     /// Restore workspace (`RestoreTransaction`): next to the datadir, so on

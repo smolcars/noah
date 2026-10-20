@@ -145,7 +145,7 @@ struct SettingsView: View {
 }
 
 /// RN's delete confirmation: type "delete" to enable the button.
-private struct DeleteWalletSheet: View {
+struct DeleteWalletSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var confirmation = ""

@@ -32,6 +32,7 @@ struct WalletRestorer: Sendable {
     /// Same cap as the server's `MAX_BACKUP_OBJECT_SIZE_BYTES`.
     static let maxEncryptedBytes: Int64 = 256 * 1024 * 1024
 
+    var mutation: WalletMutationGate = .shared
     let variant: AppVariant
     let session: WalletSession
     let location: WalletDataLocation
@@ -55,6 +56,13 @@ struct WalletRestorer: Sendable {
     /// Restores into a closed session and leaves it closed; open the wallet
     /// afterwards as usual.
     func restore(mnemonic: String, progress: @Sendable (Step) -> Void = { _ in }) async throws -> Outcome {
+        try await mutation.withLock { try await restoreLocked(mnemonic: mnemonic, progress: progress) }
+    }
+
+    private func restoreLocked(mnemonic: String, progress: @Sendable (Step) -> Void) async throws -> Outcome {
+        guard !FileManager.default.fileExists(atPath: location.deletionMarker.path) else {
+            throw WalletSession.OpenError.restorePending
+        }
         let reservation = try await session.reserve()
         do {
             let outcome = try await restore(mnemonic: mnemonic, holding: reservation, progress: progress)
@@ -263,10 +271,12 @@ struct WalletRestorer: Sendable {
 /// reservation the first held and failed. A restore actually in flight still
 /// rejects them.
 actor RestoreRecovery {
+    private let mutation: WalletMutationGate
     private let recover: @Sendable () async throws -> RestoreTransaction.Recovery
     private var tail: Task<RestoreTransaction.Recovery, any Error>?
 
-    init(recover: @escaping @Sendable () async throws -> RestoreTransaction.Recovery) {
+    init(mutation: WalletMutationGate = .shared, recover: @escaping @Sendable () async throws -> RestoreTransaction.Recovery) {
+        self.mutation = mutation
         self.recover = recover
     }
 
@@ -274,7 +284,7 @@ actor RestoreRecovery {
         let previous = tail
         let pass = Task { [recover] in
             _ = await previous?.result
-            return try await recover()
+            return try await mutation.withLock { try await recover() }
         }
         tail = pass
         return try await pass.value

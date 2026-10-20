@@ -221,7 +221,10 @@ struct WalletRestorerTests {
         await #expect(throws: WalletSession.OpenError.busy) { try await session.reserve() }
         await #expect(throws: WalletSession.OpenError.busy) { try await session.close() }
         #expect(try await session.summary() == nil)
-        await #expect(throws: WalletSession.OpenError.busy) { try await restorer.restore(mnemonic: mnemonic) }
+        // Even a caller with a separate mutation gate cannot bypass the session reservation.
+        var competing = restorer
+        competing.mutation = WalletMutationGate()
+        await #expect(throws: WalletSession.OpenError.busy) { try await competing.restore(mnemonic: mnemonic) }
 
         await gate.release()
         await #expect(throws: OpenRefused.self) { try await restore.value }

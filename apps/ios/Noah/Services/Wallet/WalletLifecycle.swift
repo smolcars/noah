@@ -25,6 +25,7 @@ struct WalletLifecycle: Sendable {
         var settings: SettingsStorage
         var scratch: ScratchSpace
         var appGroup: String?
+        var mutation: WalletMutationGate = .shared
         /// Best effort, like RN (`/v0/deregister`).
         var deregister: @Sendable () async throws -> Void
         var settleBackground: @Sendable () async -> Void = {}
@@ -53,14 +54,29 @@ struct WalletLifecycle: Sendable {
 
     /// Finish a committed deletion before launch inspects the seed and datadir.
     func recoverDeletion() async throws {
-        if FileManager.default.fileExists(atPath: dependencies.location.deletionMarker.path) {
-            try await delete()
+        try await dependencies.mutation.withLock { try await recoverDeletionLocked() }
+    }
+
+    /// Called by RestoreRecovery while it owns the same mutation gate.
+    func recoverDeletionLocked() async throws {
+        let location = dependencies.location
+        guard FileManager.default.fileExists(atPath: location.deletionMarker.path) else { return }
+        guard try location.deletionMatchesWallet() else {
+            AppLog("walletLifecycle").w("Discarding deletion marker for a different or unidentifiable wallet")
+            try FileManager.default.removeItem(at: location.deletionMarker)
+            try RestoreTransaction.fullSync(location.directory.deletingLastPathComponent())
+            return
         }
+        try await deleteLocked()
     }
 
     /// Drain operations and clean temporary files before committing deletion.
     /// Once the marker is durable, files precede secrets and relaunch finishes any interruption.
     func delete() async throws {
+        try await dependencies.mutation.withLock { try await deleteLocked() }
+    }
+
+    private func deleteLocked() async throws {
         let wasSuspended = dependencies.settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == true
         try setSuspended(true)
         var ownsScratch = false
@@ -76,8 +92,8 @@ struct WalletLifecycle: Sendable {
                 do { try dependencies.scratch.sweepForWalletDeletion() }
                 catch { throw Failure.temporaryFiles }
                 let marker = dependencies.location.deletionMarker
-                if !FileManager.default.fileExists(atPath: marker.path) {
-                    try Data([1]).write(to: marker, options: .atomic)
+                if try !FileManager.default.fileExists(atPath: marker.path) || !dependencies.location.deletionMatchesWallet() {
+                    try dependencies.location.writeDeletionIdentity()
                     let handle = try FileHandle(forWritingTo: marker)
                     try handle.synchronize()
                     try handle.close()
@@ -107,7 +123,12 @@ struct WalletLifecycle: Sendable {
         let location = dependencies.location
         guard !location.restorePending else { throw Failure.restorePending }
         if fileManager.fileExists(atPath: location.directory.path) {
-            try fileManager.removeItem(at: location.directory)
+            // Rename before recursive removal: recovery never sees a partial instance identity.
+            try fileManager.moveItem(at: location.directory, to: location.deletionDirectory)
+            try RestoreTransaction.fullSync(location.directory.deletingLastPathComponent())
+        }
+        if fileManager.fileExists(atPath: location.deletionDirectory.path) {
+            try fileManager.removeItem(at: location.deletionDirectory)
         }
         if fileManager.fileExists(atPath: location.restoreDirectory.path) {
             try fileManager.removeItem(at: location.restoreDirectory)
