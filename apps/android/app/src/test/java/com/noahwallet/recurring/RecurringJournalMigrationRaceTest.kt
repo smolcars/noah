@@ -63,4 +63,28 @@ class RecurringJournalMigrationRaceTest {
             w.policyDirectory.parentFile!!.deleteRecursively()
         }
     }
+    @Test fun migrationFailureIsSharedUntilTheWalletInstanceChanges() = runBlocking {
+        val w = RecurringWorld(this)
+        try {
+            val s = w.add()
+            w.journal.save(RecurringJournal.Entry(w.binding, s.id, s.plan(w.now, w.zone, true), w.now, s.nativeRevision))
+            val root = RecurringStore.json.parseToJsonElement(checkNotNull(w.journalRaw)).jsonObject
+            var raw: String? = JsonObject(root + ("version" to JsonPrimitive(2))).toString()
+            var writes = 0
+            val executor = RecurringJournal.shared(w.journal.file, w.binding) { file ->
+                RecurringJournal(file, { raw }, { writes++; error("migration fsync failed") }, quarantine = {})
+            }
+            assertTrue(runCatching { executor.load() }.isFailure)
+            val send = RecurringJournal.shared(w.journal.file.canonicalFile, w.binding)
+            assertSame(executor, send)
+            assertTrue(runCatching { send.load() }.isFailure)
+            assertEquals(1, writes)
+            // A same-path replacement is a different wallet instance, admitted by lifecycle.
+            raw = null
+            val replacement = w.binding.copy(instance = java.util.UUID.randomUUID().toString())
+            assertSame(send, RecurringJournal.shared(w.journal.file, replacement))
+            assertTrue(send.load().isEmpty())
+        } finally { w.policyDirectory.parentFile!!.deleteRecursively() }
+    }
+
 }
