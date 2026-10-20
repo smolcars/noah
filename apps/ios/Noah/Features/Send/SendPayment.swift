@@ -486,6 +486,10 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         case .alreadyPaid, .failed: break
         default: return
         }
+        clearAttempt()
+    }
+    private func clearAttempt() {
+        guard !checking else { return }
         if let attempt, attempt.recurringOccurrenceKey != nil, !recurringEvidenceDurable {
             do {
                 guard let persistRecurringEvidence else { throw SendFailure.unresolved }
@@ -493,10 +497,6 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                 recurringEvidenceDurable = true
             } catch { message = "Unable to save payment status."; return }
         }
-        clearAttempt()
-    }
-    private func clearAttempt() {
-        guard !checking else { return }
         do {
             try dependencies.write(nil)
             recurringEvidenceDurable = false
@@ -540,9 +540,9 @@ extension SendPaymentController.Dependencies {
             withReservation: { try await session.withSendReservation($0) },
             auditOverride: { try SendOverrideAudit.append($0, to: location.directory.appending(path: "noah-send-overrides.json")) },
             withRecurringReservation: { try await session.withSendReservation($0, exclusive: true) },
-            recurringEvidence: { attempt, generation, walletGeneration, state, message in
+            recurringEvidence: { attempt, generation, walletGeneration, _, message in
                 try RecurringJournal(file: location.directory.appending(path: "noah-recurring-journal.json"))
-                    .record(attempt, generation: generation, walletGeneration: walletGeneration, state: state,
+                    .record(attempt, generation: generation, walletGeneration: walletGeneration,
                             message: message, binding: RecurringStore.binding(location: location), now: RecurringPayment.now)
             },
             guardedPay: { try await session.submitSend($0, quote: $1, snapshot: $2, beforeSubmit: $3) })

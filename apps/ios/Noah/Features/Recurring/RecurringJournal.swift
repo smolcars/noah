@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// Independent fsynced marker: MMKV and the Send receipt can both lag a killed process.
 struct RecurringJournal {
     struct Entry: Codable, Sendable {
@@ -171,16 +170,14 @@ struct RecurringJournal {
         try write(migrated)
         return migrated
     }
-    /// Called inside Send's owning wallet reservation, before publishing a terminal result.
+    /// Durable handoff before Send publishes a terminal result.
     func record(_ attempt: SendPaymentController.Attempt, generation: Int, walletGeneration: Int,
-                state: SendPaymentController.State, message: String?, binding: RecurringStore.Binding, now: Double) throws {
+                message: String?, binding: RecurringStore.Binding, now: Double) throws {
         let outcome: TerminalEvidence.Outcome
-        switch state {
-        case .succeeded(let receipt) where receipt.broadcastRetryPending != true: outcome = .succeeded
-        case .alreadyPaid: outcome = .alreadyPaid
-        case .failed: outcome = .failed
-        default: outcome = .uncertain
-        }
+        if attempt.alreadyPaid != nil { outcome = .alreadyPaid }
+        else if let receipt = attempt.receipt, !receipt.isUnresolved, receipt.broadcastRetryPending != true { outcome = .succeeded }
+        else if attempt.failed { outcome = .failed }
+        else { outcome = .uncertain }
         guard let key = attempt.recurringOccurrenceKey,
               var entry = try load().values.first(where: { $0.key == key && $0.binding == binding }),
               attempt.walletIdentity == binding.wallet else { throw RecurringError.message(Self.invalidMessage) }
@@ -188,6 +185,8 @@ struct RecurringJournal {
         if let old = entry.terminal {
             guard old.attempt.recurringAttemptID == attempt.recurringAttemptID else { throw RecurringError.message(Self.invalidMessage) }
             if old.outcome != .uncertain { return }
+            let encoder = JSONEncoder(); encoder.outputFormatting = .sortedKeys
+            if old.outcome == outcome, try encoder.encode(old.attempt) == encoder.encode(attempt) { return }
         }
         entry.terminal = .init(settlementID: entry.terminal?.settlementID ?? UUID(), attempt: attempt, generation: generation, walletGeneration: walletGeneration,
                                outcome: outcome, message: message, recordedAt: now)

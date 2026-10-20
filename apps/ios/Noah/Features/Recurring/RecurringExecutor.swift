@@ -42,11 +42,11 @@ import Observation
         d = dependencies
         d.store.protectPolicies(file: d.journal.file.appendingPathExtension("policies"), binding: d.binding)
         let journal = d.journal, binding = d.binding, now = d.now
-        d.controller.persistRecurringEvidence = { attempt, generation, walletGeneration, state, message in
+        d.controller.persistRecurringEvidence = { attempt, generation, walletGeneration, _, message in
             guard FileManager.default.fileExists(atPath: journal.file.deletingLastPathComponent().path) else { throw NoWallet() }
             let owner = try binding()
             guard try binding() == owner else { throw NoWallet() }
-            try journal.record(attempt, generation: generation, walletGeneration: walletGeneration, state: state, message: message, binding: owner, now: now())
+            try journal.record(attempt, generation: generation, walletGeneration: walletGeneration, message: message, binding: owner, now: now())
         }
         if d.controller.state == .storageBlocked, d.controller.attempt?.recurringOccurrenceKey != nil { d.controller.reloadForWalletChange() }
     }
@@ -289,6 +289,9 @@ import Observation
     }
     private func markUncertain(_ entry: RecurringJournal.Entry, message: String? = nil) async throws {
         let stopped = try await storage { [self] () throws -> RecurringPayment? in
+            guard let saved = try d.journal.load()[entry.scheduleID], !saved.resolved,
+                  saved.binding == entry.binding, saved.plan == entry.plan, saved.policyRevision == entry.policyRevision,
+                  saved.markedAt == entry.markedAt else { return nil }
             let state = try d.store.load()
             guard try d.binding() == entry.binding, state.binding == entry.binding,
                   var latest = state.schedules[entry.scheduleID], latest.nativeRevision == entry.policyRevision else { return nil }
@@ -348,9 +351,6 @@ import Observation
             try d.journal.save(saved)
             return notification
         }
-        // Releasing the shared Send slot has no part in preserving recurring evidence.
-        let released = try await storage { [self] in try d.journal.load()[entry.scheduleID]?.released == true && d.binding() == entry.binding }
-        if released { d.controller.releaseRecurring(attemptID: evidence.attempt.recurringAttemptID, expectedGeneration: evidence.generation, expectedWalletGeneration: evidence.walletGeneration, retainReceipt: retainReceipt) }
         if let notification { await d.notifications([], notification) }
     }
     func checkStatus(_ id: String) async {
@@ -433,6 +433,9 @@ import Observation
         await changed()
     }
     func overrideAndResume(_ id: String, confirmed: Bool) async throws {
+        guard confirmed, !running else { return }
+        if let entry = try await storage({ [self] in try d.journal.load()[id] }),
+           let terminal = entry.terminal, terminal.outcome != .uncertain { try await settle(entry) }
         try await storage { [self] in
             guard confirmed, !running else { return }
             _ = try boundStateNow()
@@ -446,7 +449,11 @@ import Observation
             }
             // Includes RN in-flight markers that predate Send. Audit before releasing the occurrence.
             try auditLegacyOverride(schedule)
-            if var entry = try d.journal.load()[id] { entry.resolved = true; entry.consumed = true; try d.journal.save(entry) }
+            if var entry = try d.journal.load()[id] {
+                entry.resolved = true; entry.consumed = true
+                if entry.terminal != nil { entry.historyApplied = true; entry.released = true }
+                try d.journal.save(entry)
+            }
             schedule.resume(now: d.now(), zone: d.zone())
             try d.store.upsert(schedule)
         }
