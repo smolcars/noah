@@ -80,6 +80,7 @@ class LogFile(private val directory: File) {
         private val bip39 = requireNotNull(LogFile::class.java.getResourceAsStream("/bip39-english.txt"))
             .bufferedReader().use { it.readLines().toSet() }
         private val words = Regex("[\\p{L}\\p{M}]+")
+        private val urlUserinfo = Regex("""(?i)(\b[a-z][a-z0-9+.-]*://)[^\s/@<>"']+@""")
         private val sensitivePatterns = listOf(
             """(?is)\b[\w.-]*(?:email|lightning[_ -]?address)[\w.-]*["']?\s*[:=].*""",
             """(?i)\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,63}\b""",
@@ -93,7 +94,7 @@ class LogFile(private val directory: File) {
 
         fun redact(message: String): String {
             if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return "[oversized log message omitted]"
-            var result = message
+            var result = urlUserinfo.replace(message) { "${it.groupValues[1]}[redacted]@" }
             for (pattern in sensitivePatterns) result = pattern.replace(result, "[redacted]")
             val decomposed = Normalizer.normalize(result, Normalizer.Form.NFKD)
             val normalized = decomposed.lowercase(Locale.ROOT).replace("ß", "ss")

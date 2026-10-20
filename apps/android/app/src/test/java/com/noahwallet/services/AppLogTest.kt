@@ -29,6 +29,7 @@ class AppLogTest {
         assertRedactionCases("r2-separator-")
     }
     @Test fun unicodeEquivalentMnemonicsAreRedacted() { assertRedactionCases("r2-mnemonic-") }
+    @Test fun urlUserinfoCredentialsAreRedacted() { assertRedactionCases("r2-userinfo-") }
 
     private fun assertRedactionCases(prefix: String) {
         for (case in SharedFixtures.load("log-redaction").filter { it.name.startsWith(prefix) }) {

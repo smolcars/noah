@@ -457,6 +457,31 @@
       "expected": "ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábout"
     },
     {
+      "name": "r2-userinfo-ipv4",
+      "input": "request https://alice:synthetic-password@127.0.0.1:3000/status",
+      "expected": "request https://[redacted]@127.0.0.1:3000/status"
+    },
+    {
+      "name": "r2-userinfo-ipv6",
+      "input": "request https://alice:synthetic-password@[::1]:3000/status",
+      "expected": "request https://[redacted]@[::1]:3000/status"
+    },
+    {
+      "name": "r2-userinfo-ftp",
+      "input": "request ftp://alice:fake-password@localhost/file",
+      "expected": "request ftp://[redacted]@localhost/file"
+    },
+    {
+      "name": "r2-userinfo-username",
+      "input": "request postgres://synthetic-token@localhost/db",
+      "expected": "request postgres://[redacted]@localhost/db"
+    },
+    {
+      "name": "r2-userinfo-domain",
+      "input": "request https://alice:fake-password@example.invalid/status",
+      "expected": "request https://[redacted]@example.invalid/status"
+    },
+    {
       "name": "r2-negative-bitcoin",
       "input": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
       "expected": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
