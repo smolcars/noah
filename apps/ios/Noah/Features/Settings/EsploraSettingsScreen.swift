@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct EsploraSettingsScreen: View {
+    @Environment(AppModel.self) private var model
     @State private var selection = EsploraSettings().selection(for: .current)
     @State private var input = ""
     @State private var busy = false
@@ -59,6 +60,7 @@ struct EsploraSettingsScreen: View {
                 input = effectiveEndpoint
                 message = selection.endpoint == nil ? "The wallet is now using Noah's default Esplora endpoint." : "The wallet is now using the new Esplora endpoint."
             } catch { self.error = error.localizedDescription }
+            await model.walletConfigurationChanged()
         }
     }
 }

@@ -113,7 +113,7 @@ struct WalletTabs: View {
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { recurringRoute.presented = false } } }
             }
         }
-        .task(id: app.summary == nil ? nil : app.preferredCurrency) {
+        .task(id: app.summary == nil ? nil : "\(app.preferredCurrency):\(app.walletSessionRevision)") {
             guard app.summary != nil else { return }
             await history.observe(currency: app.preferredCurrency)
         }

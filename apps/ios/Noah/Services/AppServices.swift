@@ -106,8 +106,7 @@ final class AppServices: Sendable {
                     throw EsploraEndpoint.Failure(message: "Open your wallet before changing the endpoint.")
                 }
                 let mnemonic = try readMnemonic()
-                try await session.closeForConfigurationChange()
-                let reservation = try await session.reserve()
+                let reservation = try await session.reserveForConfigurationChange()
                 do {
                     try await EsploraSettings().change(to: candidate) { [self] selection, commit in
                         try await EsploraOpening.$selection.withValue(selection) {

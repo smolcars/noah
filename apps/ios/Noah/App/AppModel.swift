@@ -18,6 +18,7 @@ final class AppModel {
 
     private(set) var phase: Phase = .launching
     private(set) var summary: WalletSession.Summary?
+    private(set) var walletSessionRevision = 0
     private(set) var walletError: String?
     private(set) var resumeOnboarding = false
     private(set) var isRestoring = false
@@ -43,6 +44,20 @@ final class AppModel {
     func setLanguage(_ code: String) {
         UserDefaults.standard.set(code, forKey: LegacyLocale.key)
         localeIdentifier = code
+    }
+
+    /// Closing a session ends its streams, even when its wallet identity stays the same.
+    func walletConfigurationChanged() async {
+        if let running = backupTriggers {
+            running.task.cancel()
+            await running.task.value
+            backupTriggers = nil
+        }
+        walletSessionRevision += 1
+        if await session.isOpen {
+            await refresh()
+            await reconcileBackupTriggers()
+        }
     }
 
     func backupSettingsChanged() async { await reconcileBackupTriggers() }

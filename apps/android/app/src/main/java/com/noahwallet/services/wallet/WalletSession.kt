@@ -462,16 +462,28 @@ class WalletSession internal constructor(
         close()
     }
 
-    suspend fun close(refuseRunning: Boolean = false) = withContext(NonCancellable + Dispatchers.IO) {
+    suspend fun close() = close(false, null)
+
+    internal suspend fun reserveForConfigurationChange(): Reservation {
+        val reservation = Reservation()
+        close(refuseRunning = true, reservation)
+        return reservation
+    }
+
+    private suspend fun close(refuseRunning: Boolean, reservation: Reservation?) = withContext(NonCancellable + Dispatchers.IO) {
+        var quarantined = false
         val handles = synchronized(lock) {
             if (refuseRunning && (runningCalls != 0 || exclusiveSend)) {
                 throw EsploraEndpoint.Failure("Wait for the current wallet operation to finish before changing the endpoint.")
             }
             if (exclusiveSend) throw OpenError(OpenFailure.busy)
             when (val current = state) {
-                State.Closed -> return@withContext
+                State.Closed -> {
+                    if (reservation != null) state = State.Reserved(reservation)
+                    return@withContext
+                }
                 is State.Open -> current.handles.also { state = State.Closing }
-                is State.Quarantined -> current.handles.also { state = State.Closing }
+                is State.Quarantined -> current.handles.also { quarantined = true; state = State.Closing }
                 else -> throw OpenError(OpenFailure.busy)
             }
         }
@@ -488,7 +500,7 @@ class WalletSession internal constructor(
                     handles.discardSendReviews()
                     handles.stopDaemonWait()
                 } catch (failure: Throwable) {
-                    synchronized(lock) { state = if (location.restorePending) State.Quarantined(handles) else State.Open(handles) }
+                    synchronized(lock) { state = if (quarantined || location.restorePending) State.Quarantined(handles) else State.Open(handles) }
                     throw failure
                 }
                 try { handles.close() }
@@ -496,7 +508,7 @@ class WalletSession internal constructor(
                     synchronized(lock) { state = State.Quarantined(handles) }
                     throw failure
                 }
-                synchronized(lock) { state = State.Closed; walletChanged() }
+                synchronized(lock) { state = reservation?.let { State.Reserved(it) } ?: State.Closed; walletChanged() }
             }
         }
     }

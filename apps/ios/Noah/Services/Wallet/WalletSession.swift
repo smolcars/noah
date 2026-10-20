@@ -52,6 +52,7 @@ actor WalletSession {
         case closed
         case opening(Task<Handles, Error>)
         case open(Handles)
+        case quarantined(Handles)
         case closing
         /// Held by a restore, a wallet creation or launch recovery; everyone
         /// else sees `busy`.
@@ -118,7 +119,7 @@ actor WalletSession {
         guard backgroundOwner == nil, runningCalls == 0, !sendReserved,
               sendPreparations.isEmpty, boardPreparations.isEmpty else { throw OpenError.busy }
         switch state {
-        case .opening, .closing, .reserved: throw OpenError.busy
+        case .opening, .closing, .reserved, .quarantined: throw OpenError.busy
         case .closed, .open: break
         }
         let owner = UUID()
@@ -201,7 +202,7 @@ actor WalletSession {
             return
         case .opening(let inFlight):
             _ = try await inFlight.value
-        case .closing, .reserved:
+        case .closing, .reserved, .quarantined:
             throw OpenError.busy
         case .closed:
             try await openExisting(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion)
@@ -210,15 +211,19 @@ actor WalletSession {
 
     /// Stops new wallet calls, waits for the running ones, then stops the
     /// daemon. Only then is the session closed.
-    func close() async throws {
+    func close() async throws { try await close(reserving: nil) }
+
+    private func close(reserving reservation: Reservation?) async throws {
         try checkAccess()
         guard !sendReserved else { throw OpenError.busy }
+        let previousState = state
         switch state {
         case .closed:
+            if let reservation { state = .reserved(reservation.id) }
             return
         case .opening, .closing, .reserved:
             throw OpenError.busy
-        case .open(let handles):
+        case .open(let handles), .quarantined(let handles):
             state = .closing
             await stopObservers()
             await callsDrained()
@@ -227,20 +232,22 @@ actor WalletSession {
                 try await discardBoardReviews()
                 try await Task { try await handles.wallet.stopDaemonWait() }.value
             } catch {
-                state = .open(handles)
+                state = previousState
                 throw error
             }
-            state = .closed
+            state = reservation.map { .reserved($0.id) } ?? .closed
         }
     }
 
     /// Refuse all counted work (including send, board, exit and recurring settlement).
     /// close changes state before its first await, so no new operation can enter.
-    func closeForConfigurationChange() async throws {
+    func reserveForConfigurationChange() async throws -> Reservation {
         guard runningCalls == 0, !sendReserved, !exclusiveSend else {
             throw EsploraEndpoint.Failure(message: "Wait for the current wallet operation to finish before changing the endpoint.")
         }
-        try await close()
+        let reservation = Reservation(id: UUID())
+        try await close(reserving: reservation)
+        return reservation
     }
 
     /// Keep the reservation until the new configuration is durably committed.
@@ -252,7 +259,7 @@ actor WalletSession {
         do { try commit() }
         catch {
             do { try await Task { try await handles.wallet.stopDaemonWait() }.value }
-            catch { state = .open(handles); throw OpenError.teardownFailed }
+            catch { state = .quarantined(handles); throw OpenError.teardownFailed }
             throw error
         }
         state = .open(handles)

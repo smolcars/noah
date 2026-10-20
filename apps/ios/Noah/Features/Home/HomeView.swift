@@ -16,7 +16,8 @@ struct HomeView: View {
     let onRepeatPayment: (RepeatPayment) -> Void
 
     private var observationWalletID: String? {
-        scenePhase == .active && !model.isWalletSuspended ? model.summary?.fingerprint : nil
+        scenePhase == .active && !model.isWalletSuspended
+            ? model.summary.map { "\($0.fingerprint):\(model.walletSessionRevision)" } : nil
     }
 
     var body: some View {

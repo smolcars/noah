@@ -35,7 +35,10 @@ fun EsploraSettingsScreen(model: AppModel) {
                 model.services.startServerServices()
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (failure: Exception) { error = failure.message ?: "Endpoint not changed" }
-            finally { selection = store.selection(BuildConfig.APP_VARIANT) }
+            finally {
+                selection = store.selection(BuildConfig.APP_VARIANT)
+                model.services.reconcileBackupTriggers()
+            }
         }
     }
     SettingsColumn {
