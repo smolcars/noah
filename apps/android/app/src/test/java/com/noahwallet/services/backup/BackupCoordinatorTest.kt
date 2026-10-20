@@ -37,6 +37,33 @@ class BackupCoordinatorTest {
             sleep = clock::sleep, jitter = { 1.0 }, now = { 1000.0 }))
     }
     private suspend fun eventually(condition: () -> Boolean) = withTimeout(5000) { while (!condition()) delay(2) }
+    @Test fun deletingLatestSchedulesDebouncedReplacementOnlyWhenEligible() = runBlocking {
+        val w = World()
+        w.coordinator.flush(BackupCoordinator.Reason.manual)
+        w.coordinator.forgetUploadedBackup("other")
+        assertTrue(w.clock.pending().isEmpty())
+        w.coordinator.forgetUploadedBackup("id-sha-1")
+        eventually { w.clock.pending() == listOf(5000L) }
+        assertEquals(1, w.calls.size)
+        w.clock.fire()
+        eventually { w.calls.size == 2 && w.state.lastBackupStatus == "success" }
+        assertEquals(listOf<String?>(null, null), w.calls)
+        w.coordinator.cancelScheduled()
+    }
+
+    @Test fun deletingLatestWhileDisabledOrSuspendedDoesNotSchedule() = runBlocking {
+        for (suspended in listOf(false, true)) {
+            val w = World()
+            w.coordinator.flush(BackupCoordinator.Reason.manual)
+            w.enabled = suspended; w.eligible = !suspended
+            w.coordinator.forgetUploadedBackup("id-sha-1")
+            assertNull(w.state.lastUploadedSnapshotSha256)
+            assertTrue(w.state.backupPending)
+            assertTrue(w.clock.pending().isEmpty())
+            assertEquals(1, w.calls.size)
+        }
+    }
+
     @Test fun statusSnapshotsPublishOnlyAfterPersistenceAndRetainEarlierValues() = runBlocking {
         val w = World()
         val initial = w.coordinator.statusChanges.value
@@ -125,7 +152,9 @@ class BackupCoordinatorTest {
         yield(); assertFalse(deletion.isCompleted)
         gate.complete(Unit); pass.await(); deletion.await()
         assertNull(w.state.lastUploadedSnapshotSha256); assertNull(w.state.lastBackupId); assertTrue(w.state.backupPending)
-        w.coordinator.flush(BackupCoordinator.Reason.manual, false)
+        eventually { w.clock.pending() == listOf(5000L) }
+        w.clock.fire()
+        eventually { w.calls.size == 3 && w.state.lastBackupStatus == "success" }
         assertNull(w.calls.last())
         w.coordinator.cancelScheduled()
     }

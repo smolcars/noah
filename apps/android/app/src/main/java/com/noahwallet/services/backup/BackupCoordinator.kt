@@ -73,7 +73,9 @@ class BackupCoordinator(private val dependencies: Dependencies) {
         while (true) {
             val pass = synchronized(lock) {
                 inFlight ?: run {
-                    update { it.forgetUploadedBackup(id) }
+                    var deletedCurrent = false
+                    update { deletedCurrent = it.forgetUploadedBackup(id) }
+                    if (deletedCurrent) schedule(Reason.manual)
                     return
                 }
             }
