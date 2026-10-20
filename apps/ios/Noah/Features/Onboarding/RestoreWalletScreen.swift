@@ -111,19 +111,28 @@ struct RestoreWalletScreen: View {
     }
 
     private func suggestions(at index: Int) -> some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 20) {
-                ForEach(input.suggestions(at: index), id: \.self) { word in
-                    Button(word) {
-                        input.update(word, at: index)
-                        focusedWord = index < 11 ? index + 1 : nil
-                    }
-                    .frame(minHeight: 44)
+        let words = input.suggestions(at: index)
+        // Only the fitting row exists visually or for VoiceOver: no offscreen suggestions,
+        // full-phrase labels or hidden input. Each button announces exactly its visible word.
+        return ViewThatFits(in: .horizontal) {
+            suggestionButtons(words, at: index)
+            suggestionButtons(Array(words.prefix(3)), at: index)
+            suggestionButtons(Array(words.prefix(1)), at: index)
+        }
+    }
+
+    private func suggestionButtons(_ words: [String], at index: Int) -> some View {
+        HStack(spacing: 20) {
+            ForEach(words, id: \.self) { word in
+                Button(word) {
+                    input.update(word, at: index)
+                    focusedWord = index < 11 ? index + 1 : nil
                 }
+                .accessibilityLabel(Text(word))
+                .frame(minHeight: 44)
             }
         }
-        .fixedSize(horizontal: false, vertical: true)
-        .scrollIndicators(.hidden)
+        .fixedSize(horizontal: true, vertical: true)
     }
 
     private var progressMessage: String {
@@ -168,14 +177,6 @@ struct RecoveryWordField: UIViewRepresentable {
     func makeUIView(context: Context) -> RecoveryWordTextField {
         let field = RecoveryWordTextField()
         field.delegate = context.coordinator
-        field.autocorrectionType = .no
-        field.autocapitalizationType = .none
-        field.spellCheckingType = .no
-        field.smartQuotesType = .no
-        field.smartDashesType = .no
-        field.keyboardType = .asciiCapable
-        field.inlinePredictionType = .no
-        field.textContentType = .none
         field.returnKeyType = index == 11 ? .done : .next
         field.font = UIFont.preferredFont(forTextStyle: .body)
         field.adjustsFontForContentSizeCategory = true
@@ -224,4 +225,21 @@ struct RecoveryWordField: UIViewRepresentable {
 /// Recovery words must never be retained in UIKit's shared undo manager.
 final class RecoveryWordTextField: UITextField {
     override var undoManager: UndoManager? { nil }
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        // Visible entry is intentional. AppDelegate blocks keyboard extensions; disable
+        // system predictions and text transformations without hiding typed words.
+        autocorrectionType = .no
+        spellCheckingType = .no
+        smartQuotesType = .no
+        smartDashesType = .no
+        smartInsertDeleteType = .no
+        inlinePredictionType = .no
+        textContentType = nil
+        keyboardType = .asciiCapable
+        autocapitalizationType = .none
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 }

@@ -173,6 +173,26 @@ struct RestoreIssueTests {
 
 @MainActor
 struct RestoreFieldPrivacyTests {
+    @Test func visibleRecoveryFieldDisablesPredictionsAndTextTransformations() {
+        let field = RecoveryWordTextField()
+        #expect(!field.isSecureTextEntry) // Visible words are a deliberate usability decision.
+        #expect(field.autocorrectionType == .no)
+        #expect(field.spellCheckingType == .no)
+        #expect(field.smartQuotesType == .no)
+        #expect(field.smartDashesType == .no)
+        #expect(field.smartInsertDeleteType == .no)
+        #expect(field.inlinePredictionType == .no)
+        #expect(field.textContentType == nil)
+        #expect(field.keyboardType == .asciiCapable)
+        #expect(field.autocapitalizationType == .none)
+    }
+
+    @Test func appRejectsOnlyThirdPartyKeyboardExtensions() {
+        let delegate = AppDelegate()
+        #expect(!delegate.application(UIApplication.shared, shouldAllowExtensionPointIdentifier: .keyboard))
+        #expect(delegate.application(UIApplication.shared, shouldAllowExtensionPointIdentifier: .init(rawValue: "unrelated.extension")))
+    }
+
     @Test func recoveryFieldCannotUndoAfterClearingOrDismantling() {
         let field = RecoveryWordTextField()
         field.insertText("abandon")

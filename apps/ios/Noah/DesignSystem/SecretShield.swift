@@ -5,7 +5,8 @@ extension View {
     /// Hides secret content (recovery phrase) while the app is not active,
     /// so the app-switcher snapshot never contains it, and while the screen
     /// is being recorded, mirrored or shared. Screenshots themselves cannot
-    /// be blocked on iOS.
+    /// be blocked on iOS. While visible, system VoiceOver reads only the same
+    /// content shown on screen; shielding also removes it from accessibility.
     func secretShield() -> some View {
         modifier(SecretShield())
     }

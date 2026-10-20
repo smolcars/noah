@@ -15,6 +15,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
+    /// Restore words stay visible for RN parity. System VoiceOver can read visible content;
+    /// iOS has no third-party accessibility services, but keyboard extensions could log it.
+    /// Block those app-wide so a non-secure recovery field never hands them keystrokes.
+    func application(_ application: UIApplication, shouldAllowExtensionPointIdentifier identifier: UIApplication.ExtensionPointIdentifier) -> Bool {
+        identifier != .keyboard
+    }
+
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         PushRegistration.shared.deliver(.success(deviceToken))
     }
