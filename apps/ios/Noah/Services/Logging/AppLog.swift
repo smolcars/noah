@@ -288,7 +288,7 @@ final class LogFile: @unchecked Sendable {
         return code.flatMap(UnicodeScalar.init).map(String.init)
     }
 
-    private static func redactPlain(_ message: String) -> String {
+    static func redactPlain(_ message: String) -> String {
         var result = replaceTokens(in: message, tokens: schemeTokens, pattern: urlUserinfo,
                                    start: schemeStart, template: "$1[redacted]@")
         result = redactLabels(result, addresses: true)

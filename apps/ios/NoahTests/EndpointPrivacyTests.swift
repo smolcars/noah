@@ -114,5 +114,13 @@ struct EndpointPrivacyTests {
                 #expect(EndpointLogPrivacy.sanitize(endpoint, registered: [origin]) == "[custom-esplora]")
             }
         }
+        let hosts: Set<String> = ["abandon", "mnemonic", "preimage", "password"]
+        let registered = Set(hosts.map { "https://" + $0 })
+        for test in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
+            where ["mnemonic-lower", "label-mnemonic", "label-preimage", "label-password"].contains(test.name) {
+            #expect(EndpointLogPrivacy.sanitize(test.input, registered: registered, hosts: hosts) == test.expected)
+            #expect(EndpointLogPrivacy.sanitize("TransportError HTTP 503: " + test.input, registered: registered, hosts: hosts) == "TransportError HTTP 503: " + test.expected)
+        }
+
     }
 }

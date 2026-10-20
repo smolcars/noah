@@ -56,17 +56,20 @@ enum EndpointLogPrivacy {
         return try? EsploraEndpoint.canonicalHost(ascii.lowercased().replacingOccurrences(of: #"\.+$"#, with: "", options: .regularExpression))
     }
     private static let plainAuthority = try! NSRegularExpression(pattern: #"^(?:\[[0-9a-fA-F:.]+\]|[a-zA-Z0-9.-]+)(?::[0-9]+)?$"#)
-    private static func allowed(_ value: String, registered: Set<String>) -> Bool {
-        guard !value.contains("\\"), value.removingPercentEncoding != nil, let authority = authority(value),
+    private static func allowed(_ value: String, registered: Set<String>, hosts: Set<String>) -> Bool {
+        let parts = value.components(separatedBy: "://")
+        guard parts.count == 2, !value.contains("\\"), value.removingPercentEncoding != nil, let authority = authority(value),
               plainAuthority.firstMatch(in: authority, range: NSRange(authority.startIndex..., in: authority)) != nil,
               let origin = origin(value), !registered.contains(origin), publicOrigins.contains(origin) else { return false }
         // Only the canonical IP spelling may inherit an allowlisted origin.
         let rawHost = authority.hasPrefix("[") ? String(authority.prefix { $0 != "]" }) + "]" : String(authority.prefix { $0 != ":" })
+        let tail = String(parts[1].dropFirst(authority.count))
         return rawHost.lowercased().replacingOccurrences(of: #"\.+$"#, with: "", options: .regularExpression) == host(value)
+            && redactHosts(tail, registered: hosts) == tail
     }
 
     private static let hostTokens = try! NSRegularExpression(
-        pattern: #"\[[^\[\]\s]+\](?::[^\s<>"'()/\\?#,\];{}!$&*=^`|]+)?|[^\s<>"'()/\\?#,\[\];{}!$&*=^`|]+"#)
+        pattern: #"\[[0-9a-fA-F.]*:[0-9a-fA-F:.]*(?:%[^\[\]\s]+)?\](?::[^\s<>"'()/\\?#,\];{}!$&*=^`|]+)?|[^\s<>"'()/\\?#,\[\];{}!$&*=^`|]+"#)
     private static func redactHosts(_ text: String, registered: Set<String>) -> String {
         var result = text
         let urlRanges = urls.matches(in: text, range: NSRange(text.startIndex..., in: text)).map(\.range)
@@ -76,10 +79,19 @@ enum EndpointLogPrivacy {
             if urlIndex >= 0 && NSIntersectionRange(urlRanges[urlIndex], match.range).length > 0 { continue }
             guard let range = Range(match.range, in: result) else { continue }
             let token = String(result[range])
-            if token.hasPrefix("["), !token.dropFirst().prefix(while: { $0 != "]" && $0 != "%" }).allSatisfy({ "0123456789abcdefABCDEF:.%".contains($0) }) { continue }
-            guard token.contains(".") || (token.hasPrefix("[") && token.contains(":")) || token.allSatisfy({ $0.isASCII && $0.isNumber }) || token.lowercased().hasPrefix("0x") else { continue }
+            guard token.contains(where: { $0.isLetter || $0.isNumber || !$0.isASCII }) else { continue }
+            let address = token.prefix { $0 != "%" }
+            if (address.contains("::") || address.filter({ $0 == ":" }).count == 7),
+               address.allSatisfy({ "0123456789abcdefABCDEF:.".contains($0) }) {
+                result.replaceSubrange(range, with: "[custom-esplora]"); continue
+            }
             let authority = String(token.split(separator: "@", omittingEmptySubsequences: false).last!)
             let rawHost = authority.hasPrefix("[") ? String(authority.prefix { $0 != "]" }) + "]" : String(authority.prefix { $0 != ":" })
+            guard !rawHost.isEmpty else { continue }
+            // Plain words need a registration; authority-shaped and encoded tokens require inspection.
+            guard registered.contains(rawHost.lowercased()) || token.contains(".") || token.contains(":") || token.contains("%")
+                || rawHost.allSatisfy({ $0.isASCII && $0.isNumber }) || rawHost.lowercased().hasPrefix("0x")
+                || token.contains(where: { !$0.isASCII }) else { continue }
             let canonical = host("https://" + rawHost)
             if canonical.map(registered.contains) ?? true { result.replaceSubrange(range, with: "[custom-esplora]") }
         }
@@ -128,18 +140,27 @@ enum EndpointLogPrivacy {
         guard !registered.isEmpty else { return text }
         var result = text
         for (index, view) in views.enumerated() {
-            var clean = view
-            for match in urls.matches(in: view, range: NSRange(view.startIndex..., in: view)).reversed() {
-                guard let range = Range(match.range, in: clean), !allowed(String(clean[range]), registered: registered) else { continue }
-                clean.replaceSubrange(range, with: "[custom-esplora]")
+            let endpointOnly = redactEndpoints(view, registered: registered, sensitive: sensitive, hosts: hosts)
+            if endpointOnly == "[custom-esplora]" || (index > 0 && endpointOnly != view) { return "[custom-esplora]" }
+            // Host replacement must not hide credential labels or break mnemonic runs.
+            let plain = LogFile.redactPlain(view)
+            if index > 0 && plain != view { return "[redacted]" }
+            if index == 0 {
+                result = plain == view ? endpointOnly : redactEndpoints(plain, registered: registered, sensitive: sensitive, hosts: hosts)
             }
-            // Inspect relative references separately: another origin never inherits our paths.
-            let relative = urls.stringByReplacingMatches(in: clean, range: NSRange(clean.startIndex..., in: clean), withTemplate: "")
-            if sensitive.contains(where: { relative.contains($0) }) { return "[custom-esplora]" }
-            clean = redactHosts(clean, registered: hosts)
-            if index > 0 && clean != view { return "[custom-esplora]" }
-            if index == 0 { result = clean }
         }
         return result
+    }
+
+    private static func redactEndpoints(_ text: String, registered: Set<String>, sensitive: Set<String>, hosts: Set<String>) -> String {
+        var clean = text
+        for match in urls.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+            guard let range = Range(match.range, in: clean), !allowed(String(clean[range]), registered: registered, hosts: hosts) else { continue }
+            clean.replaceSubrange(range, with: "[custom-esplora]")
+        }
+        // Inspect relative references separately: another origin never inherits our paths.
+        let relative = urls.stringByReplacingMatches(in: clean, range: NSRange(clean.startIndex..., in: clean), withTemplate: "")
+        if sensitive.contains(where: { relative.contains($0) }) { return "[custom-esplora]" }
+        return redactHosts(clean, registered: hosts)
     }
 }
