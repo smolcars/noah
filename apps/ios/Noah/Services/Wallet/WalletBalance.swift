@@ -85,6 +85,10 @@ struct WalletBalance: Equatable, Sendable {
     /// Unconfirmed onchain (pending + immature) plus pending Ark buckets.
     var pendingSats: UInt64 { (onchain.total - onchain.confirmed) + ark.pending }
 
+    func pendingRoundMessage(amount: String) -> String? {
+        ark.pendingInRound == 0 ? nil : "\(amount) pending in a round. These funds become available after the round confirms."
+    }
+
     struct Detail: Codable, Equatable {
         let label: String
         let sats: UInt64

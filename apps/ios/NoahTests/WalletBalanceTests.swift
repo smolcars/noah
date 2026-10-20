@@ -28,6 +28,11 @@ struct WalletBalanceTests {
         for fixture in try Fixtures.load("home-balance-details", input: Input.self, expected: [WalletBalance.Detail].self) {
             let balance = WalletBalance(ark: fixture.input.ark, onchain: fixture.input.onchain)
             #expect(balance.details == fixture.expected)
+            #expect(balance.pendingRoundMessage(amount: "200 sats") == "200 sats pending in a round. These funds become available after the round confirms.")
+            #expect(balance.pendingRoundMessage(amount: "••••")?.hasPrefix("•••• pending") == true)
+            var ark = balance.ark
+            ark.pendingInRound = 0
+            #expect(WalletBalance(ark: ark, onchain: balance.onchain).pendingRoundMessage(amount: "0 sats") == nil)
             for row in balance.details {
                 for unit in [BitcoinAmountUnit.sats, .bip177] {
                     #expect(WalletBalance.display(row.sats, hidden: true, unit: unit, locale: .init(identifier: "en_US")) == "••••")

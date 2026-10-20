@@ -32,6 +32,11 @@ struct SendView: View {
                 model.btcPrice = response.rates.additionalProperties[app.preferredCurrency]
             }
         }
+        .onChange(of: app.summary) { _, summary in
+            model.arkBalance = summary?.balance.ark.spendable ?? 0
+            model.onchainBalance = summary?.balance.onchain.confirmed ?? 0
+            model.onchainTotal = summary?.balance.onchain.total ?? 0
+        }
         .onChange(of: model.stage) { _, _ in focus = nil }
         .onChange(of: model.controller.state) { _, state in if state != .ready { focus = nil } }
         .onChange(of: scenePhase) { _, phase in
@@ -140,6 +145,10 @@ struct SendView: View {
             Button(model.useFiat ? app.preferredCurrency : "sats") { model.toggleCurrency() }
                 .disabled(model.btcPrice == nil).accessibilityLabel("Switch amount currency")
             Text("\(model.arkBalance) sats available in Ark").foregroundStyle(NoahColor.mutedForeground)
+            if let balance = app.summary?.balance,
+               let message = balance.pendingRoundMessage(amount: "\(balance.ark.pendingInRound) sats") {
+                Text(message).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+            }
             if !model.parsed.isAmountEditable { Text("Amount set by payment request") }
             if focus == nil {
                 AmountKeypad(amount: $model.amount, decimal: model.useFiat).disabled(!model.parsed.isAmountEditable)

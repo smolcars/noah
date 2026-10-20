@@ -258,6 +258,9 @@ private struct BalanceHeader: View {
                     Text("Pending balance: \(WalletBalance.display(balance.pendingSats, hidden: isHidden, unit: unit, locale: locale))")
                         .font(NoahFont.footnote)
                 }
+                if let message = balance.pendingRoundMessage(amount: WalletBalance.display(balance.ark.pendingInRound, hidden: isHidden, unit: unit, locale: locale)) {
+                    Text(message).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+                }
                 if expanded {
                     NoahCard {
                         VStack(spacing: 8) {
