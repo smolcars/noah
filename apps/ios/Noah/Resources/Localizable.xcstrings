@@ -13885,6 +13885,18 @@
         }
       }
     },
+    "Endpoint not changed. Restart Noah to reopen the previous endpoint.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint not changed. Restart Noah to reopen the previous endpoint."
+          }
+        }
+      }
+    },
     "Endpoint not changed. The wallet is using the previous endpoint.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",

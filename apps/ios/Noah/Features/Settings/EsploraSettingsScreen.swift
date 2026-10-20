@@ -50,7 +50,11 @@ struct EsploraSettingsScreen: View {
         .onAppear { input = selection.input ?? effectiveEndpoint }
         .onReceive(NotificationCenter.default.publisher(for: AppServices.esploraReopened)) { _ in
             selection = EsploraSettings().selection(for: .current)
-            error = L10n.text("Endpoint not changed. The wallet is using the previous endpoint.")
+            Task {
+                error = await model.session.isOpen
+                    ? L10n.text("Endpoint not changed. The wallet is using the previous endpoint.")
+                    : L10n.text("Endpoint not changed. Restart Noah to reopen the previous endpoint.")
+            }
         }
     }
     private func apply(_ value: String?) {
