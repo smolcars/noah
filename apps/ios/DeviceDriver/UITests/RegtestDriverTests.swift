@@ -87,6 +87,54 @@ final class RegtestDriverTests: XCTestCase {
         XCTFail("Native did not reach Home")
     }
 
+    /// Runs `TEST_RUNNER_NOAH_SCRIPT`: one step per line, `command:argument`.
+    /// tap, tapid, wait, gone, scrollto (label); type (text into focus);
+    /// field (`index:text`); swipeup, swipedown, home, activate, dump; sleep (seconds).
+    /// `wait`/`gone` accept `label@seconds`.
+    func testRunScript() {
+        let script = ProcessInfo.processInfo.environment["NOAH_SCRIPT"] ?? ""
+        for raw in script.split(separator: "\n") {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            guard !line.isEmpty else { continue }
+            let (command, argument) = line.firstIndex(of: ":").map {
+                (String(line[..<$0]), String(line[line.index(after: $0)...]))
+            } ?? (line, "")
+            let (label, seconds) = argument.lastIndex(of: "@").flatMap { at in
+                TimeInterval(argument[argument.index(after: at)...]).map { (String(argument[..<at]), $0) }
+            } ?? (argument, 30)
+            print("NOAH-STEP \(command):\(argument)")
+            switch command {
+            case "activate": app.activate()
+            case "tap": step(label, timeout: seconds)
+            case "tapid":
+                let target = app.descendants(matching: .any)[label]
+                XCTAssertTrue(target.waitForExistence(timeout: seconds), "No element \(label)")
+                target.tap()
+            case "wait": wait(for: label, timeout: seconds)
+            case "gone":
+                let deadline = Date().addingTimeInterval(seconds)
+                while element(label).exists && Date() < deadline { allowAlerts(); sleep(1) }
+                XCTAssertFalse(element(label).exists, "Still showing \"\(label)\"")
+            case "scrollto":
+                for _ in 0..<10 where !(element(label).exists && element(label).isHittable) { app.swipeUp() }
+                step(label)
+            case "type": app.typeText(argument)
+            case "field":
+                let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
+                let field = app.textFields.element(boundBy: Int(parts[0]) ?? 0)
+                XCTAssertTrue(field.waitForExistence(timeout: 15))
+                field.tap()
+                field.typeText(parts.count > 1 ? parts[1] : "")
+            case "swipeup": app.swipeUp()
+            case "swipedown": app.swipeDown()
+            case "home": XCUIDevice.shared.press(.home)
+            case "sleep": settle(seconds: TimeInterval(argument) ?? 1)
+            case "dump": print("NOAH-DUMP-BEGIN\n\(app.debugDescription)\nNOAH-DUMP-END")
+            default: XCTFail("Unknown step \(line)")
+            }
+        }
+    }
+
     // MARK: - Helpers
 
     private func element(_ label: String) -> XCUIElement {
