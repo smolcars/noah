@@ -92,14 +92,6 @@ the previous database bytes and seed, with no pending journal or open wallet.
 Existing retained-backup fallback remains: a rejected candidate may be followed
 by an older compatible server-listed backup.
 
-**Known restore-copy bug, left unfixed:** only the server-listed format error
-says to update Noah. Internal envelope/manifest versions and the SDK's explicit
-“newer than supported version” schema error become “Please try again later.”
-The opt-in failing acceptance test reproduces all three paths; default suites
-skip it. Reproduce on your own simulator with
-`TEST_RUNNER_NOAH_REQUIRE_FUTURE_BACKUP_COPY=1` and
-`-only-testing:'NoahTests/CrossPlatformBackupTests/newerBackupsExplainUpdateRequired(_:)'`.
-Use `test-without-building` after building this test source. Ordinary focused
-verification uses `-only-testing:NoahTests/CrossPlatformBackupTests`.
+Restore now classifies newer envelope, manifest and SDK schema versions separately and asks the user to update Noah; wrong-phrase and damaged-backup copy is unchanged. `newerBackupsExplainUpdateRequired(_:)` runs normally alongside the pre-install safety tests (no opt-in flag).
 
 Verification: native export generation passed once; focused restore + four newer-version safety cases passed. The opt-in copy reproduction failed all three cases as expected. Final full NoahTests ran once after the last iOS code change: **694 total / 669 passed / 25 opt-in skipped / 0 failed**, **144 suites** (1,393 expanded passes in xcresult). XcodeGen regenerated the project; regtest, arm64, ONLY_ACTIVE_ARCH=YES, code signing enabled, DerivedData under `/private/tmp`. The owned iPhone 17 / iOS 27.0 simulator **Noah Backup Cross 5612** (`B8D12D73-AFA2-47D2-958F-8369D59D85AF`) was identity-checked, shut down and deleted. Owned DerivedData, result bundles and temporary exports/logs were removed. No protected simulator/device or Docker lifecycle was controlled.

@@ -920,12 +920,7 @@ SQLite migration 9999 are refused before installation, preserving the prior DB
 bytes and seed with no journal/open wallet. The existing restorer can still fall
 back to an older compatible retained backup after rejecting a candidate.
 
-**Known bug, not fixed:** only future format in server metadata produces the
-update-required message. Internal future envelope/manifest versions and newer
-SDK database schema map to generic retry-later copy. Enable the deliberately
-failing `newerBackupsExplainUpdateRequired` test with
-`-e noahRequireFutureBackupCopy 1`; it first reproduces the manifest case.
-The normal safety test covers all four newer-version rejection paths.
+Restore now classifies newer envelope, manifest and SDK schema versions separately and asks the user to update Noah; wrong-phrase and damaged-backup copy is unchanged. `newerBackupsExplainUpdateRequired` runs normally alongside the pre-install safety tests (no opt-in flag), with classification also covered by JVM tests.
 
 Run only on an emulator you created:
 
