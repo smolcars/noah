@@ -6,9 +6,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 internal object EndpointLogPrivacy {
     private val origins = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val paths = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
-    private val routes = setOf("api", "tx", "txs", "raw", "hex", "status", "outspend", "outspends", "address",
-        "scripthash", "utxo", "chain", "mempool", "block", "blocks", "block-height", "tip", "height", "hash",
-        "header", "txids", "txid", "merkle-proof", "merkleblock-proof", "fee-estimates", "recent")
     private val urls = Regex("""(?i)\bhttps?://[^\s<>"']*""")
     // Admit only the SDK error type/status, never provider-controlled response text.
     private val responseStatus = Regex("""HttpResponse(?:\s*\{\s*status:\s*|\()([0-9]{3})\b""")
@@ -18,7 +15,6 @@ internal object EndpointLogPrivacy {
         val url = endpoint?.toHttpUrlOrNull() ?: return
         for (path in LogFile.decodedViews(url.encodedPath, percentEncoded = true) ?: listOf(url.encodedPath)) {
             if (path != "/") paths.add(path.trimEnd('/'))
-            paths.addAll(path.split('/').filter { it.isNotEmpty() && it !in routes })
         }
         origin(endpoint)?.let(origins::add)
     }
@@ -33,8 +29,9 @@ internal object EndpointLogPrivacy {
         var result = text
         for ((index, view) in views.withIndex()) {
             val clean = urls.replace(view) { match -> if (origin(match.value)?.let { it in origins } == true) "[custom-esplora]" else match.value }
-            // Decoding loses offsets; omit the message when any relative path or segment matches.
-            if (paths.any { clean.contains(it) }) return "[redacted]"
+            // Inspect relative references separately: another origin never inherits our paths.
+            val relative = urls.replace(clean, "")
+            if (paths.any { relative.contains(it) }) return "[custom-esplora]"
             if (index > 0 && clean != view) return "[custom-esplora]"
             if (index == 0) result = clean
         }
