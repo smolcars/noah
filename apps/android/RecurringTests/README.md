@@ -3,6 +3,22 @@
 Initial implementation base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
 Kotlin / Compose, API 24 minimum, bark-bolt-ffi **0.4.0**.
 
+## Storage strictness — envelope version (2026-10-20)
+
+Base: `feat/native-rewrite` at `c6283d16`. Check the raw JSON primitive's token,
+without integer/double conversion: only absent legacy version or exact `0` is
+accepted (surrounding JSON whitespace is allowed). RN's recurring store leaves
+Zustand's default numeric version 0 unchanged; `createJSONStorage` serializes it
+with `JSON.stringify` as `0`, including if passed JavaScript negative zero.
+
+Expected outcomes: absent / `0` → readable and writable; `1e-400`, `0.0`, `-0`,
+`0e5`, `"0"`, `1`, `1e400`, booleans, null, objects and arrays → entire store
+unavailable, zero execution, zero writes, original bytes preserved across reopen.
+`RecurringVersionTest` exercises a populated RN store, both execution triggers,
+binding, upsert, pending, removal and reopen. Before the fix, the targeted
+`--tests "*Recurring*"` run reported **1,444 tests / 1 failure**, reproducing
+acceptance of `1e-400` before any mutation in that test.
+
 ## Round-3 final cross-platform fixes (2026-10-20)
 
 Base: `feat/native-rewrite` local HEAD `95cd6af0`.

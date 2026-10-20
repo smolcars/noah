@@ -24,7 +24,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         val raw = read() ?: return buildJsonObject { put("version", 0); putJsonObject("state") { putJsonObject("schedules") {}; put("serverSyncPending", false) } }
         return json.parseToJsonElement(raw).jsonObject.also {
             val version = it["version"]
-            require(version == null || version is JsonPrimitive && !version.isString && version.intOrNull == 0) { "Unsupported recurring payment version. Sending is stopped." }
+            require(version == null || version is JsonPrimitive && !version.isString && version.content == "0") { "Unsupported recurring payment version. Sending is stopped." }
             it.getValue("state").jsonObject.getValue("schedules").jsonObject
         }
     }
