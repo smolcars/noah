@@ -14,11 +14,12 @@ struct OnchainAmountRow: View {
 
 struct OnchainStatusSection: View {
     let model: OnchainModel
+    @State private var discardID: UUID?
     var body: some View {
         if model.loading || model.busy {
             ProgressView().frame(maxWidth: .infinity).accessibilityLabel("Updating wallet")
         }
-        if let attempt = model.attempt {
+        ForEach(model.attempts) { attempt in
             Section(attempt.receipt == nil ? "Check operation status" : "Submitted") {
                 Text(attempt.quote.action.title).font(NoahFont.headline)
                 OnchainAmountRow(title: "Reviewed amount", sats: attempt.quote.amount)
@@ -32,12 +33,26 @@ struct OnchainStatusSection: View {
                     Button("Copy transaction ID") { UIPasteboard.general.string = txid }
                 }
                 if attempt.receipt != nil {
-                    Button("Done") { Task { await model.acknowledge() } }.disabled(model.busy)
+                    Button("Done") { Task { await model.acknowledge(attempt.id) } }.disabled(model.busy)
+                } else {
+                    Button("Check status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
+                    Button("Clear unresolved attempt…", role: .destructive) { discardID = attempt.id }
+                        .disabled(model.busy)
                 }
+            }
+            .alert("Clear unresolved attempt?", isPresented: Binding(
+                get: { discardID == attempt.id }, set: { if !$0 { discardID = nil } })) {
+                Button("Keep attempt", role: .cancel) { discardID = nil }
+                Button("I understand this may repeat the operation", role: .destructive) {
+                    discardID = nil
+                    Task { await model.discardUncertain(attempt.id) }
+                }
+            } message: {
+                Text("Clearing this record cannot cancel a submitted operation. Submitting again may spend additional funds or fees. Check status first.")
             }
         }
         if let error = model.error { Section { Text(error).foregroundStyle(NoahColor.destructive) } }
-        if let message = model.message, model.attempt == nil { Section { Text(message) } }
+        if let message = model.message { Section { Text(message) } }
     }
 }
 

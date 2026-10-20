@@ -244,7 +244,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] ExitVtxoDetailScreen + terminal canceled timeline; 187 RN-derived fee/cancellation/timeline/coordination/boarding fixtures — iOS
 - [x] Starting/progressing exits — iOS RN parity: explicit start review explains automatic background broadcasts/fee bumps and onchain fees; manual Progress Exits review, cancel until final broadcast, claim reviews; optional manual-daemon policy is P2 FFI 17
 - [x] Suspended wallet gates — iOS Settings M6 rows remain navigable like RN; M6 screen actions/queries, Home refresh, boarding minimum/address queries and Auto-Board perform no wallet operations
-- [ ] Durable operation reconciliation after an ambiguous M6 submission — FFI 19; iOS preserves the attempt and blocks resubmission
+- [x] Scoped durable M6 uncertainty — iOS: unrelated recovery remains available, exact pre-broadcast allowlist, read-only Check status and explicit destructive override; legacy journal migration and relaunch tests
+- [ ] Durable operation IDs for pre-ID ambiguous board/refresh outcomes — FFI 19; iOS never reconciles by amount or automatically resubmits
 - [x] Live exit start → automatic daemon broadcast/CPFP → 144-block timelock → reviewed manual progress → claim/confirmation — iOS; manual boarding/MAX actual fees and suspended UI verified (see `apps/ios/ExitTests/README.md`)
 - [ ] Live exit cancellation before final broadcast — iOS (fixture coverage passes; daemon progressed the acceptance exit before cancellation)
 - [ ] BoardArkScreen, auto-boarding, VTXOs/details/refresh, all exit screens — Android

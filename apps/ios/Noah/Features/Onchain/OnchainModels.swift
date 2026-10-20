@@ -99,7 +99,7 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
 }
 
 enum OnchainFailure: LocalizedError {
-    case unavailable, changed, invalid, uncertain, busy, cancellationRefused, claimFeeChanged
+    case unavailable, changed, invalid, uncertain, busy, cancellationRefused, claimFeeChanged, constructionFailed
     var errorDescription: String? {
         switch self {
         case .unavailable: "Wait for the wallet to be ready, then refresh."
@@ -108,8 +108,9 @@ enum OnchainFailure: LocalizedError {
         case .invalid:
             "Check the amount, selected VTXOs, and destination. There may not be enough confirmed funds."
         case .uncertain:
-            "The operation may have been submitted. Do not repeat it. Check its status and contact support before trying again."
-        case .busy: "Another onchain operation is unresolved. Check its status before continuing."
+            "The operation may have been submitted. Check its status before repeating it. Other recovery operations remain available."
+        case .busy: "This operation overlaps an unresolved attempt. Check its status before repeating it."
+        case .constructionFailed: "The transaction could not be constructed. Nothing was broadcast. Review again."
         case .cancellationRefused:
             "This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status."
         case .claimFeeChanged:

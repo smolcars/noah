@@ -74,7 +74,7 @@ struct AutoBoardingService: View {
                                 !(await WalletBackgroundActivity.shared.isRunning)
                             else { throw OnchainFailure.unavailable }
                             message = try await app.session.executeOnchain(quote)
-                            try await OnchainOperationJournal.shared.acknowledge()
+                            try await OnchainOperationJournal.shared.acknowledge(quote.id)
                             await app.refresh()
                         } catch {
                             message =
@@ -103,7 +103,7 @@ struct AutoBoardingService: View {
         defer { checking = false }
         do {
             guard !(await WalletBackgroundActivity.shared.isRunning),
-                try await OnchainOperationJournal.shared.load() == nil
+                !(try await OnchainOperationJournal.shared.loadAll()).contains(where: { $0.blocks(.board, ids: []) })
             else { return }
             let quote = try await app.session.autoBoardQuote()
             let latest = PersistedTransactionState.load(from: .shared)

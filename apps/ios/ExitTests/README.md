@@ -33,12 +33,19 @@ Other deliberate differences from RN:
   rechecks wallet identity, selected VTXOs, destination, amounts, both fee legs and
   confirmed balance. A changed or stale quote requires another review.
 - Every mutation records an atomic attempt inside the wallet directory before SDK
-  submission. It survives errors/relaunch; unresolved attempts block further M6
-  mutations. There is no automatic retry or amount-only reconciliation. A returned
-  receipt stays until acknowledged. Durable operation lookup is requested in FFI 19.
+  submission. Attempts survive errors/relaunch and block only overlapping repeats
+  of the same operation; uncertain board/refresh never blocks exits, claims or
+  cancellations. Bark makes repeated active starts/already-canceled cancels harmless.
+  Read-only **Check status** syncs BDK (not broadcast-capable wallet/exit sync), then
+  reads exact txids and per-item VTXO/exit states. Only conclusive evidence resolves
+  an attempt. Missing IDs, locked refresh inputs and unknown errors remain uncertain.
+  **Clear unresolved attempt…** requires explicit destructive repeat-risk consent.
+  There is no automatic retry or amount-only reconciliation. Receipts stay until
+  acknowledged; durable operation lookup for the pre-ID window remains FFI 19.
 - Claims compare the built PSBT's fee to the reviewed estimate before broadcasting.
   A changed fee releases the attempt without broadcasting. Unknown native failures
-  retain it. Cancellation is rechecked by Bark, and a refused cancellation remains
+  retain it. Exact outer construction errors clear the attempt (including a failed
+  claim PSBT build); nested/unknown errors remain uncertain. Cancellation is rechecked by Bark, and a refused cancellation remains
   visible as an error rather than being shown as successful.
 - No estimator-unavailable emergency fallback. No broadcasting `syncExits` call on
   screen appearance, pull-to-refresh, polling, or fee review. Status polling is
@@ -281,3 +288,14 @@ Before deletion, `simctl list devices --json` was checked for its exact name and
 UDID and **Shutdown** state. Deleted only that simulator and verified its absence.
 The separately created Core funding wallet remains named
 `noah-m6-parity-2364-funder`; no existing wallet was reset, unloaded or deleted.
+
+## Recovery review fixes (2026-10-19)
+
+Owned simulator **Noah M6 Recovery Sol ee0d**, iPhone 17 Pro, iOS 27.0,
+UDID `386B936B-02F3-4480-B542-F4FF386CDB92`; derived data
+`/tmp/noah-m6-recovery-ee0d-dd`. The uncertainty change passed **16 tests in
+3 suites**, zero skips/failures (`OnchainRecoveryTests`, `OnchainJournalTests`,
+`OnchainModelTests`), result `/tmp/noah-m6-recovery-ee0d-targeted1.xcresult`.
+Tests exercise overlapping scopes, harmless repeat policy, exact outer error
+contexts, unknown failures, conclusive/inconclusive checks, wallet identity,
+explicit discard, legacy migration, relaunch and no model-driven resubmission.

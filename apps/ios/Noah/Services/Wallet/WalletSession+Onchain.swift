@@ -192,6 +192,7 @@ extension WalletSession {
                     } else {
                         board = try await handles.wallet.boardAmount(amountSats: quote.amount)
                     }
+                    try await journal.recordTransaction(board.txid, for: quote.id)
                     // A receipt must survive even when the optional fee lookup fails after submission.
                     let fee = try? await handles.onchain.transactions().first { $0.txid == board.txid }?.onchainFeeSats
                     return OnchainReceipt(
@@ -218,7 +219,9 @@ extension WalletSession {
                         vtxoIds: quote.ids, address: quote.destination!, feeRateSatPerVb: nil)
                     guard claim.feeSats == quote.fee else { throw OnchainFailure.claimFeeChanged }
                     let tx = try extractTxFromPsbt(psbtBase64: claim.psbtBase64)
-                    let txid = try await handles.wallet.broadcastTx(txHex: tx)
+                    let txid: String
+                    do { txid = try await handles.wallet.broadcastTx(txHex: tx) }
+                    catch { throw OnchainFailure.uncertain }
                     return OnchainReceipt(message: "Claim submitted. Refresh to check confirmation.", txid: txid)
                 case .cancel:
                     let result = try await handles.wallet.cancelExit(vtxoId: quote.ids[0])
@@ -226,6 +229,29 @@ extension WalletSession {
                     return "Exit canceled. The VTXO remains spendable."
                 }
             }
+        }
+    }
+
+    /// Only BDK's onchain sync is used: wallet.sync can resume pending actions/broadcasts.
+    // https://gitlab.com/ark-bitcoin/bark/-/blob/bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c/bark/src/lib.rs
+    func checkOnchainAttempt(_ id: UUID, journal: OnchainOperationJournal = .shared) async throws -> Bool {
+        try await withOpenWallet { handles in
+            guard let attempt = try await journal.loadAll().first(where: { $0.id == id }),
+                attempt.quote.walletID == handles.wallet.fingerprint() else { throw OnchainFailure.changed }
+            _ = try await handles.onchain.sync()
+            var evidence = OnchainOperationJournal.Evidence(walletID: handles.wallet.fingerprint())
+            evidence.transactionIDs = Set(try await handles.onchain.transactions().map(\.txid))
+            for id in attempt.quote.ids {
+                if attempt.quote.action == .refresh {
+                    let vtxo = try await handles.wallet.getVtxoById(vtxoId: id)
+                    evidence.vtxoStates[id] = Self.vtxoModel(vtxo, tip: 0, expiring: []).state
+                }
+                if let status = try await handles.wallet.getExitStatus(
+                    vtxoId: id, includeHistory: true, includeTransactions: false) {
+                    evidence.exitStates[id] = Self.exitState(status.state).0
+                }
+            }
+            return try await journal.reconcile(id, evidence: evidence)
         }
     }
 

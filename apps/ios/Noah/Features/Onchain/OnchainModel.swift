@@ -9,8 +9,10 @@ final class OnchainModel {
         var overview: @Sendable () async throws -> OnchainOverview
         var quote: @Sendable (OnchainAction, [String], UInt64, String?) async throws -> OnchainQuote
         var execute: @Sendable (OnchainQuote) async throws -> String
-        var attempt: @Sendable () async throws -> OnchainOperationJournal.Attempt?
-        var acknowledge: @Sendable () async throws -> Void
+        var attempt: @Sendable () async throws -> [OnchainOperationJournal.Attempt]
+        var acknowledge: @Sendable (UUID) async throws -> Void
+        var check: @Sendable (UUID) async throws -> Bool = { _ in false }
+        var discard: @Sendable (UUID) async throws -> Void = { _ in }
         static func live(session: WalletSession = .shared) -> Self {
             Self(
                 ready: {
@@ -23,8 +25,10 @@ final class OnchainModel {
                 }, overview: { try await session.onchainOverview() },
                 quote: { try await session.quoteOnchain($0, ids: $1, amount: $2, destination: $3) },
                 execute: { try await session.executeOnchain($0) },
-                attempt: { try await OnchainOperationJournal.shared.load() },
-                acknowledge: { try await OnchainOperationJournal.shared.acknowledge() })
+                attempt: { try await OnchainOperationJournal.shared.loadAll() },
+                acknowledge: { try await OnchainOperationJournal.shared.acknowledge($0) },
+                check: { try await session.checkOnchainAttempt($0) },
+                discard: { try await OnchainOperationJournal.shared.discardUncertain($0) })
         }
     }
     private let dependencies: Dependencies
@@ -33,10 +37,11 @@ final class OnchainModel {
     private(set) var quote: OnchainQuote?
     private(set) var busy = false
     private(set) var loading = false
-    private(set) var attempt: OnchainOperationJournal.Attempt?
+    private(set) var attempts: [OnchainOperationJournal.Attempt] = []
+    var attempt: OnchainOperationJournal.Attempt? { attempts.first }
     private(set) var message: String?
     private(set) var error: String?
-    var locked: Bool { busy || attempt != nil }
+    var locked: Bool { busy }
 
     init(dependencies: Dependencies = .live()) { self.dependencies = dependencies }
     func invalidate() {
@@ -49,7 +54,7 @@ final class OnchainModel {
         loading = true
         defer { loading = false }
         do {
-            attempt = try await dependencies.attempt()
+            attempts = try await dependencies.attempt()
             guard await dependencies.ready() else {
                 overview = nil
                 invalidate()
@@ -78,7 +83,8 @@ final class OnchainModel {
         defer { busy = false }
         do {
             guard await dependencies.ready() else { throw OnchainFailure.unavailable }
-            guard try await dependencies.attempt() == nil else { throw OnchainFailure.busy }
+            attempts = try await dependencies.attempt()
+            guard !attempts.contains(where: { $0.blocks(action, ids: ids) }) else { throw OnchainFailure.busy }
             let fresh = try await dependencies.quote(action, ids, amount, destination)
             guard generation == token, await dependencies.ready() else { return }
             quote = fresh
@@ -108,13 +114,39 @@ final class OnchainModel {
         await load()
         if let submissionError { error = submissionError }
     }
-    func acknowledge() async {
+    func acknowledge(_ id: UUID) async {
         do {
-            try await dependencies.acknowledge()
-            attempt = nil
+            try await dependencies.acknowledge(id)
+            attempts.removeAll { $0.id == id }
             message = nil
         } catch { self.error = OnchainFailure.uncertain.errorDescription }
     }
+    func checkStatus(_ id: UUID) async {
+        guard !busy else { return }
+        busy = true
+        invalidate()
+        defer { busy = false }
+        do {
+            guard await dependencies.ready() else { throw OnchainFailure.unavailable }
+            let resolved = try await dependencies.check(id)
+            await load()
+            message = resolved ? "Status resolved. Review the receipt." : "Status remains uncertain. No operation was repeated. You may use other recovery operations."
+        } catch {
+            self.error = (error as? OnchainFailure)?.errorDescription ?? "Couldn't check status. The attempt is still saved."
+        }
+    }
+    func discardUncertain(_ id: UUID) async {
+        guard !busy else { return }
+        busy = true
+        invalidate()
+        defer { busy = false }
+        do {
+            try await dependencies.discard(id)
+            attempts.removeAll { $0.id == id }
+            message = "Attempt cleared. Review the current wallet state before submitting again."
+        } catch { self.error = OnchainFailure.uncertain.errorDescription }
+    }
+
 }
 
 /// Native equivalent of RN's isBackgroundJobRunning query gate; counts overlapping pushes.

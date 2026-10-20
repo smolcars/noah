@@ -41,7 +41,7 @@ struct ExitLiveTests {
         let owned = try String(contentsOf: URL.documentsDirectory.appending(path: "m6-live-owned-wallet.txt"), encoding: .utf8)
         try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "m6-acceptance")
         guard try await session.summary()?.fingerprint == owned else { throw OnchainFailure.invalid }
-        if stage != "estimate" {
+        if !["estimate", "uncertain-board", "check-uncertain-board"].contains(stage) {
             try await session.close()
             try await session.ensureOpen(mnemonic: mnemonic, runDaemon: true, appVersion: "m6-acceptance")
         }
@@ -56,6 +56,39 @@ struct ExitLiveTests {
                 "chainFee": "\(quote.chainFee)",
             ]).write(to: URL.documentsDirectory.appending(path: "m6-live-board.json"), options: .atomic)
             try await OnchainOperationJournal.shared.acknowledge()
+        } else if stage == "uncertain-board" {
+            try await session.sync()
+            let quote = try await session.quoteOnchain(.board, amount: 30000)
+            _ = try await session.executeOnchain(quote)
+            let file = WalletDataLocation(variant: .regtest).directory.appending(path: "noah-onchain-attempt.json")
+            var attempts = try await OnchainOperationJournal.shared.loadAll()
+            let index = try #require(attempts.firstIndex { $0.id == quote.id })
+            #expect(attempts[index].txid != nil)
+            // Simulate loss of the final receipt write after the submitted txid was persisted.
+            // No second board call; the next invocation reopens this exact on-disk uncertainty.
+            attempts[index].receipt = nil
+            try JSONEncoder().encode(attempts).write(to: file, options: .atomic)
+            try JSONEncoder().encode(attempts[index]).write(
+                to: URL.documentsDirectory.appending(path: "m6-live-uncertain-board.json"), options: .atomic)
+        } else if stage == "check-uncertain-board" {
+            let attempt = try #require(try await OnchainOperationJournal.shared.loadAll().first {
+                $0.quote.action == .board && $0.receipt == nil
+            })
+            let before = try await session.withOpenWallet { try await $0.onchain.transactions().map(\.txid) }
+            let model = OnchainModel()
+            await model.load()
+            let ids = try #require(model.overview).vtxos.filter(\.eligible).map(\.id)
+            #expect(!ids.isEmpty)
+            await model.review(.startExit, ids: ids)
+            #expect(model.quote?.action == .startExit && !model.locked)
+            await model.checkStatus(attempt.id)
+            let resolved = try #require(try await OnchainOperationJournal.shared.loadAll().first { $0.id == attempt.id })
+            #expect(resolved.receipt?.txid == attempt.txid)
+            let after = try await session.withOpenWallet { try await $0.onchain.transactions().map(\.txid) }
+            #expect(Set(before) == Set(after))
+            try JSONEncoder().encode(resolved).write(
+                to: URL.documentsDirectory.appending(path: "m6-live-check-uncertain-board.json"), options: .atomic)
+            try await OnchainOperationJournal.shared.acknowledge(attempt.id)
         } else if stage == "refresh" {
             try await session.sync()
             let overview = try await session.onchainOverview()

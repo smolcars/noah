@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 import Testing
 
@@ -125,7 +126,7 @@ struct OnchainModelTests {
         .init(
             ready: { await calls.ready }, overview: { await calls.read() },
             quote: { _, _, _, _ in OnchainJournalTests.quote },
-            execute: { _ in await calls.mutate() }, attempt: { nil }, acknowledge: {})
+            execute: { _ in await calls.mutate() }, attempt: { [] }, acknowledge: { _ in })
     }
     @Test func unavailableAndStaleRefreshNeverReadOrMutate() async {
         let calls = Calls()
@@ -189,6 +190,45 @@ struct OnchainModelTests {
         await calls.setReady(false)
         await model.confirm()
         #expect(await calls.mutations == 2)
+    }
+    @Test func unresolvedBoardAllowsExitReviewAndStatusChecksNeverSubmit() async throws {
+        let calls = Calls()
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let journal = OnchainOperationJournal(file: file)
+        let board = OnchainJournalTests.quote
+        await #expect(throws: OnchainFailure.uncertain) {
+            try await journal.perform(board) { throw OnchainFailure.uncertain }
+        }
+        var d = dependencies(calls)
+        d.attempt = { try await journal.loadAll() }
+        d.quote = { action, ids, _, _ in
+            var q = OnchainJournalTests.quote
+            q.action = action
+            q.ids = ids
+            return q
+        }
+        d.check = { id in
+            try await journal.reconcile(id, evidence: .init(walletID: "wallet"))
+        }
+        d.discard = { try await journal.discardUncertain($0) }
+        let model = OnchainModel(dependencies: d)
+        await model.load()
+        #expect(!model.locked)
+        await model.review(.startExit, ids: ["a"])
+        #expect(model.quote?.action == .startExit)
+        await model.review(.board)
+        #expect(model.quote == nil && model.error != nil)
+        await model.checkStatus(board.id)
+        #expect(model.attempts.count == 1)
+        #expect(await calls.mutations == 0)
+        await calls.setReady(false)
+        await model.checkStatus(board.id)
+        #expect(model.error == OnchainFailure.unavailable.errorDescription)
+        await model.discardUncertain(board.id)
+        #expect(model.attempts.isEmpty)
+        #expect(try await OnchainOperationJournal(file: file).loadAll().isEmpty)
+        #expect(await calls.mutations == 0)
     }
     @Test func expiredQuoteRequiresReviewAgain() async {
         let calls = Calls()
