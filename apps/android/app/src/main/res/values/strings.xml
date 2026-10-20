@@ -1622,6 +1622,7 @@
   <string name="gt_3b208c8df3744b19">"Recover your Ark funds onchain if the Ark server is unavailable. Exits require confirmed onchain funds for broadcast fees and a timelock before claiming."</string>
   <string name="gt_512d764f27c017d9">"Recovery phrase found"</string>
   <string name="gt_f1edc38f48fa8c1a">"Recurring background work stopped."</string>
+  <string name="gt_de5aca532e062c99">"Recurring evidence storage unavailable"</string>
   <string name="gt_e96cc9747bde094a">"Recurring payment data couldn\'t be read. Your saved schedules have been preserved. Sending is stopped."</string>
   <string name="gt_7bca5b89bad58cde">"Recurring payment history needs attention. Its saved evidence has been preserved; sending remains stopped."</string>
   <string name="gt_6d677a11da721fa8">"Recurring payment needs approval"</string>
