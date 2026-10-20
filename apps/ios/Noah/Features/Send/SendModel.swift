@@ -315,6 +315,21 @@ import Observation
         payment = nil
         error = nil
     }
+    /// Consume only when editable; the normal recipient step validates and chooses rails again.
+    func consumeRepeatPayment(_ pending: inout RepeatPayment?, currency: String) {
+        guard let repeatPayment = pending, !controller.locked, !busy else { return }
+        pending = nil
+        reset()
+        destination = repeatPayment.destination
+        let prefill = repeatPayment.prefill(preferredCurrency: currency)
+        amount = prefill.amountInput
+        useFiat = prefill.amountMode == "FIAT"
+        fiatCurrency = currency
+        comment = repeatPayment.comment
+        progress = SendProgress(entry: .recipientFirst)
+        stage = .recipient
+    }
+
     func toggleCurrency() {
         guard let btcPrice else { return }
         let sats = sats

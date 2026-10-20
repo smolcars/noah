@@ -94,14 +94,15 @@ struct WalletTabs: View {
                 NavigationStack { ReceiveView(isActive: selection == .receive) { selection = .home } }
             }
             SwiftUI.Tab("Send", systemImage: "arrow.up.right", value: .send) {
-                // TODO: hand `pendingRepeatPayment` to SendView once it takes a prefill
-                // (after the Send safety fixes, which also reset routes on prefill).
                 NavigationStack { SendView(model: send) }
             }
             SwiftUI.Tab("History", systemImage: "clock.arrow.circlepath", value: .history) {
                 NavigationStack { TransactionsView(onRepeatPayment: repeatPayment) }
             }
         }
+        .onChange(of: pendingRepeatPayment) { _, _ in consumeRepeatPayment() }
+        .onChange(of: send.controller.locked) { _, _ in consumeRepeatPayment() }
+        .onChange(of: send.busy) { _, _ in consumeRepeatPayment() }
         .alert("Payment in progress", isPresented: $scanBlocked) {
             Button("OK", role: .cancel) {}
         } message: { Text("Finish the current payment before scanning another request.") }
@@ -128,6 +129,10 @@ struct WalletTabs: View {
     private func scanned(_ value: String) {
         selection = .send
         Task { if !(await QRScanRoute.apply(value, to: send)) { scanBlocked = true } }
+    }
+
+    private func consumeRepeatPayment() {
+        send.consumeRepeatPayment(&pendingRepeatPayment, currency: app.preferredCurrency)
     }
 
     private func repeatPayment(_ details: RepeatPayment) {
