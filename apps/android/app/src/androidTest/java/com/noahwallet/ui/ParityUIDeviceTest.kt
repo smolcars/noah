@@ -187,6 +187,12 @@ class ParityUIDeviceTest {
         val request = services.session.receiveRequest().uri()
         val activity = instrumentation.startActivitySync(Intent(context, com.noahwallet.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         try {
+            click("Hide balance")
+            waitFor("Fiat privacy uses the RN currency symbol") { text("$ ••••") != null }
+            shot("home-hidden")
+            click("Show balance")
+            waitFor("Live fiat amount") { text("$0.00") != null }
+            shot("home-live")
             click("QR Code")
             waitFor("Live identity QR") { text("This QR contains only your Lightning address.") != null }
             shot("qr-live-address")

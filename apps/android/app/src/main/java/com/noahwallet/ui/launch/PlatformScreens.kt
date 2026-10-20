@@ -12,6 +12,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.noahwallet.services.push.UnifiedPushRegistration
 import com.noahwallet.services.push.PushWork
+import com.noahwallet.services.server.value
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.ui.*
 import kotlinx.coroutines.*
@@ -113,7 +114,17 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
                         registration.endpoint()
                     }
                     endpoint = received
-                    if (received != null) PushWork.register(context) else failed = true
+                    if (received != null) {
+                        // Onboarding has a registered server user before isInitialized is set.
+                        val services = com.noahwallet.services.AppServices.shared(context)
+                        try {
+                            if (services.registration.state.isRegisteredWithServer == true)
+                                com.noahwallet.api.generated.client.V0RegisterPushTokenClient(services.client)
+                                    .registerPushToken(com.noahwallet.api.generated.models.RegisterPushToken(received)).value()
+                        } catch (cancelled: CancellationException) { throw cancelled }
+                        catch (_: Exception) { com.noahwallet.services.logging.AppLog(context, "push").w("UnifiedPush server registration failed; queued for retry") }
+                        PushWork.register(context)
+                    } else failed = true
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { failed = true }
                 finally { registering = false }

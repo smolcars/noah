@@ -184,7 +184,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Derive key 0 before fresh-wallet registration and persist `staticVtxoPubkey` — Android
 - [x] Home first pass: full balance, persisted unit/privacy, pull-to-sync, variant and email banner; Inter/light/dark theme — Android
 - [x] Home fiat and hidden-currency symbols (48 shared fiat cases), RN facts picked on mount/refresh, existing Settings/Map shortcuts — Android
-- [x] Home backup progress/failure+retry/5 s success, automatic-board 5 s success from existing receipts, active pending rounds with 30 s polling and detail sheet — Android (read-only observation; boarding/Send internals unchanged)
+- [x] Home backup progress/failure+retry/5 s success, automatic-board 5 s success from the existing UI completion callback, active pending rounds with 30 s polling and detail sheet — Android (boarding/Send operations unchanged; UI completion and destination wiring only)
 - [x] App-version UI: RN’s nonblocking Update Available banner, current/latest versions and variant Play Store link; service failure continues without a banner — Android
 - [x] Shared RN Home predicates/facts/symbols (`home-status.json`, RN-source generator); launch push-before-battery truth table (`platform-gates.json`) — Android
 - [x] Notification permission and existing push registration after onboarding — Android

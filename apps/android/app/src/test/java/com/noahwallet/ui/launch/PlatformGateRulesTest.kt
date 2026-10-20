@@ -6,6 +6,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PlatformGateRulesTest {
+    @Test fun seedSafetyPrecedesPlatformGatesEvenWithStaleOpenState() {
+        val states = com.noahwallet.services.launch.LaunchState.entries
+        states.forEach { state ->
+            assertEquals(state.name, state in setOf(com.noahwallet.services.launch.LaunchState.existingWallet,
+                com.noahwallet.services.launch.LaunchState.onboarding), PlatformGateRules.launchResolved(state))
+        }
+        assertFalse(PlatformGateRules.launchResolved(null))
+    }
     @Test fun matchesRNTruthTable() {
         SharedFixtures.load("platform-gates").forEach { case ->
             val input = case.input.jsonObject

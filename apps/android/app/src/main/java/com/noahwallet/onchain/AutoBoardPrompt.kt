@@ -17,7 +17,7 @@ object AutoBoardRules {
 
 /** One-shot prompt only: background checks never submit boarding. */
 @Composable
-fun AutoBoardPrompt(app: AppModel) {
+fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val scope = rememberCoroutineScope()
     var plan by remember { mutableStateOf<OnchainQuote?>(null) }
@@ -87,6 +87,7 @@ fun AutoBoardPrompt(app: AppModel) {
                             if (!enabled() || !onchainReady(app) || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) fail(OnchainFailure.unavailable)
                             app.session.executeOnchain(quote)
                         }
+                        onBoarded(quote.net)
                         app.refresh()
                     } catch (cancelled: CancellationException) { throw cancelled }
                     catch (failure: Exception) { message = (failure as? OnchainException)?.message ?: OnchainFailure.uncertain.text }

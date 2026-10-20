@@ -40,13 +40,13 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
         price = null
         if (model.isWalletSuspended) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
-        while (kotlinx.coroutines.currentCoroutineContext().isActive) {
-            try { price = com.noahwallet.api.generated.client.V0PricesClient(model.services.client)
+            while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+                try { price = com.noahwallet.api.generated.client.V0PricesClient(model.services.client)
                 .fiatPrices(kotlinx.serialization.json.JsonObject(emptyMap())).value().rates[currency]?.takeIf { it.isFinite() && it > 0 } }
-            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-            catch (_: Exception) { }
-            kotlinx.coroutines.delay(300_000)
-        }
+                catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                catch (_: Exception) { }
+                kotlinx.coroutines.delay(300_000)
+            }
         }
     }
     if (map) {

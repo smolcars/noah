@@ -26,6 +26,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.noahwallet.R
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.contentOrNull
 
 @Serializable
 enum class Destination(val title: Int, val icon: Int) : NavKey {
@@ -50,7 +51,7 @@ fun NoahApp(model: AppModel) {
     LaunchedEffect(model, model.preferredCurrency, lifecycle, walletAvailable) {
         if (walletAvailable) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.history.observe(model.preferredCurrency) }
     }
-    if (backStack.last() == Destination.Home) com.noahwallet.onchain.AutoBoardPrompt(model)
+    if (backStack.last() == Destination.Home) com.noahwallet.onchain.AutoBoardPrompt(model) { model.autoBoardSuccessBanner = it to System.currentTimeMillis() }
     val repeat: (com.noahwallet.history.RepeatPayment) -> Unit = {
         model.repeatPayment = it
         backStack.clear(); backStack.add(Destination.Home); backStack.add(Destination.Send)
@@ -93,7 +94,7 @@ fun NoahApp(model: AppModel) {
             entryProvider = entryProvider {
                 entry<QRDestination> {
                     QRHubScreen(model.server.state.lightningAddress,
-                        com.noahwallet.services.storage.SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content } ?: "",
+                        com.noahwallet.services.storage.SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull } ?: "",
                         onBack = { backStack.removeAt(backStack.lastIndex) },
                         onProfile = { backStack.add(SettingsDestination.Profile) },
                         onScan = { value ->

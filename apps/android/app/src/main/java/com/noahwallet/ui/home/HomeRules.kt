@@ -20,6 +20,8 @@ object HomeRules {
             Banner("Backup completed", "Last backup ${DateFormat.getTimeInstance(DateFormat.SHORT, locale).format(Date(state.lastBackupAt!!.toLong()))}")
         else -> null
     }
+    fun boarding(amount: Long, createdAt: Long, now: Long, locale: Locale): Banner? =
+        if (now - createdAt < successMillis) Banner("Boarding completed", "${java.text.NumberFormat.getIntegerInstance(locale).format(amount)} sats available in Ark") else null
     fun activeRound(final: Boolean, status: String) = !final || status in setOf("pending", "unconfirmed")
     fun updateURL(variant: String) = "https://play.google.com/store/apps/details?id=com.noahwallet.${if (variant == "mainnet") "mainnet" else "signet"}"
 }

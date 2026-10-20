@@ -75,8 +75,8 @@ fun LaunchGateView() {
             permission.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else PlatformAccess.openSettings(activity)
     }
-    LaunchedEffect(model.onboarded, model.walletLock.locked) {
-        if (model.onboarded && !model.walletLock.locked) {
+    LaunchedEffect(model.onboarded, model.walletLock.locked, state) {
+        if (model.onboarded && !model.walletLock.locked && PlatformGateRules.launchResolved(state)) {
             PushNotifications.ensureChannels(context)
             refreshPermission()
             if (PlatformAccess.physical() && permissionStatus == PlatformGateRules.Permission.undetermined && !permissionRequested) requestPermission()
@@ -103,7 +103,7 @@ fun LaunchGateView() {
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().then(Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing))) {
             when {
                 state == LaunchState.seedWithoutWalletData -> RestoreWalletScreen(model, useStoredSeed = true)
-                state != LaunchState.onboarding && state != LaunchState.existingWallet -> LaunchMessage(state, model.error != null, model::start, model)
+                !PlatformGateRules.launchResolved(state) -> LaunchMessage(state, model.error != null, model::start, model)
                 (model.open || model.isWalletSuspended) && model.onboarded -> when (platformGate) {
                     PlatformGateRules.Gate.push -> PushNotificationsRequiredScreen(requesting, ::requestPermission, ::refreshPermission)
                     PlatformGateRules.Gate.battery -> BatteryOptimizationScreen(model) { gateRevision++ }

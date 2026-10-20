@@ -20,7 +20,6 @@ import com.noahwallet.services.storage.PersistedBackupState
 import com.noahwallet.ui.AppModel
 import io.github.niteshbalusu11.bark.PendingRoundStatus
 import kotlinx.coroutines.*
-import java.text.NumberFormat
 import java.util.Locale
 
 @Composable
@@ -31,31 +30,21 @@ fun HomeBanners(app: AppModel, refresh: Int) {
     var retrying by remember { mutableStateOf(false) }
     var rounds by remember { mutableStateOf<List<PendingRoundStatus>>(emptyList()) }
     var showRounds by remember { mutableStateOf(false) }
-    var boarding by remember { mutableStateOf<Pair<Long, Long>?>(null) }
+    val boarding = app.autoBoardSuccessBanner
     val locale = Locale.forLanguageTag(app.localeIdentifier)
     val scope = rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(app, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            // Existing automatic receipts are history; RN's success banner is transient and not persisted.
-            val seen = try { withContext(Dispatchers.IO) { app.session.onchainJournal.loadAll().filter { it.receipt != null }.map { it.id }.toMutableSet() } }
-                catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { mutableSetOf<String>() }
             while (isActive) {
                 now = System.currentTimeMillis()
                 backup = PersistedBackupState.decode(app.settings.string(PersistedBackupState.key))
                 version = app.server.versionInfo
-                try {
-                    val completed = withContext(Dispatchers.IO) { app.session.onchainJournal.loadAll() }
-                        .filter { it.quote.automatic && it.receipt != null && !it.receipt.broadcastRetryPending }
-                    completed.forEach { attempt -> if (seen.add(attempt.id)) boarding = attempt.quote.net to now }
-                } catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { /* A status banner must never interfere with boarding recovery. */ }
                 delay(1000)
             }
         }
     }
-    LaunchedEffect(app, refresh, lifecycle) {
+    LaunchedEffect(app, refresh, lifecycle, rounds.any { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) }) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             // RN polls at 30 s only while an active round exists; refresh and wallet changes re-query.
             do {
@@ -69,12 +58,17 @@ fun HomeBanners(app: AppModel, refresh: Int) {
     }
     LaunchedEffect(app.session, refresh, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-        app.session.walletChanges.collect {
-            try { rounds = app.session.pendingRounds() }
-            catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { }
+            app.session.walletChanges.collect {
+                try { rounds = app.session.pendingRounds() }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { }
+            }
         }
     }
+    LaunchedEffect(backup.lastBackupAt, backup.lastBackupStatus, boarding) {
+        val expiries = listOfNotNull(backup.lastBackupAt?.toLong(), boarding?.second).map { it + HomeRules.successMillis }
+            .filter { it > System.currentTimeMillis() }.sorted()
+        expiries.forEach { expiry -> delay((expiry - System.currentTimeMillis()).coerceAtLeast(0)); now = System.currentTimeMillis() }
     }
     version?.takeIf { it.updateRequired }?.let { UpdateWarningBanner(it, BuildConfig.VERSION_NAME, BuildConfig.APP_VARIANT) }
     HomeRules.backup(backup, now, locale)?.let { banner -> StatusBanner(banner, retrying) {
@@ -86,9 +80,7 @@ fun HomeBanners(app: AppModel, refresh: Int) {
             finally { retrying = false }
         }
     } }
-    boarding?.takeIf { now - it.second < HomeRules.successMillis }?.let { (amount, _) ->
-        StatusBanner(HomeRules.Banner("Boarding completed", "${NumberFormat.getIntegerInstance(locale).format(amount)} sats available in Ark"))
-    }
+    boarding?.let { (amount, created) -> HomeRules.boarding(amount, created, now, locale)?.let { StatusBanner(it) } }
     val active = rounds.filter { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) }
     if (active.isNotEmpty()) Card(onClick = { showRounds = true }, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
@@ -126,7 +118,7 @@ internal fun UpdateWarningBanner(info: AppVersionInfo, currentVersion: String, v
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PendingRoundsSheet(rounds: List<PendingRoundStatus>, close: () -> Unit) {
+internal fun PendingRoundsSheet(rounds: List<PendingRoundStatus>, close: () -> Unit) {
     ModalBottomSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         com.noahwallet.ui.settings.SettingsColumn {
             TextButton(close) { Text("Close") }
@@ -152,7 +144,7 @@ private fun RoundTransaction(label: String, txid: String, copyable: Boolean = fa
     if (copyable) TextButton({
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label, txid))
     }) { Text("Copy $label") }
-    if (BuildConfig.APP_VARIANT != "regtest") TextButton({
+    TextButton({
         uri.openUri("https://mempool.space/${if (BuildConfig.APP_VARIANT == "mainnet") "" else "signet/"}tx/$txid")
     }) { Text("Open $label in browser") }
 }

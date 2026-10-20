@@ -43,6 +43,10 @@ class HomeRulesTest {
         assertTrue(failed.retry); assertTrue(failed.failed)
         assertEquals("An unknown error occurred while backing up.", failed.message)
     }
+    @Test fun boardingSuccessIsTransientAndAlwaysInSatsLikeRN() {
+        assertEquals("20,000 sats available in Ark", HomeRules.boarding(20_000, 1000, 5999, Locale.US)?.message)
+        assertNull(HomeRules.boarding(20_000, 1000, 6000, Locale.US))
+    }
     @Test fun storeLinksMatchRN() {
         assertEquals("https://play.google.com/store/apps/details?id=com.noahwallet.mainnet", HomeRules.updateURL("mainnet"))
         assertEquals("https://play.google.com/store/apps/details?id=com.noahwallet.signet", HomeRules.updateURL("signet"))
