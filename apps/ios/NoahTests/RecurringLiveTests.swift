@@ -88,57 +88,59 @@ struct RecurringLiveTests {
 /// Runs only on the owned fresh regtest simulator; never changes server fee policy.
 @MainActor @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_RECURRING_FEE_LIVE"] == "1"))
 struct RecurringFeeLiveTests {
-    @Test func realFeeGateThenExplicitManualApprovalPaysOnce() async throws {
+    @Test func belowCapLightningAutomaticallyPaysOnce() async throws {
         try #require(AppVariant.current == .regtest)
         let location = WalletDataLocation(variant: .regtest)
         try #require(!location.hasAnyData)
         let offer = try #require(ProcessInfo.processInfo.environment["NOAH_RECURRING_FEE_OFFER"])
         let services = AppServices.shared, session = services.session
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: true, appVersion: "recurring-r1-fee-live")
+        try await session.createNew(mnemonic: mnemonic, runDaemon: true, appVersion: "recurring-arkinfo-fee-live")
         try services.seed.save(mnemonic)
         try SettingsStorage.shared.setPersistedState(PersistedWalletState(isInitialized: true, isWalletLoaded: true), key: PersistedWalletState.key, version: 0)
         let request = try await session.receiveRequest()
         try request.arkAddress.write(to: URL.documentsDirectory.appending(path: "recurring-fee-funding-address.txt"), atomically: true, encoding: .utf8)
+        let fundingInvoice = try await session.bolt11Invoice(amountSats: 31_000)
+        try fundingInvoice.write(to: URL.documentsDirectory.appending(path: "recurring-fee-funding-invoice.txt"), atomically: true, encoding: .utf8)
         let deadline = ContinuousClock.now + .seconds(180)
         while ContinuousClock.now < deadline {
+            try await session.claimLightningReceives()
             try await session.sync()
             if try await session.summary()?.spendableSats ?? 0 >= 30_000 { break }
             try await Task.sleep(for: .seconds(1))
         }
         try #require(try await session.summary()?.spendableSats ?? 0 >= 30_000)
         try await ServerRegistration(variant: .regtest, session: session, client: services.client).ensureRegistered()
-        let executor = RecurringExecutor.shared
+        let quoted = RecurringExecutorTests.Locked<[String: String]>([:])
+        var dependencies = RecurringExecutor.Dependencies.live()
+        dependencies.quote = { schedule in
+            let result = try await RecurringRecipient.quote(schedule, session: session)
+            let decision = RecurringFeePolicy.evaluate(amount: result.0.amount, method: result.0.method, quoteFee: result.1.fee, schedule: result.2)
+            quoted.withLock { $0 = ["quotedFeeSat": String(result.1.fee), "capSat": String(decision.cap!), "worstCaseFeeSat": String(decision.worstCaseFee!), "decision": decision.reason.rawValue] }
+            return result
+        }
+        let executor = RecurringExecutor(dependencies: dependencies)
         let now = RecurringPayment.now
-        let schedule = RecurringPayment(id: UUID().uuidString, label: "Fee approval proof", destination: offer,
+        let schedule = RecurringPayment(id: UUID().uuidString, label: "Automatic fee cap proof", destination: offer,
             destinationType: "offer", amountSat: 20_000, comment: "", interval: .init(unit: "day", every: 1),
             startAt: now - 1000, nextRunAt: now - 1000, createdAt: now, updatedAt: now)
         try await executor.save(schedule, editing: false)
         let before = try await session.withOpenWallet { try await $0.wallet.history().map(\.id) }
         await executor.execute(); await executor.execute(manual: true)
-        try #require(executor.schedules.first?.status == "needs_approval")
-        let skipped = try await session.withOpenWallet { try await $0.wallet.history().filter { !before.contains($0.id) } }
-        #expect(skipped.isEmpty)
-        let journal = RecurringJournal(file: location.directory.appending(path: "noah-recurring-journal.json"))
-        #expect(try journal.load().isEmpty)
-        let review = try await executor.review(schedule.id)
-        // This is the explicit confirmation action used by the normal Send review sheet.
-        await executor.execute(manual: true, approval: review)
+        try #require(executor.schedules.first?.status == "active")
         try #require(executor.schedules.first?.occurrencesPaid == 1)
-        await executor.execute(manual: true, approval: review)
+        let journal = RecurringJournal(file: location.directory.appending(path: "noah-recurring-journal.json"))
         let after = try await session.withOpenWallet { try await $0.wallet.history().filter { !before.contains($0.id) } }
         try #require(after.count == 1)
         #expect(after[0].status == "successful")
         #expect(after[0].sentToAddresses.reduce(UInt64(0)) { $0 + $1.amountSats } == 20_000)
         #expect(try journal.load()[schedule.id]?.consumed == true)
-        let evidence: [String: String] = [
-            "amountSat": "20000", "quotedFeeSat": String(review.quote.fee),
-            "capSat": String(RecurringFeePolicy.cap(amount: 20_000)),
-            "exceedsCap": String(review.quote.fee > RecurringFeePolicy.cap(amount: 20_000)),
-            "automaticStatus": "needs_approval", "automaticMovements": String(skipped.count),
-            "manualMovements": String(after.count), "movementID": String(after[0].id),
-            "movementStatus": after[0].status, "manualPath": "explicit confirmation; production executor and Send controller/SDK",
-        ]
+        var evidence = quoted.withLock { $0 }
+        evidence.merge([
+            "amountSat": "20000", "automaticStatus": "active", "automaticMovements": String(after.count),
+            "movementID": String(after[0].id), "movementStatus": after[0].status,
+            "path": "unattended production executor and Send controller/SDK; repeated trigger"
+        ]) { _, new in new }
         try JSONEncoder().encode(evidence).write(to: URL.documentsDirectory.appending(path: "recurring-fee-evidence.json"), options: .atomic)
         try await executor.cancel(schedule.id)
         try await WalletLifecycle(dependencies: .live(services: services)).delete()

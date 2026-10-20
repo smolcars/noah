@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 import UserNotifications
 
@@ -51,7 +52,7 @@ enum RecurringRecipient {
         default: throw RecurringError.message("Unsupported recipient")
         }
     }
-    static func quote(_ schedule: RecurringPayment, session: WalletSession) async throws -> (SendPayment, SendQuote) {
+    static func quote(_ schedule: RecurringPayment, session: WalletSession) async throws -> (SendPayment, SendQuote, LightningSendFees?) {
         guard schedule.validPolicy else { throw SendFailure.invalid }
         let recipient = try resolve(schedule.destination)
         guard recipient.type == schedule.destinationType else { throw SendFailure.invalid }
@@ -65,8 +66,20 @@ enum RecurringRecipient {
             if let ark = route.arkAddress { payment.destination = ark; payment.method = "ark" }
         }
         payment.repeatMetadata = try SendPayment.metadata(destination: schedule.destination, comment: schedule.comment, amount: String(schedule.amountSat), fiatCurrency: nil)
-        return (payment, try await session.quoteSend(payment))
+        let quote = try await session.quoteSend(payment)
+        let fees = payment.method == "ark" ? nil : await lightningFees {
+            try await session.withOpenWallet { try await $0.wallet.arkInfo()?.feeSchedule.lightningSend }
+        }
+        return (payment, quote, fees)
     }
+    static func lightningFees(_ fetch: () async throws -> LightningSendFees?) async -> LightningSendFees {
+        do {
+            if let fees = try await fetch() { return fees }
+        } catch { /* Use the published fallback for unavailable ArkInfo. */ }
+        AppLog("recurring").d("ArkInfo unavailable; using the published Lightning fee schedule")
+        return RecurringFeePolicy.fallback
+    }
+
 }
 
 /// iOS uses the same server wake + foreground execution and local reminder policy as RN.
@@ -123,19 +136,56 @@ enum RecurringNotifications {
     }
 }
 
-/// BarkBoltFFI 0.4.0 exposes no Lightning submission fee limit. wait:false can
-/// already advance the send; inspecting pendingLightningSends afterwards is too late.
-/// Pinned bark fees.rs defines Arkoor as zero-fee, with no variable fee path.
+/// bark-bolt-ffi 0.4.0 pins bark bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c.
+/// lib/src/fees.rs LightningSendFees::calculate charges max(min, base + ceil(ppm)),
+/// with calc_ppm_expiry_fee charging at most the payment amount across expiry tiers.
+/// bark/src/actions/lightning/pay.rs start_lightning_send selects inputs using the
+/// wallet's ArkInfo lightning_send schedule, stores that fee, and builds the HTLC
+/// and change from it; the server cosigns those outputs, without adding a fee.
+/// Thus the maximum tier bounds submission under that schedule. The user accepts
+/// the residual risk of the server changing its schedule between quote and submit.
+/// Arkoor remains zero-fee. Attended Send review is deliberately uncapped.
 enum RecurringFeePolicy {
-    static func cap(amount: UInt64) -> UInt64 { max(amount / 100, 200) }
-    static func approvalReason(payment: SendPayment, quote: SendQuote) -> String? {
-        let limit = cap(amount: payment.amount)
-        if quote.fee > limit {
-            return "The estimated fee of \(quote.fee) sats exceeds your automatic limit of \(limit) sats (1% or 200 sats, whichever is higher). Review this payment to pay manually."
+    static let fallback = LightningSendFees(minFeeSats: 20, baseFeeSats: 0, ppmExpiryTable: [
+        .init(expiryBlocksThreshold: 0, ppm: 2000),
+        .init(expiryBlocksThreshold: 1008, ppm: 4000),
+        .init(expiryBlocksThreshold: 2016, ppm: 5000)
+    ])
+    enum Reason: String { case withinCap = "within_cap", quoteExceedsCap = "quote_exceeds_cap", scheduleExceedsCap = "schedule_exceeds_cap", arkFee = "ark_fee" }
+    struct Decision {
+        let worstCaseFee: UInt64?
+        let cap: UInt64?
+        let reason: Reason
+        var autoPay: Bool { reason == .withinCap }
+        func approvalMessage(quoteFee: UInt64) -> String? {
+            switch reason {
+            case .withinCap: nil
+            case .quoteExceedsCap: "The fee for this payment (\(quoteFee) sats) is above your automatic limit of \(cap!) sats. Review it to pay manually."
+            case .scheduleExceedsCap: "Ark's published Lightning fees for this amount can reach \(worstCaseFee!) sats, above your automatic limit of \(cap!) sats. Review it to pay manually."
+            case .arkFee: "The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually."
+            }
         }
-        guard payment.method == "ark", quote.fee == 0 else {
-            return "This payment's fee cannot be limited to \(limit) sats during automatic sending. Review this payment to pay manually."
+    }
+    static func evaluate(amount: UInt64, method: String, quoteFee: UInt64, schedule: LightningSendFees?) -> Decision {
+        if method == "ark" { return .init(worstCaseFee: nil, cap: nil, reason: quoteFee == 0 ? .withinCap : .arkFee) }
+        let schedule = schedule ?? fallback
+        let ppm = schedule.ppmExpiryTable.map(\.ppm).max() ?? 0
+        // Widen before dividing: a UInt64 product can overflow while its ppm fee fits.
+        let product = amount.multipliedFullWidth(by: ppm)
+        let proportional: UInt64
+        if product.high >= 1_000_000 { proportional = .max }
+        else {
+            let divided = UInt64(1_000_000).dividingFullWidth(product)
+            proportional = add(divided.quotient, divided.remainder == 0 ? 0 : 1)
         }
-        return nil
+        let worst = max(schedule.minFeeSats, add(schedule.baseFeeSats, proportional))
+        let cap = min(add(worst, worst), max(200, amount / 50))
+        // The cap is always below UInt64.max, so any saturated fee exceeds it.
+        let reason: Reason = quoteFee > cap ? .quoteExceedsCap : worst > cap ? .scheduleExceedsCap : .withinCap
+        return .init(worstCaseFee: worst, cap: cap, reason: reason)
+    }
+    private static func add(_ a: UInt64, _ b: UInt64) -> UInt64 {
+        let (value, overflow) = a.addingReportingOverflow(b)
+        return overflow ? .max : value
     }
 }

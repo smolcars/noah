@@ -9,7 +9,7 @@ struct RecurringPaymentsView: View {
     var body: some View {
         List {
             Section {
-                Text("Automatic payments from your Ark balance. Fees are limited to 1% or 200 sats, whichever is higher. Payments whose fees cannot be limited need manual approval. Keep notifications enabled.")
+                Text("Automatic payments from your Ark balance. Lightning fee limits use Ark’s published fees, up to 2% or 200 sats, whichever is higher. Payments above the limit need manual approval. Keep notifications enabled.")
                     .foregroundStyle(NoahColor.mutedForeground)
                 NavigationLink("New recurring payment") { RecurringPaymentEditorView(executor: executor) }
                     .accessibilityIdentifier("recurring-new-button")

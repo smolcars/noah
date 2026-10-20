@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 import Testing
 @testable import Noah
@@ -22,6 +23,9 @@ import Testing
         var ambiguous = false
         var fee: UInt64 = 0
         var method = "ark"
+        var fees: LightningSendFees? = nil
+        var feeFetches = 0
+        var feeFetchFails = false
         var notified: [RecurringPayment] = []
         var reservation: (@MainActor (@escaping @MainActor @Sendable () async -> Void) async throws -> Void)?
         var preflight: (@MainActor () async throws -> Void)?
@@ -74,13 +78,21 @@ import Testing
                     if stopped.withLock({ $0 }) { throw AppServices.WalletSuspended() }
                 }, quote: { [self] schedule in
                     try await beforeQuote()
-                    return await quoted(schedule)
+                    let fees = await RecurringRecipient.lightningFees { [self] in
+                        try await fetchFees()
+                    }
+                    return await quoted(schedule, fees: fees)
                 }, automationGeneration: { [settings] in settings.string(forKey: WalletLifecycle.automationStopKey) }, zone: { [zone] in zone.withLock { $0 } }, now: { [clock] in clock.withLock { $0 } }, sync: { [self] entries in try await sync(entries) },
                 notifications: { [self] schedules, result in await notification(schedules, result) }))
         }
-        func quoted(_ schedule: RecurringPayment) -> (SendPayment, SendQuote) {
+        func fetchFees() throws -> LightningSendFees? {
+            feeFetches += 1
+            if feeFetchFails { throw URLError(.notConnectedToInternet) }
+            return fees
+        }
+        func quoted(_ schedule: RecurringPayment, fees: LightningSendFees) -> (SendPayment, SendQuote, LightningSendFees?) {
             (SendPayment(destination: schedule.destination, method: method, amount: schedule.amountSat),
-             .init(amount: schedule.amountSat, fee: fee, total: schedule.amountSat + fee, walletIdentity: owner.withLock { $0.wallet }))
+             .init(amount: schedule.amountSat, fee: fee, total: schedule.amountSat + fee, walletIdentity: owner.withLock { $0.wallet }), fees)
         }
         func notification(_ schedules: [RecurringPayment], _ result: RecurringPayment?) {
             if let result { notified.append(result) } else { reminders = schedules }
@@ -315,21 +327,48 @@ import Testing
 
     @Test(arguments: ["ark", "lnurl", "offer", "lightning"]) func variableOrExcessiveFeesNeedApprovalAndNeverConsume(method: String) async throws {
         let h = try Harness(); let schedule = try h.add()
-        h.method = method; h.fee = 501 // 1% of 50,000 sats is 500.
+        h.method = method; h.fee = 501 // F = 250; cap = 500 for 50,000 sats.
         await h.executor.execute(); await h.executor.execute(manual: true)
         #expect(h.calls.withLock { $0 } == 0)
         #expect(try h.store.load().schedules[schedule.id]?.status == "needs_approval")
         #expect(try h.journal.load().isEmpty)
         #expect(h.saved == nil)
         #expect(h.notified.count == 1)
-        #expect(h.notified.first?.lastError?.contains("500 sats") == true)
+        #expect(h.notified.first?.lastError?.contains(method == "ark" ? "0 sats" : "500 sats") == true)
     }
-    @Test(arguments: ["lnurl", "offer", "lightning"]) func unboundedLightningNeedsApprovalEvenBelowCap(method: String) async throws {
-        let h = try Harness(); let schedule = try h.add(); h.method = method; h.fee = 1
+    @Test(arguments: ["lnurl", "offer", "lightning"]) func belowCapLightningPaysAutomaticallyExactlyOnce(method: String) async throws {
+        let h = try Harness(); let schedule = try h.add(); h.method = method; h.fee = 250
+        await h.executor.execute(); await h.executor.execute(manual: true)
+        #expect(h.calls.withLock { $0 } == 1)
+        #expect(try h.store.load().schedules[schedule.id]?.status == "active")
+        #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == 1)
+        #expect(!h.notified.contains { $0.status == "needs_approval" })
+    }
+    @Test func scheduleAboveCapWithLowQuoteNeedsApproval() async throws {
+        let h = try Harness(); let schedule = try h.add(); h.method = "offer"; h.fee = 1
+        h.fees = .init(minFeeSats: 0, baseFeeSats: 0, ppmExpiryTable: [.init(expiryBlocksThreshold: 0, ppm: 50_000)])
         await h.executor.execute()
         #expect(h.calls.withLock { $0 } == 0)
-        #expect(try h.store.load().schedules[schedule.id]?.status == "needs_approval")
-        #expect(try h.journal.load().isEmpty)
+        #expect(try h.journal.load().isEmpty && h.saved == nil)
+        #expect(h.notified.count == 1)
+        #expect(h.notified.first?.status == "needs_approval")
+        #expect(h.notified.first?.lastError == "Ark's published Lightning fees for this amount can reach 2500 sats, above your automatic limit of 1000 sats. Review it to pay manually.")
+        #expect(try h.store.load().schedules[schedule.id]?.lastError == h.notified.first?.lastError)
+    }
+    @Test func arkInfoFailureUsesFallbackCap() async throws {
+        let h = try Harness(); _ = try h.add(); h.method = "offer"; h.fee = 501; h.feeFetchFails = true
+        await h.executor.execute()
+        #expect(h.feeFetches == 1 && h.calls.withLock { $0 } == 0)
+        #expect(h.notified.first?.lastError == "The fee for this payment (501 sats) is above your automatic limit of 500 sats. Review it to pay manually.")
+    }
+    @Test func finalGuardUsesCapturedScheduleAndQuoteWithoutRefetching() async throws {
+        let h = try Harness(); _ = try h.add(); h.method = "offer"; h.fee = 800
+        h.fees = .init(minFeeSats: 0, baseFeeSats: 600, ppmExpiryTable: [])
+        // Only the captured schedule/quote allows this fee; fallback or refetch blocks it.
+        h.beforePay = { h.fees = .init(minFeeSats: 5000, baseFeeSats: 0, ppmExpiryTable: []); h.fee = 5000 }
+        await h.executor.execute()
+        #expect(h.feeFetches == 1 && h.calls.withLock { $0 } == 1)
+        #expect(!h.notified.contains { $0.status == "needs_approval" })
     }
     @Test func manualApprovalUsesReviewedQuoteAndSettlesOccurrenceOnce() async throws {
         let h = try Harness(); let schedule = try h.add(); h.method = "lnurl"; h.fee = 501
@@ -343,20 +382,13 @@ import Testing
         #expect(try h.journal.load()[schedule.id]?.consumed == true)
     }
     @Test func manualReviewCannotOutlivePause() async throws {
-        let h = try Harness(); let schedule = try h.add(); h.method = "offer"
+        let h = try Harness(); let schedule = try h.add(); h.method = "offer"; h.fee = 501
         await h.executor.execute()
         let review = try await h.executor.review(schedule.id)
         try await h.executor.pause(schedule.id)
         await h.executor.execute(manual: true, approval: review)
         #expect(h.calls.withLock { $0 } == 0)
     }
-    @Test func feeCapUsesIntegerSatsWithoutRoundingUpOrOverflow() {
-        #expect(RecurringFeePolicy.cap(amount: 1) == 200)
-        #expect(RecurringFeePolicy.cap(amount: 20_099) == 200)
-        #expect(RecurringFeePolicy.cap(amount: 50_099) == 500)
-        #expect(RecurringFeePolicy.cap(amount: UInt64.max) == UInt64.max / 100)
-    }
-
     @Test(arguments: [-1.0, 86_400_000.0]) func finalGuardRejectsClockJumpDuringPreparation(delta: Double) async throws {
         let h = try Harness(); let schedule = try h.add()
         h.beforePay = { h.clock.withLock { $0 += delta } }

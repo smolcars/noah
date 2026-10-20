@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 import Observation
 
@@ -9,7 +10,7 @@ import Observation
         var ensureOpen: @Sendable () async throws -> Void
         var binding: @Sendable () throws -> RecurringStore.Binding
         var allowed: @Sendable () throws -> Void
-        var quote: @Sendable (RecurringPayment) async throws -> (SendPayment, SendQuote)
+        var quote: @Sendable (RecurringPayment) async throws -> (SendPayment, SendQuote, LightningSendFees?)
         var automationGeneration: @Sendable () -> String? = { nil }
         var zone: @Sendable () -> TimeZone = { .current }
         var now: @Sendable () -> Double = { RecurringPayment.now }
@@ -118,16 +119,17 @@ import Observation
                 guard plan.kind == "pay", !d.controller.locked else { continue }
                 do {
                     let payment: SendPayment, quote: SendQuote
+                    let fees: LightningSendFees?
                     if let approval {
                         guard plan == approval.plan else { continue }
-                        (payment, quote) = (approval.payment, approval.quote)
-                    } else { (payment, quote) = try await d.quote(schedule) }
+                        (payment, quote, fees) = (approval.payment, approval.quote, nil)
+                    } else { (payment, quote, fees) = try await d.quote(schedule) }
                     guard RecurringExecutionBudget.available else { break }
                     let state = try boundState()
                     guard let latest = state.schedules[id], latest == schedule,
                           planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual) == plan,
                           quote.walletIdentity == state.binding?.wallet else { continue }
-                    if approval == nil, let reason = RecurringFeePolicy.approvalReason(payment: payment, quote: quote) {
+                    if approval == nil, let reason = RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees).approvalMessage(quoteFee: quote.fee) {
                         schedule.status = "needs_approval"
                         schedule.lastError = reason
                         schedule.retryNotBefore = nil
@@ -159,7 +161,7 @@ import Observation
                               state.binding == (try binding()), state.binding == entry.binding,
                               state.schedules[id] == marked,
                               marked.status == (unattended ? "active" : "needs_approval"),
-                              !unattended || RecurringFeePolicy.approvalReason(payment: payment, quote: quote) == nil else {
+                              !unattended || RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees).autoPay else {
                             throw SendNotSubmitted(reason: .recurringStopped)
                         }
                     }
@@ -251,7 +253,7 @@ import Observation
         var planning = schedule; planning.status = "active"
         let plan = planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: true)
         guard plan.kind == "pay" else { throw RecurringError.message("This payment is no longer due.") }
-        let (payment, quote) = try await d.quote(schedule)
+        let (payment, quote, _) = try await d.quote(schedule)
         guard try boundState().schedules[id] == schedule else { throw SendFailure.invalid }
         return Review(schedule: schedule, plan: plan, payment: payment, quote: quote)
     }
