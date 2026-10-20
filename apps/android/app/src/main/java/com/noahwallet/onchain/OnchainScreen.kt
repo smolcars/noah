@@ -158,6 +158,7 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
                     AmountRow(app, if (quote.action == OnchainAction.board) "Estimated onchain fee" else "Estimated broadcast fees", quote.chainFee)
                 AmountRow(app, if (quote.action == OnchainAction.board) "Estimated Ark balance receives" else "Amount after fee", quote.net)
             }
+            if (quote.automatic) AmountRow(app, "Estimated onchain reserve", quote.confirmed - quote.amount - quote.chainFee)
             quote.destination?.let { DetailRow("Destination", it) }
             quote.externalDestinationWarning?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Text(reviewExplanation(quote))
