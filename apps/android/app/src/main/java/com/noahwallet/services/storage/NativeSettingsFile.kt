@@ -1,0 +1,53 @@
+package com.noahwallet.services.storage
+
+import java.io.File
+import java.io.FileOutputStream
+import java.security.MessageDigest
+import kotlinx.serialization.json.*
+
+/** One committed generation. Pending files are never read or used as a fallback. */
+internal class NativeSettingsFile(val file: File,
+    private val sync: (File) -> Unit = ::syncDirectory,
+    private val step: (String) -> Unit = {}) {
+    data class State(val values: Map<String, String> = emptyMap(), val admittedKeys: Set<String> = emptySet(),
+        val recoveryPending: Boolean = false, val cleanupPending: Boolean = false)
+    val exists get() = file.exists()
+
+    fun load(): State {
+        val root = Json.parseToJsonElement(RNStoreCodec.storedString(true, file.readBytes())!!).jsonObject
+        check(root.keys == setOf("version", "payload", "sha256"))
+        check(root.getValue("version").toString() == "1")
+        fun string(value: JsonElement): String = value.jsonPrimitive.let { check(it.isString); it.content }
+        val payload = string(root.getValue("payload"))
+        check(string(root.getValue("sha256")) == digest(payload))
+        val state = Json.parseToJsonElement(payload).jsonObject
+        check(state.keys == setOf("values", "admittedKeys", "recoveryPending", "cleanupPending"))
+        val values = state.getValue("values").jsonObject.mapValues { string(it.value) }
+        val keys = state.getValue("admittedKeys").jsonArray.map(::string)
+        check(keys.distinct().size == keys.size && keys.all { it in values })
+        fun boolean(key: String): Boolean = state.getValue(key).jsonPrimitive.let { check(!it.isString); it.boolean }
+        return State(values, keys.toSet(), boolean("recoveryPending"), boolean("cleanupPending"))
+    }
+
+    fun save(state: State) {
+        val payload = buildJsonObject {
+            put("values", JsonObject(state.values.toSortedMap().mapValues { JsonPrimitive(it.value) }))
+            put("admittedKeys", JsonArray(state.admittedKeys.sorted().map(::JsonPrimitive)))
+            put("recoveryPending", state.recoveryPending)
+            put("cleanupPending", state.cleanupPending)
+        }.toString()
+        val data = buildJsonObject { put("version", 1); put("payload", payload); put("sha256", digest(payload)) }.toString()
+        val pending = File(file.path + ".pending")
+        FileOutputStream(pending).use { it.write(data.toByteArray(Charsets.UTF_8)) }
+        step("write")
+        sync(pending)
+        step("fileSync")
+        check(pending.renameTo(file))
+        step("rename")
+        sync(file.parentFile!!)
+        step("directorySync")
+    }
+
+    private fun digest(payload: String) = MessageDigest.getInstance("SHA-256")
+        .digest(payload.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+}
