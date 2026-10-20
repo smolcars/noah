@@ -77,18 +77,21 @@ fun BackupSettingsScreen(model: AppModel) {
         } }, enabled = !model.busy) { Text("Delete Backup") } }) }
 }
 
+/** A file for the share sheet and how to remove it once the receiver is done. */
+private class SharedFile(val file: File, val discard: () -> Unit)
+
 /** Keep the grant and file alive while the receiver is active; clean on return or screen disposal. */
 @Composable
-private fun ShareFileButton(model: AppModel, title: String, filename: String, mime: String, write: suspend (File) -> Unit) {
+private fun ShareFileButton(model: AppModel, title: String, mime: String, produce: suspend () -> SharedFile) {
     val context = LocalContext.current
-    var folder by remember { mutableStateOf<File?>(null) }
+    var shared by remember { mutableStateOf<SharedFile?>(null) }
     var shareUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var returned by remember { mutableStateOf(false) }
     val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     fun discard() {
         shareUri?.let { context.revokeUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-        folder?.let { model.services.scratch.discard(it) }
-        folder = null; shareUri = null; returned = false
+        shared?.discard?.invoke()
+        shared = null; shareUri = null; returned = false
     }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         // A chooser result alone can precede the receiver reading; wait until Noah resumes.
@@ -105,15 +108,12 @@ private fun ShareFileButton(model: AppModel, title: String, filename: String, mi
     NoahButton(title, !model.busy && !model.isWalletSuspended) {
         model.action("Couldn't prepare the file for sharing. Please try again.") {
             discard()
-            val directory = model.services.scratch.makeFolder("share")
-            folder = directory
+            val file = withContext(Dispatchers.IO) { produce() }.also { shared = it }.file
             try {
-                val file = File(directory, filename)
-                withContext(Dispatchers.IO) { write(file) }
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
                 shareUri = uri
                 val send = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri)
-                    .apply { clipData = ClipData.newRawUri(filename, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+                    .apply { clipData = ClipData.newRawUri(file.name, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
                 launcher.launch(Intent.createChooser(send, title))
             } catch (failure: Exception) { discard(); throw failure }
         }
@@ -125,8 +125,10 @@ fun ExportScreen(model: AppModel) {
     SettingsColumn {
         Text("Create an encrypted backup file containing your wallet database.")
         Text("You will need your seed phrase to restore this backup. Keep it safe and never share it.")
-        ShareFileButton(model, "Export Database", "noah-${BuildConfig.APP_VARIANT}.noahbackup", "application/octet-stream") {
-            model.services.backupService.exportEncryptedBackup(it)
+        ShareFileButton(model, "Export Database", "application/octet-stream") {
+            // The backup service owns the export's folder; it is swept at launch if never discarded.
+            val export = model.services.backupService.exportEncryptedBackup("noah-${BuildConfig.APP_VARIANT}.noahbackup")
+            SharedFile(export.archive.file) { export.discard() }
         }
         if (model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     }
@@ -139,7 +141,14 @@ fun LogScreen(model: AppModel) {
     LaunchedEffect(Unit) { lines = withContext(Dispatchers.IO) { LogFile.shared(context).lines() } }
     SettingsColumn {
         NoahButton("Refresh Logs", !model.busy, secondary = true) { model.action("Couldn't read logs.") { lines = withContext(Dispatchers.IO) { LogFile.shared(context).lines() } } }
-        ShareFileButton(model, "Share Logs", "noah.log", "text/plain") { it.writeText(LogFile.shared(context).lines().joinToString("\n")) }
+        ShareFileButton(model, "Share Logs", "text/plain") {
+            val scratch = model.services.scratch
+            val folder = scratch.makeFolder("share")
+            try {
+                val file = File(folder, "noah.log").apply { writeText(LogFile.shared(context).lines().joinToString("\n")) }
+                SharedFile(file) { scratch.discard(folder) }
+            } catch (failure: Exception) { scratch.discard(folder); throw failure }
+        }
         if (lines.isEmpty()) Text("No logs found")
         androidx.compose.foundation.text.selection.SelectionContainer {
             Text(lines.joinToString("\n"), style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))

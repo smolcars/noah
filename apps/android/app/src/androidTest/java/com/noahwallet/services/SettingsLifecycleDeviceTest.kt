@@ -56,13 +56,16 @@ class SettingsLifecycleDeviceTest {
         services.backupCoordinator.flush(BackupCoordinator.Reason.manual, false)
         assertTrue(V0BackupV2ListClient(services.client).listBackupObjects().value().isNotEmpty())
         val phrase = (SeedStorage(context, "regtest").read() as SecretResult.Found).value
-        services.scratch.withFolder("settings-export-test") { folder ->
-            val file = File(folder, "export.noahbackup")
-            services.backupService.exportEncryptedBackup(file)
+        val export = services.backupService.exportEncryptedBackup("export.noahbackup")
+        try {
+            val file = export.archive.file
             assertEquals(2, file.inputStream().use { it.read() })
-            val opened = BackupArchive.open(file, phrase, File(folder, "opened"))
-            assertEquals("regtest", opened.manifest.network)
-        }
+            services.scratch.withFolder("settings-export-test") { folder ->
+                val opened = BackupArchive.open(file, phrase, File(folder, "opened"))
+                assertEquals("regtest", opened.manifest.network)
+            }
+        } finally { export.discard() }
+        assertFalse(export.archive.file.exists())
         services.registration.setBackupEnabled(true)
     }
 
