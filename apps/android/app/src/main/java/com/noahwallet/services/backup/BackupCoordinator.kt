@@ -56,6 +56,13 @@ class BackupCoordinator(private val dependencies: Dependencies) {
         cancelScheduled()
     }
 
+    suspend fun settleForDeletion() {
+        val pass = synchronized(lock) { cancelScheduled(); inFlight }
+        pass?.cancel()
+        pass?.join()
+        cancelScheduled()
+    }
+
     suspend fun forgetUploadedBackup(id: String) {
         while (true) {
             val pass = synchronized(lock) {

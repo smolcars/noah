@@ -25,7 +25,7 @@ class WalletLifecycleTest {
         val events = mutableListOf<String>()
         val session = WalletSession("regtest", location, inspect = { WalletDatabase.Properties("regtest", "abcd") },
             isSuspended = { suspended }, opener = { _, _, _, _, _ -> error("Open refused") })
-        fun lifecycle(session: WalletSession = this.session) = WalletLifecycle(session, location,
+        fun lifecycle(session: WalletSession = this.session, drainTimeoutMillis: Long = 30_000) = WalletLifecycle(session, location,
             setSuspended = { suspended = it; events.add("flag:$it") },
             deregister = { events.add("deregister"); if (deregisterFails) error("Offline") },
             deleteSeed = {
@@ -41,7 +41,7 @@ class WalletLifecycleTest {
             isSuspended = { suspended },
             settleBackground = { settleBackground() },
             finishBackground = { finishBackground() },
-            syncIdentityDirectory = {},
+            syncIdentityDirectory = {}, drainTimeoutMillis = drainTimeoutMillis,
             syncFiles = { if (syncFails) error("Directory sync failed"); events.add("sync") })
         fun files() { location.directory.mkdirs(); location.database.writeText("fake"); location.restoreDirectory.mkdirs() }
         fun clean() { root.deleteRecursively() }
@@ -225,6 +225,42 @@ class WalletLifecycleTest {
                 assertFalse(world.seed)
             } finally { world.clean() }
         }
+    }
+
+    @Test fun timedOutExportKeepsWalletIntactAndCanRetry() = runBlocking {
+        val world = World()
+        val scratch = com.noahwallet.services.backup.ScratchSpace(File(world.root, "scratch")) {}
+        val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
+        val export = async { scratch.withFolder("export") { folder ->
+            File(folder, "snapshot.sqlite").writeText("plaintext")
+            entered.complete(Unit); release.await()
+        } }
+        try {
+            world.files(); entered.await()
+            world.settleBackground = { scratch.drainForWalletDeletion(20) }
+            world.finishBackground = scratch::finishWalletDeletion
+            world.sweepScratch = scratch::sweepForWalletDeletion
+            assertTrue(runCatching { world.lifecycle().delete() }.exceptionOrNull() is WalletLifecycle.BackupBusy)
+            assertTrue(world.location.database.exists()); assertTrue(world.seed); assertTrue(world.settings)
+            assertFalse(world.suspended); assertFalse(world.location.deletionMarker.exists())
+            scratch.withFolder("retry-export") {}
+            release.complete(Unit); export.await()
+            world.lifecycle().delete()
+            assertFalse(world.seed)
+        } finally { release.complete(Unit); export.await(); world.clean() }
+    }
+
+    @Test fun timedOutBackgroundSettlementDoesNotCommitDeletion() = runBlocking {
+        val world = World()
+        try {
+            world.files()
+            world.settleBackground = { awaitCancellation() }
+            assertTrue(runCatching { world.lifecycle(drainTimeoutMillis = 20).delete() }.exceptionOrNull() is WalletLifecycle.BackupBusy)
+            assertTrue(world.location.database.exists()); assertTrue(world.seed); assertTrue(world.settings)
+            assertFalse(world.suspended); assertFalse(world.location.deletionMarker.exists())
+            world.settleBackground = {}
+            world.lifecycle().delete(); assertFalse(world.seed)
+        } finally { world.clean() }
     }
 
     @Test fun differentAndLegacyMarkersNeverDeleteCurrentWallet() = runBlocking {

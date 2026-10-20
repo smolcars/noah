@@ -2,6 +2,8 @@ package com.noahwallet.services.wallet
 
 import com.noahwallet.services.storage.WalletDataLocation
 import com.noahwallet.services.storage.syncDirectory
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -25,9 +27,11 @@ class WalletLifecycle(
     private val isSuspended: () -> Boolean = { false },
     private val syncFiles: () -> Unit = {},
     private val syncIdentityDirectory: (java.io.File) -> Unit = ::syncDirectory,
+    private val drainTimeoutMillis: Long = 30_000,
     private val warn: (String) -> Unit = {},
 ) {
     class RestorePending : Exception("Restart Noah to settle the pending restore before deleting")
+    class BackupBusy : Exception("Noah is still finishing a backup. Try again in a moment.")
     class TemporaryFiles : Exception("Noah couldn't remove temporary wallet files. Restart Noah and try again.")
     private val mutation = Mutex()
 
@@ -62,8 +66,9 @@ class WalletLifecycle(
         val wasSuspended = isSuspended()
         setSuspended(true)
         try {
-            settleBackground()
-            drainExports()
+            try {
+                withTimeout(drainTimeoutMillis) { settleBackground(); drainExports() }
+            } catch (_: TimeoutCancellationException) { throw BackupBusy() }
             session.closeSettled()
             val reservation = session.reserve()
             try {

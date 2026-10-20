@@ -117,10 +117,10 @@ class AppServices private constructor(private val context: Context) {
         },
         settleBackground = {
             reconcileBackupTriggers()
-            backupCoordinator.settle()
+            backupCoordinator.settleForDeletion()
             startup.withLock { started = false }
         },
-        drainExports = scratch::drainForWalletDeletion,
+        drainExports = { scratch.drainForWalletDeletion() },
         finishBackground = scratch::finishWalletDeletion,
         isSuspended = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true },
         syncFiles = {

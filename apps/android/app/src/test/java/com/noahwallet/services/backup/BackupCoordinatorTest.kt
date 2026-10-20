@@ -37,6 +37,16 @@ class BackupCoordinatorTest {
             sleep = clock::sleep, jitter = { 1.0 }, now = { 1000.0 }))
     }
     private suspend fun eventually(condition: () -> Boolean) = withTimeout(5000) { while (!condition()) delay(2) }
+    @Test fun deletionCancelsUploadAndWaitsForItsFinalStateWrite() = runBlocking {
+        val w = World()
+        w.held = CompletableDeferred()
+        w.coordinator.schedule(BackupCoordinator.Reason.manual, true)
+        w.entered.await(); w.eligible = false
+        withTimeout(1000) { w.coordinator.settleForDeletion() }
+        assertEquals("failed", w.state.lastBackupStatus)
+        assertNull(w.state.lastBackupAt)
+    }
+
     @Test fun debounceCoalescesRequests() = runBlocking {
         val w = World(); repeat(3) { w.coordinator.schedule(BackupCoordinator.Reason.databaseChanged) }
         eventually { w.clock.pending() == listOf(5000L) }; assertTrue(w.calls.isEmpty()); w.clock.fire()
