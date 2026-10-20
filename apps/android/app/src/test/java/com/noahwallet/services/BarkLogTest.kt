@@ -22,6 +22,30 @@ class BarkLogTest {
             AppLog.Level.debug, AppLog.Level.verbose), LogLevel.entries.map(BarkLog::appLevel))
     }
 
+    @Test fun sdkRustErrorChainsAreRedactedBeforeBothSinks() {
+        val directory = Files.createTempDirectory("bark-error-chains").toFile()
+        val received = mutableListOf<String>()
+        val writer = Executors.newSingleThreadExecutor()
+        val file = LogFile(directory, executor = writer, systemSink = { _, tag, message -> received += "[$tag] $message" })
+        try {
+            val logger = BarkLog(file)
+            for (text in listOf(
+                "[ONCHAIN] Using Bitcoin Core RPC at http://fake-user:fake-password@localhost:18443",
+                "request failed: error sending request for url (https://example.invalid/x?X-Amz-Signature=fake-presigned-value)\n\nCaused by:\n    transport error",
+                "sync failed: invalid signature: " + "ab".repeat(64),
+                "wallet failed: private_key=0x" + "cd".repeat(32))) {
+                logger.log(LogLevel.ERROR, "bark::wallet", text)
+            }
+            file.flush()
+            val saved = file.lines().joinToString("\n")
+            for (secret in listOf("fake-user", "fake-password", "fake-presigned-value", "ab".repeat(64), "cd".repeat(32))) {
+                assertFalse(secret, received.joinToString().contains(secret))
+                assertFalse(secret, saved.contains(secret))
+            }
+            assertEquals(4, received.size)
+        } finally { writer.shutdownNow(); directory.deleteRecursively() }
+    }
+
     @Test fun concurrentCallbacksPreserveEachProducersOrderUnderLoad() {
         val directory = Files.createTempDirectory("bark-order").toFile()
         val writer = Executors.newSingleThreadExecutor()

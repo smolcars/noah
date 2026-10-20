@@ -9,6 +9,7 @@ import io.sentry.protocol.SentryException
 import io.sentry.transport.ITransport
 import io.sentry.util.HintUtils
 import java.io.ByteArrayInputStream
+import java.io.StringReader
 import java.nio.file.Files
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
@@ -122,6 +123,60 @@ class TelemetryTransportTest {
             value = "synthetic failure"
             mechanism = Mechanism().apply { type = mechanismType; isHandled = handled }
         })
+    }
+
+    private fun nativeEvent() = requireNotNull(javaClass.getResourceAsStream("/telemetry/native-crash.json")).use {
+        requireNotNull(serializer.deserialize(StringReader(it.bufferedReader().readText()), SentryEvent::class.java))
+    }
+
+    @Test fun nativeOutboxReplayKeepsOnlyAllowlistedSignalThreadAndFrameFields() {
+        for (signal in listOf("SIGSEGV", "SIGABRT")) {
+            val outbox = Files.createTempDirectory("noah-native-outbox").toFile()
+            val options = options()
+            val received = RecordingTransport()
+            var hookCalls = 0
+            val hook = requireNotNull(options.beforeSend)
+            options.setBeforeSend { event, hint -> hookCalls++; hook.execute(event, hint) }
+            options.setTransportFactory { configured, _ -> TelemetryTransport(received, configured) }
+            val client = SentryClient(options)
+            try {
+                val event = nativeEvent().apply { exceptions!!.single().type = signal }
+                val attachment = item(SentryItemType.Attachment, "synthetic-sensitive-minidump")
+                val cached = outbox.resolve("native-crash")
+                cached.outputStream().use { serializer.serialize(SentryEnvelope(SentryEnvelopeHeader(event.eventId),
+                    listOf(SentryEnvelopeItem.fromEvent(serializer, event), attachment)), it) }
+                val scopes = Scopes(Scope(options).apply { bindClient(client) }, Scope(options), Scope(options), "native-test")
+                OutboxSender(scopes, options.envelopeReader, serializer, NoOpLogger.getInstance(), 100, 10).processDirectory(outbox)
+                assertEquals(1, hookCalls)
+                val envelope = received.envelopes.single()
+                assertEquals(listOf(SentryItemType.Event), envelope.items.map { it.header.type })
+                val clean = requireNotNull(envelope.items.single().getEvent(serializer))
+                assertEquals("native", clean.platform)
+                assertEquals(signal, clean.exceptions!!.single().type)
+                assertEquals("worker", clean.threads!!.single().name)
+                val payload = AppTelemetry.json(clean)
+                val exception = payload["exception"]!!.jsonObject["values"]!!.jsonArray.single().jsonObject
+                assertEquals(setOf("type", "value", "thread_id", "stacktrace", "mechanism"), exception.keys)
+                assertEquals(setOf("type", "handled", "synthetic"), exception["mechanism"]!!.jsonObject.keys)
+                for (trace in listOf(clean.exceptions!!.single().stacktrace!!, clean.threads!!.single().stacktrace!!)) {
+                    assertNull(trace.registers)
+                    val frame = trace.frames!!.single()
+                    assertEquals("libbark_bolt_ffi.so", frame.module)
+                    assertEquals(setOf("function", "module", "filename", "lineno"), AppTelemetry.json(frame).keys)
+                }
+                assertNull(clean.debugMeta); assertNull(clean.extras); assertNull(clean.user); assertNull(clean.request)
+                assertFalse(payload.toString().contains("synthetic-sensitive"))
+                assertFalse(payload.toString().contains("0x1234"))
+            } finally { client.close(); outbox.deleteRecursively() }
+        }
+    }
+
+    @Test fun nativeSecretBearingThreadNamesRejectTheWholeEventAtBothGates() {
+        for (name in listOf("abandon ".repeat(11) + "about", "preimage=fake-token")) {
+            val event = nativeEvent().apply { threads!!.single().name = name }
+            assertNull(options().beforeSend!!.execute(event, Hint()))
+            assertNull(TelemetryTransport.filter(SentryEnvelope.from(serializer, event, null)))
+        }
     }
 
     private class RecordingTransport : ITransport {

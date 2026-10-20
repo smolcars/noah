@@ -1,0 +1,37 @@
+{
+  "platform": "native",
+  "level": "fatal",
+  "sdk": {"name": "sentry.native.android", "version": "0.16.6"},
+  "message": {"formatted": "Segmentation fault"},
+  "exception": {"values": [{
+    "type": "SIGSEGV",
+    "value": "Segmentation fault",
+    "thread_id": 1,
+    "mechanism": {
+      "type": "signalhandler", "handled": false, "synthetic": true,
+      "meta": {"signal": {"name": "SIGSEGV", "number": 11}},
+      "data": {"memory": "synthetic-sensitive-mechanism"}
+    },
+    "stacktrace": {
+      "registers": {"x0": "synthetic-sensitive-register"},
+      "frames": [{
+        "function": "wallet_sync", "module": "libbark_bolt_ffi.so", "filename": "wallet.rs", "lineno": 42,
+        "instruction_addr": "0x1234", "image_addr": "0x1000", "package": "synthetic-sensitive-path",
+        "vars": {"key": "synthetic-sensitive-variable"}, "pre_context": ["synthetic-sensitive-source"]
+      }]
+    }
+  }]},
+  "threads": {"values": [{
+    "id": 1, "name": "worker", "crashed": true, "current": true,
+    "stacktrace": {
+      "registers": {"x0": "synthetic-sensitive-thread-register"},
+      "frames": [{"function": "wallet_sync", "module": "libbark_bolt_ffi.so", "filename": "wallet.rs", "lineno": 42,
+        "instruction_addr": "0x1234", "vars": {"key": "synthetic-sensitive-thread-variable"}}]
+    }
+  }]},
+  "debug_meta": {"images": [{"type": "elf", "code_file": "libbark_bolt_ffi.so", "image_addr": "0x1000", "debug_id": "synthetic-sensitive-image"}]},
+  "contexts": {"memory": {"bytes": "synthetic-sensitive-context"}},
+  "extra": {"memory": "synthetic-sensitive-memory"},
+  "user": {"id": "synthetic-sensitive-identity"},
+  "request": {"headers": {"Authorization": "fake-token"}}
+}

@@ -18,6 +18,16 @@
             <sha256 value="7b72a5e49f3b031932515e709bdc8dd3a07b137327863745bf81404f67d88b15" origin="Maven Central artifact, independently downloaded"/>
          </artifact>
       </component>
+      <component group="io.sentry" name="sentry-android-ndk" version="8.57.0">
+         <artifact name="sentry-android-ndk-8.57.0.aar">
+            <sha256 value="0c280a250046918b3d878eb65f4937cb932dc54e655de0f1a007b9eefc42c33f" origin="Maven Central artifact, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="io.sentry" name="sentry-native-ndk" version="0.16.6">
+         <artifact name="sentry-native-ndk-0.16.6.aar">
+            <sha256 value="07fea3e481b27a08ff235cf06ea70bc845ae973521d689442774577f20584ba9" origin="Maven Central artifact, independently downloaded"/>
+         </artifact>
+      </component>
       <component group="androidx.fragment" name="fragment" version="1.8.9">
          <artifact name="fragment-1.8.9.aar">
             <sha256 value="12de5b89ab6641c1d8da82b63dc816652622b06d2781b949b6fbd2dff9fac492" origin="Google Maven artifact, independently downloaded"/>

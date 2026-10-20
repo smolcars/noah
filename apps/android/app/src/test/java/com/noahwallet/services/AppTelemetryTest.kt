@@ -61,7 +61,6 @@ class AppTelemetryTest {
 
     @Test fun bypassChannelsAreDisabledAndTheirHooksDrop() {
         val options = requireNotNull(options())
-        assertFalse(options.isEnableNdk)
         assertFalse(options.isEnableScopeSync)
         assertFalse(options.isEnableNdkAppHangTracking)
         assertFalse(options.isTombstoneEnabled)
@@ -92,6 +91,17 @@ class AppTelemetryTest {
         assertNull(options.beforeSendTransaction!!.execute(SentryTransaction("synthetic", 0.0, 1.0, emptyList(), emptyMap(), TransactionInfo("custom")), Hint()))
         assertNull(options.beforeSendFeedback!!.execute(event(), Hint()))
         assertNotNull(options.beforeSendReplay)
+    }
+
+    @Test fun nativeCrashIntegrationIsEnabledWithoutScopeSyncOrAttachments() {
+        val options = requireNotNull(options())
+        assertTrue(options.isEnableNdk)
+        assertNotNull(Class.forName("io.sentry.android.ndk.SentryNdk", false, javaClass.classLoader))
+        assertFalse(options.isEnableScopeSync)
+        assertFalse(options.isEnableNdkAppHangTracking)
+        assertFalse(options.isTombstoneEnabled)
+        assertFalse(options.isAttachRawTombstone)
+        assertEquals(0L, options.maxAttachmentSize)
     }
 
     @Test fun freshAllowlistDropsExtrasIdentityRequestAndUnknownFieldsWithoutTraversing() {

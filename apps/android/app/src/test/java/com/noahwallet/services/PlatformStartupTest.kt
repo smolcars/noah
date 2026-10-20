@@ -18,7 +18,7 @@ class PlatformStartupTest {
         assertTrue(app is NoahApplication)
         assertTrue(BuildConfig.DEBUG)
         assertFalse(Sentry.isEnabled())
-        for (name in listOf("SentryInitProvider", "SentryPerformanceProvider")) {
+        for (name in listOf("SentryInitProvider", "SentryPerformanceProvider", "SentryNdkPreloadProvider")) {
             assertNull(app.packageManager.resolveContentProvider("${BuildConfig.APPLICATION_ID}.$name", 0))
         }
     }

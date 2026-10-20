@@ -77,8 +77,8 @@ object AppTelemetry {
         logs.setBeforeSend { null }
         metrics.isEnabled = false
         metrics.setBeforeSend { _, _ -> null }
-        // Native minidumps/replay bypass the event hook; their artifacts are not dependencies.
-        isEnableNdk = false
+        // NDK outbox events return through captureEvent and the same allowlist/transport gate.
+        isEnableNdk = true
         isEnableScopeSync = false
         isEnableNdkAppHangTracking = false
         isTombstoneEnabled = false

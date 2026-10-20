@@ -164,6 +164,7 @@ android {
 
 dependencies {
     implementation(libs.sentry.android.core)
+    implementation(libs.sentry.android.ndk)
     implementation(libs.biometric)
     implementation(libs.fragment)
     implementation(libs.maplibre)
