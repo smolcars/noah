@@ -12,7 +12,7 @@ internal class StoredWalletOpener(
     class OnboardingIncomplete : Exception("Finish onboarding before background wallet work")
 
     fun requireHeadlessAdmission() {
-        if (walletState()?.isInitialized != true) throw OnboardingIncomplete()
+        if (walletState()?.isInitialized == false || walletState()?.isWalletSuspended == true) throw OnboardingIncomplete()
     }
 
     suspend fun ensureOpen() { requireHeadlessAdmission(); open(read()) }

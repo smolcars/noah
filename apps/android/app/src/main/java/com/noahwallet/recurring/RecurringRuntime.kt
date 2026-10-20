@@ -25,7 +25,7 @@ class RecurringRuntime private constructor(context: Context) {
         ensureOpen = { services.ensureWalletOpen() }, binding = { RecurringStore.binding(location) },
         allowed = {
             val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
-            check(!services.recurringAutomationStorageFailed && !location.restorePending && !location.deletionMarker.exists() && wallet?.isInitialized == true && wallet.isWalletSuspended != true) { "Wallet suspended or replacement pending. Sending is stopped." }
+            check(!services.recurringAutomationStorageFailed && !location.restorePending && !location.deletionMarker.exists() && wallet?.isInitialized != false && wallet?.isWalletSuspended != true) { "Wallet suspended or replacement pending. Sending is stopped." }
         }, quote = { RecurringRecipient.quote(it, services.session) },
         automationGeneration = { settings.string(WalletLifecycle.automationStopKey) },
         sync = {

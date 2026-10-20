@@ -180,25 +180,6 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         com.noahwallet.services.push.PushRuntime(getApplication(), services).register()
     }
 
-    /** Continue applies recovered protection before start() can publish wallet data. */
-    suspend fun acknowledgeRecoveredSettings() {
-        withContext(Dispatchers.IO) { settings.acknowledgeRecovery() }
-        reloadRecoveredSettings()
-        start()
-    }
-
-    internal fun reloadRecoveredSettings() {
-        settings.requireHealthy()
-        walletLock = com.noahwallet.ui.settings.WalletLock(settings)
-        hidden = (state("privacy-storage")["isHomeBalanceHidden"] as? JsonPrimitive)?.booleanOrNull ?: false
-        amountUnit = SettingsPreferences.amountUnit(settings.string("profile-storage"))
-        preferredCurrency = SettingsPreferences.preferredCurrency(settings.string("profile-storage"))
-        isWalletSuspended = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
-        localeIdentifier = LegacyLocale.read(getApplication()) ?: "en"
-        services.backupCoordinator.reloadStatus()
-        summary = null; error = null; open = false; onboarded = false; launchState = null
-    }
-
     private var starting = false
 
     private fun state(key: String): JsonObject = settings.string(key)?.let {
@@ -211,8 +192,6 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         viewModelScope.launch {
             var recovering = true
             try {
-                try { withContext(Dispatchers.IO) { settings.validateStores() } }
-                catch (failure: Exception) { launchState = LaunchState.openFailure(failure); return@launch }
                 withContext(Dispatchers.IO) {
                     services.lifecycle.withWalletMutation {
                         val recovered = services.recoverRestore(walletMutationHeld = true)

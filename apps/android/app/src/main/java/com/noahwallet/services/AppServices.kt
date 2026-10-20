@@ -1,6 +1,7 @@
 package com.noahwallet.services
 
 import android.content.Context
+import com.noahwallet.services.launch.LaunchState
 import com.noahwallet.BuildConfig
 import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.server.*
@@ -45,7 +46,7 @@ class AppServices private constructor(private val context: Context) {
         perform = backupService::performBackup,
         canBackup = { required ->
             val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
-            wallet?.isInitialized == true && wallet.isWalletSuspended != true && session.isOpen &&
+            wallet?.isInitialized != false && wallet?.isWalletSuspended != true && session.isOpen &&
                 (!required || registration.state.isBackupEnabled == true)
         },
         loadState = { PersistedBackupState.decode(settings.string(PersistedBackupState.key)) },
@@ -55,7 +56,7 @@ class AppServices private constructor(private val context: Context) {
 
     @Synchronized fun reconcileBackupTriggers(foreground: Boolean = false) {
         val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
-        if (!session.isOpen || wallet?.isInitialized != true || wallet.isWalletSuspended == true || registration.state.isBackupEnabled != true) {
+        if (!session.isOpen || wallet?.isInitialized == false || wallet?.isWalletSuspended == true || registration.state.isBackupEnabled != true) {
             backupObserver?.cancel(); backupObserver = null; backupCoordinator.cancelScheduled(); return
         }
         if (backupObserver?.isActive != true) backupObserver = scope.launch {
@@ -155,7 +156,7 @@ class AppServices private constructor(private val context: Context) {
     private var started = false
 
     fun isOnboarded(): Boolean = SettingsStorage(context)
-        .persistedState<PersistedWalletState>(PersistedWalletState.key)?.isInitialized == true
+        .persistedState<PersistedWalletState>(PersistedWalletState.key)?.isInitialized != false
 
     class WalletSuspended : Exception("Wallet suspended")
     class RestoreNotSettled : Exception("Interrupted restore not settled yet")
@@ -177,8 +178,10 @@ class AppServices private constructor(private val context: Context) {
         if (!walletMutationHeld) { lifecycle.withWalletMutation { openWallet(walletMutationHeld = true, foreground) }; return@withContext }
         settings.validateStores()
         if (!foreground) walletOpener.requireHeadlessAdmission()
-        if (!foreground && WalletDataLocation(context.filesDir, variant).deletionMarker.exists()) throw RestoreNotSettled()
-        if (recoverRestore(walletMutationHeld) == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
+        val location = WalletDataLocation(context.filesDir, variant)
+        if (!foreground && (location.restorePending || location.deletionMarker.exists())) throw RestoreNotSettled()
+        if (!foreground && LaunchState.current(context, variant) != LaunchState.existingWallet) throw RestoreNotSettled()
+        if (foreground && recoverRestore(walletMutationHeld) == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
         if (settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
             throw WalletSuspended()
         }

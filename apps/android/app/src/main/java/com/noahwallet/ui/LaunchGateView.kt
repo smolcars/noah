@@ -164,8 +164,6 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
         LaunchState.onboarding -> R.string.launch_welcome to R.string.launch_onboarding_message
         LaunchState.seedWithoutWalletData -> R.string.launch_seed_found to R.string.launch_seed_found_message
         LaunchState.walletDataWithoutSeed -> R.string.launch_seed_needed to R.string.launch_seed_needed_message
-        LaunchState.settingsRecovered -> R.string.launch_settings_recovered to R.string.launch_settings_recovered_message
-        LaunchState.incompatibleStorage -> R.string.launch_settings_recovery to R.string.launch_settings_recovery_message
         LaunchState.secureStorageUnavailable, LaunchState.invalidSeed, LaunchState.seedConflict ->
             R.string.launch_unlock to R.string.launch_unlock_message
     }
@@ -178,30 +176,17 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
         androidx.compose.foundation.text.selection.SelectionContainer {
             Text(stringResource(message.second), textAlign = TextAlign.Center)
         }
-        if (state == LaunchState.secureStorageUnavailable || state == LaunchState.incompatibleStorage || state == LaunchState.settingsRecovered || (state == LaunchState.existingWallet && openFailed)) {
+        if (state == LaunchState.secureStorageUnavailable || (state == LaunchState.existingWallet && openFailed)) {
             val context = LocalContext.current
             androidx.compose.material3.TextButton({
                 val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                 clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Noah support",
-                    if (state == LaunchState.settingsRecovered) context.getString(R.string.launch_settings_recovered_message) else "Noah Android ${com.noahwallet.BuildConfig.VERSION_NAME} (${com.noahwallet.BuildConfig.APP_VARIANT}): " +
+                    "Noah Android ${com.noahwallet.BuildConfig.VERSION_NAME} (${com.noahwallet.BuildConfig.APP_VARIANT}): " +
                         "saved wallet data could not be safely verified after an update. Data has been kept. Please help me recover access. " +
                         "I will not share my recovery phrase."))
             }) { Text("Copy support message") }
         }
-        if (state == LaunchState.settingsRecovered) {
-            val owner = LocalLifecycleOwner.current
-            val scope = androidx.compose.runtime.rememberCoroutineScope()
-            var acknowledging by remember { mutableStateOf(false) }
-            NoahButton("Continue", enabled = !acknowledging) {
-                if (owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) scope.launch {
-                    acknowledging = true
-                    try {
-                        model.acknowledgeRecoveredSettings()
-                    } catch (_: Exception) { model.error = "Settings still need recovery. Please try again." }
-                    finally { acknowledging = false }
-                }
-            }
-        } else if (state != null) NoahButton("Try again", onClick = retry)
+        if (state != null) NoahButton("Try again", onClick = retry)
         if (state == LaunchState.seedWithoutWalletData || state == LaunchState.walletDataWithoutSeed) {
             DeleteWalletFallback(model)
         }

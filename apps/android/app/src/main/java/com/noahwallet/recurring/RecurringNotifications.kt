@@ -61,7 +61,7 @@ class RecurringReminderWorker(context: Context, parameters: WorkerParameters) : 
             val s = store.reminderSchedule(java.io.File(location.directory, "noah-recurring-journal.json.policies"),
                 { RecurringStore.binding(location) }, inputData.getString("id"), inputData.getLong("due", -1)) ?: return Result.success()
             val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
-            if (wallet?.isInitialized != true || wallet.isWalletSuspended == true) return Result.success()
+            if (wallet?.isInitialized == false || wallet?.isWalletSuspended == true) return Result.success()
             val reminder = inputData.getString("kind") == "reminder"
             RecurringNotifications.show(applicationContext, "recurring-${s.id}-${inputData.getString("kind")}",
                 if (reminder) "Upcoming recurring payment" else "Recurring payment waiting",
