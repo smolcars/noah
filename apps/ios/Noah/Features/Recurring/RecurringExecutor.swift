@@ -216,10 +216,9 @@ import Observation
         try d.store.upsert(latest)
         await d.notifications([], latest)
     }
-    private func settle(_ entry: RecurringJournal.Entry, original: RecurringPayment, retainReceipt: Bool = false) async throws {
+    private func settle(_ entry: RecurringJournal.Entry, original: RecurringPayment?, retainReceipt: Bool = false) async throws {
         guard let attempt = d.controller.attempt, attempt.recurringOccurrenceKey == entry.key else { return }
-        let state = try d.store.load()
-        guard try d.binding() == entry.binding, state.binding == entry.binding else { return }
+        guard try d.binding() == entry.binding else { return }
         let outcome = d.controller.state
         let success: Bool
         let paid: Bool
@@ -237,6 +236,8 @@ import Observation
             if !retainReceipt { d.controller.acknowledge() }
             return
         }
+        let state = try d.store.load()
+        guard state.binding == entry.binding else { return }
         // Claim application with consumption: an interruption stops advancement without repeating it.
         var resolved = entry; resolved.resolved = true; resolved.consumed = paid; resolved.policyApplied = true
         try d.journal.save(resolved)
@@ -256,7 +257,7 @@ import Observation
             }
             try d.store.upsert(latest)
             if paid { notification = latest }
-        } else if success, original.nativeRevision == entry.policyRevision {
+        } else if success, let original, original.nativeRevision == entry.policyRevision {
             var result = original; result.status = "active"
             result.success(entry.plan, now: d.now(), zone: d.zone())
             notification = result
@@ -271,7 +272,9 @@ import Observation
     func checkStatus(_ id: String) async {
         guard !running else { return }
         do {
-            guard let entry = try d.journal.load()[id], let original = try d.store.load().schedules[id], !original.unsupportedStorage else { return }
+            guard let entry = try d.journal.load()[id] else { return }
+            let original = try? d.store.load().schedules[id]
+            guard entry.policyApplied == true || original?.unsupportedStorage == false else { return }
             await d.controller.checkStatus()
             try await settle(entry, original: original)
         } catch { self.error = error.localizedDescription }
