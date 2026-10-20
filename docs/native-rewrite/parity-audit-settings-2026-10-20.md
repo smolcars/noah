@@ -3,7 +3,7 @@
 Read-only source audit (Sol) of the RN screens not covered by earlier reviews, against both native apps at `454da8c6`. No builds or devices were used. Fix batches:
 
 - Lifecycle/backup batch (items 1, 2, 6, 8, 17, 22 and the 60-second sync question): in progress.
-- Account/preferences batch (items 3, 7, 9–14, 21, 23): queued.
+- Account/preferences batch (items 3, 7, 9–14, 21, 23): implemented on the named platforms; verification and commit ledger below.
 - Info/tools batch (items 4, 5, 15, 16, 18–20): queued.
 
 Audited clean HEAD `454da8c6` on `t3/audit-native-screen-parity`. Findings below are from source inspection; no files changed and no builds or device commands ran. S/M/L describe estimated fix size.
@@ -16,7 +16,7 @@ Audited clean HEAD `454da8c6` on `t3/audit-native-screen-parity`. Findings below
 2. **Recovery-phrase access requires OS authentication even when wallet authentication is disabled.** RN bypasses authentication in that case; native always requests it, with no alternative for a device unable to authenticate. Retain the added protection while providing an accessible credential-setup/recovery path. **M**
    RN: `client/src/screens/MnemonicScreen.tsx:47`, `client/src/hooks/useBiometrics.ts:33`. iOS: `apps/ios/Noah/Features/Onboarding/OnboardingFlow.swift:196`. Android: `apps/android/app/src/main/java/com/noahwallet/ui/Onboarding.kt:92`.
 
-3. **The pre-wallet language picker is missing on both platforms.** Users must complete creation or restoration before reaching native language settings. **S**
+3. **Closed in the account/preferences batch below.** **The pre-wallet language picker is missing on both platforms.** Users must complete creation or restoration before reaching native language settings. **S**
    RN: `client/src/screens/OnboardingScreen.tsx:23`. iOS: missing from `apps/ios/Noah/Features/Onboarding/OnboardingFlow.swift:41`. Android: missing from `apps/android/app/src/main/java/com/noahwallet/ui/Onboarding.kt:33`.
 
 4. **Feedback loses screenshot editing; Android also loses the selected-image preview.** RN permits cropping before attaching and displays the selected image. Native users cannot crop private surrounding content within this flow; Android shows only the attachment size. **M**
@@ -30,28 +30,28 @@ Audited clean HEAD `454da8c6` on `t3/audit-native-screen-parity`. Findings below
 6. **Background locking discards screen-local state instead of preserving it under an overlay.** Both native roots remove wallet content while locked; Android also removes it while resolving foreground permission checks. This can discard Settings/Feedback drafts and navigation state. **M**
    RN: `client/src/components/BiometricGate.tsx:149`. iOS: `apps/ios/Noah/Features/Shell/RootView.swift:24`. Android: `apps/android/app/src/main/java/com/noahwallet/ui/LaunchGateView.kt:69`, `apps/android/app/src/main/java/com/noahwallet/ui/LaunchGateView.kt:123`. These lifecycle consequences were not runtime-reproduced.
 
-7. **Android hides the tabs throughout Settings.** RN keeps the main tabs available while browsing Settings; native Android requires backing out first. **S**
+7. **Closed in the account/preferences batch below.** **Android hides the tabs throughout Settings.** RN keeps the main tabs available while browsing Settings; native Android requires backing out first. **S**
    RN: `client/src/Navigators.tsx:396`. iOS: matching tab shell, `apps/ios/Noah/Features/Shell/RootView.swift:99`. Android: `apps/android/app/src/main/java/com/noahwallet/ui/NoahApp.kt:73`.
 
 8. **Reset Registration can report completion without completing all RN service-registration steps.** iOS omits immediate mailbox renewal and swallows push-registration failures; Android ignores a nonregistered push outcome. RN propagates push/mailbox failures. **S**
    RN: `client/src/lib/server.ts:182`. iOS: `apps/ios/Noah/App/AppModel.swift:363`, `apps/ios/Noah/App/AppModel.swift:485`. Android: `apps/android/app/src/main/java/com/noahwallet/ui/AppModel.kt:183`.
 
-9. **Android resubmits an unchanged Lightning identity.** RN and iOS exit without a server mutation; Android can fail an otherwise unnecessary Save because of connectivity or server errors. **S**
+9. **Closed in the account/preferences batch below.** **Android resubmits an unchanged Lightning identity.** RN and iOS exit without a server mutation; Android can fail an otherwise unnecessary Save because of connectivity or server errors. **S**
    RN: `client/src/screens/LightningAddressScreen.tsx:62`. iOS: matching, `apps/ios/Noah/Features/Onboarding/LightningAddressView.swift:134`. Android: `apps/android/app/src/main/java/com/noahwallet/ui/Onboarding.kt:195`.
 
-10. **Android replaces actionable identity/email server errors with generic failures.** RN displays the server’s message; native Android loses explanations such as username conflicts or verification/send restrictions. Preserve safe structured server messages. **S**
+10. **Closed in the account/preferences batch below.** **Android replaces actionable identity/email server errors with generic failures.** RN displays the server’s message; native Android loses explanations such as username conflicts or verification/send restrictions. Preserve safe structured server messages. **S**
     RN: `client/src/hooks/useUpdateLightningIdentity.ts:59`, `client/src/screens/EmailVerificationScreen.tsx:175`. iOS: matching message extraction, `apps/ios/Noah/Features/Onboarding/EmergencyEmailView.swift:188`. Android: `apps/android/app/src/main/java/com/noahwallet/ui/AppModel.kt:271`.
 
-11. **Email replacement loses its existing-address reassurance.** Both natives use generic optional-email copy instead of explaining that the current verified address stays active until the replacement is verified; Android additionally offers “Continue without email” from Settings. The underlying preservation of the old address matches. **S**
+11. **Closed in the account/preferences batch below.** **Email replacement loses its existing-address reassurance.** Both natives use generic optional-email copy instead of explaining that the current verified address stays active until the replacement is verified; Android additionally offers “Continue without email” from Settings. The underlying preservation of the old address matches. **S**
     RN: `client/src/screens/EmailVerificationScreen.tsx:229`. iOS: `apps/ios/Noah/Features/Onboarding/EmergencyEmailView.swift:68`. Android: `apps/android/app/src/main/java/com/noahwallet/ui/Onboarding.kt:168`.
 
-12. **Profile loses the 80-character input limit and verified-email copy action.** Both native name fields accept longer input, and the emergency email is plain text rather than RN’s copyable row. **S**
+12. **Closed in the account/preferences batch below.** **Profile loses the 80-character input limit and verified-email copy action.** Both native name fields accept longer input, and the emergency email is plain text rather than RN’s copyable row. **S**
     RN: `client/src/screens/ProfileScreen.tsx:223`, `client/src/screens/ProfileScreen.tsx:308`. iOS: `apps/ios/Noah/Features/Settings/ProfileView.swift:69`, `apps/ios/Noah/Features/Settings/ProfileView.swift:79`. Android: `apps/android/app/src/main/java/com/noahwallet/ui/settings/AccountScreens.kt:51`, `apps/android/app/src/main/java/com/noahwallet/ui/settings/AccountScreens.kt:60`.
 
-13. **Android preference selection stays on the picker; its unit picker also omits amount examples.** RN returns immediately after currency/unit/language selection. Android currency names additionally use the device locale rather than the selected app locale. **S**
+13. **Closed in the account/preferences batch below.** **Android preference selection stays on the picker; its unit picker also omits amount examples.** RN returns immediately after currency/unit/language selection. Android currency names additionally use the device locale rather than the selected app locale. **S**
     RN: `client/src/screens/CurrencySettingsScreen.tsx:34`, `client/src/screens/BitcoinUnitSettingsScreen.tsx:26`, `client/src/screens/LanguageSettingsScreen.tsx:25`. iOS: matching selection/return, `apps/ios/Noah/Features/Settings/ProfileView.swift:43`. Android: `apps/android/app/src/main/java/com/noahwallet/ui/settings/AccountScreens.kt:83`.
 
-14. **Settings loses current-value summaries and Android changes row order.** iOS omits the selected language/currency/unit summaries; Android reduces them and moves Board before Emergency Exit, plus UnifiedPush below the toggles. **S**
+14. **Closed in the account/preferences batch below.** **Settings loses current-value summaries and Android changes row order.** iOS omits the selected language/currency/unit summaries; Android reduces them and moves Board before Emergency Exit, plus UnifiedPush below the toggles. **S**
     RN: `client/src/screens/SettingsScreen.tsx:288`, `client/src/screens/SettingsScreen.tsx:318`. iOS: `apps/ios/Noah/Features/Settings/SettingsView.swift:25`. Android: `apps/android/app/src/main/java/com/noahwallet/ui/settings/SettingsScreen.kt:112`.
 
 15. **Ark Info omits the reported network and block-height API field.** Both natives retain the other inspected server parameters, keys and wallet endpoints. **S**
@@ -72,13 +72,13 @@ Audited clean HEAD `454da8c6` on `t3/audit-native-screen-parity`. Findings below
 20. **Story playback stops earlier.** RN stops on unmount; iOS stops on disappearance, including leaving its tab, and Android explicitly pauses on `ON_STOP`. Play/pause/stop/seek and bundled audio otherwise exist. **S**
     RN: `client/src/screens/NoahStoryScreen.tsx:163`. iOS: `apps/ios/Noah/Features/Settings/NoahStoryView.swift:50`. Android: `apps/android/app/src/main/java/com/noahwallet/ui/settings/OtherScreens.kt:92`.
 
-21. **Android onboarding Back differs from RN’s stack.** Email/Lightning Back is consumed, UnifiedPush Back advances, and Battery Back is blocked; RN can return through its registered onboarding stack. **S**
+21. **Closed in the account/preferences batch below.** **Android onboarding Back differs from RN’s stack.** Email/Lightning Back is consumed, UnifiedPush Back advances, and Battery Back is blocked; RN can return through its registered onboarding stack. **S**
     RN: `client/src/Navigators.tsx:279`, `client/src/screens/EmailVerificationScreen.tsx:216`. iOS: uses a navigation stack, `apps/ios/Noah/Features/Onboarding/OnboardingFlow.swift:13`. Android: `apps/android/app/src/main/java/com/noahwallet/ui/Onboarding.kt:31`, `apps/android/app/src/main/java/com/noahwallet/ui/launch/PlatformScreens.kt:65`, `apps/android/app/src/main/java/com/noahwallet/ui/launch/PlatformScreens.kt:105`.
 
 22. **iOS deletion does not reset the live biometric-lock object.** RN resets the wallet’s biometric preference; iOS clears persisted settings but retains `RootView`’s existing lock policy, so same-process re-onboarding can inherit the previous lock. **S**
     RN: `client/src/hooks/useWallet.ts:379`. iOS: `apps/ios/Noah/App/AppModel.swift:354`, `apps/ios/Noah/Features/Shell/RootView.swift:6`. Android: resets it, `apps/android/app/src/main/java/com/noahwallet/ui/AppModel.kt:176`.
 
-23. **Android hardcodes the regtest Lightning-address domain.** RN supports `EXPO_PUBLIC_REGTEST_LNURL_DOMAIN`, and iOS supports its native configuration override; Android always previews `localhost.com`. **S**
+23. **Closed in the account/preferences batch below.** **Android hardcodes the regtest Lightning-address domain.** RN supports `EXPO_PUBLIC_REGTEST_LNURL_DOMAIN`, and iOS supports its native configuration override; Android always previews `localhost.com`. **S**
     RN: `client/src/constants.ts:69`. iOS: `apps/ios/Noah/Services/Server/LightningIdentity.swift:30`. Android: `apps/android/app/src/main/java/com/noahwallet/services/server/LightningIdentity.kt:20`.
 
 **Acceptable/intentional**
@@ -115,3 +115,46 @@ RN’s initialized-wallet order is: Account → Info → Wallet → Debug → Da
 One unresolved service-level comparison remains: RN explicitly runs an app-wide 60-second sync/claim loop (`AppServices.tsx:18`). I found native daemon/feature-driven refresh paths, but did not establish that they provide the same cadence while these Settings screens stay open. This is an uncertainty, not a confirmed gap.
 
 Runtime lifecycle, photo-picker and OS-authentication behaviour were not exercised. No money-flow or restore-internal re-audit was performed.
+
+
+## Account/preferences implementation, 2026-10-20
+
+Re-checked the RN and native references against clean `2fa950f1` on the supplied
+`t3/native-parity-settings-onboarding` checkout before editing. This section updates
+the audit's findings; the original descriptions and baseline references above remain
+as the before-state. All requested gaps are closed on their named platforms.
+
+- **3, iOS:** Welcome links to the existing language preference view before creation/restoration (`apps/ios/Noah/Features/Onboarding/OnboardingFlow.swift:27`, `:48`). Its navigation bar is visible so Back works. It calls the existing `AppModel.setLanguage` and changes the same persisted GT preference and live locale. Commits `e464085b`, `2100537f`.
+- **3, Android:** Welcome opens the existing preference screen in a dismissible sheet (`apps/android/app/src/main/java/com/noahwallet/ui/Onboarding.kt:34`). It uses `AppModel.setLanguage`; selecting immediately closes the sheet without requiring wallet state. Commit `817f6aee`.
+- **7, Android:** Settings remains under Home with the tabs always available; selecting another tab preserves Home's route list, and per-tab saveable state retains supported drafts (`apps/android/app/src/main/java/com/noahwallet/ui/NoahApp.kt:46`, `:109`). Profile name now uses `rememberSaveable`. System Back from another tab returns to the retained Home stack; Settings Back pops one screen and still respects busy state. Commit `af37cd5a`.
+- **9, Android:** Compare normalized username/domain and trimmed npub against the existing identity before saving; an unchanged identity calls the existing completion path without `saveIdentity` (`apps/android/app/src/main/java/com/noahwallet/services/server/LightningIdentity.kt:10`, `apps/android/app/src/main/java/com/noahwallet/ui/Onboarding.kt:220`, `:232`). Commit `115871c3`.
+- **10, Android:** Only the decoded `ApiErrorResponse.message` can override an identity/email fallback. Raw bodies, status descriptions, `.reason`, unknown exceptions and connection failures cannot become displayed error text (`apps/android/app/src/main/java/com/noahwallet/services/server/ServerClient.kt:24`, `apps/android/app/src/main/java/com/noahwallet/ui/AppModel.kt:266`, `apps/android/app/src/main/java/com/noahwallet/ui/Onboarding.kt:182`, `:195`, `:236`). Other actions keep their previous error policy. Commit `0ec356fb`.
+- **11, iOS:** Verified-email replacement uses RN's exact reassurance, including the current address when available (`apps/ios/Noah/Features/Onboarding/EmergencyEmailView.swift:69`, `:141`). Existing onboarding-only Skip policy and email preservation remain. Commit `fe51c963`.
+- **11, Android:** The same reassurance appears for replacement, and “Continue without email” is restricted to onboarding (`apps/android/app/src/main/java/com/noahwallet/ui/Onboarding.kt:209`, `:244`). Settings/Home email entry points default to the non-onboarding flow. Commit `319cefd0`.
+- **12, iOS:** Bound profile input to RN's 80 UTF-16-unit limit without cutting a composed character; verified email uses `CopySettingRow` (`apps/ios/Noah/Features/Settings/ProfileView.swift:77`, `:87`, `:116`). This retains the existing local-only, two-minute pasteboard expiry. Commit `8d2f55e7`.
+- **12, Android:** Bound profile input to 80 UTF-16 units without a dangling surrogate; verified email uses the existing `CopyRow` and copied feedback (`apps/android/app/src/main/java/com/noahwallet/ui/settings/AccountScreens.kt:52`, `:61`, `:71`). Existing platform clipboard behaviour remains. Commit `3d5b1815`.
+- **13, Android:** Selection calls Back after the preference write succeeds. Unit options show 1,234-sat examples; currency display names explicitly use the app locale (`apps/android/app/src/main/java/com/noahwallet/ui/settings/AccountScreens.kt:73`, `:79`, `:90`, `:105`; `apps/android/app/src/main/java/com/noahwallet/ui/settings/SettingsScreen.kt:50`). Commit `d7c551e0`.
+- **14, iOS:** Add current native language name, currency code/name, and unit/example alongside the existing descriptions (`apps/ios/Noah/Features/Settings/ProfileView.swift:40`, `apps/ios/Noah/Features/Settings/SettingsView.swift:27`, `apps/ios/Noah/Features/Settings/SettingsPresentation.swift:6`). Commit `12508a78`.
+- **14, Android:** Show the same complete value summaries. Render Wallet rows in RN order: Seed → VTXOs → Emergency Exit → Recurring → Backup → conditional UnifiedPush → Board → Auto-board → conditional Biometrics → Mailbox. The native-only **Battery Optimization** row follows Mailbox (`apps/android/app/src/main/java/com/noahwallet/ui/settings/SettingsScreen.kt:39`, `:121`, `:127`; `apps/android/app/src/main/java/com/noahwallet/ui/settings/AccountScreens.kt:83`). Non-GMS recurring visibility stays as previously accepted. Commit `70adb95e`.
+- **21, Android:** Save the visited onboarding steps and pop them on Back. Email returns to the recovery phrase; Lightning returns to its actual preceding screen; UnifiedPush Back returns without calling Continue (`apps/android/app/src/main/java/com/noahwallet/ui/OnboardingNavigation.kt:3`, `apps/android/app/src/main/java/com/noahwallet/ui/Onboarding.kt:38`, `apps/android/app/src/main/java/com/noahwallet/ui/launch/PlatformScreens.kt:107`). **Battery choice:** onboarding Back may return to the preceding step, but does not set `hasSeenBatteryOptimizationPrompt` or advance. The prompt can therefore be encountered again; explicit Skip/exemption remains the completion path. The root battery gate has no Back callback and remains blocking. Busy/restore-in-progress and the existing post-creation recovery-phrase boundary remain blocking; notification denial also retains its root gate (`PlatformScreens.kt:27`, `:41`, `:67`). Commit `bac573d5`.
+- **23, Android:** `-PnoahRegtestLnurlDomain=wallet.test` populates `BuildConfig.REGTEST_LNURL_DOMAIN`; previews and unchanged-identity comparison use it. Default remains `localhost.com`; mainnet/signet domains are unchanged (`apps/android/app/build.gradle.kts:87`, `apps/android/app/src/main/java/com/noahwallet/services/server/LightningIdentity.kt:24`). Documented in `apps/android/README.md:3`. Commit `f1d801eb`.
+
+### Tests and verification
+
+- Added Swift Testing `AccountParityTests`: replacement reassurance (including missing address and locale), shared profile-name boundary fixtures, and current-value summaries. Added `TranslationsTests.welcomeLanguageSelectionNeedsNoWallet` for model preference persistence before a wallet exists.
+- Added JVM `AccountParityTest` (replacement/Skip policy, profile bounds, selected-locale currency names, amount examples, value summaries and all Wallet-row visibility/order combinations), `MainTabsTest` (retained Home/Settings routes), `OnboardingNavigationTest` (visited-step Back, battery/UnifiedPush, busy/restore/recovery boundaries), `LightningIdentityTest` (unchanged keys/usernames and native domain config), `ServerFailureTest` (structured actionable messages versus malformed/raw/internal/connectivity fallbacks), and a pre-wallet language persistence case in `TranslationsTest`.
+- Shared `apps/fixtures/profile-name.json`: eight cases, including empty/79/80/over-limit input, whitespace, emoji and an incomplete surrogate boundary; consumed by both platforms.
+- Translation generation and `--check` pass. All **7 translation-tool tests** pass; the two reassurance strings already existed in RN's generated resources, so only the usage inventory changes.
+- Full Android verification ran once after the final Android source change: **3,589 JVM tests / 143 suites, 0 failures / 0 errors / 0 skipped**, regtest APK assembled and instrumentation Kotlin compiled. Command: `nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'`. Build completed successfully in 3m 30s.
+- Full iOS `NoahTests` ran once after the last iOS source change: **792 tests / 158 suites; 766 passed / 26 opt-in skipped / 0 failed** (1,599 expanded passing executions). Ran `xcodegen generate` first, then signed simulator `xcodebuild test` with scheme `Noah-Regtest`, configuration `Debug-Regtest`, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, `-parallel-testing-enabled NO`, `-packageAuthorizationProvider netrc`, DerivedData `/private/tmp/noah-parity-account-dd`, and result bundle `/private/tmp/noah-parity-account-ios.xcresult`. Dedicated iPhone 17 simulator: `Noah Parity Account 65c20d3f`, `566B34C2-40AE-4706-972B-71BAF9FC2438`, iOS 27.0. Android completed before this build started.
+- iOS simulator smoke check after the full suite: Welcome → Language showed a Back button; selecting Español returned immediately to Spanish Welcome with no wallet created. Used the T3 device panel and its pinned `agent-device` CLI; no screenshots were retained.
+- Cleanup: confirmed the owned simulator name/UUID, shut it down through the device panel, re-confirmed `Shutdown`, then deleted it. Removed the owned DerivedData and `.xcresult` bundle above. No emulator/AVD, physical device or Docker was used, and no owned build/test process remains. Prohibited/shared devices were left untouched.
+- Every commit ends with the requested co-author trailer. Locked dependency setup restored the missing Husky hook files; subsequent commits ran the RN lint/compiler/148 unit-test/typecheck checks and Cargo formatting hook, without bypass flags.
+
+Scope remained limited to account/preferences and shell presentation. No changes to
+`client/`, `server/`, wallet lifecycle, launch-gate resolution, Send internals,
+recurring execution, backup, restore, Esplora, or the separately owned Info/tools
+screens and Story playback. The native shell still routes to those existing screens.
+iOS behaviour already matching the Android-only gaps was left as-is. Android retains route/saveable state when changing tabs; ordinary unsaveable local state in the separately owned tool screens keeps its existing lifetime. Visual design remains for the later design pass.
+No funded or live-server acceptance was attempted for this batch; UI-only Android
+changes have JVM state/presentation coverage and compilation, not device acceptance.

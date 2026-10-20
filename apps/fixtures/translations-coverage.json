@@ -9,7 +9,7 @@
   "catalogEntries": 1287,
   "coverage": {
     "ios": {
-      "rnTranslated": 601,
+      "rnTranslated": 603,
       "nativeOnlyEnglish": 414,
       "nativeOnly": [
         "#{nativeValue1} · {nativeValue2} · {nativeValue3} sats",
@@ -1002,6 +1002,8 @@
         "Your Lightning address has been updated without NIP-05.",
         "Your Lightning address will be",
         "Your Recovery Phrase",
+        "Your current email will stay active until the new email is verified.",
+        "Your current email, {email}, will stay active until the new email is verified.",
         "Your email has been verified successfully.",
         "Your feedback was sent to the Noah team.",
         "Your wallet has been backed up successfully.",
@@ -1032,7 +1034,7 @@
       ]
     },
     "android": {
-      "rnTranslated": 518,
+      "rnTranslated": 520,
       "nativeOnlyEnglish": 504,
       "nativeOnly": [
         "6-digit code",
@@ -2043,6 +2045,8 @@
         "You've reached the maximum number of recurring payments.",
         "Your Ark balance cannot be swept to this wallet's own onchain address. Use an external Bitcoin address.",
         "Your Recovery Phrase",
+        "Your current email will stay active until the new email is verified.",
+        "Your current email, {email}, will stay active until the new email is verified.",
         "Your feedback was sent to the Noah team.",
         "Your wallet has been backed up successfully.",
         "e.g. Rent, Donation, VPN",
