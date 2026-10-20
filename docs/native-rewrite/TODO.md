@@ -85,7 +85,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Server auth token reader/writer (RN_KEYCHAIN, existing GCM/CBC alias; excluded from backup) — Android
 - [x] MMKV: open `noah-wallet-storage` + zustand envelope codec, `wallet-storage` decoded — iOS
 - [x] MMKV — Android
-- [x] MMKV interrupted-update safety — both platforms: recover CRC/length errors; fixed redacted diagnostics; immutable fsynced pre-open RN file-pair backup outside MMKV; one closed-file restore with restart journal; unavailable/support gate on loss; existing DB/seed + missing wallet-storage never enters onboarding
+- [x] MMKV interrupted-update safety — both platforms: recover CRC/length errors; fixed redacted diagnostics; immutable fsynced pre-open RN file-pair backup outside MMKV; one closed-file restore with restart journal; unavailable/support gate on loss; existing DB/seed + missing wallet-storage resumes onboarding (user decision; RN Delete Wallet bug), headless work waits until onboarding finishes
 - [x] MMKV safety regression coverage — shared real RN mmap fixture; discard baseline vs CRC/length/truncation recovery; backup/sync/retry/restore/deletion gates; recurring journal rejects a recovered older policy without duplicate payment
 - [x] Upgrade runners cover install while RN is running/writing (`INSTALL_WHILE_RUNNING=1`, default); stopped baseline mode retained (`=0`). Run both for acceptance; live results are recorded in each platform's upgrade docs.
 - [ ] Remaining RN store shapes (decode as their screens land)

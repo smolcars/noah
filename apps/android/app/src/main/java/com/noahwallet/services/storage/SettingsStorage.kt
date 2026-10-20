@@ -5,14 +5,12 @@ import com.tencent.mmkv.MMKV
 import com.tencent.mmkv.MMKVLogLevel
 import com.tencent.mmkv.MMKVHandler
 import com.tencent.mmkv.MMKVRecoverStrategic
-import com.noahwallet.BuildConfig
 import com.noahwallet.services.logging.AppLog
 import java.io.File
 
 class SettingsStorage(context: Context) {
     private val mmkv: MMKV?
     private val backup = MMKVUpgradeBackup(File(context.filesDir, "mmkv"), instanceID)
-    private val walletLocation = WalletDataLocation(context.filesDir, BuildConfig.APP_VARIANT)
 
     init {
         val rootPath = File(context.filesDir, "mmkv").absolutePath
@@ -55,7 +53,8 @@ class SettingsStorage(context: Context) {
     fun validateStores() {
         requireHealthy()
         RNStoreCodec.versions.keys.filter { it != "esplora-storage" }.forEach { key -> string(key)?.let { RNStoreCodec.decode(key, it) } }
-        if (walletLocation.hasAnyData && string(PersistedWalletState.key) == null) throw Unavailable()
+        // A missing wallet-storage with wallet data (RN Delete Wallet unlinked the MMKV folder
+        // while open) is compatible: the existing wallet resumes onboarding, never blocks.
     }
     fun sync() { requireHealthy(); mmkv!!.sync() }
     fun removeAll() { requireHealthy(); backup.markReset(); mmkv!!.clearAll(); mmkv.sync() }

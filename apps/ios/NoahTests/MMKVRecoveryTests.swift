@@ -106,14 +106,17 @@ struct MMKVRecoveryTests {
         #expect(try !MMKVUpgradeBackup(root: root, instanceID: Self.id).hasContent)
     }
 
-    @Test func missingWalletSettingsBlockExistingWalletButAnExplicitIncompleteStoreCanResume() throws {
+    /// RN's Delete Wallet unlinked the MMKV folder while open, so a wallet re-created in
+    /// that session has no wallet-storage. A healthy store without it is compatible:
+    /// the existing wallet resumes onboarding (isInitialized is not true), never blocks.
+    @Test func missingWalletSettingsResumeOnboardingInsteadOfBlocking() throws {
         let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
         let store = try SettingsStorage(rootPath: root.path)
         store.remove(forKey: PersistedWalletState.key)
-        #expect(throws: (any Error).self) { try store.requireCompatibleRNStores(walletDataExists: true) }
-        try store.requireCompatibleRNStores(walletDataExists: false)
+        try store.requireCompatibleRNStores()
+        #expect(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized != true)
         try store.setPersistedState(PersistedWalletState(isInitialized: false), key: PersistedWalletState.key, version: 0)
-        try store.requireCompatibleRNStores(walletDataExists: true)
+        try store.requireCompatibleRNStores()
         #expect(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == false)
     }
 }

@@ -87,12 +87,13 @@ class MMKVRecoveryTest {
         assertTrue(runCatching { store.requireHealthy() }.isFailure)
         assertFalse(crc.exists())
     }
-    @Test fun existingDatabaseWithMissingWalletStoreBlocksButExplicitIncompleteStateCanResume() = fixture { context, root ->
+    @Test fun existingDatabaseWithMissingWalletStoreResumesOnboardingInsteadOfBlocking() = fixture { context, root ->
         val store = SettingsStorage(context)
         val location = WalletDataLocation(context.filesDir, com.noahwallet.BuildConfig.APP_VARIANT)
         check(location.directory.mkdirs()); File(location.directory, "db.sqlite").writeBytes(byteArrayOf(1))
         MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!.removeValueForKey("wallet-storage")
-        assertTrue(runCatching { store.validateStores() }.exceptionOrNull() is SettingsStorage.Unavailable)
+        store.validateStores()
+        assertFalse(store.persistedState<PersistedWalletState>("wallet-storage")?.isInitialized == true)
         store.set("""{"state":{"isInitialized":false},"version":0}""", "wallet-storage")
         store.validateStores()
         assertFalse(store.persistedState<PersistedWalletState>("wallet-storage")!!.isInitialized == true)

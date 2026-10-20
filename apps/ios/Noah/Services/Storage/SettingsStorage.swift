@@ -132,13 +132,11 @@ final class SettingsStorage: @unchecked Sendable {
 
     /// An unreadable consumed store blocks startup and headless wallet work;
     /// defaults must never overwrite a future or corrupt RN envelope.
-    func requireCompatibleRNStores(walletDataExists: Bool = false) throws {
+    func requireCompatibleRNStores() throws {
         try requireHealthy()
         for key in RNStoreCodec.schemas.keys where key != PersistedEsploraState.key {
             if let raw = string(forKey: key) { _ = try RNStoreCodec.decode(raw, key: key) }
         }
-        if walletDataExists,
-           string(forKey: PersistedWalletState.key) == nil { throw OpenError() }
     }
 }
 

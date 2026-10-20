@@ -414,9 +414,11 @@ If backup metadata records content but no RN keys survive, native closes MMKV,
 restores the original pair once and reopens with recovery enabled. A durable
 pending marker resumes a crashed restore before mapping either file. If RN data
 is still absent, startup and headless wallet opens block with a selectable,
-copy-safe `STORAGE_UNSUPPORTED` support state. Existing DB/seed with missing
-`wallet-storage` also block: absence cannot prove RN's final `isInitialized=true`
-step happened. An explicit false flag still resumes unfinished onboarding.
+copy-safe `STORAGE_UNSUPPORTED` support state. Existing DB/seed with a missing
+`wallet-storage` resume onboarding (user decision, 2026-10-20). RN's Delete Wallet
+unlinks the MMKV folder while it's open, so a wallet re-created in that session
+never persisted its stores; blocking would lock users out of a valid wallet. An
+explicit false flag also resumes unfinished onboarding.
 Wallet deletion marks the retained backup ineligible before clearing settings.
 Recurring storage checks health before reading policies; the separate recurring
 journal prevents replay when MMKV returns an older confirmed policy.

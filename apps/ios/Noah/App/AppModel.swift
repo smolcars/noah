@@ -124,7 +124,9 @@ final class AppModel {
         let state = readLaunchState()
         switch state {
         case .existingWallet:
-            do { try settings.requireCompatibleRNStores(walletDataExists: true) }
+            // Unreadable stores block; a missing wallet-storage (RN Delete Wallet unlinked
+            // the MMKV folder while open) resumes onboarding for the existing wallet.
+            do { try settings.requireCompatibleRNStores() }
             catch { phase = .blocked(.incompatibleStorage); return }
             resumeOnboarding = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized != true
             await openExistingWallet()

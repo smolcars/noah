@@ -322,10 +322,13 @@ again blocks with `STORAGE_UNSUPPORTED`, preserving the backup. Explicit wallet
 deletion durably marks the backup ineligible for restoration before clearing
 settings, so a later launch cannot resurrect the deleted wallet's settings.
 
-A DB and seed with **missing `wallet-storage` block** in both foreground and
-headless opens. They do not imply completed onboarding: RN only writes
-`isInitialized=true` at its final onboarding step. A present, compatible store
-with `isInitialized=false` still resumes onboarding. Neither condition is
+A DB and seed with a **missing `wallet-storage` resume onboarding** in the
+foreground (user decision, 2026-10-20). RN's Delete Wallet unlinks the MMKV
+folder while it's open, so a wallet re-created in the same RN session never
+persists its stores. Blocking would lock those users out of a valid wallet.
+Headless opens still refuse until onboarding finishes (`isInitialized` must be
+true). A present, compatible store with `isInitialized=false` resumes onboarding
+as before. Neither condition is
 silently repaired by writing defaults. Recurring execution requires healthy
 storage; its independent journal retains consumed-payment evidence when MMKV
 recovers an older policy.
