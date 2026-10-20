@@ -70,6 +70,15 @@ struct WalletRestorer: Sendable {
     static func recoverInterruptedRestore(
         session: WalletSession, location: WalletDataLocation, seed: any SecretItem
     ) async throws -> RestoreTransaction.Recovery {
+        // Without a journal there is nothing to swap: drop abandoned plaintext
+        // without reserving, so a launch opening the wallet right after its own
+        // recovery never finds the session busy. A journal only appears under a
+        // restore's reservation, which `unlessReserved` respects.
+        guard location.restorePending else {
+            let transaction = RestoreTransaction(location: location)
+            try await session.unlessReserved { try transaction.removeScratch() }
+            return .nothingPending
+        }
         let reservation: WalletSession.Reservation
         do {
             reservation = try await session.reserve()

@@ -125,6 +125,13 @@ class WalletRestorer(
         const val maxEncryptedBytes = 256L * 1024 * 1024
         suspend fun recoverInterruptedRestore(session: WalletSession, location: WalletDataLocation, seed: SecretItem,
             transaction: RestoreTransaction = RestoreTransaction(location)): RestoreTransaction.Recovery = withContext(NonCancellable + Dispatchers.IO) {
+            // Without a journal there is nothing to swap: drop abandoned plaintext without reserving,
+            // so a launch opening the wallet right after its own recovery never finds the session busy.
+            // A journal only appears under a restore's reservation, which `unlessReserved` respects.
+            if (!location.restorePending) {
+                session.unlessReserved { transaction.removeScratch() }
+                return@withContext RestoreTransaction.Recovery.nothingPending
+            }
             val reservation = try { session.reserve() }
             catch (failure: WalletSession.OpenError) {
                 if (failure.reason != WalletSession.OpenFailure.busy || location.restorePending) throw failure

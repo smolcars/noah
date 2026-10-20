@@ -251,6 +251,40 @@ struct WalletRestorerTests {
         #expect(try await second.value == .nothingPending)
     }
 
+    /// Review finding: a queued no-journal recovery must not reserve the
+    /// session another launch is opening.
+    @Test func recoveryWithoutAJournalNeverBlocksAnOpen() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let seed = FakeSeed("previous seed")
+        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in throw OpenRefused() }
+        _ = try await setUp(seed: seed, session: session)
+        try makeBarkProperties(at: deviceB)
+        let transaction = RestoreTransaction(location: deviceB)
+        try transaction.prepare()
+        let count = 5000
+        for index in 0..<count {
+            try Data("plain".utf8).write(to: transaction.work.appending(path: "plain-\(index)"))
+        }
+        let samples = stride(from: 0, to: count, by: 250).map { transaction.work.appending(path: "plain-\($0)").path }
+        let location = deviceB
+        let recovery = Task.detached {
+            try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: seed)
+        }
+        // Open while the recovery is deleting the leftovers: its critical window.
+        let deadline = ContinuousClock.now + .seconds(10)
+        while samples.allSatisfy({ FileManager.default.fileExists(atPath: $0) }), ContinuousClock.now < deadline {
+            await Task.yield()
+        }
+        do {
+            try await session.ensureOpen(mnemonic: "previous seed", runDaemon: false, appVersion: "test")
+            Issue.record("the refusing opener should have thrown")
+        } catch {
+            #expect(error is OpenRefused, "the open must get past the session, not find it busy: \(error)")
+        }
+        #expect(try await recovery.value == .nothingPending)
+        #expect(!FileManager.default.fileExists(atPath: transaction.work.path))
+    }
+
     @Test func launchRecoveryLeavesAnActiveRestoresFilesAlone() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in throw OpenRefused() }

@@ -182,6 +182,19 @@ class WalletRestorerTest {
         assertEquals(RestoreTransaction.Recovery.nothingPending, second.await().getOrThrow())
         assertEquals("new wallet", location.database.readText()); assertFalse(location.restorePending)
     } }
+    /** Review finding: a queued no-journal recovery must not reserve the session another launch is opening. */
+    @Test fun recoveryWithoutJournalNeverBlocksAnOpen() = runBlocking { world {
+        repeat(30) {
+            tx.prepare(); repeat(300) { File(tx.work, "plain-$it").writeText("plain") }
+            val start = java.util.concurrent.CountDownLatch(1)
+            val recovery = async(Dispatchers.IO) { start.await(); WalletRestorer.recoverInterruptedRestore(session, location, seed, tx) }
+            val open = async(Dispatchers.IO) { start.await(); runCatching { session.ensureOpen("old seed", false, "test") } }
+            start.countDown()
+            assertEquals(RestoreTransaction.Recovery.nothingPending, recovery.await())
+            assertTrue("open must not find the session busy", open.await().isSuccess)
+            session.close()
+        }
+    } }
     @Test fun unreadableSeedTouchesNothing() = runBlocking { world {
         seed.unavailable = true; assertTrue(runCatching { restorer().restore("new seed") }.isFailure)
         seed.unavailable = false; previous()
