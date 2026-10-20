@@ -24,9 +24,9 @@ struct SettingsView: View {
             }
             Section("Account") {
                 row("Profile", "Manage your name, Lightning address, emergency email, and public key.") { ProfileView() }
-                row("Language", "Choose the language used in Noah.") { PreferenceView(kind: .language) }
-                row("Currency", "Choose the fiat currency used for balances and payment amounts.") { PreferenceView(kind: .currency) }
-                row("Bitcoin Unit", "Choose how bitcoin amounts are displayed.") { PreferenceView(kind: .unit) }
+                row("Language", "Choose the language used in Noah.", value: PreferenceView.summary(kind: .language, code: model.localeIdentifier, locale: locale)) { PreferenceView(kind: .language) }
+                row("Currency", "Choose the fiat currency used for balances and payment amounts.", value: PreferenceView.summary(kind: .currency, code: model.preferredCurrency, locale: locale)) { PreferenceView(kind: .currency) }
+                row("Bitcoin Unit", "Choose how bitcoin amounts are displayed.", value: PreferenceView.summary(kind: .unit, code: model.amountUnit.rawValue, locale: locale)) { PreferenceView(kind: .unit) }
             }
             Section("Info") {
                 row("Ark Info", "View Ark server, wallet, and explorer configuration.") { ArkInfoView() }
@@ -125,8 +125,8 @@ struct SettingsView: View {
         }
     }
 
-    private func row<Content: View>(_ title: String, _ detail: String, @ViewBuilder destination: () -> Content) -> some View {
-        NavigationLink(destination: destination) { SettingsLabel(title: title, detail: detail) }
+    private func row<Content: View>(_ title: String, _ detail: String, value: String? = nil, @ViewBuilder destination: () -> Content) -> some View {
+        NavigationLink(destination: destination) { SettingsLabel(title: title, detail: detail, value: value) }
     }
     private func setAutoBoard(_ enabled: Bool) {
         transaction.setAutoBoarding(enabled)

@@ -37,6 +37,13 @@ struct PreferenceView: View {
         case .unit: code == "bip177" ? "Bitcoin (BIP-177)" : "Satoshis"
         }
     }
+    static func summary(kind: Kind, code: String, locale: Locale) -> String {
+        switch kind {
+        case .language: Locale(identifier: code).localizedString(forLanguageCode: code)?.localizedCapitalized ?? code
+        case .currency: "\(code) · \(locale.localizedString(forCurrencyCode: code) ?? code)"
+        case .unit: "\(code == "sats" ? "Satoshis" : "Bitcoin (BIP-177)") · \(BitcoinAmount.format(sats: 1234, unit: BitcoinAmountUnit(rawValue: code) ?? .bip177, locale: locale))"
+        }
+    }
     private func detail(_ code: String) -> String {
         kind == .unit ? BitcoinAmount.format(sats: 1234, unit: BitcoinAmountUnit(rawValue: code) ?? .bip177, locale: locale) : code.uppercased()
     }

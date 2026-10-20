@@ -3,9 +3,16 @@ import SwiftUI
 struct SettingsLabel: View {
     let title: String
     let detail: String
+    var value: String? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(LocalizedStringKey(title)).font(NoahFont.callout)
+            HStack {
+                Text(LocalizedStringKey(title)).font(NoahFont.callout)
+                if let value {
+                    Spacer()
+                    Text(value).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+                }
+            }
             Text(LocalizedStringKey(detail)).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
         }.padding(.vertical, 6)
     }
