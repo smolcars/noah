@@ -33,21 +33,44 @@ and pending-state retention/retry on sync failure. No server code changed.
 
 Home shows each applicable message once, without blocking or acknowledgement:
 
-- Some settings couldn't be carried over from the previous version. Please check Settings, including security, currency and Esplora server.
+- Some settings couldn't be carried over from the previous version, so they're back to their defaults: biometric lock is off, balances are visible, and currency and display settings are reset. Please review Settings.
 - Recurring payments need to be set up again after this update.
 
 Pending notice flags live in the native file and are consumed only by visible
-foreground Home. Background import retains them. Missing RN files cannot prove
+foreground Home. Background import retains them. If persistence is unavailable,
+consumption is remembered in the process-wide fallback shared by all settings
+objects for that file. The notice still appears without a successful write. A
+later write persists consumption; if the process exits before any write can
+succeed, a later launch may show the notice again. Missing RN files cannot prove
 lost preferences and use defaults without the loss notice; an existing empty or
 cleared MMKV snapshot does record that notice.
 
 The native store's existence is the import-complete marker. A damaged native
-file uses defaults plus the settings notice, atomically commits that reset, and
-never reimports RN; the wallet itself is unaffected. Pending temporary files are
+file uses defaults plus the settings notice and attempts an atomic reset. Failed
+reads, directory creation, reset writes and notice writes cannot prevent
+foreground wallet admission. The fallback stays in memory under the existing
+process-wide lock, shared by file path so another settings object cannot overwrite
+a recovered onboarding marker with stale defaults. Explicit writes and new opens
+retry persistence. Durable write APIs still throw, and health/sync checks reject
+an unpersisted fallback: recurring execution and the independent automation
+authority remain stopped on write failure. A damaged native file never reimports
+RN; the wallet itself is unaffected. Pending temporary files are
 never loaded as a fallback. Wallet deletion resets the native file with a durable
 cleanup-pending flag, deletes the RN directory and snapshot, then clears the flag.
 Interrupted cleanup retries on the next settings access. The empty native file
 remains, so re-onboarding can never import the old RN wallet again.
+
+Fresh native creation durably records `wallet-storage.isInitialized=false` under
+the existing creation gate and session reservation before generating/saving the
+seed or creating the database. Marker-write failure creates neither and permits a
+retry through the existing onboarding error. Public-key lookup happens afterwards.
+Both backup and phrase restore write the same marker under the restore gate and
+reservation before installing staged data or committing the seed. Existing
+restore completion/recovery still owns marking a completed restore initialized.
+Interrupted creation with seed + DB therefore resumes onboarding; an existing
+wallet with missing/unreadable settings still opens Home. Default preferences
+mean biometric lock off, suspension cleared, balances visible, USD/bip177 display,
+and auto-boarding prompts on; boarding still requires confirmation.
 
 Background opens require the seed/DB launch decision Home, no pending restore or
 deletion, no explicit unfinished onboarding, and no suspension. They read seeds
@@ -68,6 +91,41 @@ read/write APIs remain; durable failures still stop financial automation.
 Paths: iOS `Documents/mmkv.native-settings.json`; Android
 `noBackupFilesDir/settings.native.json`. Snapshot paths remain
 `Documents/mmkv.native-backup` / `noBackupFilesDir/mmkv.native-backup`.
+
+
+Settings review fixes (2026-10-20, base `10c0b996`): actual file/parent permission
+faults reproduced `EACCES`/Cocoa 513 before the fix on both platforms. Interrupted
+creation probes also failed before marker ordering changed. Afterward, tests cover
+constructor and later-read fallback, once-only notice consumption while writes
+fail, recovered persistence shared across readers, creation interruption after the
+marker/seed/DB and before public-key lookup, failed marker retry without a wallet,
+restore marker ordering/retry, and recurring executor/authority fail-closed behavior.
+Creation interruptions use injected stop boundaries and reopened durable settings;
+these are not OS-kill UI tests.
+
+Final Android required command ran once after the last code change:
+`nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'`:
+**3,011 JVM tests / 106 suites / zero failures, errors or skips**, APK assembled,
+instrumentation Kotlin compiled. Targeted final checks: **25 JVM tests passed**.
+On the owned API-35 emulator at console port 5600, the broader storage run was
+**17 tests / 16 passed / 1 failed**: unchanged
+`AndroidStorageTest.realRNFormatsDataStoreAndPreferencesRemainUnchanged` uses
+`instrumentation-only-secret` as a mnemonic and receives `invalidMnemonic` from
+existing BIP39 validation. Its fixture was left untouched. Both new regressions,
+all ten real-JNI import tests, real Keystore persistence, Expo ID and both auth
+storage tests passed. Final installed APK + instrumentation APK were checked
+again after the required command: **12/12 passed** (`SettingsFailureTest` and
+`MMKVRecoveryTest`, including the real executor write-failure probe).
+
+Final iOS full `NoahTests` ran once after the last code change, with generated
+project, arm64/active architecture, signing enabled and private `/private/tmp`
+DerivedData: **667 total / 645 passed / 22 opt-in skipped / zero failures**, 135
+suites (**963 expanded passing cases**). Targeted settings and onboarding/restore
+checks passed: six test functions / ten expanded cases. Owned iPhone-17 simulator
+`NoahSettingsFix809c` was identified, shut down and deleted; private DerivedData
+and all six result bundles were removed. The same-named owned AVD at port 5600
+was identified, stopped, verified absent and deleted. No physical devices, other
+agents' devices or Docker were used. `client/` and `server/` were unchanged.
 
 
 All eight stores use `client/src/lib/mmkv.ts` instance `noah-wallet-storage` in
