@@ -137,10 +137,10 @@ extension PushJobs.Dependencies {
             },
             announceReceived: { sats, usd in
                 let content = UNMutableNotificationContent()
-                content.title = String(localized: "Lightning Payment Received! ⚡")
-                let amount = BitcoinAmount.format(sats: sats, unit: .bip177)
-                content.body = usd.map { String(localized: "You received \(amount) (≈ US$\($0))") }
-                    ?? String(localized: "You received \(amount)")
+                let unit = SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.amountUnit ?? .bip177
+                let copy = NotificationCopy.received(sats: sats, usd: usd, unit: unit)
+                content.title = copy.title
+                content.body = copy.body
                 try? await UNUserNotificationCenter.current().add(
                     UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
             },

@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.work.*
+import com.noahwallet.localization.L10n
+import com.noahwallet.localization.NotificationCopy
 import com.noahwallet.MainActivity
 import com.noahwallet.R
 import com.noahwallet.notifications.NotificationChannels
@@ -18,11 +20,12 @@ object RecurringNotifications {
     @Synchronized fun refresh(context: Context, schedules: List<RecurringPayment>, result: RecurringPayment?) {
         runCatching {
             if (result != null) {
+                val amount = amount(context, result.amountSat)
                 val (title, body) = when {
-                    result.status == "needs_approval" -> "Recurring payment needs approval" to "Automatic payment to ${result.label} was skipped. Open the schedule to review its fee and pay manually."
-                    result.status == "needs_attention" -> "Recurring payment needs your attention" to "A payment to ${result.label} was interrupted. Check your history, then resume it."
-                    result.runs.firstOrNull()?.status == "failed" -> "Recurring payment will retry" to "${result.amountSat} sats to ${result.label} could not be sent yet."
-                    else -> "Recurring payment sent" to "${result.amountSat} sats sent to ${result.label}."
+                    result.status == "needs_approval" -> L10n.text(context, "Recurring payment needs approval") to L10n.text(context, "Automatic payment to {recipient} was skipped. Open the schedule to review its fee and pay manually.", result.label)
+                    result.status == "needs_attention" -> L10n.text(context, "Recurring payment needs your attention") to L10n.text(context, "A payment to {recipient} was interrupted. Check your history, then resume it.", result.label)
+                    result.runs.firstOrNull()?.status == "failed" -> L10n.text(context, "Recurring payment will retry") to L10n.text(context, "{amount} to {recipient} could not be sent yet: {error}", amount, result.label, L10n.text(context, result.lastError ?: "unknown error"))
+                    else -> L10n.text(context, "Recurring payment sent") to L10n.text(context, "{amount} sent to {recipient}.", amount, result.label)
                 }
                 show(context, "recurring-result-${result.id}-${result.updatedAt}", title, body)
                 return
@@ -39,6 +42,10 @@ object RecurringNotifications {
                 }
             }
         }
+    }
+    fun amount(context: Context, sats: Long): String {
+        val unit = com.noahwallet.services.storage.SettingsPreferences.amountUnit(com.noahwallet.services.storage.SettingsStorage(context).string("profile-storage"))
+        return com.noahwallet.formatting.BitcoinAmount.format(sats, unit, java.util.Locale.forLanguageTag(com.noahwallet.services.storage.LegacyLocale.resolved(context)))
     }
     fun show(context: Context, id: String, title: String, body: String) {
         PushNotifications.ensureChannels(context)
@@ -57,9 +64,8 @@ class RecurringReminderWorker(context: Context, parameters: WorkerParameters) : 
             val s = RecurringRuntime.shared(applicationContext).executor.reminderSchedule(
                 inputData.getString("id"), inputData.getLong("due", -1)) ?: return Result.success()
             val reminder = inputData.getString("kind") == "reminder"
-            RecurringNotifications.show(applicationContext, "recurring-${s.id}-${inputData.getString("kind")}",
-                if (reminder) "Upcoming recurring payment" else "Recurring payment waiting",
-                if (reminder) "${s.amountSat} sats to ${s.label} will be sent tomorrow." else "Open Noah to send ${s.amountSat} sats to ${s.label}.")
+            val copy = NotificationCopy.reminder(applicationContext, RecurringNotifications.amount(applicationContext, s.amountSat), s.label, reminder)
+            RecurringNotifications.show(applicationContext, "recurring-${s.id}-${inputData.getString("kind")}", copy.title, copy.body)
             Result.success()
         } catch (_: Exception) { Result.failure() }
     }

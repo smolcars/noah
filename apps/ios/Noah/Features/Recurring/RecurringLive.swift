@@ -100,18 +100,21 @@ enum RecurringNotifications {
         let center = UNUserNotificationCenter.current()
         if let result {
             let content = UNMutableNotificationContent()
+            let locale = LegacyLocale.resolved()
+            let unit = SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.amountUnit ?? .bip177
+            let amount = BitcoinAmount.format(sats: Int64(clamping: result.amountSat), unit: unit, locale: Locale(identifier: locale))
             if result.status == "needs_approval" {
-                content.title = "Recurring payment needs approval"
-                content.body = "Automatic payment to \(result.label) was skipped. Open the schedule to review its fee and pay manually."
+                content.title = L10n.text("Recurring payment needs approval", locale: locale)
+                content.body = L10n.text("Automatic payment to {recipient} was skipped. Open the schedule to review its fee and pay manually.", result.label, locale: locale)
             } else if result.status == "needs_attention" {
-                content.title = "Recurring payment needs your attention"
-                content.body = result.lastError ?? "A payment to \(result.label) needs your attention. Open the schedule to check its status."
+                content.title = L10n.text("Recurring payment needs your attention", locale: locale)
+                content.body = L10n.text("A payment to {recipient} was interrupted. Check your history, then resume it.", result.label, locale: locale)
             } else if result.runs.first?.status == "failed" {
-                content.title = "Recurring payment will retry"
-                content.body = "\(result.amountSat) sats to \(result.label) could not be sent yet: \(result.lastError ?? "unknown error")"
+                content.title = L10n.text("Recurring payment will retry", locale: locale)
+                content.body = L10n.text("{amount} to {recipient} could not be sent yet: {error}", amount, result.label, L10n.text(result.lastError ?? "unknown error", locale: locale), locale: locale)
             } else {
-                content.title = "Recurring payment sent"
-                content.body = "\(result.amountSat) sats sent to \(result.label)."
+                content.title = L10n.text("Recurring payment sent", locale: locale)
+                content.body = L10n.text("{amount} sent to {recipient}.", amount, result.label, locale: locale)
             }
             content.sound = .default
             content.userInfo = ["notification_type": "recurring_payment_result"]
@@ -134,12 +137,15 @@ enum RecurringNotifications {
     private static func schedule(_ schedules: [RecurringPayment], center: UNUserNotificationCenter) {
         for schedule in schedules where schedule.status == "active" && schedule.inFlight == nil {
             guard let due = schedule.nextRunAt else { continue }
-            for (suffix, at, title, body) in [
-                ("reminder", due - 86_400_000, "Upcoming recurring payment", "\(schedule.amountSat) sats to \(schedule.label) will be sent tomorrow."),
-                ("overdue", due + 7_200_000, "Recurring payment waiting", "Open Noah to send \(schedule.amountSat) sats to \(schedule.label).")
+            for (suffix, at) in [
+                ("reminder", due - 86_400_000),
+                ("overdue", due + 7_200_000)
             ] where at > RecurringPayment.now {
                 let content = UNMutableNotificationContent()
-                content.title = title; content.body = body; content.sound = .default
+                let unit = SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.amountUnit ?? .bip177
+                let amount = BitcoinAmount.format(sats: Int64(clamping: schedule.amountSat), unit: unit, locale: Locale(identifier: LegacyLocale.resolved()))
+                let copy = NotificationCopy.reminder(amount: amount, recipient: schedule.label, upcoming: suffix == "reminder")
+                content.title = copy.title; content.body = copy.body; content.sound = .default
                 content.userInfo = ["notification_type": "recurring_payment_reminder"]
                 let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, (at - RecurringPayment.now) / 1000), repeats: false)
                 center.add(.init(identifier: "recurring-\(schedule.id)-\(suffix)", content: content, trigger: trigger), withCompletionHandler: nil)
