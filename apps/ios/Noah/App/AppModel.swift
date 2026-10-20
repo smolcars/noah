@@ -81,6 +81,8 @@ final class AppModel {
         // `.task` can run again if the root view is rebuilt; launch once.
         guard !started else { return }
         started = true
+        do { try settings.requireCompatibleRNStores() }
+        catch { phase = .blocked(.incompatibleStorage); return }
         let initialState = LaunchState.current(variant: variant)
         if initialState == .invalidSeed || initialState == .seedConflict {
             phase = .blocked(initialState)
@@ -116,7 +118,7 @@ final class AppModel {
             await openExistingWallet()
         case .onboarding:
             phase = .onboarding
-        case .seedWithoutWalletData, .walletDataWithoutSeed, .secureStorageUnavailable, .invalidSeed, .seedConflict:
+        case .seedWithoutWalletData, .walletDataWithoutSeed, .secureStorageUnavailable, .invalidSeed, .seedConflict, .incompatibleStorage:
             phase = .blocked(state)
         }
     }
@@ -147,7 +149,7 @@ final class AppModel {
         var committed = false
         do {
             let mnemonic = try phrase ?? AppServices.shared.readMnemonic()
-            guard RecoveryPhraseInput.isValid(mnemonic) else {
+            guard (try? StoredSeed.normalized(mnemonic)) != nil else {
                 restoreIssue = .invalidPhrase
                 return
             }

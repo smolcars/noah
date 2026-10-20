@@ -154,7 +154,7 @@ final class RecurringStore: @unchecked Sendable {
 }
 
 /// Foundation validates the JSON; slicing values avoids rounding wide RN numbers on unrelated writes.
-private struct RawObject {
+struct RawObject {
     var fields: [String: String] = [:]
     init(_ raw: String) throws {
         guard try JSONSerialization.jsonObject(with: Data(raw.utf8)) is [String: Any] else {

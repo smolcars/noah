@@ -149,6 +149,7 @@ private struct LaunchMessageView: View {
         case .secureStorageUnavailable: "Waiting for secure storage"
         case .invalidSeed: "Wallet recovery needed"
         case .seedConflict: "Conflicting wallet data"
+        case .incompatibleStorage: "Wallet settings need recovery"
         case .existingWallet, .onboarding: ""
         }
     }
@@ -162,9 +163,11 @@ private struct LaunchMessageView: View {
         case .secureStorageUnavailable:
             "Noah can't read its secure storage yet. Unlock your device to continue."
         case .invalidSeed:
-            "Support code: SEED_INVALID. The stored recovery phrase could not be validated. Keep this app installed and contact Noah support through Settings in your previous app or github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database."
+            "Support code: SEED_INVALID. The stored recovery phrase could not be validated. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database."
         case .seedConflict:
             "Support code: WALLET_CONFLICT. Noah found wallet records that cannot be safely matched. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database."
+        case .incompatibleStorage:
+            "Support code: STORAGE_UNSUPPORTED. Noah couldn't safely read your saved settings. Keep this app installed and contact support at github.com/smolcars/noah. Never share your recovery phrase, private keys, or a wallet database."
         case .existingWallet, .onboarding:
             ""
         }

@@ -64,3 +64,19 @@ millisecond delays. Thus normal writes have whole-millisecond start/end/next-run
 created/updated, retry, in-flight and run-history times. The factory/validator can
 accept synthetic fractional inputs (as these range rows demonstrate), but native
 classifies any fractional time field as an unsupported row and preserves its values.
+
+Upgrade safety: `launch-seed-safety.json` adds invalid/ambiguous seed decisions
+without embedding any phrase. iOS `SeedSafetyTests` also drives the real SDK's
+read-only fingerprint rejection and asserts that database bytes and directory
+entries do not change.
+
+RN store envelopes: run `NODE_PATH=<installed-repo>/node_modules bun
+--tsconfig-override client/tsconfig.json apps/fixtures/tools/generate-rn-stores.ts`
+from the repository root. The generator executes all eight actual RN Zustand
+stores through `persist`/`createJSONStorage`, mocking MMKV, logging and an unused
+number formatter only. `rn-stores.json` includes partialization, real envelope
+versions and non-default values. RN's existing `recurring-storage.json` and
+`recurring-rn-range.json` additionally exercise complete policies and numeric
+edge cases. iOS rejects unknown versions/types without overwriting the input,
+preserves unknown JSON tokens on writes, and applies transaction v0→v1's
+`hasAttemptedAutoBoarding = false` migration in memory before any write.

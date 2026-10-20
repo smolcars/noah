@@ -45,7 +45,8 @@ extension PersistedTransactionState {
 
     static func load(from storage: SettingsStorage) -> Self {
         guard let json = storage.string(forKey: key),
-              let envelope = try? JSONDecoder().decode(PersistedEnvelope<Self>.self, from: Data(json.utf8)) else { return .init() }
+              let checked = try? RNStoreCodec.decode(json, key: key).json(),
+              let envelope = try? JSONDecoder().decode(PersistedEnvelope<Self>.self, from: Data(checked.utf8)) else { return .init() }
         var state = envelope.state
         if (envelope.version ?? 0) < version { state.hasAttemptedAutoBoarding = false }
         return state

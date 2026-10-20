@@ -83,13 +83,28 @@ final class SettingsStorage: @unchecked Sendable {
         guard let json = string(forKey: key), let data = json.data(using: .utf8) else {
             return nil
         }
+        if RNStoreCodec.schemas[key] != nil {
+            guard let checked = try? RNStoreCodec.decode(json, key: key).json() else { return nil }
+            return try? JSONDecoder().decode(PersistedEnvelope<State>.self, from: Data(checked.utf8)).state
+        }
         return try? JSONDecoder().decode(PersistedEnvelope<State>.self, from: data).state
     }
 
     /// Writes a zustand-compatible envelope so the value round-trips.
     func setPersistedState<State: Encodable>(_ state: State, key: String, version: Int) throws {
         let data = try JSONEncoder().encode(PersistedEnvelope(state: state, version: version))
-        set(String(decoding: data, as: UTF8.self), forKey: key)
+        let encoded = String(decoding: data, as: UTF8.self)
+        let value = RNStoreCodec.schemas[key] == nil ? encoded
+            : try RNStoreCodec.merging(encoded, into: string(forKey: key), key: key)
+        try setDurably(value, forKey: key)
+    }
+
+    /// An unreadable consumed store blocks startup and headless wallet work;
+    /// defaults must never overwrite a future or corrupt RN envelope.
+    func requireCompatibleRNStores() throws {
+        for key in RNStoreCodec.schemas.keys where key != PersistedEsploraState.key {
+            if let raw = string(forKey: key) { _ = try RNStoreCodec.decode(raw, key: key) }
+        }
     }
 }
 

@@ -63,6 +63,7 @@ final class AppServices: Sendable {
     struct RestoreNotSettled: Error {}
 
     func ensureWalletOpen() async throws {
+        try SettingsStorage.shared.requireCompatibleRNStores()
         try StoredSeed.requireUsable(seed.read())
         guard !WalletDataLocation(variant: variant).hasMultipleDatabases else { throw StoredSeed.Failure.conflict }
         // A background (push) launch never runs AppModel.start: settle an interrupted
