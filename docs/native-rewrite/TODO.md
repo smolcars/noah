@@ -31,23 +31,23 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] iOS pins bark-bolt-ffi 0.5.0 at `68b88c73ccaaa8e5fe607fbcc1e7d783a9ef4609`; SPM manifest and resolved XCFramework SHA-256 verified against release SHA256SUMS. Prepared boarding (18), read-only transaction status (15), persisted all-exit listings (20) adopted; prepared offboards and durable operation keys (19) remain open
 - [x] FFI items 11 + 12 in v0.3.0: `OnchainWallet.openExisting` (read-only identity check before writes) and all nine balance buckets + Bark's pending/total — adopted on iOS (now pinned to 0.5.0; Noah's own preflight kept)
 - [x] Android on bark-bolt-ffi 0.5.0 (tag `68b88c73`): verified AAR/POM SHA-256, `openExisting`, full balance, prepared sends/boarding, read-only chain status and persisted live/terminal exits; wrappers and preparations drained on teardown
-- [ ] Android session lifecycle parity with iOS (reservations, calls shielded from cancellation, observers), with the Android restore port
+- [x] Android session lifecycle parity with iOS (reservations, calls shielded from cancellation, observers), with the Android restore port — `WalletSession.kt:141,215,349,411,465`, `WalletRestorer.kt:42`; `WalletSessionTest` cancellation/reservation/observer regressions + `WalletRestorerTest` / `RestoreTransactionTest` (restore reservations `e5f08b66`, observer fixes `b02ba8fc`, admission follow-up `6667d748`)
 - [x] Funded RN→native upgrade re-run on 0.3.0 — iOS (fingerprint, 2 movements, 95,000 spendable; opened via `openExisting`)
 - [x] Funded RN→native upgrade on 0.3.0 — Android, real Pixel 6 (Android 17): fingerprint, 2 movements, 95,000 spendable; Expo UUID and token unchanged (see `apps/android/UpgradeTests/DEVICE.md`)
 - [x] Pixel 6: background-job callbacks, killed-process delivery and widget refresh — real Expo heartbeat `responded` / maintenance `Success` in both states; placed widget refreshed 95,000 → 96,234 sats after a push (2026-10-19 follow-up in `apps/android/UpgradeTests/DEVICE.md`)
 - [x] bark-bolt-ffi Android libraries 16 KB-aligned (FFI handoff item 13) — fixed in 0.3.1; both platforms now on 0.5.0 and Android reverified there; arm64-v8a, armeabi-v7a and x86_64 `libbark_bolt_ffi.so` LOAD segments all `Align 0x4000` (checked with llvm-readelf on the published AAR)
-- [ ] `WalletService` protocol/interface over bark-bolt-ffi (Swift + Kotlin), with a fake for UI work
+- [x] `WalletService` protocol/interface with a fake for UI work — superseded by `WalletSession` plus feature-specific dependency seams: iOS `ReceiveModel.swift:7` / `HistoryModel.swift:7`; Android `WalletSession.Handles` (`WalletSession.kt:46`) / `SendWallet` (`SendController.kt:243`); injected fakes in `ReceiveModelTests` / `SendSafetyTest` (`cfe15cf1`, `91095f90`)
 - [x] Config mapping per variant with **fee units: sat/kvB → sat/kwu** — iOS
 - [x] Config mapping — Android (sat/kwu; regtest via `10.0.2.2`)
-- [ ] Esplora override from `esplora-storage`
-- [ ] `WalletCoordinator`: single owner of wallet lifetime; serializes load/close/replace and operations for UI, push, background tasks, backups, App Intents
+- [ ] Activate the decoded `esplora-storage` override on both platforms after endpoint/network validation and coordinated reload; both SDK openers still use `WalletConfiguration.base`. Codecs exist (`RNStoreCodec.swift:28,83`, `RNStoreCodec.kt:16`); consumer/editor remains M5
+- [x] `WalletCoordinator` — superseded by process-wide `WalletSession` + `WalletLifecycle` mutation gates: iOS actor/shared owner (`WalletSession.swift:14,71`), Android owner/reservations/drained close (`WalletSession.kt:22,215,465`); UI/push/backup/restore and iOS App Intents share it; `WalletSessionTests`, `WalletSessionTest`, `WalletLifecycleTests` / `WalletLifecycleTest` (`3d530294`, `e5f08b66`, `5e000c52`)
   - [x] iOS: `WalletSession` holds headless admission across push/task/intent awaits and backup/native settlement; foreground entry waits; restore/deletion reservations exclude jobs
 - [x] Open existing wallet: preflight `db.sqlite`, `createIfNotExists=false`, original network — iOS (`WalletSession`)
 - [x] One `WalletSession.shared` per process (bark locks the datadir); `ensureOpen` joins an open in progress — iOS
 - [x] Shared session, preflight open, safe create-or-resume, bark balance accounting — Android (overlapping closes rejected, native handles disposed explicitly)
-- [ ] `runDaemon` policy + coordination rules for push/background/backups on the shared session
+- [x] `runDaemon` policy + coordination rules for push/background/backups on the shared session — iOS headless opens disable the daemon and settle/close; Android retains the daemon-on shared session (`AppServices.kt:170,176`), with lifecycle admission, counted shielded calls and backup settlement (`WalletSession.kt:349,465`, `AppServices.kt:140`); `HeadlessWalletTests`, `StoredWalletOpenerTest`, `WalletSessionTest`, `BackupCoordinatorTest` (`d40f6368`, `ec9f1876`, `2416b2ef`)
   - [x] iOS: headless opens are existing-only, daemon off, closed after settlement; an already-open foreground session is retained. No headless restore/deletion recovery or seed writes; suspended/incompatible/locked/missing/conflicting state refuses admission
-- [ ] Notification loop (movement events) + receive subscriptions with cancellation
+- [x] Notification loop (movement events) + receive subscriptions with cancellation — `WalletSession.swift:499,537`, `WalletSession.kt:89,411`; `WalletSessionTests.repeatedPendingObserversStopOnCloseAndConsumerCancellation`, `WalletObserverStopTests.stopRetriesRegistrationGapWithoutCancellingReader`, `WalletSessionTest.cancelReceiveObserverReleasesHolderButLeavesWalletUsable` (`cfe15cf1`, `91095f90`, `b02ba8fc`, `4d9f1ca5`)
 
 ### 0.4 Server API contract
 - [x] Utoipa `ToSchema` on `server/src/types.rs` exports + path annotations on all handlers (bearer + registered-user security)
@@ -74,7 +74,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 ### 0.5 Upgrade compatibility (gate before any funded-wallet milestone)
 - [x] Both recurring round-3 correctness: all 20 RN factory fields mandatory (including nullable keys), shared missing-field classification/lossless-row regressions; settlement retains underlying policy across temporary suspension; clock/execution admission and protected binding reads avoid pre-onboarding authority failure on both platforms. Existing rollback, consumption, generation and storage-health gates retained; Android final 3,001 tests / 104 suites + APK; iOS full once 665 total / 642 passed / 23 opt-in skipped / 0 failed, 132 suites (959 expanded passes); owned simulator/DerivedData/six result bundles removed; both RecurringTests notes
 - [x] Both recurring round-2 upgrade safety: wallet-local durable lifecycle stop/suspension authority survives acknowledged MMKV rollback; per-occurrence settlement application claims and pre-marker consumed-receipt migration prevent duplicate history/notifications; proven consumed receipts release Send despite policy rollback/write latches; explicit edit/resume reapproval retains journal consumption. Android reminder protection, stage cancellation/budget checks, and injectable ledger sync on both platforms; final evidence in RecurringTests notes
-- [x] Android standalone restore-preparation stop in `AppServices.stopRecurringAutomation`: durable automation authority stop precedes the settings generation write (already present at base `b6b3538d`); lifecycle suspension/deletion paths remain covered.
+- [x] Android standalone restore-preparation stop in `AppServices.stopRecurringAutomation` — `f4ba6620` writes the durable automation authority stop before the settings generation write (`AppServices.kt:107`); lifecycle suspension/deletion paths remain covered.
 - [x] iOS seed reader: keychain service `com.noah.mnemonic.<variant>`, account `noah` (read + in-place save, RN attributes)
 - [x] Android seed reader: `RN_KEYCHAIN` DataStore (+ legacy SharedPreferences), cipher from `:c` (AES-GCM / AES-CBC); fallback `noah_native_secrets`; new Keystore-backed store; legacy kept
 - [x] Android RN→native upgrade test run on an emulator
@@ -92,7 +92,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] One-time nonblocking Home notices persist in native settings for lost settings and RN recurring schedules. Removed quarantine, Continue/model rebuilding, unreadable-settings blocked/support states, restore-once/retirement, MMKV handlers and lazy reload guards. Wallet deletion removes RN files/snapshot while retaining the native import marker through re-onboarding.
 - [x] Shared launch/import fixtures and native tests: eight MMKV admission cases, 196 raw RN import cases, interrupted writes before/after rename, background/concurrent import, damaged native defaults, one-time notices, native deletion/re-onboarding and 2,000 native writes with byte-identical live RN files. Final Android: 2,978 JVM / 103 suites, APK + instrumentation compilation; owned-emulator JNI: 12 passed / 1 prepared-upgrade skip. Final iOS: 652 total / 630 passed / 22 opt-in skips / 0 failures. Owned devices, DerivedData and results removed; details and acceptance limits in UpgradeTests docs.
 - [x] Upgrade runners cover install while RN is running/writing (`INSTALL_WHILE_RUNNING=1`, default); stopped baseline mode retained (`=0`). Run both for acceptance; live results are recorded in each platform's upgrade docs.
-- [ ] Remaining RN store shapes (decode as their screens land)
+- [x] Remaining RN store shapes — all eight envelopes have codecs, unknown-field retention and transaction-v0 migration; both `RNStoreTests` / `RNStoreMigrationTest.unifiedRNFixturesValidateMigrateAndPreserveOriginalBytes` consume 196 RN-generated cases (`RNStoreCodec.swift:14`, `RNStoreCodec.kt:10`; `f29a23a4`, `b84ce5dd`, `17e7b76f`). Esplora activation remains separately tracked in 0.3/M5
   - [x] Review round 1: exact raw version tokens; recoverable profile fallback without stored-value repair; one deterministic RN Zustand generator/196-case raw fixture consumed by both native suites — `apps/fixtures/README.md`
   - [x] iOS: inventory all 8 stores; validate consumed envelopes/versions, preserve unknown JSON tokens, apply transaction v0 migration; RN-generated fixtures; Esplora decoder remains inactive until its native screen lands — `apps/ios/UpgradeTests/README.md`
   - [x] Android: all 8 RN envelopes inventoried/validated; unknown fields retained on writes, transaction v0 migration matched; Esplora has a decoder but no native consumer — `apps/android/UpgradeTests/STORES.md`.
@@ -104,7 +104,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] UnifiedPush connector storage + instance names preserved — Android (3.1.2 SQLite + legacy prefs fixture on device)
 - [x] Upgrade test iOS (`apps/ios/UpgradeTests/run.sh`): RN regtest creates wallet via Maestro → native installed over it → seed, DB, MMKV readable, launch = existingWallet, RN DB opens with new bark (same file, not recreated)
 - [x] Funded upgrade test iOS (`FUNDED=1`): RN receives 100k + sends 5k → native sees same fingerprint, 2 movements, 95,000 spendable
-- [ ] Extend funded upgrade test: onchain funds, recurring rule, settings values, Expo token
+- [ ] Repeat the final Android extended funded upgrade script uninterrupted from its entry point; onchain funds, recurring rule, settings and real Expo-token assertions already exist and passed in resumed procedures (`UpgradeCompatibilityTest.kt:40`, `apps/android/UpgradeTests/DEVICE.md:363`). iOS extended upgrade and physical Expo continuity passed (`UpgradeCompatibilityTests.swift:52,83,111,132`; `5aa40aa6`, `da24df4d`); retain the evidence below
   - [x] iOS: confirmed 10k onchain + 95k Ark, identical movements/fingerprint/recurring policy, native recurring UI with zero payments, non-default settings and locale — `apps/ios/UpgradeTests/README.md`
   - [x] iOS: Expo token continuity verified on a physical iPhone 17 (iOS 27.2): native re-registered RN's exact token after an in-place install; installation ID reused (`apps/ios/UpgradeTests/README.md`)
   - [x] Both: RN Settings → Delete Wallet unlinks MMKV while open, so a wallet re-created in that RN session never persists stores. Reproduced on a real iPhone with the UI driver (`apps/ios/DeviceDriver`). RN fix merged: smolcars/noah#371 (keep the folder, `clearAll()`). iPhone, 2026-10-20: old RN → empty store → native resumes onboarding; fixed RN → stores persist, RN relaunch and native both land on Home
@@ -124,7 +124,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [ ] Route bark-bolt-ffi `BarkLogger` callbacks into the app log — Android
 - [x] Sentry (cocoa), disabled in debug + regtest like RN — iOS (production DSN; fixed event/context/tag allowlist, PII off, no attachments, redacted messages and fail-closed key/value guard; archive dSYMs require CI credentials)
 - [ ] Sentry (android), disabled in debug + regtest like RN
-- [ ] HTTP clients (URLSession / OkHttp) incl. upload/download
+- [x] HTTP clients (URLSession / OkHttp) incl. upload/download — iOS `ServerClient.swift:19`, `BackupService.swift:106`, `BoundedDownload.swift:16`; Android `ServerClient.kt:48`, `BackupService.kt:33`, `BoundedDownload.kt:14`; `ServerAuthTests` / `ServerAuthTest`, `BoundedDownloadTests`, `BackupArchiveTest.boundedDownloadChecksActualBytesWithoutTrustingHeaders`, both live backup integration suites (`5ef912c5`, `ec9f1876`, `60ebc1b7`)
 - [x] Server auth: `/v0/getk1` → sign (offline key `m/350/0`) → `/v0/auth/login` → JWT; refresh near expiry; retry once — iOS (live-tested on regtest)
 - [x] Server auth — Android (offline index-0 signing, shared login, RN token storage, retry once; live-tested on regtest)
 - [x] Server registration + last-login + device info (shared token provider/client) — iOS
@@ -133,12 +133,12 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Push iOS: permission, APNs token → Expo token (RN installation ID, provisioning aps-environment), `register_push_token`, silent-push handler with 25 s budget, jobs for maintenance / invoice / claim / backup / heartbeat with job-status reports, widget refresh; expiry checks between stages, at wallet-open admission and immediately before native opening; bounded completion log drain
 - [x] iOS SDK observer teardown: stop native notification/state-change waits and await uncancelled readers, retrying the wait-registration gap; repeated close/consumer-cancellation regressions and [upstream draft](upstream/bark-bolt-ffi-notification-teardown.md), including Android polling audit — `apps/ios/PlatformTests/README.md`
 - [x] Push iOS: register the push token after server registration once onboarding is done (RN `usePushNotifications` gating)
-- [ ] Push iOS: recurring_payment_due (M7); verify real delivery on a device (simctl push does not run the background handler)
-- [x] FirebaseMessagingService + Expo token, onboarding/permission/server gates, expedited push work, maintenance/invoice/claim + status/heartbeat — Android (real Expo heartbeat + maintenance delivered; backup/recurring log-only pending their ports; caller/budget admission rechecked before native work and after cleanup/reservation waits; every independent push stage including reports/widgets is gated)
+- [ ] Verify physical iOS `recurring_payment_due` background delivery; M7 handling is implemented (`PushJobs.swift:82`, `RecurringLive.swift:31`; `RecurringLiveTests` / `RecurringBackgroundRegressionTests`, `23e08ffd`). Simulator/direct-handler evidence does not prove remote background delivery
+- [x] FirebaseMessagingService + Expo token, onboarding/permission/server gates, expedited push work, maintenance/invoice/claim + status/heartbeat — Android (real Expo heartbeat + maintenance delivered; initial backup/recurring log-only stubs superseded by real coordinator/executor calls in `PushRuntime.kt:25,27`, covered by `PushJobsTest.backupReportsSuccessAndRecurringOpensThenExecutes`; caller/budget admission rechecked before native work and after cleanup/reservation waits; every independent push stage including reports/widgets is gated)
 - [x] UnifiedPush (Android, non-GMS) in pure Kotlin — Android (shared jobs, preserved endpoint/connector storage; live distributor test pending)
-- [ ] Background tasks: BGTaskScheduler / WorkManager (maintenance, recurring)
+- [ ] Add Android periodic WorkManager maintenance/recurring execution; existing `PushWork.kt:14,33` handles delivered pushes/registration and `RecurringNotifications.kt:31,58` schedules advisory reminders only. iOS BGTaskScheduler implementation is complete below (`BackgroundScheduler.swift:27,88`; `BackgroundTaskTests`, `f095e8be`)
   - [x] iOS: 15-minute opportunistic app refresh (sync/recurring/widget), 6-hour network processing (also maintenance/enabled backup), shared push deadline/submission budget, expiration/foreground revocation, stage/open-admission checks, bounded completion log drains and session settlement; `apps/ios/PlatformTests/README.md`
-- [x] Widget data writer — iOS (`widgetBalance`, same keys, expiry from VTXOs and onchain tip)
+- [x] Widget data writer — iOS (`widgetBalance`, six rendered balance/expiry keys, expiry from VTXOs and onchain tip; `WidgetDataWriter.swift:7`; RN's unused `lastUpdated` metadata is not emitted)
 - [x] Widget data writer — Android (provider Long keys, expiry sentinel, explicit update broadcast; refreshed by real push)
 
 ### 0.7 Backups
@@ -162,18 +162,18 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Backup upload and unchanged-snapshot skip; live S3 round trip at port 3100 — Android
 - [x] Shared Node/Info-ZIP v1/v2 archives and a Node-made real wallet snapshot restored/reopened — Android
 - [x] Independently built v2 + v1 backup files (Node crypto + Info-ZIP, `backup-archives.json`) open on iOS
-- [ ] Direct iOS ↔ Android round trip; `scripts/decrypt_backup.js` supports v2 (shared fixtures and Node → Android verified)
+- [ ] Verify a direct iOS ↔ Android backup round trip and add v2 support to `scripts/decrypt_backup.js` (line 29 still accepts only v1). Both native v1/v2 codecs, shared fixtures and Node → Android are verified; those do not establish a direct cross-platform round trip (`apps/android/README.md:575`, `60ebc1b7`)
 
 ### 0.8 Translations
 - [ ] Tool: GT catalogs → `.xcstrings` + `strings.xml` for en/es/ja/ko/sv (placeholders, plurals, rich text flattened)
 - [ ] Background notification strings honour the persisted locale
 
 ## M1 — Shell, onboarding, Home
-- [ ] Launch gating: wallet check, onboarding vs main, push-permission gate, battery gate (Android), biometric lock overlay, beta warning
+- [x] Launch gating: wallet check, onboarding vs main, push-permission gate, battery gate (Android), biometric lock overlay, beta warning — `RootView.swift:13`, `LaunchGateView.kt:124`, `PlatformGateRules.kt:10`; `LaunchStateTests` / `LaunchAndSettingsTest`, `PushPermissionTests`, `PlatformGateRulesTest.matchesRNTruthTable`, `SettingsFeaturesTest.launchBackgroundAndStaleAuthentication` (`879e0160`, `90bd4789`; existing platform-specific evidence below)
 - [x] Launch gating: wallet/onboarding, denied-push gate and beta warning — iOS (seed-safety and secure-storage states remain ahead of push)
 - [x] Biometric lock overlay on launch and foreground (device-passcode fallback) — iOS
 - [x] Biometric app lock on launch and foreground, device-credential fallback; Settings seed re-auth and FLAG_SECURE — Android
-- [ ] Tab shell: Home, Receive, Send, History (Liquid Glass tab bar on iOS 26)
+- [x] Tab shell: Home, Receive, Send, History (system Liquid Glass tab bar on iOS 26) — `RootView.swift:97,213`, Android Navigation 3 `NoahApp.kt:33,67,91`; native screen/route tests and existing ParityTests live Home/Receive → QR → Send evidence (`91c03a26`, `b0de918c`, `ad310b64`). iOS repeat-payment prefill remains in the cutover parity audit
 - [x] OnboardingScreen create/restore — iOS (language picker waits for 0.8 translations)
 - [x] Onboarding create/restore — Android (restore from Welcome or a securely stored phrase; never offer creation while restore/deletion recovery is pending)
 - [x] Create-or-resume logic (`WalletCreator`, RN `walletCreation` test cases ported) — iOS
@@ -185,18 +185,18 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] EmailVerificationScreen (send/resend, 6-digit OTP, skip, reconcile verified) — iOS
 - [x] LightningAddressScreen (username/domain, optional npub, skip) — iOS
 - [x] PushNotificationsRequiredScreen — iOS (physical device + initialized + denied only; provisional/ephemeral remain undetermined like Expo; foreground/recheck/settings resolution; existing seed/recovery gates and biometric overlay retain precedence)
-- [ ] PushNotificationsRequiredScreen — Android
-- [ ] BatteryOptimizationScreen (Android)
-- [ ] UnifiedPushScreen (Android, non-GMS)
+- [x] PushNotificationsRequiredScreen — Android (`PlatformScreens.kt:22`, `LaunchGateView.kt:127`; `PlatformGateRulesTest.matchesRNTruthTable`, `ParityUIDeviceTest.notificationActionsAndBatterySkip`; `879e0160`, `90bd4789`)
+- [x] BatteryOptimizationScreen (Android) — persisted Skip, foreground exemption recheck and OS-settings fallbacks (`PlatformScreens.kt:38`, `PlatformAccess.kt:30`; `PlatformGateRulesTest.emailOnboardingRouting`, `ParityUIDeviceTest.notificationActionsAndBatterySkip`; `879e0160`)
+- [x] UnifiedPushScreen (Android, non-GMS) — distributor/endpoint/copy/register/Skip/Continue parity with timeout retry (`PlatformScreens.kt:80`; `ParityUIDeviceTest.nonGmsDistributorSelectionAndTimeoutCanRetry`, `879e0160`). Real distributor transport acceptance remains open under cutover
 - [x] HomeScreen first pass: balance (BIP-177/sats from `profile-storage`), hide toggle (`privacy-storage`), pull-to-sync, variant badge — iOS
 - [x] HomeScreen: fiat (shared currency fixtures, 5-minute quotes), settings/map shortcuts, RN random facts on mount/refresh — iOS (QR shortcut completed with M2)
-- [ ] HomeScreen: fiat, recent 3 transactions, shortcuts, banners, facts — Android
+- [x] HomeScreen: fiat, recent 3 transactions, shortcuts, banners, facts — Android (`HomeScreen.kt:29,70,88,110`; `HomeRulesTest.factsMatchRN` / `fiatUsesSharedRoundingAndLoadingState`, `ParityUIDeviceTest.liveQrHubPastesReceiveRequestIntoSend`, history fixture/device coverage; `547b3256`, `1e633c51`). Remaining broader Home parity gaps are listed under cutover
 - [x] HomeScreen: recent 3 transactions, View all, transaction detail — iOS
 - [x] Banners: backup status/retry + 5-second success, automatic boarding success + 5-second expiry, pending rounds + detail/copy/explorer + 30-second active-only polling, persisted email dismissal/verification, update warning — iOS
   - iOS deliberately observes successful automatic boarding receipts from the existing journal (observational hook only; boarding behaviour unchanged); historical receipts do not replay. Backup/boarding snapshots follow coordinator/journal events, success banners use one-shot expiry timers, and idle Home has no presentation polling; background jobs pause round progression; completion revisions and wallet-change events resume queries even for jobs completed between UI updates. Existing native boarding review/receipt messages remain.
-- [ ] Banners: backup status, auto-boarding, pending round, email verification, update warning — Android
+- [x] Banners: backup status, auto-boarding, pending round, email verification, update warning — Android (`HomeBanners.kt:25`, `HomeScreen.kt:97`; `HomeRulesTest`, `HomeBannerExpiryTest.backupAndBoardingExpireOnceAtTheirFiveSecondDeadlines`, `HomeRoundObserverTest.jobEntirelyBetweenPollsRequeriesImmediatelyAndPausesTheTimer`, `ParityUIDeviceTest.backupRetryAndUpdateWarningCopy`; `547b3256`, `90bd4789`)
 - [x] App version check — iOS (`/v0/app_version`, current version once per process, no retry, failure allows use, Home warning + variant TestFlight link; no blocking update screen, as in RN)
-- [ ] App version check — Android
+- [x] App version check — Android (`ServerRegistration.kt:32`, `HomeBanners.kt:28,88`; `ServerRegistrationTest.stalledVersionCheckDoesNotBlockRegistrationOrEmailAndRunsOnce` / `independentVersionFailureIsCachedAndOnlyRecordsSuccessfulReports`; `1d055c27`, `90bd4789`)
 - [x] Shared RN Home predicates/facts/symbols (`home-status.json`) and platform push gates (`platform-gates.json`), retaining unknown-round and iOS authorization cases — iOS
 - [x] iOS parity verification: 33 targeted passes; full NoahTests once, 537 total / 515 passed / 22 opt-in skipped / 0 failed (113 suites). Dedicated regtest simulator, 10 screenshots, no payments submitted; simulator/DerivedData/result bundles removed. Deliberate session-lifetime/scanner/presentation differences and device-only acceptance gaps: `apps/ios/ParityTests/README.md`.
 
@@ -215,13 +215,13 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] UnifiedPushScreen: non-GMS onboarding and Settings, saved/connected distributor selection, endpoint polling/copy, backend registration, Skip/Continue — Android (connector storage and `noah-<variant>` preserved; deliberate improvement: 30 s timeout permits retry instead of leaving RN’s spinner stuck)
 
 - [x] Android M1 round-1 scoped fixes: background-job completion resumes Home rounds (including jobs between polls and refresh/foreground query failures); independent cached version check; observable backup/boarding status with one-shot 5 s expiry; accessible QR copy button; awaited IO startup/recovery/gates/token calls and debug StrictMode; fiat waits for balance + price. Full JVM/APK command once: 2,880 tests / 82 suites / zero failures; final follow-up: 71 focused tests / 10 suites + rebuilt APK; four distinct device checks and private setup passed; owned port-5598 AVD identity/shutdown/deletion verified — `apps/android/ParityTests/README.md`.
-- [ ] Android initialized-launch StrictMode follow-up outside M1 round-1 scope: Send observer reservation preflight and recurring readiness/binding/database inspection/widget writes still run on main (37 violations in the follow-up sample). Fresh launch and focused recovery/battery/UnifiedPush paths are clean; earlier ANR is not claimed resolved. Requires the explicitly excluded Send/Recurring execution changes; details in `apps/android/ParityTests/README.md`.
+- [x] Android initialized-launch StrictMode follow-up — Send reservations, recurring readiness/binding/database inspection and widget IO moved off main (`WalletSession.kt:349`, `RecurringExecutor.kt:30`, `WidgetDataWriter.kt:24,35`; `1d3cacb0`, `85c80d98`, `9d009d9e`, `ac770323`). `WalletSessionUiReadTest.uiSessionStateReadDoesNotBlockBehindIoSuspensionRead`, delayed journal/settlement/widget regressions and archived five-flow zero-violation measurements supersede the historical 37-violation sample; no ANR performance-profiling claim. Details in `apps/android/ParityTests/README.md:175,270`
 
 ## M2 — Receive
 - [x] ReceiveScreen (BIP-321 unified QR, amount/description sheet, copy sheet, share, completion subscriptions) — iOS
 - [x] ReceiveSuccessScreen + animation — iOS
 - [x] QRHubScreen (my Lightning-address code / scan) — iOS (address-only QR, name/copy, Profile fallback, existing scanner + paste, existing Send recipient import; denied/canceled/lost-focus reset to My code; live payments are preserved)
-- [ ] QRHubScreen (my lightning-address code / scan) — Android
+- [x] QRHubScreen (my lightning-address code / scan) — Android (`QRHubScreen.kt:25`, `NoahApp.kt:97`; `ParityUIDeviceTest` QR decoding/copy/Profile/close/paste cases and `liveQrHubPastesReceiveRequestIntoSend`; `ad310b64`, `6e3efa7c`; fuller evidence below)
 
 - [x] ReceiveScreen: BIP-321 QR with Noah logo, amount/note/fiat sheet, copy/share, Ark and Lightning completion — Android
 - [x] ReceiveSuccessScreen with animation, settled status and refreshed balance — Android
@@ -260,7 +260,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Restore onchain-wallet MAX with prepared `.drainAll`, confirmed-only inputs and exact fee/amount review (FFI 14) — iOS
 - [x] Read-only offboard chain status (FFI 15) — iOS and Android on 0.5.0: not yet seen / mempool / confirmed height; errors keep the last status, absence never unlocks.
 - [x] Android 0.5.0 round-1 Send receipt ordering: persist exact returned txid/proof before optional network status; interrupted lookup/restart and failed-write regressions. Offboard status bypasses BDK sync/graph, while BDK send reorg/conflict/retry rules remain intact
-- [ ] Explicit offboard broadcast outcomes/prepared offboards (remaining FFI 15); replace weak Ark/offboard history correlation with durable operation IDs (FFI 16)
+- [ ] Adopt explicit offboard broadcast outcomes/prepared offboards (remaining FFI 15) and durable Ark/offboard operation IDs (FFI 16) on both platforms; 0.5.0 read-only txid status is done, but submission still uses `sendOnchain` / `offboardVtxos` and pre-receipt history stays candidate evidence (`WalletSession+Send.swift:181,210`, `SdkSendWallet.kt:136`, both `SendReconciliation` implementations)
 - [x] Adopt bark-bolt-ffi 0.4.0 — iOS: signed onchain fee/amount/vsize/input-count review, two-minute expiry and lifecycle discard, confirmed-only MAX, exact txid journaled before `broadcastPrepared`, explicit broadcast outcomes, typed call-specific Send/M6 errors; round-5 Lightning checkpoint identity/amount/fee guards remain valid. Verification: `apps/ios/SendTests/README.md`
 - [x] Round-6 Send crash recovery — iOS: unconfirmed prepared/broadcasting journals retain the broadcast-retry lock until confirmation; failed reconciliation sync surfaces an error and cannot upgrade cached evidence; crash-before-receipt and failed-receipt-write restart regressions. Verification: `apps/ios/SendTests/README.md`
 - [x] Round-6 Send review lifetime — iOS: discard/exit/background/recipient changes invalidate in-flight reviews with a generation token; late preparations immediately discard their reserved inputs, and stale errors cannot alter the new flow. Suspended-preparation regressions: `apps/ios/SendTests/README.md`
@@ -298,7 +298,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Settings danger-zone rows wired to suspend/resume, delete wallet (type "delete" to confirm, as RN), re-register — iOS
 - [x] ProfileScreen — iOS
 - [x] LanguageSettingsScreen, CurrencySettingsScreen, BitcoinUnitSettingsScreen — iOS (language persists; translated copy awaits 0.9 catalogs)
-- [ ] EsploraSettingsScreen (coordinated wallet reload)
+- [ ] Implement EsploraSettingsScreen on both platforms: edit/reset, URL normalization, genesis/network test, persist override and coordinated wallet reload matching RN `EsploraSettingsScreen.tsx`; native Ark Info still shows a disabled "Coming soon" row (`ArkInfoView.swift:36`, `AccountScreens.kt:131`)
 - [x] BackupSettingsScreen — iOS
 - [x] ArkInfoScreen — iOS
 - [x] ExportDatabaseScreen (encrypted `.noahbackup`) — iOS
@@ -410,7 +410,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] M7 iOS round-2 safety: portable journal v2 retains consumed indices per wallet instance/schedule/policy revision alongside cross-revision timestamp watermarks; conservative durable v1/dictionary migration blocks unknown revision history; exact New York→UTC rollback, spring/fall DST and cross-revision regressions
 - [x] M7 iOS round-2 attended approval retains Send success/receipt until Done with replay protection; scene-scoped 60-second foreground runner reuses the executor, coalesces push/screen triggers and cancels on scene deactivation
 - [x] M7 iOS round-2 verification: focused runs 44/35/41 tests (67/58/71 individual runs); full NoahTests once: 447 total / 429 passed / 18 opt-in skipped / 0 failed, 95 suites (576 expanded passes); owned simulator/DerivedData/six result bundles removed; ArkInfo fee policy unchanged; `apps/ios/RecurringTests/README.md`
-- [ ] Physical recurring-wake delivery, timed local reminder delivery, external LNURL/BOLT12 provider live acceptance and funded RN-recurring upgrade — iOS
+- [ ] Physical recurring-wake delivery, timed local reminder delivery and external LNURL/BOLT12 provider live acceptance — iOS (Android physical recurring transport/timed reminders/external-provider acceptance also remain unverified in `apps/android/RecurringTests/README.md:854`). Funded RN-recurring upgrade is already verified by `UpgradeCompatibilityTests.recurringPolicyIsIdenticalAndHasNotRun` and `apps/ios/UpgradeTests/README.md:197` (`5aa40aa6`); the earlier RecurringTests limitation is historical
 - [x] Schedule math/executor, RN MMKV + wallet-instance binding, screens, foreground/push + independent deadline, notifications and serialized server wake sync — Android; round-3 uses Long occurrence counts, keeps unrepresentable RN rows visible/stopped/lossless, notifies the first active preflight failure and confirmed settlement after cancellation, rejects string envelope versions and legacy-uncertain resume/edit up front, and defaults Custom to 14 days; RN actual validator/writer verified 1 through Number.MAX_VALUE with Android-only fixture; targeted 1,435/1,439/1,442 passed, final JVM/APK command once: 2,830 passed / 73 suites / 0 failed/skipped; parity follow-up aligns new/edited end dates with RN 23:59:00.000 while preserving stored timestamps; oversized RN policies remain visible as needs attention without blocking healthy schedules; validate cross-record journal consumption before reads/writes, preserve malformed originals plus durable quarantine, and stop policies visibly across relaunch (including negative-index/zone-rollback regression); unchanged fixture-defined captured Lightning fee cap (all 24 cases), persistent stop generation; round-1 portable journal v2 retains consumed indices/timestamps and blocks incomplete legacy history, attended receipts stay until Done, STARTED lifecycle checks every minute through the shared executor; targeted 1,432 passed / 11 suites, full JVM/APK check once: 2,817 passed / 72 suites / 0 failed/skipped; earlier four passing instrumentation tests and exactly one 1,000-sat Ark + one automatic 1,000-sat BOLT12 send (79-sat fee, 166-sat cap); parity JVM-only limits and earlier setup/cleanup evidence in `apps/android/RecurringTests/README.md`
 - [x] Android unattended recurring fee approval copy matches iOS's separate quoted-fee, published-schedule and zero-fee Ark reasons; policy unchanged, exact-copy + shared fixture/executor checks: 1,357 passed
 
@@ -426,8 +426,10 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Android M8: location requests remain explicit Locate only; lazy Places in view/detail navigation from dateline-aware camera bounds; re-rank cities on viewport/focus changes; shared `btc-map-review.json` URL/phone/bounds cases (including digitless phone regressions); narrow URI-only intents retain user choice of handler
 
 ## Cutover
-- [ ] Adaptive layouts (iPad / landscape / foldables) parity
-- [ ] Parity audit against RN, screen by screen
+- [ ] Finish adaptive layouts (iPad / landscape / foldables) parity outside the existing History/BTC Map split panes (`TransactionsView.swift:15`, `TransactionDetail.kt:28`, both BTC Map screens; `2fa4e026`, `062ac351`). Home/Receive/Send/QR/settings still need RN adaptive-flow comparison and wide-window acceptance
+- [ ] Complete the RN screen-by-screen behaviour audit beyond the recorded M1/M2, History, Send/M6 and recurring reviews; resolve the gaps below and verify the remaining flows on both platforms
+  - Home: both native headers show only total balance; RN also exposes pending balance and expandable Ark/onchain bucket details (`client/src/screens/HomeScreen.tsx:317,353,363`, `HomeView.swift:196`, `HomeScreen.kt:89`). Native Home also lacks RN's background-job-in-progress strip
+  - iOS Home/History repeat callback selects Send but never consumes `pendingRepeatPayment` (`RootView.swift:90,105,141`); finish recipient prefill/revalidation. Android is already wired (`NoahApp.kt:55`, M3)
   - Send: while a refresh round awaits confirmation, Send shows "0 sats available in Ark" without saying why (both apps; Home already shows pending-in-round funds)
   - History: refresh movements (`bark.round:refresh`) fall through to the "Onchain" label, the same as RN; consider a Refresh label in the design pass
   - Send/Board (FFI 0.5.0 verification, 2026-10-20) — align, both safe today:
@@ -437,12 +439,12 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
     - Boarding typed-error copy differs: insufficient funds, minimum amount, reserved inputs, failed broadcast and `notAttempted`.
     - Boarding receipts: Android shows net Ark amount and total leaving next to the fees; iOS shows only the fee rows.
     - Incomplete probe cleanup: iOS stops before re-preparing; Android re-prepares and relies on SDK reservations to reject it.
-- [ ] TestFlight + Play internal track on existing listings; upgrade test on real devices (iOS, GMS Android, non-GMS Android)
+- [ ] Publish native builds to the existing TestFlight + Play internal listings and verify release-candidate upgrades on physical iOS, GMS Android and non-GMS Android. Debug RN→native identity/seed/token upgrades already passed on iPhone 17 and Pixel 6 (`apps/ios/UpgradeTests/README.md:138`, `apps/android/UpgradeTests/DEVICE.md:70`); non-GMS distributor/device acceptance and native store-track releases are not evidenced
 - [ ] Monitor heartbeats, push delivery, migration telemetry; staged rollout
 - [ ] Retire `client/`, Nitro modules, ts-rs
 
 ## Backlog (after parity)
 - [ ] OS deep links (`bitcoin:`, `lightning:`, `lnurl`)
 - [ ] Raw APNs/FCM token registration alongside Expo
-- [ ] Noah design system setup
-- [ ] iOS keychain accessibility policy review
+- [ ] Complete the later Noah design-system pass (`PLAN.md:34`); initial RN light/dark colors, Inter typography and shared controls already exist (`DesignSystem/Theme.swift:6`, `DesignSystem/Buttons.swift:5`, `NoahTheme.kt:24`; `91c03a26`, `b0de918c`)
+- [ ] iOS keychain accessibility policy review — current new-item policy is `kSecAttrAccessibleAfterFirstUnlock`, while in-place updates preserve RN attributes (`KeychainPassword.swift:74,86`); compatibility coverage is not a completed policy review
