@@ -51,6 +51,15 @@ object RNStoreCodec {
         root
     } catch (_: Exception) { throw Unreadable() }
 
+    /** Admission uses the recurring reader too; unsupported rows remain visible and stopped. */
+    internal fun validateStoredValue(key: String, raw: String) {
+        decode(key, raw)
+        if (key == com.noahwallet.recurring.RecurringStore.key) {
+            try { com.noahwallet.recurring.RecurringStore({ raw }, { error("Read only") }).load() }
+            catch (_: Exception) { throw Unreadable() }
+        }
+    }
+
     /** JNI string getters may replace invalid UTF-8; never turn a present value into defaults. */
     fun storedString(present: Boolean, bytes: ByteArray?): String? {
         if (!present) return null

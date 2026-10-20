@@ -83,7 +83,7 @@ class SettingsStorage(context: Context) {
         private fun validate(store: MMKV, requiredKeys: List<String>) {
             check(requiredKeys.all(store::containsKey)) { "Native settings lost persisted keys" }
             RNStoreCodec.versions.keys.filter { it != "esplora-storage" }.forEach { key ->
-                RNStoreCodec.storedString(store.containsKey(key), store.decodeBytes(key))?.let { RNStoreCodec.decode(key, it) }
+                RNStoreCodec.storedString(store.containsKey(key), store.decodeBytes(key))?.let { RNStoreCodec.validateStoredValue(key, it) }
             }
         }
     }

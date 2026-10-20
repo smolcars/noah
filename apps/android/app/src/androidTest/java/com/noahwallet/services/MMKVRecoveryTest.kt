@@ -109,6 +109,19 @@ class MMKVRecoveryTest {
         assertTrue(runCatching { SettingsStorage(context).validateStores() }.isFailure)
         assertFalse(MMKVUpgradeBackup(root, id, backupRoot = context.noBackupFilesDir).restored)
     }
+    @Test fun recurringEnvelopeAndAdmittedKeyLossBlock() {
+        for (mode in listOf("undecodable", "missing", "missingSchedules")) fixture { context, root ->
+            if (mode == "missing") SettingsStorage(context).validateStores() else MMKV.initialize(app, root.path)
+            val raw = MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!
+            when (mode) {
+                "missing" -> raw.removeValueForKey("recurring-payment-storage")
+                "missingSchedules" -> raw.encode("recurring-payment-storage", """{"state":{},"version":0}""")
+                else -> raw.encode("recurring-payment-storage", byteArrayOf(0xff.toByte()))
+            }
+            raw.sync(); closeForRestart(root)
+            assertTrue(runCatching { SettingsStorage(context).validateStores() }.isFailure)
+        }
+    }
     @Test fun laterCRCRecoveryBlocksEvenWhenRNKeysSurvive() = fixture { context, root ->
         SettingsStorage(context).validateStores(); closeForRestart(root); corrupt(root, "crc")
         assertTrue(runCatching { SettingsStorage(context).validateStores() }.isFailure)
