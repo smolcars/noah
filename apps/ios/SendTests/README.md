@@ -32,6 +32,25 @@ suite was excluded. Swift Testing's parameterized cases account for 269 passed
 individual runs. The pre-fix regression run failed both missing-BDK-history and
 wrong-destination-amount assertions; both pass after the fix.
 
+## Round-5 wallet identity and checkpoint adoption (2026-10-19)
+
+Reviews and attempts now carry the wallet fingerprint and network. A foreign
+journal is removed before exposing its receipt or reconciling it; failed removal
+blocks Send. A successful deletion, creation, restore or committed-restore
+recovery invalidates the process-wide controller while replacement is reserved.
+A generation guard rejects status/submission callbacks queued for the old wallet.
+Same-wallet restarts preserve the journal and lock.
+
+**Legacy rule:** journals without an identity are quarantined, never displayed as
+success and never reconciled/adopted. The old format recorded neither an identity
+nor a wallet-change epoch, so even an old file timestamp cannot prove that the
+wallet has remained unchanged. We therefore never automatically assign an
+identity-free journal to the current wallet. It remains locked with only the
+explicit, twice-confirmed destructive history-check override; a failed removal
+keeps the lock. Existing v1/v2/v3 outcome-provenance migrations still apply to
+identity-bound attempts. Tests without live storage inject their own identities
+or deliberately exercise the older migration logic in isolation.
+
 ## Round-4 payment safety (2026-10-19)
 
 LNURL and Lightning addresses resolve the callback invoice in the app, persist it

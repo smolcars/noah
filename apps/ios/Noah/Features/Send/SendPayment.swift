@@ -27,6 +27,7 @@ struct SendQuote: Codable, Sendable, Equatable {
     var feeRate: UInt64?
     var approximate = false
     var vtxoIDs: [String]?
+    var walletIdentity: SendWalletIdentity?
     var recipientIsEstimated: Bool { vtxoIDs?.isEmpty == false }
     var recipientDescription: String { recipientIsEstimated ? "Recipient receives about \(amount) sats" : "\(amount) sats" }
     static let recipientEstimateExplanation = "The exact amount depends on the network fee when sent. The total is exactly the reviewed coins."
@@ -66,10 +67,16 @@ struct SendReceipt: Codable, Equatable, Sendable {
         }
     }
 }
+struct SendWalletIdentity: Codable, Equatable, Sendable {
+    var fingerprint: String
+    var network: String
+}
+
 struct SendSnapshot: Codable, Sendable {
     var movementIDs: Set<UInt32>
     var bdkTxids: Set<String>?
     var resolvedInvoice: String?
+    var walletIdentity: SendWalletIdentity?
 }
 enum SendFailure: LocalizedError {
     case invalid, insufficient, expired, ownAddress, feeChanged, unresolved, onchainMaxUnavailable, fundsChanged, constructionFailed, lightningInProgress
@@ -109,6 +116,8 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         case failed, storageBlocked
     }
     struct Attempt: Codable, Sendable {
+        var walletIdentity: SendWalletIdentity?
+        var inspectionPending: Bool?
         var safetyVersion: Int? = 3
         var payment: SendPayment
         var snapshot: SendSnapshot
@@ -129,6 +138,8 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         var reconcile: @Sendable (Attempt) async throws -> Resolution
         var read: () throws -> Attempt?
         var write: (Attempt?) throws -> Void
+        var identity: (() throws -> SendWalletIdentity)?
+        var withReservation: @Sendable (@escaping @MainActor @Sendable () async -> Void) async throws -> Void = { await $0() }
     }
     enum Resolution: Sendable, Equatable {
         case uncertain
@@ -146,13 +157,40 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     private(set) var message: String?
     private(set) var checking = false
     private var task: Task<Void, Never>?
+    private var unboundJournal = false
+    private var generation = 0
     var locked: Bool { state != .ready }
 
     init(dependencies: Dependencies) {
         self.dependencies = dependencies
+        reloadForWalletChange()
+    }
+    func reloadForWalletChange() {
+        generation += 1
+        checking = false
+        attempt = nil
+        state = .ready
+        message = nil
+        unboundJournal = false
         do {
             attempt = try dependencies.read()
             if var saved = attempt {
+                if let identity = dependencies.identity {
+                    let current = try identity()
+                    guard let owner = saved.walletIdentity else {
+                        // No historic identity/epoch proves ownership. Never display or drive this journal.
+                        attempt = nil
+                        unboundJournal = true
+                        state = .uncertain
+                        message = "This legacy payment has no wallet identity. Check your history and recipient before discarding it."
+                        return
+                    }
+                    guard owner == current else {
+                        attempt = nil
+                        try dependencies.write(nil)
+                        return
+                    }
+                }
                 // Older MAX receipts used the quote as the outcome; retain identity but await actual outputs.
                 if saved.payment.max, saved.payment.source == .offchain,
                    saved.receipt?.proof == .submitReturnedTxid, saved.receipt?.amountIsPending == nil {
@@ -192,46 +230,92 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         state = .submitting
         message = nil
         // This task belongs to the controller, not a sheet's cancellable .task.
+        let generation = self.generation
         task = Task {
-            do {
-                let snapshot = try await dependencies.prepare(payment, quote)
-                let pending = Attempt(payment: payment, snapshot: snapshot,
-                                      paymentHash: PaymentEncoding.invoice(snapshot.resolvedInvoice ?? (payment.method == "lightning" ? payment.destination : ""))?.hash, quote: quote)
+            do { try await dependencies.withReservation {
+                guard generation == self.generation else { return }
+                await self.performSubmit(payment, quote: quote, generation: generation)
+            } }
+            catch {
+                guard generation == self.generation else { return }
+                state = .ready
+                message = "Unable to reserve the wallet. No payment was submitted."
+            }
+        }
+    }
+    private func performSubmit(_ payment: SendPayment, quote: SendQuote, generation: Int) async {
+        do {
+            let identity = try dependencies.identity?()
+            // Lightning inspection errors must survive restart without granting permission to pay.
+            if ["lightning", "lnurl"].contains(payment.method) {
+                let pending = Attempt(walletIdentity: identity, inspectionPending: true, payment: payment, snapshot: .init(movementIDs: []), quote: quote)
                 try dependencies.write(pending)
                 attempt = pending
-            } catch {
-                state = .ready
-                message =
-                    (error as? SendFailure)?.errorDescription ?? "Unable to prepare payment. No payment was submitted."
-                return
             }
-            do {
-                let receipt = try await dependencies.pay(payment, quote, attempt!.snapshot)
-                finish(.paid(receipt))
-            } catch let error as SendExistingLightning {
-                finish(.inProgress(error.progress))
-            } catch let error as SendAlreadyPaid {
-                finish(.alreadyPaid(error.receipt))
-            } catch SendFailure.lightningInProgress {
-                attempt?.failureMessage = SendFailure.lightningInProgress.errorDescription
-                message = SendFailure.lightningInProgress.errorDescription
-                finish(.uncertain)
-            } catch let error as SendNotSubmitted {
-                attempt?.failureMessage = error.reason.errorDescription
-                message = error.reason.errorDescription
-                finish(.failed)
-            } catch {
-                state = .uncertain
-                await checkStatus()
-            }
+            let snapshot = try await dependencies.prepare(payment, quote)
+            guard generation == self.generation else { return }
+            let pending = Attempt(walletIdentity: identity, payment: payment, snapshot: snapshot,
+                                  paymentHash: PaymentEncoding.invoice(snapshot.resolvedInvoice ?? (payment.method == "lightning" ? payment.destination : ""))?.hash, quote: quote)
+            try dependencies.write(pending)
+            attempt = pending
+        } catch {
+            guard generation == self.generation else { return }
+            state = attempt == nil ? .ready : .uncertain
+            message =
+                (error as? SendFailure)?.errorDescription ?? (attempt == nil
+                    ? "Unable to prepare payment. No payment was submitted."
+                    : "Unable to inspect this payment. It may already be in progress. Check status before sending again.")
+            return
+        }
+        do {
+            let receipt = try await dependencies.pay(payment, quote, attempt!.snapshot)
+            guard generation == self.generation else { return }
+            finish(.paid(receipt))
+        } catch let error as SendExistingLightning {
+            guard generation == self.generation else { return }
+            finish(.inProgress(error.progress))
+        } catch let error as SendAlreadyPaid {
+            guard generation == self.generation else { return }
+            finish(.alreadyPaid(error.receipt))
+        } catch SendFailure.lightningInProgress {
+            guard generation == self.generation else { return }
+            attempt?.failureMessage = SendFailure.lightningInProgress.errorDescription
+            message = SendFailure.lightningInProgress.errorDescription
+            finish(.uncertain)
+        } catch let error as SendNotSubmitted {
+            guard generation == self.generation else { return }
+            attempt?.failureMessage = error.reason.errorDescription
+            message = error.reason.errorDescription
+            finish(.failed)
+        } catch {
+            guard generation == self.generation else { return }
+            state = .uncertain
+            checking = true
+            await reconcileCurrentAttempt()
+            checking = false
         }
     }
     func checkStatus() async {
         guard !checking, let attempt else { return }
         guard state == .uncertain || attempt.receipt?.txid != nil else { return }
+        let generation = self.generation
         checking = true
-        defer { checking = false }
-        do { finish(try await dependencies.reconcile(attempt)) } catch {
+        defer { if generation == self.generation { checking = false } }
+        do { try await dependencies.withReservation {
+            guard generation == self.generation else { return }
+            await self.reconcileCurrentAttempt()
+        } }
+        catch { if generation == self.generation { message = "Unable to reserve the wallet to check payment status." } }
+    }
+    private func reconcileCurrentAttempt() async {
+        guard let attempt else { return }
+        let generation = self.generation
+        do {
+            let resolution = try await dependencies.reconcile(attempt)
+            guard generation == self.generation else { return }
+            finish(resolution)
+        } catch {
+            guard generation == self.generation else { return }
             finish(.uncertain)
             message = "Unable to check payment status. It may have been sent. Do not pay again."
         }
@@ -270,6 +354,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         }
     }
     var canOverride: Bool {
+        if unboundJournal { return !checking }
         guard state == .uncertain, !checking, let attempt, attempt.receipt == nil else { return false }
         return true
     }
@@ -289,6 +374,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         do {
             try dependencies.write(nil)
             attempt = nil
+            unboundJournal = false
             state = .ready
             message = nil
         } catch { message = "Unable to save payment status." }
@@ -296,8 +382,9 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
 }
 
 extension SendPaymentController.Dependencies {
-    static func live(session: WalletSession = .shared, variant: AppVariant = .current) -> Self {
-        let file = WalletDataLocation(variant: variant).directory.appending(path: "noah-send-attempt.json")
+    static func live(session: WalletSession = .shared, variant: AppVariant = .current, location: WalletDataLocation? = nil) -> Self {
+        let location = location ?? WalletDataLocation(variant: variant)
+        let file = location.directory.appending(path: "noah-send-attempt.json")
         return Self(
             prepare: { try await session.prepareSend($0, quote: $1) },
             pay: { try await session.submitSend($0, quote: $1, snapshot: $2) },
@@ -317,6 +404,11 @@ extension SendPaymentController.Dependencies {
                 } else if FileManager.default.fileExists(atPath: file.path) {
                     try FileManager.default.removeItem(at: file)
                 }
-            })
+            },
+            identity: {
+                let properties = try WalletDatabase.properties(at: location.database)
+                return .init(fingerprint: properties.fingerprint, network: properties.network)
+            },
+            withReservation: { try await session.withSendReservation($0) })
     }
 }

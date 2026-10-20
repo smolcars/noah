@@ -84,6 +84,7 @@ actor WalletSession {
     private let opener: Opener
     private var state = State.closed
     private var runningCalls = 0
+    private var sendReserved = false
     private var drainWaiters: [CheckedContinuation<Void, Never>] = []
     private var observers: [UUID: Observer] = [:]
 
@@ -148,6 +149,7 @@ actor WalletSession {
     /// Stops new wallet calls, waits for the running ones, then stops the
     /// daemon. Only then is the session closed.
     func close() async throws {
+        guard !sendReserved else { throw OpenError.busy }
         switch state {
         case .closed:
             return
@@ -241,6 +243,7 @@ actor WalletSession {
             }
             throw error
         }
+        if self === WalletSession.shared { await SendPaymentController.shared.reloadForWalletChange() }
         state = .open(handles)
     }
 
@@ -284,6 +287,14 @@ actor WalletSession {
         runningCalls += 1
         defer { callFinished() }
         return try await Task { try await body(handles) }.value
+    }
+
+    /// Covers inspection, durable journal writes and progression; excludes replacement and other Send creators.
+    func withSendReservation(_ body: @escaping @MainActor @Sendable () async -> Void) async throws {
+        guard isOpen, !sendReserved else { throw OpenError.busy }
+        sendReserved = true
+        defer { sendReserved = false }
+        await Task { await body() }.value
     }
 
     private func callFinished() {

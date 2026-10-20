@@ -125,6 +125,72 @@ struct WalletRestorerTests {
         #expect(leftovers.isEmpty, "journal, previous wallet and decrypted files are gone: \(leftovers)")
     }
 
+    @MainActor @Test func sendReceiptIsInvalidatedByRealDeleteAndDifferentSeedRestore() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let replacementSeed = try generateMnemonic()
+        let backup = try await makeBackup(mnemonic: replacementSeed)
+        let session = WalletSession(variant: .regtest, location: deviceB) { mnemonic, datadir, _, _, create in
+            let config = WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "send-identity-test")
+            let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
+            let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config,
+                args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create, createWithoutServer: true, skipRecovery: true), onchain: onchain)
+            return .init(wallet: wallet, onchain: onchain)
+        }
+        let oldSeed = try generateMnemonic()
+        let seed = KeychainPassword(service: "com.noah.tests.send-replace.\(UUID().uuidString)", account: "noah")
+        let token = KeychainPassword(service: "com.noah.tests.send-token.\(UUID().uuidString)", account: "noah")
+        defer { seed.remove(); token.remove() }
+        try seed.save(oldSeed)
+        try await session.createNew(mnemonic: oldSeed, runDaemon: false, appVersion: "test")
+        let oldFingerprint = try #require(try await session.summary()?.fingerprint)
+        var dependencies = SendPaymentController.Dependencies.live(session: session, variant: .regtest, location: deviceB)
+        dependencies.prepare = { _, _ in .init(movementIDs: []) }
+        dependencies.pay = { _, _, _ in .init(amount: 1000, proof: .submitReturnedArkSuccess) }
+        let controller = SendPaymentController(dependencies: dependencies)
+        controller.submit(.init(destination: "ark", method: "ark", amount: 1000), quote: .init(amount: 1000, fee: 0, total: 1000))
+        try await SendPaymentTests.waitUntil { controller.state != .submitting }
+        #expect(controller.attempt?.receipt?.proof == .submitReturnedArkSuccess)
+        let settings = try SettingsStorage(rootPath: root.appending(path: "mmkv").path, instanceID: UUID().uuidString)
+        let lifecycle = WalletLifecycle(dependencies: .init(session: session, location: deviceB, seed: seed, authToken: token,
+            settings: settings, scratch: ScratchSpace(root: root.appending(path: "scratch")), appGroup: nil,
+            deregister: {}, walletChanged: { await controller.reloadForWalletChange() }))
+        try await lifecycle.delete()
+        #expect(controller.state == .ready && controller.attempt == nil)
+        let restorer = WalletRestorer(variant: .regtest, session: session, location: deviceB, seed: seed,
+            makeClient: { _ in Client(serverURL: URL(string: "http://fake")!, transport: FakeServer(backupId: "new", encrypted: backup)) },
+            walletChanged: { await controller.reloadForWalletChange() })
+        _ = try await restorer.restore(mnemonic: replacementSeed)
+        try await session.openExisting(mnemonic: replacementSeed, runDaemon: false, appVersion: "test")
+        #expect(try await session.summary()?.fingerprint != oldFingerprint)
+        #expect(seed.read() == .found(replacementSeed))
+        #expect(controller.state == .ready && controller.attempt == nil)
+        try await session.close()
+    }
+
+    @MainActor @Test func sendReservationExcludesReplacementAndAnotherCreatorDespiteCancellation() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let mnemonic = try generateMnemonic()
+        let backup = try await makeBackup(mnemonic: mnemonic)
+        let session = WalletSession(variant: .regtest, location: deviceB)
+        let restorer = WalletRestorer(variant: .regtest, session: session, location: deviceB, seed: FakeSeed(nil),
+            makeClient: { _ in Client(serverURL: URL(string: "http://fake")!, transport: FakeServer(backupId: "b", encrypted: backup)) })
+        _ = try await restorer.restore(mnemonic: mnemonic)
+        try await session.openExisting(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        let gate = Gate()
+        let submitting = Task { try await session.withSendReservation { await gate.enter() } }
+        await gate.waitUntilEntered()
+        submitting.cancel()
+        await #expect(throws: WalletSession.OpenError.busy) { try await session.closeSettled() }
+        await #expect(throws: WalletSession.OpenError.busy) { try await session.reserve() }
+        await #expect(throws: WalletSession.OpenError.busy) { try await session.withSendReservation { Issue.record("Second creator") } }
+        await gate.release()
+        try await submitting.value
+        try await session.close()
+        let reservation = try await session.reserve()
+        await session.release(reservation)
+    }
+
     @Test func failedOpenPutsThePreviousWalletBack() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let seed = FakeSeed("previous seed")

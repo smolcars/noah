@@ -31,7 +31,7 @@ extension WalletSession {
         let available =
             payment.method == "onchain" && payment.source == .onchain
             ? try await handles.onchain.balance().confirmedSats : try await handles.wallet.balance().spendableSats
-        let quote: SendQuote
+        var quote: SendQuote
         if payment.method == "onchain", payment.source == .onchain {
             let rate = SendFlow.sdkFeeRate(satsPerKwu: try await handles.onchain.feeRates().regularSatPerKwu)
             let (fee, overflow) = rate.multipliedReportingOverflow(by: 208)  // RN's 2-input, 2-output estimate.
@@ -62,21 +62,25 @@ extension WalletSession {
             quote = SendQuote(amount: estimate.netAmountSats, fee: estimate.feeSats, total: estimate.grossAmountSats, vtxoIDs: vtxoIDs)
         }
         guard quote.amount > 0, quote.total <= available else { throw SendFailure.insufficient }
+        quote.walletIdentity = try await Self.sendIdentity(handles)
         return quote
     }
     func prepareSend(_ payment: SendPayment, quote: SendQuote) async throws -> SendSnapshot {
         let invoice = payment.method == "lnurl" ? try await SendRecipientService.invoice(payment, session: self) : nil
         return try await withOpenWallet { handles in
+            guard quote.walletIdentity == (try await Self.sendIdentity(handles)) else { throw SendFailure.unresolved }
             let fresh = try await Self.quote(payment, handles: handles)
             guard fresh == quote else { throw SendFailure.feeChanged }
             return SendSnapshot(movementIDs: Set(try await handles.wallet.history().map(\.id)),
-                                bdkTxids: Set(try await handles.onchain.transactions().map(\.txid)), resolvedInvoice: invoice)
+                                bdkTxids: Set(try await handles.onchain.transactions().map(\.txid)), resolvedInvoice: invoice,
+                                walletIdentity: try await Self.sendIdentity(handles))
         }
     }
     func submitSend(_ payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot) async throws -> SendReceipt {
         do { try SendMaxValidation.available(payment) }
         catch let error as SendFailure { throw SendNotSubmitted(reason: error) }
         return try await withOpenWallet { handles in
+            guard snapshot.walletIdentity == (try await Self.sendIdentity(handles)) else { throw SendFailure.unresolved }
             var receipt = SendReceipt(amount: quote.amount)
             var lightning: LightningSendStatus?
             switch payment.method {
@@ -178,6 +182,8 @@ extension WalletSession {
     }
     func reconcileSend(_ attempt: SendPaymentController.Attempt) async throws -> SendPaymentController.Resolution {
         try await withOpenWallet { handles in
+            guard attempt.walletIdentity == (try await Self.sendIdentity(handles)) else { throw SendFailure.unresolved }
+            guard attempt.inspectionPending != true else { return .uncertain }
             if attempt.payment.method == "onchain", attempt.payment.source == .onchain || attempt.receipt?.txid != nil {
                 // Read even if sync fails: a persist error can leave the transaction only in BDK memory.
                 _ = try? await handles.onchain.sync()
@@ -212,6 +218,10 @@ extension WalletSession {
             }
             return resolution
         }
+    }
+    private static func sendIdentity(_ handles: Handles) async throws -> SendWalletIdentity {
+        let network = try await handles.wallet.network()
+        return .init(fingerprint: handles.wallet.fingerprint(), network: network == .bitcoin ? "bitcoin" : String(describing: network))
     }
     func sendArkServerKey() async throws -> String? {
         try await withOpenWallet { try await $0.wallet.arkInfo()?.serverPubkey }

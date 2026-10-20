@@ -38,6 +38,7 @@ struct WalletRestorer: Sendable {
     let seed: any SecretItem
     /// Authenticated client for `mnemonic` whose token is never persisted.
     let makeClient: @Sendable (_ mnemonic: String) -> Client
+    var walletChanged: @Sendable () async -> Void = { await SendPaymentController.shared.reloadForWalletChange() }
 
     struct Outcome: Equatable, Sendable {
         let backupId: String?
@@ -57,6 +58,7 @@ struct WalletRestorer: Sendable {
         let reservation = try await session.reserve()
         do {
             let outcome = try await restore(mnemonic: mnemonic, holding: reservation, progress: progress)
+            await walletChanged()
             await session.release(reservation)
             return outcome
         } catch {
@@ -92,6 +94,9 @@ struct WalletRestorer: Sendable {
             return .nothingPending
         }
         let result = Result { try RestoreTransaction(location: location).recover(seed: seed) }
+        if case .success(.completed) = result, session === WalletSession.shared {
+            await SendPaymentController.shared.reloadForWalletChange()
+        }
         await session.release(reservation)
         return try result.get()
     }

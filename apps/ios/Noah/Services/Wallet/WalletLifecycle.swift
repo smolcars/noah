@@ -28,6 +28,7 @@ struct WalletLifecycle: Sendable {
         /// Best effort, like RN (`/v0/deregister`).
         var deregister: @Sendable () async throws -> Void
         var settleBackground: @Sendable () async -> Void = {}
+        var walletChanged: @Sendable () async -> Void = { await SendPaymentController.shared.reloadForWalletChange() }
     }
 
     let dependencies: Dependencies
@@ -85,6 +86,7 @@ struct WalletLifecycle: Sendable {
                 do { try await dependencies.deregister() }
                 catch { AppLog("walletLifecycle").w("Deregistration failed while deleting the wallet") }
                 try deleteLocalWallet()
+                await dependencies.walletChanged()
                 try FileManager.default.removeItem(at: marker)
                 try RestoreTransaction.fullSync(marker.deletingLastPathComponent())
                 await dependencies.session.release(reservation)
