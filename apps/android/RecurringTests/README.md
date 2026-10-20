@@ -1,7 +1,101 @@
 # Native Android recurring payments — M7
 
-Base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
+Initial implementation base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
 Kotlin / Compose, API 24 minimum, bark-bolt-ffi **0.4.0**.
+
+## Round-1 fixes (2026-10-20)
+
+Fix base: `feat/native-rewrite` local HEAD `bf8ac96f`. Android now matches iOS
+`30a27dd8`, `eae1c5e1` and `9f6b42be` for these three findings. The user-decided
+ArkInfo fee policy and `apps/fixtures/recurring-fee-cap.json` are unchanged.
+
+### Journal migration and replay prevention
+
+`noah-recurring-journal.json` now uses the portable **version 2** format described
+in `apps/ios/RecurringTests/README.md`: `attempts`, cross-revision `consumed`
+timestamp watermarks, revision-scoped `consumedIndices` sorted unique integer
+arrays, and wallet/schedule-scoped `legacyUncertainty`. Binding includes wallet
+fingerprint, network and local instance UUID; the original RN revision is null.
+An attempt from a later revision never replaces earlier consumption evidence.
+
+Migration completes durably on the first read, before an attempt can be replaced:
+
+- v1 retains every timestamp watermark and reconstructs exact indices from all
+  retained consumed attempts. Android's old `revisions[].throughIndex` values are
+  also retained as known consumed indices. Every old timestamp/revision-watermark
+  scope gains legacy uncertainty because overwritten indices are unknowable.
+- Unversioned dictionaries reconstruct retained consumed attempts and mark every
+  retained wallet/schedule scope uncertain, including a latest proven failure.
+- A known revision/index, a timestamp at/before its watermark, **or** legacy
+  uncertainty blocks execution. Unknown versions, incomplete/invalid evidence
+  and failed durable migration writes stop sending and preserve the evidence.
+- Legacy uncertainty stays **Needs attention** across zone changes, edits and
+  destructive resume. Resume cannot clear it. Cancel and explicitly approve a
+  fresh schedule with a new ID to continue; cancellation preserves old evidence.
+
+The exact regression paid monthly index 1 in New York at `1774753200000`, retained
+only its timestamp after revision B's proven pre-submission failure, rolled MMKV
+back to A and changed to UTC at `1775016000000`. Before the fix it failed with
+**expected 1 submission, observed 2**. It now stays at one. Spring/fall daily DST,
+cross-revision replacement, reopened persistence, wallet/revision isolation,
+malformed evidence, failed migration and cancel/fresh-approval paths are covered.
+
+### Attended receipt and foreground runner
+
+Attended settlement retains the normal Send terminal outcome, receipt and lock
+through slow server sync and after execution finishes. The review sheet keeps
+showing that outcome; **Done** acknowledges it before dismissing. Replaying the
+review before or after Done cannot submit again. Unattended settlement still
+acknowledges immediately. The pre-fix blocked-sync regression failed with
+**expected succeeded, observed ready** and now passes.
+
+`RecurringForegroundRunner` is registered with `MainActivity` as a lifecycle
+observer. It waits **60 seconds** between checks while the activity is STARTED,
+starts idempotently, and cancels on STOP. Each tick checks onboarding and enters
+the existing shared executor. Stopping also revokes the tick's submission budget,
+so a quote/preparation already in progress cannot submit after backgrounding.
+Already-submitted settlement remains process-owned and finishes once.
+
+Injected-minute tests drive the actual Android lifecycle registry and production
+executor: becoming due without another foreground transition, restart without
+extra timers, timer/push/screen/time-change coalescing, cancellation during quote
+and preparation, settlement after STOP, per-tick suspension/wallet checks, stop
+generation, and pause/cancel/edit/replace/restore races. Existing lifecycle-gate,
+restore-recovery, session-reservation, journal and fee guards are reused.
+WorkManager reminder workers remain advisory.
+
+### Verification and limits
+
+Every Gradle invocation used Nix and `--max-workers=2`. Passing targeted runs used
+`:app:testRegtestDebugUnitTest --tests "*Recurring*"`:
+
+- Journal migration: **1,377 tests / 8 suites**.
+- Receipt retention: **1,378 tests / 8 suites**.
+- Foreground runner: **1,384 tests / 9 suites**, then **1,384 / 9** after a test
+  helper rename. Every passing run had **zero failures/errors/skips**.
+- Two separate one-test pre-fix runs deliberately failed on the duplicate
+  submission and cleared attended receipt, respectively; neither selected run
+  was empty.
+
+The required full test/APK command ran **once**, without exclusions, after the
+final production change: **2,742 JUnit cases / 68 suites / zero failures, errors
+or skips**. The recurring package contributes **1,382 cases**; the targeted
+pattern also selects two real session/teardown regressions. APK assembly passed
+in the same **1m 5s** invocation. Existing native-library stripping warnings were
+non-fatal.
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+Logs and JSON summaries remain under `/tmp/noah-android-recurring-r1-*`.
+Only Android recurring code, its activity lifecycle hook/tests, this README and
+the Android M7 TODO line changed. Send, Onchain/M6, SDK pins, iOS, server, client,
+fee fixtures and reminder workers were untouched. No emulator, physical Pixel 6,
+simulator or Docker was accessed. No new device/UI, funded-payment, physical-push,
+timed-notification or real-power-loss verification is claimed for this round;
+these races are deterministic JVM regressions. Earlier live evidence below is
+historical and was not rerun.
 
 ## Contract and safety
 
@@ -21,11 +115,11 @@ instance. Creation/restore seals unbound legacy policies to an unverified prior
 wallet before installing a replacement. Foreign policies stay visible/cancellable.
 
 The independently fsynced, atomic occurrence journal precedes the MMKV in-flight
-marker and Send journal. Consumed timestamp watermarks span policy revisions and
-migrate before legacy attempts can be overwritten. Android additionally retains
-consumed indices per revision: timezone changes can move a previously paid index
-to a later timestamp, so timestamp-only watermarks cannot prevent its replay after
-MMKV rollback. The regression fails without this index watermark.
+marker and Send journal. Portable v2 retains cross-revision timestamp watermarks,
+exact consumed indices per revision and conservative legacy-uncertainty scopes
+before attempts can be overwritten. Timezone changes can move a previously paid
+index to a later timestamp; the durable index and legacy blocks prevent its replay
+after MMKV rollback. See the round-1 migration rule above.
 
 All money goes through the existing Send controller/journal and session. Its
 exclusive recurring reservation drains counted calls, excludes new unrelated
@@ -93,7 +187,7 @@ Reminders/results use the existing notification channel and honor
 POST_NOTIFICATIONS. WorkManager reminders recheck the current due date, policy,
 suspension and wallet binding before displaying. Tapping opens the schedule screen.
 
-## Verification and live evidence
+## Initial verification and live evidence
 
 The required full check ran **once**, without exclusions, after the final production
 change: **2,725 JUnit cases, 67 suites, zero failures/errors/skips**. This includes
