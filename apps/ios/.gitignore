@@ -1,5 +1,6 @@
 Noah.xcodeproj/
 build/
 DerivedData/
+Config/Sentry.local.xcconfig
 Tools/OpenAPIGenerator/.build/
 OnboardingTests/screenshots/

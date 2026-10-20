@@ -3,6 +3,7 @@
 // data and placed widgets.
 
 NOAH_VARIANT_NAME = Regtest
+#include "Sentry.xcconfig"
 NOAH_APP_VARIANT = regtest
 NOAH_BUNDLE_ID = com.noahwallet.regtest
 NOAH_DISPLAY_NAME = Noah (Regtest)

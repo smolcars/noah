@@ -3,6 +3,7 @@
 // data and placed widgets.
 
 NOAH_VARIANT_NAME = Mainnet
+#include "Sentry.xcconfig"
 NOAH_APP_VARIANT = mainnet
 NOAH_BUNDLE_ID = com.noahwallet.mainnet
 NOAH_DISPLAY_NAME = Noah

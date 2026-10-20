@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NoahSentryDSN</key>
+	<string>$(NOAH_SENTRY_DSN)</string>
 	<key>NoahAppVariant</key>
 	<string>$(NOAH_APP_VARIANT)</string>
 	<key>NoahAppGroup</key>

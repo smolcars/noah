@@ -3,6 +3,7 @@
 // data and placed widgets.
 
 NOAH_VARIANT_NAME = Signet
+#include "Sentry.xcconfig"
 NOAH_APP_VARIANT = signet
 NOAH_BUNDLE_ID = com.noahwallet.signet
 NOAH_DISPLAY_NAME = Noah (Signet)

@@ -1,0 +1,4 @@
+// Supply the RN project's DSN through an untracked override or CI build setting.
+// In xcconfig files spell the URL https:/$()/… so // is not treated as a comment.
+NOAH_SENTRY_DSN =
+#include? "Sentry.local.xcconfig"

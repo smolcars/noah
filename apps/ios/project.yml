@@ -37,6 +37,9 @@ settings:
     SWIFT_EMIT_LOC_STRINGS: YES
 
 packages:
+  Sentry:
+    url: https://github.com/getsentry/sentry-cocoa
+    exactVersion: 9.29.0
   MapLibre:
     url: https://github.com/maplibre/maplibre-gl-native-distribution
     exactVersion: 6.31.0
@@ -79,8 +82,20 @@ targets:
         INFOPLIST_FILE: Noah/Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: Noah/Resources/Noah.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: noah
+        # sentry-cli needs network and dSYM access during device archives.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+    postBuildScripts:
+      - name: Upload Debug Symbols to Sentry
+        path: Scripts/upload-sentry-symbols.sh
+        basedOnDependencyAnalysis: false
+        showEnvVars: false
+        inputFiles:
+          - $(DWARF_DSYM_FOLDER_PATH)/$(DWARF_DSYM_FILE_NAME)
     dependencies:
       - target: NoahWidget
+      - package: Sentry
+        product: Sentry
       - package: MapLibre
         product: MapLibre
       - package: BarkBoltFFI

@@ -1,5 +1,5 @@
 {
-  "originHash" : "cd35ccfe00dad7c9abbcc3016730cd58fc6ef5f17afd3f5bed89ec3618c4e0e0",
+  "originHash" : "875928876c071b0efe9c2bbfa2fc25518a5d3b593e004dbf20a84093db0583b2",
   "pins" : [
     {
       "identity" : "bark-bolt-ffi",
@@ -26,6 +26,15 @@
       "state" : {
         "revision" : "007a393cd5e255e9aa68d6648f7179159bdf0f9d",
         "version" : "2.4.3"
+      }
+    },
+    {
+      "identity" : "sentry-cocoa",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/getsentry/sentry-cocoa",
+      "state" : {
+        "revision" : "d9df1c4e8d8466c7f8b3c56150378927dadf1b8e",
+        "version" : "9.29.0"
       }
     },
     {
