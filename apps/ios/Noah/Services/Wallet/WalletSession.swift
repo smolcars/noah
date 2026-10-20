@@ -89,6 +89,7 @@ actor WalletSession {
     @TaskLocal static var backgroundOwner: UUID?
     private var backgroundOwner: UUID?
     private var backgroundWaiters: [CheckedContinuation<Void, Never>] = []
+    let syncFlight = WalletSync()
     private var runningCalls = 0
     private var sendReserved = false
     private var exclusiveSend = false
@@ -612,12 +613,17 @@ actor WalletSession {
         }
     }
 
-    /// Syncs onchain then Ark state, like `syncWallet` minus Lightning claims.
-    func sync() async throws {
+    /// RN sync stages share a flight across foreground, pull-to-refresh and background calls.
+    func sync(includingLightningClaims: Bool = false) async throws {
         guard isOpen else { return }
+        let flight = syncFlight
         try await withOpenWallet { handles in
-            _ = try await handles.onchain.sync()
-            try await handles.wallet.sync()
+            var stages: [@Sendable () async throws -> Void] = [
+                { _ = try await handles.onchain.sync() },
+                { try await handles.wallet.sync() },
+            ]
+            if includingLightningClaims { stages.append { _ = try await handles.wallet.tryClaimAllLightningReceives(wait: false) } }
+            try await flight.run(stages)
         }
     }
 

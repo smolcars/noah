@@ -236,7 +236,8 @@ extension WalletSession {
         }
     }
     func reconcileSend(_ attempt: SendPaymentController.Attempt) async throws -> SendPaymentController.Resolution {
-        try await withOpenWallet { handles in
+        let flight = syncFlight
+        return try await withOpenWallet { handles in
             guard attempt.walletIdentity == (try await Self.sendIdentity(handles)) else { throw SendFailure.unresolved }
             guard attempt.inspectionPending != true else { return .uncertain }
             if let checkpoint = attempt.snapshot.checkpoint {
@@ -254,7 +255,7 @@ extension WalletSession {
                 let resolution: SendPaymentController.Resolution
                 if attempt.payment.source == .onchain {
                     // Preserve BDK reorg and confirmed competing-spend checks.
-                    try await handles.onchain.sync()
+                    try await flight.serialized { _ = try await handles.onchain.sync() }
                     resolution = try SendReconciliation.onchain(attempt, transactions: try await handles.onchain.transactions())
                 } else if let receipt = attempt.receipt {
                     resolution = .paid(SendReconciliation.offboardReceipt(receipt, payment: attempt.payment,
@@ -283,7 +284,7 @@ extension WalletSession {
                 }
                 return SendReconciliation.ark(tracked, movements: movements)
             }
-            try await handles.wallet.sync()
+            try await flight.serialized { try await handles.wallet.sync() }
             let resolution = SendReconciliation.ark(attempt, movements: try await handles.wallet.history())
             if case .paid(let receipt) = resolution, let id = receipt.movementID, let patch = attempt.payment.repeatMetadata {
                 do { try await handles.wallet.updateHistoryMetadata(movementId: id, patchJson: patch) }

@@ -76,6 +76,7 @@ final class AppModel {
     private let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
     @ObservationIgnored private let creator: WalletCreator
     @ObservationIgnored private var recurringForeground: RecurringForegroundRunner?
+    @ObservationIgnored private var foregroundActivation: RecurringSubmissionBudget?
     @ObservationIgnored private var started = false
     @ObservationIgnored private var starting = false
     @ObservationIgnored private let readLaunchState: () -> LaunchState
@@ -102,6 +103,9 @@ final class AppModel {
             .isWalletSuspended == true
         recurringForeground = RecurringForegroundRunner { [weak self] in
             guard let self, phase == .wallet, !isWalletSuspended, !pushPermission.blocksWallet(initialized: true) else { return }
+            await AppServices.shared.syncInForeground()
+            guard !Task.isCancelled, phase == .wallet, !isWalletSuspended, await session.isOpen else { return }
+            await refresh()
             await RecurringExecutor.shared.execute()
         }
     }
@@ -440,8 +444,23 @@ final class AppModel {
         await start()
     }
 
+    func appBecameInactive() { foregroundActivation?.revoke() }
+
     func appBecameActive() async {
+        guard UIApplication.shared.applicationState == .active else { return }
+        foregroundActivation?.revoke()
+        let budget = RecurringSubmissionBudget()
+        foregroundActivation = budget
+        defer {
+            budget.revoke()
+            if foregroundActivation === budget { foregroundActivation = nil }
+        }
+        await RecurringSubmissionBudget.$current.withValue(budget) { await refreshOnForeground() }
+    }
+
+    private func refreshOnForeground() async {
         await session.waitForBackgroundAccess()
+        guard RecurringSubmissionBudget.available, UIApplication.shared.applicationState == .active else { return }
         RestoreTransaction(location: WalletDataLocation(variant: variant)).completeSettings(settings)
         if phase == .wallet, !isWalletSuspended, !(await session.isOpen) { await openExistingWallet() }
         await retrySecureStorage()
@@ -453,6 +472,7 @@ final class AppModel {
             guard !pushPermission.blocksWallet(initialized: true) else { return }
             if wasBlocked { await startServerServices() }
             try? await server.refreshMailboxIfNeeded()
+            await AppServices.shared.syncInForeground()
             await RecurringExecutor.shared.execute()
             await refresh()
         }

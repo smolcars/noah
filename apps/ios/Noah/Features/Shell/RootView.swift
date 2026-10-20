@@ -66,6 +66,7 @@ struct RootView: View {
             if model.phase == .wallet && lock.policy.locked && scenePhase == .active { await lock.unlock() }
         }
         .onChange(of: scenePhase) { _, phase in
+            if phase != .active { model.appBecameInactive() }
             if phase == .background { lock.background() }
             if phase == .active {
                 model.localeIdentifier = LegacyLocale.resolved()
