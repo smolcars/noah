@@ -112,10 +112,14 @@ struct UnilateralExitView: View {
 
 struct ExitVtxoDetailView: View {
     let id: String
-    @State private var model = OnchainModel()
+    @State private var model: OnchainModel
+    init(id: String) {
+        self.id = id
+        _model = State(initialValue: OnchainModel(detailID: id))
+    }
     var body: some View {
         List {
-            if let exit = model.overview?.exits.first(where: { $0.id == id }) {
+            if let exit = model.exit {
                 Section {
                     OnchainAmountRow(title: "Amount", sats: exit.amount)
                     LabeledContent("VTXO ID") { Text(id).textSelection(.enabled) }

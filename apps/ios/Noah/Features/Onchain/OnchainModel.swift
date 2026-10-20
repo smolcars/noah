@@ -13,6 +13,7 @@ final class OnchainModel {
         var acknowledge: @Sendable (UUID) async throws -> Void
         var check: @Sendable (UUID) async throws -> Bool = { _ in false }
         var discard: @Sendable (UUID) async throws -> Void = { _ in }
+        var detail: @Sendable (String) async throws -> ExitModel? = { _ in nil }
         static func live(session: WalletSession = .shared) -> Self {
             Self(
                 ready: {
@@ -28,10 +29,13 @@ final class OnchainModel {
                 attempt: { try await OnchainOperationJournal.shared.loadAll() },
                 acknowledge: { try await OnchainOperationJournal.shared.acknowledge($0) },
                 check: { try await session.checkOnchainAttempt($0) },
-                discard: { try await OnchainOperationJournal.shared.discardUncertain($0) })
+                discard: { try await OnchainOperationJournal.shared.discardUncertain($0) },
+                detail: { try await session.exitDetail($0) })
         }
     }
     private let dependencies: Dependencies
+    private let detailID: String?
+    private(set) var exit: ExitModel?
     private var generation = UUID()
     private(set) var overview: OnchainOverview?
     private(set) var quote: OnchainQuote?
@@ -43,7 +47,10 @@ final class OnchainModel {
     private(set) var error: String?
     var locked: Bool { busy }
 
-    init(dependencies: Dependencies = .live()) { self.dependencies = dependencies }
+    init(dependencies: Dependencies = .live(), detailID: String? = nil) {
+        self.dependencies = dependencies
+        self.detailID = detailID
+    }
     func invalidate() {
         generation = UUID()
         quote = nil
@@ -57,10 +64,16 @@ final class OnchainModel {
             attempts = try await dependencies.attempt()
             guard await dependencies.ready() else {
                 overview = nil
+                exit = nil
                 invalidate()
                 throw OnchainFailure.unavailable
             }
             let token = generation
+            if let detailID {
+                let detail = try await dependencies.detail(detailID)
+                guard token == generation, await dependencies.ready() else { return }
+                exit = detail
+            }
             let latest = try await dependencies.overview()
             guard token == generation, await dependencies.ready() else { return }
             overview = latest

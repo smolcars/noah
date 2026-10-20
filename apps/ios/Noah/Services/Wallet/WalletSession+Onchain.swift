@@ -14,18 +14,16 @@ extension WalletSession {
                 Self.vtxoModel($0, tip: tip, expiring: expiring)
             }
             let exits = try await handles.wallet.getExitVtxos()
+            // RN displays tracked rows with getExitStatus history. Bark now drops terminal rows
+            // from getExitVtxos; seed legacy discovery from persisted exit movements as well.
+            // https://gitlab.com/ark-bitcoin/bark/-/blob/bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c/bark/src/exit/mod.rs
+            let walletID = handles.wallet.fingerprint()
+            let legacyIDs = try await handles.wallet.history().filter { $0.subsystemName == "bark.exit" }
+                .flatMap { $0.inputVtxoIds + $0.exitedVtxoIds }
+            try await ExitHistoryStore.shared.remember(exits.map(\.vtxoId) + legacyIDs, walletID: walletID)
             var models: [ExitModel] = []
-            for exit in exits {
-                // Never syncExits here: Bark sync is allowed to broadcast.
-                let status = try await handles.wallet.getExitStatus(
-                    vtxoId: exit.vtxoId, includeHistory: true, includeTransactions: false)
-                let current = Self.exitState(status?.state ?? exit.state)
-                let history = (status?.history ?? []).map(Self.exitState)
-                models.append(
-                    .init(
-                        id: exit.vtxoId, amount: exit.amountSats, state: current.0, details: current.1,
-                        history: history.map(\.0), historyDetails: history.map(\.1),
-                        claimable: exit.isClaimable || current.0 == "Claimable"))
+            for id in try await ExitHistoryStore.shared.ids(walletID: walletID) {
+                if let model = try await Self.exitDetail(handles, id: id) { models.append(model) }
             }
             return OnchainOverview(
                 walletID: handles.wallet.fingerprint(), vtxos: vtxos, exits: models,
@@ -33,6 +31,28 @@ extension WalletSession {
                 pendingTotal: try await handles.wallet.pendingExitsTotalSats(),
                 claimableHeight: try await handles.wallet.allExitsClaimableAtHeight())
         }
+    }
+
+    func exitDetail(_ id: String) async throws -> ExitModel? {
+        try await withOpenWallet { handles in
+            let model = try await Self.exitDetail(handles, id: id)
+            if model != nil {
+                try await ExitHistoryStore.shared.remember([id], walletID: handles.wallet.fingerprint())
+            }
+            return model
+        }
+    }
+
+    private static func exitDetail(_ handles: Handles, id: String) async throws -> ExitModel? {
+        // Reads the persisted terminal entry directly, including after close/reopen; never syncExits.
+        guard let status = try await handles.wallet.getExitStatus(
+            vtxoId: id, includeHistory: true, includeTransactions: false) else { return nil }
+        let vtxo = try await handles.wallet.getVtxoById(vtxoId: id)
+        let current = Self.exitState(status.state)
+        let history = (status.history ?? []).map(Self.exitState)
+        return .init(
+            id: id, amount: vtxo.amountSats, state: current.0, details: current.1,
+            history: history.map(\.0), historyDetails: history.map(\.1), claimable: current.0 == "Claimable")
     }
 
     func exitDepositAddress() async throws -> String {
@@ -182,6 +202,10 @@ extension WalletSession {
                 destination: quote.destination, automatic: quote.automatic)
             guard quote.matches(fresh), ExitRules.current(reviewedAt: quote.createdAt) else {
                 throw OnchainFailure.changed
+            }
+            if [.startExit, .claim, .cancel].contains(quote.action) {
+                // Save discovery before SDK mutation, even if the daemon finishes before the next read.
+                try await ExitHistoryStore.shared.remember(quote.ids, walletID: quote.walletID)
             }
             return try await journal.perform(quote) {
                 switch quote.action {

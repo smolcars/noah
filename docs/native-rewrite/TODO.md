@@ -241,7 +241,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt (prepared boarding awaits FFI 18, same priority as 14)
 - [x] VTXOsScreen + VTXODetailScreen + delegated refresh review dialog — iOS
 - [x] Emergency-exit read-only overview/estimates, quote < 30 s, 330-sat eligibility, deposit sheet, claim/cancel reviews — iOS
-- [x] ExitVtxoDetailScreen + terminal canceled timeline; 187 RN-derived fee/cancellation/timeline/coordination/boarding fixtures — iOS
+- [x] ExitVtxoDetailScreen + direct persisted terminal status/timeline, wallet-scoped exit ID discovery (including legacy exit movements); 187 RN-derived fee/cancellation/timeline/coordination/boarding fixtures — iOS
 - [x] Starting/progressing exits — iOS RN parity: explicit start review explains automatic background broadcasts/fee bumps and onchain fees; manual Progress Exits review, cancel until final broadcast, claim reviews; optional manual-daemon policy is P2 FFI 17
 - [x] Suspended wallet gates — iOS Settings M6 rows remain navigable like RN; M6 screen actions/queries, Home refresh, boarding minimum/address queries and Auto-Board perform no wallet operations
 - [x] Scoped durable M6 uncertainty — iOS: unrelated recovery remains available, exact pre-broadcast allowlist, read-only Check status and explicit destructive override; legacy journal migration and relaunch tests

@@ -41,7 +41,7 @@ struct ExitLiveTests {
         let owned = try String(contentsOf: URL.documentsDirectory.appending(path: "m6-live-owned-wallet.txt"), encoding: .utf8)
         try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "m6-acceptance")
         guard try await session.summary()?.fingerprint == owned else { throw OnchainFailure.invalid }
-        if !["estimate", "uncertain-board", "check-uncertain-board"].contains(stage) {
+        if !["estimate", "uncertain-board", "check-uncertain-board", "cancel-cycle", "cancel-reopen"].contains(stage) {
             try await session.close()
             try await session.ensureOpen(mnemonic: mnemonic, runDaemon: true, appVersion: "m6-acceptance")
         }
@@ -89,6 +89,36 @@ struct ExitLiveTests {
             try JSONEncoder().encode(resolved).write(
                 to: URL.documentsDirectory.appending(path: "m6-live-check-uncertain-board.json"), options: .atomic)
             try await OnchainOperationJournal.shared.acknowledge(attempt.id)
+        } else if stage == "cancel-cycle" || stage == "cancel-reopen" {
+            let marker = URL.documentsDirectory.appending(path: "m6-live-canceled-id.txt")
+            let id: String
+            if stage == "cancel-cycle" {
+                try await session.sync()
+                let overview = try await session.onchainOverview()
+                guard overview.exits.isEmpty else { throw OnchainFailure.invalid }
+                id = try #require(overview.vtxos.first { $0.eligible && $0.amount <= 30000 }).id
+                let start = try await session.quoteOnchain(.startExit, ids: [id])
+                _ = try await session.executeOnchain(start)
+                try await OnchainOperationJournal.shared.acknowledge(start.id)
+                let cancel = try await session.quoteOnchain(.cancel, ids: [id])
+                _ = try await session.executeOnchain(cancel)
+                try await OnchainOperationJournal.shared.acknowledge(cancel.id)
+                try Data(id.utf8).write(to: marker, options: .atomic)
+            } else {
+                id = try String(contentsOf: marker, encoding: .utf8)
+            }
+            let detail = try #require(try await session.exitDetail(id))
+            #expect(detail.state == "Canceled" && !detail.cancelable && !detail.claimable)
+            #expect(detail.timeline.last?.state == "Canceled")
+            #expect(detail.timeline.contains { $0.state == "Start" })
+            #expect(try await session.onchainOverview().exits.contains { $0.id == id && $0.state == "Canceled" })
+            let active = try await session.withOpenWallet { try await $0.wallet.getExitVtxos() }
+            #expect(!active.contains { $0.vtxoId == id })
+            try JSONEncoder().encode([
+                "vtxo": id, "state": detail.state,
+                "timeline": detail.timeline.map(\.state).joined(separator: ","),
+                "activeCount": String(active.count),
+            ]).write(to: URL.documentsDirectory.appending(path: "m6-live-\(stage).json"), options: .atomic)
         } else if stage == "refresh" {
             try await session.sync()
             let overview = try await session.onchainOverview()

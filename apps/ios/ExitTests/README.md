@@ -57,6 +57,15 @@ Other deliberate differences from RN:
   wide-screen split pane are not ported here; technical details use native selectable
   text. The SDK's additional `VtxoSwept` terminal state is shown explicitly.
 
+Terminal details read `getExitStatus(id)` directly, including history, rather than
+searching the active overview. Discovered IDs are stored in a wallet-fingerprint
+scoped file before start/claim/cancel and whenever active exits are read. Legacy
+`bark.exit` movements seed additional input/exited IDs. Canceled/claimed rows thus
+stay discoverable after close/reopen. RN's detail currently also depends on its
+tracked overview; this preserves its intended terminal timeline despite the newer
+Bark active-list semantics. FFI item 20 requests an all-exits listing for imports
+whose terminal IDs/movements were never available to this app.
+
 ## Shared fixtures and tests
 
 From the repository root:
@@ -299,3 +308,12 @@ UDID `386B936B-02F3-4480-B542-F4FF386CDB92`; derived data
 Tests exercise overlapping scopes, harmless repeat policy, exact outer error
 contexts, unknown failures, conclusive/inconclusive checks, wallet identity,
 explicit discard, legacy migration, relaunch and no model-driven resubmission.
+
+Terminal-discovery follow-up passed **8 tests in 2 suites**, zero skips/failures
+(`ExitHistoryTests`, `OnchainModelTests`), result
+`/tmp/noah-m6-recovery-ee0d-targeted2.xcresult`. Tests cover removal from active
+lists, wallet-scoped ID persistence after restart, direct detail/timeline loading
+with an empty overview, and suspension clearing the detail.
+Opt-in `cancel-cycle` and `cancel-reopen` stages keep the daemon disabled so a
+throwaway exit can be canceled before automatic final broadcast; normal app
+automatic progression remains unchanged.
