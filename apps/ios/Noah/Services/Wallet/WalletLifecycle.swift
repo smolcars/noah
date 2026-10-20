@@ -226,6 +226,7 @@ struct WalletLifecycle: Sendable {
             try fileManager.removeItem(at: location.restoreDirectory)
         }
         try RestoreTransaction.fullSync(location.directory.deletingLastPathComponent())
+        RecurringAutomationAuthority.deleted(directory: location.directory)
         try dependencies.seed.deleteWalletSeed()
         dependencies.authToken.remove()
         try dependencies.settings.removeAllDurably()
@@ -244,7 +245,8 @@ struct WalletLifecycle: Sendable {
         let settings = dependencies.settings
         var wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
         wallet.isWalletSuspended = suspended
-        try settings.setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)
+        do { try settings.setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version) }
+        catch { try? authority()?.stop(); throw error }
     }
 }
 

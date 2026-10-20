@@ -34,4 +34,16 @@ import Testing
         #expect(try h.store.load().schedules[original.id]?.status == "needs_attention")
     }
 
+    @Test(arguments: [false, true]) func durableGenerationRejectsAdmittedWorkAfterRollback(resume: Bool) async throws {
+        let h = try RecurringExecutorTests.Harness(); _ = try h.add()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        h.beforePay = {
+            let authority = RecurringAutomationAuthority(directory: h.directory)
+            try authority.stop()
+            if resume { try authority.resume() }
+            h.settings.remove(forKey: WalletLifecycle.automationStopKey)
+        }
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 0)
+    }
 }

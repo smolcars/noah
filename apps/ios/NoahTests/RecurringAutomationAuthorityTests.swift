@@ -38,7 +38,7 @@ struct RecurringAutomationAuthorityTests {
         let file = root.appending(path: "authority")
         let events = RecurringExecutorTests.Locked<[String]>([])
         try RecurringStore.durableWrite(Data("stop".utf8), to: file, sync: { target in
-            if target == root {
+            if target.lastPathComponent == root.lastPathComponent {
                 #expect(try String(contentsOf: file, encoding: .utf8) == "stop")
                 events.withLock { $0.append("directory") }
             } else {
@@ -48,5 +48,23 @@ struct RecurringAutomationAuthorityTests {
             try RestoreTransaction.fullSync(target)
         })
         #expect(events.withLock { $0 } == ["file", "directory"])
+    }
+    @Test(arguments: ["missing", "marker-missing", "corrupt", "missing-stop-field"])
+    func missingOrCorruptAuthorityCannotBootstrapAgain(damage: String) throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "automation-damage-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let authority = RecurringAutomationAuthority(directory: root)
+        _ = try authority.generation()
+        switch damage {
+        case "missing": try FileManager.default.removeItem(at: authority.file)
+        case "marker-missing": try FileManager.default.removeItem(at: authority.marker)
+        case "corrupt": try Data("{".utf8).write(to: authority.file)
+        default:
+            let raw = try String(contentsOf: authority.file, encoding: .utf8)
+            try Data(raw.replacingOccurrences(of: "\"stopped\":false", with: "\"other\":false").utf8).write(to: authority.file)
+        }
+        #expect(!RecurringAutomationAuthority(directory: root).allowed())
+        #expect(throws: (any Error).self) { try RecurringAutomationAuthority(directory: root).resume() }
     }
 }

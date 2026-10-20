@@ -16,6 +16,9 @@ final class RecurringAutomationAuthority: @unchecked Sendable {
         var failed: Set<URL> = []
     }
     private static let gate = Gate()
+    static func deleted(directory: URL) {
+        gate.lock.withLock { _ = gate.failed.remove(directory.appending(path: ".noah-recurring-automation.json")) }
+    }
     let file: URL
     var marker: URL { file.appendingPathExtension("initialized") }
     private let sync: @Sendable (URL) throws -> Void
