@@ -7,8 +7,40 @@ import java.nio.file.Files
 import java.util.concurrent.Executor
 import org.junit.Assert.*
 import org.junit.Test
+import kotlinx.serialization.json.*
+import io.sentry.protocol.SentryException
 
 class EndpointPrivacyTest {
+    @Test fun equivalentAuthoritiesUseSharedFixturesAtEveryBoundary() {
+        val cases = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-authorities.json")!!.readText()).jsonArray.map { it.jsonObject }
+        cases.forEach { EndpointLogPrivacy.register(it.getValue("endpoint").jsonPrimitive.content) }
+        val directory = Files.createTempDirectory("authority").toFile()
+        val received = mutableListOf<String>()
+        val file = LogFile(directory, executor = Executor { it.run() }, systemSink = { _, _, text -> received += text })
+        try {
+            for (test in cases) {
+                val input = test.getValue("input").jsonPrimitive.content
+                val safe = LogFile.redact(input)
+                assertTrue(input, if (test.getValue("redacted").jsonPrimitive.boolean) safe.contains("[custom-esplora]") else safe == input)
+                val event = SentryEvent().apply {
+                    message = Message().apply { formatted = input }
+                    exceptions = listOf(SentryException().apply { value = input; type = "FakeEndpointError" })
+                }
+                val clean = requireNotNull(AppTelemetry.scrub(event))
+                assertEquals(safe, clean.message?.formatted)
+                assertEquals(safe, clean.exceptions!!.first().value)
+                assertEquals("FakeEndpointError", clean.exceptions!!.first().type)
+                assertEquals(safe, requireNotNull(AppTelemetry.scrub(Breadcrumb().apply { message = input })).message)
+                AppLog("authority", file).e(input)
+                assertEquals(safe, received.last())
+                assertTrue(file.lines().last().endsWith(safe.trim()))
+            }
+            directory.resolve("noah.log.1").writeText(cases.filter { it.getValue("redacted").jsonPrimitive.boolean }.joinToString("\n") { it.getValue("input").jsonPrimitive.content })
+            assertFalse(file.lines().joinToString().contains("bücher.example)"))
+            assertFalse(file.lines().joinToString().contains("[0:0::1]"))
+        } finally { directory.deleteRecursively() }
+    }
+
     @Test fun hostCredentialsAndEncodedIdentitiesNeverReachSinks() {
         val origin = "https://fakehostcredential73.example.com:8443"
         EndpointLogPrivacy.register("$origin/api")

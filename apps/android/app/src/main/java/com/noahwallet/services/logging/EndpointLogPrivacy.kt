@@ -11,8 +11,13 @@ internal object EndpointLogPrivacy {
     private val urls = Regex("""(?i)https?://[^\s<>"']*""")
     // Admit only the SDK error type/status, never provider-controlled response text.
     private val responseStatus = Regex("""HttpResponse(?:\s*\{\s*status:\s*|\()([0-9]{3})\b""")
-    private fun origin(value: String): String? = value.toHttpUrlOrNull()?.let { url ->
-        url.newBuilder().host(url.host.trimEnd('.').ifEmpty { url.host }).encodedPath("/").query(null).fragment(null)
+    // Extract before parsing: log punctuation is not part of a URL authority.
+    private val authority = Regex("""(?i)^https?://(?:\[[^\]\s]+\](?::[^/\\?#\s<>"'()\[\],]*)?|[^/\\?#\s<>"'()\[\],]+)""")
+    private fun origin(value: String): String? {
+        val token = authority.find(value)?.value?.trimEnd('.') ?: return null
+        // HttpUrl canonicalizes IDNA, IPv6, case and default ports without DNS/network IO.
+        val url = token.toHttpUrlOrNull() ?: return null
+        return url.newBuilder().host(url.host.trimEnd('.').ifEmpty { url.host }).encodedPath("/").query(null).fragment(null)
             .username("").password("").build().toString().removeSuffix("/")
     }
     fun register(endpoint: String?) {
@@ -20,22 +25,9 @@ internal object EndpointLogPrivacy {
         for (path in LogFile.decodedViews(url.encodedPath, percentEncoded = true) ?: listOf(url.encodedPath)) {
             path.trimEnd('/').takeIf { it.isNotEmpty() }?.let(paths::add)
         }
-        origin(endpoint)?.let {
-            origins.add(it)
-            if (url.port == if (url.scheme == "http") 80 else 443) origins.add("$it:${url.port}")
-        }
+        origin(endpoint)?.let(origins::add)
     }
-    private fun matches(value: String): Boolean {
-        if (origin(value)?.let { it in origins } == true) return true
-        // Match a known authority before log delimiters, never another host/port prefix.
-        val lower = value.lowercase()
-        return origins.any { origin ->
-            if (!lower.startsWith(origin)) false else {
-                val next = lower.drop(origin.length).dropWhile { it == '.' }.firstOrNull()
-                next == null || !next.isLetterOrDigit() && next !in "-_%:@"
-            }
-        }
-    }
+    private fun matches(value: String): Boolean = origin(value)?.let { it in origins } == true
     fun redact(text: String): String = sanitize(text) ?: "[redacted]"
 
     private val recordStart = Regex("""^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [VDIWE] \[""")
