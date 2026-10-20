@@ -1,0 +1,84 @@
+{
+  "description": "RN Home bucket labels with all SDK Ark buckets. FFI 0.5.0 exposes trusted + untrusted pending combined; display Pending without inventing a split. Immature = total - confirmed - pending. All displayed values are masked when hidden.",
+  "cases": [
+    {
+      "name": "every bucket, including immature and nonspendable Ark funds",
+      "input": {
+        "ark": {
+          "spendable": 1000,
+          "needsRefresh": 50,
+          "pendingLightningSend": 400,
+          "claimableLightningReceive": 150,
+          "pendingInRound": 200,
+          "pendingExit": 300,
+          "pendingBoard": 500,
+          "pendingArkoorSend": 60,
+          "pendingOffboard": 70
+        },
+        "onchain": {
+          "confirmed": 7000,
+          "pending": 600,
+          "total": 8100
+        }
+      },
+      "expected": [
+        {
+          "label": "Onchain",
+          "sats": 8100
+        },
+        {
+          "label": "Confirmed",
+          "sats": 7000
+        },
+        {
+          "label": "Pending",
+          "sats": 600
+        },
+        {
+          "label": "Immature",
+          "sats": 500
+        },
+        {
+          "label": "Offchain",
+          "sats": 2730
+        },
+        {
+          "label": "Spendable",
+          "sats": 1000
+        },
+        {
+          "label": "Needs Refresh",
+          "sats": 50
+        },
+        {
+          "label": "Pending Send",
+          "sats": 400
+        },
+        {
+          "label": "Claimable Lightning Receive",
+          "sats": 150
+        },
+        {
+          "label": "Pending In Round",
+          "sats": 200
+        },
+        {
+          "label": "Pending Exit",
+          "sats": 300
+        },
+        {
+          "label": "Pending Board",
+          "sats": 500
+        },
+        {
+          "label": "Pending Arkoor Send",
+          "sats": 60
+        },
+        {
+          "label": "Pending Offboard",
+          "sats": 70
+        }
+      ]
+    }
+  ]
+}

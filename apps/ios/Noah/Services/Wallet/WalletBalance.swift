@@ -84,4 +84,28 @@ struct WalletBalance: Equatable, Sendable {
 
     /// Unconfirmed onchain (pending + immature) plus pending Ark buckets.
     var pendingSats: UInt64 { (onchain.total - onchain.confirmed) + ark.pending }
+
+    struct Detail: Codable, Equatable {
+        let label: String
+        let sats: UInt64
+    }
+    var details: [Detail] {
+        [Detail(label: "Onchain", sats: onchain.total),
+         Detail(label: "Confirmed", sats: onchain.confirmed),
+         Detail(label: "Pending", sats: onchain.pending),
+         Detail(label: "Immature", sats: onchain.total - onchain.confirmed - onchain.pending),
+         Detail(label: "Offchain", sats: ark.total),
+         Detail(label: "Spendable", sats: ark.spendable),
+         Detail(label: "Needs Refresh", sats: ark.needsRefresh),
+         Detail(label: "Pending Send", sats: ark.pendingLightningSend),
+         Detail(label: "Claimable Lightning Receive", sats: ark.claimableLightningReceive),
+         Detail(label: "Pending In Round", sats: ark.pendingInRound),
+         Detail(label: "Pending Exit", sats: ark.pendingExit),
+         Detail(label: "Pending Board", sats: ark.pendingBoard),
+         Detail(label: "Pending Arkoor Send", sats: ark.pendingArkoorSend),
+         Detail(label: "Pending Offboard", sats: ark.pendingOffboard)]
+    }
+    static func display(_ sats: UInt64, hidden: Bool, unit: BitcoinAmountUnit, locale: Locale) -> String {
+        hidden ? "••••" : BitcoinAmount.format(sats: Int64(clamping: sats), unit: unit, locale: locale)
+    }
 }

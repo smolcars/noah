@@ -45,7 +45,7 @@ struct HomeView: View {
                             .padding(.top, 24)
                     } else {
                         BalanceHeader(
-                            sats: model.summary.map { Int64($0.balance.totalSats) },
+                            balance: model.summary?.balance,
                             unit: model.amountUnit,
                             btcPrice: home.btcPrice, currency: model.preferredCurrency,
                             isHidden: $model.isBalanceHidden)
@@ -202,7 +202,9 @@ struct HomeView: View {
 }
 
 private struct BalanceHeader: View {
-    let sats: Int64?
+    let balance: WalletBalance?
+    private var sats: Int64? { balance.map { Int64(clamping: $0.totalSats) } }
+    @State private var expanded = false
     let unit: BitcoinAmountUnit
     let btcPrice: Double?
     let currency: String
@@ -219,6 +221,8 @@ private struct BalanceHeader: View {
                     .font(NoahFont.title).foregroundStyle(NoahColor.mutedForeground)
             } else { ProgressView().frame(height: 32) }
             HStack(spacing: 14) {
+            Button { expanded.toggle() } label: {
+            HStack {
             Group {
                 if isHidden {
                     Text(verbatim: "••••")
@@ -233,6 +237,10 @@ private struct BalanceHeader: View {
             .foregroundStyle(NoahColor.foreground)
             .minimumScaleFactor(0.5)
             .lineLimit(1)
+            Image(systemName: expanded ? "chevron.up" : "chevron.down")
+            }
+            }.buttonStyle(.plain).accessibilityLabel("Toggle balance details")
+            .accessibilityValue(expanded ? "Expanded" : "Collapsed")
 
             Button {
                 withAnimation(.snappy) { isHidden.toggle() }
@@ -245,6 +253,22 @@ private struct BalanceHeader: View {
             }
             .accessibilityLabel(isHidden ? "Show wallet balance" : "Hide wallet balance")
         }
+            if let balance {
+                if balance.pendingSats > 0 {
+                    Text("Pending balance: \(WalletBalance.display(balance.pendingSats, hidden: isHidden, unit: unit, locale: locale))")
+                        .font(NoahFont.footnote)
+                }
+                if expanded {
+                    NoahCard {
+                        VStack(spacing: 8) {
+                            Text("Balance Details").font(NoahFont.headline)
+                            ForEach(balance.details, id: \.label) { row in
+                                LabeledContent(row.label, value: WalletBalance.display(row.sats, hidden: isHidden, unit: unit, locale: locale))
+                            }
+                        }
+                    }
+                }
+            }
         }
         .sensoryFeedback(.selection, trigger: isHidden)
     }

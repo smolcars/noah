@@ -24,4 +24,16 @@ struct WalletBalanceTests {
             #expect(balance.pendingSats == testCase.expected.pending, "\(testCase.name)")
         }
     }
+    @Test func homeDetailsAndHiding() throws {
+        for fixture in try Fixtures.load("home-balance-details", input: Input.self, expected: [WalletBalance.Detail].self) {
+            let balance = WalletBalance(ark: fixture.input.ark, onchain: fixture.input.onchain)
+            #expect(balance.details == fixture.expected)
+            for row in balance.details {
+                for unit in [BitcoinAmountUnit.sats, .bip177] {
+                    #expect(WalletBalance.display(row.sats, hidden: true, unit: unit, locale: .init(identifier: "en_US")) == "••••")
+                    #expect(WalletBalance.display(row.sats, hidden: false, unit: unit, locale: .init(identifier: "en_US")) != "••••")
+                }
+            }
+        }
+    }
 }
