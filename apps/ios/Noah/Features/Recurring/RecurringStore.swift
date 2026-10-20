@@ -1,4 +1,3 @@
-import CoreFoundation
 import Foundation
 
 /// Keeps RN's version-0 envelope and unknown fields. Corruption is never treated as an empty store.
@@ -32,10 +31,8 @@ final class RecurringStore: @unchecked Sendable {
     private func envelope() throws -> RawObject {
         let raw = settings.string(forKey: Self.key) ?? #"{"version":0,"state":{"schedules":{},"serverSyncPending":false}}"#
         let value = try RawObject(raw)
-        let version = try value.fields["version"].map {
-            try JSONSerialization.jsonObject(with: Data($0.utf8), options: [.fragmentsAllowed])
-        }
-        guard version == nil || (version as? NSNumber).map({ CFGetTypeID($0) != CFBooleanGetTypeID() && $0 == 0 }) == true,
+        let version = value.fields["version"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard version == nil || version == "0",
               let stateJSON = value.fields["state"], let state = try? RawObject(stateJSON),
               let schedules = state.fields["schedules"], (try? RawObject(schedules)) != nil
         else { throw RecurringError.message("Recurring payment data couldn't be read. Your saved schedules have been preserved. Sending is stopped.") }

@@ -3,6 +3,23 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Storage strictness — envelope version (2026-10-20)
+
+Base: `feat/native-rewrite` at `c6283d16`. Compare the original version token,
+without NSNumber conversion. Only an absent legacy version or the exact token
+`0` is accepted (surrounding JSON whitespace is allowed). RN's store retains
+Zustand's default numeric version 0, serialized by `createJSONStorage` through
+`JSON.stringify` as `0`; even JavaScript negative zero serializes as `0`.
+
+Expected outcomes: absent / `0` → readable and writable; `1e-400`, `0.0`, `-0`,
+`0e5`, `"0"`, `1`, `1e400`, booleans, null, objects and arrays → entire store
+unavailable, no execution or writes, original bytes preserved across reopen.
+`RecurringVersionTests` uses all 11 populated RN rows, both executor triggers,
+binding, upsert, pending, cancellation and reopen. The pre-fix targeted run
+reported **2 test definitions / 15 expanded runs**, with **4 expanded failures**
+(the numeric zero variants) and 11 passes, zero skips. The rejected-overflow
+`1e400` case also stays closed when Foundation rejects it during JSON validation.
+
 ## RN wide-number storage compatibility (2026-10-20)
 
 Base: `feat/native-rewrite` local HEAD `38af11f3`.
