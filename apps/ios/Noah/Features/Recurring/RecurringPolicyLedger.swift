@@ -13,6 +13,9 @@ final class RecurringPolicyLedger: @unchecked Sendable {
         var revision: UUID?
         var status: String
         var digest: String?
+        var settlementKey: String?
+        var pending: RecurringPayment?
+        var predecessor: String?
     }
     private struct State: Codable {
         var version: Int
@@ -70,7 +73,7 @@ final class RecurringPolicyLedger: @unchecked Sendable {
             return stopped
         } catch { return Set(schedules.keys) }
     }
-    func commit(binding: RecurringStore.Binding, before: [String: RecurringPayment], after: [String: RecurringPayment], policyID: String? = nil, reapproval: Bool = false) throws {
+    func commit(binding: RecurringStore.Binding, before: [String: RecurringPayment], after: [String: RecurringPayment], policyID: String? = nil, reapproval: Bool = false, settlementKey: String? = nil) throws {
         var state = try state(binding: binding, schedules: before)
         let changed = Set(before.keys).union(after.keys).union(policyID.map { [$0] } ?? []).filter { $0 == policyID || before[$0] != after[$0] }
         guard !changed.isEmpty else { return }
@@ -82,7 +85,10 @@ final class RecurringPolicyLedger: @unchecked Sendable {
                 // User reapproval starts a fresh revision under this generation.
                 let approved = reapproval && schedule.nativeRevision != nil && schedule.nativeRevision != state.entries[key]?.revision && schedule.nativeRevision != before[id]?.nativeRevision && schedule.inFlight == nil && schedule.status == "active"
                 guard try approved || (before[id].map({ try matches(state.entries[key], binding, $0) }) ?? (state.entries[key] == nil)) else { throw RecurringError.message(Self.message) }
-                state.entries[key] = try entry(binding, schedule, generation: state.generation)
+                var next = try entry(binding, schedule, generation: state.generation)
+                next.settlementKey = settlementKey ?? state.entries[key]?.settlementKey
+                if settlementKey != nil { next.pending = schedule; next.predecessor = state.entries[key]?.digest }
+                state.entries[key] = next
             } else {
                 state.entries[key] = .init(binding: binding, scheduleID: id, generation: state.generation, revision: state.entries[key]?.revision, status: "deleted", digest: nil)
             }
@@ -90,4 +96,33 @@ final class RecurringPolicyLedger: @unchecked Sendable {
         do { try write(state) }
         catch { failed = true; AppLog("recurring").w(Self.logMessage); throw error }
     }
+    var hasPending: Bool {
+        guard let bytes = try? Data(contentsOf: file), let state = try? JSONDecoder().decode(State.self, from: bytes) else { return false }
+        return state.entries.values.contains { $0.pending != nil }
+    }
+    func applied(binding: RecurringStore.Binding, schedules: [String: RecurringPayment], id: String, token: String) throws -> Bool {
+        try state(binding: binding, schedules: schedules).entries[key(binding, id)]?.settlementKey == token
+    }
+    /// Repair only an unfinished exact predecessor; completed snapshots still fail closed.
+    func pending(binding: RecurringStore.Binding, schedules: [String: RecurringPayment]) throws -> [RecurringPayment] {
+        let state = try state(binding: binding, schedules: schedules)
+        return try state.entries.values.filter { $0.binding == binding && $0.pending != nil }.map { entry in
+            guard let row = schedules[entry.scheduleID], let pending = entry.pending,
+                  entry.settlementKey != nil, pending.id == entry.scheduleID, pending.nativeRevision == entry.revision,
+                  try digest(pending) == entry.digest,
+                  try digest(row) == entry.predecessor || matches(entry, binding, row) else { throw RecurringError.message(Self.message) }
+            return pending
+        }
+    }
+    func finish(binding: RecurringStore.Binding, schedules: [String: RecurringPayment]) throws {
+        var state = try state(binding: binding, schedules: schedules)
+        let pending = state.entries.filter { $0.value.binding == binding && $0.value.pending != nil }
+        guard !pending.isEmpty else { return }
+        for (id, entry) in pending {
+            guard let row = schedules[entry.scheduleID], try matches(entry, binding, row) else { throw RecurringError.message(Self.message) }
+            state.entries[id]?.pending = nil; state.entries[id]?.predecessor = nil
+        }
+        try write(state)
+    }
+
 }

@@ -41,6 +41,14 @@ import Observation
     init(dependencies: Dependencies) {
         d = dependencies
         d.store.protectPolicies(file: d.journal.file.appendingPathExtension("policies"), binding: d.binding)
+        let journal = d.journal, binding = d.binding, now = d.now
+        d.controller.persistRecurringEvidence = { attempt, generation, walletGeneration, state, message in
+            guard FileManager.default.fileExists(atPath: journal.file.deletingLastPathComponent().path) else { throw NoWallet() }
+            let owner = try binding()
+            guard try binding() == owner else { throw NoWallet() }
+            try journal.record(attempt, generation: generation, walletGeneration: walletGeneration, state: state, message: message, binding: owner, now: now())
+        }
+        if d.controller.state == .storageBlocked, d.controller.attempt?.recurringOccurrenceKey != nil { d.controller.reloadForWalletChange() }
     }
     private func readAdmission() throws -> RecurringStore.Binding {
         let directory = d.journal.file.deletingLastPathComponent()
@@ -154,6 +162,10 @@ import Observation
                 executionBinding = owner
                 return (generation, durableGeneration)
             }
+            let recovery: [RecurringJournal.Entry]
+            do { recovery = try await storage { [self] in Array(try d.journal.load().values) } }
+            catch { try await recoverMarkers(boundState()); throw error }
+            for entry in recovery where entry.terminal != nil && entry.released != true { try await settle(entry) }
             try await refreshDates()
             let initial = try await boundState()
             try await recoverMarkers(initial)
@@ -212,7 +224,7 @@ import Observation
                     }
                     // Automation never adopts a pre-existing Lightning checkpoint: no user fee review.
                     guard quote.checkpoint == nil else { throw SendFailure.lightningInProgress }
-                    let entry = RecurringJournal.Entry(binding: state.binding!, scheduleID: id, plan: plan, markedAt: d.now(), policyRevision: schedule.nativeRevision)
+                    let entry = RecurringJournal.Entry(binding: state.binding!, scheduleID: id, plan: plan, markedAt: d.now(), policyRevision: schedule.nativeRevision, policy: schedule)
                     schedule.inFlight = .init(occurrenceIndex: plan.occurrenceIndex!, startedAt: d.now())
                     schedule.updatedAt = d.now()
                     let admitted = try await storage { [self, schedule] in
@@ -225,7 +237,7 @@ import Observation
                     let marked = schedule
                     let unattended = approval == nil
                     let store = d.store, binding = d.binding, allowed = d.allowed, generation = d.automationGeneration, now = d.now, zone = d.zone
-                    let result = await d.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key) {
+                    _ = await d.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key) {
                         do {
                             try allowed()
                             guard try binding() == entry.binding, generation() == automationGeneration else { throw NoWallet() }
@@ -248,7 +260,7 @@ import Observation
                             throw SendNotSubmitted(reason: .recurringStopped)
                         }
                     }
-                    try await settle(entry, original: marked, result: result, retainReceipt: approval != nil)
+                    try await settle(entry, retainReceipt: approval != nil, notifyOriginal: true)
                 } catch is NoWallet { throw NoWallet() }
                 catch {
                     // Only a failure before the independent marker exists is automatically retryable.
@@ -287,73 +299,67 @@ import Observation
         }
         if let stopped { await d.notifications([], stopped) }
     }
-    private func settle(_ entry: RecurringJournal.Entry, original: RecurringPayment?, result: SendPaymentController.TerminalResult?, retainReceipt: Bool = false) async throws {
-        guard let result, result.recurringKey == entry.key else { return }
-        let outcome = result.outcome, message = result.message
-        let success: Bool, paid: Bool
-        switch outcome {
-        case .succeeded(let receipt) where !receipt.isUnresolved && receipt.broadcastRetryPending != true:
-            success = true; paid = true
-        case .alreadyPaid: success = false; paid = true
-        case .failed: success = false; paid = false
-        case .submitting: return
-        default: try await markUncertain(entry, message: message); return
+    private func settle(_ entry: RecurringJournal.Entry, retainReceipt: Bool = false, notifyOriginal: Bool = false) async throws {
+        guard let evidence = try await storage({ [self] in
+            try d.journal.load()[entry.scheduleID].flatMap { saved in
+                saved.binding == entry.binding && saved.plan == entry.plan && saved.markedAt == entry.markedAt && saved.policyRevision == entry.policyRevision ? saved.terminal : nil
+            }
+        }) else { return }
+        if evidence.outcome == .uncertain { try await markUncertain(entry, message: evidence.message); return }
+        if try await storage({ [self] in try d.binding() == entry.binding }) {
+            d.controller.releaseRecurring(attemptID: evidence.attempt.recurringAttemptID, expectedGeneration: evidence.generation, expectedWalletGeneration: evidence.walletGeneration, retainReceipt: retainReceipt)
         }
         let notification = try await storage { [self] () throws -> RecurringPayment? in
-            guard try d.binding() == entry.binding else { return nil }
-            guard let saved = try d.journal.load()[entry.scheduleID], saved.binding == entry.binding,
-                  saved.plan == entry.plan, saved.policyRevision == entry.policyRevision, saved.markedAt == entry.markedAt else { return nil }
-            if saved.policyApplied == true || saved.consumed == true {
-                // Older consumed receipts may already have advanced MMKV; never apply them twice.
-                if saved.policyApplied != true {
-                    var claimed = saved; claimed.policyApplied = true; try d.journal.save(claimed)
-                }
-                d.controller.settlementConsumed(result, retainReceipt: retainReceipt)
-                return nil
+            guard try d.binding() == entry.binding,
+                  var saved = try d.journal.load()[entry.scheduleID], saved.terminal?.settlementID == evidence.settlementID else { return nil }
+            if saved.released == true { return nil }
+            let state = saved.historyApplied != true ? try d.store.settlementState() : nil
+            if let state, state.binding != entry.binding { return nil }
+            if !saved.resolved {
+                saved.resolved = true; saved.consumed = evidence.paid
+                try d.journal.save(saved)
             }
-            let state = try d.store.settlementState()
-            guard state.binding == entry.binding else { return nil }
-            // Claim application with consumption: an interruption stops advancement without repeating it.
-            var resolved = entry; resolved.resolved = true; resolved.consumed = paid; resolved.policyApplied = true
-            try d.journal.save(resolved)
             var notification: RecurringPayment?
-            do {
-            if var latest = state.schedules[entry.scheduleID], latest.nativeRevision == entry.policyRevision {
-                if success {
-                    let stopped = latest
-                    latest.status = "active"
-                    latest.success(entry.plan, now: d.now(), zone: d.zone())
-                    if stopped.status != "active", stopped.status != "needs_approval", latest.status == "active" {
-                        latest.status = stopped.status; latest.consecutiveFailures = stopped.consecutiveFailures
-                        latest.lastError = stopped.lastError; latest.retryNotBefore = stopped.retryNotBefore
+            if saved.historyApplied != true {
+                guard let state else { return nil }
+                if try !d.store.settlementApplied(entry.scheduleID, token: evidence.settlementID.uuidString),
+                   var latest = state.schedules[entry.scheduleID], latest.nativeRevision == entry.policyRevision {
+                    if evidence.outcome == .succeeded {
+                        let stopped = latest
+                        latest.status = "active"
+                        latest.success(entry.plan, now: evidence.recordedAt, zone: d.zone())
+                        if stopped.status != "active", stopped.status != "needs_approval", latest.status == "active" {
+                            latest.status = stopped.status; latest.consecutiveFailures = stopped.consecutiveFailures
+                            latest.lastError = stopped.lastError; latest.retryNotBefore = stopped.retryNotBefore
+                        }
+                    } else {
+                        latest.failure(entry.plan, message: evidence.paid ? "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming." : evidence.message ?? "No payment was submitted.", retryable: !evidence.paid, now: evidence.recordedAt)
                     }
-                } else {
-                    latest.failure(entry.plan, message: paid ? "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming." : message ?? "No payment was submitted.", retryable: !paid, now: d.now())
+                    try d.store.upsert(latest, settlementKey: evidence.settlementID.uuidString)
+                    notification = latest
+                } else if notifyOriginal, evidence.outcome == .succeeded, var original = entry.policy, original.nativeRevision == entry.policyRevision {
+                    original.status = "active"; original.success(entry.plan, now: evidence.recordedAt, zone: d.zone())
+                    notification = original
                 }
-                try d.store.upsert(latest)
-                if paid { notification = latest }
-            } else if success, let original, original.nativeRevision == entry.policyRevision {
-                var result = original; result.status = "active"
-                result.success(entry.plan, now: d.now(), zone: d.zone())
-                notification = result
+                saved.historyApplied = true; saved.policyApplied = true
+                try d.journal.save(saved)
             }
-            } catch {
-                // Proven consumption releases Send even when policy advancement cannot be saved.
-                self.error = RecurringPolicyLedger.message
-            }
-            d.controller.settlementConsumed(result, retainReceipt: retainReceipt)
+            saved.released = true
+            try d.journal.save(saved)
             return notification
         }
+        // Releasing the shared Send slot has no part in preserving recurring evidence.
+        let released = try await storage { [self] in try d.journal.load()[entry.scheduleID]?.released == true && d.binding() == entry.binding }
+        if released { d.controller.releaseRecurring(attemptID: evidence.attempt.recurringAttemptID, expectedGeneration: evidence.generation, expectedWalletGeneration: evidence.walletGeneration, retainReceipt: retainReceipt) }
         if let notification { await d.notifications([], notification) }
     }
     func checkStatus(_ id: String) async {
         guard !running else { return }
         do {
             guard let entry = try await storage({ [self] in try d.journal.load()[id] }) else { return }
-            let original = try? await storage { [self] in try d.store.load().schedules[id] }
-            guard entry.policyApplied == true || entry.consumed == true || original?.unsupportedStorage == false else { return }
-            await d.controller.checkStatus()
-            try await settle(entry, original: original, result: d.controller.resultForSettlement(entry.key))
+            // Reconciliation can add exact evidence; settlement only reads the occurrence.
+            if entry.terminal == nil || entry.terminal?.outcome == .uncertain { await d.controller.checkStatus() }
+            try await settle(entry)
         } catch is NoWallet { return }
         catch { self.error = error.localizedDescription }
         await reload()
