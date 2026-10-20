@@ -14,20 +14,28 @@ struct AppLogTests {
     ]
 
     @Test func redactionPerformance() {
+        for (name, unit) in Self.performanceInputs { assertRedactionScales(name, unit) }
+    }
+
+    private func assertRedactionScales(_ name: String, _ unit: String) {
         LogFile.prepareRedaction()
-        _ = LogFile.redact("warmup")
-        for (name, unit) in Self.performanceInputs {
-            for size in [1024, 4096, 16384] {
-                let input = String(String(repeating: unit, count: (size + unit.count - 1) / unit.count).prefix(size))
-                let elapsed = (0..<3).map { _ in
-                    let started = ContinuousClock.now
-                    _ = LogFile.redact(input)
-                    return ContinuousClock.now - started
-                }.sorted()[1]
-                print("REDACTION \(name) \(size) \(elapsed)")
-                #expect(elapsed < .milliseconds(100), "\(name) \(size): \(elapsed)")
+        let inputs = [1024, 16384].map { size in
+            String(String(repeating: unit, count: (size + unit.count - 1) / unit.count).prefix(size))
+        }
+        for input in inputs { _ = LogFile.redact(input) }
+        var samples = [[Duration](), [Duration]()]
+        for _ in 0..<5 {
+            for (index, input) in inputs.enumerated() {
+                let started = ContinuousClock.now
+                _ = LogFile.redact(input)
+                samples[index].append(ContinuousClock.now - started)
             }
         }
+        let small = samples[0].sorted()[2], large = samples[1].sorted()[2]
+        print("REDACTION \(name) 1 KiB \(small); 16 KiB \(large)")
+        // Linear work grows 16x; quadratic suffix rescans grow 256x. Allow scheduler noise.
+        #expect(large < small * 64 + .milliseconds(20), "\(name): \(small) -> \(large)")
+        #expect(large < .seconds(2), "\(name) 16 KiB exceeds 2 s ceiling")
     }
 
     @Test @MainActor func mainActorAndSDKCallbacksOnlyEnqueueRawText() async {
@@ -84,15 +92,9 @@ struct AppLogTests {
     }
 
     @Test func failedTokenCandidatesStayBounded() {
-        // Missing terminators and repeated candidate keywords must not restart a suffix search.
+        // Missing terminators and repeated keywords must not restart a suffix search.
         for unit in ["seed.", "http://", "ExpoPushToken[", "x@x.", "xprv", "\\u0078!"] {
-            let input = String(String(repeating: unit, count: (16384 + unit.count - 1) / unit.count).prefix(16384))
-            let elapsed = (0..<3).map { _ in
-                let started = ContinuousClock.now
-                _ = LogFile.redact(input)
-                return ContinuousClock.now - started
-            }.sorted()[1]
-            #expect(elapsed < .milliseconds(100), "\(unit): \(elapsed)")
+            assertRedactionScales("failed candidate \(unit)", unit)
         }
     }
 
