@@ -14,7 +14,7 @@ internal object EndpointLogPrivacy {
     fun register(endpoint: String?) {
         val url = endpoint?.toHttpUrlOrNull() ?: return
         for (path in LogFile.decodedViews(url.encodedPath, percentEncoded = true) ?: listOf(url.encodedPath)) {
-            if (path != "/") paths.add(path.trimEnd('/'))
+            path.trimEnd('/').takeIf { it.isNotEmpty() }?.let(paths::add)
         }
         origin(endpoint)?.let(origins::add)
     }
@@ -42,9 +42,11 @@ internal object EndpointLogPrivacy {
         // Exported lines include a bounded tag and timestamp as well as the message.
         if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[oversized log message omitted]"
         responseStatus.find(text)?.let { return "HttpResponse { status: ${it.groupValues[1]} }" }
+        if (text.contains("HttpResponse")) return "HttpResponse"
         val views = LogFile.decodedViews(text, percentEncoded = true) ?: return null
         for (view in views) {
             responseStatus.find(view)?.let { return "HttpResponse { status: ${it.groupValues[1]} }" }
+            if (view.contains("HttpResponse")) return "HttpResponse"
         }
         if (origins.isEmpty()) return text
         var result = text

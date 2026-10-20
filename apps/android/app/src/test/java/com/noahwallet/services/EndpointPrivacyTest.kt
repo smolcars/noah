@@ -12,7 +12,8 @@ class EndpointPrivacyTest {
     @Test fun hostCredentialsAndEncodedIdentitiesNeverReachSinks() {
         val origin = "https://fakehostcredential73.example.com:8443"
         EndpointLogPrivacy.register("$origin/api")
-        val inputs = listOf(origin, "$origin/api/blocks/tip/height", origin.replace("/", "%2F"),
+        val inputs = listOf(origin, "$origin/api/blocks/tip/height", origin.uppercase(),
+            origin.replace("fake", """\u0066ake"""), origin.replace(":", "%3A").replace("/", "%2F"), origin.replace("/", "%2F"),
             origin.replace("/", "\\/"), origin.replace(":", "&#58;").replace("/", "&#x2f;"))
         for (input in inputs) {
             assertEquals("[custom-esplora]", LogFile.redact(input))
@@ -28,7 +29,13 @@ class EndpointPrivacyTest {
     @Test fun providerBodiesAreRemovedAtEveryBoundaryAndHistoricalExport() {
         val input = """HttpResponse { status: 404, message: "Account: &#x66;akeBodyCredential83" }"""
         val expected = "HttpResponse { status: 404 }"
-        assertEquals(expected, LogFile.redact(input))
+        for (response in listOf(input, """HttpResponse { status: 404, message: "truncated fake""",
+            """HttpResponse { status: 404, message: "bad \uD800 escape" }""",
+            input.replace("{", "&#123;").replace("}", "&#125;"))) {
+            assertEquals(expected, LogFile.redact(response))
+            assertEquals(expected, LogFile.redactForTelemetry(response))
+        }
+        assertEquals("HttpResponse", LogFile.redact("""HttpResponse { message: "fakeUnknownBody" }"""))
         val event = SentryEvent().apply { message = Message().apply { formatted = input } }
         assertEquals(expected, requireNotNull(AppTelemetry.scrub(event)).message?.formatted)
         val directory = Files.createTempDirectory("endpoint-boundary").toFile()
