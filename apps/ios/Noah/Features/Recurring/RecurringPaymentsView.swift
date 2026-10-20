@@ -4,11 +4,12 @@ struct RecurringPaymentsView: View {
     @State private var executor = RecurringExecutor.shared
     @State private var cancelling: RecurringPayment?
     @State private var overriding: RecurringPayment?
+    @State private var review: RecurringExecutor.Review?
     @State private var actionError: String?
     var body: some View {
         List {
             Section {
-                Text("Automatic payments from your Ark balance. Keep notifications enabled so payments can go through while the app is closed.")
+                Text("Automatic payments from your Ark balance. Fees are limited to 1% or 200 sats, whichever is higher. Payments whose fees cannot be limited need manual approval. Keep notifications enabled.")
                     .foregroundStyle(NoahColor.mutedForeground)
                 NavigationLink("New recurring payment") { RecurringPaymentEditorView(executor: executor) }
                     .accessibilityIdentifier("recurring-new-button")
@@ -42,6 +43,11 @@ struct RecurringPaymentsView: View {
                         }
                         if let error = schedule.lastError { Text(error).font(NoahFont.footnote).foregroundStyle(NoahColor.destructive) }
                     }.accessibilityIdentifier("recurring-payment-\(schedule.id)")
+                    if schedule.status == "needs_approval" {
+                        Button("Review and pay manually") { run { review = try await executor.review(schedule.id) } }
+                            .disabled(executor.running || executor.controller.locked)
+                            .accessibilityIdentifier("recurring-review-\(schedule.id)")
+                    }
                     if schedule.status == "needs_attention" || schedule.inFlight != nil {
                         Button("Check payment status") { Task { await executor.checkStatus(schedule.id) } }
                         Button("Resume after checking history…", role: .destructive) { overriding = schedule }.disabled(executor.running)
@@ -66,6 +72,11 @@ struct RecurringPaymentsView: View {
             if let error = actionError ?? executor.error { Text(error).foregroundStyle(NoahColor.destructive) }
         }
         .settingsStyle("Recurring payments")
+        .sheet(item: $review) { item in
+            SendConfirmation(confirm: { Task { await executor.execute(manual: true, approval: item) } },
+                             payment: item.payment, quote: item.quote, controller: executor.controller,
+                             cancel: { review = nil }, done: { review = nil; executor.reload() })
+        }
         .task { executor.reload(); await executor.execute() }
         .alert("Cancel recurring payment?", isPresented: Binding(get: { cancelling != nil }, set: { if !$0 { cancelling = nil } })) {
             Button("Keep payment", role: .cancel) { cancelling = nil }
@@ -84,7 +95,7 @@ struct RecurringPaymentsView: View {
     }
     private func status(_ schedule: RecurringPayment) -> String {
         if schedule.inFlight != nil && executor.running { return "Sending" }
-        return ["active": "Active", "paused": "Paused", "needs_attention": "Needs attention", "completed": "Completed"][schedule.status] ?? "Needs attention"
+        return ["active": "Active", "paused": "Paused", "needs_attention": "Needs attention", "needs_approval": "Needs approval", "completed": "Completed"][schedule.status] ?? "Needs attention"
     }
     private func run(_ work: @escaping @MainActor () async throws -> Void) {
         actionError = nil

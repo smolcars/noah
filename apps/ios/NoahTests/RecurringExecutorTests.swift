@@ -20,6 +20,9 @@ import Testing
         var saved: SendPaymentController.Attempt?
         var writeReceiptFails = false
         var ambiguous = false
+        var fee: UInt64 = 0
+        var method = "ark"
+        var notified: [RecurringPayment] = []
         var reservation: (@MainActor (@escaping @MainActor @Sendable () async -> Void) async throws -> Void)?
         var preflight: (@MainActor () async throws -> Void)?
         var beforePay: (@MainActor () async throws -> Void)?
@@ -69,10 +72,15 @@ import Testing
                     if stopped.withLock({ $0 }) { throw AppServices.WalletSuspended() }
                 }, quote: { [self] schedule in
                     try await beforeQuote()
-                    return (SendPayment(destination: schedule.destination, method: "ark", amount: schedule.amountSat),
-                            .init(amount: schedule.amountSat, fee: 0, total: schedule.amountSat, walletIdentity: owner.withLock { $0.wallet }))
-                }, automationGeneration: { [settings] in settings.string(forKey: WalletLifecycle.automationStopKey) }, now: { [clock] in clock.withLock { $0 } }, sync: { [self] entries in try await sync(entries) }))
+                    return await quoted(schedule)
+                }, automationGeneration: { [settings] in settings.string(forKey: WalletLifecycle.automationStopKey) }, now: { [clock] in clock.withLock { $0 } }, sync: { [self] entries in try await sync(entries) },
+                notifications: { [self] _, result in await notification(result) }))
         }
+        func quoted(_ schedule: RecurringPayment) -> (SendPayment, SendQuote) {
+            (SendPayment(destination: schedule.destination, method: method, amount: schedule.amountSat),
+             .init(amount: schedule.amountSat, fee: fee, total: schedule.amountSat + fee, walletIdentity: owner.withLock { $0.wallet }))
+        }
+        func notification(_ result: RecurringPayment?) { if let result { notified.append(result) } }
         func reserve(_ work: @escaping @MainActor @Sendable () async -> Void) async throws {
             if let reservation { try await reservation(work) } else { await work() }
         }
@@ -299,6 +307,50 @@ import Testing
         #expect(try h.journal.consumed(binding: owner, scheduleID: schedule.id, at: h.now))
         var otherWallet = owner; otherWallet.instance = UUID()
         #expect(try !h.journal.consumed(binding: otherWallet, scheduleID: schedule.id, at: h.now))
+    }
+
+    @Test(arguments: ["ark", "lnurl", "offer", "lightning"]) func variableOrExcessiveFeesNeedApprovalAndNeverConsume(method: String) async throws {
+        let h = try Harness(); let schedule = try h.add()
+        h.method = method; h.fee = 501 // 1% of 50,000 sats is 500.
+        await h.executor.execute(); await h.executor.execute(manual: true)
+        #expect(h.calls.withLock { $0 } == 0)
+        #expect(try h.store.load().schedules[schedule.id]?.status == "needs_approval")
+        #expect(try h.journal.load().isEmpty)
+        #expect(h.saved == nil)
+        #expect(h.notified.count == 1)
+        #expect(h.notified.first?.lastError?.contains("500 sats") == true)
+    }
+    @Test(arguments: ["lnurl", "offer", "lightning"]) func unboundedLightningNeedsApprovalEvenBelowCap(method: String) async throws {
+        let h = try Harness(); let schedule = try h.add(); h.method = method; h.fee = 1
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 0)
+        #expect(try h.store.load().schedules[schedule.id]?.status == "needs_approval")
+        #expect(try h.journal.load().isEmpty)
+    }
+    @Test func manualApprovalUsesReviewedQuoteAndSettlesOccurrenceOnce() async throws {
+        let h = try Harness(); let schedule = try h.add(); h.method = "lnurl"; h.fee = 501
+        await h.executor.execute()
+        let review = try await h.executor.review(schedule.id)
+        #expect(review.quote.fee == 501)
+        await h.executor.execute(manual: true, approval: review)
+        await h.executor.execute(manual: true, approval: review)
+        #expect(h.calls.withLock { $0 } == 1)
+        #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == 1)
+        #expect(try h.journal.load()[schedule.id]?.consumed == true)
+    }
+    @Test func manualReviewCannotOutlivePause() async throws {
+        let h = try Harness(); let schedule = try h.add(); h.method = "offer"
+        await h.executor.execute()
+        let review = try await h.executor.review(schedule.id)
+        try await h.executor.pause(schedule.id)
+        await h.executor.execute(manual: true, approval: review)
+        #expect(h.calls.withLock { $0 } == 0)
+    }
+    @Test func feeCapUsesIntegerSatsWithoutRoundingUpOrOverflow() {
+        #expect(RecurringFeePolicy.cap(amount: 1) == 200)
+        #expect(RecurringFeePolicy.cap(amount: 20_099) == 200)
+        #expect(RecurringFeePolicy.cap(amount: 50_099) == 500)
+        #expect(RecurringFeePolicy.cap(amount: UInt64.max) == UInt64.max / 100)
     }
 
 }

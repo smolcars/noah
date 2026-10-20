@@ -16,6 +16,13 @@ import Observation
         var notifications: @Sendable ([RecurringPayment], RecurringPayment?) async -> Void = { _, _ in }
         var refresh: @Sendable () async -> Void = {}
     }
+    struct Review: Identifiable {
+        let id = UUID()
+        let schedule: RecurringPayment
+        let plan: RecurringPayment.Plan
+        let payment: SendPayment
+        let quote: SendQuote
+    }
     static let overrideWarning = SendOverrideAudit.warningText + "\n\nResuming skips all occurrences that are already due."
     static let overrideConfirmation = "Resume anyway"
     private let d: Dependencies
@@ -36,9 +43,9 @@ import Observation
         } catch { self.error = error.localizedDescription }
     }
     /// Join push/foreground/manual triggers. The executor owns the task, not the trigger's budget.
-    func execute(manual: Bool = false) async {
+    func execute(manual: Bool = false, approval: Review? = nil) async {
         if let task { await task.value; return }
-        let work = Task { await run(manual: manual) }
+        let work = Task { await run(manual: manual, approval: approval) }
         task = work
         await work.value
         task = nil
@@ -60,7 +67,9 @@ import Observation
         for var schedule in state.schedules.values {
             let entry = entries[schedule.id]
             let pendingMarker = entry.map { !$0.resolved && $0.binding == state.binding } == true
-            let plan = schedule.plan(now: d.now(), ignoreBackoff: true)
+            var planning = schedule
+            if planning.status == "needs_approval" { planning.status = "active" }
+            let plan = planning.plan(now: d.now(), ignoreBackoff: true)
             let consumed = try plan.scheduledFor.map { at in
                 try d.journal.consumed(binding: state.binding!, scheduleID: schedule.id, at: at)
             } ?? false
@@ -73,7 +82,7 @@ import Observation
             }
         }
     }
-    private func run(manual: Bool) async {
+    private func run(manual: Bool, approval: Review?) async {
         running = true
         error = nil
         defer { running = false; reload() }
@@ -83,9 +92,15 @@ import Observation
             let initial = try boundState()
             try await recoverMarkers(initial)
             for id in initial.schedules.keys.sorted() {
+                if let approval, approval.schedule.id != id { continue }
                 guard var schedule = try boundState().schedules[id] else { continue }
                 guard schedule.validPolicy else { throw SendFailure.invalid }
-                let plan = schedule.plan(now: d.now(), ignoreBackoff: manual)
+                var planning = schedule
+                if let approval {
+                    guard schedule == approval.schedule, schedule.status == "needs_approval" else { continue }
+                    planning.status = "active"
+                }
+                let plan = planning.plan(now: d.now(), ignoreBackoff: manual)
                 if plan.kind == "too_many_missed" {
                     schedule.status = "needs_attention"
                     schedule.lastError = "This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment."
@@ -99,11 +114,24 @@ import Observation
                 }
                 guard plan.kind == "pay", !d.controller.locked else { continue }
                 do {
-                    let (payment, quote) = try await d.quote(schedule)
+                    let payment: SendPayment, quote: SendQuote
+                    if let approval {
+                        guard plan == approval.plan else { continue }
+                        (payment, quote) = (approval.payment, approval.quote)
+                    } else { (payment, quote) = try await d.quote(schedule) }
                     let state = try boundState()
                     guard let latest = state.schedules[id], latest == schedule,
-                          latest.plan(now: d.now(), ignoreBackoff: true).occurrenceIndex == plan.occurrenceIndex,
+                          planning.plan(now: d.now(), ignoreBackoff: true).occurrenceIndex == plan.occurrenceIndex,
                           quote.walletIdentity == state.binding?.wallet else { continue }
+                    if approval == nil, let reason = RecurringFeePolicy.approvalReason(payment: payment, quote: quote) {
+                        schedule.status = "needs_approval"
+                        schedule.lastError = reason
+                        schedule.retryNotBefore = nil
+                        schedule.updatedAt = d.now()
+                        try d.store.upsert(schedule)
+                        await d.notifications([], schedule)
+                        continue
+                    }
                     // Automation never adopts a pre-existing Lightning checkpoint: no user fee review.
                     guard quote.checkpoint == nil else { throw SendFailure.lightningInProgress }
                     let entry = RecurringJournal.Entry(binding: state.binding!, scheduleID: id, plan: plan, markedAt: d.now(), policyRevision: schedule.nativeRevision)
@@ -112,13 +140,16 @@ import Observation
                     schedule.updatedAt = d.now()
                     try d.store.upsert(schedule)
                     let marked = schedule
+                    let unattended = approval == nil
                     let store = d.store, binding = d.binding, allowed = d.allowed, generation = d.automationGeneration
                     await d.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key) {
                         do { try allowed() } catch { throw SendNotSubmitted(reason: .recurringStopped) }
                         let state = try store.load()
                         guard generation() == automationGeneration,
                               state.binding == (try binding()), state.binding == entry.binding,
-                              state.schedules[id] == marked, marked.status == "active" else {
+                              state.schedules[id] == marked,
+                              marked.status == (unattended ? "active" : "needs_approval"),
+                              !unattended || RecurringFeePolicy.approvalReason(payment: payment, quote: quote) == nil else {
                             throw SendNotSubmitted(reason: .recurringStopped)
                         }
                     }
@@ -164,8 +195,9 @@ import Observation
         switch d.controller.state {
         case .succeeded(let receipt) where !receipt.isUnresolved && receipt.broadcastRetryPending != true:
             var result = original
+            if result.status == "needs_approval" { result.status = "active" }
             result.success(entry.plan, now: d.now())
-            if latest.status != "active", result.status == "active" { result.status = latest.status }
+            if latest.status != "active", latest.status != "needs_approval", result.status == "active" { result.status = latest.status }
             // Editing an in-flight policy is prohibited; a concurrent cancel is never recreated.
             try d.store.upsert(result)
             var resolved = entry; resolved.resolved = true; resolved.consumed = true
@@ -200,6 +232,17 @@ import Observation
             try await settle(entry, original: original)
         } catch { self.error = error.localizedDescription }
         reload()
+    }
+    func review(_ id: String) async throws -> Review {
+        guard !running, !d.controller.locked else { throw SendFailure.unresolved }
+        try await d.ensureOpen()
+        guard let schedule = try boundState().schedules[id], schedule.status == "needs_approval" else { throw SendFailure.invalid }
+        var planning = schedule; planning.status = "active"
+        let plan = planning.plan(now: d.now(), ignoreBackoff: true)
+        guard plan.kind == "pay" else { throw RecurringError.message("This payment is no longer due.") }
+        let (payment, quote) = try await d.quote(schedule)
+        guard try boundState().schedules[id] == schedule else { throw SendFailure.invalid }
+        return Review(schedule: schedule, plan: plan, payment: payment, quote: quote)
     }
     func save(_ input: RecurringPayment, editing: Bool) async throws {
         var schedule = input

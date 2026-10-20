@@ -253,6 +253,7 @@ struct AmountKeypad: View {
 }
 
 struct SendConfirmation: View {
+    var confirm: (() -> Void)? = nil
     let payment: SendPayment
     let quote: SendQuote
     @Bindable var controller: SendPaymentController
@@ -291,7 +292,9 @@ struct SendConfirmation: View {
                             if let message = controller.message { Text(message).foregroundStyle(NoahColor.destructive) }
                         }.padding(24)
                     }.safeAreaInset(edge: .bottom) {
-                        NoahButton(title: "Confirm send") { controller.submit(payment, quote: quote) }
+                        NoahButton(title: "Confirm send") {
+                            if let confirm { confirm() } else { controller.submit(payment, quote: quote) }
+                        }
                             .accessibilityIdentifier("send-confirm").padding()
                     }
                 }

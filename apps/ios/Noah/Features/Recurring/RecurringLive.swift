@@ -76,7 +76,10 @@ enum RecurringNotifications {
         let center = UNUserNotificationCenter.current()
         if let result {
             let content = UNMutableNotificationContent()
-            if result.status == "needs_attention" {
+            if result.status == "needs_approval" {
+                content.title = "Recurring payment needs approval"
+                content.body = "Automatic payment to \(result.label) was skipped. Open the schedule to review its fee and pay manually."
+            } else if result.status == "needs_attention" {
                 content.title = "Recurring payment needs your attention"
                 content.body = "A payment to \(result.label) was interrupted. Check your history, then resume it."
             } else if result.runs.first?.status == "failed" {
@@ -117,5 +120,22 @@ enum RecurringNotifications {
                 center.add(.init(identifier: "recurring-\(schedule.id)-\(suffix)", content: content, trigger: trigger), withCompletionHandler: nil)
             }
         }
+    }
+}
+
+/// BarkBoltFFI 0.4.0 exposes no Lightning submission fee limit. wait:false can
+/// already advance the send; inspecting pendingLightningSends afterwards is too late.
+/// Pinned bark fees.rs defines Arkoor as zero-fee, with no variable fee path.
+enum RecurringFeePolicy {
+    static func cap(amount: UInt64) -> UInt64 { max(amount / 100, 200) }
+    static func approvalReason(payment: SendPayment, quote: SendQuote) -> String? {
+        let limit = cap(amount: payment.amount)
+        if quote.fee > limit {
+            return "The estimated fee of \(quote.fee) sats exceeds your automatic limit of \(limit) sats (1% or 200 sats, whichever is higher). Review this payment to pay manually."
+        }
+        guard payment.method == "ark", quote.fee == 0 else {
+            return "This payment's fee cannot be limited to \(limit) sats during automatic sending. Review this payment to pay manually."
+        }
+        return nil
     }
 }

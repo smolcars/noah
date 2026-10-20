@@ -49,7 +49,7 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
         !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && label.utf16.count <= 64
             && amountSat > 0 && amountSat <= 9_007_199_254_740_991
             && ["ark", "lnurl", "offer"].contains(destinationType) && !destination.isEmpty
-            && ["active", "paused", "needs_attention", "completed"].contains(status)
+            && ["active", "paused", "needs_attention", "needs_approval", "completed"].contains(status)
             && interval.valid && startAt.isFinite && abs(startAt) < 8.64e15
             && (endAt == nil || (endAt!.isFinite && endAt! >= startAt))
             && (maxOccurrences == nil || maxOccurrences! >= 1) && nextOccurrenceIndex >= 0 && nextOccurrenceIndex <= 1_000_000
