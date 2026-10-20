@@ -16,8 +16,12 @@ import kotlinx.coroutines.runBlocking
 
 class AppLogTest {
     @Test fun redactionPerformance() {
-        com.noahwallet.services.logging.EndpointLogPrivacy.register("https://scaling-privacy.example/api/fakeScaleToken")
-        for ((name, unit) in performanceInputs) {
+        repeat(1000) { index ->
+            com.noahwallet.services.logging.EndpointLogPrivacy.register("https://scaling-privacy-$index.example/api/fakeScale$index")
+        }
+        val authorities = listOf("other authorities" to "https://unrelated-scaling.example/other ",
+            "registered authorities" to "https://scaling-privacy-999.example/other ")
+        for ((name, unit) in performanceInputs + authorities) {
             assertRedactionScales(name, unit, LogFile::redact)
             assertRedactionScales("boundary $name", unit, com.noahwallet.services.logging.EndpointLogPrivacy::redact)
         }
