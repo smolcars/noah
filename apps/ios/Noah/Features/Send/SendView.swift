@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SendView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(AppModel.self) private var app
     @State private var model = SendModel()
     @State private var scanner = false
@@ -31,12 +32,24 @@ struct SendView: View {
         }
         .onChange(of: model.stage) { _, _ in focus = nil }
         .onChange(of: model.controller.state) { _, state in if state != .ready { focus = nil } }
-        .sheet(isPresented: $model.showReview) {
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active && !model.controller.locked { model.showReview = false; model.discardReview() }
+        }
+        .onDisappear {
+            if !model.controller.locked { model.showReview = false; model.discardReview() }
+        }
+        .sheet(isPresented: $model.showReview, onDismiss: {
+            if !model.controller.locked {
+                model.discardReview()
+                if model.stage == .review { model.stage = model.isMax ? .source : .recipient }
+            }
+        }) {
             if let payment = model.payment, let quote = model.quote {
                 SendConfirmation(
                     payment: payment, quote: quote, controller: model.controller,
                     cancel: {
                         model.showReview = false
+                        model.discardReview()
                         model.stage = model.isMax ? .source : .recipient
                     }
                 ) {
@@ -80,10 +93,6 @@ struct SendView: View {
                             "\(source.label) · \(source == .offchain ? model.arkBalance : model.onchainBalance) sats",
                             selected: model.source == source, enabled: model.sources.contains(source)
                         ) { model.source = source }
-                    }
-                    if model.isMax {
-                        Text(SendFailure.onchainMaxUnavailable.errorDescription!)
-                            .font(NoahFont.callout).accessibilityIdentifier("send-onchain-max-unavailable")
                     }
                 }
                 if let error = model.error {
@@ -266,6 +275,11 @@ struct SendConfirmation: View {
                                     : payment.method == "ark" ? "Ark" : "Lightning")
                             LabeledContent(quote.approximate || quote.recipientIsEstimated ? "Estimated fee" : "Fee", value: "\(quote.fee) sats")
                             LabeledContent(quote.recipientIsEstimated ? "Total (reviewed coins)" : quote.approximate ? "Estimated total" : "Total", value: "\(quote.total) sats")
+                            if let prepared = quote.prepared {
+                                LabeledContent("Transaction size", value: "\(prepared.vsize) vbytes")
+                                LabeledContent("Inputs", value: "\(prepared.inputCount)")
+                                Text("This signed transaction expires after two minutes. Review again for a fresh fee rate.").font(NoahFont.callout)
+                            }
                             if quote.recipientIsEstimated {
                                 Text(SendQuote.recipientEstimateExplanation).font(NoahFont.callout)
                             }
@@ -291,6 +305,12 @@ struct SendConfirmation: View {
             }
         }
         .interactiveDismissDisabled(controller.locked)
+        .task(id: quote.prepared?.id) {
+            guard let prepared = quote.prepared else { return }
+            let remaining = max(0, SendPreparedTransaction.reviewLifetime - Date().timeIntervalSince(prepared.createdAt))
+            do { try await Task.sleep(for: .seconds(remaining)) } catch { return }
+            if !controller.locked { cancel() }
+        }
     }
 }
 
@@ -349,7 +369,9 @@ struct SendOutcomeView: View {
                     Image(systemName: "checkmark.circle.fill").font(.system(size: 64)).foregroundStyle(NoahColor.success)
                     Text(receipt.isSubmitted ? "Submitted" : receipt.status == .confirmed ? "Payment confirmed" : "Payment sent")
                         .font(NoahFont.title).accessibilityIdentifier("send-success")
-                    if receipt.isSubmitted {
+                    if receipt.broadcastRetryPending == true {
+                        Text("Submitted, awaiting broadcast. Noah will keep retrying the broadcast. Do not send this payment again.")
+                    } else if receipt.isSubmitted {
                         Text(controller.attempt?.payment.source == .offchain
                              ? "Noah can’t track this transaction’s confirmation in-app; check a block explorer. Do not send this payment again."
                              : "Noah has not confirmed this transaction. If it was replaced, confirmation may not be trackable in-app; check a block explorer. Do not send this payment again.")
@@ -372,9 +394,11 @@ struct SendOutcomeView: View {
                             .font(NoahFont.callout)
                     }
                     transactionDetails(receipt)
-                    NoahButton(title: "Done") {
-                        controller.acknowledge()
-                        if !controller.locked { done() }
+                    if receipt.broadcastRetryPending != true {
+                        NoahButton(title: "Done") {
+                            controller.acknowledge()
+                            if !controller.locked { done() }
+                        }
                     }
                 case .alreadyPaid(let receipt):
                     Text("Invoice already paid").font(NoahFont.title)

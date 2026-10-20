@@ -82,6 +82,7 @@ actor WalletSession {
     private let variant: AppVariant
     private let location: WalletDataLocation
     private let opener: Opener
+    var sendPreparations: [String: SendPreparation] = [:]
     private var state = State.closed
     private var runningCalls = 0
     private var sendReserved = false
@@ -159,6 +160,7 @@ actor WalletSession {
             state = .closing
             await stopObservers()
             await callsDrained()
+            await discardSendReviews()
             do {
                 try await Task { try await handles.wallet.stopDaemonWait() }.value
             } catch {

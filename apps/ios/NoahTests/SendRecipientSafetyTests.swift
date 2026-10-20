@@ -81,7 +81,7 @@ import Testing
         #expect(model.route == nil)
     }
 
-    @Test func onchainMaxExplainsWhyItIsUnavailable() async {
+    @Test func onchainMaxRequiresConfirmedCoins() async {
         let model = SendModel(controller: freshController())
         model.onchainBalance = 0
         model.onchainTotal = 24900
@@ -89,7 +89,9 @@ import Testing
         model.source = .onchain
         #expect(!model.sources.contains(.onchain))
         await model.continueStage()
-        #expect(model.error == SendFailure.onchainMaxUnavailable.errorDescription)
+        #expect(model.error == "Choose a balance with sufficient funds.")
         #expect(!model.progress.sourceConfirmed && !model.showReview)
+        model.onchainBalance = 2000
+        #expect(model.sources.contains(.onchain))
     }
 }

@@ -20,7 +20,7 @@ import Observation
             progress.rails = []
             progress.selectedRailAvailable = nil
             if !isMax { progress.sourceConfirmed = false; source = nil }
-            quote = nil
+            discardReview()
             payment = nil
             showReview = false
         }
@@ -86,7 +86,7 @@ import Observation
     var sources: [SendSource] {
         SendSource.allCases.filter {
             let balance = $0 == .offchain ? arkBalance : onchainBalance
-            return isMax ? $0 == .offchain && balance > 0 : sats > 0 && balance >= sats
+            return isMax ? balance > 0 : sats > 0 && balance >= sats
         }
     }
     func load() async {
@@ -101,6 +101,7 @@ import Observation
     }
     func maxSend() {
         guard !controller.locked else { return }
+        discardReview()
         progress = SendProgress(entry: .max)
         error = nil
         source = nil
@@ -217,10 +218,6 @@ import Observation
             }
             progress.railConfirmed = true
         case .source:
-            if isMax, source == .onchain {
-                error = SendFailure.onchainMaxUnavailable.errorDescription
-                return
-            }
             guard let source, sources.contains(source) else {
                 error = "Choose a balance with sufficient funds."
                 return
@@ -232,6 +229,7 @@ import Observation
         await advance()
     }
     func review() async {
+        discardReview()
         busy = true
         let revision = recipientRevision
         defer { busy = false }
@@ -276,19 +274,27 @@ import Observation
             }
             try SendMaxValidation.available(payment)
             let reviewed = try await quotePayment(payment)
-            guard revision == recipientRevision else { return }
+            guard !Task.isCancelled, revision == recipientRevision else {
+                await session.discardSend(reviewed)
+                return
+            }
             quote = reviewed
             self.payment = payment
             showReview = true
         } catch {
             self.error =
                 (error as? SendFailure)?.errorDescription
-                ?? "Unable to estimate this payment. Check the destination and available funds."
+                ?? "Unable to prepare this payment. Check the destination and available funds."
             stage = .recipient
         }
     }
+    func discardReview() {
+        if let quote { Task { await session.discardSend(quote) } }
+        quote = nil
+    }
     func reset() {
         guard !controller.locked else { return }
+        discardReview()
         amount = ""
         destination = ""
         comment = ""

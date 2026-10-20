@@ -8,6 +8,7 @@ extension WalletSession {
             var resolved = payment
             if let invoice { resolved.destination = invoice; resolved.method = "lightning" }
             var quote = try await Self.quote(resolved, handles: handles)
+            if quote.prepared != nil { await self.retainSendReview(payment, quote: quote, onchain: handles.onchain) }
             quote.resolvedInvoice = invoice
             return quote
         }
@@ -49,11 +50,12 @@ extension WalletSession {
         var quote: SendQuote
         if payment.method == "onchain", payment.source == .onchain {
             let rate = SendFlow.sdkFeeRate(satsPerKwu: try await handles.onchain.feeRates().regularSatPerKwu)
-            let (fee, overflow) = rate.multipliedReportingOverflow(by: 208)  // RN's 2-input, 2-output estimate.
-            guard !overflow, fee < available else { throw SendFailure.insufficient }
-            let amount = payment.amount
-            guard amount <= available - fee else { throw SendFailure.insufficient }
-            quote = SendQuote(amount: amount, fee: fee, total: amount + fee, feeRate: rate, approximate: true)
+            let prepared = try await handles.onchain.prepareSend(
+                address: payment.destination, amount: payment.max ? .drainAll : .amount(amountSats: payment.amount),
+                feeRateSatPerVb: rate, confirmedOnly: true)
+            quote = SendQuote(amount: prepared.amountSats, fee: prepared.feeSats,
+                              total: prepared.amountSats + prepared.feeSats, feeRate: rate,
+                              prepared: SendPreparedTransaction(prepared))
         } else {
             let estimate: FeeEstimate
             var vtxoIDs: [String]?
@@ -76,8 +78,13 @@ extension WalletSession {
             }
             quote = SendQuote(amount: estimate.netAmountSats, fee: estimate.feeSats, total: estimate.grossAmountSats, vtxoIDs: vtxoIDs)
         }
-        guard quote.amount > 0, quote.total <= available else { throw SendFailure.insufficient }
-        quote.walletIdentity = try await Self.sendIdentity(handles)
+        do {
+            guard quote.amount > 0, quote.total <= available else { throw SendFailure.insufficient }
+            quote.walletIdentity = try await Self.sendIdentity(handles)
+        } catch {
+            if let prepared = quote.prepared { try? await handles.onchain.discardPrepared(id: prepared.id) }
+            throw error
+        }
         return quote
     }
     func prepareSend(_ payment: SendPayment, quote: SendQuote) async throws -> SendSnapshot {
@@ -91,7 +98,11 @@ extension WalletSession {
                 checkpoint = SendLightningCheckpoint.prepared(reviewed: quote,
                     inspected: try await handles.wallet.lightningSendState(paymentHash: hash))
             }
-            if checkpoint == nil {
+            if payment.method == "onchain", payment.source == .onchain {
+                guard quote.prepared != nil else { throw SendFailure.feeChanged }
+                try await self.claimSendReview(payment, quote: quote)
+                return SendSnapshot(movementIDs: [], walletIdentity: quote.walletIdentity)
+            } else if checkpoint == nil {
                 var resolvedPayment = payment
                 if let invoice { resolvedPayment.destination = invoice; resolvedPayment.method = "lightning" }
                 var fresh = try await Self.quote(resolvedPayment, handles: handles)
@@ -140,10 +151,13 @@ extension WalletSession {
                 }
             case "onchain":
                 if payment.source == .onchain {
-                    receipt.status = .submitted
+                    guard let prepared = quote.prepared,
+                          await self.consumeSendReview(payment, quote: quote) else {
+                        throw SendNotSubmitted(reason: .feeChanged)
+                    }
                     do {
-                        receipt.txid = try await handles.onchain.send(
-                            address: payment.destination, amountSats: payment.amount, feeRateSatPerVb: quote.feeRate!)
+                        let result = try await handles.onchain.broadcastPrepared(id: prepared.id)
+                        receipt = try SendOnchainSubmission.receipt(result, quote: quote)
                     } catch {
                         if let reason = SendOnchainSubmission.notSubmitted(error) {
                             throw SendNotSubmitted(reason: reason)
@@ -181,7 +195,7 @@ extension WalletSession {
                     }
                 }
             }
-            if receipt.txid != nil { receipt.proof = .submitReturnedTxid }
+            if receipt.txid != nil && receipt.proof == nil { receipt.proof = .submitReturnedTxid }
             if payment.method == "onchain", payment.source == .offchain {
                 if payment.max {
                     // offboardVtxos binds reviewed coins, but Bark recomputes the fee/output at submit.
@@ -277,10 +291,10 @@ extension WalletSession {
     }
 }
 
-/// BDK drain cannot bind coin selection to a reviewed balance (FFI handoff item 14).
+/// MAX uses confirmed-only signed preparations for BDK; offboards pin their VTXOs.
 enum SendMaxValidation {
     static func available(_ payment: SendPayment) throws {
-        guard !(payment.max && payment.source == .onchain) else { throw SendFailure.onchainMaxUnavailable }
+        guard !payment.max || (payment.method == "onchain" && payment.source != nil) else { throw SendFailure.invalid }
     }
     static func offchain(currentIDs: [String], reviewedIDs: [String]?) throws {
         guard let reviewedIDs, !reviewedIDs.isEmpty, Set(currentIDs) == Set(reviewedIDs) else {
@@ -289,26 +303,26 @@ enum SendMaxValidation {
     }
 }
 
-/// Only use for an error thrown directly by OnchainWallet.send in bark-bolt-ffi 0.3.0.
+/// Only for the first broadcastPrepared call for an app-owned preparation (FFI v0.4.0).
 enum SendOnchainSubmission {
     static func notSubmitted(_ error: Error) -> SendFailure? {
-        // The Swift BarkError is a message-only struct, not a typed error enum:
-        // https://github.com/smolcars/bark-bolt-ffi/blob/v0.3.0/src/error.rs
-        // Exact outer contexts identify the pre-recording stages (never search nested messages).
-        // Address/network and fee validation precede the call into Bark:
-        // https://github.com/smolcars/bark-bolt-ffi/blob/v0.3.0/src/core/mod.rs
-        // https://github.com/smolcars/bark-bolt-ffi/blob/v0.3.0/src/core/onchain.rs
-        guard let message = (error as? BarkError)?.message else { return nil }
-        if message.hasPrefix("invalid bitcoin address: ")
-            || ["bitcoin", "testnet", "testnet4", "signet", "regtest"].contains(where: {
-                message.hasPrefix("bitcoin address is not valid on \($0): ")
-            }) { return .invalid }
-        if message == "Invalid fee rate" { return .feeChanged }
-        // prepare_tx's b.finish() (including coin-selection insufficient funds) is before
-        // sign_psbt, record_broadcast_tx and broadcast. Persist/broadcast/unknown errors remain uncertain.
-        // https://gitlab.com/ark-bitcoin/bark/-/blob/bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c/bark/src/onchain/bdk.rs
-        if message.hasPrefix("Send failed: error building tx: ") { return .constructionFailed }
-        return nil
+        guard let code = (error as? BarkError)?.code else { return nil }
+        // core/onchain.rs checks these before record_prepared; the app never retries this id.
+        switch code {
+        case .preparedTransactionNotFound, .preparedInputsUnavailable: return .fundsChanged
+        default: return nil
+        }
+    }
+    static func receipt(_ result: BroadcastResult, quote: SendQuote) throws -> SendReceipt {
+        guard let prepared = quote.prepared, result.txid == prepared.txid else { throw SendFailure.unresolved }
+        switch result.broadcast {
+        case .notAttempted: throw SendNotSubmitted(reason: .constructionFailed)
+        case .accepted, .failed:
+            var receipt = SendReceipt(amount: quote.amount, txid: result.txid, status: .submitted,
+                                      fee: quote.fee, proof: .preparedTxid)
+            if case .failed = result.broadcast { receipt.broadcastRetryPending = true }
+            return receipt
+        }
     }
 }
 

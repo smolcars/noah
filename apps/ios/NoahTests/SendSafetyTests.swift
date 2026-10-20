@@ -87,40 +87,22 @@ import Testing
         #expect(try SendReconciliation.onchain(saved, transactions: [transaction(), transaction(id: "second")]) == .possibleTransactions(["new", "second"]))
     }
 
-    @Test func onchainMaxCannotReachWalletOrDrain() async throws {
+    @Test func onchainMaxRequiresPreparationAndAnOpenWallet() async throws {
         let payment = attempt("onchain", source: .onchain, max: true).payment
-        #expect(throws: SendFailure.onchainMaxUnavailable) { try SendMaxValidation.available(payment) }
-        // A closed session would throw notOpen if the submission guard reached the SDK.
+        try SendMaxValidation.available(payment)
         let session = WalletSession(variant: .regtest)
-        do {
+        await #expect(throws: WalletSession.SessionError.notOpen) {
             _ = try await session.submitSend(payment, quote: quote, snapshot: .init(movementIDs: []))
-            Issue.record("Onchain MAX must never submit")
-        } catch let error as SendNotSubmitted {
-            #expect(error.reason == .onchainMaxUnavailable)
         }
-        try SendMaxValidation.available(attempt("onchain", source: .offchain, max: true).payment)
     }
 
-    @Test func onlyPinnedPreRecordingErrorContextsUnlockOnchainSend() {
-        for message in [
-            "invalid bitcoin address: base58 error",
-            "bitcoin address is not valid on regtest: validation error",
-            "Invalid fee rate",
-            "Send failed: error building tx: Insufficient funds: 100 available of 1000 needed",
-        ] {
-            #expect(SendOnchainSubmission.notSubmitted(BarkError(message: message)) != nil)
+    @Test func onlyTypedFirstBroadcastRefusalsUnlockOnchainSend() {
+        for code in BarkErrorCode.allCases {
+            let failure = SendOnchainSubmission.notSubmitted(BarkError(message: "arbitrary diagnostic", code: code))
+            #expect((failure != nil) == [.preparedTransactionNotFound, .preparedInputsUnavailable].contains(code))
         }
-        for message in [
-            "Send failed: failed to persist wallet: database locked",
-            "Send failed: broadcast failed: insufficient funds",
-            "Send failed: backend: invalid bitcoin address: bad address",
-            "Send failed: unknown error", "drain failed: error building tx: insufficient funds",
-            "Insufficient funds", "Invalid fee rate: nested backend error",
-        ] {
-            #expect(SendOnchainSubmission.notSubmitted(BarkError(message: message)) == nil)
-        }
+        #expect(SendOnchainSubmission.notSubmitted(BarkError(message: "Send failed: error building tx: insufficient funds")) == nil)
         #expect(SendOnchainSubmission.notSubmitted(URLError(.timedOut)) == nil)
-        #expect(SendOnchainSubmission.notSubmitted(CancellationError()) == nil)
     }
 
     @Test func offchainMaxRequiresExactReviewedVtxos() throws {
@@ -140,7 +122,7 @@ import Testing
         let subject = SendPaymentController(
             dependencies: .init(
                 prepare: { _, _ in .init(movementIDs: [], bdkTxids: []) },
-                pay: { _, _, _ in throw SendNotSubmitted(reason: .onchainMaxUnavailable) },
+                pay: { _, _, _ in throw SendNotSubmitted(reason: .fundsChanged) },
                 reconcile: { _ in
                     Issue.record("No SDK submission occurred")
                     return .uncertain
@@ -149,7 +131,7 @@ import Testing
         subject.submit(attempt("onchain", source: .onchain, max: true).payment, quote: quote)
         try await SendPaymentTests.waitUntil { subject.state != .submitting }
         #expect(subject.state == .failed)
-        #expect(subject.message == SendFailure.onchainMaxUnavailable.errorDescription)
+        #expect(subject.message == SendFailure.fundsChanged.errorDescription)
         storage.attempt = try roundTrip(#require(storage.attempt))
         let restarted = controller(storage) { _ in .uncertain }
         #expect(restarted.state == .failed)

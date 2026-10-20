@@ -30,6 +30,7 @@ struct SendQuote: Codable, Sendable, Equatable {
     var walletIdentity: SendWalletIdentity?
     var checkpoint: SendLightningCheckpoint?
     var resolvedInvoice: String?
+    var prepared: SendPreparedTransaction?
     var recipientIsEstimated: Bool { vtxoIDs?.isEmpty == false }
     var recipientDescription: String { recipientIsEstimated ? "Recipient receives about \(amount) sats" : "\(amount) sats" }
     static let recipientEstimateExplanation = "The exact amount depends on the network fee when sent. The total is exactly the reviewed coins."
@@ -45,7 +46,8 @@ struct SendReceipt: Codable, Equatable, Sendable {
     var status: Status?
     var fee: UInt64?
     var proof: Proof?
-    enum Proof: String, Codable, Sendable { case submitReturnedTxid, actualMovement, submitReturnedArkSuccess }
+    var broadcastRetryPending: Bool?
+    enum Proof: String, Codable, Sendable { case preparedTxid, submitReturnedTxid, actualMovement, submitReturnedArkSuccess }
     enum Status: String, Codable, Sendable { case submitted, confirmed, unlocated }
     var amountDescription: String {
         amountIsPending == true ? "Recipient amount pending" : "\(amountIsEstimated == true ? "About " : "")\(amount) sats"
@@ -56,6 +58,9 @@ struct SendReceipt: Codable, Equatable, Sendable {
         case .submitReturnedArkSuccess:
             return payment.method == "ark" && amount > 0 && amount == payment.amount
                 && txid == nil && paymentHash == nil && amountIsPending != true
+        case .preparedTxid:
+            return payment.method == "onchain" && payment.source == .onchain && txid?.isEmpty == false
+                && amount > 0 && (payment.max || amount == payment.amount)
         case .submitReturnedTxid:
             return payment.method == "onchain" && txid?.isEmpty == false
                 && (amount > 0 || (payment.max && payment.source == .offchain && amountIsPending == true))
@@ -82,11 +87,10 @@ struct SendSnapshot: Codable, Sendable {
     var checkpoint: SendLightningCheckpoint?
 }
 enum SendFailure: LocalizedError {
-    case invalid, insufficient, expired, ownAddress, feeChanged, unresolved, onchainMaxUnavailable, fundsChanged, constructionFailed, lightningInProgress
+    case invalid, insufficient, expired, ownAddress, feeChanged, unresolved, fundsChanged, constructionFailed, lightningInProgress
     var errorDescription: String? {
         switch self {
         case .lightningInProgress: "Another Lightning payment is still in progress. Try again once it completes."
-        case .onchainMaxUnavailable: "Sending your entire onchain balance isn’t available yet. Enter an amount instead."
         case .constructionFailed: "The transaction could not be built. No payment was submitted. Review the amount and fee."
         case .fundsChanged: "The available funds changed. Review the payment again."
         case .invalid: "Enter a valid destination and a whole-satoshi amount greater than zero."
@@ -122,6 +126,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         var walletIdentity: SendWalletIdentity?
         var inspectionPending: Bool?
         var safetyVersion: Int? = 3
+        var broadcastingTxid: String?
         var payment: SendPayment
         var snapshot: SendSnapshot
         var receipt: SendReceipt?
@@ -142,6 +147,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         var read: () throws -> Attempt?
         var write: (Attempt?) throws -> Void
         var identity: (() throws -> SendWalletIdentity)?
+        var discard: @Sendable (SendQuote) async -> Void = { _ in }
         var withReservation: @Sendable (@escaping @MainActor @Sendable () async -> Void) async throws -> Void = { await $0() }
     }
     enum Resolution: Sendable, Equatable {
@@ -241,12 +247,14 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
             } }
             catch {
                 guard generation == self.generation else { return }
+                await dependencies.discard(quote)
                 state = .ready
                 message = "Unable to reserve the wallet. No payment was submitted."
             }
         }
     }
     private func performSubmit(_ payment: SendPayment, quote: SendQuote, generation: Int) async {
+        defer { Task { await dependencies.discard(quote) } }
         do {
             let identity = try dependencies.identity?()
             // Lightning inspection errors must survive restart without granting permission to pay.
@@ -257,7 +265,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
             }
             let snapshot = try await dependencies.prepare(payment, quote)
             guard generation == self.generation else { return }
-            let pending = Attempt(walletIdentity: identity, payment: payment, snapshot: snapshot,
+            let pending = Attempt(walletIdentity: identity, broadcastingTxid: quote.prepared?.txid, payment: payment, snapshot: snapshot,
                                   paymentHash: PaymentEncoding.invoice(snapshot.resolvedInvoice ?? (payment.method == "lightning" ? payment.destination : ""))?.hash, quote: quote)
             try dependencies.write(pending)
             attempt = pending
@@ -367,7 +375,9 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     }
     func acknowledge() {
         switch state {
-        case .succeeded, .alreadyPaid, .failed: break
+        case .succeeded(let receipt):
+            guard receipt.broadcastRetryPending != true else { return }
+        case .alreadyPaid, .failed: break
         default: return
         }
         clearAttempt()
@@ -412,6 +422,7 @@ extension SendPaymentController.Dependencies {
                 let properties = try WalletDatabase.properties(at: location.database)
                 return .init(fingerprint: properties.fingerprint, network: properties.network)
             },
+            discard: { await session.discardSend($0, includingClaimed: true) },
             withReservation: { try await session.withSendReservation($0) })
     }
 }

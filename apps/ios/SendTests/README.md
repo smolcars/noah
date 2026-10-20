@@ -1,5 +1,129 @@
 # Native Send verification
 
+## FFI 0.4.0 adoption (2026-10-19)
+
+This section supersedes the historical disabled-MAX and estimated-BDK-send notes
+below. Onchain-wallet review now calls `prepareSend` with `.amount` or `.drainAll`
+and `confirmedOnly: true`. Review shows the signed recipient amount, fee, total,
+vsize and input count. Confirm claims that process-local handle; it does not
+re-estimate, rebuild, send or drain. The durable attempt stores `broadcastingTxid`
+and the complete reviewed quote **before** the first `broadcastPrepared(id)` call.
+
+Reviews expire **two minutes after signing**, releasing the reserved inputs and
+returning to editing. A new review fetches a fresh fee rate and signs again.
+Back, editing/reset, sheet dismissal, leaving Send, app inactivity and late or
+canceled quote results discard unclaimed preparations. The session owns a timeout
+independent of the sheet. Confirmation cancels that timeout while the existing
+Send reservation protects journaling/submission. Failure to save the journal also
+discards the preparation. `WalletSession.close` drains running calls and discards
+all remaining handles before stopping the daemon, covering close/suspend/delete
+without modifying `WalletLifecycle` or `AppModel`. A reopened wallet never accepts
+an old review handle.
+
+`accepted` produces a Submitted receipt for the exact prepared txid and values.
+`failed` produces a locked Submitted receipt with **“Noah will keep retrying the
+broadcast”**; Done/override cannot release it. Core may already have received a
+failed RPC, and Bark retains the spend for sync retry. Confirmation clears this
+broadcast-pending flag. `notAttempted` produces a not-submitted error and permits
+a new review through the failure screen. Discard after submission forgets only
+the SDK handle and cannot cancel the stored spend or its retries. Raw SDK reasons
+are not exposed in this UI; `SafeErrorDescription` redaction is unchanged.
+
+After a crash in the broadcasting phase, only `broadcastingTxid` found in BDK
+state establishes Submitted/Confirmed, using the signed reviewed values. Absence
+stays uncertain with the existing destructive override: canonical history can
+evict an unconfirmed transaction. Snapshot differences/possible matches apply
+only to older journals without this exact identity; all existing wallet-identity
+quarantine and outcome-provenance migrations remain conservative.
+
+Typed-error audit against the resolved **v0.4.0** sources:
+
+- [`core/onchain.rs`](https://github.com/smolcars/bark-bolt-ffi/blob/v0.4.0/src/core/onchain.rs)
+  `prepare_send`/`prepared_onchain.rs` sign without recording/broadcasting. Any
+  failed preparation is safe to abandon. For the app's **first and only**
+  `broadcast_prepared` call, `preparedTransactionNotFound` and
+  `preparedInputsUnavailable` precede recording; they permit another review.
+  Persistence failures use `notAttempted`. Other thrown errors stay uncertain.
+  This classifier must never be reused for retrying an already-recorded ID.
+- [`error.rs`](https://github.com/smolcars/bark-bolt-ffi/blob/v0.4.0/src/error.rs)
+  maps BDK `CreateTxError::CoinSelection/NoUtxosSelected` to `insufficientFunds`
+  and `OutputBelowDustLimit` to `dust`. Pinned Bark's `board` builds the PSBT
+  before signing, requesting cosignatures or writing its payment checkpoint;
+  these two codes from `boardAmount`/`boardAll` are safe to release.
+- [`core/wallet.rs`](https://github.com/smolcars/bark-bolt-ffi/blob/v0.4.0/src/core/wallet.rs)
+  refresh/start/cancel ID validation and claim PSBT/address failures still use
+  `other`; they remain uncertain rather than being inferred from message text.
+  Claim broadcasting is separately wrapped as uncertain. Local pre-broadcast
+  claim-fee changes and explicit canceled/refused results retain their existing
+  safe behavior. No diagnostic-prefix allowlist remains in Send or M6.
+- Round-5 Lightning adoption still validates canonical invoice, hash, amount,
+  movement/revocation evidence and the reviewed fee/total bounds before
+  `checkLightningPayment`. 0.4.0 preserves these fields; no Lightning code change
+  was necessary. Boarding and Ark→onchain MAX/offboards retain estimate copy
+  because no prepared API exists for those operations (FFI 18 / remaining 14).
+
+Targeted verification: **38 tests / 63 individual runs**, 0 failures/skips,
+including all broadcast outcomes, pre-broadcast journal contents, failed-broadcast
+restart locking, exact-id crash reconciliation, wrong-id/absent history, legacy
+journals and typed errors for every M6 action. Initial test compilation caught a
+non-Sendable test-storage capture; it was corrected before the passing run.
+The full `NoahTests` suite was run **once** after the final code changes:
+**342 total, 326 passed, 16 opt-in skipped, 0 failed**, across **79 suites**;
+parameterized execution reports **388 passed / 16 skipped**. No target or suite
+was excluded. All runs used Nix, XcodeGen, normal simulator code signing,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, disabled parallel testing and
+`/private/tmp/noah-040-a7-dd`. Summaries were exported from xcresulttool before
+removing the result bundles.
+
+Live verification used a fresh throwaway wallet on **Noah Prepared 040 a7dba81a**,
+iPhone 17 / iOS 27.0, UDID `53C1AED5-6012-4B4D-B72B-684104C80488`:
+
+- Funded once with 60,000 + 40,000 sats via two Core payments; exactly two blocks
+  mined to confirm funding. No service, container, other wallet or device reset.
+- Native Back from a signed 5,000-sat review released its reservation. Core
+  reported “Transaction not in mempool” before confirmation; another preparation
+  successfully used the same input. The live harness also refused expired and
+  edited reviews, closed/reopened the wallet, verified its preparation registry
+  was empty, and refused the stale pre-close handle.
+- Entered-amount review/receipt/Core agree: **5,000 sats**, **143-sat fee**,
+  **142 vbytes**, **1 input**, txid `c2ef1c4aff32…`. Core independently decoded
+  the recipient output and reported the mempool fee; no outgoing block mined.
+- Confirmed-only MAX review/receipt/Core agree: **59,900 sats**, **100-sat fee**,
+  **99 vbytes**, **1 input**, txid `c453b0573f2a…`. It spent the remaining
+  **60,000 confirmed sats**, excluding **34,857 sats of unconfirmed change**.
+- The production app reopened the unacknowledged MAX receipt. The app process was
+  explicitly terminated with `simctl terminate`, then relaunched. Send again
+  showed Submitted, 59,900 sats, Actual fee 100 sats, and the **same full txid**.
+  The crash-before-final-receipt-write case uses the journal regression tests;
+  this live kill was after the returned receipt had been saved.
+
+The opt-in live test passed **1 test, 0 failures/skips**, through production
+session/SDK, controller/journal and native confirmation UI (Back/Confirm driven
+through the Device panel). Broadcast `failed`/`notAttempted` were covered with
+SDK-value/controller regressions rather than injecting storage/network faults
+into the shared regtest stack. External providers and physical hardware were not
+exercised in this round.
+
+Repeat with `TEST_RUNNER_NOAH_PREPARED_LIVE=1` and a fresh Core address in
+`TEST_RUNNER_NOAH_PREPARED_RECIPIENT`, selecting
+`-only-testing:NoahTests/SendPreparedLiveTests/preparedReviewCancelEnteredAndMax()`.
+Fund `Documents/prepared-fund.txt` with two confirmed UTXOs totaling 100,000 sats.
+Tap Back on the first review, inspect/tap Confirm on the second, then create
+`Documents/prepared-max-go` after checking the entered receipt. Inspect/confirm
+MAX, reopen the real app and kill/relaunch before Done. The harness exports
+`Documents/prepared-{cancel-review,entered-review,entered-receipt,max-review,max-receipt}.json`.
+Never rerun the creating test in a wallet that already holds funds/journals.
+
+Artifacts: `/private/tmp/noah-040-{targeted-summary,entered-core-evidence,max-core-evidence}.json`,
+`/private/tmp/noah-040-*-ax.txt`, and review/relaunch PNGs. Runtime destinations,
+seeds and databases are not committed. DerivedData and xcresult bundles are
+removed during final cleanup; summary JSON/logs retain the verification counts.
+Cleanup completed: closed the Device panel, verified the owned simulator’s exact
+name/UDID and Shutdown state, deleted only that simulator, and confirmed its
+absence. Removed the owned DerivedData directory and all result bundles, including
+the initial failed-build bundle. Other simulators/devices and Docker lifecycle
+were untouched.
+
 Run shared fixture generation from the repository root:
 
 ```sh
@@ -21,7 +145,7 @@ cd apps/ios
 xcodegen generate
 xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest \
   -destination "platform=iOS Simulator,id=$SEND_SIMULATOR" \
-  -derivedDataPath build/DerivedData test \
+  -derivedDataPath /private/tmp/noah-send-derived test \
   ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -parallel-testing-enabled NO
 ```
 

@@ -119,16 +119,25 @@ enum SendReconciliation {
         throws
         -> SendPaymentController.Resolution
     {
-        if var receipt = attempt.receipt, receipt.proof == .submitReturnedTxid, let txid = receipt.txid {
+        if var receipt = attempt.receipt, [.submitReturnedTxid, .preparedTxid].contains(receipt.proof), let txid = receipt.txid {
             if let tx = transactions.first(where: { $0.txid == txid }) {
                 receipt.status = tx.confirmation == nil ? .submitted : .confirmed
                 receipt.fee = tx.onchainFeeSats ?? receipt.fee
+                if tx.confirmation != nil { receipt.broadcastRetryPending = nil }
             } else {
                 // External offboards aren't in BDK's wallet history (FFI handoff item 15).
                 receipt.status = attempt.payment.source == .offchain ? .submitted : .unlocated
             }
             return .paid(receipt)
         }
+        if let txid = attempt.broadcastingTxid, let quote = attempt.quote,
+           quote.prepared?.txid == txid, attempt.payment.method == "onchain", attempt.payment.source == .onchain {
+            guard let tx = transactions.first(where: { $0.txid == txid }) else { return .uncertain }
+            return .paid(.init(amount: quote.amount, txid: txid,
+                               status: tx.confirmation == nil ? .submitted : .confirmed,
+                               fee: quote.fee, proof: .preparedTxid))
+        }
+        // Legacy journals have no exact pre-broadcast identity; retain their conservative evidence path.
         guard attempt.payment.method == "onchain", attempt.payment.source == .onchain, !attempt.payment.max,
             let previous = attempt.snapshot.bdkTxids
         else { return .uncertain }
