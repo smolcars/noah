@@ -128,6 +128,10 @@ struct OnchainReceipt: Codable, Sendable, ExpressibleByStringLiteral {
         self.txid = txid
         self.onchainFee = onchainFee
     }
+    static func boardingMessage(fee: UInt64?) -> String {
+        "Boarding submitted. Funds become spendable after the board completes."
+            + (fee.map { " Actual onchain fee: \($0) sats." } ?? " Actual onchain fee is not yet available.")
+    }
     init(stringLiteral value: String) { message = value }
     init(from decoder: Decoder) throws {
         if let message = try? decoder.singleValueContainer().decode(String.self) {

@@ -14,6 +14,7 @@ final class OnchainModel {
         var check: @Sendable (UUID) async throws -> Bool = { _ in false }
         var discard: @Sendable (UUID) async throws -> Void = { _ in }
         var detail: @Sendable (String) async throws -> ExitModel? = { _ in nil }
+        var refreshReceipts: @Sendable () async throws -> Void = {}
         static func live(session: WalletSession = .shared) -> Self {
             Self(
                 ready: {
@@ -30,7 +31,8 @@ final class OnchainModel {
                 acknowledge: { try await OnchainOperationJournal.shared.acknowledge($0) },
                 check: { try await session.checkOnchainAttempt($0) },
                 discard: { try await OnchainOperationJournal.shared.discardUncertain($0) },
-                detail: { try await session.exitDetail($0) })
+                detail: { try await session.exitDetail($0) },
+                refreshReceipts: { try await session.refreshOnchainReceiptFees() })
         }
     }
     private let dependencies: Dependencies
@@ -68,6 +70,9 @@ final class OnchainModel {
                 invalidate()
                 throw OnchainFailure.unavailable
             }
+            // Fee lookup is optional after submission; it must never hide an existing receipt.
+            try? await dependencies.refreshReceipts()
+            attempts = try await dependencies.attempt()
             let token = generation
             if let detailID {
                 let detail = try await dependencies.detail(detailID)

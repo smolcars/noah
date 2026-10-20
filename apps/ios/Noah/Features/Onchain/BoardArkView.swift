@@ -74,7 +74,7 @@ struct AutoBoardingService: View {
                                 !(await WalletBackgroundActivity.shared.isRunning)
                             else { throw OnchainFailure.unavailable }
                             message = try await app.session.executeOnchain(quote)
-                            try await OnchainOperationJournal.shared.acknowledge(quote.id)
+                            // Keep the receipt for fee reconciliation and explicit Done in Board to Ark.
                             await app.refresh()
                         } catch {
                             message =

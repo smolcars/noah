@@ -220,8 +220,7 @@ extension WalletSession {
                     // A receipt must survive even when the optional fee lookup fails after submission.
                     let fee = try? await handles.onchain.transactions().first { $0.txid == board.txid }?.onchainFeeSats
                     return OnchainReceipt(
-                        message: "Boarding submitted. Funds become spendable after the board completes."
-                            + (fee.map { " Actual onchain fee: \($0) sats." } ?? " Actual onchain fee is not yet available."),
+                        message: OnchainReceipt.boardingMessage(fee: fee),
                         txid: board.txid, onchainFee: fee)
                 case .refresh:
                     let round = try await handles.wallet.refreshVtxosDelegated(vtxoIds: quote.ids)
@@ -253,6 +252,20 @@ extension WalletSession {
                     return "Exit canceled. The VTXO remains spendable."
                 }
             }
+        }
+    }
+
+    func refreshOnchainReceiptFees(journal: OnchainOperationJournal = .shared) async throws {
+        let attempts = try await journal.loadAll()
+        guard attempts.contains(where: {
+            $0.quote.action == .board && $0.receipt?.txid != nil && $0.receipt?.onchainFee == nil
+        }) else { return }
+        try await withOpenWallet { handles in
+            let transactions = try await handles.onchain.transactions()
+            let fees = Dictionary(transactions.compactMap { transaction -> (String, UInt64)? in
+                transaction.onchainFeeSats.map { (transaction.txid, $0) }
+            }, uniquingKeysWith: { first, _ in first })
+            try await journal.refreshBoardFees(walletID: handles.wallet.fingerprint(), fees: fees)
         }
     }
 

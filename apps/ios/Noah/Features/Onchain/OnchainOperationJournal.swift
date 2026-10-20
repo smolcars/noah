@@ -111,6 +111,21 @@ actor OnchainOperationJournal {
         try update(id, receipt: receipt)
         return true
     }
+    func refreshBoardFees(walletID: String, fees: [String: UInt64]) throws {
+        guard !running else { return }
+        var attempts = try loadAll()
+        var changed = false
+        for index in attempts.indices {
+            guard attempts[index].quote.walletID == walletID, attempts[index].quote.action == .board,
+                var receipt = attempts[index].receipt, receipt.onchainFee == nil,
+                let txid = receipt.txid, let fee = fees[txid] else { continue }
+            receipt.onchainFee = fee
+            receipt.message = OnchainReceipt.boardingMessage(fee: fee)
+            attempts[index].receipt = receipt
+            changed = true
+        }
+        if changed { try save(attempts) }
+    }
     func acknowledge(_ id: UUID? = nil) throws {
         guard !running, let attempt = try loadAll().first(where: { id == nil || $0.id == id }),
             attempt.receipt != nil else { throw OnchainFailure.uncertain }

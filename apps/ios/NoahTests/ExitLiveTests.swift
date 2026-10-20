@@ -41,11 +41,11 @@ struct ExitLiveTests {
         let owned = try String(contentsOf: URL.documentsDirectory.appending(path: "m6-live-owned-wallet.txt"), encoding: .utf8)
         try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "m6-acceptance")
         guard try await session.summary()?.fingerprint == owned else { throw OnchainFailure.invalid }
-        if !["estimate", "uncertain-board", "check-uncertain-board", "cancel-cycle", "cancel-reopen"].contains(stage) {
+        if !["estimate", "uncertain-board", "check-uncertain-board", "cancel-cycle", "cancel-reopen", "board-missing-fee", "reconcile-fee"].contains(stage) {
             try await session.close()
             try await session.ensureOpen(mnemonic: mnemonic, runDaemon: true, appVersion: "m6-acceptance")
         }
-        if stage == "board" {
+        if stage == "board" || stage == "board-missing-fee" {
             try await session.sync()
             let quote = try await session.quoteOnchain(.board, amount: 30000)
             #expect(quote.confirmed >= quote.amount + quote.chainFee)
@@ -55,7 +55,31 @@ struct ExitLiveTests {
                 "receipt": receipt, "gross": "\(quote.amount)", "arkFee": "\(quote.fee)",
                 "chainFee": "\(quote.chainFee)",
             ]).write(to: URL.documentsDirectory.appending(path: "m6-live-board.json"), options: .atomic)
-            try await OnchainOperationJournal.shared.acknowledge()
+            if stage == "board-missing-fee" {
+                let file = WalletDataLocation(variant: .regtest).directory.appending(path: "noah-onchain-attempt.json")
+                var attempts = try await OnchainOperationJournal.shared.loadAll()
+                let index = try #require(attempts.firstIndex { $0.id == quote.id })
+                // Simulate the optional initial fee lookup being unavailable, retaining the real txid.
+                attempts[index].receipt?.onchainFee = nil
+                attempts[index].receipt?.message = OnchainReceipt.boardingMessage(fee: nil)
+                try JSONEncoder().encode(attempts).write(to: file, options: .atomic)
+                try JSONEncoder().encode(attempts[index]).write(
+                    to: URL.documentsDirectory.appending(path: "m6-live-board-missing-fee.json"), options: .atomic)
+            } else { try await OnchainOperationJournal.shared.acknowledge(quote.id) }
+        } else if stage == "reconcile-fee" {
+            let before = try #require(try await OnchainOperationJournal.shared.load())
+            #expect(before.receipt?.onchainFee == nil && before.receipt?.txid != nil)
+            let transactionsBefore = try await session.withOpenWallet { try await $0.onchain.transactions().map(\.txid) }
+            let model = OnchainModel()
+            await model.load()
+            let after = try #require(model.attempt)
+            #expect(after.receipt?.onchainFee != nil)
+            #expect(after.receipt?.txid == before.receipt?.txid)
+            let transactionsAfter = try await session.withOpenWallet { try await $0.onchain.transactions().map(\.txid) }
+            #expect(Set(transactionsBefore) == Set(transactionsAfter))
+            try JSONEncoder().encode(after).write(
+                to: URL.documentsDirectory.appending(path: "m6-live-reconcile-fee.json"), options: .atomic)
+            try await OnchainOperationJournal.shared.acknowledge(after.id)
         } else if stage == "uncertain-board" {
             try await session.sync()
             let quote = try await session.quoteOnchain(.board, amount: 30000)

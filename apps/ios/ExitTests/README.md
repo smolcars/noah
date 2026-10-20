@@ -28,6 +28,9 @@ Other deliberate differences from RN:
   amounts are estimates: the final fee may be higher if more coins are needed.
   The receipt persists/displays the SDK's actual `onchainFeeSats` when available;
   a failed fee lookup cannot turn a returned submission into an unknown outcome.
+  Missing actual fees are retried by exact persisted receipt txid on screen refresh,
+  polling and relaunch, updating the saved receipt/message without resubmission.
+  Auto-Board also retains its receipt until Done in Settings → Board to Ark.
   Prepared boarding (FFI 18) has the same priority as prepared sends (FFI 14).
 - Confirmation must be younger than 30 seconds for every M6 mutation. The session
   rechecks wallet identity, selected VTXOs, destination, amounts, both fee legs and
@@ -317,3 +320,85 @@ with an empty overview, and suspension clearing the detail.
 Opt-in `cancel-cycle` and `cancel-reopen` stages keep the daemon disabled so a
 throwaway exit can be canceled before automatic final broadcast; normal app
 automatic progression remains unchanged.
+
+Receipt-fee follow-up passed **3 tests in 2 suites**, zero skips/failures: two
+`OnchainReceiptFeeTests` plus the opt-in `board-missing-fee` live stage, result
+`/tmp/noah-m6-recovery-ee0d-fees-board.xcresult`. Fee tests cover an unavailable
+lookup, exact txid/wallet matching, persistence after reopen, unchanged actual
+fees and zero submission calls from model refresh.
+
+### Live recovery review verification
+
+All **seven live stages** (`create`, `board-missing-fee`, `reconcile-fee`,
+`cancel-cycle`, `cancel-reopen`, `uncertain-board`, `check-uncertain-board`) passed
+one selected Swift Testing function each, with zero skips/failures. The board
+stage also ran the two fee unit tests above. Every live invocation used the full
+`-only-testing:NoahTests/ExitLiveTests/regtestAcceptance()` ID, arm64,
+`ONLY_ACTIVE_ARCH=YES`, ad-hoc signing, `-jobs 2`, isolated derived data and the
+owned simulator listed above. Each result/log is under
+`/tmp/noah-m6-recovery-ee0d-<stage>.xcresult` / `.log`, except the combined board
+stage uses `fees-board`. JSON evidence and the rendered canceled detail screenshot
+are copied to `/tmp/noah-m6-recovery-ee0d-evidence/` before simulator deletion.
+
+- Created a throwaway native wallet, fingerprint `1f74458b`, with automatic
+  boarding disabled. No seed was printed or exported. Funded it with **100,000
+  sats** from Core's regtest `dev-wallet` using `just send-to`; funding txid
+  `309a76a4405225323ac36e799a55961329c0c0674163ae1b38b170df761c1899`,
+  confirmed in block **449** by the wrapper's one block. No Docker lifecycle
+  command or unrelated wallet reset was used.
+- Boarded **30,000 sats gross / 29,670 net**, with **330 sats estimated Ark fee**
+  and **208 sats estimated chain fee**. Txid
+  `c1811d23be12142ceac6617cb4cb7438906fb96c2835e489549eb19fa1397062`.
+  The initial SDK actual fee was **1,543 sats**. To exercise an unavailable
+  initial lookup, the harness removed only the receipt's fee/message, retaining
+  the actual txid. A new test process reopened the wallet and called the production
+  model's `load`: the saved receipt gained **1,543 sats** and the actual-fee message,
+  with the same txid and unchanged wallet transaction set. No board was repeated.
+- Mined exactly **three** board-confirmation blocks with `just generate 3`, reaching
+  **452**. With the daemon disabled only for this explicit cancellation test,
+  started then canceled VTXO
+  `06b19efc51711569e274792053652eadff9c8914912459085675abae58043601:0`
+  through freshly reviewed production session operations. Bark's active list was
+  empty immediately afterward, while direct detail and the app overview retained
+  **Canceled**, amount **29,670 sats**, and **Start → Canceled** at height 452.
+- A separate `cancel-reopen` process reopened the wallet and repeated those detail,
+  timeline, discoverability and empty-active-list assertions. Then the normal app
+  was launched through the Device panel: Settings → Emergency Exit showed the
+  canceled row, and its detail visibly showed **Started** and **Canceled · Current**.
+  Screenshot: `/tmp/noah-m6-recovery-ee0d-evidence/canceled-detail.png`.
+- Submitted a separate reviewed **30,000-sat** board once, txid
+  `b80de545fc26f64c3f3f8904485fd6c1eedd36d122184ddc1eacf2fe795be0f3`.
+  Simulated losing the final receipt write by leaving its persisted txid and
+  removing its receipt. After reopening, the production model could review an
+  emergency exit despite that unresolved board. **Check status** resolved the
+  attempt from the exact txid; the receipt recorded **1,543 sats**, and the wallet
+  transaction set was unchanged before/after checking. Core's `getmempoolentry`
+  independently showed this tx: **616 weight units / 154 vbytes**, fee
+  **0.00001543 BTC**, `unbroadcast=false`.
+
+Limits: the receipt-loss tests simulate persisted crash outcomes; no process was
+killed during a broadcast. A crash before the SDK returns any correlatable ID
+cannot be conclusively reconciled by amount or by an empty transaction list.
+Those attempts stay scoped/uncertain until conclusive state evidence or the
+explicit destructive override; FFI 19 requests durable IDs. FFI 20 requests
+all-exit discovery for terminal records without app-known IDs or retained exit
+movements. The previous full claim lifecycle was not rerun here; no physical
+hardware or external network was used. Normal automatic exit progression, all
+review/freshness/cancellation rules and automatic-boarding thresholds are unchanged.
+
+### Final full suite
+
+The full `NoahTests` suite was run **once** after the implementation and live
+checks: **294 tests total, 282 passed, 12 explicitly gated skips, 0 failures**,
+across **69 suites**. Eleven parameterized tests expand to 50 runs, giving device
+execution **321 passed, 12 skipped**. Both counts are confirmed by
+`xcresulttool get test-results summary`. Result:
+`/tmp/noah-m6-recovery-ee0d-full.xcresult`; log:
+`/tmp/noah-m6-recovery-ee0d-full.log`; saved summary:
+`/tmp/noah-m6-recovery-ee0d-evidence/full-summary.json`. `git diff --check` passes.
+
+Cleanup: closed the owned simulator's Device panel and shut it down. Immediately
+before deletion, `simctl list devices --json` was checked for the exact name
+**Noah M6 Recovery Sol ee0d**, UDID `386B936B-02F3-4480-B542-F4FF386CDB92`, and
+**Shutdown** state. Deleted only that UDID and verified its absence. No other
+simulator, Android emulator, physical device or Docker lifecycle was changed.

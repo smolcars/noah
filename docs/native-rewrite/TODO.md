@@ -238,7 +238,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] M5 review verification: 385 Android JVM tests; regtest APK + instrumentation compilation; two API 28 device privacy/onboarding cases; full iOS NoahTests (247 passed, 10 opt-in skipped) — evidence in `apps/android/SettingsTests/README.md`
 
 ## M6 — Onchain & exits
-- [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt (prepared boarding awaits FFI 18, same priority as 14)
+- [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt with txid-only read refresh/relaunch reconciliation for missing fees (prepared boarding awaits FFI 18, same priority as 14)
 - [x] VTXOsScreen + VTXODetailScreen + delegated refresh review dialog — iOS
 - [x] Emergency-exit read-only overview/estimates, quote < 30 s, 330-sat eligibility, deposit sheet, claim/cancel reviews — iOS
 - [x] ExitVtxoDetailScreen + direct persisted terminal status/timeline, wallet-scoped exit ID discovery (including legacy exit movements); 187 RN-derived fee/cancellation/timeline/coordination/boarding fixtures — iOS
@@ -247,7 +247,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Scoped durable M6 uncertainty — iOS: unrelated recovery remains available, exact pre-broadcast allowlist, read-only Check status and explicit destructive override; legacy journal migration and relaunch tests
 - [ ] Durable operation IDs for pre-ID ambiguous board/refresh outcomes — FFI 19; iOS never reconciles by amount or automatically resubmits
 - [x] Live exit start → automatic daemon broadcast/CPFP → 144-block timelock → reviewed manual progress → claim/confirmation — iOS; manual boarding/MAX actual fees and suspended UI verified (see `apps/ios/ExitTests/README.md`)
-- [ ] Live exit cancellation before final broadcast — iOS (fixture coverage passes; daemon progressed the acceptance exit before cancellation)
+- [x] Live exit cancellation before final broadcast — iOS throwaway wallet; canceled detail/timeline and overview retained after reopen; simulated lost board receipt leaves exits available and read-only Check status resolves exact txid (see `apps/ios/ExitTests/README.md`)
 - [ ] BoardArkScreen, auto-boarding, VTXOs/details/refresh, all exit screens — Android
 
 ## M7 — Recurring payments
