@@ -143,6 +143,26 @@
     {
       "input": "https://[0:0::1]/api",
       "endpoint": "https://[::1]/api"
+    },
+    {
+      "input": "http://[fe80::1%25en0]",
+      "endpoint": null
+    },
+    {
+      "input": "http://[fe80::1%en0]",
+      "endpoint": null
+    },
+    {
+      "input": "https://example.com:99999999999999999999999999/api",
+      "endpoint": null
+    },
+    {
+      "input": "https://example.com:443:error/api",
+      "endpoint": null
+    },
+    {
+      "input": "https://example.com:invalid/api",
+      "endpoint": null
     }
   ],
   "genesis": [

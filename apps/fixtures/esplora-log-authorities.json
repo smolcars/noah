@@ -2,676 +2,1315 @@
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example,",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example\"",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]\""
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example'",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]'"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example]",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example>",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]>"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example ",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora] "
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example/other",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https%3A%2F%2Fbücher.example)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https:\\/\\/bücher.example)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https&#58;&#47;&#47;bücher.example)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS://BÜCHER.EXAMPLE.:443",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS://BÜCHER.EXAMPLE.:443)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS://BÜCHER.EXAMPLE.:443,",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS://BÜCHER.EXAMPLE.:443\"",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]\""
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS://BÜCHER.EXAMPLE.:443'",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]'"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS://BÜCHER.EXAMPLE.:443]",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS://BÜCHER.EXAMPLE.:443>",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]>"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS://BÜCHER.EXAMPLE.:443 ",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora] "
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS://BÜCHER.EXAMPLE.:443/other",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS%3A%2F%2FBÜCHER.EXAMPLE.%3A443)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS:\\/\\/BÜCHER.EXAMPLE.:443)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS&#58;&#47;&#47;BÜCHER.EXAMPLE.&#58;443)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://xn--bcher-kva.example",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://xn--bcher-kva.example)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://xn--bcher-kva.example,",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://xn--bcher-kva.example\"",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]\""
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://xn--bcher-kva.example'",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]'"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://xn--bcher-kva.example]",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://xn--bcher-kva.example>",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]>"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://xn--bcher-kva.example ",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora] "
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://xn--bcher-kva.example/other",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https%3A%2F%2Fxn--bcher-kva.example)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https:\\/\\/xn--bcher-kva.example)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https&#58;&#47;&#47;xn--bcher-kva.example)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0::1]:8443",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0::1]:8443)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0::1]:8443,",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0::1]:8443\"",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]\""
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0::1]:8443'",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]'"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0::1]:8443]",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0::1]:8443>",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]>"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0::1]:8443 ",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora] "
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0::1]:8443/other",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https%3A%2F%2F[0%3A0%3A%3A1]%3A8443)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https:\\/\\/[0:0::1]:8443)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https&#58;&#47;&#47;[0&#58;0&#58;&#58;1]&#58;8443)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0:0:0:0:0:0:1]:8443",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0:0:0:0:0:0:1]:8443)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0:0:0:0:0:0:1]:8443,",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0:0:0:0:0:0:1]:8443\"",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]\""
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0:0:0:0:0:0:1]:8443'",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]'"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0:0:0:0:0:0:1]:8443]",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0:0:0:0:0:0:1]:8443>",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]>"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0:0:0:0:0:0:1]:8443 ",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora] "
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0:0:0:0:0:0:1]:8443/other",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https%3A%2F%2F[0%3A0%3A0%3A0%3A0%3A0%3A0%3A1]%3A8443)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https:\\/\\/[0:0:0:0:0:0:0:1]:8443)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https&#58;&#47;&#47;[0&#58;0&#58;0&#58;0&#58;0&#58;0&#58;0&#58;1]&#58;8443)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[::1]:8443/other",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[::1]:8443/other)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[::1]:8443/other,",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[::1]:8443/other\"",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]\""
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[::1]:8443/other'",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]'"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[::1]:8443/other]",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[::1]:8443/other>",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]>"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[::1]:8443/other ",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora] "
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[::1]:8443/other/other",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https%3A%2F%2F[%3A%3A1]%3A8443%2Fother)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https:\\/\\/[::1]:8443\\/other)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https&#58;&#47;&#47;[&#58;&#58;1]&#58;8443&#47;other)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80,",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80\"",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]\""
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80'",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]'"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80]",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80>",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]>"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80 ",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora] "
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80/other",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http%3A%2F%2F[2001%3A0DB8%3A0%3A0%3A0%3A0%3A0%3AABCD]%3A80)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http:\\/\\/[2001:0DB8:0:0:0:0:0:ABCD]:80)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http&#58;&#47;&#47;[2001&#58;0DB8&#58;0&#58;0&#58;0&#58;0&#58;0&#58;ABCD]&#58;80)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:db8::ABCD]",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:db8::ABCD])",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:db8::ABCD],",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:db8::ABCD]\"",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]\""
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:db8::ABCD]'",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]'"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:db8::ABCD]]",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:db8::ABCD]>",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]>"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:db8::ABCD] ",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora] "
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:db8::ABCD]/other",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http%3A%2F%2F[2001%3Adb8%3A%3AABCD])",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http:\\/\\/[2001:db8::ABCD])",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http&#58;&#47;&#47;[2001&#58;db8&#58;&#58;ABCD])",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example.other/api",
-    "redacted": false
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example:8443/api",
-    "redacted": false
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://[::1]:8444/api",
-    "redacted": false
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "http://[::1]:8443/api",
-    "redacted": false
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://mempool.space/api/blocks/tip/height",
-    "redacted": false
+    "redacted": false,
+    "expected": "https://mempool.space/api/blocks/tip/height"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://blockstream.info/api",
-    "redacted": false
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://noahwallet.io/v0/health",
-    "redacted": false
+    "redacted": false,
+    "expected": "https://noahwallet.io/v0/health"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://unrelated.example/api",
-    "redacted": false
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://signet.noahwallet.io/v0/health",
-    "redacted": false
+    "redacted": false,
+    "expected": "https://signet.noahwallet.io/v0/health"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://mempool.second.tech/api/blocks/tip/height",
-    "redacted": false
+    "redacted": false,
+    "expected": "https://mempool.second.tech/api/blocks/tip/height"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://esplora.signet.2nd.dev/blocks/tip/height",
-    "redacted": false
+    "redacted": false,
+    "expected": "https://esplora.signet.2nd.dev/blocks/tip/height"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://b%C3%BCcher.example)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://b\\u00fccher.example)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://b&#252;cher.example)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://b&#xFC;cher.example)",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example;",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example}",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://bücher.example!",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS://BÜCHER.EXAMPLE.:443;",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS://BÜCHER.EXAMPLE.:443}",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "HTTPS://BÜCHER.EXAMPLE.:443!",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://xn--bcher-kva.example;",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://xn--bcher-kva.example}",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://xn--bcher-kva.example/api",
     "input": "https://xn--bcher-kva.example!",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0::1]:8443;",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0::1]:8443}",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0::1]:8443!",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0:0:0:0:0:0:1]:8443;",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0:0:0:0:0:0:1]:8443}",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[0:0:0:0:0:0:0:1]:8443!",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[::1]:8443/other;",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[::1]:8443/other}",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "https://[::1]:8443/api",
     "input": "https://[::1]:8443/other!",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80;",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80}",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:0DB8:0:0:0:0:0:ABCD]:80!",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:db8::ABCD];",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:db8::ABCD]}",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
   },
   {
     "endpoint": "http://[2001:db8::abcd]/api",
     "input": "http://[2001:db8::ABCD]!",
-    "redacted": true
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake-review-r5.example:invalid",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake-review-r5.example:443:error",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "fake-review-r5.example:invalid",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "fake-review-r5.example:443:error",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "fake-review-r5.example:443",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "fake-review-r5.example",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake+review.example/api",
+    "input": "https://fake＋review.example)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake+review.example/api",
+    "input": "fake＋review.example",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake+review.example/api",
+    "input": "https://fake+review.example)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "http://2130706433)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "2130706433",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "http://017700000001)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "017700000001",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "http://0x7f000001)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "0x7f000001",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "http://127.1)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "127.1",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "http://127.0.1)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "127.0.1",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "http://0177.0.0.1)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "0177.0.0.1",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "http://0x7f.0.0.1)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "0x7f.0.0.1",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "http://127.000.000.001)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "http://127.0.0.1/api",
+    "input": "127.000.000.001",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example]",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example]",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example,",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example,",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example;",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example;",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example!",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example!",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example$",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example$",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example&",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example&",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example*",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example*",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example+",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example+",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example=",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example=",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example^",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example^",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example`",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example`",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example|",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example|",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example}",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example}",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example:invalid",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example:invalid",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://user!name@fake-review-r5.example:443:error",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://fake＋review.example:443:error",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https%3A%2F%2Ffake-review-r5.example%3Ainvalid",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https:\\/\\/fake-review-r5.example:invalid",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https&#58;&#47;&#47;fake-review-r5.example&#58;invalid",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https%3A%2F%2Fuser!name@fake-review-r5.example)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https:\\/\\/user!name@fake-review-r5.example)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https&#58;&#47;&#47;user!name@fake-review-r5.example)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "http%3A%2F%2F2130706433)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "http:\\/\\/2130706433)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "http&#58;&#47;&#47;2130706433)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https%3A%2F%2Ffake＋review.example)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https:\\/\\/fake＋review.example)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https&#58;&#47;&#47;fake＋review.example)",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "ftp://fake-review-r5.example/api",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "custom+sdk://fake-review-r5.example/api",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://unknown-lnurl.example/callback",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://noahwallet.io.evil.example/api",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://noahwallet.io@fake-review-r5.example/api",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://noahwallet.io:invalid",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://ｎｏａｈｗａｌｌｅｔ.io/api",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://%6eoahwallet.io/api",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://noahwallet.io\\@fake-review-r5.example/api",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://ark.second.tech/health",
+    "redacted": false,
+    "expected": "https://ark.second.tech/health"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://ark.signet.2nd.dev/health",
+    "redacted": false,
+    "expected": "https://ark.signet.2nd.dev/health"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://exp.host/health",
+    "redacted": false,
+    "expected": "https://exp.host/health"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://api.btcmap.org/health",
+    "redacted": false,
+    "expected": "https://api.btcmap.org/health"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "https://tiles.openfreemap.org/health",
+    "redacted": false,
+    "expected": "https://tiles.openfreemap.org/health"
   }
 ]
