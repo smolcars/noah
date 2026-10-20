@@ -16,6 +16,7 @@ google-services = "4.5.0"
 unifiedpush = "3.1.2"
 work = "2.9.1"
 bark-bolt = "0.5.0"
+sentry = "8.57.0"
 junit = "4.13.2"
 datastore = "1.1.1"
 security-crypto = "1.1.0"
@@ -23,6 +24,8 @@ androidx-test-runner = "1.6.2"
 androidx-test-junit = "1.2.1"
 
 [libraries]
+# Core only: no native crash or replay artifact can bypass the JVM event filter.
+sentry-android-core = { module = "io.sentry:sentry-android-core", version.ref = "sentry" }
 camera-core = { module = "androidx.camera:camera-core", version = "1.4.2" }
 camera-camera2 = { module = "androidx.camera:camera-camera2", version = "1.4.2" }
 camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version = "1.4.2" }

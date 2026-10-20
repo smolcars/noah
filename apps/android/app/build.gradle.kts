@@ -10,6 +10,13 @@ plugins {
 val localProperties = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
+val sentryProperties = Properties().apply {
+    rootProject.file("Config/sentry.properties").inputStream().use { load(it) }
+}
+val sentryDsn = providers.environmentVariable("NOAH_SENTRY_DSN").orNull
+    ?: localProperties.getProperty("NOAH_SENTRY_DSN")
+    ?: sentryProperties.getProperty("NOAH_SENTRY_DSN", "")
+
 val releaseSigningKeys = listOf(
     "MYAPP_RELEASE_STORE_FILE",
     "MYAPP_RELEASE_STORE_PASSWORD",
@@ -60,6 +67,7 @@ android {
         val regtestServer = providers.gradleProperty("noahRegtestServerURL").orElse("http://$regtestHost:3000").get()
         require(regtestServer.matches(Regex("https?://[a-zA-Z0-9.:-]+"))) { "Invalid regtest server URL" }
         buildConfigField("String", "REGTEST_SERVER_URL", "\"$regtestServer\"")
+        buildConfigField("String", "SENTRY_DSN", "\"${sentryDsn.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         versionCode = 100
         versionName = "0.2.0"
         // Same ABIs as the RN app; MMKV and bark-bolt-ffi ship no x86 libraries.
@@ -135,6 +143,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.sentry.android.core)
     implementation(libs.biometric)
     implementation(libs.fragment)
     implementation(libs.maplibre)
