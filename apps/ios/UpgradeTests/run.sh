@@ -4,6 +4,8 @@
 # FUNDED=1 adds Ark send/receive, confirmed onchain funds, UI-created recurring
 # policy, and non-default settings. See README.md for the physical push gate.
 set -euo pipefail
+umask 077
+SECONDS=0
 SIM="$1"
 RN_APP="$2"
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -23,6 +25,7 @@ cleanup() {
     rm -rf "$container/Documents/noah-upgrade-rn-mmkv" \
       "$container/Documents/noah-upgrade-rn-mmkv.native-backup" \
       "$container/Documents/noah-upgrade-rn-mmkv.native-backup.pending" \
+      "$container/Documents/noah-upgrade-rn-mmkv.native-settings.json" \
       "$container/Documents/noah-upgrade-check.json"
   fi
 }
@@ -37,25 +40,28 @@ assert matched[0]['name'] not in ['Noah Upgrade 030', 'Noah Native iPhone', 'Noa
 print('Disposable upgrade simulator:', matched[0]['name'], matched[0]['udid'])
 PY
 xcrun simctl boot "$SIM" 2>/dev/null || true
-flow() { maestro --device "$SIM" test --debug-output "$DEBUG" "$@"; }
+flow() { maestro --device "$SIM" test --debug-output "$DEBUG" --test-output-dir "$DEBUG" "$@"; }
 if [[ "${RN_PREPARED:-0}" != 1 ]]; then
 xcrun simctl uninstall "$SIM" "$BUNDLE" 2>/dev/null || true
 xcrun simctl install "$SIM" "$RN_APP"
 if [[ "${FUNDED:-0}" == 1 ]]; then
   flow "$FLOWS/prepare-funded-send.yml"
-  runtime="$(xcrun simctl getenv "$SIM" SIMULATOR_RUNTIME_VERSION)"
-  if [[ "${runtime%%.*}" -ge 27 ]]; then xcrun simctl privacy "$SIM" grant pasteboard "$BUNDLE"; fi
-  rn_ark_address="$(xcrun simctl pbpaste "$SIM" | tr -d '\r\n')"
-  [[ "$rn_ark_address" =~ ^tark1 ]] || { echo "no RN Ark address on clipboard"; exit 1; }
-  (cd "$REPO" && just bark send --wait "$rn_ark_address" "100000 sats")
-  bark_address="$(cd "$REPO" && just bark address 2>&1 | sed -n '/^tark1/p' | tail -n 1)"
+  # Read the displayed request, independent of simulator/host clipboard syncing.
+  xcrun swiftc -module-cache-path "$snapshot/swift-cache" "$HERE/read-rn-qr.swift" -o "$snapshot/read-rn-qr"
+  xcrun simctl io "$SIM" screenshot "$snapshot/rn-qr.png" >/dev/null
+  "$snapshot/read-rn-qr" "$snapshot/rn-qr.png" > "$snapshot/rn-addresses.json"
+  rn_ark_address="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["ark"])' "$snapshot/rn-addresses.json")"
+  rn_onchain_address="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["onchain"])' "$snapshot/rn-addresses.json")"
+  [[ "$rn_ark_address" =~ ^tark1 ]] || { echo "no RN Ark address in displayed QR"; exit 1; }
+  (cd "$REPO" && just bark --quiet --no-logfile send --wait "$rn_ark_address" "100000 sats")
+  bark_address="$(cd "$REPO" && just bark --quiet --no-logfile address 2>&1 | sed -n '/^tark1/p' | tail -n 1)"
   [[ "$bark_address" =~ ^tark1 ]] || { echo "no Bark destination"; exit 1; }
-  printf '%s' "$bark_address" | xcrun simctl pbcopy "$SIM"
-  flow "$FLOWS/send-funded-ark.yml"
+  [[ "$bark_address" != "$rn_ark_address" ]] || { echo "Bark destination equals RN wallet"; exit 1; }
+  flow -e "DESTINATION=$bark_address" "$HERE/rn-send-funded.yml"
   flow -e "RECURRING_DESTINATION=$bark_address" "$HERE/rn-settings-and-recurring.yml"
-  onchain_address="$(xcrun simctl pbpaste "$SIM" | tr -d '\r\n')"
-  [[ "$onchain_address" =~ ^bcrt1 ]] || { echo "no RN onchain address on clipboard"; exit 1; }
-  (cd "$REPO" && just bcli sendtoaddress "$onchain_address" 0.0001 && just generate 1)
+  onchain_address="$rn_onchain_address"
+  [[ "$onchain_address" =~ ^bcrt1 ]] || { echo "no RN onchain address in displayed QR"; exit 1; }
+  (cd "$REPO" && just bcli sendtoaddress "$onchain_address" 0.0003 && just generate 1)
   flow "$HERE/rn-confirm-onchain.yml"
   flow "$HERE/rn-locale.yml"
 else
@@ -79,10 +85,11 @@ fi
 xcrun simctl terminate "$SIM" "$BUNDLE" 2>/dev/null || true
 container="$(xcrun simctl get_app_container "$SIM" "$BUNDLE" data)"
 test -f "$container/Documents/noah-data-regtest/db.sqlite"
-# Snapshot the real RN MMKV bytes before native startup can update them.
-cp -R "$container/Documents/mmkv" "$container/Documents/noah-upgrade-rn-mmkv"
+db_inode="$(/usr/bin/stat -f %i "$container/Documents/noah-data-regtest/db.sqlite")"
+# Record stopped RN bytes; native must never write this directory.
+python3 "$HERE/check-mmkv.py" record "$container/Documents/mmkv" "$snapshot/mmkv-stopped.json"
 cp "$container/Documents/noah-data-regtest/"db.sqlite* "$snapshot/"
-python3 - "$snapshot/db.sqlite" "$container/Documents/noah-upgrade-check.json" "${FUNDED:-0}" "$container/Library/Preferences/$BUNDLE.plist" <<'PY'
+python3 - "$snapshot/db.sqlite" "$container/Documents/noah-upgrade-check.json" "${FUNDED:-0}" "$container/Library/Preferences/$BUNDLE.plist" "${bark_address:-}" <<'PY'
 import json, plistlib, sqlite3, sys
 connection = sqlite3.connect('file:' + sys.argv[1] + '?mode=ro', uri=True)
 connection.row_factory = sqlite3.Row
@@ -94,10 +101,12 @@ with open(sys.argv[4], 'rb') as preferences:
 if funded:
     assert result['locale'] == 'sv', 'RN locale was not persisted'
 result['spendable'] = connection.execute("select coalesce(sum(amount_sat),0) from vtxo_view where state_kind='Spendable'").fetchone()[0]
-result['onchain'] = 10000 if funded else 0
+result['onchain'] = 30000 if funded else 0
 result['movements'] = [dict(r) for r in connection.execute('select id, status, subsystem_name, movement_kind, intended_balance, effective_balance, offchain_fee from bark_movements order by id')]
 if funded:
     assert result['spendable'] == 95000 and len(result['movements']) == 2, 'RN funded baseline is incomplete'
+    if sys.argv[5]:
+        assert [tuple(r) for r in connection.execute('select destination_value, amount from bark_movements_sent_to')] == [(sys.argv[5], 5000)], 'RN payment did not go to Bark'
 with open(sys.argv[2], 'w') as output:
     json.dump(result, output)
 print('RN baseline: movements=%d Ark=%d confirmed onchain=%d' % (len(result['movements']), result['spendable'], result['onchain']))
@@ -105,10 +114,10 @@ PY
 cd "$IOS"
 xcodegen generate >/dev/null
 xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest \
-  -destination "id=$SIM" -derivedDataPath "$DD" ARCHS=arm64 ONLY_ACTIVE_ARCH=YES build-for-testing
+  -destination "id=$SIM" -derivedDataPath "$DD" ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -jobs 2 build-for-testing
 if [[ "${INSTALL_WHILE_RUNNING:-1}" == 1 ]]; then
   before="$(shasum -a 256 "$container/Documents/mmkv/noah-wallet-storage")"
-  maestro --device "$SIM" test --debug-output "$DEBUG/writer" "$HERE/rn-write-during-install.yml" > "$DEBUG/writer.log" 2>&1 &
+  maestro --device "$SIM" test --debug-output "$DEBUG/writer" --test-output-dir "$DEBUG/writer" "$HERE/rn-write-during-install.yml" > "$DEBUG/writer.log" 2>&1 &
   writer_pid=$!
   changed=0
   for attempt in {1..60}; do
@@ -121,8 +130,18 @@ if [[ "${INSTALL_WHILE_RUNNING:-1}" == 1 ]]; then
   echo 'Replacing RN while running and writing MMKV'
 fi
 # Explicitly replace the running RN process; the test runner must not terminate it first.
+sync_since="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 xcrun simctl install "$SIM" "$DD/Build/Products/Debug-Regtest-iphonesimulator/Noah.app"
 if [[ -n "${writer_pid:-}" ]]; then kill "$writer_pid" 2>/dev/null || true; wait "$writer_pid" 2>/dev/null || true; unset writer_pid; fi
+# RN has now been killed by replacement. Capture its final generation before
+# native's first launch, including the running/writing variant.
+container="$(xcrun simctl get_app_container "$SIM" "$BUNDLE" data)"
+if [[ "${INSTALL_WHILE_RUNNING:-1}" == 0 ]]; then
+  python3 "$HERE/check-mmkv.py" check "$container/Documents/mmkv" "$snapshot/mmkv-stopped.json"
+fi
+python3 "$HERE/check-mmkv.py" record "$container/Documents/mmkv" "$snapshot/mmkv-final.json"
+cp -R "$container/Documents/mmkv" "$container/Documents/noah-upgrade-rn-mmkv"
+if [[ "${FUNDED:-0}" == 1 ]]; then flow "$HERE/native-notice.yml"; fi
 TEST_RUNNER_NOAH_UPGRADE_CHECK=1 xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest \
   -destination "id=$SIM" -derivedDataPath "$DD" ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
   -parallel-testing-enabled NO -only-testing:NoahTests/UpgradeCompatibilityTests test-without-building
@@ -151,5 +170,14 @@ result['widgetPlacementPreserved'] = before['funded']
 with open(sys.argv[3], 'w') as output:
     json.dump(result, output, indent=2)
 PYPOST
+[[ "$db_inode" == "$(/usr/bin/stat -f %i "$container/Documents/noah-data-regtest/db.sqlite")" ]] || { echo "Wallet DB was replaced"; exit 1; }
+python3 "$HERE/check-mmkv.py" check "$container/Documents/mmkv" "$snapshot/mmkv-final.json"
+python3 "$HERE/check-mmkv.py" snapshot "$container/Documents/mmkv.native-backup" "$snapshot/mmkv-final.json"
+if [[ "${FUNDED:-0}" == 1 ]]; then
+  login_key="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["loginKey"])' "$container/Documents/noah-upgrade-result.json")"
+  native_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$DD/Build/Products/Debug-Regtest-iphonesimulator/Noah.app/Info.plist")"
+  python3 "$HERE/check-server-sync.py" "$sync_since" "$login_key" "Noah/$native_build "
+fi
 cp "$container/Documents/noah-upgrade-result.json" "${UPGRADE_EVIDENCE:-/private/tmp/noah-upgrade-evidence.json}"
+echo "Elapsed: ${SECONDS}s"
 echo "Wallet/settings/recurring upgrade checks passed. Expo continuity requires a physical-device run; see README.md."

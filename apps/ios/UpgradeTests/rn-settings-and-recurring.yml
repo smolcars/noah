@@ -1,5 +1,5 @@
 # Uses RN controls only. The first payment remains tomorrow, so upgrading
-# must preserve the policy without executing it.
+# must discard the policy without executing it.
 appId: com.noahwallet.regtest
 ---
 - launchApp
@@ -22,11 +22,12 @@ appId: com.noahwallet.regtest
 - tapOn: "Edit name"
 - tapOn:
     id: "profile-name-input"
+- eraseText: 100
 - inputText: "Upgrade safety"
 - tapOn: "Save name"
 - tapOn:
     id: "profile-back-button"
-- runFlow: rn-disable-automation.yml
+# Auto-boarding is disabled through RN's boarding prompt after funding.
 - scrollUntilVisible:
     element:
       text: 'v0\..*'

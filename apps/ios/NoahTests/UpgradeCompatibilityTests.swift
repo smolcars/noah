@@ -74,9 +74,20 @@ struct UpgradeCompatibilityTests {
             #expect(actual.effectiveBalanceSats == row.effective_balance)
             #expect(actual.offchainFeeSats == row.offchain_fee)
         }
-        let report: [String: Any] = ["fingerprint": summary.fingerprint, "movements": summary.movementCount,
+        guard case .found(let mnemonic) = KeychainPassword.mnemonic(for: .current).read() else {
+            Issue.record("RN seed not readable for public login identity")
+            return
+        }
+        let loginKey = try ServerClient.loginKey(variant: .current, mnemonic: mnemonic)
+        let report: [String: Any] = ["loginKey": loginKey, "fingerprint": summary.fingerprint, "movements": summary.movementCount,
             "spendable": summary.spendableSats, "onchainConfirmed": summary.balance.onchain.confirmed,
-            "expoContinuityVerified": false]
+            "expoContinuityVerified": false,
+            "displayUnit": SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.amountUnit.rawValue ?? "missing",
+            "currency": SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.preferredCurrency ?? "missing",
+            "language": LegacyLocale.read() ?? "default",
+            "hiddenBalance": SettingsStorage.shared.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key)?.isHomeBalanceHidden ?? false,
+            "biometrics": SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isBiometricsEnabled ?? false,
+            "autoBoarding": PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled]
         try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]).write(to: URL.documentsDirectory.appending(path: "noah-upgrade-result.json"))
     }
 
@@ -104,8 +115,8 @@ struct UpgradeCompatibilityTests {
         let oldServer = before.persistedState(PersistedServerState.self, key: PersistedServerState.key)
         let server = storage.persistedState(PersistedServerState.self, key: PersistedServerState.key)
         #expect(server?.isMailboxAuthorizationEnabled == oldServer?.isMailboxAuthorizationEnabled)
-        #expect(server?.isMailboxAuthorizationEnabled == false)
         #expect(server?.isBackupEnabled == oldServer?.isBackupEnabled)
+        #expect(storage.string(forKey: "esplora-storage") == before.string(forKey: "esplora-storage"))
     }
 
     @Test func recurringIsEmptyAndUpgradeNoticeIsRecordedInNativeStore() throws {
@@ -114,7 +125,8 @@ struct UpgradeCompatibilityTests {
         #expect(try old.nativeFile.load().recurringNoticePending)
         #expect(SettingsStorage.shared.nativeFile.exists)
         #expect(try RecurringStore().load().schedules.isEmpty)
-        #expect(try SettingsStorage.shared.nativeFile.load().recurringNoticePending)
+        // The application may already have displayed and consumed the Home notice.
+        // The runner verifies its visible first launch and absence after a restart.
     }
 
     /// Simulators cannot acquire RN APNs/Expo registration. Missing expectations

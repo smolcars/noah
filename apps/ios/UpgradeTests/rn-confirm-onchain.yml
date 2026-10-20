@@ -3,6 +3,11 @@ appId: com.noahwallet.regtest
 - stopApp
 - launchApp
 - tapOn: "Home"
+- extendedWaitUntil:
+    visible: "No, turn off"
+    timeout: 60000
+- tapOn: "No, turn off"
+- assertNotVisible: "Yes, board"
 - tapOn: "Toggle balance details"
 - scrollUntilVisible:
     element:
@@ -11,7 +16,7 @@ appId: com.noahwallet.regtest
     centerElement: true
 - extendedWaitUntil:
     visible:
-      text: "10,000 sats"
+      text: "30,000 sats"
       rightOf: "Confirmed"
     timeout: 30000
 - assertVisible: "Confirmed"
