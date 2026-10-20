@@ -18,12 +18,16 @@ import java.util.TimeZone
     val retryNotBefore: Long? = null, val inFlight: InFlight? = null, val runs: List<Run> = emptyList(),
     val createdAt: Long, val updatedAt: Long,
 ) {
+    companion object {
+        const val maximumAmount = 2_100_000_000_000_000L
+        const val amountLimitMessage = "This amount exceeds 21 million BTC. Cancel this schedule and approve a new payment within the limit."
+    }
     @Serializable data class InFlight(val occurrenceIndex: Int, val startedAt: Long)
     @Serializable data class Run(val occurrenceIndex: Int, val scheduledFor: Long, val attemptedAt: Long,
         val status: String, val amountSat: Long, val error: String? = null)
     @Serializable data class Plan(val kind: String, val occurrenceIndex: Int? = null, val scheduledFor: Long? = null,
         val skippedIndices: List<Int>? = null)
-    val validPolicy get() = label.isNotBlank() && label.length <= 64 && amountSat in 1..2_100_000_000_000_000L &&
+    val validPolicy get() = label.isNotBlank() && label.length <= 64 && amountSat > 0 &&
         destinationType in listOf("ark", "lnurl", "offer") && destination.isNotEmpty() && interval.valid &&
         status in listOf("active", "paused", "needs_attention", "needs_approval", "completed") &&
         startAt in -8_639_999_999_999_999L..8_639_999_999_999_999L && (endAt == null || endAt >= startAt) &&
@@ -31,7 +35,7 @@ import java.util.TimeZone
         occurrencesPaid >= 0 && consecutiveFailures >= 0
     fun validateInput(now: Long) {
         require(label.isNotBlank() && label.length <= 64) { "Give this payment a short name (max 64 characters)." }
-        require(amountSat in 1..2_100_000_000_000_000L) { "Enter a whole amount in sats." }
+        require(amountSat in 1..maximumAmount) { "Enter a whole amount in sats, up to 21 million BTC." }
         require(validPolicy) { "Enter an Ark address, Lightning address or BOLT12 offer and a valid interval." }
         require(startAt >= now - 300_000) { "The first payment can't be in the past." }
     }

@@ -24,6 +24,32 @@ class RecurringStoreTest {
         store.upsert(original.copy(lastError = "failure")); store.upsert(original)
         assertNull(store.load().schedules.getValue("rent").lastError)
     }
+    @Test fun oversizedRNPolicyStaysVisibleWithoutChangingBytesOrUnknownFields() {
+        for (amount in listOf(RecurringPayment.maximumAmount + 1, Long.MAX_VALUE)) {
+            val root = Json.parseToJsonElement(fixture()).jsonObject
+            val state = root.getValue("state").jsonObject
+            val rent = state.getValue("schedules").jsonObject.getValue("rent").jsonObject
+            val oversized = JsonObject(rent + ("amountSat" to JsonPrimitive(amount)) + ("futureSchedule" to JsonPrimitive("kept")))
+            var raw = JsonObject(root + ("futureEnvelope" to JsonPrimitive(7)) + ("state" to JsonObject(state +
+                ("futureState" to JsonPrimitive(true)) + ("schedules" to JsonObject(mapOf("rent" to oversized)))))).toString()
+            val original = raw
+            val store = RecurringStore({ raw }, { raw = it })
+            val schedule = store.load().schedules.getValue("rent")
+            assertEquals(amount, schedule.amountSat)
+            assertEquals("needs_attention", schedule.status)
+            assertEquals(RecurringPayment.amountLimitMessage, schedule.lastError)
+            assertEquals(original, raw)
+            store.setPending(false)
+            val saved = Json.parseToJsonElement(raw).jsonObject
+            assertEquals(oversized, saved.getValue("state").jsonObject.getValue("schedules").jsonObject.getValue("rent"))
+            assertEquals(JsonPrimitive(7), saved["futureEnvelope"])
+            assertEquals(JsonPrimitive(true), saved.getValue("state").jsonObject["futureState"])
+            store.upsert(schedule.copy(updatedAt = schedule.updatedAt + 1))
+            assertEquals(amount, RecurringStore({ raw }, { raw = it }).load().schedules.getValue("rent").amountSat)
+            assertTrue(raw.contains("futureSchedule"))
+            store.remove("rent"); assertTrue(store.load().schedules.isEmpty())
+        }
+    }
     @Test fun invalidCorruptAndFutureStoresNeverBecomeEmptyOrWritable() {
         for (invalid in listOf("{", "{}", fixture().replace("\"version\":0", "\"version\":2"), fixture().replace("\"amountSat\":50000", "\"amountSat\":-1"), fixture().replace("\"id\":\"rent\"", "\"id\":\"other\""))) {
             var writes = 0; val store = RecurringStore({ invalid }, { writes++ })

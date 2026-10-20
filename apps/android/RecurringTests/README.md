@@ -13,6 +13,14 @@ Base: `feat/native-rewrite` local HEAD `51c24bc0` (iOS round 3).
   final millisecond and unchanged timestamps through reads/pause/reopen.
   Shared calendar fixtures only calculate occurrence dates and all shared policy
   fixtures have null end dates, so they require no changes.
+- Oversized RN amounts remain visible as **Needs attention**, preserving the exact
+  stored amount and unknown fields. Reading does not rewrite the stored bytes;
+  unrelated policies continue to execute. New/edited approvals retain the
+  **2,100,000,000,000,000-sat** cap; resume/override reject oversized policies before
+  auditing or clearing locks, and the final submission guard checks the cap.
+- Amount targeted run: **1,390 tests / 10 suites**, zero failures/errors/skips.
+  Store and executor regressions cover the maximum, maximum + 1, Long.MAX_VALUE,
+  unknown fields, cancellation and an unaffected healthy payment.
 - End-date targeted run: **1,387 tests / 10 suites**, zero failures/errors/skips,
   using Nix and `--max-workers=2 :app:testRegtestDebugUnitTest --tests "*Recurring*"`.
 

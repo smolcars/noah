@@ -101,7 +101,7 @@ class RecurringExecutor(private val d: Dependencies,
                             d.allowed()
                             val current = d.store.load()
                             val currentPlan = marked.copy(inFlight = null, status = "active").plan(d.now(), d.zone(), manual)
-                            check(budget.available && currentPlan == entry.plan && generation == d.automationGeneration())
+                            check(budget.available && currentPlan == entry.plan && generation == d.automationGeneration() && marked.amountSat <= RecurringPayment.maximumAmount)
                             check(current.binding == d.binding() && current.binding == entry.binding && current.schedules[id] == marked)
                             check(!d.journal.consumed(entry.binding, id, entry.plan.scheduledFor!!, entry.policyRevision, entry.plan.occurrenceIndex))
                             check(approval != null || RecurringFeePolicy.evaluate(payment.amount, payment.method, quote.fee, quote.lightningFeeSchedule).autoPay)
@@ -191,6 +191,7 @@ class RecurringExecutor(private val d: Dependencies,
         boundState()
         synchronized(RecurringStore.lock) {
             val schedule = d.store.load().schedules[id] ?: return
+            check(schedule.amountSat <= RecurringPayment.maximumAmount) { RecurringPayment.amountLimitMessage }
             check(schedule.inFlight == null && schedule.status != "needs_attention") { "Check your transaction history, then confirm the destructive override before resuming." }
             if (schedule.status != "completed") d.store.upsert(schedule.resume(d.now(), d.zone()))
         }
@@ -201,6 +202,7 @@ class RecurringExecutor(private val d: Dependencies,
         if (!confirmed) return
         check(!running); boundState()
         val schedule = d.store.load().schedules[id] ?: return
+        check(schedule.amountSat <= RecurringPayment.maximumAmount) { RecurringPayment.amountLimitMessage }
         val entry = d.journal.load()[id]
         check(!d.journal.legacyUncertain(d.binding(), id)) { RecurringJournal.legacyMessage }
         // Audit the exact warning before either lock can be removed, including legacy RN markers.

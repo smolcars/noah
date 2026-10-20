@@ -34,7 +34,12 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         require(schedules.all { it.key == it.value.id && it.value.validPolicy }) { "A saved recurring payment is invalid. Sending is stopped." }
         val binding = state["nativeWalletBinding"]?.takeUnless { it == JsonNull }?.let { json.decodeFromJsonElement<Binding>(it) }
         binding?.let { require(it.wallet.fingerprint.isNotBlank() && it.wallet.network.isNotBlank()); UUID.fromString(it.instance) }
-        return State(schedules, state["serverSyncPending"]?.jsonPrimitive?.booleanOrNull ?: true, binding)
+        // RN may store amounts above native approval limits; retain each row and its original bytes.
+        val visible = schedules.mapValues { (_, schedule) ->
+            if (schedule.amountSat > RecurringPayment.maximumAmount) schedule.copy(status = "needs_attention", lastError = RecurringPayment.amountLimitMessage)
+            else schedule
+        }
+        return State(visible, state["serverSyncPending"]?.jsonPrimitive?.booleanOrNull ?: true, binding)
     }
     private fun change(mutate: (MutableMap<String, JsonElement>) -> Unit) = synchronized(lock) {
         val envelope = envelope(); decode(envelope)

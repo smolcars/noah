@@ -50,6 +50,39 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
 }
 
 class RecurringExecutorTest {
+    @Test fun oversizedStoredPolicyCannotRunResumeOverrideOrBlockHealthyPayments() = runBlocking {
+        val w = RecurringWorld(this); val healthy = w.add()
+        val oversized = healthy.copy(id = "oversized", amountSat = RecurringPayment.maximumAmount + 1)
+        w.store.upsert(oversized)
+        w.executor.reload()
+        assertEquals(2, w.executor.schedules.size)
+        val visible = w.executor.schedules.single { it.id == oversized.id }
+        assertEquals(oversized.amountSat, visible.amountSat)
+        assertEquals("needs_attention", visible.status)
+        assertEquals(RecurringPayment.amountLimitMessage, visible.lastError)
+        w.executor.execute(); w.executor.execute()
+        assertEquals(1, w.wallet.calls); assertEquals(1, w.quotes)
+        assertEquals(listOf("rent"), w.journal.load().keys.toList())
+        for (resume in listOf<suspend () -> Unit>({ w.executor.resume(oversized.id) }, { w.executor.overrideAndResume(oversized.id, true) })) {
+            assertEquals(RecurringPayment.amountLimitMessage, runCatching { resume() }.exceptionOrNull()?.message)
+        }
+        assertEquals(0, w.audits)
+        assertEquals("needs_attention", w.store.load().schedules.getValue(oversized.id).status)
+        w.executor.cancel(oversized.id)
+        assertEquals(setOf("rent"), w.store.load().schedules.keys)
+    }
+    @Test fun newAndEditedApprovalsRejectAmountsAboveTheLimit() = runBlocking {
+        val w = RecurringWorld(this); val original = w.add()
+        for (editing in listOf(false, true)) {
+            val input = original.copy(id = if (editing) original.id else "new", amountSat = RecurringPayment.maximumAmount + 1)
+            val raw = w.raw
+            assertTrue(runCatching { w.executor.save(input, editing) }.isFailure)
+            assertEquals(raw, w.raw)
+        }
+        w.executor.save(original.copy(amountSat = RecurringPayment.maximumAmount), editing = true)
+        assertEquals(RecurringPayment.maximumAmount, w.schedule!!.amountSat)
+        assertEquals("active", w.schedule!!.status)
+    }
     @Test fun pushForegroundAndRepeatedTriggersPayLatestDueOnlyOnce() = runBlocking {
         val w = RecurringWorld(this); w.add(1000 - 2 * 86_400_000)
         val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
