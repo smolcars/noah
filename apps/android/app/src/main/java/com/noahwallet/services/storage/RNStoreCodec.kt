@@ -30,8 +30,9 @@ object RNStoreCodec {
     fun decode(key: String, value: String): JsonObject = try {
         val root = Json.parseToJsonElement(value).jsonObject
         val state = root.getValue("state").jsonObject
-        val version = root["version"]?.let { (it as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull ?: throw Unreadable() } ?: 0
-        require(version in 0..versions.getValue(key))
+        val version = root["version"]
+        require(version == null || version is JsonPrimitive && !version.isString &&
+            (version.content == "0" || versions.getValue(key) == 1 && version.content == "1"))
         state.forEach { (field, value) ->
             val primitive = value as? JsonPrimitive
             require(when (field) {

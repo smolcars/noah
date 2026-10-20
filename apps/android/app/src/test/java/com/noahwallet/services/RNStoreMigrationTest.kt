@@ -27,6 +27,18 @@ class RNStoreMigrationTest {
         }
     }
 
+    @Test fun onlyExactVersionTokensAreAccepted() {
+        for (key in RNStoreCodec.versions.keys) {
+            for (token in listOf("-0", "0e5", "1e-400", "0.0", "1.0", "1e0", "-1", "99", "true", "null", "\"0\"")) {
+                assertThrows(RNStoreCodec.Unreadable::class.java) { RNStoreCodec.decode(key, "{\"state\":{},\"version\":$token}") }
+            }
+            RNStoreCodec.decode(key, "{\"state\":{}}")
+            RNStoreCodec.decode(key, "{\"state\":{},\"version\": 0 }")
+            if (key == "transaction-storage") RNStoreCodec.decode(key, "{\"state\":{},\"version\":1}")
+            else assertThrows(RNStoreCodec.Unreadable::class.java) { RNStoreCodec.decode(key, "{\"state\":{},\"version\":1}") }
+        }
+    }
+
     @Test fun corruptFutureOrWronglyTypedStoresCannotBeOverwritten() {
         for (key in RNStoreCodec.versions.keys) {
             for (bad in listOf("", "null", "{}", "{\"state\":[]}", "{\"state\":{},\"version\":99}",
