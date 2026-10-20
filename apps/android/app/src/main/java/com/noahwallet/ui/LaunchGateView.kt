@@ -105,8 +105,6 @@ fun LaunchGateView() {
 
 @Composable
 private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () -> Unit, model: AppModel) {
-    var showingDelete by rememberSaveable { mutableStateOf(false) }
-    var confirmation by rememberSaveable { mutableStateOf("") }
     val message = when (state) {
         null -> R.string.launch_loading to R.string.launch_loading_message
         LaunchState.existingWallet -> if (openFailed) {
@@ -127,22 +125,30 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
         Text(stringResource(message.second), textAlign = TextAlign.Center)
         if (state != null) NoahButton("Try again", onClick = retry)
         if (state == LaunchState.seedWithoutWalletData || state == LaunchState.walletDataWithoutSeed) {
-            androidx.compose.material3.TextButton({ showingDelete = true }) { Text("Delete Wallet") }
+            DeleteWalletFallback(model)
         }
     }
+}
+
+@Composable
+internal fun DeleteWalletFallback(model: AppModel) {
+    var showingDelete by rememberSaveable { mutableStateOf(false) }
+    var confirmation by rememberSaveable { mutableStateOf("") }
+    val enabled = model.canDeleteRecoveryWallet
+    androidx.compose.material3.TextButton({ showingDelete = true }, enabled = enabled) { Text("Delete Wallet") }
     if (showingDelete) androidx.compose.material3.AlertDialog(
-        onDismissRequest = { if (!model.busy) showingDelete = false },
+        onDismissRequest = { if (enabled) showingDelete = false },
         title = { Text("Delete Wallet") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm.")
             androidx.compose.material3.OutlinedTextField(confirmation, { confirmation = it },
-                label = { Text("delete") }, enabled = !model.busy, singleLine = true)
+                label = { Text("delete") }, enabled = enabled, singleLine = true)
         } },
-        dismissButton = { androidx.compose.material3.TextButton({ showingDelete = false }, enabled = !model.busy) { Text("Cancel") } },
+        dismissButton = { androidx.compose.material3.TextButton({ showingDelete = false }, enabled = enabled) { Text("Cancel") } },
         confirmButton = { androidx.compose.material3.TextButton({
             model.action("Couldn't delete wallet. Restart Noah and try again.") {
                 model.deleteWallet(); showingDelete = false
             }
-        }, enabled = !model.busy && confirmation.trim().equals("delete", true)) { Text("Delete Wallet") } },
+        }, enabled = enabled && confirmation.trim().equals("delete", true)) { Text("Delete Wallet") } },
     )
 }

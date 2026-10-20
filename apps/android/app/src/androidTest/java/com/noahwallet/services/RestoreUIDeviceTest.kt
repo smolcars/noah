@@ -110,6 +110,22 @@ class RestoreUIDeviceTest {
             cleanupClient = ServerClient.make(BuildConfig.REGTEST_SERVER_URL, tokens)
             withContext(Dispatchers.Main) { originalModel.finish() }
             originalModel.server.ensureRegistered()
+            if (InstrumentationRegistry.getArguments().getString("noahRestoreFunded") == "1") {
+                stage = "fund throwaway wallet"
+                val addressFile = File(context.filesDir, "restore-funding-address.txt")
+                try {
+                    addressFile.writeText(originalModel.session.peekAddress(0u))
+                    val deadline = System.currentTimeMillis() + 180_000
+                    while (System.currentTimeMillis() < deadline) {
+                        originalModel.session.sync()
+                        if ((originalModel.session.summary()?.balance?.totalSats ?: 0uL) > 0uL) break
+                        delay(500)
+                    }
+                    val funded = checkNotNull(originalModel.session.summary())
+                    assertTrue("Funded wallet has a balance", funded.balance.totalSats > 0uL)
+                    assertTrue("Funded wallet has movements", funded.movementCount > 0)
+                } finally { addressFile.delete() }
+            }
             stage = "upload backup"
             originalModel.services.backupService.registerBackup()
             originalModel.services.backupCoordinator.flush(BackupCoordinator.Reason.manual, requireEnabled = false)
@@ -117,6 +133,7 @@ class RestoreUIDeviceTest {
             assertNotNull(backed.lastBackupId)
             cleanupToken = originalModel.services.tokens.token()
             val expected = checkNotNull(originalModel.session.summary())
+            val expectedMovements = originalModel.session.transactionHistory()
 
             stage = "wipe local wallet without removing server backup"
             // This is a reinstall-equivalent local wipe, scoped to this opt-in disposable package.
@@ -155,7 +172,16 @@ class RestoreUIDeviceTest {
             clickText("Restore Wallet")
             waitFor("Phrase input returns") { find(automation.rootInActiveWindow) { it.isEditable && it.isPassword } != null }
             stage = "clear phrase on background"
+            instrumentation.runOnMainSync {
+                (context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+                    .setPrimaryClip(android.content.ClipData.newPlainText("test", phrase))
+            }
             enterPhrase(phrase)
+            instrumentation.runOnMainSync {
+                val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                assertTrue("Accepted whole phrase removed from clipboard", clipboard.primaryClip?.getItemAt(0)?.text?.toString() != phrase)
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("test", "unrelated replacement"))
+            }
             fun firstField(view: android.view.View): RecoveryWordEditText? {
                 if (view is RecoveryWordEditText) return view
                 if (view is android.view.ViewGroup) for (i in 0 until view.childCount)
@@ -180,6 +206,10 @@ class RestoreUIDeviceTest {
                 assertTrue("Hardware Undo cannot restore cleared words", fresh.text.isEmpty())
             }
             assertNotNull(text("0 of 12 words"))
+            instrumentation.runOnMainSync {
+                val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                assertTrue("Background preserves replacement clipboard", clipboard.primaryClip?.getItemAt(0)?.text?.toString() == "unrelated replacement")
+            }
             enterPhrase(phrase)
             // No screenshots, screen dumps, clipboard persistence, shell arguments or assertion diffs contain the phrase.
             stage = "submit restore UI"
@@ -191,6 +221,7 @@ class RestoreUIDeviceTest {
             assertTrue("Fingerprint preserved", expected.fingerprint == actual.fingerprint)
             assertEquals(expected.balance, actual.balance)
             assertEquals(expected.movementCount, actual.movementCount)
+            assertTrue("Restored movement details match", expectedMovements == restoredModel.session.transactionHistory())
             val seeded = PersistedBackupState.decode(restoredModel.settings.string(PersistedBackupState.key))
             assertEquals(backed.lastUploadedSnapshotSha256, seeded.lastUploadedSnapshotSha256)
             assertFalse(location.restorePending)
@@ -199,17 +230,22 @@ class RestoreUIDeviceTest {
             withContext(Dispatchers.Main) { restoredModel.suspendWallet() }
             instrumentation.runOnMainSync { activity!!.finish() }
             assertTrue(location.directory.deleteRecursively())
-            restoredModel.services.lifecycle.resume()
             val seedOnly = launch(); activity = seedOnly.first; current = seedOnly.second
             assertEquals(LaunchState.seedWithoutWalletData, seedOnly.second.launchState)
             waitFor("Saved phrase recovery offered") { text("Recovery phrase found") != null }
             assertNull(find(automation.rootInActiveWindow) { it.isEditable })
+            assertTrue(seedOnly.second.isWalletSuspended)
+            assertNull(submitButton())
+            waitFor("Deletion fallback remains available") { text("Delete Wallet") != null }
+            clickText("Resume Recovery")
+            waitFor("Recovery resumed") { seedOnly.second.canRestoreWallet }
             submit()
             waitFor("Saved phrase restore opens wallet") { seedOnly.second.restore.completed || seedOnly.second.restore.issue != null }
             assertTrue(seedOnly.second.restore.completed)
             val seedOnlySummary = checkNotNull(seedOnly.second.session.summary())
             assertEquals(expected.balance, seedOnlySummary.balance)
             assertEquals(expected.movementCount, seedOnlySummary.movementCount)
+            assertTrue("Stored-seed movement details match", expectedMovements == seedOnly.second.session.transactionHistory())
             assertTrue(expected.fingerprint == seedOnlySummary.fingerprint)
             instrumentation.sendStatus(0, Bundle().apply {
                 putString("restoreEvidence", "balance=${actual.balance.totalSats};movements=${actual.movementCount};fingerprintMatches=true;backupStorageSeeded=true;missingBackupActionable=true;savedPhraseRestore=true")
@@ -231,6 +267,35 @@ class RestoreUIDeviceTest {
         }
     }
 
+
+    @Test fun seedOnlyLaunchCanConfirmDeletionAndStartOver() = runBlocking<Unit> {
+        optIn()
+        val location = WalletDataLocation(context.filesDir, "regtest")
+        assertFalse("Disposable wallet is empty", location.hasAnyData)
+        SeedStorage(context, "regtest").save(generateMnemonic())
+        val launched = launch()
+        val activity = launched.first; val model = launched.second
+        try {
+            assertEquals(LaunchState.seedWithoutWalletData, model.launchState)
+            clickText("Delete Wallet")
+            waitFor("Typed confirmation appears") { find(automation.rootInActiveWindow) { it.isEditable && !it.isPassword } != null }
+            val confirm = checkNotNull(find(automation.rootInActiveWindow) { it.isEditable && !it.isPassword })
+            assertTrue(confirm.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
+                Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "delete") }))
+            waitFor("Deletion confirmation enabled") {
+                find(automation.rootInActiveWindow) { node -> node.isClickable && node.isEnabled &&
+                    find(node) { it.text?.toString() == "Delete Wallet" } != null } != null
+            }
+            assertTrue(checkNotNull(find(automation.rootInActiveWindow) { node -> node.isClickable && node.isEnabled &&
+                find(node) { it.text?.toString() == "Delete Wallet" } != null }).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            waitFor("Creation available after confirmed deletion") { text("Create Wallet") != null }
+            assertEquals(LaunchState.onboarding, model.launchState)
+            assertEquals(SecretResult.NotFound, SeedStorage(context, "regtest").read())
+        } finally {
+            instrumentation.runOnMainSync { activity.finish() }
+            model.services.lifecycle.delete()
+        }
+    }
 
     @Test fun platformPasswordNodesEventsAndImeArePrivate() {
         optIn()

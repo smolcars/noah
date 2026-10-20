@@ -103,7 +103,13 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
         }
         flow.issue?.let { Text(it.message, color = MaterialTheme.colorScheme.error,
             modifier = Modifier.testTag("restore-error").semantics { liveRegion = LiveRegionMode.Assertive }) }
-        if (flow.issue?.requiresRestart != true) NoahButton("Restore Wallet", !blocked && (useStoredSeed || input.isComplete)) {
+        if (useStoredSeed && model.isWalletSuspended) {
+            Text("Your wallet is suspended. Resume recovery to restore its backup, or delete this wallet from your device.")
+            NoahButton("Resume Recovery", !blocked) {
+                model.action("Couldn't resume recovery. Restart Noah and try again.") { model.resumeRestoreRecovery() }
+            }
+        }
+        if (flow.issue?.requiresRestart != true) NoahButton("Restore Wallet", model.canRestoreWallet && (useStoredSeed || input.isComplete)) {
             focus.clearFocus()
             if (!useStoredSeed && !RecoveryPhraseInput.isValid(input.phrase)) {
                 clear()
@@ -114,6 +120,7 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
                 model.restoreWallet(phrase)
             }
         }
+        if (useStoredSeed) DeleteWalletFallback(model)
         if (!useStoredSeed) NoahButton("Back", !blocked, secondary = true, onClick = ::leave)
     }
 }
