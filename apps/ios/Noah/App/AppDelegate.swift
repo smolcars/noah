@@ -22,6 +22,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        do { try EsploraSettings().restoreLogPrivacy() }
+        catch { EndpointLogPrivacy.failClosed() }
         BarkLog.install()
         AppTelemetry.start()
         SettingsStorage.bootstrap()

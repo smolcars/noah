@@ -3,6 +3,8 @@ import Foundation
 /// Register before entering Rust: endpoint paths can be opaque credentials.
 enum EndpointLogPrivacy {
     private static let lock = NSLock()
+    nonisolated(unsafe) private static var unavailable = false
+    static func failClosed() { lock.withLock { unavailable = true } }
     nonisolated(unsafe) private static var origins = Set<String>()
     nonisolated(unsafe) private static var paths = Set<String>()
     private static let urls = try! NSRegularExpression(pattern: #"(?i)\bhttps?://[^\s<>"']*"#)
@@ -47,7 +49,8 @@ enum EndpointLogPrivacy {
     }
 
     static func sanitize(_ text: String) -> String? {
-        let (registered, sensitive) = lock.withLock { (origins, paths) }
+        let (registered, sensitive, unavailable) = lock.withLock { (origins, paths, unavailable) }
+        if unavailable { return "[custom-esplora]" }
         // Exported lines include a bounded tag and timestamp as well as the message.
         guard text.utf8.count <= 2 * LogFile.maxMessageBytes + 128 else { return "[oversized log message omitted]" }
         if let match = responseStatus.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) {

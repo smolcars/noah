@@ -137,7 +137,9 @@ final class SettingsStorage: @unchecked Sendable {
         Self.access.lock(); defer { Self.access.unlock() }
         var state = load()
         do {
-            let record = EsploraSettings.Record(active: .init(variant: variant.rawValue))
+            let retained = try EsploraSettings.retainingLogPrivacy(state.values)
+            let history = try retained[EsploraSettings.key].flatMap { try JSONDecoder().decode(EsploraSettings.Record.self, from: Data($0.utf8)).logEndpoints }
+            let record = EsploraSettings.Record(active: .init(variant: variant.rawValue), logEndpoints: history)
             state.values[EsploraSettings.key] = String(decoding: try JSONEncoder().encode(record), as: UTF8.self)
             try persist(state)
         } catch { fallback = state }
@@ -163,7 +165,7 @@ final class SettingsStorage: @unchecked Sendable {
     func removeAllDurably() throws {
         Self.access.lock(); defer { Self.access.unlock() }
         let previous = load()
-        do { try persist(.init(cleanupPending: true)) }
+        do { try persist(.init(values: EsploraSettings.retainingLogPrivacy(previous.values), cleanupPending: true)) }
         catch { fallback = previous; throw error }
         try finishCleanup()
     }
@@ -173,7 +175,7 @@ final class SettingsStorage: @unchecked Sendable {
         if fm.fileExists(atPath: root.path) { try fm.removeItem(at: root) }
         try RestoreTransaction.fullSync(root.deletingLastPathComponent())
         try MMKVUpgradeBackup(root: root, instanceID: storeID).deleteSnapshot()
-        try persist(.init()) // Keep the import marker through re-onboarding.
+        try persist(.init(values: EsploraSettings.retainingLogPrivacy(load().values))) // Keep log protection through re-onboarding.
     }
 
     /// Only committed restore completion may publish flags in memory after a failed write.

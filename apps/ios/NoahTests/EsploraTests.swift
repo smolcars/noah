@@ -14,6 +14,9 @@ struct EsploraTests {
         var store: EsploraSettings { EsploraSettings(read: { key in self.lock.withLock { self.values[key] } }, write: { key, value in
             self.lock.withLock { self.values[key] = value }
         }) }
+        func selectionRecord() throws -> EsploraSettings.Record? {
+            try store.record().map { .init(active: $0.active, pending: $0.pending) }
+        }
         func imported(_ value: String) throws {
             struct State: Encodable { let endpointOverride: String }
             let raw = String(decoding: try JSONEncoder().encode(PersistedEnvelope(state: State(endpointOverride: value), version: 0)), as: UTF8.self)
@@ -83,6 +86,34 @@ struct EsploraTests {
         #expect(endpoint == "https://custom.example/api")
         #expect(memory.store.selection(for: .signet).attention == nil)
     }
+    @Test func retiredEndpointsAreDurableBeforeAndAfterSimulatedRestart() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "privacy-settings-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let storage = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
+        let settings = EsploraSettings(storage: storage)
+        let retired = "https://retired-r3.example/api/retiredR3Opaque74"
+        try settings.save(.init(active: .init(endpoint: retired, variant: "signet")))
+        try settings.save(.init(active: .init(variant: "signet")))
+        let restarted = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
+        let raw = try #require(restarted.string(forKey: EsploraSettings.key))
+        #expect(raw.contains("retiredR3Opaque74"))
+        try restarted.removeAllDurably()
+        let reset = EsploraSettings(storage: try SettingsStorage(rootPath: root.appending(path: "mmkv").path))
+        #expect(try reset.record()?.active.endpoint == nil)
+        #expect(try reset.record()?.logEndpoints?.contains(retired) == true)
+        // Seed a previous process's history without registering it in this process.
+        let cold = "https://cold-history-only.example/coldOpaqueRestart88"
+        var record = try #require(try reset.record())
+        record.logEndpoints = (record.logEndpoints ?? []) + [cold]
+        try restarted.setDurably(String(decoding: JSONEncoder().encode(record), as: UTF8.self), forKey: EsploraSettings.key)
+        let relaunched = EsploraSettings(storage: try SettingsStorage(rootPath: root.appending(path: "mmkv").path))
+        try relaunched.restoreLogPrivacy()
+        let logs = root.appending(path: "logs")
+        try FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
+        try "HTTP failure /coldOpaqueRestart88/fee-estimates".write(to: logs.appending(path: "noah.log.1"), atomically: true, encoding: .utf8)
+        #expect(!LogFile(directory: logs).lines().joined().contains("coldOpaqueRestart88"))
+    }
+
     @Test func regtestNeverFetchesOrAppliesImportedEndpoint() async throws {
         let memory = Memory(); try memory.imported("custom.example")
         let endpoint = try await memory.store.resolve(for: .regtest) { _ in Issue.record("regtest fetched Esplora"); return "" }
@@ -107,23 +138,23 @@ struct EsploraTests {
             try await memory.store.change(to: Self.candidate) { selection, commit in
                 await calls.add(selection.endpoint!)
                 if selection == Self.candidate {
-                    #expect(try memory.store.record() == .init(active: Self.previous, pending: Self.candidate))
+                    #expect(try memory.selectionRecord() == .init(active: Self.previous, pending: Self.candidate))
                     throw EsploraEndpoint.Failure(message: "fake failed open")
                 }
-                #expect(try memory.store.record() == .init(active: Self.previous))
+                #expect(try memory.selectionRecord() == .init(active: Self.previous))
                 try commit()
             }
         }
         #expect(await calls.values == [Self.candidate.endpoint!, Self.previous.endpoint!])
-        #expect(try memory.store.record() == .init(active: Self.previous))
+        #expect(try memory.selectionRecord() == .init(active: Self.previous))
     }
     @Test func successfulReopenCommitsAfterOpening() async throws {
         let memory = Memory(); try memory.store.save(.init(active: Self.previous))
         try await memory.store.change(to: Self.candidate) { _, commit in
-            #expect(try memory.store.record()?.active == Self.previous)
+            #expect(try memory.selectionRecord()?.active == Self.previous)
             try commit()
         }
-        #expect(try memory.store.record() == .init(active: Self.candidate))
+        #expect(try memory.selectionRecord() == .init(active: Self.candidate))
     }
     @Test func storageFailureReopensPreviousWithoutPublishingCandidate() async throws {
         for phase in ["pending", "commit"] {
@@ -143,7 +174,7 @@ struct EsploraTests {
                 }
             }
             #expect(await calls.values == (phase == "pending" ? [] : [Self.candidate.endpoint!, Self.previous.endpoint!]))
-            #expect(try memory.store.record() == .init(active: Self.previous))
+            #expect(try memory.selectionRecord() == .init(active: Self.previous))
         }
     }
 
@@ -193,6 +224,6 @@ struct EsploraTests {
                 try commit()
             }
         }
-        #expect(try memory.store.record() == .init(active: Self.previous))
+        #expect(try memory.selectionRecord() == .init(active: Self.previous))
     }
 }
