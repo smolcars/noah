@@ -41,10 +41,12 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Config mapping — Android (sat/kwu; regtest via `10.0.2.2`)
 - [ ] Esplora override from `esplora-storage`
 - [ ] `WalletCoordinator`: single owner of wallet lifetime; serializes load/close/replace and operations for UI, push, background tasks, backups, App Intents
+  - [x] iOS: `WalletSession` holds headless admission across push/task/intent awaits and backup/native settlement; foreground entry waits; restore/deletion reservations exclude jobs
 - [x] Open existing wallet: preflight `db.sqlite`, `createIfNotExists=false`, original network — iOS (`WalletSession`)
 - [x] One `WalletSession.shared` per process (bark locks the datadir); `ensureOpen` joins an open in progress — iOS
 - [x] Shared session, preflight open, safe create-or-resume, bark balance accounting — Android (overlapping closes rejected, native handles disposed explicitly)
 - [ ] `runDaemon` policy + coordination rules for push/background/backups on the shared session
+  - [x] iOS: headless opens are existing-only, daemon off, closed after settlement; an already-open foreground session is retained. No headless restore/deletion recovery or seed writes; suspended/incompatible/locked/missing/conflicting state refuses admission
 - [ ] Notification loop (movement events) + receive subscriptions with cancellation
 
 ### 0.4 Server API contract

@@ -24,6 +24,7 @@ struct PushJobs: Sendable {
         var announceReceived: @Sendable (_ sats: Int64, _ usd: String?) async -> Void
         var refreshWidget: @Sendable () async -> Void
         var recurring: @Sendable () async throws -> Void = {}
+        var withWalletAccess: @Sendable (@escaping @Sendable () async throws -> Void) async throws -> Void = { try await $0() }
     }
 
     let dependencies: Dependencies
@@ -32,7 +33,7 @@ struct PushJobs: Sendable {
     func handle(_ notification: NotificationData) async throws {
         await WalletBackgroundActivity.shared.begin()
         do {
-            try await handleAction(notification)
+            try await dependencies.withWalletAccess { try await handleAction(notification) }
             await WalletBackgroundActivity.shared.end()
         } catch {
             await WalletBackgroundActivity.shared.end()
@@ -144,6 +145,7 @@ extension PushJobs.Dependencies {
                 let expiry = try? await session.closestExpiryBlocks()
                 WidgetDataWriter.write(balance: summary.balance, closestExpiryBlocks: expiry ?? nil, variant: services.variant)
             },
-            recurring: { await RecurringExecutor.shared.execute() })
+            recurring: { await RecurringExecutor.shared.execute() },
+            withWalletAccess: { try await services.withBackgroundWallet($0) })
     }
 }

@@ -85,6 +85,9 @@ actor WalletSession {
     var sendPreparations: [String: SendPreparation] = [:]
     var boardPreparations: [String: BoardPreparation] = [:]
     private var state = State.closed
+    @TaskLocal static var backgroundOwner: UUID?
+    private var backgroundOwner: UUID?
+    private var backgroundWaiters: [CheckedContinuation<Void, Never>] = []
     private var runningCalls = 0
     private var sendReserved = false
     private var exclusiveSend = false
@@ -106,12 +109,55 @@ actor WalletSession {
         self.opener = opener ?? Self.sdkOpener(variant: variant)
     }
 
+    /// Holds admission across awaits, including cancelled native settlement. Foreground
+    /// calls and another push/task/intent fail busy until the owner releases it.
+    func withBackgroundAccess<T: Sendable>(
+        _ operation: @escaping @Sendable () async throws -> T,
+        settle: @escaping @Sendable () async -> Void = {}
+    ) async throws -> T {
+        try Task.checkCancellation()
+        guard backgroundOwner == nil, runningCalls == 0, !sendReserved,
+              sendPreparations.isEmpty, boardPreparations.isEmpty else { throw OpenError.busy }
+        switch state {
+        case .opening, .closing, .reserved: throw OpenError.busy
+        case .closed, .open: break
+        }
+        let owner = UUID()
+        backgroundOwner = owner
+        let openedHere = !isOpen
+        defer {
+            backgroundOwner = nil
+            let waiters = backgroundWaiters
+            backgroundWaiters = []
+            waiters.forEach { $0.resume() }
+        }
+        return try await Self.$backgroundOwner.withValue(owner) {
+            let result: Result<T, Error>
+            do { result = .success(try await operation()) }
+            catch { result = .failure(error) }
+            // A cancelled flush stops waiting before its upload/native snapshot finishes.
+            // Keep admission until those passes and any SDK call have settled.
+            await Task { await settle() }.value
+            if openedHere { try await Task { try await self.closeSettled() }.value }
+            return try result.get()
+        }
+    }
+
+    func waitForBackgroundAccess() async {
+        if backgroundOwner != nil { await withCheckedContinuation { backgroundWaiters.append($0) } }
+    }
+
+    private func checkAccess() throws {
+        guard backgroundOwner == Self.backgroundOwner else { throw OpenError.busy }
+    }
+
     // MARK: Lifecycle
 
     /// Opens the wallet the React Native app (or a previous native run)
     /// created. Refuses to run if the database is absent, is not a bark
     /// wallet, or belongs to another network.
     func openExisting(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
+        try checkAccess()
         guard case .closed = state else { throw OpenError.busy }
         guard !location.restorePending else { throw OpenError.restorePending }
         try checkExistingDatabase()
@@ -122,7 +168,7 @@ actor WalletSession {
         // finished open still marked as opening.
         let attempt = Task {
             do {
-                let handles = try await opener(mnemonic, datadir, runDaemon, appVersion, false)
+                let handles = try await opener(mnemonic, datadir, runDaemon && Self.backgroundOwner == nil, appVersion, false)
                 state = .open(handles)
                 return handles
             } catch {
@@ -138,6 +184,7 @@ actor WalletSession {
     /// `loadWalletIfNeeded`). Still rejects overlapping open/close.
     /// Waits for an open already in progress instead of failing.
     func ensureOpen(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
+        try checkAccess()
         switch state {
         case .open:
             return
@@ -153,6 +200,7 @@ actor WalletSession {
     /// Stops new wallet calls, waits for the running ones, then stops the
     /// daemon. Only then is the session closed.
     func close() async throws {
+        try checkAccess()
         guard !sendReserved else { throw OpenError.busy }
         switch state {
         case .closed:
@@ -189,6 +237,7 @@ actor WalletSession {
     /// Reserves the closed session. Opens, closes, wallet calls and other
     /// reservations fail (or see no wallet) until `release`.
     func reserve() throws -> Reservation {
+        try checkAccess()
         guard case .closed = state else { throw OpenError.busy }
         let reservation = Reservation(id: UUID())
         state = .reserved(reservation.id)
@@ -205,6 +254,7 @@ actor WalletSession {
     /// whether it ran.
     @discardableResult
     func unlessReserved(_ body: @Sendable () throws -> Void) rethrows -> Bool {
+        if backgroundOwner != Self.backgroundOwner { return false }
         if case .reserved = state { return false }
         try body()
         return true
@@ -230,6 +280,7 @@ actor WalletSession {
     /// nothing is running on the files, so the caller can remove what the
     /// attempt created before anyone else gets in.
     func createNew(_ reservation: Reservation, mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
+        guard Self.backgroundOwner == nil else { throw OpenError.busy }
         try checkHeld(reservation)
         guard !location.restorePending else { throw OpenError.restorePending }
         guard !location.databaseExists else { throw OpenError.walletDatabaseExists }
@@ -266,6 +317,7 @@ actor WalletSession {
     }
 
     private func checkHeld(_ reservation: Reservation) throws {
+        try checkAccess()
         guard case .reserved(let id) = state, id == reservation.id else { throw OpenError.busy }
     }
 
@@ -290,6 +342,7 @@ actor WalletSession {
     /// it, and it finishes even if the caller is cancelled. Long-lived
     /// observers must not use this, or `close` would wait for them forever.
     func withOpenWallet<T: Sendable>(_ body: @escaping @Sendable (Handles) async throws -> T) async throws -> T {
+        try checkAccess()
         guard case .open(let handles) = state else { throw SessionError.notOpen }
         guard !exclusiveSend || Self.sendWork else { throw OpenError.busy }
         runningCalls += 1
@@ -301,6 +354,7 @@ actor WalletSession {
 
     /// Covers inspection, durable journal writes and progression; excludes replacement and other Send creators.
     func withSendReservation(_ body: @escaping @MainActor @Sendable () async -> Void, exclusive: Bool = false) async throws {
+        try checkAccess()
         guard isOpen, !sendReserved else { throw OpenError.busy }
         sendReserved = true
         exclusiveSend = exclusive
@@ -430,6 +484,7 @@ actor WalletSession {
     /// during setup can't fall in a gap. The observer belongs to the
     /// session: `close` stops it and waits for it.
     func receiveCompletions(for request: ReceiveRequest) throws -> AsyncThrowingStream<ReceiveCompletion, Error> {
+        try checkAccess()
         guard case .open(let handles) = state else { throw SessionError.notOpen }
         let holder = handles.wallet.notifications()
         let id = UUID()
@@ -465,6 +520,7 @@ actor WalletSession {
     /// `resyncRequired`), for scheduling backups. Session-owned like the
     /// receive observer: `close` stops it and waits for it.
     func stateChanges() throws -> AsyncThrowingStream<StateChangeEvent, Error> {
+        try checkAccess()
         guard case .open(let handles) = state else { throw SessionError.notOpen }
         let subscription = try handles.wallet.stateChanges()
         let id = UUID()

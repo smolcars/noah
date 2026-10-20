@@ -90,6 +90,7 @@ final class AppModel {
         guard !started, !starting else { return }
         starting = true
         defer { starting = false }
+        await session.waitForBackgroundAccess()
         started = true
         do { try settings.requireCompatibleRNStores() }
         catch { phase = .blocked(.incompatibleStorage); return }
@@ -389,6 +390,8 @@ final class AppModel {
     }
 
     func appBecameActive() async {
+        await session.waitForBackgroundAccess()
+        if phase == .wallet, !isWalletSuspended, !(await session.isOpen) { await openExistingWallet() }
         await retrySecureStorage()
         if UIApplication.shared.applicationState == .active { recurringForeground?.start() }
         if phase == .wallet {

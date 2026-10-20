@@ -58,22 +58,19 @@ final class AppServices: Sendable {
 
     struct WalletSuspended: Error {}
 
-    /// Opens the wallet if needed (RN `loadWalletIfNeeded`), never while the
-    /// user has suspended it.
+    /// Read-only admission: recovery and seed migration belong to foreground launch.
     struct RestoreNotSettled: Error {}
 
     func ensureWalletOpen() async throws {
-        try SettingsStorage.shared.requireCompatibleRNStores()
-        try StoredSeed.requireUsable(seed.read())
-        guard !WalletDataLocation(variant: variant).hasMultipleDatabases else { throw StoredSeed.Failure.conflict }
-        // A background (push) launch never runs AppModel.start: settle an interrupted
-        // restore here too, instead of failing every job until the app is opened.
-        // This runs without a journal too (it removes plaintext a restore left
-        // before writing one) and while suspended (nothing gets opened).
-        if try await restoreRecovery.settle() == .waitingForKeychain { throw RestoreNotSettled() }
-        let wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
-        guard wallet?.isWalletSuspended != true else { throw WalletSuspended() }
-        try await session.ensureOpen(mnemonic: readMnemonic(), runDaemon: true, appVersion: appVersion)
+        let mnemonic = try HeadlessWalletGate.mnemonic(
+            location: WalletDataLocation(variant: variant), settings: .shared, readSeed: { self.seed.read() })
+        try Task.checkCancellation()
+        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: WalletSession.backgroundOwner == nil, appVersion: appVersion)
+        try Task.checkCancellation()
+    }
+
+    func withBackgroundWallet<T: Sendable>(_ operation: @escaping @Sendable () async throws -> T) async throws -> T {
+        try await session.withBackgroundAccess(operation, settle: { [self] in await backupCoordinator.settle() })
     }
 
     var backupService: BackupService {
