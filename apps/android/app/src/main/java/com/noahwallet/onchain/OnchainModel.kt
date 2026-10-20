@@ -1,0 +1,104 @@
+package com.noahwallet.onchain
+
+import androidx.compose.runtime.*
+import kotlinx.coroutines.CancellationException
+
+/** UI state never replays a mutation. Refresh reconciles cached evidence, including retained originals. */
+class OnchainModel(private val dependencies: Dependencies, private val detailID: String? = null) {
+    class Dependencies(
+        val ready: () -> Boolean, val overview: suspend () -> OnchainOverview,
+        val quote: suspend (OnchainAction, List<String>, Long, String?) -> OnchainQuote,
+        val execute: suspend (OnchainQuote) -> String, val attempts: suspend () -> List<OnchainOperationJournal.Attempt>,
+        val acknowledge: suspend (String) -> Unit, val check: suspend (String) -> Boolean,
+        val override: suspend (String) -> Unit, val detail: suspend (String) -> ExitModel?,
+        val refreshReceipts: suspend () -> Unit,
+    )
+    var overview by mutableStateOf<OnchainOverview?>(null); private set
+    var exit by mutableStateOf<ExitModel?>(null); private set
+    var quote by mutableStateOf<OnchainQuote?>(null); private set
+    var busy by mutableStateOf(false); private set
+    var loading by mutableStateOf(false); private set
+    var attempts by mutableStateOf<List<OnchainOperationJournal.Attempt>>(emptyList()); private set
+    var message by mutableStateOf<String?>(null); private set
+    var error by mutableStateOf<String?>(null); private set
+    private var generation = 0
+    fun invalidate() { generation++; quote = null }
+    fun unavailable() { invalidate(); overview = null; exit = null }
+    private fun visible(saved: List<OnchainOperationJournal.Attempt>) = saved.filter { it.overrideAudit?.acknowledgedAt == null }
+    suspend fun load() {
+        if (loading) return
+        loading = true
+        try {
+            val saved = dependencies.attempts()
+            attempts = visible(saved)
+            if (!dependencies.ready()) { unavailable(); fail(OnchainFailure.unavailable) }
+            for (attempt in saved.filter { it.receipt == null }) {
+                try { dependencies.check(attempt.id) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { }
+            }
+            try { dependencies.refreshReceipts() } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { }
+            attempts = visible(dependencies.attempts())
+            val token = generation
+            val detail = detailID?.let { dependencies.detail(it) }
+            val latest = dependencies.overview()
+            if (generation == token && dependencies.ready()) { exit = detail; overview = latest; error = null }
+            else if (!dependencies.ready()) unavailable()
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't read wallet status. Pull to refresh." }
+        finally { loading = false }
+    }
+    suspend fun review(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0, destination: String? = null) {
+        if (busy) return
+        invalidate(); error = null; message = null; busy = true
+        val token = generation
+        try {
+            if (!dependencies.ready()) fail(OnchainFailure.unavailable)
+            attempts = visible(dependencies.attempts())
+            if (attempts.any { it.blocks(action, ids) }) fail(OnchainFailure.busy)
+            val fresh = dependencies.quote(action, ids, amount, destination)
+            if (token == generation && dependencies.ready()) quote = fresh
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't estimate fees. Nothing was submitted. Review again when the wallet is ready." }
+        finally { busy = false }
+    }
+    /** The view must present the quote and obtain explicit consent before calling this. */
+    suspend fun confirm() {
+        if (busy) return
+        val reviewed = quote ?: return
+        quote = null; busy = true; error = null
+        try {
+            if (!dependencies.ready() || !ExitRules.current(reviewed.createdAt)) fail(OnchainFailure.changed)
+            message = dependencies.execute(reviewed)
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: OnchainFailure.uncertain.text }
+        finally { busy = false }
+        val submissionError = error
+        load()
+        if (submissionError != null) error = submissionError
+    }
+    suspend fun acknowledge(id: String) {
+        if (busy) return
+        try { dependencies.acknowledge(id); attempts = attempts.filter { it.id != id }; message = null }
+        catch (failure: Exception) { error = OnchainFailure.uncertain.text }
+    }
+    suspend fun checkStatus(id: String) {
+        if (busy) return
+        busy = true; invalidate()
+        try {
+            if (!dependencies.ready()) fail(OnchainFailure.unavailable)
+            val resolved = dependencies.check(id)
+            load()
+            message = if (resolved) "Status resolved. Review the receipt." else "Status remains uncertain. Noah checks again automatically as your wallet syncs."
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't check status. The attempt is still saved." }
+        finally { busy = false }
+    }
+    suspend fun overrideUncertain(id: String) {
+        if (busy) return
+        busy = true; invalidate()
+        try {
+            dependencies.override(id); attempts = visible(dependencies.attempts())
+            message = "Repeat protection overridden. The original attempt is still saved. Review the current wallet state before submitting again."
+        } catch (failure: Exception) { error = OnchainFailure.uncertain.text }
+        finally { busy = false }
+    }
+}

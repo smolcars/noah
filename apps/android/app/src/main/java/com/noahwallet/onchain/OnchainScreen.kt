@@ -1,0 +1,173 @@
+package com.noahwallet.onchain
+
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import com.noahwallet.BuildConfig
+import com.noahwallet.formatting.BitcoinAmount
+import com.noahwallet.services.storage.PersistedWalletState
+import com.noahwallet.services.wallet.WalletBackgroundActivity
+import com.noahwallet.ui.AppModel
+import kotlinx.coroutines.*
+
+fun onchainReady(app: AppModel): Boolean {
+    val persisted = app.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
+    return ExitRules.ready(persisted?.isInitialized == true, app.session.isOpen,
+        app.isWalletSuspended || persisted?.isWalletSuspended == true, WalletBackgroundActivity.isRunning)
+}
+internal fun onchainDependencies(app: AppModel) = OnchainModel.Dependencies(
+    ready = { onchainReady(app) }, overview = app.session::onchainOverview,
+    quote = { action, ids, amount, destination -> app.session.quoteOnchain(action, ids, amount, destination) },
+    execute = { quote -> app.services.lifecycle.withWalletMutation {
+        if (!onchainReady(app)) fail(OnchainFailure.unavailable)
+        app.session.executeOnchain(quote)
+    } },
+    attempts = { withContext(Dispatchers.IO) { app.session.onchainJournal.loadAll() } },
+    acknowledge = { withContext(Dispatchers.IO) { app.session.onchainJournal.acknowledge(it) } },
+    check = app.session::checkOnchainAttempt,
+    override = { withContext(Dispatchers.IO) { app.session.onchainJournal.overrideUncertain(it) } },
+    detail = app.session::exitDetail, refreshReceipts = app.session::refreshOnchainReceiptFees,
+)
+
+@Composable
+internal fun rememberOnchainModel(app: AppModel, detailID: String? = null): OnchainModel =
+    remember(app, detailID) { OnchainModel(onchainDependencies(app), detailID) }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun OnchainScreen(app: AppModel, model: OnchainModel, content: @Composable ColumnScope.() -> Unit) {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val scope = rememberCoroutineScope()
+    DisposableEffect(model, lifecycle) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) model.invalidate() }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer); model.invalidate() }
+    }
+    LaunchedEffect(model, app.isWalletSuspended) {
+        if (app.isWalletSuspended) { model.unavailable(); return@LaunchedEffect }
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            model.load()
+            while (isActive) { delay(60_000); if (!model.busy && model.quote == null) model.load() }
+        }
+    }
+    PullToRefreshBox(model.loading, onRefresh = { model.invalidate(); scope.launch { model.load() } }) {
+        Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (app.isWalletSuspended) Text("Wallet suspended. Resume your wallet in Settings.")
+            else content()
+            OnchainStatus(app, model)
+        }
+    }
+    model.quote?.let { quote ->
+        OnchainReview(app, quote, onDismiss = model::invalidate, confirm = { scope.launch { model.confirm(); app.refresh() } })
+    }
+}
+
+@Composable
+internal fun AmountRow(app: AppModel, title: String, sats: Long) {
+    ListItem(headlineContent = { Text(title) }, supportingContent = { Text(BitcoinAmount.format(sats, app.amountUnit, java.util.Locale.forLanguageTag(app.localeIdentifier))) })
+}
+@Composable
+internal fun DetailRow(title: String, value: String) {
+    Text(title, style = MaterialTheme.typography.labelLarge)
+    SelectionContainer { Text(value) }
+}
+internal fun copy(context: Context, value: String) {
+    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Noah", value))
+}
+@Composable
+internal fun TransactionRow(txid: String) {
+    val context = LocalContext.current
+    val uri = LocalUriHandler.current
+    DetailRow("Transaction ID", txid)
+    TextButton({ copy(context, txid) }) { Text("Copy transaction ID") }
+    if (BuildConfig.APP_VARIANT != "regtest") TextButton({ uri.openUri("https://mempool.space/" + (if (BuildConfig.APP_VARIANT == "signet") "signet/" else "") + "tx/$txid") }) { Text("View in explorer") }
+}
+
+@Composable
+private fun OnchainStatus(app: AppModel, model: OnchainModel) {
+    val scope = rememberCoroutineScope()
+    var overrideID by remember { mutableStateOf<String?>(null) }
+    if (model.loading || model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+    model.attempts.forEach { attempt ->
+        HorizontalDivider()
+        Text(if (attempt.overrideAudit != null) "Overridden attempt" else if (attempt.receipt == null) "Check operation status" else "Submitted", style = MaterialTheme.typography.titleLarge)
+        Text(attempt.quote.action.title)
+        AmountRow(app, "Reviewed amount", attempt.quote.amount)
+        Text(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(attempt.quote.createdAt)))
+        Text(attempt.receipt?.message ?: OnchainFailure.uncertain.text)
+        attempt.overrideAudit?.let { audit ->
+            Text("Repeat protection overridden: " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(audit.overriddenAt)))
+            Text(audit.statusMessage); Text(audit.title); Text(audit.warning); Text(audit.confirmation)
+        }
+        attempt.receipt?.onchainFee?.let { AmountRow(app, "Actual onchain fee", it) }
+        (attempt.receipt?.txid ?: attempt.txid)?.let { TransactionRow(it) }
+        if (attempt.receipt != null) TextButton({ scope.launch { model.acknowledge(attempt.id) } }, enabled = !model.busy) { Text("Done") }
+        else {
+            Text("Noah checks again automatically as your wallet syncs.")
+            TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text("Check status") }
+            if (attempt.overrideAudit == null) TextButton({ overrideID = attempt.id }, enabled = !model.busy) { Text("Override repeat protection…", color = MaterialTheme.colorScheme.error) }
+        }
+    }
+    overrideID?.let { id -> AlertDialog(onDismissRequest = { overrideID = null },
+        title = { Text(OnchainOperationJournal.overrideTitle) }, text = { Text(OnchainOperationJournal.overrideWarning) },
+        dismissButton = { TextButton({ overrideID = null }) { Text("Keep attempt") } },
+        confirmButton = { TextButton({ overrideID = null; scope.launch { model.overrideUncertain(id) } }) { Text(OnchainOperationJournal.overrideConfirmation) } }) }
+    model.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    model.message?.let { Text(it) }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> Unit, confirm: () -> Unit,
+    cancelTitle: String = "Cancel", cancel: () -> Unit = onDismiss) {
+    var current by remember(quote) { mutableStateOf(ExitRules.current(quote.createdAt)) }
+    LaunchedEffect(quote) { while (isActive && current) { delay(250); current = ExitRules.current(quote.createdAt) } }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(quote.action.title, style = MaterialTheme.typography.headlineSmall)
+            AmountRow(app, if (quote.action == OnchainAction.board) "Estimated boarding amount" else "Amount selected", quote.amount)
+            if (quote.ids.isNotEmpty()) Text("VTXOs selected: ${quote.ids.size}")
+            if (quote.action != OnchainAction.cancel) {
+                AmountRow(app, when (quote.action) { OnchainAction.board -> "Estimated Ark boarding fee"; OnchainAction.refresh -> "Refresh fee"; else -> "Estimated claim fee" }, quote.fee)
+                if (quote.action in setOf(OnchainAction.board, OnchainAction.startExit, OnchainAction.progress))
+                    AmountRow(app, if (quote.action == OnchainAction.board) "Estimated onchain fee" else "Estimated broadcast fees", quote.chainFee)
+                AmountRow(app, if (quote.action == OnchainAction.board) "Estimated Ark balance receives" else "Amount after fee", quote.net)
+            }
+            quote.destination?.let { DetailRow("Destination", it) }
+            Text(reviewExplanation(quote))
+            if (quote.action in setOf(OnchainAction.startExit, OnchainAction.progress, OnchainAction.claim)) {
+                ExitRules.warning(quote.amount, quote.fee, quote.totalFee, quote.action == OnchainAction.claim)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                if (!quote.fundable) Text("Additional confirmed onchain funds would be required to progress this exit.")
+            }
+            if (!current) Text(OnchainFailure.changed.text, color = MaterialTheme.colorScheme.error)
+            Button(confirm, enabled = current && !app.isWalletSuspended) { Text(quote.action.title) }
+            TextButton(cancel) { Text(cancelTitle) }
+        }
+    }
+}
+internal fun reviewExplanation(quote: OnchainQuote): String = when (quote.action) {
+    OnchainAction.board -> "Move onchain bitcoin into Ark. Fees and received amounts are estimates. The final fee may be higher if more coins are needed. Funds become spendable after the board completes." +
+        (if (quote.boardAll) " MAX boards all available onchain funds, including spendable pending funds. The final boarding amount may differ from this estimate." else "")
+    OnchainAction.refresh -> "This refreshes the selected VTXOs in a delegated Ark round."
+    OnchainAction.startExit -> "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."
+    OnchainAction.progress -> "This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process. Fees are paid from your onchain balance. Cancellation is possible only before the final exit transaction is broadcast."
+    OnchainAction.claim -> "This broadcasts the claim transaction. Earlier broadcast fees are not deducted again."
+    OnchainAction.cancel -> "Cancel this exit before its final transaction is broadcast. The VTXO remains spendable. The wallet will recheck whether cancellation is still possible."
+}
