@@ -35,9 +35,19 @@ struct WalletLifecycle: Sendable {
         var deregister: @Sendable () async throws -> Void
         var settleBackground: @Sendable (Duration) async throws -> Void = { _ in }
         var walletChanged: @Sendable () async -> Void = { await SendPaymentController.shared.reloadForWalletChange() }
+        var persistAutomationStop: (@Sendable (String) throws -> Void)? = nil
     }
 
     static let automationStopKey = "native-recurring-automation-stop-generation"
+
+    private final class StopLatch: @unchecked Sendable {
+        let lock = NSLock()
+        var failed: [ObjectIdentifier: SettingsStorage] = [:]
+    }
+    private static let stopLatch = StopLatch()
+    static func automationAllowed(settings: SettingsStorage) -> Bool {
+        stopLatch.lock.withLock { stopLatch.failed[ObjectIdentifier(settings)] == nil }
+    }
 
     let dependencies: Dependencies
 
@@ -126,7 +136,19 @@ struct WalletLifecycle: Sendable {
     }
 
     private func stopAutomation() throws {
-        try dependencies.settings.setDurably(UUID().uuidString, forKey: Self.automationStopKey)
+        try Self.stopLatch.lock.withLock {
+            let settings = dependencies.settings
+            do {
+                let generation = UUID().uuidString
+                if let persist = dependencies.persistAutomationStop { try persist(generation) }
+                else { try settings.setDurably(generation, forKey: Self.automationStopKey) }
+                Self.stopLatch.failed.removeValue(forKey: ObjectIdentifier(settings))
+            } catch {
+                // A failed stop must beat a pending submission even when durable state is unchanged.
+                Self.stopLatch.failed[ObjectIdentifier(settings)] = settings
+                throw error
+            }
+        }
     }
 
     private func deleteLocked() async throws {

@@ -13,7 +13,20 @@ final class RecurringStore: @unchecked Sendable {
         var binding: Binding?
     }
     private let settings: SettingsStorage
-    init(settings: SettingsStorage = .shared) { self.settings = settings }
+    private let write: @Sendable (String) throws -> Void
+    private let lock = NSRecursiveLock()
+    private var writeFailed = false
+    init(settings: SettingsStorage = .shared, write: (@Sendable (String) throws -> Void)? = nil) {
+        self.settings = settings
+        self.write = write ?? { try settings.setDurably($0, forKey: Self.key) }
+    }
+    func checkAutomationAllowed() throws {
+        try lock.withLock {
+            guard !writeFailed, WalletLifecycle.automationAllowed(settings: settings) else {
+                throw RecurringError.message("Recurring payment storage failed. Restart Noah; sending is stopped.")
+            }
+        }
+    }
 
     private func envelope() throws -> [String: Any] {
         guard let raw = settings.string(forKey: Self.key) else {
@@ -26,25 +39,31 @@ final class RecurringStore: @unchecked Sendable {
         return value
     }
     func load() throws -> State {
-        let state = try envelope()["state"] as! [String: Any]
-        let raw = state["schedules"] as! [String: Any]
-        let schedules = try JSONDecoder().decode([String: RecurringPayment].self, from: JSONSerialization.data(withJSONObject: raw))
-        guard schedules.allSatisfy({ $0.key == $0.value.id && $0.value.validPolicy }) else {
-            throw RecurringError.message("A saved recurring payment is invalid. Schedules have been preserved; sending is stopped.")
+        try lock.withLock {
+            guard !writeFailed else { throw RecurringError.message("Recurring payment storage failed. Restart Noah; sending is stopped.") }
+            let state = try envelope()["state"] as! [String: Any]
+            let raw = state["schedules"] as! [String: Any]
+            let schedules = try JSONDecoder().decode([String: RecurringPayment].self, from: JSONSerialization.data(withJSONObject: raw))
+            guard schedules.allSatisfy({ $0.key == $0.value.id && $0.value.validPolicy }) else {
+                throw RecurringError.message("A saved recurring payment is invalid. Schedules have been preserved; sending is stopped.")
+            }
+            let binding = try state["nativeWalletBinding"].map {
+                try JSONDecoder().decode(Binding.self, from: JSONSerialization.data(withJSONObject: $0))
+            }
+            return State(schedules: schedules, pending: state["serverSyncPending"] as? Bool ?? true, binding: binding)
         }
-        let binding = try state["nativeWalletBinding"].map {
-            try JSONDecoder().decode(Binding.self, from: JSONSerialization.data(withJSONObject: $0))
-        }
-        return State(schedules: schedules, pending: state["serverSyncPending"] as? Bool ?? true, binding: binding)
     }
     private func change(_ mutate: (inout [String: Any]) throws -> Void) throws {
-        _ = try load()
-        var envelope = try envelope()
-        var state = envelope["state"] as! [String: Any]
-        try mutate(&state)
-        envelope["state"] = state
-        let raw = String(decoding: try JSONSerialization.data(withJSONObject: envelope, options: [.sortedKeys]), as: UTF8.self)
-        try settings.setDurably(raw, forKey: Self.key)
+        try lock.withLock {
+            _ = try load()
+            var envelope = try envelope()
+            var state = envelope["state"] as! [String: Any]
+            try mutate(&state)
+            envelope["state"] = state
+            let raw = String(decoding: try JSONSerialization.data(withJSONObject: envelope, options: [.sortedKeys]), as: UTF8.self)
+            do { try write(raw) }
+            catch { writeFailed = true; throw error }
+        }
     }
     func bind(_ binding: Binding) throws {
         try change { state in

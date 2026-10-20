@@ -54,6 +54,7 @@ import Observation
     }
     private func boundState() throws -> RecurringStore.State {
         try d.allowed()
+        try d.store.checkAutomationAllowed()
         let owner = try d.binding()
         var state = try d.store.load()
         if state.binding == nil || (state.binding != owner && state.schedules.isEmpty) {
@@ -160,7 +161,7 @@ import Observation
                     let unattended = approval == nil
                     let store = d.store, binding = d.binding, allowed = d.allowed, generation = d.automationGeneration, now = d.now, zone = d.zone
                     await d.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key) {
-                        do { try allowed() } catch { throw SendNotSubmitted(reason: .recurringStopped) }
+                        do { try allowed(); try store.checkAutomationAllowed() } catch { throw SendNotSubmitted(reason: .recurringStopped) }
                         let state = try store.load()
                         // Remove only our marker; the persisted policy must still match below.
                         var currentPlan = marked

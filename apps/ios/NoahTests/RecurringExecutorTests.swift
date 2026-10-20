@@ -17,6 +17,7 @@ import Testing
         let journal: RecurringJournal
         let owner: Locked<RecurringStore.Binding>
         let stopped = Locked(false)
+        let storeWriteFails = Locked(false)
         let calls = Locked(0)
         var saved: SendPaymentController.Attempt?
         var writeReceiptFails = false
@@ -44,7 +45,11 @@ import Testing
             directory = FileManager.default.temporaryDirectory.appending(path: "recurring-executor-\(UUID())")
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             settings = try .init(rootPath: directory.appending(path: "mmkv").path, instanceID: UUID().uuidString)
-            store = .init(settings: settings)
+            let settings = settings, storeWriteFails = storeWriteFails
+            store = .init(settings: settings, write: {
+                if storeWriteFails.withLock({ $0 }) { throw CocoaError(.fileWriteUnknown) }
+                try settings.setDurably($0, forKey: RecurringStore.key)
+            })
             journal = .init(file: directory.appending(path: "journal.json"))
             owner = Locked(.init(wallet: .init(fingerprint: "test", network: "regtest"), instance: UUID()))
             rebuild()
