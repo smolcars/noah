@@ -2,6 +2,9 @@ import Foundation
 
 /// Independent fsynced marker: MMKV and the Send receipt can both lag a killed process.
 struct RecurringJournal {
+    private static let lock = NSRecursiveLock()
+    func withLock<T>(_ operation: () throws -> T) rethrows -> T { try Self.lock.withLock(operation) }
+
     struct Entry: Codable, Sendable {
         var binding: RecurringStore.Binding
         var scheduleID: String
@@ -174,6 +177,7 @@ struct RecurringJournal {
     /// Durable handoff before Send publishes a terminal result.
     func record(_ attempt: SendPaymentController.Attempt, generation: Int, walletGeneration: Int,
                 message: String?, binding: RecurringStore.Binding, now: Double) throws {
+        Self.lock.lock(); defer { Self.lock.unlock() }
         let outcome: TerminalEvidence.Outcome
         if attempt.alreadyPaid != nil { outcome = .alreadyPaid }
         else if let receipt = attempt.receipt, !receipt.isUnresolved, receipt.broadcastRetryPending != true { outcome = .succeeded }
@@ -193,12 +197,13 @@ struct RecurringJournal {
                                outcome: outcome, message: message, recordedAt: now)
         try save(entry)
     }
-    func load() throws -> [String: Entry] { try state().attempts }
+    func load() throws -> [String: Entry] { try withLock { try state().attempts } }
     func legacyUncertain(binding: RecurringStore.Binding, scheduleID: String) throws -> Bool {
-        try state().legacyUncertainty.contains(.init(binding: binding, scheduleID: scheduleID))
+        try withLock { try state().legacyUncertainty.contains(.init(binding: binding, scheduleID: scheduleID)) }
     }
     func consumed(binding: RecurringStore.Binding, scheduleID: String, at: Double,
                   policyRevision: UUID?, occurrenceIndex: Int) throws -> Bool {
+        Self.lock.lock(); defer { Self.lock.unlock() }
         let state = try state()
         return state.legacyUncertainty.contains(.init(binding: binding, scheduleID: scheduleID))
             || state.consumed.contains { $0.binding == binding && $0.scheduleID == scheduleID && at <= $0.through }
@@ -211,6 +216,7 @@ struct RecurringJournal {
         try persist(JSONEncoder().encode(state), file)
     }
     func save(_ entry: Entry) throws {
+        Self.lock.lock(); defer { Self.lock.unlock() }
         var state = try state()
         state.attempts[entry.scheduleID] = entry
         try validate(state, complete: false)

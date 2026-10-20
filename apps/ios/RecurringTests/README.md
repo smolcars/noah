@@ -3,6 +3,46 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Audited resume settles repaired proof (2026-10-20)
+
+Base `88abe06f`. Audited resume reloads the occurrence after clearing Send, because
+cleanup can repair an initially failed evidence handoff. Success, proven-already-paid
+and failed outcomes now use the normal consumption → ledger/history → historyApplied
+→ released routine before resume reads the latest policy row. Only still-ambiguous
+outcomes receive skip flags. The recursive journal lock covers handoff, migration,
+reads and writes, including the entire settlement/override transaction. Marker
+admission already runs in one synchronous MainActor/lifecycle transaction. Recovery
+and status checks use settlement; reapproval/cancel write policy only; deletion keeps
+its lifecycle drain. Normal Send and wallet/stop/failure/storage gates are unchanged.
+
+The supplied probe is permanent in `RecurringOverrideSettlementTests`:
+**1 definition / 2 cases failed before**, with four paid-count/history issues.
+The expanded suite covers both initial handoff failures (binding/read and journal
+write), repaired already-paid/failure outcomes, and seven interrupted override
+boundaries: terminal, Send removal, consumption, paid row, historyApplied, released,
+and the resumed policy's write-ahead. Fresh stores/controllers repeatedly verify
+one paid occurrence/history row and one submission. These are deterministic durable
+write failures and restarts, not live power cuts or funded payments.
+Focused verification passed **68 definitions / 140 expanded cases / 7 suites**,
+zero failures/skips; the new suite contributes **3 definitions / 11 cases**.
+`bun apps/tools/translations.mjs --check` is clean, with no UI string changes.
+
+Full **NoahTests ran once after the last iOS source/test change**, with no exclusions:
+**755 definitions / 150 suites**, **731 passed / 24 opt-in skipped / zero failed**;
+**1,552 expanded passes / 24 skips**, **267.166 seconds** of test execution.
+All runs used Nix, XcodeGen, normal signing, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`,
+two Xcode jobs, disabled parallel testing, and owned `/private/tmp` DerivedData.
+Selectors named whole suites; the final selector was `-only-testing:NoahTests`.
+Logs and exported summary/test-tree JSON: `/private/tmp/noah-override-f17b-ios-*`.
+
+Owned iPhone 17 / iOS 27.0 simulator **Noah Override Settlement Sol f17b**,
+`2E44A7A7-9647-425A-9DD9-B8D0692531C0`: T3 twice rejected the new UDID as
+unknown, so Xcode targeted it directly. Its exact identity/runtime and **Shutdown**
+state were confirmed before deletion, and absence afterward. Removed owned
+DerivedData, all **three** result bundles and the isolated GT dependency install.
+No owned build/test process remains; shared daemons and other devices were left
+alone. Cleanup receipt: `/private/tmp/noah-override-f17b-cleanup.json`.
+
 ## Durable occurrence settlement (2026-10-20)
 
 Base: `feat/native-rewrite` at `7e88fdd8`. This supersedes the earlier retained

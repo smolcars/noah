@@ -318,7 +318,11 @@ import Observation
         if try await storage({ [self] in try d.binding() == entry.binding }) {
             d.controller.releaseRecurring(attemptID: evidence.attempt.recurringAttemptID, expectedGeneration: evidence.generation, expectedWalletGeneration: evidence.walletGeneration, retainReceipt: retainReceipt)
         }
-        let notification = try await storage { [self] () throws -> RecurringPayment? in
+        let notification = try await storage { [self] in try applySettlement(entry, evidence: evidence, notifyOriginal: notifyOriginal) }
+        if let notification { await d.notifications([], notification) }
+    }
+    private func applySettlement(_ entry: RecurringJournal.Entry, evidence: RecurringJournal.TerminalEvidence, notifyOriginal: Bool = false) throws -> RecurringPayment? {
+        try d.journal.withLock {
             guard try d.binding() == entry.binding,
                   var saved = try d.journal.load()[entry.scheduleID], saved.terminal?.settlementID == evidence.settlementID else { return nil }
             if saved.released == true { return nil }
@@ -357,7 +361,6 @@ import Observation
             try d.journal.save(saved)
             return notification
         }
-        if let notification { await d.notifications([], notification) }
     }
     func checkStatus(_ id: String) async {
         guard !running else { return }
@@ -442,10 +445,10 @@ import Observation
         guard confirmed, !running else { return }
         if let entry = try await storage({ [self] in try d.journal.load()[id] }),
            let terminal = entry.terminal, terminal.outcome != .uncertain { try await settle(entry) }
-        try await storage { [self] in
-            guard confirmed, !running else { return }
+        let notification = try await storage { [self] () throws -> RecurringPayment? in
+            guard confirmed, !running else { return nil }
             _ = try boundStateNow()
-            guard var schedule = try d.store.load().schedules[id] else { return }
+            guard var schedule = try d.store.load().schedules[id] else { return nil }
             guard !schedule.unsupportedStorage else { throw RecurringError.message(RecurringPayment.unsupportedMessage) }
             try rejectLegacyUncertainty(id)
             guard schedule.amountSat <= RecurringPayment.maximumAmount else { throw RecurringError.message(RecurringPayment.amountLimitMessage) }
@@ -455,14 +458,28 @@ import Observation
             }
             // Includes RN in-flight markers that predate Send. Audit before releasing the occurrence.
             try auditLegacyOverride(schedule)
-            if var entry = try d.journal.load()[id] {
-                entry.resolved = true; entry.consumed = true
-                if entry.terminal != nil { entry.historyApplied = true; entry.released = true }
-                try d.journal.save(entry)
+            return try d.journal.withLock {
+                // Clearing Send can repair its failed handoff. Settle that proof before any skip.
+                var notification: RecurringPayment?
+                if var entry = try d.journal.load()[id] {
+                    guard try entry.binding == d.binding() else { throw NoWallet() }
+                    if let evidence = entry.terminal, evidence.outcome != .uncertain {
+                        notification = try applySettlement(entry, evidence: evidence)
+                        guard try d.journal.load()[id]?.released == true else { throw SendFailure.unresolved }
+                    } else {
+                        entry.resolved = true; entry.consumed = true
+                        if entry.terminal != nil { entry.historyApplied = true; entry.released = true }
+                        try d.journal.save(entry)
+                    }
+                }
+                guard let latest = try d.store.load().schedules[id] else { return notification }
+                schedule = latest
+                schedule.resume(now: d.now(), zone: d.zone())
+                try d.store.upsert(schedule)
+                return notification
             }
-            schedule.resume(now: d.now(), zone: d.zone())
-            try d.store.upsert(schedule)
         }
+        if let notification { await d.notifications([], notification) }
         await changed()
     }
     private func rejectLegacyUncertainty(_ id: String) throws {
