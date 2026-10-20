@@ -1,6 +1,7 @@
 package com.noahwallet.services.wallet
 
 import com.noahwallet.services.storage.*
+import com.noahwallet.services.backup.*
 import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -314,6 +315,99 @@ class WalletLifecycleTest {
                 } finally { world.clean() }
             }
         }
+    }
+
+    @Test fun restoreJournalSettlesBeforeMatchingStaleDeletionMarker() = runBlocking {
+        for (phase in listOf("installing", "rollback", "committed")) {
+            val world = World()
+            try {
+                world.files(); world.location.database.writeText("wallet A data")
+                val tx = RestoreTransaction(world.location, sync = {}, rename = { from, to -> check(from.renameTo(to)) })
+                tx.prepare(); check(tx.staged.mkdir()); File(tx.staged, "db.sqlite").writeText("wallet B data")
+                File(tx.work, "snapshot.sqlite").writeText("plaintext")
+                tx.begin("wallet B")
+                if (phase != "installing") tx.markCommitting()
+                if (phase == "committed") world.seedValue = "wallet B"
+                val secret = object : SecretItem {
+                    override suspend fun read() = SecretResult.Found(world.seedValue)
+                    override suspend fun save(value: String) = error("Recovery must not write a seed")
+                }
+                // Matching both live instance and current seed used to enter deletion and throw
+                // RestorePending forever, before the journal got a chance to settle.
+                world.location.writeDeletionIdentity(secret.read()) {}
+                val lifecycle = world.lifecycle()
+                val recovery = RestoreRecovery { lifecycle.recoverRestoreAndDeletion {
+                    WalletRestorer.recoverInterruptedRestore(world.session, world.location, secret, tx)
+                } }
+                val first = async { recovery.settle() }
+                val headless = async { recovery.settle() }
+                assertEquals(if (phase == "committed") RestoreTransaction.Recovery.completed else RestoreTransaction.Recovery.rolledBack, first.await())
+                assertEquals(RestoreTransaction.Recovery.nothingPending, headless.await())
+                assertEquals(if (phase == "committed") "wallet B data" else "wallet A data", world.location.database.readText())
+                assertTrue(world.seed); assertTrue(world.token); assertTrue(world.settings)
+                assertFalse(world.suspended); assertFalse(world.events.contains("scratch"))
+                assertFalse(world.location.restorePending); assertFalse(world.location.deletionMarker.exists())
+                assertFalse(tx.previous.exists()); assertFalse(tx.work.exists())
+                world.session.release(world.session.reserve())
+                lifecycle.delete(); assertFalse(world.seed) // Still explicitly deletable.
+            } finally { world.clean() }
+        }
+    }
+
+    @Test fun restoreWaitingForSecretDiscardsStaleMarkerWithoutDeletingWallet() = runBlocking {
+        val world = World()
+        try {
+            world.files()
+            val tx = RestoreTransaction(world.location, sync = {}, rename = { from, to -> check(from.renameTo(to)) })
+            tx.prepare(); check(tx.staged.mkdir()); File(tx.staged, "db.sqlite").writeText("wallet B data")
+            tx.begin("wallet B"); tx.markCommitting()
+            world.location.writeDeletionIdentity(SecretResult.Found("wallet B")) {}
+            var locked = true
+            val secret = object : SecretItem {
+                override suspend fun read(): SecretResult = if (locked) SecretResult.Unavailable(SecretFailure.storageUnreadable) else SecretResult.Found("wallet B")
+                override suspend fun save(value: String) = error("Recovery must not write a seed")
+            }
+            val lifecycle = world.lifecycle()
+            val recovery = RestoreRecovery { lifecycle.recoverRestoreAndDeletion {
+                WalletRestorer.recoverInterruptedRestore(world.session, world.location, secret, tx)
+            } }
+            assertEquals(RestoreTransaction.Recovery.waitingForSecret, recovery.settle())
+            assertTrue(world.location.restorePending); assertFalse(world.location.deletionMarker.exists())
+            assertTrue(world.seed); assertEquals(listOf("sync"), world.events)
+            locked = false; world.seedValue = "wallet B"
+            assertEquals(RestoreTransaction.Recovery.completed, recovery.settle())
+            assertFalse(world.location.restorePending); assertFalse(world.location.deletionMarker.exists())
+            assertEquals("wallet B data", world.location.database.readText()); assertTrue(world.seed)
+        } finally { world.clean() }
+    }
+
+    @Test fun interruptionAfterRollbackCannotReauthorizeStaleDeletion() = runBlocking {
+        val world = World()
+        try {
+            world.files()
+            world.location.writeDeletionIdentity(SecretResult.Found(world.seedValue)) {}
+            val tx = RestoreTransaction(world.location, sync = {}, rename = { from, to -> check(from.renameTo(to)) })
+            tx.prepare(); check(tx.staged.mkdir()); File(tx.staged, "db.sqlite").writeText("wallet B data")
+            tx.begin("wallet B")
+            val secret = object : SecretItem {
+                override suspend fun read() = SecretResult.Found(world.seedValue)
+                override suspend fun save(value: String) = error("Recovery must not write a seed")
+            }
+            val lifecycle = world.lifecycle()
+            assertTrue(runCatching { lifecycle.recoverRestoreAndDeletion {
+                assertFalse(world.location.deletionMarker.exists())
+                assertTrue(world.events.contains("sync"))
+                assertEquals(RestoreTransaction.Recovery.rolledBack,
+                    WalletRestorer.recoverInterruptedRestore(world.session, world.location, secret, tx))
+                error("Interrupted after journal removal")
+            } }.isFailure)
+            val recovery = RestoreRecovery { lifecycle.recoverRestoreAndDeletion {
+                WalletRestorer.recoverInterruptedRestore(world.session, world.location, secret, tx)
+            } }
+            assertEquals(RestoreTransaction.Recovery.nothingPending, recovery.settle())
+            assertTrue(world.seed); assertTrue(world.location.database.exists()); assertTrue(world.settings)
+            assertFalse(world.location.deletionMarker.exists())
+        } finally { world.clean() }
     }
 
     @Test fun suspendedSessionRejectsDelayedOpen() = runBlocking {

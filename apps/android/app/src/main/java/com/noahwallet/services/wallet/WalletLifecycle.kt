@@ -1,5 +1,6 @@
 package com.noahwallet.services.wallet
 
+import com.noahwallet.services.backup.RestoreTransaction
 import com.noahwallet.services.storage.WalletDataLocation
 import com.noahwallet.services.storage.syncDirectory
 import kotlinx.coroutines.withTimeout
@@ -36,17 +37,42 @@ class WalletLifecycle(
     class TemporaryFiles : Exception("Noah couldn't remove temporary wallet files. Restart Noah and try again.")
     private val mutation = Mutex()
 
-    suspend fun recoverDeletion() = withContext(NonCancellable + Dispatchers.IO) {
-        mutation.withLock {
-            if (!location.deletionMarker.exists()) return@withLock
-            if (!location.deletionMatchesWallet(readSeed())) {
-                warn("Discarding deletion marker for a different or unidentifiable wallet")
-                check(location.deletionMarker.delete())
-                syncFiles()
-                return@withLock
+    /** Called by launch and headless recovery; keeps deletion out until restore has settled. */
+    suspend fun recoverRestoreAndDeletion(recoverRestore: suspend () -> RestoreTransaction.Recovery) =
+        withContext(NonCancellable + Dispatchers.IO) {
+            mutation.withLock {
+                // Deletion refuses a restore journal, and restore refuses a deletion marker.
+                // Coexistence proves the marker is stale, even if its seed tag matches.
+                // Drop it durably before restore removes its journal: a crash after rollback
+                // must not reauthorize deletion of the previous wallet on the next launch.
+                if (location.restorePending) {
+                    if (location.deletionMarker.exists()) discardDeletionMarker()
+                    else syncFiles() // Retry a prior marker unlink whose directory sync failed.
+                }
+                val result = recoverRestore()
+                if (result == RestoreTransaction.Recovery.waitingForSecret) return@withLock result
+                recoverDeletionLocked()
+                result
             }
-            deleteLocked()
         }
+
+    suspend fun recoverDeletion() = withContext(NonCancellable + Dispatchers.IO) {
+        mutation.withLock { recoverDeletionLocked() }
+    }
+
+    private suspend fun recoverDeletionLocked() {
+        if (!location.deletionMarker.exists()) return
+        if (!location.deletionMatchesWallet(readSeed())) {
+            discardDeletionMarker()
+            return
+        }
+        deleteLocked()
+    }
+
+    private fun discardDeletionMarker() {
+        warn("Discarding deletion marker for a different or unidentifiable wallet")
+        check(location.deletionMarker.delete())
+        syncFiles()
     }
 
     suspend fun suspend() = withContext(NonCancellable + Dispatchers.IO) {

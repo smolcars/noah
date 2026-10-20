@@ -78,12 +78,11 @@ class AppServices private constructor(private val context: Context) {
     }
 
     private val restoreRecovery = RestoreRecovery {
-        WalletRestorer.recoverInterruptedRestore(session, WalletDataLocation(context.filesDir, variant), SeedItem(seed))
+        lifecycle.recoverRestoreAndDeletion {
+            WalletRestorer.recoverInterruptedRestore(session, WalletDataLocation(context.filesDir, variant), SeedItem(seed))
+        }
     }
-    suspend fun recoverRestore(): RestoreTransaction.Recovery {
-        lifecycle.recoverDeletion()
-        return restoreRecovery.settle()
-    }
+    suspend fun recoverRestore(): RestoreTransaction.Recovery = restoreRecovery.settle()
 
     fun restorer() = WalletRestorer(variant, session, WalletDataLocation(context.filesDir, variant), SeedItem(seed),
         makeClient = { phrase ->
