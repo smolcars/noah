@@ -54,6 +54,24 @@ struct SendDestination: Equatable, Sendable, Codable {
     private static func mismatch(_ actual: String, _ expected: String) -> Self {
         Self(error: "Network mismatch: expected \(expected), got \(actual)")
     }
+    /// Match the bounded Android decimal domain before Foundation's permissive prefix parser.
+    private static func uriAmount(_ value: String) -> Decimal? {
+        let syntax = #"^[+]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]{1,2})?$"#
+        guard value.utf8.count <= 96,
+              value.range(of: syntax, options: .regularExpression) == value.startIndex..<value.endIndex else { return nil }
+        let parts = value.lowercased().split(separator: "e", omittingEmptySubsequences: false)
+        let mantissa = parts[0]
+        guard let exponent = Int(parts.count == 2 ? String(parts[1]) : "0") else { return nil }
+        let fraction = mantissa.split(separator: ".", omittingEmptySubsequences: false).dropFirst().first?.count ?? 0
+        let digits = mantissa.utf8.filter { (48...57).contains($0) }.count
+        guard digits <= 32, (-32...32).contains(exponent), (-32...32).contains(fraction - exponent),
+              var btc = Decimal(string: value, locale: Locale(identifier: "en_US_POSIX")),
+              !btc.isNaN, btc >= 0, btc <= 21000000 else { return nil }
+        var factor = Decimal(100000000), sats = Decimal(), rounded = Decimal()
+        guard NSDecimalMultiply(&sats, &btc, &factor, .plain) == .noError else { return nil }
+        NSDecimalRound(&rounded, &sats, 0, .plain)
+        return rounded
+    }
     private static func uri(_ value: String, network: String) -> Self {
         let parts = value.dropFirst(8).split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
         var methods: [String: String] = [:], errors: [String] = [], seen: Set<String> = []
@@ -83,8 +101,8 @@ struct SendDestination: Equatable, Sendable, Codable {
                 }
                 switch lower {
                 case "amount":
-                    if let btc = Decimal(string: decoded, locale: Locale(identifier: "en_US_POSIX")), btc >= 0, !decoded.contains(","), btc <= 21000000 {
-                        var sats = btc * 100000000, rounded = Decimal(); NSDecimalRound(&rounded, &sats, 0, .plain); amount = rounded
+                    if let sats = uriAmount(decoded) {
+                        amount = sats
                     } else { errors.append("Invalid amount format"); invalid = true }
                 case "ark": add(decoded, type: "ark")
                 case "lightning": add(decoded, type: "lightning")
