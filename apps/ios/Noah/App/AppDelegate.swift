@@ -6,6 +6,7 @@ import UserNotifications
 /// background remote notifications). Push handling lands in Phase 0.6.
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     private let logFile: LogFile
+    private var lifecycleDrain: BackgroundExecution?
 
     override init() {
         logFile = .shared
@@ -40,17 +41,30 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         return true
     }
 
-    @objc private func drainLifecycleLogs() {
-        logFile.drain(timeout: UIApplication.shared.backgroundTimeRemaining)
+    @objc func drainLifecycleLogs() {
+        beginLifecycleLogDrain(UIApplication.shared)
+    }
+
+    private func beginLifecycleLogDrain(_ application: UIApplication) {
+        guard lifecycleDrain == nil else { return }
+        let identifier = application.beginBackgroundTask(withName: "Log drain") { [weak self] in
+            self?.lifecycleDrain?.expire()
+        }
+        guard identifier != .invalid else { return }
+        lifecycleDrain = BackgroundExecution(timeout: .seconds(min(0.2, application.backgroundTimeRemaining)),
+            logFile: logFile, completion: { [weak self] _ in
+                application.endBackgroundTask(identifier)
+                self?.lifecycleDrain = nil
+            }, operation: {})
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
-        logFile.drain(timeout: application.backgroundTimeRemaining)
+        beginLifecycleLogDrain(application)
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         Task { await BackgroundScheduler.shared.schedule() }
-        logFile.drain(timeout: application.backgroundTimeRemaining)
+        beginLifecycleLogDrain(application)
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {

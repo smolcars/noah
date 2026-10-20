@@ -7,6 +7,27 @@ import UIKit
 /// background handler for `simctl push`; real delivery is checked on devices).
 @MainActor
 struct AppDelegatePushTests {
+    @Test(arguments: ["resign", "background", "scene"])
+    func lifecycleDrainMustNotBlockMainThread(callback: String) async {
+        let queue = DispatchQueue(label: "regression.blocked-writer")
+        queue.suspend()
+        let directory = FileManager.default.temporaryDirectory.appending(path: "r3-drain-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = LogFile(directory: directory, queue: queue)
+        file.append(level: .info, tag: "r3", message: "accepted")
+        let started = ContinuousClock.now
+        let delegate = AppDelegate(logFile: file)
+        switch callback {
+        case "resign": delegate.applicationWillResignActive(UIApplication.shared)
+        case "background": delegate.applicationDidEnterBackground(UIApplication.shared)
+        default: delegate.drainLifecycleLogs()
+        }
+        let elapsed = ContinuousClock.now - started
+        queue.resume()
+        await file.flushAsync()
+        #expect(elapsed < .milliseconds(50))
+    }
+
     @Test func ignoresPushesThatAreNotForNoah() async {
         let result = await AppDelegate().application(UIApplication.shared, didReceiveRemoteNotification: ["aps": ["alert": "hi"]])
         #expect(result == .noData)
@@ -59,10 +80,12 @@ struct AppDelegatePushTests {
         let delegate = AppDelegate(logFile: file)
         file.append(level: .info, tag: "test", message: "Accepted before lifecycle callback")
         DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { queue.resume() }
+        let started = ContinuousClock.now
         if resigning { delegate.applicationWillResignActive(UIApplication.shared) }
         else { delegate.applicationDidEnterBackground(UIApplication.shared) }
-        #expect(FileManager.default.fileExists(atPath: directory.appending(path: "noah.log").path))
+        #expect(ContinuousClock.now - started < .milliseconds(50))
         await file.flushAsync()
+        #expect(FileManager.default.fileExists(atPath: directory.appending(path: "noah.log").path))
     }
 
     @Test func expiryDuringLogDrainStillCompletesExactlyOnce() async throws {

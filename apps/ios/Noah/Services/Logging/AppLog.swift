@@ -153,24 +153,35 @@ final class LogFile: @unchecked Sendable {
         }
     }
 
-    /// Lifecycle callbacks alone may wait briefly; SDK/Rust admission never calls this.
-    @discardableResult
-    func drain(timeout: TimeInterval = 0.2) -> Bool {
-        guard timeout > 0 else { return false }
-        let done = DispatchSemaphore(value: 0)
-        lock.withLock {
-            enqueueDroppedMarker()
-            queue.async { done.signal() }
+    private final class DrainCompletion: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<Void, Never>?
+
+        init(_ continuation: CheckedContinuation<Void, Never>) { self.continuation = continuation }
+
+        func finish() {
+            let waiting = lock.withLock {
+                let waiting = continuation
+                continuation = nil
+                return waiting
+            }
+            waiting?.resume()
         }
-        return done.wait(timeout: .now() + min(timeout, 0.2)) == .success
     }
 
+    /// Neither the caller nor a worker thread waits for a stalled writer.
     func drainAsync(until deadline: ContinuousClock.Instant) async {
-        _ = await Task.detached { [self] in
-            let remaining = ContinuousClock.now.duration(to: deadline).components
-            let seconds = Double(remaining.seconds) + Double(remaining.attoseconds) / 1e18
-            drain(timeout: seconds)
-        }.value
+        let remaining = ContinuousClock.now.duration(to: deadline).components
+        let seconds = min(0.2, Double(remaining.seconds) + Double(remaining.attoseconds) / 1e18)
+        guard seconds > 0 else { return }
+        await withCheckedContinuation { continuation in
+            let completion = DrainCompletion(continuation)
+            lock.withLock {
+                enqueueDroppedMarker()
+                queue.async { completion.finish() }
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + seconds) { completion.finish() }
+        }
     }
 
     func linesForExport() async -> [String] {

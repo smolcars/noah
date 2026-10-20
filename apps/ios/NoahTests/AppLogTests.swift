@@ -59,7 +59,7 @@ struct AppLogTests {
         let file = LogFile(directory: directory, capacity: 2, queue: queue)
         for index in 0..<5 { file.append(level: .info, tag: "test", message: "record \(index)") }
         let started = ContinuousClock.now
-        #expect(!file.drain(timeout: 0.02))
+        await file.drainAsync(until: .now + .milliseconds(20))
         #expect(ContinuousClock.now - started < .seconds(1))
         queue.resume()
         let lines = await file.linesForExport()
