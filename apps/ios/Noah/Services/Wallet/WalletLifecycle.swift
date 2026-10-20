@@ -58,9 +58,8 @@ struct WalletLifecycle: Sendable {
     /// already in progress. If closing fails the flag is put back.
     func suspend() async throws {
         try stopAutomation()
-        try setSuspended(true)
         do {
-            try await dependencies.session.closeSettled()
+            try await dependencies.session.closeSettled(beforeClose: { try setSuspended(true) })
         } catch {
             try? setSuspended(false)
             throw error

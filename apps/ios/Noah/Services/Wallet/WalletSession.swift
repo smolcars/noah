@@ -90,6 +90,7 @@ actor WalletSession {
     private var backgroundOwner: UUID?
     private var backgroundWaiters: [CheckedContinuation<Void, Never>] = []
     let syncFlight = WalletSync()
+    private var settlingCloses = 0
     private var runningCalls = 0
     private var sendReserved = false
     private var exclusiveSend = false
@@ -268,7 +269,11 @@ actor WalletSession {
 
     /// `close`, after waiting for an open already in progress (suspend,
     /// delete). Still `busy` while a reservation is held.
-    func closeSettled() async throws {
+    func closeSettled(beforeClose: @Sendable () throws -> Void = {}) async throws {
+        // Revoke sync before suspension persists or an in-flight open can settle.
+        settlingCloses += 1
+        defer { settlingCloses -= 1 }
+        try beforeClose()
         if case .opening(let attempt) = state { _ = try? await attempt.value }
         try await close()
     }
@@ -615,16 +620,27 @@ actor WalletSession {
 
     /// RN sync stages share a flight across foreground, pull-to-refresh and background calls.
     func sync(includingLightningClaims: Bool = false) async throws {
+        var stages: [@Sendable (Handles) async throws -> Void] = [
+            { _ = try await $0.onchain.sync() },
+            { try await $0.wallet.sync() },
+        ]
+        if includingLightningClaims { stages.append { _ = try await $0.wallet.tryClaimAllLightningReceives(wait: false) } }
+        try await sync(stages: stages)
+    }
+
+    func sync(stages: [@Sendable (Handles) async throws -> Void]) async throws {
         guard isOpen else { return }
         let flight = syncFlight
         try await withOpenWallet { handles in
-            var stages: [@Sendable () async throws -> Void] = [
-                { _ = try await handles.onchain.sync() },
-                { try await handles.wallet.sync() },
-            ]
-            if includingLightningClaims { stages.append { _ = try await handles.wallet.tryClaimAllLightningReceives(wait: false) } }
-            try await flight.run(stages)
+            try await flight.run(stages.map { stage in { try await self.runSyncStage(stage, handles: handles) } })
         }
+    }
+
+    private func runSyncStage(_ stage: @escaping @Sendable (Handles) async throws -> Void, handles: Handles) async throws {
+        try BackgroundExecution.checkActive()
+        guard settlingCloses == 0, isOpen else { throw CancellationError() }
+        // The outer counted pass retains these handles through admitted native settlement.
+        try await Task { try await stage(handles) }.value
     }
 
     private static func sdkOpener(variant: AppVariant) -> Opener {

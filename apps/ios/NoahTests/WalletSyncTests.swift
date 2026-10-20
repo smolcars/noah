@@ -1,8 +1,54 @@
+import BarkBoltFFI
 import Foundation
 import Testing
 @testable import Noah
 
 struct WalletSyncTests {
+    @Test func suspensionOrCloseRevokesLaterStagesAndDrainsThePass() async throws {
+        for suspend in [false, true] {
+            let root = FileManager.default.temporaryDirectory.appending(path: "sync-suspension-\(UUID())")
+            defer { try? FileManager.default.removeItem(at: root) }
+            let location = WalletDataLocation(variant: .regtest, documentsDirectory: root)
+            let session = WalletSession(variant: .regtest, location: location)
+            let settings = try SettingsStorage(rootPath: root.appending(path: "mmkv").path, instanceID: UUID().uuidString)
+            let lifecycle = WalletLifecycle(dependencies: .init(
+                session: session, location: location,
+                seed: KeychainPassword(service: "sync-seed-\(UUID())", account: "test"),
+                authToken: KeychainPassword(service: "sync-token-\(UUID())", account: "test"),
+                settings: settings, scratch: ScratchSpace(root: root.appending(path: "scratch")),
+                appGroup: nil, mutation: WalletMutationGate(), deregister: {}, walletChanged: {}))
+            try await session.createNew(mnemonic: generateMnemonic(), runDaemon: false, appVersion: "test")
+            let gate = RecurringReservationTests.Gate()
+            let stages = RecurringExecutorTests.Locked<[Int]>([])
+            let closed = RecurringExecutorTests.Locked(false)
+            let work = Task {
+                try await session.sync(stages: [
+                    { _ in stages.withLock { $0.append(1) }; await gate.wait() },
+                    { _ in stages.withLock { $0.append(2) } },
+                    { _ in stages.withLock { $0.append(3) } },
+                ])
+            }
+            while !(await gate.entered) { await Task.yield() }
+            let close = Task {
+                if suspend { try await lifecycle.suspend() } else { try await session.closeSettled() }
+                closed.withLock { $0 = true }
+            }
+            let deadline = ContinuousClock.now + .seconds(5)
+            while await session.isOpen, ContinuousClock.now < deadline { await Task.yield() }
+            #expect(await !session.isOpen)
+            if suspend { #expect(settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == true) }
+            #expect(!closed.withLock { $0 })
+            await #expect(throws: WalletSession.OpenError.busy) { try await session.reserve() }
+            await gate.release()
+            await #expect(throws: CancellationError.self) { try await work.value }
+            try await close.value
+            #expect(stages.withLock { $0 } == [1])
+            #expect(closed.withLock { $0 })
+            let reservation = try await session.reserve()
+            await session.release(reservation)
+        }
+    }
+
     struct Failed: Error, Equatable { let stage: Int }
 
     @Test func failedSyncStillAttemptsOtherWalletAndLightningClaims() async {
