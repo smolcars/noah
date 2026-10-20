@@ -36,6 +36,7 @@ internal class OnchainOperations(
             // Fixed-amount boarding adds a 43-vB Taproot change output to the confirmed-input drain.
             probe.amount - BoardingRules.reserve - 43 * checkNotNull(probe.feeRate)
         } finally { withContext(NonCancellable) { wallet.discardBoard(checkNotNull(probe.preparedBoard).id) } }
+        if (!wallet.boardCleanupComplete(checkNotNull(probe.preparedBoard).id)) fail(OnchainFailure.uncertain)
         currentCoroutineContext().ensureActive()
         if (candidate < BoardingRules.threshold(minimum) || !ready()) return null
         val prepared = quote(OnchainAction.board, amount = candidate, automatic = true)
@@ -130,9 +131,9 @@ internal class OnchainOperations(
                         throw error
                     }
                     if (result.txid != reviewed.preparedBoard.txid) fail(OnchainFailure.uncertain)
-                    if (result.broadcast is BroadcastOutcome.NotAttempted) throw BoardNotSubmitted(OnchainFailure.constructionFailed)
+                    if (result.broadcast is BroadcastOutcome.NotAttempted) throw BoardNotSubmitted(OnchainFailure.boardNotAttempted)
                     val retry = result.broadcast is BroadcastOutcome.Failed
-                    OnchainReceipt(if (retry) "Boarding submitted, but network delivery is unconfirmed. Noah will keep retrying the broadcast. Do not board again."
+                    OnchainReceipt(if (retry) OnchainReceipt.broadcastFailedMessage
                         else OnchainReceipt.boardingMessage(reviewed.chainFee), result.txid, reviewed.chainFee, retry)
                 }
                 OnchainAction.refresh -> OnchainReceipt(wallet.refresh(reviewed.ids)?.let { "Refresh submitted to delegated round ${it.id}." } ?: "No refresh round was needed.")

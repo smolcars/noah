@@ -45,10 +45,12 @@ enum class OnchainFailure(val text: String) {
     busy("This operation overlaps an unresolved attempt. Check its status before repeating it."),
     cancellationRefused("This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status."),
     claimFeeChanged("The built claim fee differs from the estimate. Nothing was broadcast. Review the claim again."),
-    belowMinimum("The amount is below the minimum boarding amount. Enter a larger amount."),
-    tooManyInputs("There are too many small coins for one board. Try a smaller amount."),
-    reserved("These coins are unavailable or reserved by another payment in review. Close that review or refresh and try again."),
-    notSynced("The wallet has not synced yet. Sync your wallet, then review again."),
+    insufficientFunds("There are not enough confirmed onchain funds for this amount and its fees. Reduce the amount or wait for confirmation."),
+    boardNotAttempted("Boarding was not submitted. Review again when the wallet is ready."),
+    belowMinimum("The amount Ark receives is below its minimum. Increase the boarding amount."),
+    tooManyInputs("There are too many small coins for this board. Try a smaller amount."),
+    reserved("These coins are unavailable or reserved by another payment in review. Close that review, then try again."),
+    notSynced("Sync the wallet once before preparing a board."),
     constructionFailed("The transaction could not be constructed. Nothing was broadcast. Review again."),
 }
 class OnchainException(val reason: OnchainFailure) : Exception(reason.text)
@@ -57,8 +59,11 @@ internal fun fail(reason: OnchainFailure): Nothing = throw OnchainException(reas
 @Serializable
 data class OnchainReceipt(val message: String, val txid: String? = null, val onchainFee: Long? = null,
     val broadcastRetryPending: Boolean = false, val chainStatus: com.noahwallet.services.wallet.ChainStatus? = null,
-    val statusError: String? = null) {
+    @kotlinx.serialization.Transient val statusError: String? = null) {
+    @Serializable data class BoardAmounts(val arkReceives: Long, val totalLeaving: Long)
+    fun boardAmounts(quote: OnchainQuote) = BoardAmounts(quote.net, quote.amount + (onchainFee ?: quote.chainFee))
     companion object {
+        const val broadcastFailedMessage = "Boarding submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again."
         fun boardingMessage(fee: Long?) = "Boarding submitted. Funds become spendable after the board completes." +
             (fee?.let { " Actual onchain fee: $it sats." } ?: " Actual onchain fee is not yet available.")
     }

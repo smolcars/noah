@@ -12,7 +12,8 @@ internal fun boardFailure(error: BarkError): OnchainFailure = when (error.code) 
     BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE -> OnchainFailure.reserved
     BarkErrorCode.PREPARED_BOARD_CHANGED, BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND -> OnchainFailure.changed
     BarkErrorCode.UNSUPPORTED_OPERATION -> OnchainFailure.notSynced
-    BarkErrorCode.INSUFFICIENT_FUNDS, BarkErrorCode.DUST, BarkErrorCode.INVALID_AMOUNT -> OnchainFailure.invalid
+    BarkErrorCode.INSUFFICIENT_FUNDS -> OnchainFailure.insufficientFunds
+    BarkErrorCode.DUST, BarkErrorCode.INVALID_AMOUNT, BarkErrorCode.INVALID_FEE_RATE -> OnchainFailure.constructionFailed
     else -> OnchainFailure.constructionFailed
 }
 internal suspend fun WalletSession.discardBoardReview(quote: OnchainQuote) = withContext(NonCancellable) {

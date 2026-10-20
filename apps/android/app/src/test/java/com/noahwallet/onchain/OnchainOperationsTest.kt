@@ -8,8 +8,18 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class OnchainOperationsTest {
+    @Test fun incompleteProbeCleanupStopsBeforePreparingAgain() = runBlocking { fixture { wallet, ops, journal, _ ->
+        wallet.cleanupComplete = false
+        val failure = runCatching { ops.autoBoardQuote() }.exceptionOrNull()
+        assertEquals(OnchainFailure.uncertain, (failure as OnchainException).reason)
+        assertEquals(1, wallet.preparations.size)
+        assertEquals(listOf("prepared-0"), wallet.discarded)
+        assertTrue(journal.loadAll().isEmpty())
+    } }
     private class Wallet : OnchainWalletAccess {
         override val walletID = "wallet"
+        var cleanupComplete = true
+        override fun boardCleanupComplete(id: String) = cleanupComplete
         var mine = true
         var ownershipError = false
         var network: String? = null
@@ -377,7 +387,7 @@ class OnchainOperationsTest {
             if (case is BroadcastOutcome.Failed) {
                 val attempt = journal.loadAll().single()
                 assertTrue(attempt.receipt!!.broadcastRetryPending)
-                assertTrue(attempt.receipt.message.contains("keep retrying"))
+                assertEquals(OnchainReceipt.broadcastFailedMessage, attempt.receipt.message)
                 assertTrue(runCatching { journal.acknowledge(attempt.id) }.isFailure)
             }
             assertEquals(listOf(reviewed.preparedBoard!!.id), wallet.discarded)

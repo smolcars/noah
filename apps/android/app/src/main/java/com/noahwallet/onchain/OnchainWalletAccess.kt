@@ -22,6 +22,7 @@ internal interface OnchainWalletAccess {
     suspend fun refreshFee(ids: List<String>): FeeEstimate = error("Unsupported")
     suspend fun exitFee(ids: List<String>, destination: String?): EmergencyExitFeeEstimate = error("Unsupported")
     suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard = error("Unsupported")
+    fun boardCleanupComplete(id: String): Boolean = true
     fun bindBoard(quote: OnchainQuote) {}
     fun claimBoard(quote: OnchainQuote) {}
     suspend fun submitBoard(quote: OnchainQuote): BoardResult = error("Unsupported")
@@ -66,6 +67,7 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
         preparations.retain(prepared.id)
         return prepared
     }
+    override fun boardCleanupComplete(id: String) = !preparations.contains(id)
     override fun bindBoard(quote: OnchainQuote) = preparations.bind(quote)
     override fun claimBoard(quote: OnchainQuote) = preparations.claim(quote)
     override suspend fun submitBoard(quote: OnchainQuote): BoardResult {

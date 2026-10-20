@@ -63,7 +63,7 @@ class OnchainModelTest {
         }
         val m = OnchainModel(f.dependencies()); m.load()
         assertEquals(com.noahwallet.services.wallet.ChainStatus.errorText, m.error)
-        assertEquals("In mempool", m.attempts.single().receipt!!.chainStatus!!.text)
+        assertEquals("In mempool. Waiting for confirmation.", m.attempts.single().receipt!!.chainStatus!!.text)
     }
     @Test fun directTerminalDetailWorksWithEmptyOverviewAndAcknowledgementStaysHidden() = runBlocking {
         val f = Fake(); val m = OnchainModel(f.dependencies(), "terminal")

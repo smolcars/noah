@@ -20,6 +20,7 @@ internal class BoardPreparations(
         check(id !in reviews)
         reviews[id] = Review(timeout = scope.launch { delay(lifetimeMillis); discard(id) })
     }
+    fun contains(id: String): Boolean = synchronized(lock) { id in reviews }
     fun bind(quote: OnchainQuote) = synchronized(lock) {
         val held = reviews[quote.preparedBoard?.id] ?: fail(OnchainFailure.changed)
         if (held.discardRequested) fail(OnchainFailure.changed)

@@ -32,7 +32,12 @@ import kotlinx.serialization.json.*
     val movementID: UInt? = null, val amountIsPending: Boolean = false, val status: Status = Status.submitted,
     val fee: Long? = null, val proof: Proof? = null, val broadcastRetryPending: Boolean = false,
     val confirmedConflictTxid: String? = null,
-    val chainStatus: com.noahwallet.services.wallet.ChainStatus? = null, val statusError: String? = null) {
+    val chainStatus: com.noahwallet.services.wallet.ChainStatus? = null, @kotlinx.serialization.Transient val statusError: String? = null) {
+    companion object {
+        const val broadcastPendingMessage = "Submitted, awaiting broadcast. Noah will keep retrying the broadcast. Do not send this payment again."
+        const val submittedMessage = "Submitted. Refresh to check network status. Do not send this payment again."
+        const val uncertainMessage = "Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."
+    }
     @Serializable enum class Status { submitted, confirmed, unlocated, conflicted }
     val isUnresolved get() = status in listOf(Status.unlocated, Status.conflicted)
     val conflictDescription get() = confirmedConflictTxid?.let {

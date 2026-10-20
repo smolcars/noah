@@ -170,14 +170,14 @@ class SendController(private val dependencies: Dependencies,
         } catch (_: Exception) { if (current == generation) showRefreshFailure() }
     }
     private fun showRefreshFailure() {
-        message = "Couldn't check the latest status; showing the last known status." +
+        message = "Couldn't check the latest status. Showing the last known status." +
             if (attempt?.receipt == null || attempt?.receipt?.broadcastRetryPending == true) " This payment may still complete. Do not pay again." else ""
     }
     private fun finish(resolution: SendResolution): Boolean {
         var saved = attempt ?: return false
         when (resolution) {
             SendResolution.Uncertain -> { saved = saved.copy(receipt = saved.receipt?.let { if (it.txid != null) it.copy(status = SendReceipt.Status.unlocated) else it }); state = State.uncertain }
-            is SendResolution.Paid -> { saved = saved.copy(receipt = resolution.receipt); state = if (resolution.receipt.isUnresolved) State.uncertain else State.succeeded }
+            is SendResolution.Paid -> { message = resolution.receipt.statusError; saved = saved.copy(receipt = resolution.receipt.copy(statusError = null)); state = if (resolution.receipt.isUnresolved) State.uncertain else State.succeeded }
             is SendResolution.AlreadyPaid -> { saved = saved.copy(alreadyPaid = resolution.receipt); state = State.alreadyPaid }
             is SendResolution.InProgress -> { saved = saved.copy(existingLightning = resolution.progress); state = State.uncertain }
             is SendResolution.Candidates -> { saved = saved.copy(candidates = resolution.ids); state = State.uncertain }

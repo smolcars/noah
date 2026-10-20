@@ -252,13 +252,14 @@ internal fun keypadInput(amount: String, key: String, decimal: Boolean): String 
             it.fee?.let { fee -> ReviewRow("Actual fee", "$fee sats") }
             it.txid?.let { txid -> SelectionContainer { Text(txid, style = MaterialTheme.typography.bodySmall) } }
             it.conflictDescription?.let { description -> Text(description) }
-            if (it.broadcastRetryPending) Text("Noah will keep retrying the broadcast. Do not send again.")
+            if (it.broadcastRetryPending) Text(SendReceipt.broadcastPendingMessage)
             it.chainStatus?.let { status -> Text(status.text) }
-            it.statusError?.let { error -> Text(error, color = MaterialTheme.colorScheme.error) }
+            if (it.txid != null && it.chainStatus == null && !it.broadcastRetryPending)
+                Text(SendReceipt.submittedMessage)
         }
         controller.attempt?.existingLightning?.let { Text(it.message); ReviewRow("Existing fee", "${it.fee} sats") }
         controller.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        if (controller.state == SendController.State.uncertain) Text("Check your history and the recipient before making another payment. Possible matches do not prove this payment succeeded.")
+        if (controller.state == SendController.State.uncertain) Text(SendReceipt.uncertainMessage)
         if (controller.state in listOf(SendController.State.uncertain, SendController.State.storageBlocked) || receipt?.txid != null) NoahButton(if (controller.checking) "Checking…" else if (controller.state == SendController.State.storageBlocked) "Retry" else "Check status", !controller.checking) { scope.launch { controller.checkStatus() } }
         if (controller.state in listOf(SendController.State.succeeded, SendController.State.alreadyPaid, SendController.State.failed)) NoahButton("Done", receipt?.broadcastRetryPending != true, onClick = onDone)
         if (controller.canOverride) TextButton(onClick = { overrideStep = 1 }) { Text("Start a new payment after checking history", color = MaterialTheme.colorScheme.error) }

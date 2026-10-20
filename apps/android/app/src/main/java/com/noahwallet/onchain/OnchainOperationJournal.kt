@@ -86,12 +86,14 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
         }
     }
     private val mutex = Mutex()
+    private val statusErrors = mutableMapOf<String, String>()
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private fun read(): List<Attempt> {
         if (!storage.file.exists()) return emptyList()
         val element = json.parseToJsonElement(storage.file.readText())
-        return if (element is JsonObject) listOf(json.decodeFromJsonElement<Attempt>(element))
+        val saved = if (element is JsonObject) listOf(json.decodeFromJsonElement<Attempt>(element))
             else json.decodeFromJsonElement<List<Attempt>>(element)
+        return saved.map { it.copy(receipt = it.receipt?.copy(statusError = statusErrors[it.id])) }
     }
     private fun save(attempts: List<Attempt>) {
         val retained = attempts.filter { it.overrideAudit != null }.sortedWith(
@@ -138,6 +140,7 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
         if (updated != attempts) save(updated)
     }
     suspend fun refreshStatus(id: String, status: ChainStatus?, error: String? = null) = mutex.withLock {
+        if (error == null) statusErrors.remove(id) else statusErrors[id] = error
         val attempts = read()
         val updated = attempts.map { attempt ->
             val receipt = attempt.receipt

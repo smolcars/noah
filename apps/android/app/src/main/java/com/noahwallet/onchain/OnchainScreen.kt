@@ -135,10 +135,11 @@ private fun OnchainStatus(app: AppModel, model: OnchainModel) {
         attempt.receipt?.chainStatus?.let { Text(it.text) }
         attempt.receipt?.statusError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         attempt.receipt?.onchainFee?.let { AmountRow(app, "Actual onchain fee", it) }
-        if (attempt.receipt != null && attempt.quote.preparedBoard != null) {
+        if (attempt.receipt != null && attempt.quote.action == OnchainAction.board) {
+            val amounts = attempt.receipt.boardAmounts(attempt.quote)
             AmountRow(app, "Ark fee", attempt.quote.fee)
-            AmountRow(app, "Ark receives", attempt.quote.net)
-            AmountRow(app, "Total leaving onchain wallet", attempt.quote.totalLeaving)
+            AmountRow(app, "Ark receives", amounts.arkReceives)
+            AmountRow(app, "Total leaving onchain wallet", amounts.totalLeaving)
         }
         (attempt.receipt?.txid ?: attempt.txid)?.let { TransactionRow(it) }
         if (attempt.receipt != null && !attempt.receipt.broadcastRetryPending) {

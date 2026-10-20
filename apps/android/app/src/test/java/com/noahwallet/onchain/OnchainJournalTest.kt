@@ -236,7 +236,8 @@ class OnchainJournalTest {
                 assertEquals(true, result.getOrThrow())
                 val receipt = saved.receipt!!
                 assertEquals("exact", receipt.txid); assertEquals(199L, receipt.onchainFee)
-                assertNull(receipt.chainStatus); assertEquals(ChainStatus.errorText, receipt.statusError)
+                assertNull(receipt.chainStatus); assertNull(receipt.statusError)
+                assertEquals(ChainStatus.errorText, reopened.loadAll().single().receipt!!.statusError)
                 assertTrue(receipt.broadcastRetryPending)
                 assertTrue(runCatching { journal(file).acknowledge(quote.id) }.isFailure)
                 offline = false
@@ -273,7 +274,7 @@ class OnchainJournalTest {
         journal.refreshStatus(quote.id, ChainStatus(ChainStatus.Kind.confirmed, 200))
         val receipt = journal.loadAll().single().receipt!!
         assertFalse(receipt.broadcastRetryPending); assertNull(receipt.statusError)
-        assertEquals("Confirmed at block 200", receipt.chainStatus!!.text)
+        assertEquals("Confirmed at block 200.", receipt.chainStatus!!.text)
         journal.acknowledge(quote.id); assertTrue(journal.loadAll().isEmpty())
     } }
     @Test fun claimReceiptUsesNetworkStatusWithoutSyncAndPreservesErrors() = runBlocking { fixture { _, journal ->

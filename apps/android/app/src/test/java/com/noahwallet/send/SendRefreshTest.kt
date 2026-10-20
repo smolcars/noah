@@ -34,7 +34,7 @@ class SendRefreshTest {
             restarted.reloadForWalletChange(); restarted.checkStatus()
             assertEquals("returned-exact", journal.attempt!!.receipt!!.txid)
             assertEquals(receipt.proof, journal.attempt!!.receipt!!.proof)
-            assertEquals("In mempool", journal.attempt!!.receipt!!.chainStatus!!.text)
+            assertEquals("In mempool. Waiting for confirmation.", journal.attempt!!.receipt!!.chainStatus!!.text)
             assertEquals(1, wallet.calls)
         }
     }
@@ -62,7 +62,7 @@ class SendRefreshTest {
                 val subject = controller(wallet, journal, this); subject.reloadForWalletChange(); subject.checkStatus()
                 assertEquals(SendController.State.succeeded, subject.state)
                 assertEquals(saved, subject.attempt); assertEquals(saved, journal.attempt)
-                assertTrue(subject.message!!.contains("showing the last known status"))
+                assertTrue(subject.message!!.contains("Showing the last known status"))
             }
             val subject = controller(wallet, journal, this); subject.reloadForWalletChange(); subject.checkStatus()
             wallet.reconciliation = { SendResolution.Paid(receipt) }; subject.checkStatus(); assertNull(subject.message)
