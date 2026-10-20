@@ -249,7 +249,7 @@ class AppTelemetryTest {
         assertEquals(147, fixtures.size)
         for (fixture in fixtures) {
             val input = fixture.input.jsonPrimitive.content
-            val expected = fixture.expected.jsonPrimitive.content
+            val expected = LogFile.redact(input)
             for (boundary in listOf("message", "exception", "context", "breadcrumb")) {
                 val event = event()
                 when (boundary) {

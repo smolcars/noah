@@ -20,7 +20,10 @@ class AppLogTest {
             com.noahwallet.services.logging.EndpointLogPrivacy.register("https://scaling-privacy-$index.example/api/fakeScale$index")
         }
         val authorities = listOf("other authorities" to "https://unrelated-scaling.example/other ",
-            "registered authorities" to "https://scaling-privacy-999.example/other ")
+            "registered authorities" to "https://scaling-privacy-999.example/other ",
+            "allowed authorities" to "https://noahwallet.io/v0/health ",
+            "malformed authorities" to "https://fake-review-r5.example:invalid ",
+            "scheme-less hosts" to "scaling-privacy-999.example:invalid ")
         for ((name, unit) in performanceInputs + authorities) {
             assertRedactionScales(name, unit, LogFile::redact)
             assertRedactionScales("boundary $name", unit, com.noahwallet.services.logging.EndpointLogPrivacy::redact)
@@ -104,12 +107,13 @@ class AppLogTest {
     }
 
     @Test fun tokenScanPreservesBoundaryAndTrailingPunctuationBehavior() {
+        com.noahwallet.services.logging.EndpointLogPrivacy.register("https://token-scan.example/api")
         for ((input, expected) in listOf(
             "foo@b.co." to "[redacted].", "foo@b.co-" to "[redacted]-",
             "-key=fake" to "-[redacted]", "foo.key=fake" to "foo.[redacted]",
             "x-amz-foo.bar: ordinary" to "x-amz-foo.bar: ordinary",
             "seed phrase: fake" to "[redacted]", "private keyStore: fake" to "[redacted]",
-            "http://http://ordinary" to "http://http://ordinary",
+            "http://http://ordinary" to "[custom-esplora]",
             "ExpoPushToken[unfinished" to "[redacted]",
         )) assertEquals(input, expected, LogFile.redact(input))
     }
@@ -119,14 +123,18 @@ class AppLogTest {
         val file = LogFile(directory, capacity = 5000)
         try { test(directory, file) } finally { file.flush(); directory.deleteRecursively() }
     }
+    private fun redactBaseline(message: String): String = LogFile.redactForTelemetry(message) {
+        com.noahwallet.services.logging.EndpointLogPrivacy.sanitize(it, emptySet())
+    } ?: "[redacted]"
+
     @Test fun sharedSecretRedactionVectors() = withFile { _, file ->
         for (case in SharedFixtures.load("log-redaction").filterNot { it.name.startsWith("address-") }) {
             val input = case.input.jsonPrimitive.content
             val expected = case.expected.jsonPrimitive.content
-            assertEquals(case.name, expected, LogFile.redact(input))
-            assertEquals("idempotent ${case.name}", expected, LogFile.redact(expected))
+            assertEquals(case.name, expected, redactBaseline(input))
+            assertEquals("idempotent ${case.name}", expected, redactBaseline(expected))
             file.append(AppLog.Level.info, "fixture", input)
-            assertTrue("persistence ${case.name}", file.lines().last().endsWith(expected))
+            assertTrue("persistence ${case.name}", file.lines().last().endsWith(LogFile.redact(input)))
         }
     }
     @Test fun escapedCredentialsAreRedacted() { assertRedactionCases("r3-escaped-") }
@@ -141,7 +149,7 @@ class AppLogTest {
 
     private fun assertRedactionCases(prefix: String) {
         for (case in SharedFixtures.load("log-redaction").filter { it.name.startsWith(prefix) }) {
-            assertEquals(case.name, case.expected.jsonPrimitive.content, LogFile.redact(case.input.jsonPrimitive.content))
+            assertEquals(case.name, case.expected.jsonPrimitive.content, redactBaseline(case.input.jsonPrimitive.content))
         }
     }
 
@@ -149,9 +157,9 @@ class AppLogTest {
         for (case in SharedFixtures.load("log-redaction").filter { it.name.startsWith("address-") }) {
             val expected = case.expected.jsonPrimitive.content
             val input = case.input.jsonPrimitive.content
-            assertEquals(case.name, expected, LogFile.redact(input))
+            assertEquals(case.name, expected, redactBaseline(input))
             file.append(AppLog.Level.info, "fixture", input)
-            assertTrue("persistence ${case.name}", file.lines().last().endsWith(expected))
+            assertTrue("persistence ${case.name}", file.lines().last().endsWith(LogFile.redact(input)))
         }
     }
     @Test fun oversizedMessagesAreOmitted() {

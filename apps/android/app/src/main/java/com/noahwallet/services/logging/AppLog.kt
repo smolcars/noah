@@ -178,8 +178,12 @@ class LogFile(
 
         /** Uncertain decoding and oversized messages have no telemetry admission path. */
         internal fun redactForTelemetry(message: String): String? {
+            return redactForTelemetry(message, EndpointLogPrivacy::sanitize)
+        }
+
+        internal fun redactForTelemetry(message: String, endpointPrivacy: (String) -> String?): String? {
             if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return null
-            val safe = EndpointLogPrivacy.sanitize(message) ?: return null
+            val safe = endpointPrivacy(message) ?: return null
             val views = decodedViews(safe) ?: return null
             if (views.drop(1).any { redactPlain(it) != it }) return "[redacted]"
             return redactPlain(safe)

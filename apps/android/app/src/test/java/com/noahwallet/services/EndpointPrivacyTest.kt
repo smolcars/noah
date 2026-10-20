@@ -21,7 +21,7 @@ class EndpointPrivacyTest {
             for (test in cases) {
                 val input = test.getValue("input").jsonPrimitive.content
                 val safe = LogFile.redact(input)
-                assertTrue(input, if (test.getValue("redacted").jsonPrimitive.boolean) safe.contains("[custom-esplora]") else safe == input)
+                assertEquals(input, test.getValue("expected").jsonPrimitive.content, safe)
                 val event = SentryEvent().apply {
                     message = Message().apply { formatted = input }
                     exceptions = listOf(SentryException().apply { value = input; type = "FakeEndpointError" })
@@ -57,7 +57,8 @@ class EndpointPrivacyTest {
             event.release = input
             assertNull(AppTelemetry.scrub(event))
         }
-        assertEquals("prefix[custom-esplora]", LogFile.redact("prefix$origin"))
+        assertEquals("[custom-esplora]", LogFile.redact("prefix$origin"))
+        assertEquals("TransportError HTTP 503: [custom-esplora]", LogFile.redact("TransportError HTTP 503: fakehostcredential73.example.com:invalid"))
     }
 
     @Test fun unknownHTMLEntitiesAndUnterminatedNumericEntitiesCannotExposeHosts() {
@@ -92,10 +93,29 @@ class EndpointPrivacyTest {
         } finally { directory.deleteRecursively() }
     }
 
-    @Test fun routeOnlyEndpointsPreserveOtherOriginsAndDiagnostics() {
+    @Test fun configuredOriginsAndDiagnosticsRemainVisibleInPrivacyMode() {
         EndpointLogPrivacy.register("https://route-privacy.example/api")
-        for (input in listOf("https://mempool.space/api/blocks/tip/height", "HTTP 404: /blocks/tip/height failed", "API v1 request completed", "https://.", "https://route-privacy.example.other/api", "https://route-privacy.example:8443/api")) {
+        for (input in listOf("https://mempool.space/api/blocks/tip/height", "HTTP 404: /blocks/tip/height failed", "API v1 request completed")) {
             assertEquals(input, LogFile.redact(input))
+        }
+        for (input in listOf("https://.", "https://route-privacy.example.other/api", "https://route-privacy.example:8443/api")) {
+            assertEquals("[custom-esplora]", LogFile.redact(input))
+        }
+    }
+
+    @Test fun cleanInstallAndUserEnteredDefaultsUseSeparatePolicies() {
+        val cases = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-authorities.json")!!.readText()).jsonArray
+        for (test in cases) {
+            val input = test.jsonObject.getValue("input").jsonPrimitive.content
+            assertEquals(input, EndpointLogPrivacy.sanitize(input, emptySet()))
+        }
+        for (variant in listOf("mainnet", "signet", "regtest")) {
+            val config = com.noahwallet.services.wallet.WalletConfiguration.base(variant)
+            for (endpoint in listOfNotNull(com.noahwallet.services.server.ServerEndpoint.baseURL(variant, com.noahwallet.BuildConfig.REGTEST_SERVER_URL), config.arkServer, config.esplora)) {
+                val origin = endpoint.substringBefore("/api").trimEnd('/')
+                assertEquals(endpoint, EndpointLogPrivacy.sanitize(endpoint, setOf("https://fake-custom.example")))
+                assertEquals("[custom-esplora]", EndpointLogPrivacy.sanitize(endpoint, setOf(origin)))
+            }
         }
     }
 }

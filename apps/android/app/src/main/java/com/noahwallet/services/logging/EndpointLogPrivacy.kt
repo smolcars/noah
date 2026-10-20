@@ -1,6 +1,10 @@
 package com.noahwallet.services.logging
 
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import com.noahwallet.BuildConfig
+import com.noahwallet.services.server.ServerEndpoint
+import com.noahwallet.services.wallet.EsploraEndpoint
+import com.noahwallet.services.wallet.WalletConfiguration
 
 /** Register before entering Rust: endpoint paths can be opaque credentials. */
 internal object EndpointLogPrivacy {
@@ -8,26 +12,74 @@ internal object EndpointLogPrivacy {
     fun failClosed() { unavailable = true }
     private val origins = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val paths = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
-    private val urls = Regex("""(?i)https?://[^\s<>"']*""")
+    private val hosts = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val urls = Regex("""(?i)(?<![a-z0-9+.-])[0-9+.-]*+[a-z][a-z0-9+.-]*+://[^\s<>"']*""")
     // Admit only the SDK error type/status, never provider-controlled response text.
     private val responseStatus = Regex("""HttpResponse(?:\s*\{\s*status:\s*|\()([0-9]{3})\b""")
-    // Extract before parsing: log punctuation is not part of a URL authority.
-    private val authority = Regex("""(?i)^https?://(?:\[[^\]\s]+\](?::[^/\\?#\s<>"'()\[\],;{}!$&*+=^`|]*)?|[^/\\?#\s<>"'()\[\],;{}!$&*+=^`|]+)""")
-    private fun origin(value: String): String? {
-        val token = authority.find(value)?.value?.trimEnd('.') ?: return null
-        // HttpUrl canonicalizes IDNA, IPv6, case and default ports without DNS/network IO.
-        val url = token.toHttpUrlOrNull() ?: return null
-        return url.newBuilder().host(url.host.trimEnd('.').ifEmpty { url.host }).encodedPath("/").query(null).fragment(null)
-            .username("").password("").build().toString().removeSuffix("/")
+    // Only shipped/build configuration enters this set; never use effective custom settings.
+    private val publicOrigins by lazy {
+        val endpoints = mutableListOf("https://mempool.space", "https://exp.host", "https://api.btcmap.org",
+            "https://tiles.openfreemap.org", "https://btcmap.org", "https://maps.apple.com",
+            "https://www.google.com", "https://www.openstreetmap.org", "https://openmaptiles.org",
+            "https://www.geonames.org", "https://t.me", "https://github.com", "https://play.google.com")
+        for (variant in listOf("mainnet", "signet", "regtest")) {
+            val config = WalletConfiguration.base(variant)
+            endpoints += ServerEndpoint.baseURL(variant, BuildConfig.REGTEST_SERVER_URL)
+            endpoints += listOfNotNull(config.arkServer, config.esplora, config.bitcoind)
+        }
+        endpoints.mapNotNull(::origin).toSet()
     }
+    private fun authority(value: String): String? = value.takeIf { "://" in it }?.substringAfter("://")
+        ?.takeWhile { it !in "/\\?#" }
+    private fun origin(value: String): String? {
+        val authority = authority(value) ?: return null
+        val url = runCatching { EsploraEndpoint.normalize(value.substringBefore("://") + "://" + authority) }
+            .getOrNull()?.toHttpUrlOrNull() ?: return null
+        return url.newBuilder().host(url.host.trimEnd('.').ifEmpty { url.host }).build().toString().removeSuffix("/")
+    }
+    private fun host(value: String): String? = runCatching { EsploraEndpoint.normalize(value) }
+        .getOrNull()?.toHttpUrlOrNull()?.host?.trimEnd('.')?.let { if (':' in it) "[$it]" else it }
+    private val plainAuthority = Regex("""(?:\[[0-9a-fA-F:.]+\]|[a-zA-Z0-9.-]+)(?::[0-9]+)?""")
+    private val malformedPercent = Regex("%(?![0-9a-fA-F]{2})")
+    private fun allowed(value: String, registered: Set<String>): Boolean {
+        val authority = authority(value) ?: return false
+        if ('\\' in value || malformedPercent.containsMatchIn(value) || !plainAuthority.matches(authority)) return false
+        val origin = origin(value) ?: return false
+        if (origin in registered || origin !in publicOrigins) return false
+        // Only the canonical IP spelling may inherit an allowlisted origin.
+        val rawHost = if (authority.startsWith('[')) authority.substringBefore(']') + "]" else authority.substringBefore(':')
+        return rawHost.lowercase().trimEnd('.') == host(value)
+    }
+
     fun register(endpoint: String?) {
-        val url = endpoint?.toHttpUrlOrNull() ?: return
+        if (endpoint == null) return
+        val url = endpoint.toHttpUrlOrNull()
+        val origin = origin(endpoint)
+        val host = host(endpoint)
+        if (url == null || origin == null || host == null) { failClosed(); return }
         for (path in LogFile.decodedViews(url.encodedPath, percentEncoded = true) ?: listOf(url.encodedPath)) {
             path.trimEnd('/').takeIf { it.isNotEmpty() }?.let(paths::add)
         }
-        origin(endpoint)?.let(origins::add)
+        hosts += host
+        origins += origin
     }
-    private fun matches(value: String): Boolean = origin(value)?.let { it in origins } == true
+    private val hostTokens = Regex("""\[[^\[\]\s]+\](?::[^\s<>"'()/\\?#,\];{}!$&*=^`|]+)?|[^\s<>"'()/\\?#,\[\];{}!$&*=^`|]+""")
+    private fun redactHosts(text: String, registered: Set<String>): String {
+        val urlRanges = urls.findAll(text).map { it.range }.toList()
+        var urlIndex = 0
+        return hostTokens.replace(text) { match ->
+            while (urlIndex < urlRanges.size && urlRanges[urlIndex].last < match.range.first) urlIndex++
+            if (urlIndex < urlRanges.size && urlRanges[urlIndex].first <= match.range.last) return@replace match.value
+            val token = match.value
+            if (token.startsWith('[') && !token.drop(1).substringBefore(']').substringBefore('%').all { it in "0123456789abcdefABCDEF:.%" }) return@replace token
+            if ('.' !in token && !(token.startsWith('[') && ':' in token) &&
+                !token.all { it in '0'..'9' } && !token.startsWith("0x", ignoreCase = true)) return@replace token
+            val authority = token.substringAfterLast('@')
+            val rawHost = if (authority.startsWith('[')) authority.substringBefore(']') + "]" else authority.substringBefore(':')
+            val canonical = host("https://$rawHost")
+            if (canonical == null || canonical in registered) "[custom-esplora]" else token
+        }
+    }
     fun redact(text: String): String = sanitize(text) ?: "[redacted]"
 
     private val recordStart = Regex("""^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [VDIWE] \[""")
@@ -50,6 +102,11 @@ internal object EndpointLogPrivacy {
 
     fun sanitize(text: String): String? {
         if (unavailable) return "[custom-esplora]"
+        return sanitize(text, origins, paths, hosts)
+    }
+
+    // Explicit snapshots also let tests cover a clean installation without resetting global history.
+    internal fun sanitize(text: String, registered: Set<String>, sensitive: Set<String> = emptySet(), hosts: Set<String> = emptySet()): String? {
         // Exported lines include a bounded tag and timestamp as well as the message.
         if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[oversized log message omitted]"
         responseStatus.find(text)?.let { return "HttpResponse { status: ${it.groupValues[1]} }" }
@@ -59,13 +116,14 @@ internal object EndpointLogPrivacy {
             responseStatus.find(view)?.let { return "HttpResponse { status: ${it.groupValues[1]} }" }
         }
         if (views.any { it.contains("HttpResponse") }) return "HttpResponse"
-        if (origins.isEmpty()) return text
+        if (registered.isEmpty()) return text
         var result = text
         for ((index, view) in views.withIndex()) {
-            val clean = urls.replace(view) { match -> if (matches(match.value)) "[custom-esplora]" else match.value }
+            var clean = urls.replace(view) { match -> if (!allowed(match.value, registered)) "[custom-esplora]" else match.value }
             // Inspect relative references separately: another origin never inherits our paths.
             val relative = urls.replace(clean, "")
-            if (paths.any { relative.contains(it) }) return "[custom-esplora]"
+            if (sensitive.any { relative.contains(it) }) return "[custom-esplora]"
+            clean = redactHosts(clean, hosts)
             if (index > 0 && clean != view) return "[custom-esplora]"
             if (index == 0) result = clean
         }
