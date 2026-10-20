@@ -123,6 +123,10 @@ delivery, or a changed widget cache.
   native libraries at `0x4000`. Reinstalled over the existing regtest app
   (`install -r`, data kept); Android reports `pageSizeCompat=0`. The phone was on
   its lock screen, so the dialog itself wasn't observed.
+- Observed afterwards: unlocked the Pixel 6 over adb (swipe-only keyguard) and
+  cold-launched the regtest app. It opened straight to Home (96,234 sats, recent
+  activity) with no Android App Compatibility / "not 16 KB compatible" dialog,
+  which the 0.3.0 build had shown on every launch.
 - Play Protect offered to upload the native test APK for a security check;
   declined the upload without changing a global setting.
 - Phone was USB-powered, screen on, device-idle state ACTIVE, app standby bucket
