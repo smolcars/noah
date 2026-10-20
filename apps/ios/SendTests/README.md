@@ -1,5 +1,129 @@
 # Native Send verification
 
+## bark-bolt-ffi 0.5.0 adoption (2026-10-20)
+
+Base `211ecdf2` (`feat/native-rewrite`). iOS pins **exactVersion 0.5.0** at
+`68b88c73ccaaa8e5fe607fbcc1e7d783a9ef4609`. XcodeGen regenerated the project;
+the app's SPM `Package.resolved` is now tracked. The SPM checkout's manifest hashes
+`2b76c832b05efc83cf787aae5e3625e40af297942a768a8f475567a84aa60608`; its resolved
+cached XCFramework archive hashes
+`d9b3b1e74d31d92412f1dac06a38c338c834a962846f560f745922678f155e27`.
+Both match the release `SHA256SUMS` and SPM's artifact-source record.
+[Artifact evidence](evidence/ffi050-artifact.json).
+The migration guide and Plan 23 were fetched into a fresh `mktemp` directory and
+read as untrusted data. Contract sources:
+[migration](https://github.com/smolcars/bark-bolt-ffi/blob/v0.5.0/docs/migration.md#prepared-boarding-and-stored-exits-v050),
+[Plan 23](https://github.com/smolcars/bark-bolt-ffi/blob/v0.5.0/docs/plans/23-noah-prepared-boarding.md).
+
+`transactionStatus` now tracks Ark→onchain/offboard Send receipts using the exact
+SDK-returned txid: not yet seen by this source, in mempool, confirmed at height.
+Transport errors retain the last saved receipt/status and show an error. Absence
+never fails or automatically unlocks a payment. Onchain-wallet Send retains its
+BDK sync, reorg, missing-history, confirmed competing-spend and broadcast-retry
+lock rules; the new chain-source observation supplies additional display evidence.
+Board and claim receipts use the same read-only chain API through M6. Prepared
+boards journal the signed funding txid before submit and reconcile through exact
+cached/pending/movement-anchor/network evidence, never amount matching. Prepared
+offboards and generic durable operation keys remain open.
+
+Final focused verification: **66 tests / 89 individual executions, 15 suites,
+zero failures/skips**. This includes exact board review/outcomes, two-minute
+expiry, post-acceptance persistence cleanup and failed-cleanup ownership, reserve
+re-preparation, stale/foreign/edited reviews, late review/readiness invalidation,
+chain-status recovery/error/reorg/lock checks, terminal exit mapping, existing
+claim/journal/override, prepared Send, Send round-7 and discard regressions.
+[Final targeted summary](evidence/ffi050-targeted-final-summary.json).
+An earlier focused run passed **48 tests / 53 executions in 11 suites**; the first
+build caught actor-isolated assertions, corrected before any test execution.
+
+
+Full `NoahTests` ran **once** after the final source/test changes: **452 total,
+433 passed, 19 explicitly gated skips, zero failures, 98 suites**; expanded device
+execution is **577 passed / 19 skipped**. XcodeGen ran immediately before the
+signed arm64 run, with `ONLY_ACTIVE_ARCH=YES`, two jobs and disabled parallel
+execution. [Full summary](evidence/ffi050-full-summary.json).
+
+Cleanup: verified the owned simulator's exact name, UDID and iPhone 17 type,
+shut it down through T3, rechecked **Shutdown**, deleted only that simulator and
+verified absence. Removed its `/private/tmp/noah-ffi-v050-dd` and **all 14 owned
+`.xcresult` bundles**, retaining public summaries/evidence in the repo.
+[Cleanup evidence](../ExitTests/evidence/ffi050-cleanup.json). No protected
+simulator, Android emulator, physical device or Docker lifecycle was changed.
+
+Live verification used only **Noah FFI 050 Sol c8d6719b**, iPhone 17 / iOS 27.0,
+UDID `290521A4-1583-46F9-AE4E-119EFEA023FC`, opened in T3's Device panel and driven
+with its pinned `agent-device` session. Bitcoin Core funded **300,000 sats** and
+**60,000 sats** with `just bcli sendtoaddress`; no Lightning funding or Docker
+lifecycle changes. This task mined **five one-block increments**: funding,
+amount-board/change, MAX/new funding, Auto-Board, offboard. The shared chain also
+advanced independently. The opt-in `FFI050LiveTests.acceptance()` harness showed
+the production review, and host clicks approved the actual amount/MAX/Auto-Board
+and Ark→onchain Send confirmations. All **nine final live stages passed** (one test
+each); a supplemental stage first ran against a stale binary, failed before any
+mutation, then passed after rebuilding. [Live summaries](evidence/ffi050-live-summary.json).
+
+Exact app review versus independent Core `getmempoolentry` / funding outputs:
+
+- **Amount:** gross **30,000**, net **29,670**, Ark fee **330**, onchain fee
+  **155**, total leaving **30,155 sats**, **154 vB / 1 input**. Core: output
+  **30,000 sats**, fee **155 sats**, **154 vB**, same funding outpoint and txid
+  `ab6867afa617a02d25a0b000c85002f1b742d3cb54517b975301adce610f0c23`.
+  [Review](evidence/ffi050-amount-review.json), [receipt](evidence/ffi050-amount-receipt.json),
+  [Core](evidence/ffi050-amount-core.json), [mempool](evidence/ffi050-amount-mempool.json).
+- **MAX:** confirmed **269,845**, gross **269,733**, net **269,363**, Ark fee
+  **370**, onchain fee **112**, total leaving **269,845 sats**, **111 vB / 1 input**.
+  Core: its sole output is **269,733 sats**, fee **112 sats**, **111 vB**, same
+  reviewed input and txid `ee416cb3ae37549bda13555587e09260e13cb0920ca94f6926ef372931299940`.
+  [Review](evidence/ffi050-max-review.json), [receipt](evidence/ffi050-max-receipt.json),
+  [Core](evidence/ffi050-max-core.json), [mempool](evidence/ffi050-max-mempool.json).
+- **Auto-Board:** confirmed **60,000**, gross **54,792**, net **54,462**, Ark fee
+  **330**, onchain fee **155**, total leaving **54,947**, exact reserve **5,053 sats**,
+  **154 vB / 1 input**. Core: funding **54,792**, change **5,053**, fee **155 sats**,
+  **154 vB**, same reviewed outpoint and txid
+  `a7eece0e3012fb3a5a989d66ba976366a3b4549d67693ccddf43a2ec9751abf8`.
+  [Review](evidence/ffi050-auto-review.json), [receipt](evidence/ffi050-auto-receipt.json),
+  [Core](evidence/ffi050-auto-core.json), [mempool](evidence/ffi050-auto-mempool.json).
+
+The amount/MAX txids were absent from Core's mempool before approval. An
+assert-based host check matched all three reviewed txids, fees, sizes, input
+counts/outpoints and gross outputs; Auto-Board's change matched the reviewed
+reserve. Evidence strips witness data and raw transaction hex. The first Core
+inspection included witness data; that raw scratch dump was removed and subsequent
+queries were filtered before display or retention.
+
+Ark→onchain Send: recipient **5,000 sats**, SDK receipt fee **2,560 sats**, txid
+`da0d0051fa246c3ede60b2191b3b19aaa74660c50e8f583d0d02087357bc8a3c`.
+The saved receipt moved **inMempool → confirmed(625)** after exactly one mined
+block, preserving its identity/amount/fee. Core independently reports that txid
+with one confirmation and the **5,000-sat recipient output**; its onchain network
+fee is **1,853 sats** (**185 vB**), distinct from Bark's total receipt fee.
+[Mempool receipt](evidence/ffi050-offboard-mempool.json),
+[confirmed receipt](evidence/ffi050-offboard-confirmed.json),
+[Core mempool](evidence/ffi050-offboard-mempool-core.json),
+[confirmed Core](evidence/ffi050-offboard-confirmed-core.json).
+A read-only board receipt check also returned **confirmed(621)** with the original
+**155-sat onchain / 330-sat Ark fees**, without sync or resubmission.
+[Board status](evidence/ffi050-board-status.json).
+
+Repeat with `TEST_RUNNER_NOAH_FFI050_STAGE` set to `create`, `amount`, `max`, `auto`,
+`offboard`, `confirmed`, `cancel`, `reopen` or `board-status`; offboard also needs a
+fresh Core address in `TEST_RUNNER_NOAH_FFI050_RECIPIENT`. Select
+`'-only-testing:NoahTests/FFI050LiveTests/acceptance()'` (the trailing `()` matters).
+`create` refuses an existing wallet; all stages are gated off by default. Fund/mine
+between stages only as needed, inspect receipts before repeating, and use a new
+owned simulator. Xcode uses Nix, signing enabled (`CODE_SIGN_IDENTITY=-`),
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, two jobs, disabled parallel testing and isolated
+DerivedData under `/private/tmp`.
+
+Live claimed exits, network outages, post-acceptance disk-failure injection and
+external networks/hardware were not exercised. Claimed terminal rows, transport
+failure retention and persistence/discard recovery are covered by focused tests;
+live cancel/reopen is recorded in [Exit verification](../ExitTests/README.md).
+Pinned server-rpc initializes its ArkInfo cache once; heartbeat does not update
+fee parameters. No test assumes heartbeat can reprice an existing preparation.
+Earlier sections below retain their historical SDK behavior and verification.
+
+
 ## Review follow-up: padded URI amounts and final verification (2026-10-20)
 
 The Send-only parser now removes insignificant integer leading zeros and

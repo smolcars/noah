@@ -1,0 +1,23 @@
+{
+  "txid": "a7eece0e3012fb3a5a989d66ba976366a3b4549d67693ccddf43a2ec9751abf8",
+  "vsize": 154,
+  "weight": 616,
+  "inputs": [
+    {
+      "txid": "0d862b8662da3b4fe6658b00f4363fb9b57954a1c52fa7b9a2131e3b4fbc935f",
+      "vout": 0
+    }
+  ],
+  "outputs": [
+    {
+      "n": 0,
+      "sats": 54792,
+      "address": "bcrt1pn4rvzc3v7jzhc63w22ac3sws826w7a46j7c5kk92m52jydn7a5eqrftkze"
+    },
+    {
+      "n": 1,
+      "sats": 5053,
+      "address": "bcrt1p7rgp3cvgc580jk7xnhpkepm855xm2ydxcklp2favtqeweyy33req6ye4a5"
+    }
+  ]
+}

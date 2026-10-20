@@ -1,5 +1,76 @@
 # Native iOS M6 verification
 
+## bark-bolt-ffi 0.5.0 adoption (2026-10-20)
+
+Based on `211ecdf2`; iOS now uses the checksum-verified 0.5.0 release. Prepared
+boarding replaces `boardAmount`/`boardAll` fee estimates in manual and automatic
+reviews. Gross amount, net Ark amount, both fees, total leaving onchain, signed
+vsize/input count and Auto-Board reserve are exact. MAX is a confirmed-only drain;
+the two-minute review and session cleanup follow prepared Send. Exact txids enter
+the M6 journal before submit. `failed` retains the repeat lock and retry copy;
+`notAttempted` permits a fresh review. Post-acceptance cache-write failures retry
+only the same process-local ID before discard; discard never cancels a durable
+board. Generic durable keys (FFI 19), prepared offboards and other M6 scoped
+uncertainty workarounds remain open/intact.
+
+`listAllExits` is now the exit overview/history source, including terminal rows
+after reopen. App-side discovery is fully replaced; existing wallet data is kept.
+The direct detail mapper uses SDK `amountSats`, typed state and optional history.
+Focused tests include canceled and claimed rows and their timelines. Board and
+exit-claim receipt status reads the chain source without sync or progression;
+`notFound` never means failed, and transport errors retain the last known status.
+
+Live regtest on owned **Noah FFI 050 Sol c8d6719b**, iPhone 17 / iOS 27.0,
+`290521A4-1583-46F9-AE4E-119EFEA023FC`: explicitly started then canceled the
+**11,055-sat** VTXO
+`0ad781ace6978396e47cf8ac068cbb14c7998e313c05be50bdbd8f5e25165397:0`.
+`getExitVtxos` returned **0 active rows**; `listAllExits(true, true)` retained
+**Canceled**, exact **11,055 sats**, and **Start** history. A separate test process
+reopened the wallet and verified the same persisted row, direct timeline and
+production overview. No app-side ID journal was written and no blocks were mined
+for this cancel/reopen check. [Cancel evidence](evidence/ffi050-cancel.json),
+[reopen evidence](evidence/ffi050-reopen.json).
+
+Live boarded values, independently matched against Core:
+
+- Amount: gross **30,000**, net **29,670**, Ark fee **330**, onchain fee **155**,
+  total **30,155 sats**, **154 vB / one input**.
+- MAX: gross **269,733**, net **269,363**, Ark fee **370**, onchain fee **112**,
+  total **269,845 sats**, **111 vB / one input**.
+- Auto-Board: gross **54,792**, net **54,462**, Ark fee **330**, onchain fee **155**,
+  total **54,947**, exact reserve **5,053 sats**, **154 vB / one input**.
+
+Core funding outputs, fees, vsize and exact inputs/txids match each review. The
+original board receipt later showed **confirmed at 621** through a read-only
+check. Ark→onchain receipt advanced **mempool → confirmed at 625** after one block.
+[Full numbers, txids and public evidence](../SendTests/README.md#bark-bolt-ffi-050-adoption-2026-10-20).
+Only five single blocks were mined by this task, all for funding/receipt checks;
+no Lightning funding or Docker lifecycle operations. Live claimed exits were not
+rerun; canceled/claimed typed mapping is covered by tests, and terminal persistence
+was verified live with cancel/reopen.
+
+Final targeted run: **66 tests / 89 executions across 15 suites**, zero failures or
+skips, including preparation/outcomes/reserve/cleanup, stale readiness,
+chain-status retention/locks, claim destinations, journals/overrides and terminal
+exit mapping. Nine final live stages passed (one gated test each).
+[Targeted summary](../SendTests/evidence/ffi050-targeted-final-summary.json),
+[live summaries](../SendTests/evidence/ffi050-live-summary.json).
+
+Full `NoahTests` ran **once** after final source/test changes: **452 total,
+433 passed, 19 opt-in skips, zero failures across 98 suites** (**577 passed device
+executions / 19 skipped**). Signed arm64, `ONLY_ACTIVE_ARCH=YES`, XcodeGen before
+run, two jobs, disabled parallel testing and `/private/tmp/noah-ffi-v050-dd`.
+[Full summary](../SendTests/evidence/ffi050-full-summary.json).
+
+Cleanup completed: exact owned name/UDID/type checked, T3 shutdown, **Shutdown**
+rechecked, only that simulator deleted and absence verified. Removed its
+DerivedData and all **14 task-owned `.xcresult` bundles** after exporting summaries.
+[Cleanup evidence](evidence/ffi050-cleanup.json). Other simulators, emulators,
+physical hardware and Docker lifecycle were untouched.
+
+Earlier sections below retain historical test evidence.
+
+
 M6 adds Board to Ark, the confirmation-only automatic boarding prompt, VTXO list/detail
 and delegated refresh, and emergency-exit overview/review/deposit/detail screens.
 Settings links open each surface. All native wallet work uses the counted,
@@ -19,28 +90,24 @@ policy is P2 [FFI item 17](../../../docs/native-rewrite/ffi-handoff-prompt.md).
 
 Other deliberate differences from RN:
 
-- Boarding requires a separate amount/estimated Ark fee/estimated onchain fee
-  confirmation. MAX now calls `boardAll`, matching RN's `useBoardAllArk` →
-  `boardAllArk` → Nitro `boardAll` (`client/src/hooks/usePayments.ts:278`,
-  `client/src/lib/paymentsApi.ts:166`). The review explains it can include spendable
-  pending funds and the final amount can differ. Auto-Board still uses a fixed
-  amount with an estimated 5,000-sat reserve, like RN. All boarding fees/received
-  amounts are estimates: the final fee may be higher if more coins are needed.
-  The receipt persists/displays the SDK's actual `onchainFeeSats` when available;
-  a failed fee lookup cannot turn a returned submission into an unknown outcome.
-  Missing actual fees are retried by exact persisted receipt txid on screen refresh,
-  polling and relaunch, updating the saved receipt/message without resubmission.
-  Auto-Board also retains its receipt until Done in Settings → Board to Ark.
-  Prepared boarding (FFI 18) has the same priority as prepared sends (FFI 14).
-- Confirmation must be younger than 30 seconds for every M6 mutation. The session
-  rechecks wallet identity, selected VTXOs, destination, amounts, both fee legs and
-  confirmed balance. A changed or stale quote requires another review.
+- With bark-bolt-ffi **0.5.0**, boarding reviews the exact signed gross funding
+  output, net Ark amount, Ark fee, onchain fee, total leaving onchain, vsize and
+  funding-input count. Amount boards use `.amount(gross)`; MAX uses confirmed-only
+  `.drainAll`. Auto-Board remains a persisted one-shot confirmation, leaving at
+  least 5,000 sats and showing the exact reserve. If necessary, it discards and
+  re-prepares once with reduced gross. No review means no retained unsubmitted
+  preparation; failed cleanup remains session-owned until it can release safely.
+- Prepared boarding confirmations expire after two minutes, like prepared Send.
+  Other M6 mutations retain their 30-second quote/revalidation rule. Navigation,
+  edits, backgrounding, suspension and wallet replacement invalidate reviews;
+  late preparations discard their reservations. The session waits for native calls
+  and retains failed cleanup across canceled callers/failed close.
 - Every mutation records an atomic attempt inside the wallet directory before SDK
   submission. Attempts survive errors/relaunch and block only overlapping repeats
   of the same operation; uncertain board/refresh never blocks exits, claims or
   cancellations. Bark makes repeated active starts/already-canceled cancels harmless.
-  Read-only **Check status** reads cached exact txids and per-item VTXO/exit
-  states only. It never syncs: even BDK sync may rebroadcast already-authorized
+  Read-only **Check status** reads exact cached txids, pending boards, movement
+  anchors, per-item VTXO/exit states and the chain source's `transactionStatus`. It never syncs: even BDK sync may rebroadcast already-authorized
   transactions. Bark’s daemon keeps the cache fresh. Inconclusive checks say
   “Noah checks again automatically as your wallet syncs.” Only conclusive evidence resolves
   an attempt. Missing IDs, locked refresh inputs and unknown errors remain uncertain.
@@ -75,14 +142,13 @@ Other deliberate differences from RN:
   wide-screen split pane are not ported here; technical details use native selectable
   text. The SDK's additional `VtxoSwept` terminal state is shown explicitly.
 
-Terminal details read `getExitStatus(id)` directly, including history, rather than
-searching the active overview. Discovered IDs are stored in a wallet-fingerprint
-scoped file before start/claim/cancel and whenever active exits are read. Legacy
-`bark.exit` movements seed additional input/exited IDs. Canceled/claimed rows thus
-stay discoverable after close/reopen. RN's detail currently also depends on its
-tracked overview; this preserves its intended terminal timeline despite the newer
-Bark active-list semantics. FFI item 20 requests an all-exits listing for imports
-whose terminal IDs/movements were never available to this app.
+Terminal details read persisted `getExitStatus(id)` amounts/history. The overview
+uses **`listAllExits(includeHistory: true, includeTransactions: false)`**, including
+canceled and claimed rows after reopen. SDK persistence fully covers previous
+`ExitHistoryStore` discovery, legacy movement seeding and `remember` writes, so
+those paths are retired without deleting wallet data or needing a migration bridge.
+Board and exit-claim receipts show live chain-source status; transport errors keep
+the last saved status and surface an error. `notFound` never means not delivered.
 
 ## Shared fixtures and tests
 

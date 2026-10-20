@@ -1,0 +1,13 @@
+{
+  "revision": {
+    "revision": "68b88c73ccaaa8e5fe607fbcc1e7d783a9ef4609",
+    "version": "0.5.0"
+  },
+  "artifactSource": {
+    "checksum": "d9b3b1e74d31d92412f1dac06a38c338c834a962846f560f745922678f155e27",
+    "type": "remote",
+    "url": "https://github.com/smolcars/bark-bolt-ffi/releases/download/v0.5.0/BarkBoltFFI.xcframework.zip"
+  },
+  "artifactSha256": "d9b3b1e74d31d92412f1dac06a38c338c834a962846f560f745922678f155e27",
+  "manifestSha256": "2b76c832b05efc83cf787aae5e3625e40af297942a768a8f475567a84aa60608"
+}
