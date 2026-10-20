@@ -84,17 +84,12 @@ fun StoryScreen() {
     var playing by remember { mutableStateOf(false) }
     var seeking by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    DisposableEffect(owner) {
+    DisposableEffect(Unit) {
         val media = MediaPlayer.create(context, R.raw.noahs_ark_story)
         player = media
         if (media == null) error = "Couldn't play the story. Please try again."
         else duration = media.duration.toFloat().coerceAtLeast(1f)
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) { media?.pause(); playing = false }
-        }
-        owner.lifecycle.addObserver(observer)
-        onDispose { owner.lifecycle.removeObserver(observer); media?.release(); player = null }
+        onDispose { media?.release(); player = null }
     }
     LaunchedEffect(player) {
         while (isActive) { player?.let { if (!seeking) position = it.currentPosition.toFloat(); playing = it.isPlaying }; delay(500) }
