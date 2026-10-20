@@ -53,18 +53,23 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
     static let unsupportedMessage = "Noah can't safely read this schedule. Cancel it and explicitly approve a new recurring payment."
     static let maximumAmount: UInt64 = 2_100_000_000_000_000
     static let amountLimitMessage = "This amount exceeds 21 million BTC. Cancel this schedule and approve a new payment within the limit."
-    static var now: Double { Date().timeIntervalSince1970 * 1000 }
+    static var now: Double { floor(Date().timeIntervalSince1970 * 1000) }
+    private var wholeMillisecondTimes: Bool {
+        let times = [startAt, endAt, nextRunAt, createdAt, updatedAt, retryNotBefore, inFlight?.startedAt].compactMap { $0 }
+            + runs.flatMap { [$0.scheduledFor, $0.attemptedAt] }
+        return times.allSatisfy { $0.isFinite && $0.rounded(.towardZero) == $0 }
+    }
     var validPolicy: Bool {
         !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && label.utf16.count <= 64
             && amountSat > 0
             && ["ark", "lnurl", "offer"].contains(destinationType) && !destination.isEmpty
             && ["active", "paused", "needs_attention", "needs_approval", "completed"].contains(status)
-            && interval.valid && startAt.isFinite && abs(startAt) < 8.64e15
+            && wholeMillisecondTimes && interval.valid && startAt.isFinite && abs(startAt) < 8.64e15
             && (endAt == nil || (endAt!.isFinite && endAt! >= startAt))
             && (maxOccurrences == nil || maxOccurrences! >= 1) && nextOccurrenceIndex >= 0 && nextOccurrenceIndex <= 1_000_000
     }
     func validateInput(now: Double) throws {
-        guard !unsupportedStorage else { throw RecurringError.message(Self.unsupportedMessage) }
+        guard !unsupportedStorage, wholeMillisecondTimes else { throw RecurringError.message(Self.unsupportedMessage) }
         guard !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, label.utf16.count <= 64 else { throw RecurringError.message("Give this payment a short name (max 64 characters).") }
         guard amountSat > 0, amountSat <= Self.maximumAmount else { throw RecurringError.message("Enter a whole amount in sats, up to 21 million BTC.") }
         guard ["ark", "lnurl", "offer"].contains(destinationType), !destination.isEmpty else { throw RecurringError.message("Enter an Ark address, Lightning address or BOLT12 offer.") }

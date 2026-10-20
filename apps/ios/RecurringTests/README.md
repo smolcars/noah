@@ -20,6 +20,72 @@ reported **2 test definitions / 15 expanded runs**, with **4 expanded failures**
 (the numeric zero variants) and 11 passes, zero skips. The rejected-overflow
 `1e400` case also stays closed when Foundation rejects it during JSON validation.
 
+## Storage strictness — timestamp parity (2026-10-20)
+
+Any non-integral start/end, next-run, created/updated, retry, in-flight-start or
+run-history scheduled/attempted timestamp makes the entire row unsupported.
+`RecurringPayment.validPolicy` and approval validation require finite whole
+milliseconds. Stored timestamps are never rounded. Existing per-row isolation
+keeps the original row visible as **Needs attention**, stopped and cancellable;
+its values and raw JSON survive unrelated writes. RN's normal UI/runner gets
+whole milliseconds from `Date.now()` and `Date` calendar math. The native clock
+now captures whole milliseconds too, so new policies and execution updates remain
+readable under the same rule; this does not normalize saved data.
+
+Both platforms assert every row's `expectedClassifications` entry in the shared
+`recurring-rn-range.json`, including its reason in failure output. Only the four
+representable count rows run; all seven unsupported rows stay stopped. The
+`start-0` and `end-fraction` rows retain 1000.5 and 2000.5 unchanged. Existing tests
+cover cancellation, unsupported edit/resume/override/new-approval refusal,
+unchanged journals and server-wake exclusion. `RecurringTimestampTests` adds all
+nine time-field paths, unrelated healthy execution exactly once, no unsupported
+journal, preserved JSON through pause/reopen/pending writes and cancellation. A
+new native-clock policy also remains executable after store reopen.
+
+Before the timestamp fix, the selected range/timestamp/version run failed as
+expected: **9 definitions / 39 expanded runs / 23 expanded failures**, zero skips.
+Version regressions already passed in that run. After both fixes, the broader
+14-suite run passed 78/81 definitions; its three failing range test definitions
+exposed a helper matching the new expectations map instead of `state.schedules`.
+The helper now scopes its byte-preservation check to actual schedule rows.
+Final focused range/timestamp/version verification: **9 definitions / 39 expanded
+runs / 3 suites**, zero failures or skips.
+
+## Storage strictness — final verification (2026-10-20)
+
+Full **NoahTests ran once**, without suite exclusions: **500 total / 481 passed /
+19 opt-in skipped / 0 failed**, **107 suites**, **42.369 seconds** of execution;
+**725 passed / 19 skipped** expanded runs. The Android README records its passing
+required full unit-test/APK command. The fee policy and shared fee cases are
+unchanged; no launch/seed/upgrade-test code or other stores changed.
+
+Every Xcode build used Nix, `/opt/homebrew/bin/xcodegen generate`, normal code
+signing, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, disabled parallel testing
+and automatic diagnostics, and DerivedData under `/private/tmp`. Suite selectors
+ran nonzero tests; no function selectors were used. The first environment-only
+attempt stopped before building because Nix's PATH omitted XcodeGen; subsequent
+commands used its installed absolute path. The Device panel rejected the owned
+simulator twice with `No device FEC6D3C3-719B-496C-A35E-A67B437D8DD3 on host local.`;
+Xcode used that exact `simctl`-verified owned UDID successfully.
+
+RN's original writer ran read-only through real Zustand and reproduced the
+original envelope byte-for-byte (SHA-256
+`c96c5f940008ac97f3f0757b79cef276381a56ac8e9fcca4a8d1cd27b23954b3`), excluding
+only the shared native expectations metadata. Logs, JSON summaries/test trees,
+writer output/receipt and cleanup evidence remain under
+`/private/tmp/noah-recurring-strict-5fec2083-`. No funded/live payment, physical
+notification delivery, UI inspection or upgrade test was attempted; these are
+deterministic storage/executor regressions, with upgrade work assigned separately.
+Protected simulators, Android emulators, the physical Pixel 6 and Docker were
+untouched.
+
+Cleanup completed: owned **Noah Recurring Strict Sol 5fec2083**, iPhone 17 /
+iOS 27.0, UDID **FEC6D3C3-719B-496C-A35E-A67B437D8DD3**, was confirmed by exact
+name/UDID and **Shutdown** state immediately before deletion, then verified absent.
+Removed only `/private/tmp/noah-recurring-strict-5fec2083-dd` and all **five** owned
+`.xcresult` bundles after exporting their summaries/test trees. The cleanup JSON
+records each removed path. No shared device or build artifacts were removed.
+
 ## RN wide-number storage compatibility (2026-10-20)
 
 Base: `feat/native-rewrite` local HEAD `38af11f3`.

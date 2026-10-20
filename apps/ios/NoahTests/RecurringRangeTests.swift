@@ -9,11 +9,15 @@ import Testing
         return try String(contentsOf: url, encoding: .utf8)
     }
 
-    static let supported = ["count-0", "count-1", "count-2", "count-3", "start-0", "end-fraction"]
-    nonisolated static let unsupported = ["count-4", "count-5", "count-6", "start-1", "start-2"]
+    static let supported = ["count-0", "count-1", "count-2", "count-3"]
+    nonisolated static let unsupported = ["count-4", "count-5", "count-6", "start-0", "start-1", "start-2", "end-fraction"]
+
+    struct Expectation: Decodable { var classification: String; var reason: String }
+    struct Expectations: Decodable { var expectedClassifications: [String: Expectation] }
 
     private func originalRow(_ id: String, in fixture: String) throws -> String {
-        let start = try #require(fixture.range(of: "\"\(id)\": {"))
+        let schedules = try #require(fixture.range(of: #""schedules": {"#))
+        let start = try #require(fixture.range(of: "\"\(id)\": {", range: schedules.upperBound..<fixture.endIndex))
         let rest = fixture[start.upperBound...]
         let end = try #require(rest.range(of: "\n      }"))
         return "{" + rest[..<end.upperBound]
@@ -26,6 +30,13 @@ import Testing
         h.settings.set(raw, forKey: RecurringStore.key)
         let state = try h.store.load()
         #expect(state.schedules.count == 11)
+        let expectations = try JSONDecoder().decode(Expectations.self, from: Data(raw.utf8)).expectedClassifications
+        #expect(Set(state.schedules.keys) == Set(expectations.keys))
+        for (id, expected) in expectations {
+            let row = try #require(state.schedules[id])
+            let classification = row.unsupportedStorage ? "stopped-unsupported" : row.status
+            #expect(classification == expected.classification, "\(id): \(expected.reason)")
+        }
         #expect(h.settings.string(forKey: RecurringStore.key) == raw)
         for id in Self.supported {
             #expect(state.schedules[id]?.status == "active")
@@ -48,10 +59,10 @@ import Testing
         defer { try? FileManager.default.removeItem(at: h.directory) }
         let raw = try Self.fixture()
         h.settings.set(raw, forKey: RecurringStore.key)
-        h.clock.withLock { $0 = 1000.5 }
+        h.clock.withLock { $0 = 1001 }
         await h.executor.execute()
         await h.executor.execute(manual: true)
-        #expect(h.calls.withLock { $0 } == 6)
+        #expect(h.calls.withLock { $0 } == 4)
         #expect(h.executor.error == nil)
         let state = try h.store.load()
         for id in Self.supported {
@@ -78,7 +89,7 @@ import Testing
         defer { try? FileManager.default.removeItem(at: h.directory) }
         let raw = try Self.fixture()
         h.settings.set(raw, forKey: RecurringStore.key)
-        h.clock.withLock { $0 = 1000.5 }
+        h.clock.withLock { $0 = 1001 }
         var schedule = try #require(h.store.load().schedules[id])
         var original = RecurringScheduleTests.schedule(start: 1000); original.id = id
         let entry = RecurringJournal.Entry(binding: h.owner.withLock { $0 }, scheduleID: id,
