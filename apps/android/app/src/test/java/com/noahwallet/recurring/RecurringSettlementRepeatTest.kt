@@ -6,7 +6,9 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class RecurringSettlementRepeatTest {
-    @Test fun repeatedStatusAfterAckFailureMustNotRecordSameOccurrenceTwice() = runBlocking {
+    @Test fun repeatedStatusAfterAckFailureMustNotRecordSameOccurrenceTwice() = repeatedStatus(false)
+    @Test fun preApplicationMarkerReceiptDoesNotAdvanceAgainAfterUpgrade() = repeatedStatus(true)
+    private fun repeatedStatus(legacy: Boolean) = runBlocking {
         val w = RecurringWorld(this); w.add()
         w.wallet.payBlock = { error("ambiguous") }
         w.executor.execute()
@@ -16,6 +18,8 @@ class RecurringSettlementRepeatTest {
         w.executor.checkStatus("rent")
         assertEquals(1, w.schedule!!.occurrencesPaid)
         assertTrue(w.controller.locked)
+        w.beforeJournalWrite = {}
+        if (legacy) w.journal.save(w.journal.load().getValue("rent").copy(policyApplied = false))
         val applied = w.schedule; val notices = w.notifications.toList()
         w.beforeJournalWrite = {}; w.sendJournal.fail = false
         w.executor.checkStatus("rent")

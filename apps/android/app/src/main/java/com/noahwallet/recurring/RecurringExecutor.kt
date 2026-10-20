@@ -182,7 +182,11 @@ class RecurringExecutor(private val d: Dependencies,
                 if (d.binding() != entry.binding) return@storage false
                 val saved = d.journal.load()[entry.scheduleID]
                 if (saved?.binding != entry.binding || saved.plan != entry.plan || saved.policyRevision != entry.policyRevision || saved.markedAt != entry.markedAt) return@storage false
-                if (saved.policyApplied) return@storage true
+                if (saved.policyApplied || saved.consumed) {
+                    // Pre-marker receipts may already have advanced MMKV. Never guess by applying twice.
+                    if (!saved.policyApplied) d.journal.save(saved.copy(policyApplied = true))
+                    return@storage true
+                }
                 if (d.store.load().binding != entry.binding) return@storage false
                 // Claim application with consumption: interruption may stop advancement, never repeat it.
                 d.journal.save(entry.copy(resolved = true, consumed = paid, policyApplied = true))
@@ -213,7 +217,7 @@ class RecurringExecutor(private val d: Dependencies,
         try {
             val entry = storage { d.journal.load()[id] } ?: return
             val schedule = storage { runCatching { d.store.load().schedules[id] }.getOrNull() }
-            if (schedule == null && !entry.policyApplied) return
+            if (schedule == null && !entry.policyApplied && !entry.consumed) return
             controller.checkStatus(); settle(entry, schedule)
         } catch (_: Exception) { error = "Unable to check this payment. Sending remains stopped." }
         reload()
