@@ -88,6 +88,17 @@ struct MMKVUpgradeBackup {
         try RestoreTransaction.fullSync(directory)
     }
 
+    /// Recovery may rewrite an mmap, so inventory only a disposable copy of the immutable pair.
+    func inspectSnapshot<T>(_ read: (URL) throws -> T) throws -> T {
+        let fm = FileManager.default
+        let inspection = directory.appending(path: "inspection", directoryHint: .isDirectory)
+        if fm.fileExists(atPath: inspection.path) { try fm.removeItem(at: inspection) }
+        try fm.createDirectory(at: inspection, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: inspection) }
+        for name in names { try fm.copyItem(at: directory.appending(path: name), to: inspection.appending(path: name)) }
+        return try read(inspection)
+    }
+
     /// A deliberate wallet deletion must never resurrect the old settings.
     func markReset() throws { try retire(keys: []) }
 

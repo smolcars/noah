@@ -182,6 +182,21 @@ struct MMKVRecoveryTests {
         #expect(throws: (any Error).self) { try SettingsStorage.acknowledgeRecovery(rootPath: root.path) }
     }
 
+    @Test(arguments: ["missing", "undecodable"])
+    func partialFirstOpenLossRestoresSnapshot(mode: String) throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
+        try backup.prepare()
+        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
+        if mode == "missing" { raw.removeValue(forKey: PersistedWalletState.key) }
+        else { raw.set(Data([0xff]), forKey: PersistedWalletState.key) }
+        raw.sync(); raw.close()
+        let store = try SettingsStorage(rootPath: root.path)
+        try store.requireCompatibleRNStores()
+        #expect(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true)
+        #expect(backup.restored)
+    }
+
     @Test func laterCRCRecoveryBlocksEvenWhenRNKeysSurvive() throws {
         let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
         _ = try SettingsStorage(rootPath: root.path)
@@ -226,7 +241,10 @@ struct MMKVRecoveryTests {
     }
 
     @Test func sharedStorageLaunchDecisions() throws {
-        struct Case: Decodable { let name: String; let initialWallet: String; let afterNativeWallet: String?; let expected: String }
+        struct Case: Decodable {
+            let name: String; let initialWallet: String; let afterNativeWallet: String?; let expected: String
+            let beforeNativeWallet: String?; let recoverAfterNative: Bool?; let retries: Int?; let acknowledgeRecovery: Bool?
+        }
         struct Fixture: Decodable { let cases: [Case] }
         let url = Self.fixture.deletingLastPathComponent().appending(path: "mmkv-launch-state.json")
         for vector in try JSONDecoder().decode(Fixture.self, from: Data(contentsOf: url)).cases {
@@ -239,9 +257,28 @@ struct MMKVRecoveryTests {
                 raw.sync()
             }
             apply(vector.initialWallet); raw.close()
+            if let before = vector.beforeNativeWallet {
+                try MMKVUpgradeBackup(root: root, instanceID: Self.id).prepare()
+                let live = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
+                if before == "absent" { live.removeValue(forKey: PersistedWalletState.key) }
+                else { live.set(Data([0xff]), forKey: PersistedWalletState.key) }
+                live.sync(); live.close()
+            }
             let outcome: String
             do {
-                let store = try SettingsStorage(rootPath: root.path)
+                var store: SettingsStorage
+                if vector.recoverAfterNative == true {
+                    _ = try SettingsStorage(rootPath: root.path)
+                    Self.close(root); try Self.corrupt(root, mode: "crc")
+                    for _ in 0..<(vector.retries ?? 0) {
+                        #expect(throws: SettingsStorage.RecoveryRequired.self) { try SettingsStorage(rootPath: root.path) }
+                        Self.close(root)
+                    }
+                    if vector.acknowledgeRecovery == true {
+                        #expect(throws: SettingsStorage.RecoveryRequired.self) { try SettingsStorage(rootPath: root.path) }
+                        store = try SettingsStorage.acknowledgeRecovery(rootPath: root.path)
+                    } else { store = try SettingsStorage(rootPath: root.path) }
+                } else { store = try SettingsStorage(rootPath: root.path) }
                 if let after = vector.afterNativeWallet {
                     if after == "absent" || after == "undecodable" {
                         let live = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
@@ -254,7 +291,8 @@ struct MMKVRecoveryTests {
                 }
                 try store.requireCompatibleRNStores()
                 outcome = store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true ? "existingWallet" : "onboarding"
-            } catch { outcome = "incompatibleStorage" }
+            } catch is SettingsStorage.RecoveryRequired { outcome = "settingsRecovered" }
+            catch { outcome = "incompatibleStorage" }
             #expect(outcome == vector.expected, "\(vector.name)")
         }
     }

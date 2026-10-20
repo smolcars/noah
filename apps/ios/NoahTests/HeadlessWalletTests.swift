@@ -13,7 +13,8 @@ import Testing
         let directory = FileManager.default.temporaryDirectory.appending(path: "headless-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: directory)
-        let settings = try SettingsStorage(rootPath: directory.appending(path: "mmkv").path, instanceID: UUID().uuidString)
+        let storageID = UUID().uuidString
+        let settings = try SettingsStorage(rootPath: directory.appending(path: "mmkv").path, instanceID: storageID)
         try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
         let database = Data("existing database stays unchanged".utf8)
         if state != "missing" { try database.write(to: location.database) }
@@ -22,7 +23,7 @@ import Testing
         if state == "uninitialized" { wallet.isInitialized = false }
         try settings.setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)
         if state == "quarantine" {
-            let quarantine = MMKVQuarantine(root: directory.appending(path: "mmkv"), store: "headless-test")
+            let quarantine = MMKVQuarantine(root: directory.appending(path: "mmkv"), store: storageID)
             quarantine.recordRecovery()
             try quarantine.requireDurable()
         }

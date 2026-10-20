@@ -75,21 +75,24 @@ final class SettingsStorage: @unchecked Sendable {
         Self.handler.begin(quarantine)
         defer { Self.handler.end() }
         let retiredKeys = try backup.retiredKeys
-        let expectedContent = retiredKeys == nil ? try backup.hasContent : false
-        guard var opened = MMKV(mmapID: instanceID, rootPath: rootPath) else {
-            throw OpenError()
-        }
-        if retiredKeys == nil, (expectedContent && !Self.hasRNKeys(opened)) || quarantine.exists {
-            opened.close()
-            guard !backup.restored else { throw OpenError() }
-            try backup.restore()
-            AppLog("mmkv").w("Restoring pre-native settings backup after empty recovery")
-            guard let recovered = MMKV(mmapID: instanceID, rootPath: rootPath) else { throw OpenError() }
-            opened = recovered
-            guard Self.hasRNKeys(opened) else { opened.close(); throw OpenError() }
-        }
+        let snapshot = retiredKeys == nil ? try Self.snapshotInventory(backup, instanceID: instanceID) : nil
+        let generation = Self.handler.generation
+        guard var opened = MMKV(mmapID: instanceID, rootPath: rootPath) else { throw OpenError() }
         do {
-            try Self.validate(opened, requiredKeys: retiredKeys ?? [])
+            if let snapshot {
+                let valid = (try? Self.validate(opened, requiredKeys: snapshot.keys)) != nil && snapshot.readable
+                let recovered = Self.handler.generation != generation
+                if !valid || (quarantine.exists && (!backup.restored || recovered)) {
+                    opened.close()
+                    guard !backup.restored else { throw OpenError() }
+                    try backup.restore()
+                    AppLog("mmkv").w("Restoring pre-native settings backup after incomplete recovery")
+                    guard let restored = MMKV(mmapID: instanceID, rootPath: rootPath) else { throw OpenError() }
+                    opened = restored
+                }
+                try Self.validate(opened, requiredKeys: snapshot.keys)
+                guard snapshot.readable else { throw OpenError() }
+            } else { try Self.validate(opened, requiredKeys: retiredKeys ?? []) }
             try quarantine.requireDurable()
             if retiredKeys != nil, quarantine.exists, !acknowledgingRecovery { throw RecoveryRequired() }
             try backup.retire(keys: Self.rnKeys(opened))
@@ -120,7 +123,16 @@ final class SettingsStorage: @unchecked Sendable {
     private static func rnKeys(_ store: MMKV) -> [String] {
         RNStoreCodec.storeKeys.filter { store.contains(key: $0) }
     }
-    private static func hasRNKeys(_ store: MMKV) -> Bool { !rnKeys(store).isEmpty }
+    private struct SnapshotInventory { let keys: [String]; let readable: Bool }
+    private static func snapshotInventory(_ backup: MMKVUpgradeBackup, instanceID: String) throws -> SnapshotInventory {
+        guard try backup.hasContent else { return SnapshotInventory(keys: [], readable: true) }
+        return try backup.inspectSnapshot { root in
+            guard let snapshot = MMKV(mmapID: instanceID, rootPath: root.path) else { throw OpenError() }
+            defer { snapshot.close() }
+            let keys = rnKeys(snapshot)
+            return SnapshotInventory(keys: keys, readable: !keys.isEmpty && (try? validate(snapshot, requiredKeys: keys)) != nil)
+        }
+    }
 
     private static func validate(_ store: MMKV, requiredKeys: [String]) throws {
         guard requiredKeys.allSatisfy({ store.contains(key: $0) }) else { throw OpenError() }
@@ -221,15 +233,17 @@ final class SettingsStorage: @unchecked Sendable {
 private final class RecoveryHandler: NSObject, MMKVHandler, @unchecked Sendable {
     private let lock = NSLock()
     private var active: MMKVQuarantine?
+    private var recoveries: UInt64 = 0
+    var generation: UInt64 { lock.withLock { recoveries } }
     func begin(_ quarantine: MMKVQuarantine) { lock.withLock { active = quarantine } }
     func end() { lock.withLock { active = nil } }
     func onMMKVCRCCheckFail(_ mmapID: String) -> MMKVRecoverStrategic {
-        lock.withLock { active?.recordRecovery() }
+        lock.withLock { active?.recordRecovery(); recoveries &+= 1 }
         AppLog("mmkv").w("CRC check failed; recovering settings")
         return .onErrorRecover
     }
     func onMMKVFileLengthError(_ mmapID: String) -> MMKVRecoverStrategic {
-        lock.withLock { active?.recordRecovery() }
+        lock.withLock { active?.recordRecovery(); recoveries &+= 1 }
         AppLog("mmkv").w("File length check failed; recovering settings")
         return .onErrorRecover
     }
