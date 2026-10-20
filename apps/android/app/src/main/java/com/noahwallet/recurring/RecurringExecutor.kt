@@ -115,12 +115,12 @@ class RecurringExecutor(private val d: Dependencies,
                             check(approval != null || RecurringFeePolicy.evaluate(payment.amount, payment.method, quote.fee, quote.lightningFeeSchedule).autoPay)
                         } catch (_: Exception) { throw SendNotSubmitted(SendFailure.Reason.recurringStopped) }
                     }
-                    if (job == null) { markUncertain(id); continue }
+                    if (job == null) { markUncertain(entry); continue }
                     job.join()
                     settle(entry, marked, retainReceipt = approval != null)
                 } catch (_: Exception) {
                     val entry = storage { d.journal.load()[id] }
-                    if (entry != null && !entry.resolved && entry.plan == plan) markUncertain(id)
+                    if (entry != null && !entry.resolved && entry.plan == plan && entry.binding == initial.binding && entry.policyRevision == schedule.nativeRevision) markUncertain(entry)
                     else {
                         val result = schedule.failure(plan, "This payment could not be prepared. No payment was submitted.", true, d.now())
                         if (storage { d.store.updateIf(schedule, result) } && result.status == "active" && (result.consecutiveFailures == 1 || manual)) d.notify(emptyList(), result)
@@ -131,38 +131,50 @@ class RecurringExecutor(private val d: Dependencies,
         } catch (failure: Exception) { error = failure.message ?: "Recurring sending is stopped." }
         finally { try { reload(); d.notify(storage { runCatching { d.store.load().schedules.values.toList() }.getOrDefault(emptyList()) }, null) } finally { running = false } }
     }
-    private suspend fun markUncertain(id: String) = storage {
+    private suspend fun markUncertain(entry: RecurringJournal.Entry, message: String? = controller.message) = storage {
         synchronized(RecurringStore.lock) {
-            val latest = d.store.load().schedules[id] ?: return@storage
-            val stopped = latest.copy(status = "needs_attention", lastError = controller.message ?: SendFailure.Reason.unresolved.message)
+            if (d.binding() != entry.binding) return@storage
+            val state = d.store.load()
+            if (state.binding != entry.binding) return@storage
+            val latest = state.schedules[entry.scheduleID] ?: return@storage
+            if (latest.nativeRevision != entry.policyRevision) return@storage
+            val stopped = latest.copy(status = "needs_attention", lastError = message ?: SendFailure.Reason.unresolved.message)
             d.store.upsert(stopped); d.notify(emptyList(), stopped)
         }
     }
     private suspend fun settle(entry: RecurringJournal.Entry, original: RecurringPayment, retainReceipt: Boolean = false) {
-        if (controller.attempt?.recurringOccurrenceKey != entry.key || storage { d.binding() } != entry.binding) return
-        val success = controller.state == SendController.State.succeeded && controller.attempt?.receipt?.let { !it.isUnresolved && !it.broadcastRetryPending && it.isProven(controller.attempt!!.payment) } == true
-        val paid = success || controller.state == SendController.State.alreadyPaid
-        val failed = controller.state == SendController.State.failed
-        if (!paid && !failed) { markUncertain(entry.scheduleID); return }
+        // Own this exact outcome before storage can suspend and the UI can start another attempt.
+        val attempt = controller.attempt ?: return
+        val outcome = controller.state
+        val message = controller.message
+        if (attempt.recurringOccurrenceKey != entry.key) return
+        val success = outcome == SendController.State.succeeded && attempt.receipt?.let { !it.isUnresolved && !it.broadcastRetryPending && it.isProven(attempt.payment) } == true
+        val paid = success || outcome == SendController.State.alreadyPaid
+        val failed = outcome == SendController.State.failed
+        if (!paid && !failed) { markUncertain(entry, message); return }
         // Consumption precedes advancing MMKV or releasing Send, so rollback can never replay it.
-        storage {
-            d.journal.save(entry.copy(resolved = true, consumed = paid))
+        val settled = storage {
             synchronized(RecurringStore.lock) {
+                if (d.binding() != entry.binding || d.store.load().binding != entry.binding) return@storage false
+                d.journal.save(entry.copy(resolved = true, consumed = paid))
                 val latest = d.store.load().schedules[entry.scheduleID]
-                if (latest != null) {
+                if (latest != null && latest.nativeRevision == original.nativeRevision) {
                     val result = when {
                         success -> {
                             val advanced = original.copy(status = "active").success(entry.plan, d.now(), d.zone())
-                            if (latest.status !in listOf("active", "needs_approval") && advanced.status == "active") advanced.copy(status = latest.status) else advanced
+                            if (latest.status !in listOf("active", "needs_approval") && advanced.status == "active")
+                                advanced.copy(status = latest.status, consecutiveFailures = latest.consecutiveFailures,
+                                    lastError = latest.lastError, retryNotBefore = latest.retryNotBefore) else advanced
                         }
                         paid -> latest.failure(entry.plan, "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.", false, d.now())
-                        else -> latest.failure(entry.plan, controller.message ?: "No payment was submitted.", true, d.now())
+                        else -> latest.failure(entry.plan, message ?: "No payment was submitted.", true, d.now())
                     }
                     d.store.upsert(result); d.notify(emptyList(), result)
                 } else if (success) d.notify(emptyList(), original.copy(status = "active").success(entry.plan, d.now(), d.zone()))
             }
+            true
         }
-        if (!retainReceipt) controller.acknowledge()
+        if (settled && !retainReceipt) controller.acknowledge(attempt)
     }
     suspend fun checkStatus(id: String) {
         try {

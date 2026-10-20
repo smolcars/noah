@@ -176,7 +176,8 @@ class SendController(private val dependencies: Dependencies,
             return false
         }
     }
-    suspend fun acknowledge() {
+    suspend fun acknowledge(expected: SendAttempt? = attempt) {
+        if (attempt !== expected) return
         if (state !in listOf(State.succeeded, State.alreadyPaid, State.failed) || attempt?.receipt?.broadcastRetryPending == true) return
         clear()
     }
