@@ -46,7 +46,7 @@ struct AppLogTests {
 
     @Test func redactsMnemonicShapedText() {
         let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
-        #expect(LogFile.redact("seed: \(phrase)!") == "seed: [redacted]!")
+        #expect(LogFile.redact("seed: \(phrase)!") == "[redacted]")
         #expect(LogFile.redact("wallet loaded in 3 seconds after sync") == "wallet loaded in 3 seconds after sync")
     }
 }

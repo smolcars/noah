@@ -3,7 +3,7 @@ import OSLog
 
 /// Tagged app logger, the native counterpart of `client/src/lib/log.ts`.
 /// Writes to OSLog and to the rotating file the Logs screen exports.
-/// Never pass secrets; `LogFile` still redacts mnemonic-shaped text.
+/// Never pass secrets; `LogFile` also redacts secret-shaped text at the boundary.
 struct AppLog: Sendable {
     enum Level: String, Sendable {
         case verbose, debug, info, warn, error
@@ -26,8 +26,8 @@ struct AppLog: Sendable {
     private let file: LogFile
 
     init(_ tag: String, file: LogFile = .shared) {
-        self.tag = tag
-        self.logger = Logger(subsystem: Self.subsystem, category: tag)
+        self.tag = LogFile.redact(tag)
+        self.logger = Logger(subsystem: Self.subsystem, category: self.tag)
         self.file = file
     }
 
@@ -37,7 +37,7 @@ struct AppLog: Sendable {
     func w(_ message: String) { log(.warn, message) }
     func e(_ message: String) { log(.error, message) }
 
-    private func log(_ level: Level, _ message: String) {
+    func log(_ level: Level, _ message: String) {
         let message = LogFile.redact(message)
         switch level {
         case .verbose, .debug: logger.debug("\(message, privacy: .public)")
@@ -60,6 +60,7 @@ final class LogFile: @unchecked Sendable {
     static let maxFileSizeBytes = 512 * 1024
     static let maxFiles = 4
     static let maxLines = 4000
+    static let maxMessageBytes = 16 * 1024
 
     private let directory: URL
     private let queue = DispatchQueue(label: "com.noahwallet.log-file")
@@ -75,10 +76,11 @@ final class LogFile: @unchecked Sendable {
     }
 
     func append(level: AppLog.Level, tag: String, message: String, date: Date = Date()) {
-        queue.async { [self] in
-            let cleaned = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Backpressure native worker callbacks instead of queuing unlimited messages.
+        queue.sync { [self] in
+            let cleaned = Self.redact(message).trimmingCharacters(in: .whitespacesAndNewlines)
                 .replacingOccurrences(of: "\n", with: "\n  ")
-            let line = "\(formatter.string(from: date)) \(level.symbol) [\(tag)] \(cleaned)\n"
+            let line = "\(formatter.string(from: date)) \(level.symbol) [\(Self.redact(tag))] \(cleaned)\n"
             try? write(Data(line.utf8))
         }
     }
@@ -114,7 +116,7 @@ final class LogFile: @unchecked Sendable {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let active = directory.appending(path: Self.fileName)
         if let size = try? FileManager.default.attributesOfItem(atPath: active.path)[.size] as? Int,
-            size >= Self.maxFileSizeBytes
+            size + data.count > Self.maxFileSizeBytes
         {
             try rotate(active: active)
         }
@@ -138,11 +140,25 @@ final class LogFile: @unchecked Sendable {
         }
     }
 
-    /// Replaces runs of 12 or more short lowercase words (the shape of a
-    /// BIP39 recovery phrase) so a mistaken log call cannot persist one.
+    /// Shared by local logs and telemetry. Deliberately also hides long hashes:
+    /// an unlabelled preimage/key/signature cannot safely be distinguished from one.
     static func redact(_ message: String) -> String {
-        message.replacing(mnemonicShape, with: "[redacted]")
+        guard message.utf8.count <= maxMessageBytes else { return "[oversized log message omitted]" }
+        var result = message
+        for pattern in sensitivePatterns {
+            result = pattern.stringByReplacingMatches(in: result,
+                range: NSRange(result.startIndex..., in: result), withTemplate: "[redacted]")
+        }
+        return result.replacing(mnemonicShape, with: "[redacted]")
     }
 
     nonisolated(unsafe) private static let mnemonicShape = /\b[a-z]{3,8}(?:\s+[a-z]{3,8}){11,}\b/
+    private static let sensitivePatterns = [
+        // Drop the remainder, including multiline/structured secret values.
+        #"(?is)\b(?:mnemonic|seed(?:[_ -]?phrase)?|private[_ -]?key|privkey|secret[_ -]?key|signature|preimage|authorization|password|token)[\"']?\s*[:=({\[].*"#,
+        #"(?i)\bhttps?://[^\s<>\"']*\?[^\s<>\"']*"#,
+        #"(?i)\bhttps?%3a%2f%2f[^\s<>\"']*"#,
+        #"(?i)\b(?:0x)?[0-9a-f]{64,}\b"#,
+        #"\b(?:[xt]prv[1-9A-HJ-NP-Za-km-z]{20,}|[KL5][1-9A-HJ-NP-Za-km-z]{50,51}|c[1-9A-HJ-NP-Za-km-z]{51})\b"#,
+    ].map { try! NSRegularExpression(pattern: $0) }
 }

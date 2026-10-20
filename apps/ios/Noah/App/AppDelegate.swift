@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        BarkLog.install()
         SettingsStorage.bootstrap()
         UNUserNotificationCenter.current().delegate = self
         // Before any push handler can start a backup: plaintext left by a
