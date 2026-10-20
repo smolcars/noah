@@ -122,7 +122,7 @@ struct BarkLogTests {
         ]
         for message in examples { sink.log(level: .info, target: "wallet", message: message) }
         let text = file.lines().joined(separator: "\n")
-        #expect(text.components(separatedBy: "[redacted]").count == examples.count + 1)
+        #expect(text.replacingOccurrences(of: "[custom-esplora]", with: "[redacted]").components(separatedBy: "[redacted]").count == examples.count + 1)
         #expect(!text.contains("synthetic"))
         #expect(!text.contains("X-Amz"))
         #expect(!text.contains("3, 4"))

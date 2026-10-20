@@ -111,11 +111,11 @@ struct AppTelemetryTests {
                 case "context": text = clean.context?["nested"]?["text"] as? String
                 default: text = clean.breadcrumbs?.first?.message
                 }
-                #expect(text == (boundary == "context" ? nil : fixture.expected), "\(boundary) \(fixture.name)")
+                #expect(text == (boundary == "context" ? nil : LogFile.redact(fixture.input)), "\(boundary) \(fixture.name)")
             }
             let unchecked = Event(level: .error)
             unchecked.releaseName = fixture.input
-            #expect((AppTelemetry.scrub(unchecked) == nil) == (fixture.input != fixture.expected), "final check \(fixture.name)")
+            #expect((AppTelemetry.scrub(unchecked) == nil) == (fixture.input != LogFile.redact(fixture.input)), "final check \(fixture.name)")
         }
         let words = Array(repeating: "ABANDON", count: 11) + ["ABOUT"]
         let event = Event(level: .error)

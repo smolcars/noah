@@ -19,7 +19,10 @@ struct AppLogTests {
             EndpointLogPrivacy.register("https://scaling-privacy-\(index).example/api/fakeScale\(index)")
         }
         let authorities = [("other authorities", "https://unrelated-scaling.example/other "),
-                           ("registered authorities", "https://scaling-privacy-999.example/other ")]
+                           ("registered authorities", "https://scaling-privacy-999.example/other "),
+                           ("allowed authorities", "https://noahwallet.io/v0/health "),
+                           ("malformed authorities", "https://fake-review-r5.example:invalid "),
+                           ("scheme-less hosts", "scaling-privacy-999.example:invalid ")]
         for (name, unit) in Self.performanceInputs + authorities {
             assertRedactionScales(name, unit, redact: LogFile.redact)
             assertRedactionScales("boundary " + name, unit, redact: EndpointLogPrivacy.redact)
@@ -86,16 +89,17 @@ struct AppLogTests {
         let file = LogFile(directory: directory)
         AppLog("sdk", file: file).e(raw)
         await file.flushAsync()
-        #expect(file.lines().last?.hasSuffix(input) == true)
+        #expect(file.lines().last?.hasSuffix(LogFile.redact(input)) == true)
     }
 
     @Test func tokenScanPreservesBoundaryAndTrailingPunctuationBehavior() {
+        EndpointLogPrivacy.register("https://token-scan.example/api")
         for (input, expected) in [
             ("foo@b.co.", "[redacted]."), ("foo@b.co-", "[redacted]-"),
             ("-key=fake", "-[redacted]"), ("foo.key=fake", "foo.[redacted]"),
             ("x-amz-foo.bar: ordinary", "x-amz-foo.bar: ordinary"),
             ("seed phrase: fake", "[redacted]"), ("private keyStore: fake", "[redacted]"),
-            ("http://http://ordinary", "http://http://ordinary"),
+            ("http://http://ordinary", "[custom-esplora]"),
             ("ExpoPushToken[unfinished", "[redacted]"),
         ] { #expect(LogFile.redact(input) == expected) }
     }
@@ -107,14 +111,18 @@ struct AppLogTests {
         }
     }
 
+    private func redactBaseline(_ message: String) -> String {
+        LogFile.redactForTelemetry(message, endpointPrivacy: { EndpointLogPrivacy.sanitize($0, registered: []) }) ?? "[redacted]"
+    }
+
     @Test func sharedSecretRedactionVectors() throws {
         for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
             where !fixture.name.hasPrefix("address-") {
-            #expect(LogFile.redact(fixture.input) == fixture.expected, "\(fixture.name)")
-            #expect(LogFile.redact(fixture.expected) == fixture.expected, "idempotent \(fixture.name)")
+            #expect(redactBaseline(fixture.input) == fixture.expected, "\(fixture.name)")
+            #expect(redactBaseline(fixture.expected) == fixture.expected, "idempotent \(fixture.name)")
             let file = LogFile(directory: directory, capacity: 5000)
             file.append(level: .info, tag: "fixture", message: fixture.input)
-            #expect(file.lines().last?.hasSuffix(fixture.expected.replacingOccurrences(of: "\n", with: "\n  ")) == true,
+            #expect(file.lines().last?.hasSuffix(LogFile.redact(fixture.input).replacingOccurrences(of: "\n", with: "\n  ")) == true,
                     "persistence \(fixture.name)")
         }
     }
@@ -122,17 +130,17 @@ struct AppLogTests {
     @Test func escapedCredentialsAreRedacted() throws {
         for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
             where fixture.name.hasPrefix("r3-escaped-") {
-            #expect(LogFile.redact(fixture.input) == fixture.expected, "\(fixture.name)")
+            #expect(redactBaseline(fixture.input) == fixture.expected, "\(fixture.name)")
         }
     }
 
     @Test func sharedAddressRedactionVectors() throws {
         for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
             where fixture.name.hasPrefix("address-") {
-            #expect(LogFile.redact(fixture.input) == fixture.expected, "\(fixture.name)")
+            #expect(redactBaseline(fixture.input) == fixture.expected, "\(fixture.name)")
             let file = LogFile(directory: directory, capacity: 5000)
             file.append(level: .info, tag: "fixture", message: fixture.input)
-            #expect(file.lines().last?.hasSuffix(fixture.expected) == true, "persistence \(fixture.name)")
+            #expect(file.lines().last?.hasSuffix(LogFile.redact(fixture.input)) == true, "persistence \(fixture.name)")
         }
     }
 

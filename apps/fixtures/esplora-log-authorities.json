@@ -1312,5 +1312,17 @@
     "input": "https://tiles.openfreemap.org/health",
     "redacted": false,
     "expected": "https://tiles.openfreemap.org/health"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "1https://unknown-review-r6.example:invalid",
+    "redacted": true,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "endpoint": "https://fake-review-r5.example/api",
+    "input": "9-https://unknown-review-r6.example/api",
+    "redacted": true,
+    "expected": "[custom-esplora]"
   }
 ]

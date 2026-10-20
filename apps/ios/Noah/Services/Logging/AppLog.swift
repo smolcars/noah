@@ -241,8 +241,12 @@ final class LogFile: @unchecked Sendable {
 
     /// Nil means inspection was uncertain; telemetry must omit the message.
     static func redactForTelemetry(_ message: String) -> String? {
+        redactForTelemetry(message, endpointPrivacy: EndpointLogPrivacy.sanitize)
+    }
+
+    static func redactForTelemetry(_ message: String, endpointPrivacy: (String) -> String?) -> String? {
         guard message.utf8.count <= maxMessageBytes else { return nil }
-        guard let safe = EndpointLogPrivacy.sanitize(message), let views = decodedViews(safe) else { return nil }
+        guard let safe = endpointPrivacy(message), let views = decodedViews(safe) else { return nil }
         for view in views.dropFirst() where redactPlain(view) != view { return "[redacted]" }
         return redactPlain(safe)
     }

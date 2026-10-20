@@ -15,6 +15,17 @@ enum EsploraEndpoint {
               input.range(of: "%(?![0-9a-fA-F]{2})", options: .regularExpression) == nil else {
             throw Failure(message: "Enter a valid Esplora API URL.")
         }
+        // Validate raw authority before Foundation can discard an overflowing port or IPv6 scope.
+        let authority = input.components(separatedBy: "://")[1].prefix { !"/?#".contains($0) }
+        let hostPort = authority.split(separator: "@", omittingEmptySubsequences: false).last!
+        let portStart = hostPort.hasPrefix("[") ? hostPort.firstIndex(of: "]").map { hostPort.index(after: $0) } : hostPort.firstIndex(of: ":")
+        guard !hostPort.contains("%") || !hostPort.hasPrefix("[") else { throw Failure(message: "Enter a valid Esplora API URL.") }
+        if let start = portStart, start < hostPort.endIndex {
+            let suffix = hostPort[start...]
+            guard suffix.first == ":", !suffix.dropFirst().isEmpty,
+                  suffix.dropFirst().allSatisfy({ $0.isASCII && $0.isNumber }),
+                  let port = UInt16(suffix.dropFirst()), port > 0 else { throw Failure(message: "Enter a valid Esplora API URL.") }
+        }
         guard var url = URLComponents(string: input.replacingOccurrences(of: "\\", with: "/")), let host = url.host, !host.isEmpty,
               !host.contains(where: { $0.isWhitespace }), url.url != nil else {
             throw Failure(message: "Enter a valid Esplora API URL.")

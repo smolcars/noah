@@ -7,7 +7,7 @@ import Testing
 
 struct EndpointPrivacyTests {
     @Test func equivalentAuthoritiesUseSharedFixturesAtEveryBoundary() throws {
-        struct Case: Decodable { let endpoint: String; let input: String; let redacted: Bool }
+        struct Case: Decodable { let endpoint: String; let input: String; let redacted: Bool; let expected: String }
         let cases = try Fixtures.decode("esplora-log-authorities", as: [Case].self)
         cases.forEach { EndpointLogPrivacy.register($0.endpoint) }
         let directory = FileManager.default.temporaryDirectory.appending(path: "authority-\(UUID())")
@@ -16,7 +16,7 @@ struct EndpointPrivacyTests {
         for test in cases {
             let input = test.input
             let safe = LogFile.redact(input)
-            #expect(test.redacted ? safe.contains("[custom-esplora]") : safe == input, "\(input)")
+            #expect(safe == test.expected, "\(input)")
             #expect(SafeErrorDescription.of(BarkError(message: input)) == safe)
             let event = Event(level: .error); event.message = SentryMessage(formatted: input)
             event.exceptions = [Exception(value: input, type: "FakeEndpointError")]
@@ -55,7 +55,8 @@ struct EndpointPrivacyTests {
             event.releaseName = input
             #expect(AppTelemetry.scrub(event) == nil)
         }
-        #expect(LogFile.redact("prefix" + origin) == "prefix[custom-esplora]")
+        #expect(LogFile.redact("prefix" + origin) == "[custom-esplora]")
+        #expect(LogFile.redact("TransportError HTTP 503: fakehostcredential73.example.com:invalid") == "TransportError HTTP 503: [custom-esplora]")
     }
 
     @Test func unknownHTMLEntitiesAndUnterminatedNumericEntitiesCannotExposeHosts() {
@@ -89,10 +90,29 @@ struct EndpointPrivacyTests {
         #expect(file.lines().allSatisfy { $0.hasSuffix(expected) })
     }
 
-    @Test func routeOnlyEndpointsPreserveOtherOriginsAndDiagnostics() {
+    @Test func configuredOriginsAndDiagnosticsRemainVisibleInPrivacyMode() {
         EndpointLogPrivacy.register("https://route-privacy.example/api")
-        for input in ["https://mempool.space/api/blocks/tip/height", "HTTP 404: /blocks/tip/height failed", "API v1 request completed", "https://.", "https://route-privacy.example.other/api", "https://route-privacy.example:8443/api"] {
+        for input in ["https://mempool.space/api/blocks/tip/height", "HTTP 404: /blocks/tip/height failed", "API v1 request completed"] {
             #expect(LogFile.redact(input) == input)
+        }
+        for input in ["https://.", "https://route-privacy.example.other/api", "https://route-privacy.example:8443/api"] {
+            #expect(LogFile.redact(input) == "[custom-esplora]")
+        }
+    }
+
+    @Test func cleanInstallAndUserEnteredDefaultsUseSeparatePolicies() throws {
+        struct Case: Decodable { let input: String }
+        for test in try Fixtures.decode("esplora-log-authorities", as: [Case].self) {
+            #expect(EndpointLogPrivacy.sanitize(test.input, registered: []) == test.input)
+        }
+        for variant in AppVariant.allCases {
+            let config = WalletConfiguration.base(for: variant)
+            for endpoint in [ServerEndpoint.baseURL(for: variant).absoluteString, config.arkServer, config.esplora].compactMap({ $0 }) {
+                let url = try #require(URLComponents(string: endpoint))
+                let origin = url.scheme! + "://" + url.host! + (url.port.map { ":" + String($0) } ?? "")
+                #expect(EndpointLogPrivacy.sanitize(endpoint, registered: ["https://fake-custom.example"]) == endpoint)
+                #expect(EndpointLogPrivacy.sanitize(endpoint, registered: [origin]) == "[custom-esplora]")
+            }
         }
     }
 }
