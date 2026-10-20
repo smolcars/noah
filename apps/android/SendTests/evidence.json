@@ -1,0 +1,69 @@
+{
+  "network": "regtest",
+  "device": "NoahSendM3Sol2a46 / Android 15 API 35 ARM64",
+  "ark": {
+    "amountSats": 1000,
+    "proof": "submitReturnedArkSuccess",
+    "peerMovement": {
+      "id": 39,
+      "status": "successful",
+      "intended_balance_sat": 1000,
+      "effective_balance_sat": 1000,
+      "created_at": null,
+      "subsystem": {
+        "name": "bark.arkoor",
+        "kind": "receive"
+      }
+    }
+  },
+  "lightning": {
+    "amountSats": 1000,
+    "feeSats": 76,
+    "proof": "actualMovement",
+    "cln": {
+      "status": "paid",
+      "amount_msat": 1000000,
+      "amount_received_msat": 1000000,
+      "paid_at": 1792465524
+    }
+  },
+  "onchainEntered": {
+    "txid": "da7b22e12ea0178ce3bd3fcb78bece143dfa848d86eeb1cd6aabfa551d82bd03",
+    "recipientSats": 5000,
+    "feeSats": 143,
+    "vsize": 142,
+    "inputCount": 1,
+    "inputs": [
+      {
+        "txid": "833c37b3a5c0c76f8e7aa4e638657cd3e2ed764b0f651c6ef3d236dc59d312f8",
+        "vout": 0
+      }
+    ],
+    "reviewMatchesCore": true
+  },
+  "onchainMax": {
+    "txid": "35f2f9c4769a88937cc9c912383eba9b1955547752281ac91a948ea2d540cb1c",
+    "recipientSats": 39900,
+    "feeSats": 100,
+    "vsize": 99,
+    "inputCount": 1,
+    "inputs": [
+      {
+        "txid": "9d71fcc96ca4b3fffb07fbd9ca73b34e2c3a87a3d4be5611bbbd2ddc542894c3",
+        "vout": 0
+      }
+    ],
+    "reviewMatchesCore": true
+  },
+  "confirmedOnly": {
+    "confirmedFundingSats": 100000,
+    "remainingConfirmedSats": 40000,
+    "excludedUnconfirmedChangeSats": 54857
+  },
+  "relaunch": {
+    "receiptTxid": "35f2f9c4769a88937cc9c912383eba9b1955547752281ac91a948ea2d540cb1c",
+    "status": "submitted",
+    "amountSats": 39900,
+    "beforeDone": true
+  }
+}

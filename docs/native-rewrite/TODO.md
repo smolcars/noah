@@ -196,7 +196,14 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Round-6 Send crash recovery — iOS: unconfirmed prepared/broadcasting journals retain the broadcast-retry lock until confirmation; failed reconciliation sync surfaces an error and cannot upgrade cached evidence; crash-before-receipt and failed-receipt-write restart regressions. Verification: `apps/ios/SendTests/README.md`
 - [x] Round-6 Send review lifetime — iOS: discard/exit/background/recipient changes invalidate in-flight reviews with a generation token; late preparations immediately discard their reserved inputs, and stale errors cannot alter the new flow. Suspended-preparation regressions: `apps/ios/SendTests/README.md`
 - [x] Round-6 verification — iOS: targeted Send 61 tests / 103 individual runs passed; full NoahTests once, 351 total / 335 passed / 16 opt-in skipped / 0 failed (403 passed individual runs), 79 suites; isolated simulator and build/result artifacts cleaned. `apps/ios/SendTests/README.md`
-- [ ] Adopt bark-bolt-ffi 0.4.0 prepared sends and typed errors — Android Send (dependency already pinned)
+- [x] Adopt bark-bolt-ffi 0.4.0 prepared sends and typed errors — Android Send: exact signed amount/fee/vsize/input review, confirmed-only MAX, lifecycle/expiry discard, pre-broadcast txid journal, explicit outcomes and crash-recovery broadcast lock
+- [x] Input parsing and RN-generated `send-utils`, `send-flow`, `onchain-send`, `lightning-invoice` fixtures; shared `fiat-currency` reused — Android
+- [x] Compose SendScreen: amount-first/recipient-first, custom amount keypad, MAX, method/source choice, fee review, notes, suggestions, confirmation/success sheets — Android
+- [x] CameraX + existing ZXing QR/EAN-13 scanner, RN camera permission wording — Android (physical-camera acceptance remains unverified)
+- [x] Versioned, wallet-bound durable Send controller: synchronous lock, atomic journal, counted cancellation-shielded session reservation, separate rail evidence, uncertain destructive override and reorg/status checks — Android
+- [x] BOLT11/LNURL checkpoint inspection and journaled check-only adoption; canonical invoice/hash/amount/fee/total guards, offer checkpoint block, actual already-paid amounts, in-app validated LNURL resolution — Android
+- [x] Repeat-payment metadata and History callback → recipient prefill with full revalidation — Android
+- [x] Live emulator Ark/BOLT11, exact entered-amount onchain send, confirmed-only MAX, Back/reprepare and kill/relaunch before Done — Android; full verification 993 JUnit cases passed / 0 failed / 0 skipped, APK and instrumentation Kotlin compile passed. Evidence and limits: `apps/android/SendTests/README.md`
 - [ ] External LNURL/BOLT12 provider acceptance and camera hardware verification — iOS
 
 ## M4 — History
