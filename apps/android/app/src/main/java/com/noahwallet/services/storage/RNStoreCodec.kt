@@ -22,9 +22,9 @@ object RNStoreCodec {
         "isWalletSuspended", "hasSeenBatteryOptimizationPrompt", "backupPending", "isHomeBalanceHidden",
         "serverSyncPending", "isRegisteredWithServer", "isBackupEnabled", "isEmailVerified", "isEmailPromptDismissed",
         "isMailboxAuthorizationEnabled", "isAutoBoardingEnabled", "hasAttemptedAutoBoarding")
-    private val nullableStrings = setOf("staticVtxoPubkey", "endpointOverride", "lastBackupError", "lastBackupId",
+    private val nullableStrings = setOf("displayName", "preferredCurrency", "bitcoinAmountUnit", "staticVtxoPubkey", "endpointOverride", "lastBackupError", "lastBackupId",
         "lastUploadedSnapshotSha256", "lightningAddress", "nostrPubkey", "emailAddress", "lastReportedDeviceFingerprint")
-    private val strings = setOf("displayName", "preferredCurrency", "bitcoinAmountUnit", "lastBackupStatus")
+    private val strings = setOf("lastBackupStatus")
     private val numbers = setOf("lastBackupAt", "lastBackupAttemptAt", "mailboxAuthorizationExpiry", "lastDeviceReportAt")
 
     fun decode(key: String, value: String): JsonObject = try {

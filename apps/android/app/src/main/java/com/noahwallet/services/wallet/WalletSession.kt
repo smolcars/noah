@@ -477,7 +477,11 @@ class WalletSession internal constructor(
                 .also { instance = it }
         }
 
-        private fun sdkOpener(variant: String, warn: (String) -> Unit): suspend (String, String, Boolean, String, Boolean) -> Handles =
+        internal fun sdkOpener(variant: String, warn: (String) -> Unit,
+            openOnchain: suspend (Network, String, Config, String, Boolean) -> OnchainWallet = { network, mnemonic, config, datadir, create ->
+                if (create) OnchainWallet.default(network, mnemonic, config, datadir)
+                else OnchainWallet.openExisting(network, mnemonic, config, datadir)
+            }): suspend (String, String, Boolean, String, Boolean) -> Handles =
             { inputMnemonic, datadir, runDaemon, appVersion, create ->
                 val mnemonic = com.noahwallet.services.storage.StoredMnemonic.normalize(inputMnemonic)
                     ?: throw com.noahwallet.services.storage.SeedItem.Unavailable()
@@ -485,11 +489,7 @@ class WalletSession internal constructor(
                 val config = configuration.sdkConfig(WalletConfiguration.userAgent(variant, appVersion))
                 // Existing wallets go through the SDK's read-only identity check (properties,
                 // network, seed fingerprint) before anything writes; only creation may use default.
-                val onchain = if (create) {
-                    OnchainWallet.default(configuration.network, mnemonic, config, datadir)
-                } else {
-                    OnchainWallet.openExisting(configuration.network, mnemonic, config, datadir)
-                }
+                val onchain = openOnchain(configuration.network, mnemonic, config, datadir, create)
                 val wallet = try {
                     Wallet.openWithOnchain(configuration.network, mnemonic, config,
                         WalletOpenArgs(runDaemon = runDaemon, datadir = datadir, createIfNotExists = create), onchain)

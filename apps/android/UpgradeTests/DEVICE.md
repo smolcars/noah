@@ -343,9 +343,9 @@ handled by confirming launcher actions through the owned device's agent-device U
   checks passed. Commit hooks passed client lint, compiler lint (202 files, zero
   diagnostics), **148 RN tests**, and typecheck.
 - Shared fixtures: **23 launch cases**, **9 RN-generated store cases**, plus the
-  unchanged recurring-storage/range suites. The Android-specific store fixture is
-  `apps/fixtures/rn-stores-android-shapes.json`; its generator and complete store
-  inventory are linked from [STORES.md](STORES.md).
+  unchanged recurring-storage/range suites. Round 1 superseded the separate store
+  fixtures with `apps/fixtures/rn-store-compatibility.json` (196 raw cases shared
+  by both apps); its generator and inventory are linked from [STORES.md](STORES.md).
 - Cleanup confirmation is recorded below after shutdown. Private logs/screenshots,
   wallet snapshots and temporary continuation scripts are removed; no mnemonic,
   private key, signature or raw push/auth token is retained in this evidence.

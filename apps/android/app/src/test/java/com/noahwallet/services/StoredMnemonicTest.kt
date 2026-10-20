@@ -45,6 +45,24 @@ class StoredMnemonicTest {
             SecretResult.Found(canonical))) as SecretResult.Unavailable).reason)
     }
 
+    @Test fun sharedFormattingVectorsReachWalletAndAuthSDKsNormalized() = runBlocking {
+        val stoppedBeforeSDK = IllegalStateException("Test SDK boundary")
+        for (case in SharedFixtures.load("stored-mnemonic").filter { it.input.jsonObject.getValue("exerciseCrypto").jsonPrimitive.boolean }) {
+            val raw = case.input.jsonObject.getValue("raw").jsonPrimitive.content
+            val expected = case.expected.jsonObject.getValue("normalized").jsonPrimitive.content
+            val opener = com.noahwallet.services.wallet.WalletSession.sdkOpener("regtest", {},
+                openOnchain = { _, normalized, _, _, create ->
+                    assertTrue(case.name, normalized == expected)
+                    assertFalse(create)
+                    throw stoppedBeforeSDK
+                })
+            assertSame(stoppedBeforeSDK, runCatching { opener(raw, "unused", false, "test", false) }.exceptionOrNull())
+            val derive: (String) -> String = { normalized -> assertTrue(case.name, normalized == expected); "public-test-result" }
+            com.noahwallet.services.server.ServerClient.loginKey("regtest", raw, derive)
+            com.noahwallet.services.server.ServerClient.signChallenge("challenge", "regtest", raw, derive)
+        }
+    }
+
     @Test fun authDerivationAndSigningNormalizeButBackupKeepsOriginalPassword() {
         val canonical = vector(12)
         for (original in listOf(canonical.uppercase(), " \n" + canonical.replace(" ", "\t  ") + "\n",

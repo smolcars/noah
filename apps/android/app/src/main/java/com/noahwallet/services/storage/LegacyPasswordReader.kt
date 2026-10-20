@@ -61,6 +61,8 @@ internal class LegacyPasswordReader(
             }
             if (decryptField(username) != "noah") SecretResult.Unavailable(SecretFailure.unexpectedAccount)
             else SecretResult.Found(decryptField(password))
+        } catch (_: java.nio.charset.CharacterCodingException) {
+            SecretResult.Unavailable(if (compareSeeds) SecretFailure.invalidMnemonic else SecretFailure.invalidCiphertext)
         } catch (_: Exception) {
             SecretResult.Unavailable(SecretFailure.invalidCiphertext)
         }

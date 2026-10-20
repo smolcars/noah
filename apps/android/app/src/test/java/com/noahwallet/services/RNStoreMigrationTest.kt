@@ -7,23 +7,48 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class RNStoreMigrationTest {
-    @Test fun rnEnvelopesAreDecodedAndUnknownFieldsSurviveTypedWrites() {
-        for (case in SharedFixtures.load("rn-stores-android-shapes")) {
+    @Test fun unifiedRNFixturesValidateMigrateAndPreserveOriginalBytes() {
+        val cases = SharedFixtures.load("rn-store-compatibility")
+        assertEquals(196, cases.size)
+        for (case in cases) {
             val input = case.input.jsonObject
+            val expected = case.expected.jsonObject
             val key = input.getValue("key").jsonPrimitive.content
-            val envelope = input.getValue("envelope").jsonObject
-            assertEquals(envelope, RNStoreCodec.decode(key, envelope.toString()))
-            if (case.name == "transaction v0 migration") {
-                val native = SettingsPreferences.transaction(envelope.toString())
-                val expected = case.expected.jsonObject.getValue("state").jsonObject
-                for (field in listOf("isAutoBoardingEnabled", "hasAttemptedAutoBoarding")) assertEquals(expected[field], native[field])
-                assertTrue("Native must retain fields RN partialize drops", native["future"] is JsonObject)
+            val raw = input.getValue("raw").jsonPrimitive.content
+            var stored = raw
+            val recurring = com.noahwallet.recurring.RecurringStore({ stored }, { stored = it })
+            if (!expected.getValue("available").jsonPrimitive.boolean) {
+                assertThrows(case.name, RNStoreCodec.Unreadable::class.java) { RNStoreCodec.decode(key, raw) }
+                assertThrows(case.name, RNStoreCodec.Unreadable::class.java) {
+                    stored = RNStoreCodec.merge(key, stored, """{"state":{},"version":0}""")
+                }
+                if (key == "recurring-payment-storage") {
+                    assertTrue(case.name, runCatching { recurring.load() }.isFailure)
+                    assertTrue(case.name, runCatching { recurring.setPending(false) }.isFailure)
+                }
+                assertEquals(case.name, raw, stored)
+                continue
             }
-            val withUnknown = JsonObject(envelope + ("futureEnvelope" to JsonPrimitive(42)) +
-                ("state" to JsonObject(envelope.getValue("state").jsonObject + ("futureField" to buildJsonObject { put("keep", true) }))))
-            val merged = RNStoreCodec.decode(key, RNStoreCodec.merge(key, withUnknown.toString(), envelope.toString()))
-            assertEquals(JsonPrimitive(42), merged["futureEnvelope"])
-            assertEquals(true, merged.getValue("state").jsonObject.getValue("futureField").jsonObject.getValue("keep").jsonPrimitive.boolean)
+            val decoded = RNStoreCodec.decode(key, raw)
+            if (key == "recurring-payment-storage") recurring.load()
+            val state = if (key == "transaction-storage") SettingsPreferences.transaction(raw) else decoded.getValue("state").jsonObject
+            val wanted = Json.parseToJsonElement(expected.getValue("stateRaw").jsonPrimitive.content).jsonObject
+            for ((field, value) in wanted) assertEquals("${case.name}: $field", value, state[field])
+            assertEquals("Reads must not migrate bytes: ${case.name}", raw, stored)
+            expected["consumed"]?.jsonObject?.let { consumed ->
+                assertEquals(consumed.getValue("preferredCurrency").jsonPrimitive.content, SettingsPreferences.preferredCurrency(raw))
+                assertEquals(consumed.getValue("bitcoinAmountUnit").jsonPrimitive.content, SettingsPreferences.amountUnit(raw).name)
+            }
+            if (key == "recurring-payment-storage") recurring.setPending(false)
+            else stored = RNStoreCodec.merge(key, stored, buildJsonObject {
+                put("state", wanted); put("version", expected.getValue("version"))
+            }.toString())
+            val saved = Json.parseToJsonElement(stored).jsonObject
+            expected["preservedTokens"]?.jsonObject?.forEach { (path, token) ->
+                val (scope, field) = path.split('.')
+                val value = if (scope == "root") saved[field] else saved.getValue("state").jsonObject[field]
+                assertEquals("${case.name}: $path", token.jsonPrimitive.content, value?.jsonPrimitive?.content)
+            }
         }
     }
 

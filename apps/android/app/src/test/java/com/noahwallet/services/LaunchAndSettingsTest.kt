@@ -10,16 +10,33 @@ import org.junit.Test
 
 class LaunchAndSettingsTest {
     @Test fun sharedLaunchDecisions() {
-        for (case in SharedFixtures.load("launch-state")) {
-            val input = case.input.jsonObject
-            assertEquals(case.name, case.expected.jsonPrimitive.content, LaunchState.resolve(
-                LaunchState.SeedStatus.valueOf(input.getValue("seed").jsonPrimitive.content),
-                input.getValue("walletDatabaseExists").jsonPrimitive.boolean,
-            ).name)
+        for ((fixture, count) in listOf("launch-state" to 6, "launch-seed-safety" to 30)) {
+            val cases = SharedFixtures.load(fixture)
+            assertEquals(count, cases.size)
+            for (case in cases) {
+                val input = case.input.jsonObject
+                val sources = input.getValue("sources").jsonArray.map { source ->
+                    val fields = source.jsonObject
+                    when (fields.getValue("read").jsonPrimitive.content) {
+                        "found" -> SecretResult.Found(fields.getValue("raw").jsonPrimitive.content)
+                        "absent" -> SecretResult.NotFound
+                        "conflict" -> SecretResult.Unavailable(SecretFailure.seedConflict)
+                        "invalidEncoding" -> SecretResult.Unavailable(SecretFailure.invalidMnemonic)
+                        else -> SecretResult.Unavailable(SecretFailure.storageUnreadable)
+                    }
+                }
+                val result = LaunchState.inspect(sources, input.getValue("walletDatabaseExists").jsonPrimitive.boolean,
+                    fingerprintMatches = input.getValue("databaseFingerprint").jsonPrimitive.content != "mismatch",
+                    multipleDatabases = input.getValue("multipleDatabases").jsonPrimitive.boolean)
+                assertEquals(case.name, case.expected.jsonObject.getValue("outcome").jsonPrimitive.content, result.state.name)
+                assertEquals(case.name, case.expected.jsonObject.getValue("reason").jsonPrimitive.content, result.reason.name)
+            }
         }
-        assertEquals(LaunchState.SeedStatus.unavailable, LaunchState.SeedStatus.from(SecretResult.Found("")))
+        assertEquals(LaunchState.SeedStatus.invalid, LaunchState.SeedStatus.from(SecretResult.Found("")))
         assertEquals(LaunchState.SeedStatus.unavailable,
             LaunchState.SeedStatus.from(SecretResult.Unavailable(SecretFailure.missingKey)))
+        assertEquals(LaunchState.seedConflict, LaunchState.openFailure(io.github.niteshbalusu11.bark.BarkError(
+            "incorrect mnemonic for existing wallet", io.github.niteshbalusu11.bark.BarkErrorCode.OTHER)))
     }
 
     @Test fun optionalFieldsUnknownFieldsAndEnvelopes() {

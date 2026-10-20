@@ -75,6 +75,8 @@ class WalletDataLocation(filesDirectory: File, variant: String) {
         else directory.listFiles()?.all { it.deleteRecursively() } == true
     } catch (_: Exception) { false }
 
+    val hasMultipleDatabases: Boolean get() = database.exists() && File(directory, "bark.sqlite").exists()
+
     val databaseExists: Boolean get() = database.exists()
 }
 

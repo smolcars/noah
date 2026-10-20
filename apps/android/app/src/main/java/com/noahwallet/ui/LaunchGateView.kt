@@ -145,7 +145,8 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
         LaunchState.onboarding -> R.string.launch_welcome to R.string.launch_onboarding_message
         LaunchState.seedWithoutWalletData -> R.string.launch_seed_found to R.string.launch_seed_found_message
         LaunchState.walletDataWithoutSeed -> R.string.launch_seed_needed to R.string.launch_seed_needed_message
-        LaunchState.secureStorageUnavailable -> R.string.launch_unlock to R.string.launch_unlock_message
+        LaunchState.secureStorageUnavailable, LaunchState.invalidSeed, LaunchState.seedConflict, LaunchState.incompatibleStorage ->
+            R.string.launch_unlock to R.string.launch_unlock_message
     }
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),

@@ -104,6 +104,22 @@ class SecretStorageTest {
         assertEquals(1, keys.created)
     }
 
+    @Test fun invalidCredentialEncodingIsInvalidSeedAndNeverRewritten() = runBlocking {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, key)
+        val encrypted = cipher.iv + cipher.doFinal(byteArrayOf(0xff.toByte(), 0xfe.toByte()))
+        val file = FakeFile().apply { bytes = byteArrayOf(1) + encrypted }
+        val keys = FakeKeys().apply { this.key = this@SecretStorageTest.key }
+        val native = NativeSecretStore("test", keys, file)
+        val before = file.bytes!!.copyOf()
+        assertEquals(SecretFailure.invalidMnemonic, (native.read() as SecretResult.Unavailable).reason)
+        assertTrue(native.save(secret) is SecretResult.Unavailable)
+        assertTrue(before.contentEquals(file.bytes))
+        val rn = row(true) + ("p" to Base64.getMimeEncoder().encodeToString(encrypted))
+        val reader = LegacyPasswordReader({ rn }, { null }, { key }, { Base64.getMimeDecoder().decode(it) }, compareSeeds = true)
+        assertEquals(SecretFailure.invalidMnemonic, (reader.read() as SecretResult.Unavailable).reason)
+    }
+
     @Test fun corruptVersionTagAndFailedWriteNeverReplaceExistingData() {
         val keys = FakeKeys()
         val file = FakeFile()

@@ -39,6 +39,8 @@ internal class NativeSecretStore(
                 try { SecretResult.Found(plaintext.strictUtf8()) } finally { plaintext.fill(0) }
             }
         }
+    } catch (_: java.nio.charset.CharacterCodingException) {
+        SecretResult.Unavailable(SecretFailure.invalidMnemonic)
     } catch (_: Exception) {
         SecretResult.Unavailable(SecretFailure.storageUnreadable)
     }
