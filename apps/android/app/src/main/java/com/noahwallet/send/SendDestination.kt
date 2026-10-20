@@ -1,7 +1,6 @@
 package com.noahwallet.send
 
 import java.math.BigDecimal
-import java.math.RoundingMode
 import java.net.URI
 import java.net.URLDecoder
 
@@ -45,14 +44,18 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
         private fun uriAmount(value: String): BigDecimal? {
             if (value.length > 96 || !Regex("^[+]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]{1,2})?$").matches(value)) return null
             val parts = value.lowercase().split('e')
-            val mantissa = parts[0]
+            val mantissa = parts[0].removePrefix("+").split('.', limit = 2)
+            val integer = mantissa[0].trimStart('0').ifEmpty { "0" }
+            val fraction = mantissa.getOrElse(1) { "" }.trimEnd('0')
             val exponent = parts.getOrNull(1)?.toIntOrNull() ?: 0
-            val scale = mantissa.substringAfter('.', "").length - exponent
-            if (mantissa.count { it in '0'..'9' } > 32 || exponent !in -32..32 || scale !in -32..32) return null
+            val scale = fraction.length - exponent
+            if ((integer + fraction).trimStart('0').length > 32 || exponent !in -32..32 || scale !in -32..32) return null
+            val normalized = integer + (if (fraction.isEmpty()) "" else ".$fraction") + "e$exponent"
             return try {
-                val btc = value.toBigDecimalOrNull() ?: return null
+                val btc = normalized.toBigDecimalOrNull() ?: return null
                 if (btc < BigDecimal.ZERO || btc > BigDecimal(21000000)) null
-                else btc.movePointRight(8).setScale(0, RoundingMode.HALF_UP)
+                // RN parses a JS number, then uses Math.round(btc * 100_000_000).
+                else BigDecimal.valueOf(Math.round(normalized.toDouble() * 100_000_000))
             } catch (_: ArithmeticException) { null }
         }
         private fun uri(value: String, network: String): SendDestination {
