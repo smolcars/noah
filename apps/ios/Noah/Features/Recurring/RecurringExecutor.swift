@@ -121,7 +121,7 @@ import Observation
                     } else { (payment, quote) = try await d.quote(schedule) }
                     let state = try boundState()
                     guard let latest = state.schedules[id], latest == schedule,
-                          planning.plan(now: d.now(), ignoreBackoff: true).occurrenceIndex == plan.occurrenceIndex,
+                          planning.plan(now: d.now(), ignoreBackoff: manual) == plan,
                           quote.walletIdentity == state.binding?.wallet else { continue }
                     if approval == nil, let reason = RecurringFeePolicy.approvalReason(payment: payment, quote: quote) {
                         schedule.status = "needs_approval"
@@ -141,11 +141,16 @@ import Observation
                     try d.store.upsert(schedule)
                     let marked = schedule
                     let unattended = approval == nil
-                    let store = d.store, binding = d.binding, allowed = d.allowed, generation = d.automationGeneration
+                    let store = d.store, binding = d.binding, allowed = d.allowed, generation = d.automationGeneration, now = d.now
                     await d.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key) {
                         do { try allowed() } catch { throw SendNotSubmitted(reason: .recurringStopped) }
                         let state = try store.load()
-                        guard generation() == automationGeneration,
+                        // Remove only our marker; the persisted policy must still match below.
+                        var currentPlan = marked
+                        currentPlan.inFlight = nil
+                        if !unattended { currentPlan.status = "active" }
+                        guard currentPlan.plan(now: now(), ignoreBackoff: manual) == entry.plan,
+                              generation() == automationGeneration,
                               state.binding == (try binding()), state.binding == entry.binding,
                               state.schedules[id] == marked,
                               marked.status == (unattended ? "active" : "needs_approval"),

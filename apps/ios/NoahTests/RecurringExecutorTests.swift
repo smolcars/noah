@@ -353,4 +353,27 @@ import Testing
         #expect(RecurringFeePolicy.cap(amount: UInt64.max) == UInt64.max / 100)
     }
 
+    @Test(arguments: [-1.0, 86_400_000.0]) func finalGuardRejectsClockJumpDuringPreparation(delta: Double) async throws {
+        let h = try Harness(); let schedule = try h.add()
+        h.beforePay = { h.clock.withLock { $0 += delta } }
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 0)
+        #expect(try h.journal.load()[schedule.id]?.resolved == true)
+        #expect(try h.journal.load()[schedule.id]?.consumed != true)
+        #expect(try h.store.load().schedules[schedule.id]?.inFlight == nil)
+        #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == 0)
+        #expect(!h.controller.locked)
+    }
+
+    @Test func clockJumpBehindBackoffStopsEvenWhenSameOccurrenceIsDue() async throws {
+        let h = try Harness(); var schedule = try h.add()
+        schedule.startAt -= 5000; schedule.retryNotBefore = h.now - 1000
+        try h.store.upsert(schedule)
+        h.beforePay = { h.clock.withLock { $0 -= 2000 } }
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 0)
+        #expect(try h.journal.load()[schedule.id]?.consumed != true)
+        #expect(!h.controller.locked)
+    }
+
 }
