@@ -11,6 +11,11 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import com.noahwallet.send.*
 
 /** One owner per process: bark locks the datadir. All wallet operations go through this session. */
 class WalletSession internal constructor(
@@ -18,7 +23,8 @@ class WalletSession internal constructor(
     private val location: WalletDataLocation,
     private val inspect: (File) -> WalletDatabase.Properties = WalletDatabase::properties,
     private val isSuspended: () -> Boolean = { false },
-    private val opener: suspend (String, String, Boolean, String, Boolean) -> Handles = sdkOpener(variant),
+    private val sendWarn: (String) -> Unit = {},
+    private val opener: suspend (String, String, Boolean, String, Boolean) -> Handles = sdkOpener(variant, sendWarn),
 ) {
     enum class OpenFailure { walletDatabaseMissing, notABarkWallet, networkMismatch, busy, walletDatabaseExists, restorePending, teardownFailed, suspended }
     class OpenError(val reason: OpenFailure, val found: String? = null) : Exception(reason.name)
@@ -36,6 +42,8 @@ class WalletSession internal constructor(
     }
 
     internal interface Handles {
+        val send: SendWallet get() = throw UnsupportedOperationException()
+        suspend fun discardSendReviews() {}
         suspend fun arkInfo(): io.github.niteshbalusu11.bark.ArkInfo? = throw UnsupportedOperationException()
         fun mailboxAuthorization(expiry: Long): io.github.niteshbalusu11.bark.MailboxAuthorization = throw UnsupportedOperationException()
         suspend fun debug(action: DebugAction, input: String): String = throw UnsupportedOperationException()
@@ -121,6 +129,28 @@ class WalletSession internal constructor(
     }
 
     private val lock = Any()
+    private val sendMutation = Mutex()
+    private val changed = MutableStateFlow(0L)
+    val walletChanges = changed.asStateFlow()
+    private fun walletChanged() { changed.value += 1 }
+    internal suspend fun <T> withSendReservation(block: suspend (SendWallet) -> T): T =
+        withOpen { handles -> sendMutation.withLock { block(handles.send) } }
+    suspend fun quoteSend(payment: SendPayment): SendQuote {
+        var result: SendQuote? = null
+        try { return withSendReservation { it.quote(payment).also { quote -> result = quote } } }
+        catch (failure: CancellationException) {
+            // withContext can drop a successful result while returning to a canceled UI caller.
+            withContext(NonCancellable) { result?.let { quote -> runCatching { discardSend(quote) } } }
+            throw failure
+        }
+    }
+    suspend fun discardSend(quote: SendQuote) = withSendReservation { it.discard(quote) }
+    suspend fun resolveSendRecipient(destination: String): SendRecipientRoute = withOpen { handles ->
+        val sdk = handles.send as? SdkSendWallet ?: throw SessionError()
+        sdk.recipientService().resolve(destination)
+    }
+    suspend fun pendingSendHashes(): Set<String> = withOpen { (it.send as SdkSendWallet).pendingHashes() }
+
     class Reservation internal constructor()
     private var runningCalls = 0
     private var drained = CompletableDeferred<Unit>().apply { complete(Unit) }
@@ -185,12 +215,12 @@ class WalletSession internal constructor(
             catch (failure: Throwable) {
                 try { handles.stopDaemonWait(); handles.close() }
                 catch (_: Throwable) {
-                    synchronized(lock) { state = State.Open(handles) }
+                    synchronized(lock) { state = State.Open(handles); walletChanged() }
                     throw OpenError(OpenFailure.teardownFailed)
                 }
                 throw failure
             }
-            synchronized(lock) { state = State.Open(handles) }
+            synchronized(lock) { state = State.Open(handles); walletChanged() }
         }
 
     private suspend fun beginOpen(
@@ -209,7 +239,7 @@ class WalletSession internal constructor(
             val attempt = scope.async(start = CoroutineStart.LAZY) {
                 try {
                     val handles = opener(mnemonic, location.directory.path, runDaemon, appVersion, create)
-                    synchronized(lock) { state = State.Open(handles) }
+                    synchronized(lock) { state = State.Open(handles); walletChanged() }
                 } catch (failure: Throwable) {
                     synchronized(lock) { state = State.Closed }
                     throw failure
@@ -347,6 +377,7 @@ class WalletSession internal constructor(
             synchronized(lock) { drained }.await()
             run {
                 try {
+                    handles.discardSendReviews()
                     handles.stopDaemonWait()
                 } catch (failure: Throwable) {
                     synchronized(lock) { state = if (location.restorePending) State.Quarantined(handles) else State.Open(handles) }
@@ -357,7 +388,7 @@ class WalletSession internal constructor(
                     synchronized(lock) { state = State.Quarantined(handles) }
                     throw failure
                 }
-                synchronized(lock) { state = State.Closed }
+                synchronized(lock) { state = State.Closed; walletChanged() }
             }
         }
     }
@@ -368,6 +399,7 @@ class WalletSession internal constructor(
         fun shared(context: Context): WalletSession = instance ?: synchronized(this) {
             instance ?: WalletSession(BuildConfig.APP_VARIANT,
                 WalletDataLocation(context.applicationContext.filesDir, BuildConfig.APP_VARIANT),
+                sendWarn = com.noahwallet.services.logging.AppLog(context, "send")::w,
                 isSuspended = {
                     com.noahwallet.services.storage.SettingsStorage(context).persistedState<com.noahwallet.services.storage.PersistedWalletState>(
                         com.noahwallet.services.storage.PersistedWalletState.key)?.isWalletSuspended == true
@@ -375,7 +407,7 @@ class WalletSession internal constructor(
                 .also { instance = it }
         }
 
-        private fun sdkOpener(variant: String): suspend (String, String, Boolean, String, Boolean) -> Handles =
+        private fun sdkOpener(variant: String, warn: (String) -> Unit): suspend (String, String, Boolean, String, Boolean) -> Handles =
             { mnemonic, datadir, runDaemon, appVersion, create ->
                 val configuration = WalletConfiguration.base(variant)
                 val config = configuration.sdkConfig(WalletConfiguration.userAgent(variant, appVersion))
@@ -393,11 +425,13 @@ class WalletSession internal constructor(
                     onchain.close()
                     throw failure
                 }
-                SdkHandles(wallet, onchain)
+                SdkHandles(wallet, onchain, variant, warn)
             }
     }
 
-    private class SdkHandles(val wallet: Wallet, val onchain: OnchainWallet) : Handles {
+    private class SdkHandles(val wallet: Wallet, val onchain: OnchainWallet, variant: String, warn: (String) -> Unit) : Handles {
+        override val send = SdkSendWallet(wallet, onchain, variant, warn)
+        override suspend fun discardSendReviews() { send.discardAll() }
         override suspend fun arkInfo() = wallet.arkInfo()
         override fun mailboxAuthorization(expiry: Long) = wallet.mailboxAuthorizationAt(expiry)
         override suspend fun debug(action: DebugAction, input: String): String {
