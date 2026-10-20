@@ -229,8 +229,14 @@ import Observation
         default: success = false; paid = false
         }
         guard paid || outcome == .failed else { try await markUncertain(entry, message: d.controller.message); return }
-        // Consume the paid revision before advancing MMKV or releasing Send, even after an edit/cancel.
-        var resolved = entry; resolved.resolved = true; resolved.consumed = paid
+        guard let saved = try d.journal.load()[entry.scheduleID], saved.binding == entry.binding,
+              saved.plan == entry.plan, saved.policyRevision == entry.policyRevision, saved.markedAt == entry.markedAt else { return }
+        if saved.policyApplied == true {
+            if !retainReceipt { d.controller.acknowledge() }
+            return
+        }
+        // Claim application with consumption: an interruption stops advancement without repeating it.
+        var resolved = entry; resolved.resolved = true; resolved.consumed = paid; resolved.policyApplied = true
         try d.journal.save(resolved)
         var notification: RecurringPayment?
         if var latest = state.schedules[entry.scheduleID], latest.nativeRevision == entry.policyRevision {

@@ -10,6 +10,7 @@ struct RecurringJournal {
         var policyRevision: UUID?
         var resolved = false
         var consumed: Bool?
+        var policyApplied: Bool?
         var key: String { "\(scheduleID):\(plan.occurrenceIndex!)" }
     }
     private struct Scope: Codable, Equatable {
@@ -74,7 +75,7 @@ struct RecurringJournal {
             try require(id == entry.scheduleID && entry.plan.kind == "pay"
                         && entry.plan.occurrenceIndex.map { $0 >= 0 } == true
                         && entry.plan.scheduledFor?.isFinite == true && entry.markedAt.isFinite
-                        && (entry.consumed != true || entry.resolved))
+                        && (entry.consumed != true || entry.resolved) && (entry.policyApplied != true || entry.resolved))
             if complete, entry.consumed == true {
                 try require(state.consumed.contains { $0.binding == entry.binding && $0.scheduleID == id && $0.through >= entry.plan.scheduledFor! }
                             && state.consumedIndices.contains { $0.binding == entry.binding && $0.scheduleID == id

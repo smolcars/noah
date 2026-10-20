@@ -1,0 +1,23 @@
+import Foundation
+import MMKV
+import Testing
+@testable import Noah
+
+@MainActor struct RecurringSettlementRepeatTests {
+    @Test func repeatedStatusAfterAckFailureMustNotRecordSameOccurrenceTwice() async throws {
+        let h = try RecurringExecutorTests.Harness(); let original = try h.add()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        h.ambiguous = true
+        await h.executor.execute()
+        #expect(try h.store.load().schedules[original.id]?.status == "needs_attention")
+        h.resolution = .paid(.init(amount: original.amountSat, proof: .submitReturnedArkSuccess))
+        h.writeRemovalFails = true
+        await h.executor.checkStatus(original.id)
+        #expect(try h.store.load().schedules[original.id]?.occurrencesPaid == 1)
+        #expect(h.controller.locked)
+        h.writeRemovalFails = false
+        await h.executor.checkStatus(original.id)
+        #expect(try h.store.load().schedules[original.id]?.occurrencesPaid == 1, "one paid occurrence must create one history entry")
+    }
+
+}
