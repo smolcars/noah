@@ -1,0 +1,100 @@
+{
+  "cases": [
+    {
+      "name": "pending/false",
+      "input": {
+        "status": "pending",
+        "isFinal": false
+      },
+      "expected": true
+    },
+    {
+      "name": "pending/true",
+      "input": {
+        "status": "pending",
+        "isFinal": true
+      },
+      "expected": true
+    },
+    {
+      "name": "unconfirmed/false",
+      "input": {
+        "status": "unconfirmed",
+        "isFinal": false
+      },
+      "expected": true
+    },
+    {
+      "name": "unconfirmed/true",
+      "input": {
+        "status": "unconfirmed",
+        "isFinal": true
+      },
+      "expected": true
+    },
+    {
+      "name": "confirmed/false",
+      "input": {
+        "status": "confirmed",
+        "isFinal": false
+      },
+      "expected": true
+    },
+    {
+      "name": "confirmed/true",
+      "input": {
+        "status": "confirmed",
+        "isFinal": true
+      },
+      "expected": false
+    },
+    {
+      "name": "failed/false",
+      "input": {
+        "status": "failed",
+        "isFinal": false
+      },
+      "expected": true
+    },
+    {
+      "name": "failed/true",
+      "input": {
+        "status": "failed",
+        "isFinal": true
+      },
+      "expected": false
+    },
+    {
+      "name": "canceled/false",
+      "input": {
+        "status": "canceled",
+        "isFinal": false
+      },
+      "expected": true
+    },
+    {
+      "name": "canceled/true",
+      "input": {
+        "status": "canceled",
+        "isFinal": true
+      },
+      "expected": false
+    },
+    {
+      "name": "future_status/false",
+      "input": {
+        "status": "future_status",
+        "isFinal": false
+      },
+      "expected": true
+    },
+    {
+      "name": "future_status/true",
+      "input": {
+        "status": "future_status",
+        "isFinal": true
+      },
+      "expected": false
+    }
+  ]
+}

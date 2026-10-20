@@ -1,0 +1,124 @@
+{
+  "cases": [
+    {
+      "name": "fact 0",
+      "input": 0,
+      "expected": "There can only ever be 21 million bitcoin."
+    },
+    {
+      "name": "fact 1",
+      "input": 1,
+      "expected": "Fix the money, fix the world."
+    },
+    {
+      "name": "fact 2",
+      "input": 2,
+      "expected": "Money for everyone, by everyone."
+    },
+    {
+      "name": "fact 3",
+      "input": 3,
+      "expected": "Send money to anyone, anywhere, anytime."
+    },
+    {
+      "name": "fact 4",
+      "input": 4,
+      "expected": "No one can freeze your funds."
+    },
+    {
+      "name": "fact 5",
+      "input": 5,
+      "expected": "A 'satoshi' is its smallest unit."
+    },
+    {
+      "name": "fact 6",
+      "input": 6,
+      "expected": "It's freedom in your pocket."
+    },
+    {
+      "name": "fact 7",
+      "input": 7,
+      "expected": "Hope for a fairer financial system."
+    },
+    {
+      "name": "fact 8",
+      "input": 8,
+      "expected": "Taxation is theft."
+    },
+    {
+      "name": "fact 9",
+      "input": 9,
+      "expected": "Power back to the people."
+    },
+    {
+      "name": "fact 10",
+      "input": 10,
+      "expected": "Be your own bank."
+    },
+    {
+      "name": "fact 11",
+      "input": 11,
+      "expected": "A powerful tool for savers."
+    },
+    {
+      "name": "fact 12",
+      "input": 12,
+      "expected": "The future of money is here."
+    },
+    {
+      "name": "fact 13",
+      "input": 13,
+      "expected": "Not your keys, not your coins."
+    },
+    {
+      "name": "fact 14",
+      "input": 14,
+      "expected": "Stay humble, stack sats."
+    },
+    {
+      "name": "fact 15",
+      "input": 15,
+      "expected": "In code we trust."
+    },
+    {
+      "name": "fact 16",
+      "input": 16,
+      "expected": "Governments can print money, but not Bitcoin."
+    },
+    {
+      "name": "fact 17",
+      "input": 17,
+      "expected": "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks."
+    },
+    {
+      "name": "fact 18",
+      "input": 18,
+      "expected": "Vires in numeris. (Strength in numbers)"
+    },
+    {
+      "name": "fact 19",
+      "input": 19,
+      "expected": "\"If you don't believe it or don't get it, I don't have time to try to convince you, sorry.\" - Satoshi Nakamoto"
+    },
+    {
+      "name": "fact 20",
+      "input": 20,
+      "expected": "There is no second best."
+    },
+    {
+      "name": "fact 21",
+      "input": 21,
+      "expected": "When in doubt, zoom out."
+    },
+    {
+      "name": "fact 22",
+      "input": 22,
+      "expected": "Separate money and state."
+    },
+    {
+      "name": "fact 23",
+      "input": 23,
+      "expected": "Tick tock next block."
+    }
+  ]
+}

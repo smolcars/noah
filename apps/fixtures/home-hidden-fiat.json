@@ -1,0 +1,64 @@
+{
+  "cases": [
+    {
+      "name": "USD",
+      "input": "USD",
+      "expected": "$ ••••"
+    },
+    {
+      "name": "EUR",
+      "input": "EUR",
+      "expected": "€ ••••"
+    },
+    {
+      "name": "GBP",
+      "input": "GBP",
+      "expected": "£ ••••"
+    },
+    {
+      "name": "CAD",
+      "input": "CAD",
+      "expected": "CA$ ••••"
+    },
+    {
+      "name": "CHF",
+      "input": "CHF",
+      "expected": "CHF ••••"
+    },
+    {
+      "name": "AUD",
+      "input": "AUD",
+      "expected": "A$ ••••"
+    },
+    {
+      "name": "JPY",
+      "input": "JPY",
+      "expected": "¥ ••••"
+    },
+    {
+      "name": "BRL",
+      "input": "BRL",
+      "expected": "R$ ••••"
+    },
+    {
+      "name": "KRW",
+      "input": "KRW",
+      "expected": "₩ ••••"
+    },
+    {
+      "name": "INR",
+      "input": "INR",
+      "expected": "₹ ••••"
+    },
+    {
+      "name": "MXN",
+      "input": "MXN",
+      "expected": "MX$ ••••"
+    },
+    {
+      "name": "SGD",
+      "input": "SGD",
+      "expected": "S$ ••••"
+    }
+  ]
+}

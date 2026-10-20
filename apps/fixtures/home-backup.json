@@ -1,0 +1,253 @@
+{
+  "cases": [
+    {
+      "name": "idle/false/0",
+      "input": {
+        "lastBackupStatus": "idle",
+        "backupPending": false,
+        "lastBackupAt": 10000,
+        "now": 10000
+      },
+      "expected": null
+    },
+    {
+      "name": "idle/false/4999",
+      "input": {
+        "lastBackupStatus": "idle",
+        "backupPending": false,
+        "lastBackupAt": 10000,
+        "now": 14999
+      },
+      "expected": null
+    },
+    {
+      "name": "idle/false/5000",
+      "input": {
+        "lastBackupStatus": "idle",
+        "backupPending": false,
+        "lastBackupAt": 10000,
+        "now": 15000
+      },
+      "expected": null
+    },
+    {
+      "name": "idle/true/0",
+      "input": {
+        "lastBackupStatus": "idle",
+        "backupPending": true,
+        "lastBackupAt": 10000,
+        "now": 10000
+      },
+      "expected": null
+    },
+    {
+      "name": "idle/true/4999",
+      "input": {
+        "lastBackupStatus": "idle",
+        "backupPending": true,
+        "lastBackupAt": 10000,
+        "now": 14999
+      },
+      "expected": null
+    },
+    {
+      "name": "idle/true/5000",
+      "input": {
+        "lastBackupStatus": "idle",
+        "backupPending": true,
+        "lastBackupAt": 10000,
+        "now": 15000
+      },
+      "expected": null
+    },
+    {
+      "name": "in_progress/false/0",
+      "input": {
+        "lastBackupStatus": "in_progress",
+        "backupPending": false,
+        "lastBackupAt": 10000,
+        "now": 10000
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "in_progress/false/4999",
+      "input": {
+        "lastBackupStatus": "in_progress",
+        "backupPending": false,
+        "lastBackupAt": 10000,
+        "now": 14999
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "in_progress/false/5000",
+      "input": {
+        "lastBackupStatus": "in_progress",
+        "backupPending": false,
+        "lastBackupAt": 10000,
+        "now": 15000
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "in_progress/true/0",
+      "input": {
+        "lastBackupStatus": "in_progress",
+        "backupPending": true,
+        "lastBackupAt": 10000,
+        "now": 10000
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "in_progress/true/4999",
+      "input": {
+        "lastBackupStatus": "in_progress",
+        "backupPending": true,
+        "lastBackupAt": 10000,
+        "now": 14999
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "in_progress/true/5000",
+      "input": {
+        "lastBackupStatus": "in_progress",
+        "backupPending": true,
+        "lastBackupAt": 10000,
+        "now": 15000
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "failed/false/0",
+      "input": {
+        "lastBackupStatus": "failed",
+        "backupPending": false,
+        "lastBackupAt": 10000,
+        "now": 10000
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "failed/false/4999",
+      "input": {
+        "lastBackupStatus": "failed",
+        "backupPending": false,
+        "lastBackupAt": 10000,
+        "now": 14999
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "failed/false/5000",
+      "input": {
+        "lastBackupStatus": "failed",
+        "backupPending": false,
+        "lastBackupAt": 10000,
+        "now": 15000
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "failed/true/0",
+      "input": {
+        "lastBackupStatus": "failed",
+        "backupPending": true,
+        "lastBackupAt": 10000,
+        "now": 10000
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "failed/true/4999",
+      "input": {
+        "lastBackupStatus": "failed",
+        "backupPending": true,
+        "lastBackupAt": 10000,
+        "now": 14999
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "failed/true/5000",
+      "input": {
+        "lastBackupStatus": "failed",
+        "backupPending": true,
+        "lastBackupAt": 10000,
+        "now": 15000
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "success/false/0",
+      "input": {
+        "lastBackupStatus": "success",
+        "backupPending": false,
+        "lastBackupAt": 10000,
+        "now": 10000
+      },
+      "expected": "Backup completed"
+    },
+    {
+      "name": "success/false/4999",
+      "input": {
+        "lastBackupStatus": "success",
+        "backupPending": false,
+        "lastBackupAt": 10000,
+        "now": 14999
+      },
+      "expected": "Backup completed"
+    },
+    {
+      "name": "success/false/5000",
+      "input": {
+        "lastBackupStatus": "success",
+        "backupPending": false,
+        "lastBackupAt": 10000,
+        "now": 15000
+      },
+      "expected": null
+    },
+    {
+      "name": "success/true/0",
+      "input": {
+        "lastBackupStatus": "success",
+        "backupPending": true,
+        "lastBackupAt": 10000,
+        "now": 10000
+      },
+      "expected": null
+    },
+    {
+      "name": "success/true/4999",
+      "input": {
+        "lastBackupStatus": "success",
+        "backupPending": true,
+        "lastBackupAt": 10000,
+        "now": 14999
+      },
+      "expected": null
+    },
+    {
+      "name": "success/true/5000",
+      "input": {
+        "lastBackupStatus": "success",
+        "backupPending": true,
+        "lastBackupAt": 10000,
+        "now": 15000
+      },
+      "expected": null
+    },
+    {
+      "name": "missing success timestamp",
+      "input": {
+        "lastBackupStatus": "success",
+        "backupPending": false,
+        "now": 10000
+      },
+      "expected": null
+    }
+  ]
+}

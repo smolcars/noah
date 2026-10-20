@@ -3,6 +3,8 @@ import SwiftUI
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     @Environment(HistoryModel.self) private var history
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var home = HomeModel()
     @State private var showEmail = false
     @State private var showMap = false
     @State private var selectedID: String?
@@ -30,11 +32,15 @@ struct HomeView: View {
                         BalanceHeader(
                             sats: model.summary.map { Int64($0.balance.totalSats) },
                             unit: model.amountUnit,
+                            btcPrice: home.btcPrice, currency: model.preferredCurrency,
                             isHidden: $model.isBalanceHidden)
                             .padding(.top, 24)
                     }
 
-                    if !model.isWalletSuspended { AutoBoardingService() }
+                    if !model.isWalletSuspended {
+                        HomeStatusBanners(home: home)
+                        AutoBoardingService()
+                    }
 
                     // Like RN, a suspended wallet shows only the suspended card.
                     if !model.isWalletSuspended && model.server.state.isEmailVerified != true
@@ -94,21 +100,42 @@ struct HomeView: View {
                         }
                     }
 
-                    Text("In code we trust.")
+                    if !model.isWalletSuspended {
+                        Text(home.fact)
                         .font(NoahFont.footnote)
                         .foregroundStyle(NoahColor.mutedForeground)
                         .padding(.top, 24)
+                    }
                 }
                 .padding(.horizontal, 20)
                 .frame(maxWidth: 640)
                 .frame(maxWidth: .infinity)
             }
             .task { await model.versionCheck.checkOnce() }
+            .task(id: model.summary?.fingerprint) {
+                guard model.summary != nil, !model.isWalletSuspended else { return }
+                await home.refresh(currency: model.preferredCurrency)
+                while !Task.isCancelled {
+                    do { try await Task.sleep(for: .seconds(1)) } catch { return }
+                    if scenePhase == .active { await home.tick() }
+                }
+            }
+            .task(id: model.preferredCurrency) { await home.loadPrice(currency: model.preferredCurrency) }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active && !model.isWalletSuspended {
+                    Task {
+                        await home.tick()
+                        await home.refreshRounds(force: true)
+                        await home.loadPrice(currency: model.preferredCurrency)
+                    }
+                }
+            }
             .refreshable {
                 guard !model.isWalletSuspended else { return }
                 await model.sync()
                 guard !model.isWalletSuspended else { return }
                 await history.refresh(currency: model.preferredCurrency)
+                await home.refresh(currency: model.preferredCurrency)
             }
             .sheet(isPresented: Binding(get: { selectedID != nil }, set: { if !$0 { selectedID = nil } })) {
                 if let transaction = history.transactions.first(where: { $0.id == selectedID }) {
@@ -125,8 +152,10 @@ struct HomeView: View {
             .background(NoahColor.background.ignoresSafeArea())
             .toolbar {
                 ToolbarItemGroup(placement: .topBarLeading) {
-                    NavigationLink { SettingsView() } label: { Label("Settings", systemImage: "gearshape") }
-                    Button("Bitcoin Map", systemImage: "map") { showMap = true }
+                    NavigationLink { SettingsView() } label: { Label("Open settings", systemImage: "gearshape") }
+                        .accessibilityIdentifier("home-settings-button")
+                    Button("Find places that accept bitcoin", systemImage: "map") { showMap = true }
+                        .accessibilityIdentifier("home-btc-map-button")
                 }
                 ToolbarItem(placement: .principal) {
                     VariantBadge(variant: model.variant)
@@ -147,13 +176,24 @@ struct HomeView: View {
 private struct BalanceHeader: View {
     let sats: Int64?
     let unit: BitcoinAmountUnit
+    let btcPrice: Double?
+    let currency: String
+    @Environment(\.locale) private var locale
     @Binding var isHidden: Bool
 
     var body: some View {
-        HStack(spacing: 14) {
+        VStack(spacing: 12) {
+            if isHidden {
+                Text(HomeModel.hiddenFiat(currency: currency))
+                    .font(NoahFont.title).foregroundStyle(NoahColor.mutedForeground)
+            } else if let sats, let btcPrice {
+                Text(FiatCurrency.display(sats: sats, btcPrice: btcPrice, currency: currency, locale: locale))
+                    .font(NoahFont.title).foregroundStyle(NoahColor.mutedForeground)
+            } else { ProgressView().frame(height: 32) }
+            HStack(spacing: 14) {
             Group {
                 if isHidden {
-                    Text(verbatim: "••••••")
+                    Text(verbatim: "••••")
                 } else if let sats {
                     Text(BitcoinAmount.format(sats: sats, unit: unit))
                         .contentTransition(.numericText())
@@ -175,7 +215,8 @@ private struct BalanceHeader: View {
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
             }
-            .accessibilityLabel(isHidden ? "Show balance" : "Hide balance")
+            .accessibilityLabel(isHidden ? "Show wallet balance" : "Hide wallet balance")
+        }
         }
         .sensoryFeedback(.selection, trigger: isHidden)
     }
