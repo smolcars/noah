@@ -76,9 +76,6 @@ struct LogView: View {
           ScrollView {
             LazyVStack(alignment: .leading, spacing: 8) {
                 if snapshot.loading { ProgressView() }
-                if let updated = snapshot.updatedAt {
-                    Text(L10n.text("Updated at {time}", updated.formatted(.dateTime.hour().minute().second().locale(locale)), locale: locale.identifier))
-                }
                 if let failure = snapshot.error { Text(LocalizedStringKey(failure)).foregroundStyle(NoahColor.destructive) }
                 if !snapshot.loading && snapshot.error == nil && snapshot.lines.isEmpty { Text("No logs found.") }
                 if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
@@ -91,6 +88,12 @@ struct LogView: View {
           .onChange(of: snapshot.updatedAt) { _, _ in
               Task { await Task.yield(); reader.scrollTo("latest", anchor: .bottom) }
           }
+        }
+        .safeAreaInset(edge: .top) {
+            if let updated = snapshot.updatedAt {
+                Text(L10n.text("Updated at {time}", updated.formatted(.dateTime.hour().minute().second().locale(locale)), locale: locale.identifier))
+                    .font(NoahFont.footnote).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 20)
+            }
         }
         .settingsStyle("Logs")
         .task { await snapshot.load { try await LogFile.shared.checkedLinesForExport() } }

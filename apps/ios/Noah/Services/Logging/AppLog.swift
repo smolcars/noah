@@ -124,9 +124,11 @@ final class LogFile: @unchecked Sendable {
     }
 
     private func readLines() throws -> [String] {
-        guard FileManager.default.fileExists(atPath: directory.path) else { return [] }
-        let files = try FileManager.default.contentsOfDirectory(
-            at: directory, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
+        let files: [URL]
+        do {
+            files = try FileManager.default.contentsOfDirectory(
+                at: directory, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
+        } catch CocoaError.fileReadNoSuchFile { return [] }
         let ordered = files
             .filter { $0.lastPathComponent.hasPrefix(Self.fileName) }
             .sorted { Self.age(of: $0) > Self.age(of: $1) }
