@@ -11,12 +11,18 @@ import java.util.UUID
 
 internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWallet = FakeSendWallet(),
     reservation: (suspend (suspend (SendWallet) -> Unit) -> Unit)? = null) {
+    var beforeWrite: (String) -> Unit = {}
+    var beforeJournalWrite: (String) -> Unit = {}
+    var beforeRead: () -> Unit = {}
+    var beforeJournalRead: () -> Unit = {}
+    var beforeBinding: () -> Unit = {}
+    var beforeGeneration: () -> Unit = {}
     var raw: String? = null
-    val store = RecurringStore({ raw }, { if (mmkvFails) error("MMKV"); raw = it })
+    val store = RecurringStore({ beforeRead(); raw }, { beforeWrite(it); if (mmkvFails) error("MMKV"); raw = it })
     var journalRaw: String? = null
     var journalFails = false; var mmkvFails = false; var auditFails = false
     var quarantineRaw: ByteArray? = null
-    val journal = RecurringJournal(File("unused"), { journalRaw }, { if (journalFails) error("journal"); journalRaw = it },
+    val journal = RecurringJournal(File("unused"), { beforeJournalRead(); journalRaw }, { beforeJournalWrite(it); if (journalFails) error("journal"); journalRaw = it },
         quarantine = { if (quarantineRaw == null) quarantineRaw = it })
     init { wallet.owner = SendIdentity("wallet-a", "regtest"); wallet.snapshot = SendSnapshot(walletIdentity = wallet.owner) }
     val sendJournal = TestJournal()
@@ -29,9 +35,9 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
     val notifications = mutableListOf<RecurringPayment>()
     var audits = 0
     val executor = RecurringExecutor(RecurringExecutor.Dependencies(store, journal, controller,
-        ensureOpen = {}, binding = { binding }, allowed = { check(allowed) },
+        ensureOpen = {}, binding = { beforeBinding(); binding }, allowed = { check(allowed) },
         quote = { s -> quotes++; beforeQuote(); SendPayment(s.destination, method, s.amountSat) to SendQuote(s.amountSat, fee, s.amountSat + fee, walletIdentity = binding.wallet, lightningFeeSchedule = feeSchedule) },
-        automationGeneration = { generation }, now = { now }, zone = { zone },
+        automationGeneration = { beforeGeneration(); generation }, now = { now }, zone = { zone },
         sync = { syncCalls++; sync() }, notify = { _, result -> result?.let { notifications.add(it) } },
         audit = { _, _, _, _ -> if (auditFails) error("audit"); audits++ }), scope)
     val schedule get() = store.load().schedules["rent"]

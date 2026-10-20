@@ -563,3 +563,25 @@ assembly succeeded in the same **1m 4s** run. Final targeted runs for fixes 1–
 passed **17 / 40 / 19 / 61 / 1,357 tests**, respectively (overlapping suites).
 No live device, funded broadcast or actual process kill was used; interruption
 and recovery were checked deterministically. No iOS, server or RN files changed.
+
+## Initialized launch I/O (base `37ab2125`)
+
+Executor storage operations now suspend on IO while trigger coalescing, synchronous
+Send submission and the final pre-payment guard keep their existing ownership.
+Each run awaits the stop generation, current wallet binding/database, policy,
+quarantine, legacy scopes, consumed timestamp watermarks and exact revision indices
+before quoting/submitting. There is no cached readiness or journal evidence.
+`RecurringStore.lock` and journal monitors remain inside the IO blocks; mutation
+validation and its write share one block. Occurrence journal → in-flight marker →
+Send journal → guarded SDK call, and consumption → policy advancement → Send
+acknowledgement, retain their order. The final synchronous guard still rereads
+identity, stop generation, policy, budget and consumption inside the session's IO
+reservation immediately before payment. UI reload now awaits its IO read.
+
+`RecurringLoadingTest` holds each of generation/binding/policy/journal reads off
+Main while foreground and push triggers join the same unfinished run. It proves
+zero quotes/submissions while pending, consumed evidence cannot replay afterward,
+failed reads prevent execution, and stop/replacement during binding cannot pay.
+The targeted payment/widget-value run passed **2,053 cases / 31 suites**, zero
+failures/errors/skips, including **1,455 recurring cases**. Final full-suite and
+funded-device StrictMode results are in [ParityTests](../ParityTests/README.md#initialized-wallet-main-thread-io-base-37ab2125).
