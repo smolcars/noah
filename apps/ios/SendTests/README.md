@@ -1,5 +1,61 @@
 # Native Send verification
 
+## Review follow-up: padded URI amounts and final verification (2026-10-20)
+
+The Send-only parser now removes insignificant integer leading zeros and
+fractional trailing zeros before checking precision and scale. It retains full
+ASCII-string validation, the 96-byte input bound, 32 significant mantissa digits,
+bounded exponent/normalized scale (-32...32), and exact 0...21-million-BTC range
+validation before conversion. It follows RN's `Math.round(btc * 100_000_000)`
+semantics for excess fractional precision, including IEEE-754 halfway cases.
+The rounded count converts through `UInt64` to `Decimal`, preserving exact sats
+at the supply boundary (Foundation's `Decimal(Double)` can introduce a fraction).
+
+Both platforms consume **108** shared `send-amount-safety.json` vectors. Running
+RN's pinned **bip-321@0.0.11** plus its `btcToSats` expression generated twenty
+padded/precision results, including two updated raw-digit-limit expectations and
+eighteen new inputs. Each records RN's BTC and satoshi results. Leading zeros,
+trailing zeros, both, zero/one-sat/supply boundaries, exponent padding, the
+96-character boundary and excess-fraction rounding are covered. Examples:
+`1.00000000000000000000000000000000` → 100,000,000 sats;
+`1.000000005` → 100,000,000 sats; `0.000000145` → 14 sats.
+Regenerate with `bun apps/fixtures/tools/generate-send-amount-padding.ts` using
+the pinned client dependency. Existing malformed strings, extreme exponents,
+Unicode digits, true excess precision and out-of-supply cases remain invalid.
+
+Final targeted signed verification: **25 tests / 48 individual runs passed**,
+**5 suites**, zero failures/skips: migration, amount vectors, RN Send fixtures,
+override audit and round-7 recovery. The initial failing migration regression
+finished its six test definitions, then Xcode stalled collecting failure
+diagnostics; that owned process was stopped. Final targeted/full commands used
+`-collect-test-diagnostics never` and completed normally. An intermediate amount
+run caught Foundation's large-Double conversion issue; its integer conversion
+fix passed the final targeted and full runs.
+
+The full signed `NoahTests` suite ran **once** after final iOS code/test changes,
+without target/suite exclusions: **408 total, 391 passed, 17 opt-in skipped,
+0 failed**, across **89 suites**. Parameterized execution reports **520 passed /
+17 skipped individual runs**. Full Android verification also ran once:
+**1,133 JUnit cases / 56 suites passed**, no failures/errors/skips, and regtest APK
+assembly passed. Its command and detail are in `apps/android/SendTests/README.md`.
+All iOS runs used Nix, XcodeGen, normal simulator code signing,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, two build jobs and disabled parallel testing:
+
+```sh
+nix develop --command sh -c 'cd apps/ios && /opt/homebrew/bin/xcodegen generate && xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest -destination "platform=iOS Simulator,id=2D63BF21-9539-4CD1-9147-0F64310B7D9E" -derivedDataPath /private/tmp/noah-send-r2-8d05-dd -resultBundlePath /private/tmp/noah-send-r2-ios-full.xcresult -jobs 2 -parallel-testing-enabled NO -collect-test-diagnostics never ARCHS=arm64 ONLY_ACTIVE_ARCH=YES test'
+```
+
+Cleanup completed: dedicated **Noah Send R2 Recovery Sol 8d05d178**, iPhone 17 /
+iOS 27.0 (`2D63BF21-9539-4CD1-9147-0F64310B7D9E`) had its exact identity and
+Shutdown state verified before deletion, then was confirmed absent. Removed its
+DerivedData, all four owned xcresult bundles and temporary RN dependencies.
+The Device panel could not discover this new simulator after two attempts;
+Xcode/simctl performed verification and cleanup. Logs and exported summaries
+remain under `/private/tmp/noah-send-r2-*`. No funded live payment was needed;
+other simulators, Android emulators, physical devices and Docker were untouched.
+M6 and Recurring implementation files were not changed. Both review findings
+are fixed; existing external-provider/live-fault limitations below remain.
+
 ## Review follow-up: blocked migration recovery (2026-10-20)
 
 Base: `feat/native-rewrite` HEAD `99a9177c09ee7da2d7ef3df716f6aff6edc731ff`.

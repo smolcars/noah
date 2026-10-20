@@ -60,17 +60,19 @@ struct SendDestination: Equatable, Sendable, Codable {
         guard value.utf8.count <= 96,
               value.range(of: syntax, options: .regularExpression) == value.startIndex..<value.endIndex else { return nil }
         let parts = value.lowercased().split(separator: "e", omittingEmptySubsequences: false)
-        let mantissa = parts[0]
+        let mantissa = parts[0].trimmingCharacters(in: CharacterSet(charactersIn: "+"))
+            .split(separator: ".", omittingEmptySubsequences: false)
+        let integer = String(mantissa[0].drop(while: { $0 == "0" }))
+        let fraction = mantissa.dropFirst().first.map { String($0.reversed().drop(while: { $0 == "0" }).reversed()) } ?? ""
         guard let exponent = Int(parts.count == 2 ? String(parts[1]) : "0") else { return nil }
-        let fraction = mantissa.split(separator: ".", omittingEmptySubsequences: false).dropFirst().first?.count ?? 0
-        let digits = mantissa.utf8.filter { (48...57).contains($0) }.count
-        guard digits <= 32, (-32...32).contains(exponent), (-32...32).contains(fraction - exponent),
-              var btc = Decimal(string: value, locale: Locale(identifier: "en_US_POSIX")),
+        let digits = (integer + fraction).drop(while: { $0 == "0" }).count
+        let normalized = (integer.isEmpty ? "0" : integer) + (fraction.isEmpty ? "" : "." + fraction) + "e\(exponent)"
+        guard digits <= 32, (-32...32).contains(exponent), (-32...32).contains(fraction.count - exponent),
+              let btc = Decimal(string: normalized, locale: Locale(identifier: "en_US_POSIX")),
               !btc.isNaN, btc >= 0, btc <= 21000000 else { return nil }
-        var factor = Decimal(100000000), sats = Decimal(), rounded = Decimal()
-        guard NSDecimalMultiply(&sats, &btc, &factor, .plain) == .noError else { return nil }
-        NSDecimalRound(&rounded, &sats, 0, .plain)
-        return rounded
+        // RN parses a JS number, then uses Math.round(btc * 100_000_000).
+        guard let number = Double(normalized) else { return nil }
+        return Decimal(UInt64((number * 100000000).rounded(.toNearestOrAwayFromZero)))
     }
     private static func uri(_ value: String, network: String) -> Self {
         let parts = value.dropFirst(8).split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)

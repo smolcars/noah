@@ -8,7 +8,7 @@ struct SendAmountTests {
 
     @Test func untrustedURIAmountsMatchSharedSafetyVectors() throws {
         let fixtures = try Fixtures.load("send-amount-safety", input: Input.self, expected: Expected.self)
-        #expect(fixtures.count == 90)
+        #expect(fixtures.count == 108)
         for fixture in fixtures {
             let encoded = try #require(fixture.input.amount.addingPercentEncoding(withAllowedCharacters: .alphanumerics))
             let parsed = SendDestination.parse("bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=\(encoded)", network: "mainnet")
