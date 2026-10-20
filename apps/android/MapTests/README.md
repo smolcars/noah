@@ -16,12 +16,15 @@ nix develop --command sh -c 'cd apps/android && ./gradlew :app:testRegtestDebugU
 
 The test resource directories directly reference `apps/fixtures`,
 `client/assets/btcmap`, and `client/assets/geonames`. No fixture is forked.
-`BtcMapFixtureTest` runs **61 RN-generated cases** as individual JUnit tests:
-UTC cursors, categories, distances, snapshot validation, sorted patch insertion /
-replacement / deletion, viewport validation, Unicode normalization, city ranking,
-and both bundled datasets. Eleven additional tests cover cache failure,
-cancellation, concurrent requests and freshness, optional comments, safe links,
-city-selection filtering, viewport persistence and deleted selection.
+`BtcMapFixtureTest` runs **93 shared cases** as individual JUnit tests: 61
+RN-generated `btc-map` / `city-search` cases plus 32 `btc-map-review` cases
+(including all five dateline bounds cases and seven added phone vectors).
+They cover UTC cursors, categories, distances, snapshot validation, sorted patch
+insertion / replacement / deletion, viewport validation, Unicode normalization,
+city ranking, web/phone validation and both bundled datasets. Another 26 tests
+cover resource limits, cooldown/cache preservation, delayed retry, cancellation,
+concurrent requests and freshness, optional comments, safe links, city-selection
+filtering, viewport persistence, deleted selection and every visible merchant.
 
 A debug-only activity opens the public map without wallet setup or wallet services:
 
@@ -80,11 +83,18 @@ wallet data in verification artifacts.
   Requests stop on success, screen exit/background, cancellation, or a 20-second
   timeout. Denial and unavailable providers leave city search/map browsing usable.
 - Merchant website/social/app links accept only HTTP(S), with a host and no user
-  info/control characters. Phone and email fields construct validated `tel:` and
+  info/whitespace/control characters. Phone numbers require at least one ASCII
+  digit after normalization, matching iOS; digitless punctuation and Unicode
+  digits are rejected. Phone and email fields construct validated `tel:` and
   `mailto:` links, rejecting scheme/header injection. Every external action is a
-  user tap; calls use `ACTION_DIAL`, never `ACTION_CALL`. Directions use a generated
-  HTTPS Google Maps URL. Email is exposed on Android in addition to iOS's actions.
-  Remote merchant images are not automatically downloaded.
+  user tap. HTTP(S), including generated HTTPS Google Maps directions, uses
+  `ACTION_VIEW` with `CATEGORY_BROWSABLE`; phone uses `ACTION_DIAL` (never
+  `ACTION_CALL`), and email uses `ACTION_SENDTO`. Missing handlers are caught.
+  These intents carry only the public URI, with no extras or wallet data, so
+  packages are deliberately not pinned: the user chooses their browser, dialer,
+  email or maps handler. The separate Share place chooser shares only the public
+  merchant name and BTC Map URL. Email is exposed on Android in addition to iOS's
+  actions. Remote merchant images are not automatically downloaded.
 
 ## Verification record — 2026-10-19
 
@@ -162,3 +172,32 @@ offline street-tile archive, or duplicate snapshot was added.
   sent. Cold-offline street tiles and uncached glyphs are deliberately not bundled.
 - Release/R8 builds, per-ABI delivery size and Play Store download size were not
   measured. The debug APK size above includes both supported native ABIs.
+
+## Review follow-up — 2026-10-19
+
+- The required Nix/Gradle unit-test and regtest debug assembly command passed:
+  **498 tests, zero failures/errors/skips**, including **119 map tests**
+  (93 shared fixture cases + 26 repository/model/link/limit tests). Dependency
+  verification remained enforced; no dependency or verification metadata changed.
+- Eleven limit regressions cover exact streamed length, dishonest/missing length,
+  early termination one byte beyond the cap, UTF-8 byte boundaries, bounded record
+  decoding for snapshots/patches/comments, oversized fields/metadata, oversized
+  disk-cache fallback, sync/detail cooldown at 299,999/300,000 ms, and merged-cache
+  byte/record overflow. Rejected syncs retain the previous disk cache, snapshot
+  and cursor. An additional repository test verifies the ordinary one-second retry.
+- Shared review vectors run directly from `apps/fixtures/btc-map-review.json`;
+  all five bounds cases run as individual JUnit tests. Seven new phone vectors
+  include `...`, `( )`, `+...`, empty/plus-only and Unicode-digit values, plus a
+  valid single ASCII digit. iOS already rejects digitless numbers and needs no
+  source change; its existing fixture loader consumes the same added vectors.
+- Model regressions mirror iOS's London CA → London GB viewport ranking, select
+  every merchant in world bounds through the normal detail-selection path, and
+  verify London bounds after an Atlanta location fix. Camera bounds normalize
+  MapLibre's unwrapped dateline longitudes before matching. The Compose search
+  effect includes the viewport center and field focus, so re-entry refreshes rank.
+- This follow-up used JVM tests and compilation only. No emulator/device,
+  simulator or Docker was touched. Live TalkBack traversal, focus transitions and
+  external browser/dialer/mail/maps handoffs were not repeated; the earlier live
+  evidence above predates these review fixes. iOS source was unchanged and the
+  NoahTests target was not rerun. The APK size/hash above describes the earlier
+  acceptance build, not this follow-up build.

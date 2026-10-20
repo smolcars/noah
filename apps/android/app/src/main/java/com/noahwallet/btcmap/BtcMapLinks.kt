@@ -5,16 +5,18 @@ import java.net.URI
 /** Public merchant data never supplies an Intent, component, or arbitrary URI scheme. */
 object BtcMapLinks {
     fun web(value: String): String? = runCatching {
-        val uri = URI(value.trim())
+        val uri = URI(value)
         require(uri.scheme?.lowercase() in listOf("http", "https") && !uri.host.isNullOrEmpty() && uri.userInfo == null)
-        require(value.none { it.isISOControl() })
+        require(value.none { it.isISOControl() || it.isWhitespace() })
         uri.toASCIIString()
     }.getOrNull()
 
     fun phone(value: String): String? {
-        val number = value.trim()
-        if (!number.matches(Regex("\\+?[0-9() .-]{3,40}"))) return null
-        return "tel:" + number.filter { it.isDigit() || it == '+' }
+        if (value.any { it !in "+0123456789 ()-." }) return null
+        val number = value.filter { it in '0'..'9' || it == '+' }
+        val digits = number.removePrefix("+")
+        if (digits.isEmpty() || digits.any { it !in '0'..'9' }) return null
+        return "tel:$number"
     }
 
     fun email(value: String): String? {

@@ -35,9 +35,17 @@ fun BtcMapDetailView(model: BtcMapModel, place: BtcMapPlace, modifier: Modifier 
     }
     val fields = detail?.fields.orEmpty()
     val merchant = detail?.place ?: place
-    fun open(url: String?, dial: Boolean = false) {
+    fun open(url: String?) {
         if (url == null) { model.alert = "This place provided an invalid link."; return }
-        try { context.startActivity(Intent(if (dial) Intent.ACTION_DIAL else Intent.ACTION_VIEW, Uri.parse(url))) }
+        // Only public merchant URIs leave Noah, with no wallet data/extras; keep the user's choice of handler.
+        val uri = Uri.parse(url)
+        val intent = when (uri.scheme?.lowercase()) {
+            "http", "https" -> Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE)
+            "tel" -> Intent(Intent.ACTION_DIAL, uri)
+            "mailto" -> Intent(Intent.ACTION_SENDTO, uri)
+            else -> { model.alert = "This place provided an invalid link."; return }
+        }
+        try { context.startActivity(intent) }
         catch (_: android.content.ActivityNotFoundException) { model.alert = "No app is available to open this link." }
         catch (_: SecurityException) { model.alert = "This link could not be opened." }
     }
@@ -55,7 +63,7 @@ fun BtcMapDetailView(model: BtcMapModel, place: BtcMapPlace, modifier: Modifier 
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton({ open(BtcMapLinks.directions(place)) }) { Text("Directions") }
             fields["website"]?.let { OutlinedButton({ open(BtcMapLinks.web(it)) }) { Text("Website") } }
-            fields["phone"]?.let { OutlinedButton({ open(BtcMapLinks.phone(it), dial = true) }) { Text("Call") } }
+            fields["phone"]?.let { OutlinedButton({ open(BtcMapLinks.phone(it)) }) { Text("Call") } }
             fields["email"]?.let { OutlinedButton({ open(BtcMapLinks.email(it)) }) { Text("Email") } }
             OutlinedButton({
                 try { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {

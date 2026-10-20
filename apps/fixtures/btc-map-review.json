@@ -162,6 +162,62 @@
       "expected": null
     },
     {
+      "name": "phone '...'",
+      "input": {
+        "operation": "phone",
+        "text": "..."
+      },
+      "expected": null
+    },
+    {
+      "name": "phone '( )'",
+      "input": {
+        "operation": "phone",
+        "text": "( )"
+      },
+      "expected": null
+    },
+    {
+      "name": "phone '+...'",
+      "input": {
+        "operation": "phone",
+        "text": "+..."
+      },
+      "expected": null
+    },
+    {
+      "name": "phone ''",
+      "input": {
+        "operation": "phone",
+        "text": ""
+      },
+      "expected": null
+    },
+    {
+      "name": "phone '+'",
+      "input": {
+        "operation": "phone",
+        "text": "+"
+      },
+      "expected": null
+    },
+    {
+      "name": "phone '１２３'",
+      "input": {
+        "operation": "phone",
+        "text": "１２３"
+      },
+      "expected": null
+    },
+    {
+      "name": "phone '1'",
+      "input": {
+        "operation": "phone",
+        "text": "1"
+      },
+      "expected": "tel:1"
+    },
+    {
       "name": "dateline bounds (175, 0)",
       "input": {
         "operation": "bounds",

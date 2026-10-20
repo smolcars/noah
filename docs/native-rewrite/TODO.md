@@ -242,7 +242,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Android M8: mirror transfer/record/string limits and oversize cooldown/cache preservation (bounded streaming/cache reads, merged-cache validation; JUnit regressions)
 
 - [x] BTC Map review — iOS: permission requested only by Locate, accessible Places in view opens merchant details, viewport/focus city re-ranking, tested web/phone sanitization (`btc-map-review` shared vectors)
-- [ ] Android M8: request location only from explicit Locate (automatic centering uses existing grant); accessible visible-merchant list/detail navigation; re-rank city results on viewport/search reopening; consume `btc-map-review.json` URL/phone/bounds cases
+- [x] Android M8: location requests remain explicit Locate only; lazy Places in view/detail navigation from dateline-aware camera bounds; re-rank cities on viewport/focus changes; shared `btc-map-review.json` URL/phone/bounds cases (including digitless phone regressions); narrow URI-only intents retain user choice of handler
 
 ## Cutover
 - [ ] Adaptive layouts (iPad / landscape / foldables) parity
