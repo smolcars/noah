@@ -1,5 +1,23 @@
 # Native Send verification
 
+## Review follow-up: blocked migration recovery (2026-10-20)
+
+Base: `feat/native-rewrite` HEAD `99a9177c09ee7da2d7ef3df716f6aff6edc731ff`.
+iOS had the same blocked-state recovery gap. Migration now retains the original
+identity-checked journal in memory until persistence succeeds, preserving original
+receipt txids for the audit rather than prematurely replacing them with migrated
+evidence. **Retry** re-attempts migration from that read-only evidence without
+rereading disk, reconciling, paying or releasing the lock. The blocked screen
+also offers the existing destructive history-check confirmation with its full
+stored-transaction/retry/double-spend warning. Audit/removal failures stay locked.
+Foreign or unverified ownership is still gated before activating evidence.
+
+`SendJournalMigrationTests` adds successful Retry after a transient write failure,
+an unavailable second read, retained original txid/version, canceled confirmation,
+and blocked override success/audit failure/removal failure. Its **6 tests / 12
+individual runs** pass in the targeted run. Existing legacy/provenance and
+round-7/8 override regressions remain intact.
+
 ## Round-8 override audit recovery and legacy evidence (2026-10-19)
 
 Unreadable `noah-send-overrides.json` data is moved to a unique sibling named

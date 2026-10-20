@@ -417,8 +417,9 @@ struct SendOutcomeView: View {
                 case .storageBlocked:
                     Text("Payment status unavailable").font(NoahFont.title)
                     Text(
-                        "Noah could not read the saved payment attempt. Sending is disabled until its status can be recovered."
+                        "Noah could not read or save the payment attempt. Sending is disabled until its status can be recovered."
                     )
+                    NoahButton(title: "Retry") { Task { await controller.checkStatus() } }
                 case .ready: EmptyView()
                 }
                 if controller.canOverride {

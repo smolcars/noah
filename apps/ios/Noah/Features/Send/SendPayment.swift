@@ -184,15 +184,17 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         reloadForWalletChange()
     }
     func reloadForWalletChange() {
+        loadAttempt(nil)
+    }
+    private func loadAttempt(_ retained: Attempt?) {
         generation += 1
         checking = false
-        attempt = nil
+        attempt = retained
         state = .ready
         message = nil
         unboundJournal = nil
         do {
-            attempt = try dependencies.read()
-            if var saved = attempt {
+            if var saved = try retained ?? dependencies.read() {
                 if let identity = dependencies.identity {
                     let current = try identity()
                     guard let owner = saved.walletIdentity else {
@@ -209,6 +211,8 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                         return
                     }
                 }
+                // Retain the original read-only evidence until migration is durable.
+                attempt = saved
                 // Older MAX receipts used the quote as the outcome; retain identity but await actual outputs.
                 if saved.payment.max, saved.payment.source == .offchain,
                    saved.receipt?.proof == .submitReturnedTxid, saved.receipt?.amountIsPending == nil {
@@ -232,7 +236,6 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                     saved.failed = false
                     saved.safetyVersion = 3
                     saved.failureMessage = "This saved payment outcome could not be verified. It may have been sent. Check history before sending again."
-                    attempt = saved
                     try dependencies.write(saved)
                 }
                 attempt = saved
@@ -241,7 +244,10 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                     ?? (saved.failed ? .failed : .uncertain)
                 message = saved.failureMessage
             }
-        } catch { state = .storageBlocked }
+        } catch {
+            state = .storageBlocked
+            message = "Unable to load saved payment status. Check your history and recipient before forgetting this attempt."
+        }
     }
     func submit(_ payment: SendPayment, quote: SendQuote, recurringKey: String? = nil, beforeSubmit: (@Sendable () throws -> Void)? = nil) {
         guard state == .ready else { return }
@@ -330,7 +336,9 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         }
     }
     func checkStatus() async {
-        guard !checking, let attempt else { return }
+        guard !checking else { return }
+        if state == .storageBlocked { loadAttempt(attempt); return }
+        guard let attempt else { return }
         guard state == .uncertain || attempt.receipt?.txid != nil else { return }
         let generation = self.generation
         checking = true
@@ -395,7 +403,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     var canOverride: Bool {
         if unboundJournal != nil { return !checking }
         guard !checking, attempt != nil else { return false }
-        if state == .uncertain { return true }
+        if state == .uncertain || state == .storageBlocked { return true }
         if case .succeeded(let receipt) = state { return receipt.broadcastRetryPending == true }
         return false
     }

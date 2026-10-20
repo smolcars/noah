@@ -75,4 +75,68 @@ import Testing
         #expect(subject.state == .uncertain && subject.attempt?.receipt == nil)
         #expect(subject.attempt?.possibleTxids == ["historical-wrong-amount"])
     }
+    @Test func failedMigrationRetainsOriginalEvidenceAndRetryPersistsWithoutPaying() async throws {
+        let storage = SendPaymentTests.Storage()
+        storage.attempt = try legacy(version: 2, method: "onchain")
+        storage.failWrite = true
+        var reads = 0
+        let subject = SendPaymentController(dependencies: .init(
+            prepare: { _, _ in Issue.record("Must not prepare"); throw SendFailure.unresolved },
+            pay: { _, _, _ in Issue.record("Must not pay"); throw SendFailure.unresolved },
+            reconcile: { _ in Issue.record("Blocked migration must not reconcile"); return .uncertain },
+            read: {
+                reads += 1
+                if reads > 1 { throw CocoaError(.fileReadNoPermission) }
+                return storage.attempt
+            }, write: { try storage.write($0) }))
+        #expect(subject.state == .storageBlocked && subject.canOverride)
+        #expect(subject.attempt?.receipt?.txid == "historical-wrong-amount")
+        #expect(subject.attempt?.safetyVersion == 2)
+        subject.acknowledge()
+        subject.submit(.init(destination: "other", method: "ark", amount: 1), quote: .init(amount: 1, fee: 0, total: 1))
+        #expect(subject.locked)
+        storage.failWrite = false
+        await subject.checkStatus()
+        #expect(subject.state == .uncertain && subject.locked)
+        #expect(storage.attempt?.safetyVersion == 3 && subject.attempt?.safetyVersion == 3)
+        #expect(subject.attempt?.receipt == nil)
+        #expect(subject.attempt?.possibleTxids == ["historical-wrong-amount"])
+        #expect(reads == 1)
+    }
+    @Test(arguments: ["audit", "remove", "none"])
+    func blockedMigrationOverrideRequiresConfirmationAuditAndSuccessfulRemoval(failure: String) throws {
+        let storage = SendPaymentTests.Storage()
+        storage.attempt = try legacy(version: 2, method: "onchain")
+        var audits: [SendOverrideAudit] = []
+        let subject = SendPaymentController(dependencies: .init(
+            prepare: { _, _ in Issue.record("Must not prepare"); throw SendFailure.unresolved },
+            pay: { _, _, _ in Issue.record("Must not pay"); throw SendFailure.unresolved },
+            reconcile: { _ in Issue.record("Must not reconcile"); return .uncertain },
+            read: { storage.attempt }, write: {
+                if $0 != nil || failure == "remove" { throw CocoaError(.fileWriteNoPermission) }
+                #expect(audits.last?.txid == "historical-wrong-amount")
+                try storage.write($0)
+            }, auditOverride: {
+                if failure == "audit" { throw CocoaError(.fileWriteNoPermission) }
+                audits.append($0)
+            }))
+        #expect(subject.state == .storageBlocked && subject.canOverride)
+        subject.acknowledge()
+        subject.startNewPaymentAfterHistoryCheck(confirmed: false)
+        #expect(subject.locked && audits.isEmpty)
+        #expect(subject.overrideWarning.contains("spend twice") && subject.overrideWarning.contains("future broadcast retries"))
+        subject.startNewPaymentAfterHistoryCheck(confirmed: true)
+        #expect(subject.locked == (failure != "none"))
+        if failure != "none" {
+            #expect(subject.attempt?.receipt?.txid == "historical-wrong-amount")
+            #expect(subject.attempt?.safetyVersion == 2 && storage.attempt?.safetyVersion == 2)
+        } else {
+            #expect(storage.attempt == nil && subject.attempt == nil)
+            let audit = try #require(audits.last)
+            #expect(audit.txid == "historical-wrong-amount")
+            #expect(audit.title == SendOverrideAudit.titleText)
+            #expect(audit.warning == SendOverrideAudit.warningText)
+            #expect(audit.confirmation == SendOverrideAudit.confirmationText)
+        }
+    }
 }
