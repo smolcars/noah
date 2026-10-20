@@ -53,7 +53,7 @@ fun Onboarding(model: AppModel) {
             NoahButton("I decline", !model.busy, secondary = true) { model.step = "welcome" }
         }
         "mnemonic" -> MnemonicScreen(model)
-        "email" -> EmergencyEmailScreen(model) { model.step = com.noahwallet.ui.launch.PlatformGateRules.afterEmail(
+        "email" -> EmergencyEmailScreen(model, fromOnboarding = true) { model.step = com.noahwallet.ui.launch.PlatformGateRules.afterEmail(
             com.noahwallet.ui.launch.PlatformAccess.unifiedPush(model.getApplication()),
             com.noahwallet.ui.launch.PlatformAccess.batteryEnabled(model.getApplication())) }
         "unified-push" -> com.noahwallet.ui.launch.UnifiedPushScreen(fromOnboarding = true) { model.step = "battery" }
@@ -156,12 +156,14 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
 }
 
 @Composable
-fun EmergencyEmailScreen(model: AppModel, onContinue: () -> Unit) {
+fun EmergencyEmailScreen(model: AppModel, fromOnboarding: Boolean = false, onContinue: () -> Unit) {
     var email by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }
     var sent by rememberSaveable { mutableStateOf(false) }
     var registered by remember { mutableStateOf(false) }
     val focus = LocalFocusManager.current
+    val presentation = EmergencyEmailPresentation(fromOnboarding, model.server.state.isEmailVerified == true, model.server.state.emailAddress)
+    val context = LocalContext.current
     fun register() = model.action("Failed to register with server. Please try again.") {
         model.server.ensureRegistered(); registered = true
     }
@@ -192,13 +194,13 @@ fun EmergencyEmailScreen(model: AppModel, onContinue: () -> Unit) {
             TextButton({ sent = false; code = "" }, enabled = !model.busy) { Text(tr("Change email address")) }
             Text(tr("The verification code will expire in 10 minutes."), style = MaterialTheme.typography.bodySmall)
         } else {
-            Text(tr("Email is optional. Noah uses it only for urgent wallet safety messages, such as when your VTXOs are close to expiring and you need to come online to refresh them."))
+            Text(presentation.explanation(context))
             OutlinedTextField(email, { email = it }, label = { Text(tr("Email Address")) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth(),
                 enabled = !model.busy, singleLine = true)
             if (!registered) NoahButton("Retry registration", !model.busy, secondary = true) { register() }
             NoahButton(if (model.busy) "Please wait…" else "Send Verification Code", registered && email.isNotBlank() && !model.busy) { send() }
-            NoahButton("Continue without email", registered && !model.busy, secondary = true) { focus.clearFocus(); onContinue() }
+            if (presentation.canSkip) NoahButton("Continue without email", registered && !model.busy, secondary = true) { focus.clearFocus(); onContinue() }
         }
     }
 }
@@ -230,5 +232,19 @@ fun LightningScreen(model: AppModel, onContinue: (suspend () -> Unit)? = null) {
             }
         }
         NoahButton("Skip", !model.busy, secondary = true) { finish() }
+    }
+}
+
+internal data class EmergencyEmailPresentation(val fromOnboarding: Boolean, val verified: Boolean, val email: String?) {
+    val canSkip get() = fromOnboarding
+    fun explanation(context: Context): String {
+        if (!fromOnboarding && verified) {
+            if (!email.isNullOrEmpty()) return com.noahwallet.localization.L10n.text(context,
+                "Your current email, {email}, will stay active until the new email is verified.", email)
+            return com.noahwallet.localization.L10n.text(context,
+                "Your current email will stay active until the new email is verified.")
+        }
+        return com.noahwallet.localization.L10n.text(context,
+            "Email is optional. Noah uses it only for urgent wallet safety messages, such as when your VTXOs are close to expiring and you need to come online to refresh them.")
     }
 }
