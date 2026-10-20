@@ -18,6 +18,7 @@ import Observation
         var sync: @Sendable ([Components.Schemas.RecurringPaymentScheduleEntry]) async throws -> Void = { _ in }
         var notifications: @Sendable ([RecurringPayment], RecurringPayment?) async -> Void = { _, _ in }
         var refresh: @Sendable () async -> Void = {}
+        var mutation: WalletMutationGate = .shared
     }
     struct Review: Identifiable {
         let id = UUID()
@@ -56,10 +57,15 @@ import Observation
         await work.value
         task = nil
     }
-    private func boundState() throws -> RecurringStore.State {
+    private var executionBinding: RecurringStore.Binding?
+    private func boundState() async throws -> RecurringStore.State {
+        try await d.mutation.withLock { @MainActor [self] in try boundStateNow() }
+    }
+    private func boundStateNow() throws -> RecurringStore.State {
         try d.allowed()
-        try d.store.checkAutomationAllowed()
         let owner = try d.binding()
+        guard executionBinding == nil || executionBinding == owner else { throw NoWallet() }
+        try d.store.checkAutomationAllowed()
         var state = try d.store.load()
         if state.binding == nil || (state.binding != owner && state.schedules.isEmpty) {
             // First RN upgrade only. All existing schedules are retained, including in-flight ones.
@@ -82,7 +88,7 @@ import Observation
             throw error
         }
         for var schedule in state.schedules.values where !schedule.unsupportedStorage && schedule.lastError != RecurringPolicyLedger.message {
-            let current = try boundState()
+            let current = try await boundState()
             guard current.binding == state.binding, current.schedules[schedule.id] == schedule else { continue }
             let entry = entries[schedule.id]
             let legacyUncertain = try d.journal.legacyUncertain(binding: state.binding!, scheduleID: schedule.id)
@@ -107,19 +113,30 @@ import Observation
     private func run(manual: Bool, approval: Review?) async {
         running = true
         error = nil
-        defer { running = false; reload() }
+        var noWallet = false
+        defer { executionBinding = nil; running = false; if !noWallet { reload() } }
         do {
-            try d.allowed()
-            let automationGeneration = d.automationGeneration()
-            let durableGeneration = try d.store.automationGeneration()
-            try await d.ensureOpen()
-            try refreshDates()
-            let initial = try boundState()
+            let (automationGeneration, durableGeneration) = try await d.mutation.withLock { @MainActor [self] in
+                try d.allowed()
+                let owner = try d.binding()
+                let generation = d.automationGeneration()
+                // Revalidate after waiting for lifecycle mutation, before touching authority.
+                try d.allowed()
+                guard try d.binding() == owner else { throw NoWallet() }
+                let durableGeneration = try d.store.automationGeneration()
+                try await d.ensureOpen()
+                try d.allowed()
+                guard try d.binding() == owner else { throw NoWallet() }
+                executionBinding = owner
+                return (generation, durableGeneration)
+            }
+            try await refreshDates()
+            let initial = try await boundState()
             try await recoverMarkers(initial)
             for id in initial.schedules.keys.sorted() {
                 if let approval, approval.schedule.id != id { continue }
                 guard RecurringSubmissionBudget.available, RecurringExecutionBudget.available else { break }
-                guard var schedule = try boundState().schedules[id], !schedule.unsupportedStorage else { continue }
+                guard var schedule = try await boundState().schedules[id], !schedule.unsupportedStorage else { continue }
                 guard schedule.validPolicy else { throw SendFailure.invalid }
                 var planning = schedule
                 if let approval {
@@ -147,7 +164,7 @@ import Observation
                         (payment, quote, fees) = (approval.payment, approval.quote, nil)
                     } else { (payment, quote, fees) = try await d.quote(schedule) }
                     guard RecurringSubmissionBudget.available, RecurringExecutionBudget.available else { break }
-                    let state = try boundState()
+                    let state = try await boundState()
                     guard let latest = state.schedules[id], latest == schedule,
                           planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual) == plan,
                           quote.walletIdentity == state.binding?.wallet else { continue }
@@ -190,7 +207,8 @@ import Observation
                         }
                     }
                     try await settle(entry, original: marked, retainReceipt: approval != nil)
-                } catch {
+                } catch is NoWallet { throw NoWallet() }
+                catch {
                     // Only a failure before the independent marker exists is automatically retryable.
                     let entry = try d.journal.load()[id]
                     if let entry, !entry.resolved, entry.plan == plan,
@@ -203,10 +221,10 @@ import Observation
                     }
                 }
             }
-            try refreshDates()
+            try await refreshDates()
             await syncServer()
             await d.refresh()
-        } catch is NoWallet { return }
+        } catch is NoWallet { noWallet = true; return }
         catch { self.error = error.localizedDescription }
         await d.notifications((try? d.store.load().schedules.values.map { $0 }) ?? [], nil)
     }
@@ -290,17 +308,17 @@ import Observation
     func review(_ id: String) async throws -> Review {
         guard !running, !d.controller.locked else { throw SendFailure.unresolved }
         try await d.ensureOpen()
-        guard let schedule = try boundState().schedules[id], schedule.status == "needs_approval" else { throw SendFailure.invalid }
+        guard let schedule = try await boundState().schedules[id], schedule.status == "needs_approval" else { throw SendFailure.invalid }
         var planning = schedule; planning.status = "active"
         let plan = planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: true)
         guard plan.kind == "pay" else { throw RecurringError.message("This payment is no longer due.") }
         let (payment, quote, _) = try await d.quote(schedule)
-        guard try boundState().schedules[id] == schedule else { throw SendFailure.invalid }
+        guard try await boundState().schedules[id] == schedule else { throw SendFailure.invalid }
         return Review(schedule: schedule, plan: plan, payment: payment, quote: quote)
     }
     func save(_ input: RecurringPayment, editing: Bool) async throws {
         var schedule = input
-        let state = try boundState()
+        let state = try await boundState()
         let reapproval = editing && state.schedules[schedule.id]?.lastError == RecurringPolicyLedger.message
         if reapproval { try requireReapprovalSafe(schedule.id) }
         if editing {
@@ -324,7 +342,7 @@ import Observation
         await changed()
     }
     func resume(_ id: String) async throws {
-        _ = try boundState()
+        _ = try await boundState()
         try rejectLegacyUncertainty(id)
         guard var schedule = try d.store.load().schedules[id], schedule.status != "completed" else { return }
         guard !schedule.unsupportedStorage else { throw RecurringError.message(RecurringPayment.unsupportedMessage) }
@@ -349,7 +367,7 @@ import Observation
     }
     func overrideAndResume(_ id: String, confirmed: Bool) async throws {
         guard confirmed, !running else { return }
-        _ = try boundState()
+        _ = try await boundState()
         guard var schedule = try d.store.load().schedules[id] else { return }
         guard !schedule.unsupportedStorage else { throw RecurringError.message(RecurringPayment.unsupportedMessage) }
         try rejectLegacyUncertainty(id)
@@ -380,8 +398,8 @@ import Observation
         try RestoreTransaction.fullSync(file)
         try RestoreTransaction.fullSync(file.deletingLastPathComponent())
     }
-    private func refreshDates() throws {
-        for var schedule in try boundState().schedules.values where !schedule.unsupportedStorage && schedule.status != "completed" && schedule.lastError != RecurringPolicyLedger.message {
+    private func refreshDates() async throws {
+        for var schedule in try await boundState().schedules.values where !schedule.unsupportedStorage && schedule.status != "completed" && schedule.lastError != RecurringPolicyLedger.message {
             let next = schedule.next(schedule.nextOccurrenceIndex, zone: d.zone())
             if next != schedule.nextRunAt {
                 schedule.nextRunAt = next
@@ -390,7 +408,7 @@ import Observation
         }
     }
     func timeChanged() async {
-        do { try refreshDates(); await changed() }
+        do { try await refreshDates(); await changed() }
         catch is NoWallet { return }
         catch { self.error = error.localizedDescription }
     }
@@ -409,13 +427,13 @@ import Observation
     private func performSync() async {
         do {
             for _ in 0..<20 {
-                try refreshDates()
-                let state = try boundState()
+                try await refreshDates()
+                let state = try await boundState()
                 let entries = Self.entries(state.schedules.values.map { $0 })
                 try d.store.setPending(true)
                 try await d.sync(entries)
-                try refreshDates()
-                let latest = try boundState()
+                try await refreshDates()
+                let latest = try await boundState()
                 if Self.entries(latest.schedules.values.map { $0 }) == entries {
                     try d.store.setPending(false); syncPending = false; return
                 }
