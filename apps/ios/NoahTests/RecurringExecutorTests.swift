@@ -22,6 +22,7 @@ import Testing
         let calls = Locked(0)
         var saved: SendPaymentController.Attempt?
         var writeReceiptFails = false
+        var writeRemovalFails = false
         var ambiguous = false
         var resolution: SendPaymentController.Resolution = .uncertain
         var statusChecks = 0
@@ -31,6 +32,7 @@ import Testing
         var feeFetches = 0
         var feeFetchFails = false
         var notified: [RecurringPayment] = []
+        var notificationHook: (@MainActor (RecurringPayment) async throws -> Void)?
         var reservation: (@MainActor (@escaping @MainActor @Sendable () async -> Void) async throws -> Void)?
         var preflight: (@MainActor () async throws -> Void)?
         var beforePay: (@MainActor () async throws -> Void)?
@@ -69,6 +71,7 @@ import Testing
                 read: { [self] in saved },
                 write: { [self] in
                     if writeReceiptFails && $0?.receipt != nil { throw CocoaError(.fileWriteUnknown) }
+                    if writeRemovalFails && $0 == nil { throw CocoaError(.fileWriteUnknown) }
                     saved = $0
                 },
                 identity: { owner.withLock { $0.wallet } },
@@ -102,8 +105,8 @@ import Testing
             (SendPayment(destination: schedule.destination, method: method, amount: schedule.amountSat),
              .init(amount: schedule.amountSat, fee: fee, total: schedule.amountSat + fee, walletIdentity: owner.withLock { $0.wallet }), fees)
         }
-        func notification(_ schedules: [RecurringPayment], _ result: RecurringPayment?) {
-            if let result { notified.append(result) } else { reminders = schedules }
+        func notification(_ schedules: [RecurringPayment], _ result: RecurringPayment?) async {
+            if let result { notified.append(result); try? await notificationHook?(result) } else { reminders = schedules }
         }
         func reserve(_ work: @escaping @MainActor @Sendable () async -> Void) async throws {
             if let reservation { try await reservation(work) } else { await work() }
@@ -677,6 +680,120 @@ import Testing
         #expect(h.calls.withLock { $0 } == 0)
         #expect(try h.journal.load()[schedule.id]?.consumed != true)
         #expect(!h.controller.locked)
+    }
+
+    @Test func oldSuccessfulReceiptCannotSettleAnEditedPolicyRevision() async throws {
+        let h = try Harness()
+        var original = try h.add()
+        original.startAt = h.now; original.nextRunAt = h.now; original.amountSat = 1000
+        try h.store.upsert(original)
+        h.writeRemovalFails = true
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 1)
+        #expect(try h.store.load().schedules[original.id]?.occurrencesPaid == 1)
+        #expect(h.controller.attempt?.receipt != nil)
+        h.writeRemovalFails = false
+        var input = original
+        input.destination = "different-recipient"; input.amountSat = 2000; input.maxOccurrences = 1
+        try await h.executor.save(input, editing: true)
+        await h.executor.execute()
+        let edited = try #require(h.store.load().schedules[original.id])
+        #expect(edited.status == "needs_attention" && edited.occurrencesPaid == 0)
+        #expect(try h.journal.load()[original.id]?.policyRevision != edited.nativeRevision)
+        let notificationsBefore = h.notified
+        await h.executor.checkStatus(original.id)
+        #expect(try h.store.load().schedules[original.id] == edited,
+                "An old receipt must not advance the edited recipient/amount")
+        #expect(try h.journal.load()[original.id]?.resolved == true)
+        #expect(try h.journal.load()[original.id]?.consumed == true)
+        #expect(!h.controller.locked && h.controller.attempt == nil)
+        #expect(h.notified == notificationsBefore, "Checking A must not announce the edited payment as sent")
+        await h.executor.checkStatus(original.id)
+        await h.executor.execute()
+        #expect(try h.store.load().schedules[original.id] == edited)
+        #expect(h.calls.withLock { $0 } == 1)
+    }
+
+    @Test(arguments: ["success", "alreadyPaid", "failed", "uncertain"])
+    func statusCheckOutcomesCannotMutateAnotherPolicyRevision(outcome: String) async throws {
+        let h = try Harness(); let original = try h.add(); h.ambiguous = true
+        await h.executor.execute()
+        var edited = original
+        edited.destination = "different-recipient"; edited.amountSat = 2000
+        edited.nativeRevision = UUID(); edited.status = "needs_attention"; edited.maxOccurrences = 1
+        try h.store.upsert(edited)
+        let notificationsBefore = h.notified
+        switch outcome {
+        case "success": h.resolution = .paid(.init(amount: original.amountSat, proof: .submitReturnedArkSuccess))
+        case "alreadyPaid": h.resolution = .alreadyPaid(.init(amount: original.amountSat, movementID: 1, proof: .actualMovement))
+        case "failed": h.resolution = .failed
+        default: h.resolution = .uncertain
+        }
+        await h.executor.checkStatus(original.id)
+        #expect(try h.store.load().schedules[original.id] == edited)
+        #expect(h.notified == notificationsBefore)
+        #expect(try h.journal.load()[original.id]?.resolved == (outcome != "uncertain"))
+        #expect((try h.journal.load()[original.id]?.consumed == true) == ["success", "alreadyPaid"].contains(outcome))
+        #expect(h.controller.locked == (outcome == "uncertain"))
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 1)
+    }
+
+    @Test(arguments: ["edit", "replace", "restore", "rebind", "failureLatch", "suspend"])
+    func changesAfterSubmissionKeepSettlementOwnership(action: String) async throws {
+        let h = try Harness(); let original = try h.add()
+        let owner = h.owner.withLock { $0 }
+        var changed: RecurringPayment?
+        h.afterPay = {
+            var latest = try #require(h.store.load().schedules[original.id])
+            switch action {
+            case "edit": latest.destination = "other"; latest.amountSat = 2000; latest.nativeRevision = UUID(); try h.store.upsert(latest)
+            case "replace": h.owner.withLock { $0.wallet.fingerprint = "other" }
+            case "restore": h.owner.withLock { $0.instance = UUID() }
+            case "rebind": try h.store.bind(.init(wallet: owner.wallet, instance: UUID()))
+            case "failureLatch":
+                latest.status = "needs_attention"; latest.lastError = "Safety storage failed"; latest.consecutiveFailures = 3
+                try h.store.upsert(latest)
+            default: h.stopped.withLock { $0 = true }
+            }
+            changed = try h.store.load().schedules[original.id]
+        }
+        await h.executor.execute()
+        let saved = try #require(h.store.load().schedules[original.id])
+        if ["edit", "replace", "restore", "rebind"].contains(action) { #expect(saved == changed) }
+        else {
+            #expect(saved.occurrencesPaid == 1)
+            if action == "failureLatch" {
+                #expect(saved.status == "needs_attention" && saved.consecutiveFailures == 3 && saved.lastError == "Safety storage failed")
+            }
+        }
+        #expect((try h.journal.load()[original.id]?.consumed == true) == !["replace", "restore", "rebind"].contains(action))
+        if action == "edit" {
+            #expect(h.notified.last?.destination == original.destination && h.notified.last?.amountSat == original.amountSat)
+        }
+        h.owner.withLock { $0 = owner }
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 1)
+    }
+
+    @Test func recoveryNotificationSuspensionCannotRecreateCancelledPolicy() async throws {
+        let h = try Harness(); let first = try h.add()
+        var second = first; second.id = "second"
+        try h.store.upsert(second)
+        try h.marker(first, mmkv: true); try h.marker(second, mmkv: true)
+        var cancelled: String?
+        h.notificationHook = { result in
+            guard cancelled == nil else { return }
+            let id = result.id == first.id ? second.id : first.id
+            cancelled = id
+            await Task.yield()
+            try await h.executor.cancel(id)
+        }
+        await h.executor.execute()
+        let id = try #require(cancelled)
+        #expect(try h.store.load().schedules[id] == nil)
+        #expect(h.notified.count == 1)
+        #expect(h.calls.withLock { $0 } == 0)
     }
 
 }

@@ -78,6 +78,8 @@ import Observation
             throw error
         }
         for var schedule in state.schedules.values where !schedule.unsupportedStorage {
+            let current = try boundState()
+            guard current.binding == state.binding, current.schedules[schedule.id] == schedule else { continue }
             let entry = entries[schedule.id]
             let legacyUncertain = try d.journal.legacyUncertain(binding: state.binding!, scheduleID: schedule.id)
             let pendingMarker = entry.map { !$0.resolved && $0.binding == state.binding } == true
@@ -184,12 +186,9 @@ import Observation
                 } catch {
                     // Only a failure before the independent marker exists is automatically retryable.
                     let entry = try d.journal.load()[id]
-                    if entry?.resolved == false, entry?.plan.occurrenceIndex == plan.occurrenceIndex {
-                        if var current = try d.store.load().schedules[id] {
-                            current.status = "needs_attention"
-                            current.lastError = "This payment may have been sent. Check its status before making another payment."
-                            try d.store.upsert(current)
-                        }
+                    if let entry, !entry.resolved, entry.plan == plan,
+                       entry.binding == initial.binding, entry.policyRevision == schedule.nativeRevision {
+                        try await markUncertain(entry)
                     } else if let current = try d.store.load().schedules[id], current == schedule {
                         schedule.failure(plan, message: error.localizedDescription, retryable: true, now: d.now())
                         try d.store.upsert(schedule)
@@ -203,57 +202,55 @@ import Observation
         } catch { self.error = error.localizedDescription }
         await d.notifications((try? d.store.load().schedules.values.map { $0 }) ?? [], nil)
     }
+    private func markUncertain(_ entry: RecurringJournal.Entry, message: String? = nil) async throws {
+        let state = try d.store.load()
+        guard try d.binding() == entry.binding, state.binding == entry.binding,
+              var latest = state.schedules[entry.scheduleID], latest.nativeRevision == entry.policyRevision else { return }
+        latest.status = "needs_attention"
+        latest.lastError = message ?? "This payment may have been sent. Check its status before making another payment."
+        try d.store.upsert(latest)
+        await d.notifications([], latest)
+    }
     private func settle(_ entry: RecurringJournal.Entry, original: RecurringPayment, retainReceipt: Bool = false) async throws {
-        guard d.controller.attempt?.recurringOccurrenceKey == entry.key else { return }
-        guard try d.binding() == entry.binding else { return }
-        guard var latest = try d.store.load().schedules[entry.scheduleID] else {
-            // Cancellation removes policy, never money already sent or its receipt.
-            switch d.controller.state {
-            case .succeeded(let receipt) where !receipt.isUnresolved && receipt.broadcastRetryPending != true:
-                var resolved = entry; resolved.resolved = true; resolved.consumed = true; try d.journal.save(resolved)
-                if !retainReceipt { d.controller.acknowledge() }
-                await d.notifications([], original)
-            case .failed:
-                var resolved = entry; resolved.resolved = true; try d.journal.save(resolved)
-                if !retainReceipt { d.controller.acknowledge() }
-            default: break
-            }
-            return
-        }
-        switch d.controller.state {
+        guard let attempt = d.controller.attempt, attempt.recurringOccurrenceKey == entry.key else { return }
+        let state = try d.store.load()
+        guard try d.binding() == entry.binding, state.binding == entry.binding else { return }
+        let outcome = d.controller.state
+        let success: Bool
+        let paid: Bool
+        switch outcome {
         case .succeeded(let receipt) where !receipt.isUnresolved && receipt.broadcastRetryPending != true:
-            var result = original
-            if result.status == "needs_approval" { result.status = "active" }
-            result.success(entry.plan, now: d.now(), zone: d.zone())
-            if latest.status != "active", latest.status != "needs_approval", result.status == "active" { result.status = latest.status }
-            // Editing an in-flight policy is prohibited; a concurrent cancel is never recreated.
-            try d.store.upsert(result)
-            var resolved = entry; resolved.resolved = true; resolved.consumed = true
-            try d.journal.save(resolved)
-            if !retainReceipt { d.controller.acknowledge() }
-            await d.notifications([], result)
-        case .alreadyPaid:
-            latest.failure(entry.plan, message: "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.", retryable: false, now: d.now())
-            try d.store.upsert(latest)
-            var resolved = entry; resolved.resolved = true; resolved.consumed = true
-            try d.journal.save(resolved)
-            if !retainReceipt { d.controller.acknowledge() }
-            await d.notifications([], latest)
-        case .failed:
-            latest.inFlight = nil
-            latest.failure(entry.plan, message: d.controller.message ?? "No payment was submitted.", retryable: true, now: d.now())
-            try d.store.upsert(latest)
-            var resolved = entry; resolved.resolved = true
-            try d.journal.save(resolved)
-            if !retainReceipt { d.controller.acknowledge() }
-        case .submitting:
-            return
-        default:
-            latest.status = "needs_attention"
-            latest.lastError = d.controller.message ?? "This payment may have been sent. Check its status before making another payment."
-            try d.store.upsert(latest)
-            await d.notifications([], latest)
+            success = true; paid = true
+        case .alreadyPaid: success = false; paid = true
+        case .submitting: return
+        default: success = false; paid = false
         }
+        guard paid || outcome == .failed else { try await markUncertain(entry, message: d.controller.message); return }
+        // Consume the paid revision before advancing MMKV or releasing Send, even after an edit/cancel.
+        var resolved = entry; resolved.resolved = true; resolved.consumed = paid
+        try d.journal.save(resolved)
+        var notification: RecurringPayment?
+        if var latest = state.schedules[entry.scheduleID], latest.nativeRevision == entry.policyRevision {
+            if success {
+                let stopped = latest
+                latest.status = "active"
+                latest.success(entry.plan, now: d.now(), zone: d.zone())
+                if stopped.status != "active", stopped.status != "needs_approval", latest.status == "active" {
+                    latest.status = stopped.status; latest.consecutiveFailures = stopped.consecutiveFailures
+                    latest.lastError = stopped.lastError; latest.retryNotBefore = stopped.retryNotBefore
+                }
+            } else {
+                latest.failure(entry.plan, message: paid ? "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming." : d.controller.message ?? "No payment was submitted.", retryable: !paid, now: d.now())
+            }
+            try d.store.upsert(latest)
+            if paid { notification = latest }
+        } else if success, original.nativeRevision == entry.policyRevision {
+            var result = original; result.status = "active"
+            result.success(entry.plan, now: d.now(), zone: d.zone())
+            notification = result
+        }
+        if !retainReceipt { d.controller.acknowledge() }
+        if let notification { await d.notifications([], notification) }
     }
     func checkStatus(_ id: String) async {
         guard !running else { return }
