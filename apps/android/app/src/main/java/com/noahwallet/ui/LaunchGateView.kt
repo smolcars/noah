@@ -76,6 +76,7 @@ fun LaunchGateView() {
     androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.background) {
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().then(Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing))) {
             when {
+                state == LaunchState.seedWithoutWalletData -> RestoreWalletScreen(model, useStoredSeed = true)
                 (model.open || model.isWalletSuspended) && model.onboarded -> NoahApp(model)
                 state == LaunchState.onboarding || (model.open && !model.onboarded) -> Onboarding(model)
                 else -> LaunchMessage(state, model.error != null, model::start, model)
@@ -111,7 +112,7 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
         LaunchState.existingWallet -> if (openFailed) {
             R.string.launch_open_failed to R.string.launch_open_failed_message
         } else R.string.launch_loading to R.string.launch_loading_message
-        LaunchState.restoreIncomplete -> R.string.launch_open_failed to R.string.launch_open_failed_message
+        LaunchState.restoreIncomplete -> R.string.launch_restore_incomplete to R.string.launch_restore_incomplete_message
         LaunchState.onboarding -> R.string.launch_welcome to R.string.launch_onboarding_message
         LaunchState.seedWithoutWalletData -> R.string.launch_seed_found to R.string.launch_seed_found_message
         LaunchState.walletDataWithoutSeed -> R.string.launch_seed_needed to R.string.launch_seed_needed_message

@@ -27,7 +27,7 @@ import com.noahwallet.services.server.Nostr
 
 @Composable
 fun Onboarding(model: AppModel) {
-    BackHandler { if (!model.busy && model.step in listOf("beta", "restore")) model.step = "welcome" }
+    BackHandler { if (!model.busy && model.restore.canLeave && model.step in listOf("beta", "restore")) model.step = "welcome" }
     when (model.step) {
         "welcome" -> NoahForm("Welcome to Noah") {
             Spacer(Modifier.height(80.dp))
@@ -35,10 +35,7 @@ fun Onboarding(model: AppModel) {
             NoahButton("Create Wallet") { model.step = "beta" }
             NoahButton("Restore Wallet", secondary = true) { model.step = "restore" }
         }
-        "restore" -> NoahForm("Restore Wallet") {
-            Text("Coming soon in the native app.")
-            NoahButton("Back", secondary = true) { model.step = "welcome" }
-        }
+        "restore" -> RestoreWalletScreen(model)
         "beta" -> NoahForm("Noah is in beta") {
             Text("Noah is still in beta. There is a possibility you could lose money. Only deposit funds you are willing to lose.")
             NoahButton(if (model.busy) "Creating wallet…" else "I accept", !model.busy) {

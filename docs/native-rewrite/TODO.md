@@ -110,7 +110,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Unpack limits: streaming 1 GiB cap (headers can lie), CRC-32 verified per entry — iOS
 - [x] Restore — Android (same journal semantics; durable seed read-back, launch recovery, failure/race tests)
 - [x] Restore UI (RestoreWalletScreen); seed `backup-storage` after a restore (`BackupCoordinator.seedRestored`) — iOS
-- [ ] Restore UI — Android
+- [x] Restore UI — Android (private 12-word input/paste/suggestions, staged progress, fixed issue mapping, commit-safe completion and `backup-storage` seeding; saved-phrase and pending-journal launch gates)
 - [x] Backup coordinator: single in-flight, 5 s debounce, generation counter, backoff 15 s → 15 min with jitter, suspension gates; `backup-storage` with RN's actions; triggers from wallet state changes (session-owned), foreground and push — iOS
 - [x] Backup coordinator — Android (generation counter, manual-clock tests, foreground/state-change/push triggers)
 - [x] v1 legacy extraction, bounded streaming download, startup scratch sweep and Auto Backup/device-transfer exclusions — Android
@@ -130,6 +130,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Biometric app lock on launch and foreground, device-credential fallback; Settings seed re-auth and FLAG_SECURE — Android
 - [ ] Tab shell: Home, Receive, Send, History (Liquid Glass tab bar on iOS 26)
 - [x] OnboardingScreen create/restore — iOS (language picker waits for 0.8 translations)
+- [x] Onboarding create/restore — Android (restore from Welcome or a securely stored phrase; never offer creation while restore/deletion recovery is pending)
 - [x] Create-or-resume logic (`WalletCreator`, RN `walletCreation` test cases ported) — iOS
 - [x] `deriveStoreNextKeypair` + key-0 public key (`staticVtxoPubkey`) on creation, as RN does — iOS
 - [x] BetaWarningScreen (accept before create, no double create) — iOS

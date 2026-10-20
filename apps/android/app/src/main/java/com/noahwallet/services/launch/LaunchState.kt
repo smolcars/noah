@@ -22,7 +22,8 @@ enum class LaunchState {
     }
 
     companion object {
-        fun resolve(seed: SeedStatus, walletDatabaseExists: Boolean): LaunchState = when (seed) {
+        fun resolve(seed: SeedStatus, walletDatabaseExists: Boolean, restorePending: Boolean = false,
+            deletionPending: Boolean = false): LaunchState = if (restorePending || deletionPending) restoreIncomplete else when (seed) {
             SeedStatus.unavailable -> secureStorageUnavailable
             SeedStatus.present -> if (walletDatabaseExists) existingWallet else seedWithoutWalletData
             SeedStatus.absent -> if (walletDatabaseExists) walletDataWithoutSeed else onboarding
@@ -31,6 +32,8 @@ enum class LaunchState {
         suspend fun current(context: Context, variant: String = BuildConfig.APP_VARIANT): LaunchState = resolve(
             SeedStatus.from(SeedStorage(context, variant).read()),
             WalletDataLocation(context.filesDir, variant).databaseExists,
+            WalletDataLocation(context.filesDir, variant).restorePending,
+            WalletDataLocation(context.filesDir, variant).deletionMarker.exists(),
         )
     }
 }

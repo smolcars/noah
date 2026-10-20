@@ -9,10 +9,12 @@
   <string name="history">History</string>
   <string name="placeholder">Coming soon</string>
   <string name="build_variant">Build: %1$s</string>
+    <string name="launch_restore_incomplete">Restore didn\'t finish</string>
+    <string name="launch_restore_incomplete_message">Noah couldn\'t finish or undo an interrupted restore. Your wallet files were kept. Unlock your device, then restart Noah to recover safely.</string>
     <string name="launch_welcome">Welcome to Noah</string>
     <string name="launch_onboarding_message">Onboarding lands in M1.</string>
     <string name="launch_seed_found">Recovery phrase found</string>
-    <string name="launch_seed_found_message">A recovery phrase from a previous install is stored on this device. Restoring it lands in M1.</string>
+    <string name="launch_seed_found_message">A recovery phrase from a previous install is stored on this device. Use it to restore your wallet from its backup.</string>
     <string name="launch_seed_needed">Recovery phrase needed</string>
     <string name="launch_seed_needed_message">Wallet data exists on this device but its recovery phrase could not be found.</string>
     <string name="launch_unlock">Unlock your device</string>

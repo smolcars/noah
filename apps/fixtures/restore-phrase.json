@@ -1,0 +1,44 @@
+{
+  "cases": [
+    {
+      "name": "valid public vector",
+      "input": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "expected": true
+    },
+    {
+      "name": "checksum invalid",
+      "input": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon",
+      "expected": false
+    },
+    {
+      "name": "unknown word",
+      "input": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon notaword",
+      "expected": false
+    },
+    {
+      "name": "too many",
+      "input": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about about",
+      "expected": false
+    },
+    {
+      "name": "empty",
+      "input": "",
+      "expected": false
+    },
+    {
+      "name": "normalized uppercase whitespace",
+      "input": "\nABANDON\t\nABANDON\t\nABANDON\t\nABANDON\t\nABANDON\t\nABANDON\t\nABANDON\t\nABANDON\t\nABANDON\t\nABANDON\t\nABANDON\t\nABOUT ",
+      "expected": true
+    },
+    {
+      "name": "unicode compatibility",
+      "input": "\u3000abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon \uff21\uff22\uff2f\uff35\uff34\u00a0",
+      "expected": true
+    },
+    {
+      "name": "second public vector",
+      "input": "legal winner thank year wave sausage worth useful legal winner thank yellow",
+      "expected": true
+    }
+  ]
+}

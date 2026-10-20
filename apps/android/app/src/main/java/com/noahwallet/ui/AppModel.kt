@@ -10,6 +10,7 @@ import com.noahwallet.services.AppServices
 import com.noahwallet.services.launch.LaunchState
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.*
+import com.noahwallet.services.backup.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 
@@ -37,6 +38,48 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         private set
     var localeIdentifier by mutableStateOf(com.noahwallet.services.storage.LegacyLocale.read(application) ?: "en")
         private set
+
+    val restore = RestoreFlow(
+        restore = { phrase, progress ->
+            val location = WalletDataLocation(getApplication<Application>().filesDir, BuildConfig.APP_VARIANT)
+            if (location.restorePending || location.deletionMarker.exists()) throw RestoreCompletion.RestartRequired()
+            if (location.hasAnyData) throw WalletSession.OpenError(WalletSession.OpenFailure.walletDatabaseExists)
+            check(!open && !isWalletSuspended)
+            services.restorer().restore(phrase, progress)
+        },
+        complete = { outcome ->
+            RestoreCompletion(
+                loadState = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState() },
+                saveState = { settings.setPersistedState(it, PersistedWalletState.key, 0); settings.sync() },
+                seedRestored = services.backupCoordinator::seedRestored,
+                recover = services::recoverRestore,
+                openWallet = {
+                    services.tokens.clear()
+                    withContext(Dispatchers.IO) { services.ensureWalletOpen() }
+                    open = true; onboarded = true; launchState = LaunchState.existingWallet
+                    refresh(); services.startServerServices()
+                },
+            ).finish(outcome)
+        },
+    )
+
+    fun restoreWallet(phrase: String? = null) {
+        if (busy || !restore.canLeave || open || isWalletSuspended ||
+            launchState !in setOf(LaunchState.onboarding, LaunchState.seedWithoutWalletData)) return
+        busy = true
+        viewModelScope.launch {
+            try {
+                val mnemonic = phrase ?: withContext(Dispatchers.IO) {
+                    when (val result = SeedStorage(getApplication(), BuildConfig.APP_VARIANT).read()) {
+                        is SecretResult.Found -> result.value
+                        else -> throw WalletRestorer.Failure(WalletRestorer.Reason.secureStorageUnavailable)
+                    }
+                }
+                restore.run(mnemonic)
+            } catch (failure: Exception) { restore.reject(RestoreIssue.from(failure)) }
+            finally { busy = false }
+        }
+    }
 
     val settingsShares = com.noahwallet.services.sharing.SettingsShareFiles.live(application)
         .also { it.sweep() }
@@ -87,7 +130,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
             throw failure
         }
         history.clear(); repeatPayment = null
-        walletLock.reset()
+        walletLock.reset(); restore.reset()
         open = false; onboarded = false; isWalletSuspended = false; summary = null
         hidden = false; amountUnit = BitcoinAmountUnit.bip177; preferredCurrency = "USD"; localeIdentifier = "en"
         step = "welcome"; launchState = LaunchState.onboarding
@@ -108,7 +151,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
     } ?: JsonObject(emptyMap())
 
     fun start() {
-        if (starting || open || (isWalletSuspended && onboarded)) return
+        if (starting || busy || !restore.canLeave || open || (isWalletSuspended && onboarded)) return
         starting = true
         viewModelScope.launch {
             var recovering = true
@@ -117,6 +160,12 @@ class AppModel(application: Application) : AndroidViewModel(application) {
                 if (recovered == com.noahwallet.services.backup.RestoreTransaction.Recovery.waitingForSecret) {
                     launchState = LaunchState.secureStorageUnavailable
                     return@launch
+                }
+                if (recovered == RestoreTransaction.Recovery.completed) {
+                    val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
+                    settings.setPersistedState(wallet.copy(isInitialized = true, isWalletLoaded = true), PersistedWalletState.key, 0)
+                    settings.sync()
+                    services.tokens.clear()
                 }
                 recovering = false
                 isWalletSuspended = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
@@ -152,6 +201,9 @@ class AppModel(application: Application) : AndroidViewModel(application) {
     }
 
     suspend fun create() {
+        val location = WalletDataLocation(getApplication<Application>().filesDir, BuildConfig.APP_VARIANT)
+        check(launchState == LaunchState.onboarding && !isWalletSuspended && restore.canLeave)
+        if (location.restorePending || location.deletionMarker.exists()) throw RestoreCompletion.RestartRequired()
         withContext(Dispatchers.IO) { creator.createOrResume() }
         val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
         val key = session.peekPublicKey(0u)
