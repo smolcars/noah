@@ -1,0 +1,254 @@
+{
+  "source": "client/src/lib + client/tests/unit/exit*.test.js",
+  "cases": [
+    {
+      "name": "availability 0",
+      "input": {
+        "isInitialized": false,
+        "isWalletLoaded": false,
+        "isWalletSuspended": false,
+        "isBackgroundJobRunning": false,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 1",
+      "input": {
+        "isInitialized": true,
+        "isWalletLoaded": false,
+        "isWalletSuspended": false,
+        "isBackgroundJobRunning": false,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 2",
+      "input": {
+        "isInitialized": false,
+        "isWalletLoaded": true,
+        "isWalletSuspended": false,
+        "isBackgroundJobRunning": false,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 3",
+      "input": {
+        "isInitialized": true,
+        "isWalletLoaded": true,
+        "isWalletSuspended": false,
+        "isBackgroundJobRunning": false,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": true,
+        "succeeds": true,
+        "reads": [
+          "blockHeight",
+          "claimable",
+          "exits",
+          "height",
+          "pending",
+          "status",
+          "total",
+          "vtxos"
+        ]
+      }
+    },
+    {
+      "name": "availability 4",
+      "input": {
+        "isInitialized": false,
+        "isWalletLoaded": false,
+        "isWalletSuspended": true,
+        "isBackgroundJobRunning": false,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 5",
+      "input": {
+        "isInitialized": true,
+        "isWalletLoaded": false,
+        "isWalletSuspended": true,
+        "isBackgroundJobRunning": false,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 6",
+      "input": {
+        "isInitialized": false,
+        "isWalletLoaded": true,
+        "isWalletSuspended": true,
+        "isBackgroundJobRunning": false,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 7",
+      "input": {
+        "isInitialized": true,
+        "isWalletLoaded": true,
+        "isWalletSuspended": true,
+        "isBackgroundJobRunning": false,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 8",
+      "input": {
+        "isInitialized": false,
+        "isWalletLoaded": false,
+        "isWalletSuspended": false,
+        "isBackgroundJobRunning": true,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 9",
+      "input": {
+        "isInitialized": true,
+        "isWalletLoaded": false,
+        "isWalletSuspended": false,
+        "isBackgroundJobRunning": true,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 10",
+      "input": {
+        "isInitialized": false,
+        "isWalletLoaded": true,
+        "isWalletSuspended": false,
+        "isBackgroundJobRunning": true,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 11",
+      "input": {
+        "isInitialized": true,
+        "isWalletLoaded": true,
+        "isWalletSuspended": false,
+        "isBackgroundJobRunning": true,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 12",
+      "input": {
+        "isInitialized": false,
+        "isWalletLoaded": false,
+        "isWalletSuspended": true,
+        "isBackgroundJobRunning": true,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 13",
+      "input": {
+        "isInitialized": true,
+        "isWalletLoaded": false,
+        "isWalletSuspended": true,
+        "isBackgroundJobRunning": true,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 14",
+      "input": {
+        "isInitialized": false,
+        "isWalletLoaded": true,
+        "isWalletSuspended": true,
+        "isBackgroundJobRunning": true,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    },
+    {
+      "name": "availability 15",
+      "input": {
+        "isInitialized": true,
+        "isWalletLoaded": true,
+        "isWalletSuspended": true,
+        "isBackgroundJobRunning": true,
+        "staticVtxoPubkey": "wallet-a"
+      },
+      "expected": {
+        "enabled": false,
+        "succeeds": false,
+        "reads": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,1301 @@
+{
+  "source": "client/src/lib + client/tests/unit/exit*.test.js",
+  "cases": [
+    {
+      "name": "Start null",
+      "input": {
+        "state": "Start",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": []
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "Start verify-inputs",
+      "input": {
+        "state": "Start",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "verify-inputs"
+              }
+            }
+          ]
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "Start awaiting-input-confirmation",
+      "input": {
+        "state": "Start",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-input-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "Start awaiting-cpfp-broadcast",
+      "input": {
+        "state": "Start",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-cpfp-broadcast"
+              }
+            }
+          ]
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "Start awaiting-confirmation",
+      "input": {
+        "state": "Start",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "Start confirmed",
+      "input": {
+        "state": "Start",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "confirmed"
+              }
+            }
+          ]
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "Start unknown",
+      "input": {
+        "state": "Start",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "unknown"
+              }
+            }
+          ]
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "Processing null",
+      "input": {
+        "state": "Processing",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": []
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "Processing verify-inputs",
+      "input": {
+        "state": "Processing",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "verify-inputs"
+              }
+            }
+          ]
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "Processing awaiting-input-confirmation",
+      "input": {
+        "state": "Processing",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-input-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "Processing awaiting-cpfp-broadcast",
+      "input": {
+        "state": "Processing",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-cpfp-broadcast"
+              }
+            }
+          ]
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "Processing awaiting-confirmation",
+      "input": {
+        "state": "Processing",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Processing confirmed",
+      "input": {
+        "state": "Processing",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "confirmed"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Processing unknown",
+      "input": {
+        "state": "Processing",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "unknown"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "AwaitingDelta null",
+      "input": {
+        "state": "AwaitingDelta",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": []
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "AwaitingDelta verify-inputs",
+      "input": {
+        "state": "AwaitingDelta",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "verify-inputs"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "AwaitingDelta awaiting-input-confirmation",
+      "input": {
+        "state": "AwaitingDelta",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-input-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "AwaitingDelta awaiting-cpfp-broadcast",
+      "input": {
+        "state": "AwaitingDelta",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-cpfp-broadcast"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "AwaitingDelta awaiting-confirmation",
+      "input": {
+        "state": "AwaitingDelta",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "AwaitingDelta confirmed",
+      "input": {
+        "state": "AwaitingDelta",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "confirmed"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "AwaitingDelta unknown",
+      "input": {
+        "state": "AwaitingDelta",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "unknown"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimable null",
+      "input": {
+        "state": "Claimable",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": []
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimable verify-inputs",
+      "input": {
+        "state": "Claimable",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "verify-inputs"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimable awaiting-input-confirmation",
+      "input": {
+        "state": "Claimable",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-input-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimable awaiting-cpfp-broadcast",
+      "input": {
+        "state": "Claimable",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-cpfp-broadcast"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimable awaiting-confirmation",
+      "input": {
+        "state": "Claimable",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimable confirmed",
+      "input": {
+        "state": "Claimable",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "confirmed"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimable unknown",
+      "input": {
+        "state": "Claimable",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "unknown"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "ClaimInProgress null",
+      "input": {
+        "state": "ClaimInProgress",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": []
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "ClaimInProgress verify-inputs",
+      "input": {
+        "state": "ClaimInProgress",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "verify-inputs"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "ClaimInProgress awaiting-input-confirmation",
+      "input": {
+        "state": "ClaimInProgress",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-input-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "ClaimInProgress awaiting-cpfp-broadcast",
+      "input": {
+        "state": "ClaimInProgress",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-cpfp-broadcast"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "ClaimInProgress awaiting-confirmation",
+      "input": {
+        "state": "ClaimInProgress",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "ClaimInProgress confirmed",
+      "input": {
+        "state": "ClaimInProgress",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "confirmed"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "ClaimInProgress unknown",
+      "input": {
+        "state": "ClaimInProgress",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "unknown"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimed null",
+      "input": {
+        "state": "Claimed",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": []
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimed verify-inputs",
+      "input": {
+        "state": "Claimed",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "verify-inputs"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimed awaiting-input-confirmation",
+      "input": {
+        "state": "Claimed",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-input-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimed awaiting-cpfp-broadcast",
+      "input": {
+        "state": "Claimed",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-cpfp-broadcast"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimed awaiting-confirmation",
+      "input": {
+        "state": "Claimed",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimed confirmed",
+      "input": {
+        "state": "Claimed",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "confirmed"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Claimed unknown",
+      "input": {
+        "state": "Claimed",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "unknown"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "VtxoAlreadySpent null",
+      "input": {
+        "state": "VtxoAlreadySpent",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": []
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "VtxoAlreadySpent verify-inputs",
+      "input": {
+        "state": "VtxoAlreadySpent",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "verify-inputs"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "VtxoAlreadySpent awaiting-input-confirmation",
+      "input": {
+        "state": "VtxoAlreadySpent",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-input-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "VtxoAlreadySpent awaiting-cpfp-broadcast",
+      "input": {
+        "state": "VtxoAlreadySpent",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-cpfp-broadcast"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "VtxoAlreadySpent awaiting-confirmation",
+      "input": {
+        "state": "VtxoAlreadySpent",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "VtxoAlreadySpent confirmed",
+      "input": {
+        "state": "VtxoAlreadySpent",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "confirmed"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "VtxoAlreadySpent unknown",
+      "input": {
+        "state": "VtxoAlreadySpent",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "unknown"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Canceled null",
+      "input": {
+        "state": "Canceled",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": []
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Canceled verify-inputs",
+      "input": {
+        "state": "Canceled",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "verify-inputs"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Canceled awaiting-input-confirmation",
+      "input": {
+        "state": "Canceled",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-input-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Canceled awaiting-cpfp-broadcast",
+      "input": {
+        "state": "Canceled",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-cpfp-broadcast"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Canceled awaiting-confirmation",
+      "input": {
+        "state": "Canceled",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "awaiting-confirmation"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Canceled confirmed",
+      "input": {
+        "state": "Canceled",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "confirmed"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "Canceled unknown",
+      "input": {
+        "state": "Canceled",
+        "details": {
+          "kind": "processing",
+          "tip_height": 100,
+          "transactions": [
+            {
+              "txid": "ancestor",
+              "status": {
+                "kind": "confirmed"
+              }
+            },
+            {
+              "txid": "final",
+              "status": {
+                "kind": "unknown"
+              }
+            }
+          ]
+        }
+      },
+      "expected": false
+    }
+  ]
+}

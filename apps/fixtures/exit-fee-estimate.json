@@ -1,0 +1,1483 @@
+{
+  "source": "client/src/lib + client/tests/unit/exit*.test.js",
+  "cases": [
+    {
+      "name": "eligible 0",
+      "input": {
+        "operation": "eligible",
+        "state": "Spendable",
+        "amount": 0
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 1",
+      "input": {
+        "operation": "eligible",
+        "state": "Spendable",
+        "amount": 1
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 2",
+      "input": {
+        "operation": "eligible",
+        "state": "Spendable",
+        "amount": 329
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 3",
+      "input": {
+        "operation": "eligible",
+        "state": "Spendable",
+        "amount": 330
+      },
+      "expected": true
+    },
+    {
+      "name": "eligible 4",
+      "input": {
+        "operation": "eligible",
+        "state": "Spendable",
+        "amount": 331
+      },
+      "expected": true
+    },
+    {
+      "name": "eligible 5",
+      "input": {
+        "operation": "eligible",
+        "state": "Spendable",
+        "amount": 100000
+      },
+      "expected": true
+    },
+    {
+      "name": "eligible 6",
+      "input": {
+        "operation": "eligible",
+        "state": "Locked",
+        "amount": 0
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 7",
+      "input": {
+        "operation": "eligible",
+        "state": "Locked",
+        "amount": 1
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 8",
+      "input": {
+        "operation": "eligible",
+        "state": "Locked",
+        "amount": 329
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 9",
+      "input": {
+        "operation": "eligible",
+        "state": "Locked",
+        "amount": 330
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 10",
+      "input": {
+        "operation": "eligible",
+        "state": "Locked",
+        "amount": 331
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 11",
+      "input": {
+        "operation": "eligible",
+        "state": "Locked",
+        "amount": 100000
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 12",
+      "input": {
+        "operation": "eligible",
+        "state": "Spent",
+        "amount": 0
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 13",
+      "input": {
+        "operation": "eligible",
+        "state": "Spent",
+        "amount": 1
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 14",
+      "input": {
+        "operation": "eligible",
+        "state": "Spent",
+        "amount": 329
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 15",
+      "input": {
+        "operation": "eligible",
+        "state": "Spent",
+        "amount": 330
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 16",
+      "input": {
+        "operation": "eligible",
+        "state": "Spent",
+        "amount": 331
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 17",
+      "input": {
+        "operation": "eligible",
+        "state": "Spent",
+        "amount": 100000
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 18",
+      "input": {
+        "operation": "eligible",
+        "state": "Exited",
+        "amount": 0
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 19",
+      "input": {
+        "operation": "eligible",
+        "state": "Exited",
+        "amount": 1
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 20",
+      "input": {
+        "operation": "eligible",
+        "state": "Exited",
+        "amount": 329
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 21",
+      "input": {
+        "operation": "eligible",
+        "state": "Exited",
+        "amount": 330
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 22",
+      "input": {
+        "operation": "eligible",
+        "state": "Exited",
+        "amount": 331
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 23",
+      "input": {
+        "operation": "eligible",
+        "state": "Exited",
+        "amount": 100000
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 24",
+      "input": {
+        "operation": "eligible",
+        "state": "unknown",
+        "amount": 0
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 25",
+      "input": {
+        "operation": "eligible",
+        "state": "unknown",
+        "amount": 1
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 26",
+      "input": {
+        "operation": "eligible",
+        "state": "unknown",
+        "amount": 329
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 27",
+      "input": {
+        "operation": "eligible",
+        "state": "unknown",
+        "amount": 330
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 28",
+      "input": {
+        "operation": "eligible",
+        "state": "unknown",
+        "amount": 331
+      },
+      "expected": false
+    },
+    {
+      "name": "eligible 29",
+      "input": {
+        "operation": "eligible",
+        "state": "unknown",
+        "amount": 100000
+      },
+      "expected": false
+    },
+    {
+      "name": "receive 30",
+      "input": {
+        "operation": "receive",
+        "amount": 100000,
+        "claimFee": 800
+      },
+      "expected": 99200
+    },
+    {
+      "name": "warning 31",
+      "input": {
+        "operation": "warning",
+        "amount": 100000,
+        "claimFee": 800,
+        "totalFee": 12800,
+        "claimOnly": false
+      },
+      "expected": null
+    },
+    {
+      "name": "receive 32",
+      "input": {
+        "operation": "receive",
+        "amount": 100000,
+        "claimFee": 800
+      },
+      "expected": 99200
+    },
+    {
+      "name": "warning 33",
+      "input": {
+        "operation": "warning",
+        "amount": 100000,
+        "claimFee": 800,
+        "totalFee": 12800,
+        "claimOnly": true
+      },
+      "expected": null
+    },
+    {
+      "name": "receive 34",
+      "input": {
+        "operation": "receive",
+        "amount": 800,
+        "claimFee": 800
+      },
+      "expected": 0
+    },
+    {
+      "name": "warning 35",
+      "input": {
+        "operation": "warning",
+        "amount": 800,
+        "claimFee": 800,
+        "totalFee": 12800,
+        "claimOnly": false
+      },
+      "expected": "The estimated claim fee consumes the entire recovered value. A claim may not be possible."
+    },
+    {
+      "name": "receive 36",
+      "input": {
+        "operation": "receive",
+        "amount": 800,
+        "claimFee": 800
+      },
+      "expected": 0
+    },
+    {
+      "name": "warning 37",
+      "input": {
+        "operation": "warning",
+        "amount": 800,
+        "claimFee": 800,
+        "totalFee": 12800,
+        "claimOnly": true
+      },
+      "expected": "The estimated claim fee consumes the entire recovered value. A claim may not be possible."
+    },
+    {
+      "name": "receive 38",
+      "input": {
+        "operation": "receive",
+        "amount": 500,
+        "claimFee": 800
+      },
+      "expected": 0
+    },
+    {
+      "name": "warning 39",
+      "input": {
+        "operation": "warning",
+        "amount": 500,
+        "claimFee": 800,
+        "totalFee": 12800,
+        "claimOnly": false
+      },
+      "expected": "The estimated claim fee consumes the entire recovered value. A claim may not be possible."
+    },
+    {
+      "name": "receive 40",
+      "input": {
+        "operation": "receive",
+        "amount": 500,
+        "claimFee": 800
+      },
+      "expected": 0
+    },
+    {
+      "name": "warning 41",
+      "input": {
+        "operation": "warning",
+        "amount": 500,
+        "claimFee": 800,
+        "totalFee": 12800,
+        "claimOnly": true
+      },
+      "expected": "The estimated claim fee consumes the entire recovered value. A claim may not be possible."
+    },
+    {
+      "name": "receive 42",
+      "input": {
+        "operation": "receive",
+        "amount": 12800,
+        "claimFee": 800
+      },
+      "expected": 12000
+    },
+    {
+      "name": "warning 43",
+      "input": {
+        "operation": "warning",
+        "amount": 12800,
+        "claimFee": 800,
+        "totalFee": 12800,
+        "claimOnly": false
+      },
+      "expected": "Estimated total fees meet or exceed the value being recovered."
+    },
+    {
+      "name": "receive 44",
+      "input": {
+        "operation": "receive",
+        "amount": 12800,
+        "claimFee": 800
+      },
+      "expected": 12000
+    },
+    {
+      "name": "warning 45",
+      "input": {
+        "operation": "warning",
+        "amount": 12800,
+        "claimFee": 800,
+        "totalFee": 12800,
+        "claimOnly": true
+      },
+      "expected": null
+    },
+    {
+      "name": "current 46",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 1001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "current 47",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 30999,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "current 48",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31000,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 49",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 50",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 1001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "b",
+            "a"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "current 51",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 30999,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "b",
+            "a"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": true
+    },
+    {
+      "name": "current 52",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31000,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "b",
+            "a"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 53",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "b",
+            "a"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 54",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 1001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 55",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 30999,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 56",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31000,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 57",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 58",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 1001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b",
+            "new-wallet-funds"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 59",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 30999,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b",
+            "new-wallet-funds"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 60",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31000,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b",
+            "new-wallet-funds"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 61",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b",
+            "new-wallet-funds"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 62",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 1001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "selected",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 63",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 30999,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "selected",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 64",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31000,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "selected",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 65",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "selected",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 66",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 1001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 200000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 67",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 30999,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 200000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 68",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31000,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 200000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 69",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 200000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 70",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 1001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-b",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 71",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 30999,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-b",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 72",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31000,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-b",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 73",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-b",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 74",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 1001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1",
+          "destinationAddress": "destination-b"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 75",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 30999,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1",
+          "destinationAddress": "destination-b"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 76",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31000,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1",
+          "destinationAddress": "destination-b"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 77",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1",
+          "destinationAddress": "destination-b"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 78",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 1001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "2"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 79",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 30999,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "2"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 80",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31000,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "2"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "current 81",
+      "input": {
+        "operation": "current",
+        "reviewedAt": 1000,
+        "now": 31001,
+        "inputs": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "1"
+        },
+        "current": {
+          "walletId": "wallet-a",
+          "vtxoIds": [
+            "a",
+            "b"
+          ],
+          "amountSat": 100000,
+          "scope": "wallet",
+          "revision": "2"
+        }
+      },
+      "expected": false
+    }
+  ]
+}

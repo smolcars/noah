@@ -1,0 +1,215 @@
+{
+  "source": "client/src/lib + client/tests/unit/exit*.test.js",
+  "cases": [
+    {
+      "name": "board 10000 19999",
+      "input": {
+        "minimum": 10000,
+        "balance": 19999,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": null
+    },
+    {
+      "name": "board 10000 25000",
+      "input": {
+        "minimum": 10000,
+        "balance": 25000,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": null
+    },
+    {
+      "name": "board 10000 25307",
+      "input": {
+        "minimum": 10000,
+        "balance": 25307,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": null
+    },
+    {
+      "name": "board 10000 25308",
+      "input": {
+        "minimum": 10000,
+        "balance": 25308,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": 20100
+    },
+    {
+      "name": "board 10000 25309",
+      "input": {
+        "minimum": 10000,
+        "balance": 25309,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": 20101
+    },
+    {
+      "name": "board 10000 30308",
+      "input": {
+        "minimum": 10000,
+        "balance": 30308,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": 25100
+    },
+    {
+      "name": "board 10000 100000",
+      "input": {
+        "minimum": 10000,
+        "balance": 100000,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": 94792
+    },
+    {
+      "name": "board 20000 19999",
+      "input": {
+        "minimum": 20000,
+        "balance": 19999,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": null
+    },
+    {
+      "name": "board 20000 25000",
+      "input": {
+        "minimum": 20000,
+        "balance": 25000,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": null
+    },
+    {
+      "name": "board 20000 25307",
+      "input": {
+        "minimum": 20000,
+        "balance": 25307,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": null
+    },
+    {
+      "name": "board 20000 25308",
+      "input": {
+        "minimum": 20000,
+        "balance": 25308,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": 20100
+    },
+    {
+      "name": "board 20000 25309",
+      "input": {
+        "minimum": 20000,
+        "balance": 25309,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": 20101
+    },
+    {
+      "name": "board 20000 30308",
+      "input": {
+        "minimum": 20000,
+        "balance": 30308,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": 25100
+    },
+    {
+      "name": "board 20000 100000",
+      "input": {
+        "minimum": 20000,
+        "balance": 100000,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": 94792
+    },
+    {
+      "name": "board 25000 19999",
+      "input": {
+        "minimum": 25000,
+        "balance": 19999,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": null
+    },
+    {
+      "name": "board 25000 25000",
+      "input": {
+        "minimum": 25000,
+        "balance": 25000,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": null
+    },
+    {
+      "name": "board 25000 25307",
+      "input": {
+        "minimum": 25000,
+        "balance": 25307,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": null
+    },
+    {
+      "name": "board 25000 25308",
+      "input": {
+        "minimum": 25000,
+        "balance": 25308,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": null
+    },
+    {
+      "name": "board 25000 25309",
+      "input": {
+        "minimum": 25000,
+        "balance": 25309,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": null
+    },
+    {
+      "name": "board 25000 30308",
+      "input": {
+        "minimum": 25000,
+        "balance": 30308,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": 25100
+    },
+    {
+      "name": "board 25000 100000",
+      "input": {
+        "minimum": 25000,
+        "balance": 100000,
+        "arkFee": 100,
+        "chainFee": 208
+      },
+      "expected": 94792
+    }
+  ]
+}

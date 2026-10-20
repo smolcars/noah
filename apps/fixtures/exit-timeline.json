@@ -1,0 +1,656 @@
+{
+  "source": "client/src/lib + client/tests/unit/exit*.test.js",
+  "cases": [
+    {
+      "name": "timeline 0",
+      "input": {
+        "history": [
+          "Start",
+          "Canceled"
+        ],
+        "historyDetails": [
+          {
+            "kind": "start",
+            "tip_height": 100
+          },
+          {
+            "kind": "canceled",
+            "tip_height": 101
+          }
+        ],
+        "currentState": "Canceled",
+        "currentDetails": {
+          "kind": "canceled",
+          "tip_height": 110
+        },
+        "currentBlockHeight": 110
+      },
+      "expected": [
+        {
+          "state": "Start",
+          "label": "Started",
+          "count": 1,
+          "startHeight": 100,
+          "endHeight": 100,
+          "isCurrent": false
+        },
+        {
+          "state": "Canceled",
+          "label": "Canceled",
+          "count": 1,
+          "startHeight": 110,
+          "endHeight": 110,
+          "isCurrent": true
+        }
+      ]
+    },
+    {
+      "name": "timeline 1",
+      "input": {
+        "history": [
+          "Start",
+          "Canceled"
+        ],
+        "historyDetails": [
+          {
+            "kind": "start",
+            "tip_height": 100
+          },
+          {
+            "kind": "canceled",
+            "tip_height": 101
+          }
+        ],
+        "currentState": "Claimed",
+        "currentDetails": {
+          "kind": "claimed",
+          "tip_height": 110
+        },
+        "currentBlockHeight": 110
+      },
+      "expected": [
+        {
+          "state": "Start",
+          "label": "Started",
+          "count": 1,
+          "startHeight": 100,
+          "endHeight": 100,
+          "isCurrent": false
+        },
+        {
+          "state": "Canceled",
+          "label": "Canceled",
+          "count": 1,
+          "startHeight": 101,
+          "endHeight": 101,
+          "isCurrent": false
+        },
+        {
+          "state": "Claimed",
+          "label": "Claimed",
+          "count": 1,
+          "startHeight": 110,
+          "endHeight": 110,
+          "isCurrent": true
+        }
+      ]
+    },
+    {
+      "name": "timeline 2",
+      "input": {
+        "history": [
+          "Start",
+          "Canceled"
+        ],
+        "historyDetails": [
+          {
+            "kind": "start",
+            "tip_height": 100
+          },
+          {
+            "kind": "canceled",
+            "tip_height": 101
+          }
+        ],
+        "currentState": "Processing",
+        "currentDetails": {
+          "kind": "processing",
+          "tip_height": 110
+        },
+        "currentBlockHeight": 110
+      },
+      "expected": [
+        {
+          "state": "Start",
+          "label": "Started",
+          "count": 1,
+          "startHeight": 100,
+          "endHeight": 100,
+          "isCurrent": false
+        },
+        {
+          "state": "Canceled",
+          "label": "Canceled",
+          "count": 1,
+          "startHeight": 101,
+          "endHeight": 101,
+          "isCurrent": false
+        },
+        {
+          "state": "Processing",
+          "label": "Processing",
+          "count": 1,
+          "startHeight": 110,
+          "endHeight": 110,
+          "isCurrent": true
+        }
+      ]
+    },
+    {
+      "name": "timeline 3",
+      "input": {
+        "history": [
+          "Start",
+          "Processing",
+          "Processing",
+          "AwaitingDelta",
+          "Claimable",
+          "ClaimInProgress",
+          "Claimed"
+        ],
+        "historyDetails": [
+          {
+            "kind": "start",
+            "tip_height": 100
+          },
+          {
+            "kind": "processing",
+            "tip_height": 101
+          },
+          {
+            "kind": "processing",
+            "tip_height": 102
+          },
+          {
+            "kind": "awaitingdelta",
+            "tip_height": 103
+          },
+          {
+            "kind": "claimable",
+            "tip_height": 104
+          },
+          {
+            "kind": "claiminprogress",
+            "tip_height": 105
+          },
+          {
+            "kind": "claimed",
+            "tip_height": 106
+          }
+        ],
+        "currentState": "Canceled",
+        "currentDetails": {
+          "kind": "canceled",
+          "tip_height": 110
+        },
+        "currentBlockHeight": 110
+      },
+      "expected": [
+        {
+          "state": "Start",
+          "label": "Started",
+          "count": 1,
+          "startHeight": 100,
+          "endHeight": 100,
+          "isCurrent": false
+        },
+        {
+          "state": "Processing",
+          "label": "Processing",
+          "count": 2,
+          "startHeight": 101,
+          "endHeight": 102,
+          "isCurrent": false
+        },
+        {
+          "state": "AwaitingDelta",
+          "label": "Waiting",
+          "count": 1,
+          "startHeight": 103,
+          "endHeight": 103,
+          "isCurrent": false
+        },
+        {
+          "state": "Claimable",
+          "label": "Claimable",
+          "count": 1,
+          "startHeight": 104,
+          "endHeight": 104,
+          "isCurrent": false
+        },
+        {
+          "state": "ClaimInProgress",
+          "label": "Claiming",
+          "count": 1,
+          "startHeight": 105,
+          "endHeight": 105,
+          "isCurrent": false
+        },
+        {
+          "state": "Claimed",
+          "label": "Claimed",
+          "count": 1,
+          "startHeight": 106,
+          "endHeight": 106,
+          "isCurrent": false
+        },
+        {
+          "state": "Canceled",
+          "label": "Canceled",
+          "count": 1,
+          "startHeight": 110,
+          "endHeight": 110,
+          "isCurrent": true
+        }
+      ]
+    },
+    {
+      "name": "timeline 4",
+      "input": {
+        "history": [
+          "Start",
+          "Processing",
+          "Processing",
+          "AwaitingDelta",
+          "Claimable",
+          "ClaimInProgress",
+          "Claimed"
+        ],
+        "historyDetails": [
+          {
+            "kind": "start",
+            "tip_height": 100
+          },
+          {
+            "kind": "processing",
+            "tip_height": 101
+          },
+          {
+            "kind": "processing",
+            "tip_height": 102
+          },
+          {
+            "kind": "awaitingdelta",
+            "tip_height": 103
+          },
+          {
+            "kind": "claimable",
+            "tip_height": 104
+          },
+          {
+            "kind": "claiminprogress",
+            "tip_height": 105
+          },
+          {
+            "kind": "claimed",
+            "tip_height": 106
+          }
+        ],
+        "currentState": "Claimed",
+        "currentDetails": {
+          "kind": "claimed",
+          "tip_height": 110
+        },
+        "currentBlockHeight": 110
+      },
+      "expected": [
+        {
+          "state": "Start",
+          "label": "Started",
+          "count": 1,
+          "startHeight": 100,
+          "endHeight": 100,
+          "isCurrent": false
+        },
+        {
+          "state": "Processing",
+          "label": "Processing",
+          "count": 2,
+          "startHeight": 101,
+          "endHeight": 102,
+          "isCurrent": false
+        },
+        {
+          "state": "AwaitingDelta",
+          "label": "Waiting",
+          "count": 1,
+          "startHeight": 103,
+          "endHeight": 103,
+          "isCurrent": false
+        },
+        {
+          "state": "Claimable",
+          "label": "Claimable",
+          "count": 1,
+          "startHeight": 104,
+          "endHeight": 104,
+          "isCurrent": false
+        },
+        {
+          "state": "ClaimInProgress",
+          "label": "Claiming",
+          "count": 1,
+          "startHeight": 105,
+          "endHeight": 105,
+          "isCurrent": false
+        },
+        {
+          "state": "Claimed",
+          "label": "Claimed",
+          "count": 1,
+          "startHeight": 110,
+          "endHeight": 110,
+          "isCurrent": true
+        }
+      ]
+    },
+    {
+      "name": "timeline 5",
+      "input": {
+        "history": [
+          "Start",
+          "Processing",
+          "Processing",
+          "AwaitingDelta",
+          "Claimable",
+          "ClaimInProgress",
+          "Claimed"
+        ],
+        "historyDetails": [
+          {
+            "kind": "start",
+            "tip_height": 100
+          },
+          {
+            "kind": "processing",
+            "tip_height": 101
+          },
+          {
+            "kind": "processing",
+            "tip_height": 102
+          },
+          {
+            "kind": "awaitingdelta",
+            "tip_height": 103
+          },
+          {
+            "kind": "claimable",
+            "tip_height": 104
+          },
+          {
+            "kind": "claiminprogress",
+            "tip_height": 105
+          },
+          {
+            "kind": "claimed",
+            "tip_height": 106
+          }
+        ],
+        "currentState": "Processing",
+        "currentDetails": {
+          "kind": "processing",
+          "tip_height": 110
+        },
+        "currentBlockHeight": 110
+      },
+      "expected": [
+        {
+          "state": "Start",
+          "label": "Started",
+          "count": 1,
+          "startHeight": 100,
+          "endHeight": 100,
+          "isCurrent": false
+        },
+        {
+          "state": "Processing",
+          "label": "Processing",
+          "count": 2,
+          "startHeight": 101,
+          "endHeight": 102,
+          "isCurrent": false
+        },
+        {
+          "state": "AwaitingDelta",
+          "label": "Waiting",
+          "count": 1,
+          "startHeight": 103,
+          "endHeight": 103,
+          "isCurrent": false
+        },
+        {
+          "state": "Claimable",
+          "label": "Claimable",
+          "count": 1,
+          "startHeight": 104,
+          "endHeight": 104,
+          "isCurrent": false
+        },
+        {
+          "state": "ClaimInProgress",
+          "label": "Claiming",
+          "count": 1,
+          "startHeight": 105,
+          "endHeight": 105,
+          "isCurrent": false
+        },
+        {
+          "state": "Claimed",
+          "label": "Claimed",
+          "count": 1,
+          "startHeight": 106,
+          "endHeight": 106,
+          "isCurrent": false
+        },
+        {
+          "state": "Processing",
+          "label": "Processing",
+          "count": 1,
+          "startHeight": 110,
+          "endHeight": 110,
+          "isCurrent": true
+        }
+      ]
+    },
+    {
+      "name": "timeline 6",
+      "input": {
+        "history": [],
+        "historyDetails": [],
+        "currentState": "Canceled",
+        "currentDetails": {
+          "kind": "canceled",
+          "tip_height": 110
+        },
+        "currentBlockHeight": 110
+      },
+      "expected": [
+        {
+          "state": "Canceled",
+          "label": "Canceled",
+          "count": 1,
+          "startHeight": 110,
+          "endHeight": 110,
+          "isCurrent": true
+        }
+      ]
+    },
+    {
+      "name": "timeline 7",
+      "input": {
+        "history": [],
+        "historyDetails": [],
+        "currentState": "Claimed",
+        "currentDetails": {
+          "kind": "claimed",
+          "tip_height": 110
+        },
+        "currentBlockHeight": 110
+      },
+      "expected": [
+        {
+          "state": "Claimed",
+          "label": "Claimed",
+          "count": 1,
+          "startHeight": 110,
+          "endHeight": 110,
+          "isCurrent": true
+        }
+      ]
+    },
+    {
+      "name": "timeline 8",
+      "input": {
+        "history": [],
+        "historyDetails": [],
+        "currentState": "Processing",
+        "currentDetails": {
+          "kind": "processing",
+          "tip_height": 110
+        },
+        "currentBlockHeight": 110
+      },
+      "expected": [
+        {
+          "state": "Processing",
+          "label": "Processing",
+          "count": 1,
+          "startHeight": 110,
+          "endHeight": 110,
+          "isCurrent": true
+        }
+      ]
+    },
+    {
+      "name": "timeline 9",
+      "input": {
+        "history": [
+          "Processing",
+          "Processing"
+        ],
+        "historyDetails": [
+          {
+            "kind": "processing",
+            "tip_height": 100
+          },
+          {
+            "kind": "processing",
+            "tip_height": 101
+          }
+        ],
+        "currentState": "Canceled",
+        "currentDetails": {
+          "kind": "canceled",
+          "tip_height": 110
+        },
+        "currentBlockHeight": 110
+      },
+      "expected": [
+        {
+          "state": "Processing",
+          "label": "Processing",
+          "count": 2,
+          "startHeight": 100,
+          "endHeight": 101,
+          "isCurrent": false
+        },
+        {
+          "state": "Canceled",
+          "label": "Canceled",
+          "count": 1,
+          "startHeight": 110,
+          "endHeight": 110,
+          "isCurrent": true
+        }
+      ]
+    },
+    {
+      "name": "timeline 10",
+      "input": {
+        "history": [
+          "Processing",
+          "Processing"
+        ],
+        "historyDetails": [
+          {
+            "kind": "processing",
+            "tip_height": 100
+          },
+          {
+            "kind": "processing",
+            "tip_height": 101
+          }
+        ],
+        "currentState": "Claimed",
+        "currentDetails": {
+          "kind": "claimed",
+          "tip_height": 110
+        },
+        "currentBlockHeight": 110
+      },
+      "expected": [
+        {
+          "state": "Processing",
+          "label": "Processing",
+          "count": 2,
+          "startHeight": 100,
+          "endHeight": 101,
+          "isCurrent": false
+        },
+        {
+          "state": "Claimed",
+          "label": "Claimed",
+          "count": 1,
+          "startHeight": 110,
+          "endHeight": 110,
+          "isCurrent": true
+        }
+      ]
+    },
+    {
+      "name": "timeline 11",
+      "input": {
+        "history": [
+          "Processing",
+          "Processing"
+        ],
+        "historyDetails": [
+          {
+            "kind": "processing",
+            "tip_height": 100
+          },
+          {
+            "kind": "processing",
+            "tip_height": 101
+          }
+        ],
+        "currentState": "Processing",
+        "currentDetails": {
+          "kind": "processing",
+          "tip_height": 110
+        },
+        "currentBlockHeight": 110
+      },
+      "expected": [
+        {
+          "state": "Processing",
+          "label": "Processing",
+          "count": 2,
+          "startHeight": 100,
+          "endHeight": 110,
+          "isCurrent": true
+        }
+      ]
+    }
+  ]
+}
