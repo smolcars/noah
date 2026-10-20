@@ -30,6 +30,11 @@ enum AppTelemetry {
         options.sampleRate = 1
         options.tracesSampleRate = nil
         options.enableLogs = false
+        // Manual SDK logs and metrics bypass beforeSend and nothing here uses them: drop both.
+        options.beforeSendLog = { _ in nil }
+        options.beforeSendMetric = { _ in nil }
+        // Release Health sessions stay on (2026-10-20): random install ID, release, OS and status only.
+        options.enableAutoSessionTracking = true
         options.attachScreenshot = false
         options.attachViewHierarchy = false
         options.enableMetricKitRawPayload = false

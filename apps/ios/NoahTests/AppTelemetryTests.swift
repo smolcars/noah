@@ -211,6 +211,9 @@ struct AppTelemetryTests {
             #expect(!options.enableAppHangTracking)
             #expect(!options.enableLogs && !options.attachScreenshot && !options.attachViewHierarchy)
             #expect(!options.enableMetricKitRawPayload)
+            #expect(options.enableAutoSessionTracking)
+            #expect(options.beforeSendLog?(SentryLog(level: .info, body: "synthetic")) == nil)
+            #expect(options.beforeSendMetric != nil)
         }
     }
 
