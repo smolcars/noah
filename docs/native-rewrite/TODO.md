@@ -275,6 +275,15 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 - [x] M5 round-4 verification: Android 557 JVM tests (40 suites, zero failures/errors/skips) and regtest APK assembly; signed arm64 iOS NoahTests 351 total / 335 passed / 16 opt-in skipped / 0 failed (79 suites), each full suite once. Verified own simulator identity/shutdown before deletion; removed DerivedData and all result bundles — `apps/android/SettingsTests/README.md`
 
+- [x] M5 round-5 Android startup: one lifecycle-gate interval through combined restore/deletion recovery, completion replay and wallet opening; matching-marker + restore-journal regressions use production gate → RestoreRecovery → session order
+
+- [x] M5 round-5 deletion staging — both platforms: unreadable secure storage retains valid bound markers/staging and shows “Waiting for secure storage”; readable stale/legacy markers discard safely; checked, synced unmarked staging cleanup before restore, creation and a new deletion marker, plus recovery of older committed markers over leftover staging. Supersedes round 4's unreadable-seed discard policy
+
+- [x] M5 round-5 restore entry — iOS: visible words retained for RN usability; keyboard extensions blocked app-wide, all prediction/correction/smart-edit traits disabled, ASCII/no capitalization/no content type, fitting on-screen-only suggestion rows with visible-word accessibility labels; delegate and actual UITextField configuration tests
+
+- [x] M5 round-5 verification: Android 569 JVM tests (42 suites, zero failures/errors/skips) plus regtest APK assembly; signed arm64 iOS NoahTests 374 total / 358 passed / 16 opt-in skipped / 0 failed (82 suites; 470 expanded passes), each full suite once after 75 Android / 53 iOS targeted tests. Owned simulator identity/shutdown checked before deletion; DerivedData and all result bundles removed — `apps/android/SettingsTests/README.md`
+
+
 ## M6 — Onchain & exits
 - [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt with txid-only read refresh/relaunch reconciliation for missing fees (prepared boarding awaits FFI 18, same priority as 14)
 - [x] VTXOsScreen + VTXODetailScreen + delegated refresh review dialog — iOS

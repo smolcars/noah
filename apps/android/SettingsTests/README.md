@@ -329,3 +329,91 @@ or infrastructure was changed.
 No funded-wallet acceptance, Android instrumentation or physical-device biometric
 checks were rerun in this round. The requested JVM/build and signed iOS suites
 passed; restore UI, Send/Onchain/BTC Map, server and `client/` files were untouched.
+
+
+## Round-5 deletion recovery and restore entry (2026-10-19)
+
+Base: `feat/native-rewrite` at `337245c2`. This supersedes round 4's treatment of
+unreadable secure storage as a mismatched seed. A valid bound deletion marker and
+its staged files now survive unreadable storage and return a waiting state.
+Unlock retry revalidates ownership; readable mismatches and legacy markers may be
+discarded. A restore journal still settles before deletion, with stale-marker
+unlink synced before journal removal. If its bound marker cannot yet be checked,
+both remain pending until secure storage is readable.
+
+Unmarked staging comes from an already committed deletion whose marker was
+discarded. Both platforms check its removal and sync the parent directory before
+new restore staging, creation or a deletion marker. The directory sync repeats
+on retry even if unlink already succeeded. Orphan cleanup refuses pending markers;
+the matching committed-delete path can finish older versions' stuck live-plus-stage
+state. Android creation cleans staging while holding its session reservation;
+iOS creation holds its existing lifecycle gate. No lock-order reversal was added.
+
+Android startup no longer calls standalone deletion recovery first: combined
+recovery, completion replay and wallet opening share one lifecycle-gate interval.
+Held callers pass `walletMutationHeld = true`; UI and headless recovery use gate →
+RestoreRecovery → session reservation. Production-order regression fixtures cover
+matching-marker + restore journals, all restore journal phases, completion replay,
+headless contention, locked/unlocked secure storage, partial staged deletion,
+discarded-marker leftovers and cleanup sync failure/retry. Both platforms also run
+the real encrypted-backup restore → delete pipeline after staged deletion/unlock,
+including the older-version case where the marker was already discarded.
+
+On iOS, restore words remain visible, with system VoiceOver allowed to announce
+visible content. Keyboard extensions are blocked app-wide to prevent third-party
+keystroke observation in these non-secure fields. Autocorrection, spell-checking,
+inline predictions, smart quotes/dashes/insert-delete and content-type suggestions
+are disabled; entry uses ASCII/no capitalization. Only a fitting suggestion row
+is presented, with accessibility labels equal to the visible words. The risk
+model is documented beside the delegate/field and shield. Tests verify the actual
+UITextField traits, visible-entry policy and delegate extension-point decision.
+
+Final targeted checks: **75 Android JVM tests**, four suites, **0 failures /
+0 errors / 0 skips**; signed iOS **53 tests**, five suites, **53 passed / 0 skipped /
+0 failed** (82 expanded parameterized passes). The initial iOS targeted build
+mixed a newly edited test with a previously compiled app and failed to find the
+new delegate method; the next build resolved that. Targeted runs also caught
+pre-marker sync expectations in Android tests and an iOS sync against a not-yet
+created directory; those were corrected before successful final targeted runs.
+No full suite was used during iteration.
+
+The only device used was newly created iOS 27.0 simulator
+`Noah Deletion R5 Sol 18b34` (`58EA0F3B-BAFB-4ED5-9087-DC8DA91A15CF`, iPhone 17).
+Device-panel attachment failed twice with “No device
+58EA0F3B-BAFB-4ED5-9087-DC8DA91A15CF on host local. Call device_list for current
+ids.” The UUID was verified through `simctl`, and signed Xcode tests used it
+directly. No Android emulator, protected simulator, physical device or Docker was
+started, stopped or changed.
+
+Full-suite commands (one run each after final targeted checks):
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+nix develop --command sh -c 'cd apps/ios && /opt/homebrew/bin/xcodegen generate && xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest -destination "platform=iOS Simulator,id=58EA0F3B-BAFB-4ED5-9087-DC8DA91A15CF" -derivedDataPath /private/tmp/noah-deletion-r5-18b34-ios -resultBundlePath /private/tmp/noah-deletion-r5-18b34-full.xcresult -jobs 2 ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES -parallel-testing-enabled NO test'
+```
+
+
+Final results: **569 Android JVM tests**, **42 suites**, **0 failures / 0 errors /
+0 skips**; regtest APK assembly passed. Full signed arm64 iOS `NoahTests`:
+**374 tests**, **82 suites**, **358 passed / 16 opt-in skipped / 0 failed**
+(xcresult summary; **470 expanded parameterized passes**, 16 skipped). Each full
+suite ran exactly once after the final targeted checks. The APK build emitted
+its existing native-library symbol-stripping warning; assembly succeeded.
+
+Logs: `/private/tmp/noah-r5-android-full.log`,
+`/private/tmp/noah-r5-ios-full.log`. Machine-readable summaries remain at
+`/private/tmp/noah-r5-android-full-summary.json`,
+`/private/tmp/noah-r5-ios-full-summary.json`; targeted iOS summary at
+`/private/tmp/noah-r5-ios-target3-summary.json`.
+
+After extracting results, the simulator's exact UUID, name and iPhone 17 type
+were checked, it was shut down, its `Shutdown` state and name were rechecked,
+and only that UUID was deleted. The simulator's absence was verified. Its
+`/private/tmp/noah-deletion-r5-18b34-ios` DerivedData and all four owned
+`target1`/`target2`/`target3`/`full` `.xcresult` bundles were deleted and their
+absence checked.
+
+All three round-5 High findings are addressed. No funded-wallet acceptance,
+Android instrumentation, physical-device keyboard-extension or manual VoiceOver
+session was rerun. Send, Onchain, BTC Map, server and `client/` implementation
+was untouched; only wallet recovery, restore entry and their tests/docs changed.

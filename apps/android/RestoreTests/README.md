@@ -215,3 +215,44 @@ that setting disabled. API 24–28 clipboard fallback, physical devices, live pr
 kill at every completion boundary, direct cross-platform restore and real storage
 faults remain unverified. Completion crash/failure boundaries are deterministic
 JVM tests with a real metadata receipt file and injected failures.
+
+
+## Round-5 recovery and iOS restore-entry follow-up (2026-10-19)
+
+Base: `feat/native-rewrite` at `337245c2`. Android UI startup now uses
+`AppServices.recoverRestore(walletMutationHeld = true)` inside one lifecycle
+mutation gate through recovery, completion replay and opening. It no longer calls
+deletion recovery first. Both held and headless paths run the same combined
+recovery, with gate → RestoreRecovery → session reservation ordering. Round-4
+fixtures now use that production order and verify that headless recovery waits
+until startup completion releases the gate.
+
+Both platforms distinguish unreadable secure storage from a seed mismatch. A
+valid bound marker and its staging data stay pending until unlock; startup shows
+“Waiting for secure storage”. Readable mismatches and legacy markers can be
+discarded. Coexisting restore journals still invalidate stale markers before
+journal settlement, but unreadable bound markers wait for secure storage first.
+Checked unmarked staging cleanup and parent-directory sync precede restore
+staging, creation and a new deletion marker; a failed sync is retried even after
+unlink succeeded. Orphan cleanup refuses any pending marker. The committed-delete
+path also handles an older app's marker over both a live and staged directory.
+
+Tests cover every rename/removal boundary while locked, same/different seed after
+unlock, old discarded markers, cleanup sync failure/retry, and the actual encrypted
+backup restore → deletion pipeline on both platforms. The latter tests cover both
+retained pending markers and an older app that already discarded its marker.
+
+On iOS, typed words remain visible and available to system VoiceOver. AppDelegate
+rejects keyboard extensions app-wide because they can observe non-secure entry;
+there are no third-party iOS accessibility services in this risk model. Fields
+explicitly disable autocorrection, spelling, inline prediction, quotes, dashes,
+smart insert/delete, content-type suggestions and capitalization, and use an ASCII
+keyboard. Suggestions render only the row that fits, with each accessibility label
+equal to its visible word; no combined phrase or offscreen suggestion row is
+exposed. Existing undo/clipboard/screen-capture protections remain. Delegate and
+actual UITextField trait tests assert this deliberate visible-entry policy.
+
+Full-suite verification and disposable-simulator cleanup are recorded in
+`apps/android/SettingsTests/README.md`, round 5. No funded-wallet acceptance,
+Android instrumentation, physical-device keyboard-extension or VoiceOver session
+was rerun for this round.
