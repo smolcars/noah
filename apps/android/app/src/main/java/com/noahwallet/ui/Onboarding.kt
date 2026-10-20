@@ -17,6 +17,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import kotlinx.coroutines.launch
 import com.noahwallet.BuildConfig
 import com.noahwallet.services.server.LightningIdentity
@@ -75,8 +78,16 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
     val scope = rememberCoroutineScope()
     val generation = model.walletLock.generation
     LaunchedEffect(generation) { words = emptyList(); copied = false; clear.run() }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val resumed = lifecycle.currentStateAsState().value.isAtLeast(Lifecycle.State.RESUMED)
+    LaunchedEffect(model, generation, resumed) {
+        if (!fromSettings && resumed) {
+            val loaded = model.mnemonic()
+            if (generation == model.walletLock.generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) words = loaded
+        }
+    }
     LaunchedEffect(model) {
-        if (!fromSettings || model.walletLock.authenticate(activity as androidx.fragment.app.FragmentActivity, "View your seed phrase")) {
+        if (fromSettings && model.walletLock.authenticate(activity as androidx.fragment.app.FragmentActivity, "View your seed phrase")) {
             val loaded = model.mnemonic()
             if (generation == model.walletLock.generation) words = loaded
         }

@@ -223,6 +223,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 - [x] M5 review A4: Android history observation keys wallet availability; suspension/deletion clear cached rows and invalidate old enrichment before a replacement wallet
 
+- [x] M5 review A5: onboarding recovery phrase reloads on foreground return with generation and foreground guards, after clearing on background
+
 ## M6 — Onchain & exits
 - [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt (prepared boarding awaits FFI 18, same priority as 14)
 - [x] VTXOsScreen + VTXODetailScreen + delegated refresh review dialog — iOS
