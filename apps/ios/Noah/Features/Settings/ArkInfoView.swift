@@ -5,7 +5,8 @@ struct ArkInfoView: View {
     @State private var info: ArkInfo?
     @State private var loading = false
     @State private var error: String?
-    private let configuration = WalletConfiguration.base(for: .current)
+    @State private var selection = EsploraSettings().selection(for: .current)
+    private var configuration: WalletConfiguration { .effective(for: .current, endpoint: selection.endpoint) }
     var body: some View {
         List {
             if loading { ProgressView() }
@@ -31,16 +32,16 @@ struct ArkInfoView: View {
             }
             Section("Wallet endpoints") {
                 CopySettingRow(title: "Ark server", value: configuration.arkServer)
-                if let esplora = configuration.esplora { CopySettingRow(title: "Esplora API · Noah default", value: esplora) }
+                if let esplora = configuration.esplora { CopySettingRow(title: selection.endpoint == nil ? "Esplora API · Noah default" : "Esplora API · Custom endpoint", value: esplora) }
                 if let bitcoind = configuration.bitcoind { CopySettingRow(title: "Bitcoind RPC", value: bitcoind) }
-                SettingsLabel(title: "Esplora Settings", detail: "Coming soon")
+                NavigationLink("Esplora Settings") { EsploraSettingsScreen() }
             }
             Section("Explorer APIs") {
                 CopySettingRow(title: "Mempool explorer", value: "https://mempool.space" + (AppVariant.current == .mainnet ? "" : "/signet"))
                 CopySettingRow(title: "Price API", value: "https://mempool.space/api/v1/prices")
                 CopySettingRow(title: "Historical price API", value: "https://mempool.space/api/v1/historical-price")
             }
-        }.settingsStyle("Ark Info").task { await load() }.refreshable { await load() }
+        }.settingsStyle("Ark Info").onAppear { selection = EsploraSettings().selection(for: .current) }.task { await load() }.refreshable { await load() }
     }
     private func load() async {
         loading = true; error = nil
