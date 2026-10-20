@@ -4,6 +4,10 @@ import Foundation
 /// Keeps RN's version-0 envelope and unknown fields. Corruption is never treated as an empty store.
 final class RecurringStore: @unchecked Sendable {
     static let key = "recurring-payment-storage"
+    // createRecurringPayment in client/src/lib/recurringSchedule.ts (retryNotBefore is optional).
+    private static let requiredRNFields = ["id", "label", "destination", "destinationType", "amountSat", "comment",
+        "interval", "startAt", "endAt", "maxOccurrences", "status", "nextOccurrenceIndex", "nextRunAt",
+        "occurrencesPaid", "consecutiveFailures", "lastError", "inFlight", "runs", "createdAt", "updatedAt"]
     struct Binding: Codable, Equatable, Sendable {
         var wallet: SendWalletIdentity
         var instance: UUID
@@ -69,7 +73,8 @@ final class RecurringStore: @unchecked Sendable {
     private static func payment(id: String, raw: String) -> RecurringPayment {
         let decoded = try? JSONDecoder().decode(RecurringPayment.self, from: Data(raw.utf8))
         var schedule: RecurringPayment
-        if let decoded, decoded.id == id, decoded.validPolicy {
+        if let decoded, let fields = try? RawObject(raw), requiredRNFields.allSatisfy({ fields.fields[$0] != nil }),
+           decoded.id == id, decoded.validPolicy {
             schedule = decoded
         } else {
             let fields = (try? JSONSerialization.jsonObject(with: Data(raw.utf8))) as? [String: Any]
