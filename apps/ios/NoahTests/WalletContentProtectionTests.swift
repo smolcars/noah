@@ -43,6 +43,8 @@ import UIKit
 
     @Test func modalCoverHidesAllPresentedContentAndRestoresWindowAccess() {
         let window = UIWindow()
+        window.accessibilityElementsHidden = false
+        window.isUserInteractionEnabled = true
         let coordinator = WalletLockOverlay.Coordinator()
         coordinator.cover(window)
         #expect(window.accessibilityElementsHidden)
