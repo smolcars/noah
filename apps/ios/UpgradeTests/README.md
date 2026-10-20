@@ -438,3 +438,70 @@ Owned simulator `Noah MMKV Safety t3-4176`
 exact name/UDID in Shutdown state, deleted and verified absent. Removed its
 `/private/tmp/noah-mmkv-safety-4176-dd` DerivedData (including all result bundles)
 and all owned transient scripts/logs. Shared/protected devices were untouched.
+
+## MMKV migration safety, review round 2 (2026-10-20; base `4f7228c5`)
+
+Recovery rejection now survives process restarts. Before returning **recover**
+from either MMKV error callback, native atomically writes and syncs a quarantine
+file outside MMKV, then syncs its parent directory. The identical UTF-8 format on
+both platforms is `1\nnoah-wallet-storage\n` (version, store name, trailing newline);
+it contains no setting values or secrets. iOS uses
+`Documents/mmkv.native-quarantine`; Android uses
+`noBackupFilesDir/mmkv.native-quarantine`. Marker write/sync failure fails closed
+for that launch; an unreadable or unknown marker also blocks.
+
+The admission state machine is:
+
+1. Before restoration retirement, inspect a disposable copy of the immutable
+   pre-open snapshot. Inventory **all eight RN keys**, including recurring.
+   Any missing snapshot key, undecodable consumed envelope, or newly quarantined
+   recovery closes MMKV and restores the original pair once. Revalidate against
+   the snapshot inventory before retiring restoration and clearing quarantine.
+   The existing restore-pending journal still resumes before mapping files.
+   If restoration/validation fails, remain blocked. An already restored pair may
+   finish admission after a crash; another recovery/loss cannot trigger a second
+   restoration. A snapshot that itself never had wallet-storage may still resume
+   foreground onboarding using the existing seed and DB.
+2. After retirement, never restore the RN snapshot. Recovery with readable,
+   complete admitted stores becomes **SETTINGS_RECOVERED**, a selectable support
+   message explaining that settings came from an older state and listing
+   biometrics, wallet suspension, balance hiding and backup settings to review.
+   Missing admitted keys or undecodable envelopes remain **STORAGE_UNSUPPORTED**
+   and offer no bypass. Retrying/restarting cannot clear quarantine.
+3. Only the foreground launch gate's explicit **Continue** action reopens and
+   validates recovered settings, syncs retirement, then removes the marker and
+   syncs its directory. Failed acknowledgement retains quarantine. No seed is
+   read/written to acknowledge settings. Push, background tasks, workers, widgets
+   and recurring work cannot open a quarantined wallet. Widgets only render
+   existing caches; they do not open MMKV or a wallet. The independent recurring
+   policy ledger and revision-bound settlement remain unchanged and still gate
+   recovered schedules after acknowledgement.
+
+Recurring envelope admission uses the existing recurring codec. Undecodable
+bytes, malformed envelopes and missing admitted recurring keys block both
+opening and later binding/mutation. Strict-parse unsupported rows remain visible
+and stopped; they do not block the wallet and are never replaced by an empty
+schedule envelope. Esplora remains inventoried but inactive as before.
+
+Shared `../../fixtures/mmkv-launch-state.json` now has **15 vectors**, adding
+partial first-open missing/undecodable wallet state, a snapshot with no wallet
+state, persistent quarantine, retries and explicit acknowledgement. Immutable
+snapshot bytes are never mapped directly: MMKV may rewrite only the disposable
+inspection copy or live files.
+
+Permanent real-MMKV probes reproduce an appended native suspension record
+recovering to an older wallet state, rejection across two opens, recurring
+undecodable/admitted-key loss, and partial first-open loss. The base-code run
+failed all three finding functions (six issues); a corrected admitted-recurring
+fixture was also negative-controlled against the old inventory: both cases
+failed. The fixed targeted run passed **25 functions / 3 suites**, including
+all shared vectors, four quarantine durability tests and the headless gate
+(which never calls the seed reader while quarantined).
+
+Final verification: **643 total / 124 suites / 620 passed / 23 opt-in skipped / zero failures**. XcodeGen ran before the full NoahTests suite,
+which ran once after the final code change, with arm64/active architecture only,
+code signing enabled, two jobs and owned DerivedData under `/private/tmp`.
+No funded/running-RN replacement or physical push delivery was repeated.
+
+Cleanup: owned simulator **NoahMMKVRound2-639fae47** (`FFB51B88-7853-45E3-B0F9-75DD652CC1D9`) was confirmed by exact name/UDID, shut down through T3, confirmed **Shutdown**, deleted and verified absent. Its `/private/tmp/noah-mmkv-r2-639fae47-dd` DerivedData and every owned result bundle were removed. No protected simulator, Android device, physical device,
+Docker, client or server implementation was changed.

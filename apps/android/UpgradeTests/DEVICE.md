@@ -513,3 +513,71 @@ assembly and instrumentation Kotlin compilation both succeeded. All 12
 The nine shared storage vectors passed in the equivalent real-MMKV iOS tests.
 Durable pause/cancel tombstones remain a separate task; no `RecurringExecutor`
 or `RecurringStore` implementation was changed.
+
+## MMKV migration safety, review round 2 (2026-10-20; base `4f7228c5`)
+
+Recovery rejection now survives process restarts. Before returning **recover**
+from either MMKV error callback, native atomically writes and syncs a quarantine
+file outside MMKV, then syncs its parent directory. The identical UTF-8 format on
+both platforms is `1\nnoah-wallet-storage\n` (version, store name, trailing newline);
+it contains no setting values or secrets. iOS uses
+`Documents/mmkv.native-quarantine`; Android uses
+`noBackupFilesDir/mmkv.native-quarantine`. Marker write/sync failure fails closed
+for that launch; an unreadable or unknown marker also blocks.
+
+The admission state machine is:
+
+1. Before restoration retirement, inspect a disposable copy of the immutable
+   pre-open snapshot. Inventory **all eight RN keys**, including recurring.
+   Any missing snapshot key, undecodable consumed envelope, or newly quarantined
+   recovery closes MMKV and restores the original pair once. Revalidate against
+   the snapshot inventory before retiring restoration and clearing quarantine.
+   The existing restore-pending journal still resumes before mapping files.
+   If restoration/validation fails, remain blocked. An already restored pair may
+   finish admission after a crash; another recovery/loss cannot trigger a second
+   restoration. A snapshot that itself never had wallet-storage may still resume
+   foreground onboarding using the existing seed and DB.
+2. After retirement, never restore the RN snapshot. Recovery with readable,
+   complete admitted stores becomes **SETTINGS_RECOVERED**, a selectable support
+   message explaining that settings came from an older state and listing
+   biometrics, wallet suspension, balance hiding and backup settings to review.
+   Missing admitted keys or undecodable envelopes remain **STORAGE_UNSUPPORTED**
+   and offer no bypass. Retrying/restarting cannot clear quarantine.
+3. Only the foreground launch gate's explicit **Continue** action reopens and
+   validates recovered settings, syncs retirement, then removes the marker and
+   syncs its directory. Failed acknowledgement retains quarantine. No seed is
+   read/written to acknowledge settings. Push, background tasks, workers, widgets
+   and recurring work cannot open a quarantined wallet. Widgets only render
+   existing caches; they do not open MMKV or a wallet. The independent recurring
+   policy ledger and revision-bound settlement remain unchanged and still gate
+   recovered schedules after acknowledgement.
+
+Recurring envelope admission uses the existing recurring codec. Undecodable
+bytes, malformed envelopes and missing admitted recurring keys block both
+opening and later binding/mutation. Strict-parse unsupported rows remain visible
+and stopped; they do not block the wallet and are never replaced by an empty
+schedule envelope. Esplora remains inventoried but inactive as before.
+
+Shared `../../fixtures/mmkv-launch-state.json` now has **15 vectors**, adding
+partial first-open missing/undecodable wallet state, a snapshot with no wallet
+state, persistent quarantine, retries and explicit acknowledgement. Immutable
+snapshot bytes are never mapped directly: MMKV may rewrite only the disposable
+inspection copy or live files.
+
+Verification: the required final Nix command ran once with `--max-workers=2`:
+`:app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin`
+— **2,961 JVM tests / 94 suites / zero failures, errors or skips**; regtest APK
+assembly and instrumentation Kotlin compilation succeeded. The recurring
+admission negative control failed its unreadable-envelope test when the old
+validation was reinstated; both tests passed with the fix. Four quarantine
+filesystem tests exercise sync ordering, retries, failed marker writes,
+acknowledgement failure and malformed markers. Snapshot inspection tests prove
+that recovery edits cannot alter the immutable pair and scratch is removed.
+
+All **17 MMKVRecoveryTest JNI methods compile**, including the new actual-MMKV
+suspension/retry, acknowledgement, marker failure, recurring envelope/key loss,
+partial snapshot loss and 15 shared vectors. They were **not run on Android**:
+this task prohibits touching any Android emulator or physical device. Equivalent
+real-MMKV iOS probes and all shared vectors passed. No Android device, protected
+simulator, Docker, client or server implementation was changed; funded/live
+upgrade and real FCM/UnifiedPush delivery were not repeated.

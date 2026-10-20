@@ -95,3 +95,22 @@ before JSON validation. Existing seed+DB with wallet-storage already missing at
 first native open still resumes foreground onboarding. Every headless opener
 requires explicit initialization, and committed deletion waits for foreground.
 See `DEVICE.md` and shared `../../fixtures/mmkv-launch-state.json` (nine vectors).
+
+Review round 2 (2026-10-20, base `4f7228c5`): admission inventories every RN key
+on both platforms, including recurring. Its existing codec validates envelopes;
+unsupported recurring rows stay visible/stopped, while unreadable bytes or a
+missing admitted recurring key block later binding as well as launch. First-open
+live keys must cover the immutable snapshot's key inventory; partial loss or
+undecodability restores the closed pair once or blocks. Onboarding for missing
+wallet-storage applies when the snapshot itself had no such key.
+
+Recovery callbacks durably quarantine outside MMKV before returning recover.
+The marker is UTF-8 `1\nnoah-wallet-storage\n`, file- and directory-synced.
+After restoration retirement, readable recovered settings require the foreground
+**Continue** acknowledgement (`SETTINGS_RECOVERED`); unreadable/lost admitted
+values remain blocked (`STORAGE_UNSUPPORTED`). Restart/retry and headless paths
+cannot clear it. Review biometrics, wallet suspension, balance hiding and backup
+settings after acknowledging. The independent recurring policy ledger remains
+in force. See `DEVICE.md` and all **15** shared storage launch vectors.
+Final Android verification: **2,961 JVM tests / 94 suites / zero failures or
+skips**, APK assembled and all 17 JNI probes compiled; no Android device run.
