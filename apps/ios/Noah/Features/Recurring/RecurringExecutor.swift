@@ -166,7 +166,7 @@ import Observation
                             throw SendNotSubmitted(reason: .recurringStopped)
                         }
                     }
-                    try await settle(entry, original: marked)
+                    try await settle(entry, original: marked, retainReceipt: approval != nil)
                 } catch {
                     // Only a failure before the independent marker exists is automatically retryable.
                     let entry = try d.journal.load()[id]
@@ -189,7 +189,7 @@ import Observation
         } catch { self.error = error.localizedDescription }
         await d.notifications((try? d.store.load().schedules.values.map { $0 }) ?? [], nil)
     }
-    private func settle(_ entry: RecurringJournal.Entry, original: RecurringPayment) async throws {
+    private func settle(_ entry: RecurringJournal.Entry, original: RecurringPayment, retainReceipt: Bool = false) async throws {
         guard d.controller.attempt?.recurringOccurrenceKey == entry.key else { return }
         guard try d.binding() == entry.binding else { return }
         guard var latest = try d.store.load().schedules[entry.scheduleID] else {
@@ -197,11 +197,11 @@ import Observation
             switch d.controller.state {
             case .succeeded(let receipt) where !receipt.isUnresolved && receipt.broadcastRetryPending != true:
                 var resolved = entry; resolved.resolved = true; resolved.consumed = true; try d.journal.save(resolved)
-                d.controller.acknowledge()
+                if !retainReceipt { d.controller.acknowledge() }
                 await d.notifications([], original)
             case .failed:
                 var resolved = entry; resolved.resolved = true; try d.journal.save(resolved)
-                d.controller.acknowledge()
+                if !retainReceipt { d.controller.acknowledge() }
             default: break
             }
             return
@@ -216,14 +216,14 @@ import Observation
             try d.store.upsert(result)
             var resolved = entry; resolved.resolved = true; resolved.consumed = true
             try d.journal.save(resolved)
-            d.controller.acknowledge()
+            if !retainReceipt { d.controller.acknowledge() }
             await d.notifications([], result)
         case .alreadyPaid:
             latest.failure(entry.plan, message: "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.", retryable: false, now: d.now())
             try d.store.upsert(latest)
             var resolved = entry; resolved.resolved = true; resolved.consumed = true
             try d.journal.save(resolved)
-            d.controller.acknowledge()
+            if !retainReceipt { d.controller.acknowledge() }
             await d.notifications([], latest)
         case .failed:
             latest.inFlight = nil
@@ -231,7 +231,7 @@ import Observation
             try d.store.upsert(latest)
             var resolved = entry; resolved.resolved = true
             try d.journal.save(resolved)
-            d.controller.acknowledge()
+            if !retainReceipt { d.controller.acknowledge() }
         default:
             latest.status = "needs_attention"
             latest.lastError = d.controller.message ?? "This payment may have been sent. Check its status before making another payment."

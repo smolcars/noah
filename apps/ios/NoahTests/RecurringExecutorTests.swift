@@ -493,10 +493,19 @@ import Testing
         let review = try await h.executor.review(schedule.id)
         #expect(review.quote.fee == 501)
         await h.executor.execute(manual: true, approval: review)
+        // SendConfirmation selects its receipt view while locked, until Done acknowledges it.
+        #expect(h.controller.locked)
+        #expect(h.controller.attempt?.receipt != nil)
+        if case .succeeded = h.controller.state {} else { Issue.record("The attended review must keep its success state") }
         await h.executor.execute(manual: true, approval: review)
         #expect(h.calls.withLock { $0 } == 1)
         #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == 1)
         #expect(try h.journal.load()[schedule.id]?.consumed == true)
+        h.controller.acknowledge() // The normal Send receipt's Done action.
+        #expect(!h.controller.locked && h.controller.attempt == nil)
+        await h.executor.execute(manual: true, approval: review)
+        #expect(h.calls.withLock { $0 } == 1)
+        #expect(try h.store.load().schedules[schedule.id]?.runs.first?.status == "success")
     }
     @Test func manualReviewCannotOutlivePause() async throws {
         let h = try Harness(); let schedule = try h.add(); h.method = "offer"; h.fee = 501
