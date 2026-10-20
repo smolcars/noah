@@ -109,7 +109,7 @@ class RecurringExecutor(private val d: Dependencies,
                     }
                     if (job == null) { markUncertain(id); continue }
                     job.join()
-                    settle(entry, marked)
+                    settle(entry, marked, retainReceipt = approval != null)
                 } catch (_: Exception) {
                     val entry = d.journal.load()[id]
                     if (entry != null && !entry.resolved && entry.plan == plan) markUncertain(id)
@@ -127,7 +127,7 @@ class RecurringExecutor(private val d: Dependencies,
             d.store.upsert(stopped); d.notify(emptyList(), stopped)
         }
     }
-    private fun settle(entry: RecurringJournal.Entry, original: RecurringPayment) {
+    private fun settle(entry: RecurringJournal.Entry, original: RecurringPayment, retainReceipt: Boolean = false) {
         if (controller.attempt?.recurringOccurrenceKey != entry.key || d.binding() != entry.binding) return
         val success = controller.state == SendController.State.succeeded && controller.attempt?.receipt?.let { !it.isUnresolved && !it.broadcastRetryPending && it.isProven(controller.attempt!!.payment) } == true
         val paid = success || controller.state == SendController.State.alreadyPaid
@@ -149,7 +149,7 @@ class RecurringExecutor(private val d: Dependencies,
                 d.store.upsert(result); d.notify(emptyList(), result)
             }
         }
-        controller.acknowledge()
+        if (!retainReceipt) controller.acknowledge()
     }
     suspend fun checkStatus(id: String) {
         try {

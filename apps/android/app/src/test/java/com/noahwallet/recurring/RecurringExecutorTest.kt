@@ -191,6 +191,29 @@ class RecurringExecutorTest {
         w.executor.execute(manual = true, approval = review); w.executor.execute(manual = true, approval = review)
         assertEquals(1, w.wallet.calls); assertEquals(quotes, w.quotes); assertEquals(1, w.schedule!!.occurrencesPaid)
     }
+    @Test fun attendedReceiptStaysLockedThroughSlowSyncUntilDoneAndCannotReplay() = runBlocking {
+        val w = RecurringWorld(this); w.add(); w.fee = 1
+        w.executor.execute()
+        val review = w.executor.review("rent")
+        val syncing = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
+        w.sync = { syncing.complete(Unit); release.await() }
+        val approval = async { w.executor.execute(manual = true, approval = review) }
+        try {
+            syncing.await()
+            assertEquals(SendController.State.succeeded, w.controller.state)
+            assertTrue(w.controller.locked); assertNotNull(w.controller.attempt?.receipt)
+            assertEquals(1, w.schedule!!.occurrencesPaid)
+            assertTrue(w.journal.load().getValue("rent").consumed)
+        } finally { release.complete(Unit); approval.await() }
+        w.sync = {}
+        assertEquals(SendController.State.succeeded, w.controller.state)
+        w.executor.execute(manual = true, approval = review)
+        assertEquals(1, w.wallet.calls); assertTrue(w.controller.locked)
+        w.controller.acknowledge() // The sheet's Done action.
+        assertFalse(w.controller.locked); assertNull(w.controller.attempt)
+        w.executor.execute(manual = true, approval = review)
+        assertEquals(1, w.wallet.calls); assertEquals(1, w.schedule!!.occurrencesPaid)
+    }
     @Test fun manualReviewCannotOutlivePause() = runBlocking {
         val w = RecurringWorld(this); w.add(); w.fee = 1; w.executor.execute()
         val review = w.executor.review("rent"); w.executor.pause("rent"); w.executor.execute(true, review)
