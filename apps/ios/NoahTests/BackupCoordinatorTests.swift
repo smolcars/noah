@@ -48,6 +48,7 @@ struct BackupCoordinatorTests {
         private var _failures = 0
         private var _snapshot = "sha-1"
         var eligible = true
+        var enabled = true
         var held: CheckedContinuation<Void, Never>?
         var holdNext = false
 
@@ -79,7 +80,7 @@ struct BackupCoordinatorTests {
                     onUploadRequired()
                     return .init(backupId: "backup-\(sha)", snapshotSha256: sha, uploaded: true)
                 },
-                canBackup: { _ in self.eligible },
+                canBackup: { self.eligible && (!$0 || self.enabled) },
                 loadState: { self.lock.withLock { self._state } },
                 saveState: { new in self.lock.withLock { self._state = new } },
                 sleep: { try await clock.sleep($0) },
@@ -97,6 +98,56 @@ struct BackupCoordinatorTests {
             try? await Task.sleep(for: .milliseconds(2))
         }
         Issue.record("condition never became true")
+    }
+
+    @Test func deletingLatestUploadSchedulesAnEnabledReplacement() async throws {
+        let clock = ManualClock()
+        let world = World()
+        let coordinator = BackupCoordinator(dependencies: world.dependencies(clock: clock))
+        try await coordinator.flush(.manual)
+        await coordinator.forgetUploadedBackup("other")
+        #expect(await clock.pending.isEmpty)
+        await coordinator.forgetUploadedBackup("backup-sha-1")
+        await eventually { await clock.pending == [.seconds(5)] }
+        #expect(world.calls.count == 1)
+        #expect(world.state.lastUploadedSnapshotSha256 == nil)
+        await clock.fireNext()
+        await eventually { world.calls.count == 2 && world.state.lastBackupStatus == .success }
+        #expect(world.calls == [nil, nil])
+        await coordinator.cancelScheduled()
+    }
+
+    @Test(arguments: [false, true]) func deletingLatestRespectsDisabledAndSuspendedWallets(suspended: Bool) async throws {
+        let clock = ManualClock()
+        let world = World()
+        let coordinator = BackupCoordinator(dependencies: world.dependencies(clock: clock))
+        try await coordinator.flush(.manual)
+        world.eligible = !suspended
+        world.enabled = suspended
+        await coordinator.forgetUploadedBackup("backup-sha-1")
+        #expect(world.state.lastUploadedSnapshotSha256 == nil)
+        #expect(world.state.backupPending)
+        #expect(await clock.pending.isEmpty)
+        #expect(world.calls.count == 1)
+    }
+
+    @Test func deletingLatestWaitsForUnchangedPassBeforeReplacingIt() async throws {
+        let clock = ManualClock()
+        let world = World()
+        let coordinator = BackupCoordinator(dependencies: world.dependencies(clock: clock))
+        try await coordinator.flush(.manual)
+        world.hold()
+        let pass = Task { try await coordinator.flush(.manual) }
+        await eventually { world.isHolding }
+        let deletion = Task { await coordinator.forgetUploadedBackup("backup-sha-1") }
+        world.releaseHeld()
+        try await pass.value
+        await deletion.value
+        await eventually { await clock.pending == [.seconds(5)] }
+        await clock.fireNext()
+        await eventually { world.calls.count == 3 && world.state.lastBackupStatus == .success }
+        #expect(world.calls == [nil, "sha-1", nil])
+        await coordinator.cancelScheduled()
     }
 
     @Test func deletionTimeoutDoesNotAbandonAnUncooperativePass() async throws {

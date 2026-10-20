@@ -277,8 +277,10 @@ actor BackupCoordinator {
     /// Invalidate deduplication after deleting the currently remembered upload.
     func forgetUploadedBackup(_ backupId: String) async {
         // An in-flight unchanged pass must not restore the deleted hash.
-        if let inFlight { _ = await inFlight.value }
-        update { _ = $0.forgetUploadedBackup(backupId) }
+        while let inFlight { _ = await inFlight.value }
+        var deletedCurrent = false
+        update { deletedCurrent = $0.forgetUploadedBackup(backupId) }
+        if deletedCurrent { await schedule(.manual) }
     }
 
     /// After a restore (RN `seedRestoredBackup`).
