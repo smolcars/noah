@@ -26,3 +26,21 @@ test('missing translations and unknown variables fail generation', () => {
   const catalogs = Object.fromEntries(['en', 'es', 'ja', 'ko', 'sv'].map(locale => [locale, { id: locale === 'en' ? '{name}' : '{wrong}' }]));
   expect(() => entries(catalogs)).toThrow('Placeholder drift');
 });
+
+test('native-only templates and literal percent signs are safe', () => {
+  const strings = JSON.parse(iosCatalog([], ['Payment to {recipient} was skipped.', '100% ready'])).strings;
+  expect(strings['Payment to {recipient} was skipped.'].localizations.en.stringUnit.value).toBe('Payment to %1$@ was skipped.');
+  expect(strings['100% ready'].localizations.en.stringUnit.value).toBe('100% ready');
+  expect(androidCatalog([], 'en', ['100% ready'])).toContain('"100% ready"');
+});
+
+test('native inventory handles nested interpolation and ignores comments and raw regexes', async () => {
+  const { nativeLiterals } = await import('./translations.mjs');
+  expect(nativeLiterals('// "Ignore"\nText("Hello \\(name ?? "friend")")\nlet regex = #"["\\w]"#', true).map(item => item.text)).toEqual(['Hello {nativeValue1}']);
+  expect(nativeLiterals('Text("Hello ${name ?: "friend"}") // "Ignore"\nval quote = \'"\'', false).map(item => item.text)).toEqual(['Hello {nativeValue1}']);
+});
+
+test('checked-in catalogs and every native RN key stay current in all five locales', async () => {
+  const { generate } = await import('./translations.mjs');
+  await generate(true);
+}, 30_000);

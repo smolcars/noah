@@ -1,0 +1,366 @@
+{
+  "cases": [
+    {
+      "name": "en: Cancel",
+      "input": {
+        "locale": "en",
+        "source": "Cancel",
+        "args": []
+      },
+      "expected": "Cancel"
+    },
+    {
+      "name": "en: You received {amount}",
+      "input": {
+        "locale": "en",
+        "source": "You received {amount}",
+        "args": [
+          "₿ 1,234 (≈ US$1.23)"
+        ]
+      },
+      "expected": "You received ₿ 1,234 (≈ US$1.23)"
+    },
+    {
+      "name": "en: {amount} to {recipient} will be sent tomorrow.",
+      "input": {
+        "locale": "en",
+        "source": "{amount} to {recipient} will be sent tomorrow.",
+        "args": [
+          "1,234 sats",
+          "Alice"
+        ]
+      },
+      "expected": "1,234 sats to Alice will be sent tomorrow."
+    },
+    {
+      "name": "en: Open Noah to send {amount} to {recipient}.",
+      "input": {
+        "locale": "en",
+        "source": "Open Noah to send {amount} to {recipient}.",
+        "args": [
+          "1,234 sats",
+          "Alice"
+        ]
+      },
+      "expected": "Open Noah to send 1,234 sats to Alice."
+    },
+    {
+      "name": "en: {amount} to {recipient} could not be sent yet: {error}",
+      "input": {
+        "locale": "en",
+        "source": "{amount} to {recipient} could not be sent yet: {error}",
+        "args": [
+          "1,234 sats",
+          "Alice",
+          "offline % <test>"
+        ]
+      },
+      "expected": "1,234 sats to Alice could not be sent yet: offline % <test>"
+    },
+    {
+      "name": "es: Cancel",
+      "input": {
+        "locale": "es",
+        "source": "Cancel",
+        "args": []
+      },
+      "expected": "Cancelar"
+    },
+    {
+      "name": "es: You received {amount}",
+      "input": {
+        "locale": "es",
+        "source": "You received {amount}",
+        "args": [
+          "₿ 1,234 (≈ US$1.23)"
+        ]
+      },
+      "expected": "Has recibido ₿ 1,234 (≈ US$1.23)"
+    },
+    {
+      "name": "es: {amount} to {recipient} will be sent tomorrow.",
+      "input": {
+        "locale": "es",
+        "source": "{amount} to {recipient} will be sent tomorrow.",
+        "args": [
+          "1,234 sats",
+          "Alice"
+        ]
+      },
+      "expected": "Mañana se enviará 1,234 sats a Alice."
+    },
+    {
+      "name": "es: Open Noah to send {amount} to {recipient}.",
+      "input": {
+        "locale": "es",
+        "source": "Open Noah to send {amount} to {recipient}.",
+        "args": [
+          "1,234 sats",
+          "Alice"
+        ]
+      },
+      "expected": "Abre Noah para enviar 1,234 sats a Alice."
+    },
+    {
+      "name": "es: {amount} to {recipient} could not be sent yet: {error}",
+      "input": {
+        "locale": "es",
+        "source": "{amount} to {recipient} could not be sent yet: {error}",
+        "args": [
+          "1,234 sats",
+          "Alice",
+          "offline % <test>"
+        ]
+      },
+      "expected": "Aún no se ha podido enviar 1,234 sats a Alice: offline % <test>"
+    },
+    {
+      "name": "ja: Cancel",
+      "input": {
+        "locale": "ja",
+        "source": "Cancel",
+        "args": []
+      },
+      "expected": "キャンセル"
+    },
+    {
+      "name": "ja: You received {amount}",
+      "input": {
+        "locale": "ja",
+        "source": "You received {amount}",
+        "args": [
+          "₿ 1,234 (≈ US$1.23)"
+        ]
+      },
+      "expected": "₿ 1,234 (≈ US$1.23)を受け取りました"
+    },
+    {
+      "name": "ja: {amount} to {recipient} will be sent tomorrow.",
+      "input": {
+        "locale": "ja",
+        "source": "{amount} to {recipient} will be sent tomorrow.",
+        "args": [
+          "1,234 sats",
+          "Alice"
+        ]
+      },
+      "expected": "明日、Aliceに1,234 satsを送金します。"
+    },
+    {
+      "name": "ja: Open Noah to send {amount} to {recipient}.",
+      "input": {
+        "locale": "ja",
+        "source": "Open Noah to send {amount} to {recipient}.",
+        "args": [
+          "1,234 sats",
+          "Alice"
+        ]
+      },
+      "expected": "Noahを開いてAliceに1,234 satsを送金してください。"
+    },
+    {
+      "name": "ja: {amount} to {recipient} could not be sent yet: {error}",
+      "input": {
+        "locale": "ja",
+        "source": "{amount} to {recipient} could not be sent yet: {error}",
+        "args": [
+          "1,234 sats",
+          "Alice",
+          "offline % <test>"
+        ]
+      },
+      "expected": "Aliceへの1,234 satsの送信はまだ完了していません：offline % <test>"
+    },
+    {
+      "name": "ko: Cancel",
+      "input": {
+        "locale": "ko",
+        "source": "Cancel",
+        "args": []
+      },
+      "expected": "취소"
+    },
+    {
+      "name": "ko: You received {amount}",
+      "input": {
+        "locale": "ko",
+        "source": "You received {amount}",
+        "args": [
+          "₿ 1,234 (≈ US$1.23)"
+        ]
+      },
+      "expected": "₿ 1,234 (≈ US$1.23) 받았습니다"
+    },
+    {
+      "name": "ko: {amount} to {recipient} will be sent tomorrow.",
+      "input": {
+        "locale": "ko",
+        "source": "{amount} to {recipient} will be sent tomorrow.",
+        "args": [
+          "1,234 sats",
+          "Alice"
+        ]
+      },
+      "expected": "내일 Alice에게 1,234 sats 전송 예정입니다."
+    },
+    {
+      "name": "ko: Open Noah to send {amount} to {recipient}.",
+      "input": {
+        "locale": "ko",
+        "source": "Open Noah to send {amount} to {recipient}.",
+        "args": [
+          "1,234 sats",
+          "Alice"
+        ]
+      },
+      "expected": "Noah를 열어 Alice에게 1,234 sats 보내세요."
+    },
+    {
+      "name": "ko: {amount} to {recipient} could not be sent yet: {error}",
+      "input": {
+        "locale": "ko",
+        "source": "{amount} to {recipient} could not be sent yet: {error}",
+        "args": [
+          "1,234 sats",
+          "Alice",
+          "offline % <test>"
+        ]
+      },
+      "expected": "Alice에게 1,234 sats 전송을 아직 완료하지 못했습니다: offline % <test>"
+    },
+    {
+      "name": "sv: Cancel",
+      "input": {
+        "locale": "sv",
+        "source": "Cancel",
+        "args": []
+      },
+      "expected": "Avbryt"
+    },
+    {
+      "name": "sv: You received {amount}",
+      "input": {
+        "locale": "sv",
+        "source": "You received {amount}",
+        "args": [
+          "₿ 1,234 (≈ US$1.23)"
+        ]
+      },
+      "expected": "Du har fått ₿ 1,234 (≈ US$1.23)"
+    },
+    {
+      "name": "sv: {amount} to {recipient} will be sent tomorrow.",
+      "input": {
+        "locale": "sv",
+        "source": "{amount} to {recipient} will be sent tomorrow.",
+        "args": [
+          "1,234 sats",
+          "Alice"
+        ]
+      },
+      "expected": "1,234 sats skickas till Alice i morgon."
+    },
+    {
+      "name": "sv: Open Noah to send {amount} to {recipient}.",
+      "input": {
+        "locale": "sv",
+        "source": "Open Noah to send {amount} to {recipient}.",
+        "args": [
+          "1,234 sats",
+          "Alice"
+        ]
+      },
+      "expected": "Öppna Noah för att skicka 1,234 sats till Alice."
+    },
+    {
+      "name": "sv: {amount} to {recipient} could not be sent yet: {error}",
+      "input": {
+        "locale": "sv",
+        "source": "{amount} to {recipient} could not be sent yet: {error}",
+        "args": [
+          "1,234 sats",
+          "Alice",
+          "offline % <test>"
+        ]
+      },
+      "expected": "Det gick ännu inte att skicka 1,234 sats till Alice: offline % <test>"
+    }
+  ],
+  "plurals": [
+    {
+      "source": "Spending {_gt_value_4} VTXOs",
+      "translations": {
+        "en": {
+          "other": "Spending {_gt_value_4} VTXOs",
+          "one": "Spending one VTXO"
+        },
+        "es": {
+          "other": "Gastando {_gt_value_4} VTXO",
+          "one": "Gastando un VTXO"
+        },
+        "ja": {
+          "other": "{_gt_value_4} 個の VTXO を使用中",
+          "one": "1件のVTXOを使用中"
+        },
+        "ko": {
+          "other": "VTXO {_gt_value_4}개 사용 중",
+          "one": "VTXO 1개 사용 중"
+        },
+        "sv": {
+          "other": "Spenderar {_gt_value_4} VTXO:er",
+          "one": "Spenderar en VTXO"
+        }
+      }
+    },
+    {
+      "source": "{_gt_value_4} exits are behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions.",
+      "translations": {
+        "en": {
+          "other": "{_gt_value_4} exits are behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions.",
+          "one": "One exit is behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions."
+        },
+        "es": {
+          "other": "{_gt_value_4} salidas están por detrás de la altura actual de la cadena. Usa Avanzar para consultar la cadena; esta opción también permite difundir transacciones de salida.",
+          "one": "Una salida está por detrás de la altura actual de la cadena. Usa Avanzar para consultar la cadena; esta opción también permite difundir transacciones de salida."
+        },
+        "ja": {
+          "other": "{_gt_value_4} 件の退出が現在のチェーンの高さより遅れています。 「出金処理を進める」でブロックチェーンの状態を確認してください。出金トランザクションがブロードキャストされる場合もあります。",
+          "one": "1件の出金が現在のチェーンの高さより遅れています。 「出金処理を進める」でブロックチェーンの状態を確認してください。出金トランザクションがブロードキャストされる場合もあります。"
+        },
+        "ko": {
+          "other": "{_gt_value_4}건의 출금이 현재 체인 높이보다 뒤처져 있습니다. 진행하기를 눌러 블록체인 상태를 확인하세요. 이 과정에서 출금 거래가 전파될 수도 있습니다.",
+          "one": "출금 1건이 현재 체인 높이보다 뒤처져 있습니다. 진행하기를 눌러 블록체인 상태를 확인하세요. 이 과정에서 출금 거래가 전파될 수도 있습니다."
+        },
+        "sv": {
+          "other": "{_gt_value_4} nöduttag ligger efter den aktuella kedjehöjden. Använd Gå vidare för att kontrollera blockkedjan. Det kan även innebära att nöduttagstransaktioner sänds.",
+          "one": "Ett nöduttag ligger efter den aktuella blockhöjden. Använd Gå vidare för att kontrollera blockkedjan. Det kan även innebära att nöduttagstransaktioner sänds."
+        }
+      }
+    },
+    {
+      "source": "{_gt_value_4} places{_gt_value_3}",
+      "translations": {
+        "en": {
+          "other": "{_gt_value_4} places{_gt_value_3}",
+          "one": "One place{_gt_value_3}"
+        },
+        "es": {
+          "other": "{_gt_value_4} lugares{_gt_value_3}",
+          "one": "Un lugar{_gt_value_3}"
+        },
+        "ja": {
+          "other": "{_gt_value_4} か所{_gt_value_3}",
+          "one": "1か所{_gt_value_3}"
+        },
+        "ko": {
+          "other": "{_gt_value_4}곳{_gt_value_3}",
+          "one": "한 곳{_gt_value_3}"
+        },
+        "sv": {
+          "other": "{_gt_value_4} platser{_gt_value_3}",
+          "one": "En plats{_gt_value_3}"
+        }
+      }
+    }
+  ]
+}

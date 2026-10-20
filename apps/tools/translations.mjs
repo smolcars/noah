@@ -32,7 +32,7 @@ function plural(node) {
   return null;
 }
 export function format(text, names, platform, quantity) {
-  return text.replaceAll('%', '%%').replace(variablePattern, (_, name) => {
+  return (names.length ? text.replaceAll('%', '%%') : text).replace(variablePattern, (_, name) => {
     const index = names.indexOf(name);
     if (index < 0) throw new Error(`Unknown placeholder ${name}: ${text}`);
     return `%${index + 1}$${name === quantity ? (platform === 'ios' ? 'lld' : 'd') : (platform === 'ios' ? '@' : 's')}`;
@@ -72,7 +72,7 @@ export function entries(catalogs) {
       const categories = forms ? [...new Set(['other', ...Object.keys(plural(node) ?? forms)])] : ['other'];
       translations[locale] = Object.fromEntries(categories.map(category => {
         const text = flatten(node, category);
-        if (variables(text).some(name => !names.includes(name))) throw new Error(`Placeholder drift: ${locale}/${id}`);
+        if (variables(text).some(name => !names.includes(name)) || (category === 'other' && names.some(name => !variables(text).includes(name)))) throw new Error(`Placeholder drift: ${locale}/${id}`);
         return [category, text];
       }));
     }
@@ -89,6 +89,54 @@ export async function filesBelow(directory, extension) {
   }
   return files.sort();
 }
+// Skip comments and nested interpolations so native-only sentences are inventoried once,
+// including strings whose interpolation expressions contain quoted strings of their own.
+export function nativeLiterals(code, swift) {
+  const output = [];
+  function group(start) {
+    const close = { '(': ')', '{': '}', '[': ']' }[code[start]];
+    let i = start + 1;
+    while (i < code.length) {
+      if (!swift && code[i] === "'") { const char = /^'(?:\\.|[^'\\])*'/.exec(code.slice(i)); i += char?.[0].length ?? 1; }
+      else if (code[i] === '"') i = quoted(i, false).end;
+      else if ('({['.includes(code[i])) i = group(i);
+      else if (code[i++] === close) return i;
+    }
+    throw new Error('Unclosed native interpolation');
+  }
+  function quoted(start, collect) {
+    let i = start + 1, text = '', count = 0;
+    while (i < code.length) {
+      if (code.startsWith(swift ? '\\(' : '${', i)) {
+        i = group(i + 1); text += `{nativeValue${++count}}`;
+      } else if (!swift && /^\$\w/.test(code.slice(i, i + 2))) {
+        const match = /^\$(\w+)/.exec(code.slice(i)); i += match[0].length;
+        text += `{nativeValue${++count}}`;
+      } else if (code[i] === '\\') { text += code.slice(i, i + 2); i += 2; }
+      else if (code[i] === '"') {
+        if (collect) {
+          try {
+            const decoded = JSON.parse(`"${text.replace(/\\u\{([0-9a-f]+)\}/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16))).replaceAll('\\$', '$')}"`);
+            output.push({ text: decoded, index: start });
+          } catch { /* Platform-only escape syntax is not UI copy. */ }
+        }
+        return { end: i + 1 };
+      } else text += code[i++];
+    }
+    throw new Error('Unclosed native string');
+  }
+  let i = 0;
+  while (i < code.length) {
+    if (code.startsWith('//', i)) { const end = code.indexOf('\n', i); i = end < 0 ? code.length : end; }
+    else if (code.startsWith('/*', i)) { const end = code.indexOf('*/', i + 2); i = end < 0 ? code.length : end + 2; }
+    else if (swift && code.startsWith('#"', i)) { const end = code.indexOf('"#', i + 2); i = end < 0 ? code.length : end + 2; }
+    else if (!swift && code.startsWith('"""', i)) { const end = code.indexOf('"""', i + 3); i = end < 0 ? code.length : end + 3; }
+    else if (!swift && code[i] === "'") { const char = /^'(?:\\.|[^'\\])*'/.exec(code.slice(i)); i += char?.[0].length ?? 1; }
+    else if (code[i] === '"') i = quoted(i, true).end;
+    else i++;
+  }
+  return output;
+}
 // Inventory literal UI copy and exact RN matches in native logic. Dynamic copy is explicitly
 // localized at call sites; identifiers, URLs, SF Symbols and persistence keys are not copy.
 export async function inventory(all) {
@@ -98,15 +146,16 @@ export async function inventory(all) {
     for (const file of await filesBelow(resolve(root, directory), ext)) {
       if (file.includes('/API/') || file.includes('/api/')) continue;
       const code = await readFile(file, 'utf8');
-      for (const match of code.matchAll(/"((?:\\.|[^"\\\n])*)"/g)) {
-        const raw = match[1];
-        if (raw.includes('\\(') || raw.includes('${')) continue;
-        let text;
-        try { text = JSON.parse(`"${raw}"`); } catch { continue; }
-        const uiFile = /\/(Features|DesignSystem|ui)\//.test(file) || /Screen\.kt$/.test(file);
-        const context = code.slice(Math.max(0, match.index - 60), match.index);
-        const uiLiteral = uiFile && /(?:Text|Button|Label|Section|TextField|navigationTitle|accessibilityLabel|row|SettingRow|SettingToggle|SectionTitle|NoahForm|NoahButton|settingsStyle|title:|detail:)\s*\(?[^\n]*$/.test(context);
-        if (!text || (!sources.has(text) && !(uiLiteral && /[A-Za-z]/.test(text) && !/^[a-z]+[._-]/.test(text)))) continue;
+      let literals;
+      try { literals = nativeLiterals(code, platform === 'ios'); } catch (error) { throw new Error(`${file}: ${error.message}`); }
+      for (const { text, index } of literals) {
+        const uiFile = /\/(Features|DesignSystem|ui|btcmap|onchain|recurring|send|history)\//.test(file) || /Screen\.kt$/.test(file);
+        const context = code.slice(Math.max(0, index - 60), index);
+        const uiLiteral = uiFile && /(?:Text|Button|Label|Section|TextField|navigationTitle|accessibilityLabel|row|SettingRow|SettingToggle|SectionTitle|NoahForm|NoahButton|settingsStyle|title:|detail:)\s*\(?\s*(?:(?:tr|LocalizedStringKey)\(\s*)?$/.test(context);
+        const localized = /L10n\.text\((?:context,\s*)?$/.test(context);
+        const visible = text.replace(/\{nativeValue\d+\}/g, '');
+        const sentence = uiFile && /^[A-Z][A-Za-z'’]*\s/.test(text) && !text.includes('://');
+        if (!text || (!sources.has(text) && !(localized || ((sentence || uiLiteral) && /[A-Za-z]/.test(visible) && !text.includes('://') && !/^[a-z]+[._-]/.test(text))))) continue;
         if (!result[platform].has(text)) result[platform].set(text, new Set());
         result[platform].get(text).add(file.slice(root.length + 1));
       }
@@ -127,10 +176,10 @@ export function iosCatalog(all, nativeOnly) {
       } : unit(format(entry.translations[locale].other, entry.names, 'ios'))])),
     };
   }
-  for (const text of nativeOnly) strings[text] = { comment: 'Native-only copy; no RN translation. Intentionally English.', extractionState: 'manual', localizations: { en: unit(text) } };
+  for (const text of nativeOnly) strings[text] = { comment: 'Native-only copy; no RN translation. Intentionally English.', extractionState: 'manual', localizations: { en: unit(format(text, variables(text), 'ios')) } };
   return json({ sourceLanguage: 'en', strings: Object.fromEntries(Object.entries(strings).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)), version: '1.0' });
 }
-export function androidCatalog(all, locale) {
+export function androidCatalog(all, locale, nativeOnly = []) {
   const lines = ['<?xml version="1.0" encoding="utf-8"?>', '<!-- Generated by apps/tools/translations.mjs. Do not edit. -->', '<resources>'];
   for (const entry of all) {
     const name = resourceName(entry.source);
@@ -140,6 +189,7 @@ export function androidCatalog(all, locale) {
       lines.push('  </plurals>');
     } else lines.push(`  <string name="${name}">"${xml(format(entry.translations[locale].other, entry.names, 'android'))}"</string>`);
   }
+  if (locale === 'en') for (const source of nativeOnly) lines.push(`  <string name="${resourceName(source)}">"${xml(format(source, variables(source), 'android'))}"</string>`);
   // Existing static resource callers (tabs/launch gate) retain their IDs.
   if (locale !== 'en') for (const [name, source] of Object.entries({ home: 'Home', receive: 'Receive', send: 'Send', history: 'History', launch_welcome: 'Welcome to Noah' })) {
     const entry = all.find(entry => entry.source === source);
@@ -154,7 +204,7 @@ export async function generate(check = false) {
   const nativeOnly = platform => [...used[platform].keys()].filter(source => !known.has(source)).sort();
   const outputs = new Map();
   outputs.set('apps/ios/Noah/Resources/Localizable.xcstrings', iosCatalog(all, nativeOnly('ios')));
-  for (const locale of locales) outputs.set(`apps/android/app/src/main/res/values${locale === 'en' ? '' : '-' + locale}/strings.xml`, androidCatalog(all, locale));
+  for (const locale of locales) outputs.set(`apps/android/app/src/main/res/values${locale === 'en' ? '' : '-' + locale}/strings.xml`, androidCatalog(all, locale, nativeOnly('android')));
   const coverage = Object.fromEntries(['ios', 'android'].map(platform => [platform, {
     rnTranslated: [...used[platform].keys()].filter(source => known.has(source)).length,
     nativeOnlyEnglish: nativeOnly(platform).length,

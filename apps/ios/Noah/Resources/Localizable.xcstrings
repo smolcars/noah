@@ -1,18 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "\n\nResuming skips all occurrences that are already due.": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "\n\nResuming skips all occurrences that are already due."
-          }
-        }
-      }
-    },
     " ({count} taps to unlock debug)": {
       "comment": "GT 2058f86cd24ad13b; arguments: count",
       "extractionState": "manual",
@@ -45,18 +33,6 @@
           "stringUnit": {
             "state": "translated",
             "value": " (%1$@ tryck för att låsa upp felsökning)"
-          }
-        }
-      }
-    },
-    " : amount) sats per payment, plus network fees": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " : amount) sats per payment, plus network fees"
           }
         }
       }
@@ -129,18 +105,6 @@
           "stringUnit": {
             "state": "translated",
             "value": " Tidigare sändningsavgifter dras inte av igen."
-          }
-        }
-      }
-    },
-    " · Current": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " · Current"
           }
         }
       }
@@ -285,6 +249,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "”Om du inte tror på det eller inte förstår det har jag inte tid att försöka övertyga dig, tyvärr.” – Satoshi Nakamoto"
+          }
+        }
+      }
+    },
+    "#{nativeValue1} · {nativeValue2} · {nativeValue3} sats": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "#%1$@ · %2$@ · %3$@ sats"
           }
         }
       }
@@ -441,6 +417,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "En delegerad förnyelse har schemalagts för de VTXO:er som uppfyller villkoren."
+          }
+        }
+      }
+    },
+    "A payment of {nativeValue1} sats for this invoice is already in progress. Do not pay again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A payment of %1$@ sats for this invoice is already in progress. Do not pay again."
           }
         }
       }
@@ -673,6 +661,30 @@
         }
       }
     },
+    "Action completed successfully": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Action completed successfully"
+          }
+        }
+      }
+    },
+    "Action failed. Check your input and connection before trying again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Action failed. Check your input and connection before trying again."
+          }
+        }
+      }
+    },
     "Active": {
       "comment": "GT 370aa80e162adbf6; arguments: none",
       "extractionState": "manual",
@@ -753,6 +765,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Actual fee pending"
+          }
+        }
+      }
+    },
+    "Actual fee: {nativeValue1} sats": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actual fee: %1$@ sats"
           }
         }
       }
@@ -1141,6 +1165,18 @@
         }
       }
     },
+    "Additional confirmed onchain funds would be required to progress this exit.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Additional confirmed onchain funds would be required to progress this exit."
+          }
+        }
+      }
+    },
     "Address": {
       "comment": "GT 44bbcfd33b751bd6; arguments: none",
       "extractionState": "manual",
@@ -1245,6 +1281,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Adress krävs"
+          }
+        }
+      }
+    },
+    "Address network mismatch for {nativeValue1} parameter": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Address network mismatch for %1$@ parameter"
           }
         }
       }
@@ -1557,6 +1605,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Låt Noah bevaka din Ark-brevlåda så att appen kan väckas för att ta emot Lightning-betalningar i bakgrunden."
+          }
+        }
+      }
+    },
+    "Allow camera access in Settings to scan a payment QR code.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow camera access in Settings to scan a payment QR code."
           }
         }
       }
@@ -2137,6 +2197,30 @@
         }
       }
     },
+    "An ancestor exit input was swept.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An ancestor exit input was swept."
+          }
+        }
+      }
+    },
+    "An earlier restore needs recovery. Do not retry. Close and restart Noah to continue safely.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An earlier restore needs recovery. Do not retry. Close and restart Noah to continue safely."
+          }
+        }
+      }
+    },
     "An unknown error occurred": {
       "comment": "GT b41769b26bb84aa2; arguments: none",
       "extractionState": "manual",
@@ -2245,18 +2329,6 @@
         }
       }
     },
-    "Anchor point": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anchor point"
-          }
-        }
-      }
-    },
     "Android can put Noah to sleep in the background to save energy. This has a negligible effect on battery life, but can cause push notifications to stop arriving entirely. Disabling battery optimization for Noah keeps the wallet operating correctly.": {
       "comment": "GT cc3116d6ccc5855c; arguments: none",
       "extractionState": "manual",
@@ -2329,6 +2401,18 @@
         }
       }
     },
+    "Another Lightning payment is still in progress. Try again once it completes.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another Lightning payment is still in progress. Try again once it completes."
+          }
+        }
+      }
+    },
     "App Logs": {
       "comment": "GT 200b26494e44366c; arguments: none",
       "extractionState": "manual",
@@ -2361,6 +2445,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apploggar"
+          }
+        }
+      }
+    },
+    "Appears to have gone through — check History": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appears to have gone through — check History"
+          }
+        }
+      }
+    },
+    "Approve and resume": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Approve and resume"
           }
         }
       }
@@ -2925,6 +3033,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ark-server"
+          }
+        }
+      }
+    },
+    "Ark server info is unavailable. Pull to refresh.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark server info is unavailable. Pull to refresh."
+          }
+        }
+      }
+    },
+    "Ark's published Lightning fees for this amount can reach {nativeValue1} sats, above your automatic limit of {nativeValue2} sats. Review it to pay manually.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark's published Lightning fees for this amount can reach %1$@ sats, above your automatic limit of %2$@ sats. Review it to pay manually."
+          }
+        }
+      }
+    },
+    "ArkInfo unavailable; using the published Lightning fee schedule": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArkInfo unavailable; using the published Lightning fee schedule"
+          }
+        }
+      }
+    },
+    "Ask to board to Ark when onchain balance can cover {nativeValue1} sats plus fees while leaving at least 5,000 sats onchain. Confirm the exact fees and reserve before boarding.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask to board to Ark when onchain balance can cover %1$@ sats plus fees while leaving at least 5,000 sats onchain. Confirm the exact fees and reserve before boarding."
           }
         }
       }
@@ -3517,6 +3673,18 @@
         }
       }
     },
+    "Automatic payment to {recipient} was skipped. Open the schedule to review its fee and pay manually.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic payment to %1$@ was skipped. Open the schedule to review its fee and pay manually."
+          }
+        }
+      }
+    },
     "Automatic payments from your Ark balance. Lightning fee limits use Ark’s published fees, up to 2% or 200 sats, whichever is higher. Payments above the limit need manual approval. Keep notifications enabled.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -4105,6 +4273,18 @@
         }
       }
     },
+    "Backing up...": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backing up..."
+          }
+        }
+      }
+    },
     "Backup": {
       "comment": "GT d9eee8f65bf7fa7d; arguments: none",
       "extractionState": "manual",
@@ -4357,6 +4537,18 @@
         }
       }
     },
+    "Backup complete": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup complete"
+          }
+        }
+      }
+    },
     "Backup completed": {
       "comment": "GT b27476b82dd8d646; arguments: none",
       "extractionState": "manual",
@@ -4425,6 +4617,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Säkerhetskopieringen misslyckades"
+          }
+        }
+      }
+    },
+    "Backup failed. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup failed. Please try again."
           }
         }
       }
@@ -4921,6 +5125,18 @@
         }
       }
     },
+    "Bitcoin (BIP-177)": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitcoin (BIP-177)"
+          }
+        }
+      }
+    },
     "Bitcoin Map": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -5353,6 +5569,18 @@
         }
       }
     },
+    "Block {nativeValue1}": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Block %1$@"
+          }
+        }
+      }
+    },
     "Block/tip {_gt_value_2}": {
       "comment": "GT f823ead22b1cc5a4; arguments: _gt_value_2",
       "extractionState": "manual",
@@ -5421,18 +5649,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Block tills giltigheten går ut"
-          }
-        }
-      }
-    },
-    "Blocks until expiry": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Blocks until expiry"
           }
         }
       }
@@ -5761,6 +5977,42 @@
         }
       }
     },
+    "Boarding submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boarding submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again."
+          }
+        }
+      }
+    },
+    "Boarding submitted. Funds become spendable after the board completes.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boarding submitted. Funds become spendable after the board completes."
+          }
+        }
+      }
+    },
+    "Boarding was not submitted. Review again when the wallet is ready.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boarding was not submitted. Review again when the wallet is ready."
+          }
+        }
+      }
+    },
     "Boarding…": {
       "comment": "GT f6426c9469436dfd; arguments: none",
       "extractionState": "manual",
@@ -6085,6 +6337,18 @@
         }
       }
     },
+    "Broadcast fees are paid separately from confirmed onchain funds. Deposit bitcoin and wait for confirmation before progressing an exit. The amount required may vary.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Broadcast fees are paid separately from confirmed onchain funds. Deposit bitcoin and wait for confirmation before progressing an exit. The amount required may vary."
+          }
+        }
+      }
+    },
     "Broadcast funding status is unknown; confirmed onchain funds are required.": {
       "comment": "GT e18dd36dda267292; arguments: none",
       "extractionState": "manual",
@@ -6225,6 +6489,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sändning: %1$@ (betalas separat med bekräftade medel på kedjan)"
+          }
+        }
+      }
+    },
+    "CC BY 4.0": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CC BY 4.0"
           }
         }
       }
@@ -6481,18 +6757,6 @@
         }
       }
     },
-    "Cancel exit": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancel exit"
-          }
-        }
-      }
-    },
     "Cancel payment": {
       "comment": "GT e816b0ebed9b18cd; arguments: none",
       "extractionState": "manual",
@@ -6561,6 +6825,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Avbryta återkommande betalning?"
+          }
+        }
+      }
+    },
+    "Cancel this exit before its final transaction is broadcast. The VTXO remains spendable. The wallet will recheck whether cancellation is still possible.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel this exit before its final transaction is broadcast. The VTXO remains spendable. The wallet will recheck whether cancellation is still possible."
           }
         }
       }
@@ -7033,6 +7309,18 @@
         }
       }
     },
+    "Check operation status": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check operation status"
+          }
+        }
+      }
+    },
     "Check payment status": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -7057,6 +7345,18 @@
         }
       }
     },
+    "Check the amount, selected VTXOs, and destination. There may not be enough confirmed funds.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the amount, selected VTXOs, and destination. There may not be enough confirmed funds."
+          }
+        }
+      }
+    },
     "Check this payment's outcome before approving it again.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -7077,6 +7377,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Check this payment's outcome before editing it."
+          }
+        }
+      }
+    },
+    "Check your recovery phrase. Enter all 12 words in the correct order.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check your recovery phrase. Enter all 12 words in the correct order."
           }
         }
       }
@@ -7281,6 +7593,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Välj ett Lightning-användarnamn. Om du vill kan du koppla en offentlig Nostr-nyckel till adressen så att den även fungerar som en NIP-05-identifierare."
+          }
+        }
+      }
+    },
+    "Choose a balance with sufficient funds.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a balance with sufficient funds."
           }
         }
       }
@@ -9481,6 +9805,18 @@
         }
       }
     },
+    "Conflicting wallet data": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conflicting wallet data"
+          }
+        }
+      }
+    },
     "Contactless": {
       "comment": "GT 3d513f805c72f59c; arguments: none",
       "extractionState": "manual",
@@ -10225,6 +10561,18 @@
         }
       }
     },
+    "Copy {nativeValue1}": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy %1$@"
+          }
+        }
+      }
+    },
     "Copy {value1}": {
       "comment": "GT 697095df4082762b; arguments: value1",
       "extractionState": "manual",
@@ -10293,6 +10641,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kopiera %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "Could not generate a Lightning invoice. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not generate a Lightning invoice. Please try again."
+          }
+        }
+      }
+    },
+    "Could not generate a receive request. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not generate a receive request. Please try again."
           }
         }
       }
@@ -10441,6 +10813,114 @@
         }
       }
     },
+    "Couldn't check network status. Showing the last known status.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't check network status. Showing the last known status."
+          }
+        }
+      }
+    },
+    "Couldn't check status. The attempt is still saved.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't check status. The attempt is still saved."
+          }
+        }
+      }
+    },
+    "Couldn't check the latest status — you're offline. Showing the last known status.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't check the latest status — you're offline. Showing the last known status."
+          }
+        }
+      }
+    },
+    "Couldn't check the latest status. Showing the last known status.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't check the latest status. Showing the last known status."
+          }
+        }
+      }
+    },
+    "Couldn't complete the backup operation. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't complete the backup operation. Please try again."
+          }
+        }
+      }
+    },
+    "Couldn't export your database. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't export your database. Please try again."
+          }
+        }
+      }
+    },
+    "Couldn't load Ark info. Pull to refresh.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load Ark info. Pull to refresh."
+          }
+        }
+      }
+    },
+    "Couldn't load a Noah wallet address. Try again when the wallet is ready.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load a Noah wallet address. Try again when the wallet is ready."
+          }
+        }
+      }
+    },
+    "Couldn't load a deposit address. Close and try again when the wallet is ready.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load a deposit address. Close and try again when the wallet is ready."
+          }
+        }
+      }
+    },
     "Couldn't load transactions": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -10449,6 +10929,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn't load transactions"
+          }
+        }
+      }
+    },
+    "Couldn't load transactions. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load transactions. Please try again."
+          }
+        }
+      }
+    },
+    "Couldn't load your balance.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load your balance."
           }
         }
       }
@@ -10485,6 +10989,162 @@
           "stringUnit": {
             "state": "translated",
             "value": "Det gick inte att öppna batteriinställningarna"
+          }
+        }
+      }
+    },
+    "Couldn't open your wallet.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't open your wallet."
+          }
+        }
+      }
+    },
+    "Couldn't play the story. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't play the story. Please try again."
+          }
+        }
+      }
+    },
+    "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready."
+          }
+        }
+      }
+    },
+    "Couldn't read wallet status. Pull to refresh.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't read wallet status. Pull to refresh."
+          }
+        }
+      }
+    },
+    "Couldn't refresh your profile. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't refresh your profile. Please try again."
+          }
+        }
+      }
+    },
+    "Couldn't save auto-board preference.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save auto-board preference."
+          }
+        }
+      }
+    },
+    "Couldn't save auto-board setting.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save auto-board setting."
+          }
+        }
+      }
+    },
+    "Couldn't save auto-board state.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save auto-board state."
+          }
+        }
+      }
+    },
+    "Couldn't save debug setting.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save debug setting."
+          }
+        }
+      }
+    },
+    "Couldn't save your name. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save your name. Please try again."
+          }
+        }
+      }
+    },
+    "Couldn't save your preference. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save your preference. Please try again."
+          }
+        }
+      }
+    },
+    "Couldn't share logs. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't share logs. Please try again."
+          }
+        }
+      }
+    },
+    "Couldn't update this setting. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't update this setting. Please try again."
           }
         }
       }
@@ -10809,6 +11469,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Det gick inte att skapa"
+          }
+        }
+      }
+    },
+    "Creation Failed. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creation Failed. Please try again."
           }
         }
       }
@@ -11329,6 +12001,18 @@
         }
       }
     },
+    "Dangerously remove this VTXO?": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dangerously remove this VTXO?"
+          }
+        }
+      }
+    },
     "Date": {
       "comment": "GT 12a46f713d714e93; arguments: none",
       "extractionState": "manual",
@@ -11773,6 +12457,18 @@
         }
       }
     },
+    "Delete encrypted backup?": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete encrypted backup?"
+          }
+        }
+      }
+    },
     "Deleting...": {
       "comment": "GT c4d1b302af837104; arguments: none",
       "extractionState": "manual",
@@ -11877,18 +12573,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sätt in medel på kedjan"
-          }
-        }
-      }
-    },
-    "Deposit onchain funds": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deposit onchain funds"
           }
         }
       }
@@ -12721,6 +13405,18 @@
         }
       }
     },
+    "Edit payment": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit payment"
+          }
+        }
+      }
+    },
     "Edit recurring payment": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -12729,6 +13425,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit recurring payment"
+          }
+        }
+      }
+    },
+    "Effective balance change": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effective balance change"
           }
         }
       }
@@ -12801,18 +13509,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "E-post (valfritt)"
-          }
-        }
-      }
-    },
-    "Email (optional)": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Email (optional)"
           }
         }
       }
@@ -13209,6 +13905,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Krypterad ögonblicksbild av plånboken"
+          }
+        }
+      }
+    },
+    "End date": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End date"
           }
         }
       }
@@ -13621,6 +14329,18 @@
         }
       }
     },
+    "Enter a valid Bitcoin address for this network when the wallet is ready.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid Bitcoin address for this network when the wallet is ready."
+          }
+        }
+      }
+    },
     "Enter a valid Bitcoin address, Lightning invoice, Lightning offer, Lightning address, or Ark address.": {
       "comment": "GT c8cb19a817b12366; arguments: none",
       "extractionState": "manual",
@@ -13657,6 +14377,18 @@
         }
       }
     },
+    "Enter a valid Bitcoin, Lightning, or Ark destination.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid Bitcoin, Lightning, or Ark destination."
+          }
+        }
+      }
+    },
     "Enter a valid Esplora API URL.": {
       "comment": "GT c90d22f867b1745f; arguments: none",
       "extractionState": "manual",
@@ -13689,6 +14421,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ange en giltig URL för Esploras API."
+          }
+        }
+      }
+    },
+    "Enter a valid destination and a whole-satoshi amount greater than zero.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid destination and a whole-satoshi amount greater than zero."
           }
         }
       }
@@ -13989,6 +14733,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ange datumet för den första betalningen som YYYY-MM-DD och tiden som HH:MM."
+          }
+        }
+      }
+    },
+    "Enter your 12 words in order, or paste the whole phrase into any word field.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter your 12 words in order, or paste the whole phrase into any word field."
           }
         }
       }
@@ -14365,6 +15121,18 @@
         }
       }
     },
+    "Estimated broadcast fees": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estimated broadcast fees"
+          }
+        }
+      }
+    },
     "Estimated broadcast fees · amount may vary": {
       "comment": "GT fd0b6040559b8aeb; arguments: none",
       "extractionState": "manual",
@@ -14473,6 +15241,18 @@
         }
       }
     },
+    "Estimated fee: {nativeValue1} sats": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estimated fee: %1$@ sats"
+          }
+        }
+      }
+    },
     "Estimated onchain fee": {
       "comment": "GT 6f9b381b69d5bcf2; arguments: none",
       "extractionState": "manual",
@@ -14541,6 +15321,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Beräknad avgift på kedjan: %1$@."
+          }
+        }
+      }
+    },
+    "Estimated total": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estimated total"
           }
         }
       }
@@ -14685,6 +15477,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Den beräknade totalsumman är %1$@, men ditt saldo för %2$@ är %3$@. Överföringen kan misslyckas om den slutliga avgiften inte blir lägre."
+          }
+        }
+      }
+    },
+    "Estimated total: {nativeValue1} sats": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estimated total: %1$@ sats"
           }
         }
       }
@@ -15049,6 +15853,18 @@
         }
       }
     },
+    "Every {nativeValue1} {nativeValue2}s": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every %1$@ %2$@s"
+          }
+        }
+      }
+    },
     "Every … days": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -15061,14 +15877,26 @@
         }
       }
     },
-    "Execute": {
+    "Every … months": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Execute"
+            "value": "Every … months"
+          }
+        }
+      }
+    },
+    "Every … weeks": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every … weeks"
           }
         }
       }
@@ -15141,6 +15969,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Utför..."
+          }
+        }
+      }
+    },
+    "Existing wallet data is incomplete. Restore your wallet to continue.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Existing wallet data is incomplete. Restore your wallet to continue."
           }
         }
       }
@@ -15441,18 +16281,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nöduttagets VTXO var redan förbrukad"
-          }
-        }
-      }
-    },
-    "Exit delta": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exit delta"
           }
         }
       }
@@ -15769,6 +16597,18 @@
         }
       }
     },
+    "Exit transaction confirmed; funds become claimable at block {nativeValue1}.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exit transaction confirmed; funds become claimable at block %1$@."
+          }
+        }
+      }
+    },
     "Exit transaction confirmed; funds become claimable at block {value1}{value2}.": {
       "comment": "GT 2578f04b85978c2c; arguments: value1, value2",
       "extractionState": "manual",
@@ -15849,6 +16689,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exit transaction weight"
+          }
+        }
+      }
+    },
+    "Exit transaction {nativeValue1}": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exit transaction %1$@"
           }
         }
       }
@@ -15993,6 +16845,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nöduttag genomfört"
+          }
+        }
+      }
+    },
+    "Exited VTXOs": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exited VTXOs"
           }
         }
       }
@@ -16149,18 +17013,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Blockhöjd vid utgång"
-          }
-        }
-      }
-    },
-    "Expiry height": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Expiry height"
           }
         }
       }
@@ -17965,6 +18817,18 @@
         }
       }
     },
+    "Failed to update Lightning address. Please try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to update Lightning address. Please try again."
+          }
+        }
+      }
+    },
     "Failed to validate k1": {
       "comment": "GT 77a085486ac0e6b7; arguments: none",
       "extractionState": "manual",
@@ -18325,6 +19189,30 @@
         }
       }
     },
+    "Fee for the existing payment: {nativeValue1} sats": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee for the existing payment: %1$@ sats"
+          }
+        }
+      }
+    },
+    "Fee: {nativeValue1} sats": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee: %1$@ sats"
+          }
+        }
+      }
+    },
     "Fees and amount to receive are unknown. You can retry or continue without an estimate.": {
       "comment": "GT 22aa9f020fc9e32c; arguments: none",
       "extractionState": "manual",
@@ -18501,6 +19389,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hämtar och kontrollerar säkerhetskopian..."
+          }
+        }
+      }
+    },
+    "Fetching backup…": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fetching backup…"
+          }
+        }
+      }
+    },
+    "Fiat rate unavailable: {nativeValue1}": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fiat rate unavailable: %1$@"
           }
         }
       }
@@ -19849,6 +20761,18 @@
         }
       }
     },
+    "History read failed": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History read failed"
+          }
+        }
+      }
+    },
     "Home": {
       "comment": "GT 2ecf88ef9e8e4259; arguments: none",
       "extractionState": "manual",
@@ -20461,14 +21385,14 @@
         }
       }
     },
-    "Inputs": {
+    "Input VTXOs": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inputs"
+            "value": "Input VTXOs"
           }
         }
       }
@@ -20653,6 +21577,30 @@
         }
       }
     },
+    "Insufficient funds for this payment method.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insufficient funds for this payment method."
+          }
+        }
+      }
+    },
+    "Intended balance change": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intended balance change"
+          }
+        }
+      }
+    },
     "Intended change": {
       "comment": "GT 589e08f8a5c498fc; arguments: none",
       "extractionState": "manual",
@@ -20757,6 +21705,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ogiltig BIP-321-URI"
+          }
+        }
+      }
+    },
+    "Invalid BOLT12 offer: Invalid checksum": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid BOLT12 offer: Invalid checksum"
           }
         }
       }
@@ -20977,6 +21937,18 @@
         }
       }
     },
+    "Invalid amount format": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid amount format"
+          }
+        }
+      }
+    },
     "Invalid backup ID": {
       "comment": "GT 5c79e5ae53ee50e2; arguments: none",
       "extractionState": "manual",
@@ -21045,6 +22017,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ogiltig uppladdning av säkerhetskopia"
+          }
+        }
+      }
+    },
+    "Invalid bitcoin address": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid bitcoin address"
           }
         }
       }
@@ -21993,6 +22977,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nycklar"
+          }
+        }
+      }
+    },
+    "LNURL invoice description hash does not commit to endpoint metadata": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LNURL invoice description hash does not commit to endpoint metadata"
           }
         }
       }
@@ -23473,6 +24469,18 @@
         }
       }
     },
+    "Loading transactions": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading transactions"
+          }
+        }
+      }
+    },
     "Loading wallet...": {
       "comment": "GT 87d78fc358a0eca2; arguments: none",
       "extractionState": "manual",
@@ -23505,6 +24513,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Läser in plånboken..."
+          }
+        }
+      }
+    },
+    "Loading wallet…": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading wallet…"
           }
         }
       }
@@ -23877,6 +24897,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "MAX kan inte användas med en betalningsbegäran med fast belopp."
+          }
+        }
+      }
+    },
+    "MAX requires an on-chain address without a fixed amount.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MAX requires an on-chain address without a fixed amount."
           }
         }
       }
@@ -24601,6 +25633,18 @@
         }
       }
     },
+    "Maintenance refresh completed": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maintenance refresh completed"
+          }
+        }
+      }
+    },
     "Maintenance refresh completed successfully": {
       "comment": "GT 28cbbda3ece9bf6e; arguments: none",
       "extractionState": "manual",
@@ -24705,6 +25749,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hantera ditt namn, din Lightning-adress, din e-postadress för nödfall och din publika nyckel."
+          }
+        }
+      }
+    },
+    "Manual backup failed": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manual backup failed"
           }
         }
       }
@@ -25153,6 +26209,18 @@
         }
       }
     },
+    "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes."
+          }
+        }
+      }
+    },
     "Movement ID": {
       "comment": "GT 156d3d6b7047adad; arguments: none",
       "extractionState": "manual",
@@ -25221,6 +26289,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Typ av medelsrörelse"
+          }
+        }
+      }
+    },
+    "Multiple {nativeValue1} parameters not allowed": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Multiple %1$@ parameters not allowed"
           }
         }
       }
@@ -25417,18 +26497,6 @@
         }
       }
     },
-    "Name, subject, and message are required.": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Name, subject, and message are required."
-          }
-        }
-      }
-    },
     "Nearby": {
       "comment": "GT 850053d135736535; arguments: none",
       "extractionState": "manual",
@@ -25461,6 +26529,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "I närheten"
+          }
+        }
+      }
+    },
+    "Needs approval": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needs approval"
           }
         }
       }
@@ -25641,6 +26721,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nätverk"
+          }
+        }
+      }
+    },
+    "Network mismatch": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network mismatch"
           }
         }
       }
@@ -26233,6 +27325,18 @@
         }
       }
     },
+    "No backup was found for this recovery phrase. Check the words and make sure this wallet had backups enabled.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No backup was found for this recovery phrase. Check the words and make sure this wallet had backups enabled."
+          }
+        }
+      }
+    },
     "No backups found": {
       "comment": "GT 0231bc05e277a59a; arguments: none",
       "extractionState": "manual",
@@ -26313,6 +27417,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ingen kamera hittades."
+          }
+        }
+      }
+    },
+    "No camera is available. You can paste the payment request instead.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No camera is available. You can paste the payment request instead."
           }
         }
       }
@@ -26977,6 +28093,18 @@
         }
       }
     },
+    "No payment was submitted.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No payment was submitted."
+          }
+        }
+      }
+    },
     "No payments are due right now.": {
       "comment": "GT 3fc8a57791ce3d7b; arguments: none",
       "extractionState": "manual",
@@ -27009,6 +28137,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inga betalningar ska göras just nu."
+          }
+        }
+      }
+    },
+    "No places in view": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No places in view"
           }
         }
       }
@@ -27153,6 +28293,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inga transaktioner än"
+          }
+        }
+      }
+    },
+    "No usable backup was found for this recovery phrase. Check the words and try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No usable backup was found for this recovery phrase. Check the words and try again."
           }
         }
       }
@@ -27409,6 +28561,42 @@
         }
       }
     },
+    "Noah can't read its secure storage yet. Unlock your device to continue.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah can't read its secure storage yet. Unlock your device to continue."
+          }
+        }
+      }
+    },
+    "Noah can't reconstruct this schedule's earlier payment history. Cancel it and explicitly approve a new recurring payment.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah can't reconstruct this schedule's earlier payment history. Cancel it and explicitly approve a new recurring payment."
+          }
+        }
+      }
+    },
+    "Noah can't safely read this schedule. Cancel it and explicitly approve a new recurring payment.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah can't safely read this schedule. Cancel it and explicitly approve a new recurring payment."
+          }
+        }
+      }
+    },
     "Noah can’t find this transaction right now. Its confirmation may no longer be trackable in-app. Check a block explorer.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -27469,6 +28657,102 @@
         }
       }
     },
+    "Noah could not determine your current location. Try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah could not determine your current location. Try again."
+          }
+        }
+      }
+    },
+    "Noah could not read or save the payment attempt. Sending is disabled until its status can be recovered.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah could not read or save the payment attempt. Sending is disabled until its status can be recovered."
+          }
+        }
+      }
+    },
+    "Noah couldn't access secure storage. Unlock your device and try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah couldn't access secure storage. Unlock your device and try again."
+          }
+        }
+      }
+    },
+    "Noah couldn't confirm that your recovery phrase was saved. Do not retry. Unlock your device, then close and restart Noah to recover safely.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah couldn't confirm that your recovery phrase was saved. Do not retry. Unlock your device, then close and restart Noah to recover safely."
+          }
+        }
+      }
+    },
+    "Noah couldn't download your backup. Check your internet connection and try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah couldn't download your backup. Check your internet connection and try again."
+          }
+        }
+      }
+    },
+    "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."
+          }
+        }
+      }
+    },
+    "Noah couldn't restore your wallet. Please try again later.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah couldn't restore your wallet. Please try again later."
+          }
+        }
+      }
+    },
+    "Noah couldn't safely undo the restore. Do not retry. Close and restart Noah so it can recover your wallet.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah couldn't safely undo the restore. Do not retry. Close and restart Noah so it can recover your wallet."
+          }
+        }
+      }
+    },
     "Noah default": {
       "comment": "GT 0b114757353b79aa; arguments: none",
       "extractionState": "manual",
@@ -27501,6 +28785,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noahs standard"
+          }
+        }
+      }
+    },
+    "Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."
           }
         }
       }
@@ -27609,6 +28905,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noah är fortfarande en betaversion. Det finns en risk att du förlorar pengar. Sätt bara in pengar som du är beredd att förlora."
+          }
+        }
+      }
+    },
+    "Noah progresses exits automatically. You can also progress all pending exits manually.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah progresses exits automatically. You can also progress all pending exits manually."
           }
         }
       }
@@ -28021,6 +29329,18 @@
         }
       }
     },
+    "Not verified": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not verified"
+          }
+        }
+      }
+    },
     "Not your keys, not your coins.": {
       "comment": "GT e51d6b88233aca0f; arguments: none",
       "extractionState": "manual",
@@ -28137,6 +29457,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Note must be 639 characters or fewer."
+          }
+        }
+      }
+    },
+    "Noto Sans Regular": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noto Sans Regular"
           }
         }
       }
@@ -28329,6 +29661,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ta ut alla medel till en on-chain-adress"
+          }
+        }
+      }
+    },
+    "Offboard all funds?": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offboard all funds?"
           }
         }
       }
@@ -28737,6 +30081,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Plånbok på blockkedjan"
+          }
+        }
+      }
+    },
+    "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."
           }
         }
       }
@@ -29617,6 +30973,42 @@
         }
       }
     },
+    "Output VTXOs": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Output VTXOs"
+          }
+        }
+      }
+    },
+    "Overridden attempt": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overridden attempt"
+          }
+        }
+      }
+    },
+    "Override confirmation": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Override confirmation"
+          }
+        }
+      }
+    },
     "Override repeat protection?": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -30337,6 +31729,18 @@
         }
       }
     },
+    "Payment confirmed": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payment confirmed"
+          }
+        }
+      }
+    },
     "Payment details": {
       "comment": "GT 58c1b1db2a8b8d7c; arguments: none",
       "extractionState": "manual",
@@ -30457,6 +31861,18 @@
         }
       }
     },
+    "Payment in progress": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payment in progress"
+          }
+        }
+      }
+    },
     "Payment may have been sent": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -30465,6 +31881,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Payment may have been sent"
+          }
+        }
+      }
+    },
+    "Payment method ": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payment method "
           }
         }
       }
@@ -30681,6 +32109,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Betalningen har skickats"
+          }
+        }
+      }
+    },
+    "Payment status could not be saved. Check status again after restarting Noah.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payment status could not be saved. Check status again after restarting Noah."
           }
         }
       }
@@ -31033,6 +32473,18 @@
         }
       }
     },
+    "Pending round status unavailable": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pending round status unavailable"
+          }
+        }
+      }
+    },
     "Permanently remove this wallet and its recovery phrase from this device.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -31089,18 +32541,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Places in view"
-          }
-        }
-      }
-    },
-    "Play": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Play"
           }
         }
       }
@@ -31405,14 +32845,14 @@
         }
       }
     },
-    "Point": {
+    "Possible related payment in History": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Point"
+            "value": "Possible related payment in History"
           }
         }
       }
@@ -31897,6 +33337,18 @@
         }
       }
     },
+    "Push permission not granted": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push permission not granted"
+          }
+        }
+      }
+    },
     "Push permission not granted ({value1})": {
       "comment": "GT 8f59bcc60a5c4dc1; arguments: value1",
       "extractionState": "manual",
@@ -32049,6 +33501,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "QR code unavailable. Use payment details to copy your request."
+          }
+        }
+      }
+    },
+    "QR mode": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QR mode"
           }
         }
       }
@@ -32353,6 +33817,18 @@
         }
       }
     },
+    "Receive operation failed ({nativeValue1}): {nativeValue2}": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Receive operation failed (%1$@): %2$@"
+          }
+        }
+      }
+    },
     "Receive or send bitcoin to start your history.": {
       "comment": "GT ff11f9013dc621dd; arguments: none",
       "extractionState": "manual",
@@ -32569,6 +34045,18 @@
         }
       }
     },
+    "Recipient amount pending": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recipient amount pending"
+          }
+        }
+      }
+    },
     "Recipient gets": {
       "comment": "GT 0b99c96a0fdf3ef8; arguments: none",
       "extractionState": "manual",
@@ -32601,6 +34089,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mottagaren får"
+          }
+        }
+      }
+    },
+    "Recipient receives about {nativeValue1} sats": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recipient receives about %1$@ sats"
           }
         }
       }
@@ -32689,6 +34189,18 @@
         }
       }
     },
+    "Recover your Ark funds onchain if the Ark server is unavailable. Exits require confirmed onchain funds for broadcast fees and a timelock before claiming.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recover your Ark funds onchain if the Ark server is unavailable. Exits require confirmed onchain funds for broadcast fees and a timelock before claiming."
+          }
+        }
+      }
+    },
     "Recovery phrase found": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -32697,6 +34209,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Recovery phrase found"
+          }
+        }
+      }
+    },
+    "Recovery phrase needed": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recovery phrase needed"
           }
         }
       }
@@ -32757,6 +34281,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Recurring payment data couldn't be read. Your saved schedules have been preserved. Sending is stopped."
+          }
+        }
+      }
+    },
+    "Recurring payment history needs attention. Its saved evidence has been preserved; sending remains stopped.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recurring payment history needs attention. Its saved evidence has been preserved; sending remains stopped."
+          }
+        }
+      }
+    },
+    "Recurring payment needs approval": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recurring payment needs approval"
           }
         }
       }
@@ -32829,6 +34377,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Återkommande betalning skickad"
+          }
+        }
+      }
+    },
+    "Recurring payment stopped before submission. No payment was sent.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recurring payment stopped before submission. No payment was sent."
           }
         }
       }
@@ -33025,6 +34585,42 @@
         }
       }
     },
+    "Recurring policy evidence needs attention. Saved schedules are preserved; edit or resume them to approve a new revision. Sending remains stopped.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recurring policy evidence needs attention. Saved schedules are preserved; edit or resume them to approve a new revision. Sending remains stopped."
+          }
+        }
+      }
+    },
+    "Recurring policy rollback or unavailable evidence detected; sending stopped": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recurring policy rollback or unavailable evidence detected; sending stopped"
+          }
+        }
+      }
+    },
+    "Recurring wake schedule sync failed; retained for retry": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recurring wake schedule sync failed; retained for retry"
+          }
+        }
+      }
+    },
     "Recurring wallet identity couldn't be read. Sending is stopped.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -33033,6 +34629,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Recurring wallet identity couldn't be read. Sending is stopped."
+          }
+        }
+      }
+    },
+    "Recurring {nativeValue1}, occurrence {nativeValue2}": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recurring %1$@, occurrence %2$@"
           }
         }
       }
@@ -33249,6 +34857,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Förnya VTXO?"
+          }
+        }
+      }
+    },
+    "Refresh VTXOs": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh VTXOs"
           }
         }
       }
@@ -33613,6 +35233,18 @@
         }
       }
     },
+    "Refresh {nativeValue1} VTXOs": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh %1$@ VTXOs"
+          }
+        }
+      }
+    },
     "Refreshing estimate...": {
       "comment": "GT db0c51970fb1166c; arguments: none",
       "extractionState": "manual",
@@ -33777,6 +35409,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Registered with server"
+          }
+        }
+      }
+    },
+    "Registered with the server again": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registered with the server again"
           }
         }
       }
@@ -34137,6 +35781,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Repeat protection overridden"
+          }
+        }
+      }
+    },
+    "Repeat protection overridden. The original attempt is still saved. Review the current wallet state before submitting again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repeat protection overridden. The original attempt is still saved. Review the current wallet state before submitting again."
           }
         }
       }
@@ -34813,6 +36469,18 @@
         }
       }
     },
+    "Resume anyway": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume anyway"
+          }
+        }
+      }
+    },
     "Retry": {
       "comment": "GT 13a9a2ac9075ccd5; arguments: none",
       "extractionState": "manual",
@@ -35157,18 +36825,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Review boarding"
-          }
-        }
-      }
-    },
-    "Review claim": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Review claim"
           }
         }
       }
@@ -35725,18 +37381,6 @@
         }
       }
     },
-    "Running...": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Running..."
-          }
-        }
-      }
-    },
     "Runs in the background": {
       "comment": "GT 72c482a25d98bc14; arguments: none",
       "extractionState": "manual",
@@ -35889,6 +37533,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sparat"
+          }
+        }
+      }
+    },
+    "Saved recurring payment": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved recurring payment"
           }
         }
       }
@@ -36765,6 +38421,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Välj en VTXO för att se detaljerna"
+          }
+        }
+      }
+    },
+    "Select a transaction": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a transaction"
           }
         }
       }
@@ -37773,18 +39441,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Serverns publika nyckel"
-          }
-        }
-      }
-    },
-    "Server public key": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Server public key"
           }
         }
       }
@@ -39325,6 +40981,18 @@
         }
       }
     },
+    "Starting restore…": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starting restore…"
+          }
+        }
+      }
+    },
     "Starting...": {
       "comment": "GT 221dd4241db01d9c; arguments: none",
       "extractionState": "manual",
@@ -39465,6 +41133,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Status"
+          }
+        }
+      }
+    },
+    "Status remains uncertain. Noah checks again automatically as your wallet syncs.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status remains uncertain. Noah checks again automatically as your wallet syncs."
+          }
+        }
+      }
+    },
+    "Status resolved. Review the receipt.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status resolved. Review the receipt."
           }
         }
       }
@@ -39733,14 +41425,14 @@
         }
       }
     },
-    "Submitted": {
+    "Submission stopped before a transaction could be recorded. Review the amount and fee before trying again.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Submitted"
+            "value": "Submission stopped before a transaction could be recorded. Review the amount and fee before trying again."
           }
         }
       }
@@ -39897,6 +41589,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Föreslagen insättning"
+          }
+        }
+      }
+    },
+    "Support code: SEED_INVALID. The stored recovery phrase could not be validated. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Support code: SEED_INVALID. The stored recovery phrase could not be validated. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database."
+          }
+        }
+      }
+    },
+    "Support code: WALLET_CONFLICT. Noah found wallet records that cannot be safely matched. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Support code: WALLET_CONFLICT. Noah found wallet records that cannot be safely matched. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database."
           }
         }
       }
@@ -40141,6 +41857,18 @@
         }
       }
     },
+    "Sync the wallet once before preparing a board.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync the wallet once before preparing a board."
+          }
+        }
+      }
+    },
     "Synced tip": {
       "comment": "GT 79bdfa5f0e9353f8; arguments: none",
       "extractionState": "manual",
@@ -40209,6 +41937,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Skatt är stöld."
+          }
+        }
+      }
+    },
+    "Technical details": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Technical details"
           }
         }
       }
@@ -40657,6 +42397,78 @@
         }
       }
     },
+    "The actual fee is not yet available. {nativeValue1}": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The actual fee is not yet available. %1$@"
+          }
+        }
+      }
+    },
+    "The amount Ark receives is below its minimum. Increase the boarding amount.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The amount Ark receives is below its minimum. Increase the boarding amount."
+          }
+        }
+      }
+    },
+    "The amount or fee changed. Review the payment again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The amount or fee changed. Review the payment again."
+          }
+        }
+      }
+    },
+    "The available funds changed. Review the payment again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The available funds changed. Review the payment again."
+          }
+        }
+      }
+    },
+    "The backup's wallet information doesn't match. Noah couldn't safely restore it.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The backup's wallet information doesn't match. Noah couldn't safely restore it."
+          }
+        }
+      }
+    },
+    "The built claim fee differs from the estimate. Nothing was broadcast. Review the claim again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The built claim fee differs from the estimate. Nothing was broadcast. Review the claim again."
+          }
+        }
+      }
+    },
     "The bundled places file could not be read.": {
       "comment": "GT 8fd377a87d4933df; arguments: none",
       "extractionState": "manual",
@@ -40689,6 +42501,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kunde inte läsa den medföljande filen med platser."
+          }
+        }
+      }
+    },
+    "The downloaded backup is incomplete or damaged. Check your connection and try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The downloaded backup is incomplete or damaged. Check your connection and try again."
           }
         }
       }
@@ -40837,6 +42661,54 @@
         }
       }
     },
+    "The exact amount depends on the network fee when sent. The total is exactly the reviewed coins.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The exact amount depends on the network fee when sent. The total is exactly the reviewed coins."
+          }
+        }
+      }
+    },
+    "The fee and total are estimates based on two inputs and two outputs. The final fee and total may be higher if more coins are needed.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The fee and total are estimates based on two inputs and two outputs. The final fee and total may be higher if more coins are needed."
+          }
+        }
+      }
+    },
+    "The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually."
+          }
+        }
+      }
+    },
+    "The fee for this payment ({nativeValue1} sats) is above your automatic limit of {nativeValue2} sats. Review it to pay manually.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The fee for this payment (%1$@ sats) is above your automatic limit of %2$@ sats. Review it to pay manually."
+          }
+        }
+      }
+    },
     "The final miner fee is calculated when the transaction is built": {
       "comment": "GT 6fde0fc2d89eed2f; arguments: none",
       "extractionState": "manual",
@@ -40981,6 +42853,18 @@
         }
       }
     },
+    "The invoice must request whole satoshis.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The invoice must request whole satoshis."
+          }
+        }
+      }
+    },
     "The minimum board amount is {_gt_value_2}.": {
       "comment": "GT 0456697889e3b901; arguments: _gt_value_2",
       "extractionState": "manual",
@@ -41053,6 +42937,18 @@
         }
       }
     },
+    "The operation may have been submitted. Check its status before repeating it. Other recovery operations remain available.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The operation may have been submitted. Check its status before repeating it. Other recovery operations remain available."
+          }
+        }
+      }
+    },
     "The recipient no longer accepts this amount. Update or cancel the recurring payment.": {
       "comment": "GT babb0026400f859c; arguments: none",
       "extractionState": "manual",
@@ -41085,6 +42981,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mottagaren accepterar inte längre detta belopp. Uppdatera eller avbryt den återkommande betalningen."
+          }
+        }
+      }
+    },
+    "The recorded transaction is in this wallet's transaction history.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The recorded transaction is in this wallet's transaction history."
           }
         }
       }
@@ -41197,6 +43105,54 @@
         }
       }
     },
+    "The selected balance cannot cover this payment and its fee.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selected balance cannot cover this payment and its fee."
+          }
+        }
+      }
+    },
+    "The selected items have reached a state that resolves this attempt. Review their current status and history before continuing.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selected items have reached a state that resolves this attempt. Review their current status and history before continuing."
+          }
+        }
+      }
+    },
+    "The transaction could not be built. No payment was submitted. Review the amount and fee.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The transaction could not be built. No payment was submitted. Review the amount and fee."
+          }
+        }
+      }
+    },
+    "The transaction could not be constructed. Nothing was broadcast. Review again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The transaction could not be constructed. Nothing was broadcast. Review again."
+          }
+        }
+      }
+    },
     "The transaction failed. Please try again.": {
       "comment": "GT b99fcf5ecc00edc4; arguments: none",
       "extractionState": "manual",
@@ -41265,6 +43221,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verifieringskoden upphör att gälla om 10 minuter."
+          }
+        }
+      }
+    },
+    "The wallet couldn't be deleted. Restart Noah and try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The wallet couldn't be deleted. Restart Noah and try again."
           }
         }
       }
@@ -41377,6 +43345,42 @@
         }
       }
     },
+    "The wallet or fees changed, or the quote expired. Review again before confirming.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The wallet or fees changed, or the quote expired. Review again before confirming."
+          }
+        }
+      }
+    },
+    "There are not enough confirmed onchain funds for this amount and its fees. Reduce the amount or wait for confirmation.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There are not enough confirmed onchain funds for this amount and its fees. Reduce the amount or wait for confirmation."
+          }
+        }
+      }
+    },
+    "There are too many small coins for this board. Try a smaller amount.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There are too many small coins for this board. Try a smaller amount."
+          }
+        }
+      }
+    },
     "There can only ever be 21 million bitcoin.": {
       "comment": "GT 4b7447d297a1baef; arguments: none",
       "extractionState": "manual",
@@ -41449,6 +43453,18 @@
         }
       }
     },
+    "These coins are unavailable or reserved by another payment in review. Close that review, then try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These coins are unavailable or reserved by another payment in review. Close that review, then try again."
+          }
+        }
+      }
+    },
     "These recurring payments belong to a previous wallet. They are preserved but cannot run. Cancel them and create new schedules for this wallet.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -41457,6 +43473,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "These recurring payments belong to a previous wallet. They are preserved but cannot run. Cancel them and create new schedules for this wallet."
+          }
+        }
+      }
+    },
+    "This Lightning invoice has expired. Request a new invoice.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Lightning invoice has expired. Request a new invoice."
           }
         }
       }
@@ -41689,6 +43717,42 @@
         }
       }
     },
+    "This amount exceeds 21 million BTC. Cancel this schedule and approve a new payment within the limit.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This amount exceeds 21 million BTC. Cancel this schedule and approve a new payment within the limit."
+          }
+        }
+      }
+    },
+    "This backup belongs to a different Bitcoin network. Use the matching version of Noah.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This backup belongs to a different Bitcoin network. Use the matching version of Noah."
+          }
+        }
+      }
+    },
+    "This backup needs a newer version of Noah. Update the app before restoring.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This backup needs a newer version of Noah. Update the app before restoring."
+          }
+        }
+      }
+    },
     "This backup upload was superseded by a newer attempt.": {
       "comment": "GT 0dabdd4cc955110c; arguments: none",
       "extractionState": "manual",
@@ -41721,6 +43785,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Den här uppladdningen av säkerhetskopian ersattes av ett senare försök."
+          }
+        }
+      }
+    },
+    "This broadcasts the claim transaction. Earlier broadcast fees are not deducted again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This broadcasts the claim transaction. Earlier broadcast fees are not deducted again."
           }
         }
       }
@@ -41797,6 +43873,18 @@
         }
       }
     },
+    "This differs from the {nativeValue1} sats you reviewed.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This differs from the %1$@ sats you reviewed."
+          }
+        }
+      }
+    },
     "This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -41845,6 +43933,54 @@
         }
       }
     },
+    "This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status."
+          }
+        }
+      }
+    },
+    "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming."
+          }
+        }
+      }
+    },
+    "This invoice was already paid: {nativeValue1} sats": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This invoice was already paid: %1$@ sats"
+          }
+        }
+      }
+    },
+    "This legacy payment has no wallet identity. Check your history and recipient before discarding it.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This legacy payment has no wallet identity. Check your history and recipient before discarding it."
+          }
+        }
+      }
+    },
     "This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process.": {
       "comment": "GT 724c17afef0d66cd; arguments: none",
       "extractionState": "manual",
@@ -41881,6 +44017,30 @@
         }
       }
     },
+    "This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process. Fees are paid from your onchain balance. Cancellation is possible only before the final exit transaction is broadcast.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process. Fees are paid from your onchain balance. Cancellation is possible only before the final exit transaction is broadcast."
+          }
+        }
+      }
+    },
+    "This operation overlaps an unresolved attempt. Check its status before repeating it.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This operation overlaps an unresolved attempt. Check its status before repeating it."
+          }
+        }
+      }
+    },
     "This payment is no longer due.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -41889,6 +44049,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "This payment is no longer due."
+          }
+        }
+      }
+    },
+    "This payment may have been sent. Check its status before making another payment.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This payment may have been sent. Check its status before making another payment."
           }
         }
       }
@@ -41925,6 +44097,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Den här betalningsbegäran saknar en återanvändbar Ark-adress eller ett Lightning-erbjudande"
+          }
+        }
+      }
+    },
+    "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order."
           }
         }
       }
@@ -42037,6 +44221,30 @@
         }
       }
     },
+    "This saved payment outcome could not be verified. It may have been sent. Check history before sending again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This saved payment outcome could not be verified. It may have been sent. Check history before sending again."
+          }
+        }
+      }
+    },
+    "This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment."
+          }
+        }
+      }
+    },
     "This signed transaction expires after two minutes. Review again for a fresh fee rate.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -42081,6 +44289,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Detta startar bevakningen. Använd Gå vidare för att sända nöduttagstransaktioner. Avgifterna kan ändras. Den beräknade inlösenavgiften uppdateras när du anger en destination."
+          }
+        }
+      }
+    },
+    "This transaction cannot confirm on the current chain: a confirmed different transaction ({nativeValue1}) spends one of its inputs.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This transaction cannot confirm on the current chain: a confirmed different transaction (%1$@) spends one of its inputs."
+          }
+        }
+      }
+    },
+    "This transaction may be your payment: {nativeValue1}": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This transaction may be your payment: %1$@"
           }
         }
       }
@@ -42525,6 +44757,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transaktions-ID"
+          }
+        }
+      }
+    },
+    "Transaction filter": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transaction filter"
           }
         }
       }
@@ -43021,6 +45265,18 @@
         }
       }
     },
+    "Unable to inspect this payment. It may already be in progress. Check status before sending again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to inspect this payment. It may already be in progress. Check status before sending again."
+          }
+        }
+      }
+    },
     "Unable to load Ark server info. Please try again later.": {
       "comment": "GT b908c09e6ffbb637; arguments: none",
       "extractionState": "manual",
@@ -43125,6 +45381,114 @@
           "stringUnit": {
             "state": "translated",
             "value": "Det gick inte att läsa in nöduttag"
+          }
+        }
+      }
+    },
+    "Unable to load saved payment status. Check your history and recipient before forgetting this attempt.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to load saved payment status. Check your history and recipient before forgetting this attempt."
+          }
+        }
+      }
+    },
+    "Unable to prepare boarding. Use Settings → Board to Ark to try again.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to prepare boarding. Use Settings → Board to Ark to try again."
+          }
+        }
+      }
+    },
+    "Unable to prepare payment. No payment was submitted.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to prepare payment. No payment was submitted."
+          }
+        }
+      }
+    },
+    "Unable to prepare this payment. Check the destination and available funds.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to prepare this payment. Check the destination and available funds."
+          }
+        }
+      }
+    },
+    "Unable to read available balances.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to read available balances."
+          }
+        }
+      }
+    },
+    "Unable to reserve the wallet to check payment status.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to reserve the wallet to check payment status."
+          }
+        }
+      }
+    },
+    "Unable to reserve the wallet. No payment was submitted.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to reserve the wallet. No payment was submitted."
+          }
+        }
+      }
+    },
+    "Unable to resolve this Lightning recipient. Please check the address.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to resolve this Lightning recipient. Please check the address."
+          }
+        }
+      }
+    },
+    "Unable to save payment status.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to save payment status."
           }
         }
       }
@@ -43317,6 +45681,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Okänd"
+          }
+        }
+      }
+    },
+    "Unknown required parameter: {nativeValue1}": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unknown required parameter: %1$@"
           }
         }
       }
@@ -43549,6 +45925,18 @@
         }
       }
     },
+    "Up to date or waiting for changes": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up to date or waiting for changes"
+          }
+        }
+      }
+    },
     "Up to ≈ ": {
       "comment": "GT 763351a6a369e140; arguments: none",
       "extractionState": "manual",
@@ -43765,18 +46153,6 @@
         }
       }
     },
-    "Updates": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Updates"
-          }
-        }
-      }
-    },
     "Updating places": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -43885,6 +46261,18 @@
         }
       }
     },
+    "Use the recovery phrase stored on this device to restore your backup.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the recovery phrase stored on this device to restore your backup."
+          }
+        }
+      }
+    },
     "Use this only if the Ark server is unresponsive or uncooperative. In normal circumstances, send to an onchain address from your Ark balance.": {
       "comment": "GT e82ab32bbfa6fa6b; arguments: none",
       "extractionState": "manual",
@@ -43917,6 +46305,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Använd detta endast om Ark-servern inte svarar eller inte samarbetar. I vanliga fall ska du skicka från ditt Ark-saldo till en On-chain-adress."
+          }
+        }
+      }
+    },
+    "Use {nativeValue1}": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use %1$@"
           }
         }
       }
@@ -44557,6 +46957,18 @@
         }
       }
     },
+    "Validating backup…": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Validating backup…"
+          }
+        }
+      }
+    },
     "Value": {
       "comment": "GT 90ce6a40bc073f6c; arguments: none",
       "extractionState": "manual",
@@ -44625,18 +47037,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verifieringen misslyckades"
-          }
-        }
-      }
-    },
-    "Verified": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verified"
           }
         }
       }
@@ -45157,6 +47557,18 @@
         }
       }
     },
+    "Wait for the wallet to be ready, then refresh.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wait for the wallet to be ready, then refresh."
+          }
+        }
+      }
+    },
     "Waiting": {
       "comment": "GT 0e8eab930d79d8b4; arguments: none",
       "extractionState": "manual",
@@ -45189,6 +47601,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Väntar"
+          }
+        }
+      }
+    },
+    "Waiting for secure storage": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for secure storage"
           }
         }
       }
@@ -45277,18 +47701,6 @@
         }
       }
     },
-    "Wallet Public Key": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wallet Public Key"
-          }
-        }
-      }
-    },
     "Wallet Suspended": {
       "comment": "GT 4b7ca52f647ca572; arguments: none",
       "extractionState": "manual",
@@ -45321,6 +47733,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Plånboken är avstängd"
+          }
+        }
+      }
+    },
+    "Wallet automation is durably stopped. Resume the wallet explicitly before sending recurring payments.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet automation is durably stopped. Resume the wallet explicitly before sending recurring payments."
           }
         }
       }
@@ -45373,6 +47797,18 @@
         }
       }
     },
+    "Wallet data exists on this device, but its recovery phrase is missing. Noah won't replace these files. Keep your recovery phrase and contact support for help recovering this wallet.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet data exists on this device, but its recovery phrase is missing. Noah won't replace these files. Keep your recovery phrase and contact support for help recovering this wallet."
+          }
+        }
+      }
+    },
     "Wallet endpoints": {
       "comment": "GT 88b1a1455a3d822f; arguments: none",
       "extractionState": "manual",
@@ -45405,6 +47841,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Plånbokens slutpunkter"
+          }
+        }
+      }
+    },
+    "Wallet history confirms this payment failed or was canceled.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet history confirms this payment failed or was canceled."
           }
         }
       }
@@ -45481,6 +47929,18 @@
         }
       }
     },
+    "Wallet recovery needed": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet recovery needed"
+          }
+        }
+      }
+    },
     "Wallet restore failed and could not be rolled back safely": {
       "comment": "GT a33825f6e5651cb8; arguments: none",
       "extractionState": "manual",
@@ -45513,6 +47973,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Återställningen av plånboken misslyckades och kunde inte ångras på ett säkert sätt"
+          }
+        }
+      }
+    },
+    "Wallet status observation unavailable": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet status observation unavailable"
           }
         }
       }
@@ -45949,6 +48421,18 @@
         }
       }
     },
+    "Word {nativeValue1}": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Word %1$@"
+          }
+        }
+      }
+    },
     "Working": {
       "comment": "GT 624506a403296638; arguments: none",
       "extractionState": "manual",
@@ -46017,6 +48501,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Skriv ner de här 12 orden i rätt ordning och förvara dem på en säker plats. Det är det enda sättet att återställa din plånbok."
+          }
+        }
+      }
+    },
+    "Write down these {nativeValue1} words in order and store them in a safe place. This is the only way to recover your wallet.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Write down these %1$@ words in order and store them in a safe place. This is the only way to recover your wallet."
           }
         }
       }
@@ -46233,6 +48729,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Du kan också gå med i vår Telegram-chatt för att få hjälp och lämna synpunkter."
+          }
+        }
+      }
+    },
+    "You can still browse the full map. Enable location in Settings to see nearby places.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can still browse the full map. Enable location in Settings to see nearby places."
           }
         }
       }
@@ -46729,6 +49237,18 @@
         }
       }
     },
+    "Your backup was restored, but setup couldn't finish. Do not restore again. Close and restart Noah to continue.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your backup was restored, but setup couldn't finish. Do not restore again. Close and restart Noah to continue."
+          }
+        }
+      }
+    },
     "Your current email will stay active until the new email is verified.": {
       "comment": "GT a96950c9ccfb82cb; arguments: none",
       "extractionState": "manual",
@@ -47077,14 +49597,14 @@
         }
       }
     },
-    "Your recovery phrase": {
+    "Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your recovery phrase"
+            "value": "Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."
           }
         }
       }
@@ -47161,38 +49681,14 @@
         }
       }
     },
-    "active": {
+    "Your wallet isn't ready. Please try again.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "active"
-          }
-        }
-      }
-    },
-    "amountSat": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "amountSat"
-          }
-        }
-      }
-    },
-    "ark": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ark"
+            "value": "Your wallet isn't ready. Please try again."
           }
         }
       }
@@ -47229,90 +49725,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "block"
-          }
-        }
-      }
-    },
-    "bolt": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bolt"
-          }
-        }
-      }
-    },
-    "checkmark": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "checkmark"
-          }
-        }
-      }
-    },
-    "clock": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "clock"
-          }
-        }
-      }
-    },
-    "completed": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "completed"
-          }
-        }
-      }
-    },
-    "count": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "count"
-          }
-        }
-      }
-    },
-    "date": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "date"
-          }
-        }
-      }
-    },
-    "day": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "day"
           }
         }
       }
@@ -47401,30 +49813,6 @@
         }
       }
     },
-    "endAt": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "endAt"
-          }
-        }
-      }
-    },
-    "envelope": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "envelope"
-          }
-        }
-      }
-    },
     "fiatjaf": {
       "comment": "GT a4f79dfff33cec6f; arguments: none",
       "extractionState": "manual",
@@ -47457,42 +49845,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "fiatjaf"
-          }
-        }
-      }
-    },
-    "gearshape": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "gearshape"
-          }
-        }
-      }
-    },
-    "globe": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "globe"
-          }
-        }
-      }
-    },
-    "https://mempool.space": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "https://mempool.space"
           }
         }
       }
@@ -47533,126 +49885,6 @@
         }
       }
     },
-    "https://mempool.space/api/v1/historical-price": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "https://mempool.space/api/v1/historical-price"
-          }
-        }
-      }
-    },
-    "https://mempool.space/api/v1/prices": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "https://mempool.space/api/v1/prices"
-          }
-        }
-      }
-    },
-    "https://t.me/blixtwallet/605026": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "https://t.me/blixtwallet/605026"
-          }
-        }
-      }
-    },
-    "inFlight": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "inFlight"
-          }
-        }
-      }
-    },
-    "interval": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "interval"
-          }
-        }
-      }
-    },
-    "lightning": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "lightning"
-          }
-        }
-      }
-    },
-    "location": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "location"
-          }
-        }
-      }
-    },
-    "map": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "map"
-          }
-        }
-      }
-    },
-    "maxOccurrences": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "maxOccurrences"
-          }
-        }
-      }
-    },
-    "month": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "month"
-          }
-        }
-      }
-    },
     "name@domain.com, ark1… or lno1…": {
       "comment": "GT 503851a6af1144cd; arguments: none",
       "extractionState": "manual",
@@ -47685,18 +49917,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "name@domain.com, ark1… eller lno1…"
-          }
-        }
-      }
-    },
-    "never": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "never"
           }
         }
       }
@@ -47737,30 +49957,6 @@
         }
       }
     },
-    "nextOccurrenceIndex": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "nextOccurrenceIndex"
-          }
-        }
-      }
-    },
-    "nextRunAt": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "nextRunAt"
-          }
-        }
-      }
-    },
     "npub1...": {
       "comment": "GT bbeb9ebee1631531; arguments: none",
       "extractionState": "manual",
@@ -47793,18 +49989,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "npub1..."
-          }
-        }
-      }
-    },
-    "occurrencesPaid": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "occurrencesPaid"
           }
         }
       }
@@ -47881,66 +50065,6 @@
         }
       }
     },
-    "phone": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "phone"
-          }
-        }
-      }
-    },
-    "photo": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "photo"
-          }
-        }
-      }
-    },
-    "qrcode": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "qrcode"
-          }
-        }
-      }
-    },
-    "request": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "request"
-          }
-        }
-      }
-    },
-    "runs": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "runs"
-          }
-        }
-      }
-    },
     "sats": {
       "comment": "GT 4caf875f616120f7; arguments: none",
       "extractionState": "manual",
@@ -47977,18 +50101,6 @@
         }
       }
     },
-    "schedules": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "schedules"
-          }
-        }
-      }
-    },
     "seconds": {
       "comment": "GT 16e620e21eb69fbd; arguments: none",
       "extractionState": "manual",
@@ -48021,66 +50133,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "sekunder"
-          }
-        }
-      }
-    },
-    "serverSyncPending": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "serverSyncPending"
-          }
-        }
-      }
-    },
-    "startAt": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "startAt"
-          }
-        }
-      }
-    },
-    "successful": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "successful"
-          }
-        }
-      }
-    },
-    "true": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "true"
-          }
-        }
-      }
-    },
-    "twitter": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "twitter"
           }
         }
       }
@@ -48193,26 +50245,14 @@
         }
       }
     },
-    "week": {
+    "v{nativeValue1}": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "week"
-          }
-        }
-      }
-    },
-    "xmark": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "xmark"
+            "value": "v%1$@"
           }
         }
       }
@@ -49017,6 +51057,66 @@
           "stringUnit": {
             "state": "translated",
             "value": "Växelkurs för %1$@ saknas"
+          }
+        }
+      }
+    },
+    "{nativeValue1} of 12 words": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of 12 words"
+          }
+        }
+      }
+    },
+    "{nativeValue1} sats": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ sats"
+          }
+        }
+      }
+    },
+    "{nativeValue1} sats available in Ark": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ sats available in Ark"
+          }
+        }
+      }
+    },
+    "{nativeValue1} sats per payment, plus network fees": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ sats per payment, plus network fees"
+          }
+        }
+      }
+    },
+    "{nativeValue1} · {nativeValue2} paid": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ paid"
           }
         }
       }

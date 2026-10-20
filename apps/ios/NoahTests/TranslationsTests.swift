@@ -1,0 +1,93 @@
+import Foundation
+import Testing
+@testable import Noah
+
+@Suite(.serialized)
+struct TranslationsTests {
+    struct Input: Decodable { let locale: String; let source: String; let args: [String] }
+    struct Coverage: Decodable {
+        struct Platform: Decodable { let used: [String] }
+        let locales: [String]
+        let coverage: [String: Platform]
+    }
+    struct Plurals: Decodable {
+        struct Entry: Decodable { let source: String; let translations: [String: [String: String]] }
+        let plurals: [Entry]
+    }
+
+    @Test func everyUsedRNKeyResolvesInEveryLocale() throws {
+        let fixture = try Fixtures.decode("translations-coverage", as: Coverage.self)
+        let sources = try #require(fixture.coverage["ios"]?.used)
+        #expect(sources.count > 500)
+        for locale in fixture.locales {
+            let bundle = L10n.localizedBundle(locale)
+            var keys = Set<String>()
+            for type in ["strings", "stringsdict"] {
+                if let url = bundle.url(forResource: "Localizable", withExtension: type) {
+                    let data = try Data(contentsOf: url)
+                    let values = try PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] ?? [:]
+                    keys.formUnion(values.keys)
+                }
+            }
+            for source in sources { #expect(keys.contains(source), "\(locale): \(source)") }
+        }
+    }
+
+    @Test func templatesMatchTheRNResolver() throws {
+        let cases = try Fixtures.load("translations", input: Input.self, expected: String.self)
+        #expect(cases.count == 25)
+        for item in cases {
+            let template = L10n.localizedBundle(item.input.locale).localizedString(forKey: item.input.source, value: nil, table: nil)
+            let actual = item.input.args.isEmpty ? template : String(format: template, locale: Locale(identifier: item.input.locale), arguments: item.input.args)
+            #expect(actual == item.expected, "\(item.name)")
+        }
+    }
+
+    @Test func pluralCategoriesAndArgumentsSurviveResourceCompilation() throws {
+        let fixture = try Fixtures.decode("translations", as: Plurals.self)
+        #expect(fixture.plurals.count == 3)
+        for locale in LegacyLocale.supported {
+            for entry in fixture.plurals {
+                let forms = try #require(entry.translations[locale])
+                for count in [1, 2, 5] {
+                    let category = ["en", "es", "sv"].contains(locale) && count == 1 ? "one" : "other"
+                    let expected = try #require(forms[category] ?? forms["other"])
+                        .replacingOccurrences(of: "{_gt_value_4}", with: String(count))
+                        .replacingOccurrences(of: "{_gt_value_3}", with: " · suffix")
+                    let actual = entry.source.contains("{_gt_value_3}")
+                        ? L10n.plural(entry.source, count: count, " · suffix", locale: locale)
+                        : L10n.plural(entry.source, count: count, locale: locale)
+                    #expect(actual == expected, "\(locale)/\(count)/\(entry.source)")
+                }
+            }
+        }
+    }
+
+    @Test func persistedPreferenceAndSystemFallbackMatchRN() throws {
+        #expect(LegacyLocale.resolve(preference: nil, system: ["de-DE", "ja-JP"]) == "ja")
+        #expect(LegacyLocale.resolve(preference: "ko-KR", system: ["es-ES"]) == "ko")
+        #expect(LegacyLocale.resolve(preference: "unsupported", system: ["sv_SE"]) == "sv")
+        #expect(LegacyLocale.resolve(preference: nil, system: ["de-DE"]) == "en")
+        let defaults = try #require(UserDefaults(suiteName: "translations-test"))
+        defer { defaults.removePersistentDomain(forName: "translations-test") }
+        defaults.set("es", forKey: LegacyLocale.key)
+        #expect(L10n.text("Cancel", locale: LegacyLocale.resolved(from: defaults)) == "Cancelar")
+        defaults.set("ja", forKey: LegacyLocale.key)
+        #expect(L10n.text("Cancel", locale: LegacyLocale.resolved(from: defaults)) == "キャンセル")
+        #expect(L10n.text("Native-only 100% copy", locale: "es") == "Native-only 100% copy")
+    }
+
+    @Test func backgroundCopyRereadsPersistedLanguageWithoutAnAppModel() throws {
+        let defaults = try #require(UserDefaults(suiteName: "background-translations-test"))
+        defer { defaults.removePersistentDomain(forName: "background-translations-test") }
+        defaults.set("es", forKey: LegacyLocale.key)
+        #expect(NotificationCopy.received(sats: 1234, usd: "1.23", unit: .bip177, defaults: defaults).body == "Has recibido ₿\u{00a0}1234 (≈ US$1.23)")
+        defaults.set("ja", forKey: LegacyLocale.key)
+        #expect(NotificationCopy.received(sats: 1234, usd: nil, unit: .bip177, defaults: defaults).body == "₿\u{00a0}1,234を受け取りました")
+        for locale in LegacyLocale.supported {
+            defaults.set(locale, forKey: LegacyLocale.key)
+            #expect(NotificationCopy.reminder(amount: "1,234 sats", recipient: "Alice", upcoming: true, defaults: defaults).body == L10n.text("{amount} to {recipient} will be sent tomorrow.", "1,234 sats", "Alice", locale: locale))
+            #expect(NotificationCopy.reminder(amount: "1,234 sats", recipient: "Alice", upcoming: false, defaults: defaults).body == L10n.text("Open Noah to send {amount} to {recipient}.", "1,234 sats", "Alice", locale: locale))
+        }
+    }
+}
