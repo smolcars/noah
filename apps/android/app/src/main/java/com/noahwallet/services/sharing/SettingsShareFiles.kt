@@ -1,0 +1,41 @@
+package com.noahwallet.services.sharing
+
+import android.content.Context
+import android.content.Intent
+import androidx.core.content.FileProvider
+import androidx.work.Worker
+import androidx.work.WorkerParameters
+import java.io.File
+
+/** Only encrypted backups and redacted logs belong here; plaintext stays in ScratchSpace. */
+class SettingsShareFiles(private val root: File, private val revoke: (File) -> Unit = {}) {
+    fun retain(source: File): File {
+        require(source.extension in setOf("noahbackup", "log"))
+        check(root.isDirectory || root.mkdirs())
+        sweep()
+        val file = File.createTempFile("noah_", ".${source.extension}", root)
+        try { source.copyTo(file, overwrite = true); return file }
+        catch (failure: Exception) { discard(file); throw failure }
+    }
+
+    fun discard(file: File) { revoke(file); file.delete() }
+
+    fun sweep(now: Long = System.currentTimeMillis()) {
+        root.listFiles()?.filter { now - it.lastModified() >= retentionMillis }?.forEach(::discard)
+    }
+
+    companion object {
+        const val retentionMillis = 86_400_000L
+        fun live(context: Context) = SettingsShareFiles(File(context.cacheDir, "settings-exports")) { file ->
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+            context.revokeUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+}
+
+class SettingsShareCleanup(context: Context, parameters: WorkerParameters) : Worker(context, parameters) {
+    override fun doWork(): Result {
+        SettingsShareFiles.live(applicationContext).sweep()
+        return Result.success()
+    }
+}

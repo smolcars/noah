@@ -77,45 +77,31 @@ fun BackupSettingsScreen(model: AppModel) {
         } }, enabled = !model.busy) { Text("Delete Backup") } }) }
 }
 
-/** A file for the share sheet and how to remove it once the receiver is done. */
+/** A produced file and how to remove its temporary staging folder. */
 private class SharedFile(val file: File, val discard: () -> Unit)
 
-/** Keep the grant and file alive while the receiver is active; clean on return or screen disposal. */
+/** The model retains bounded exports across rotation; chooser return does not end a receiver's read. */
 @Composable
 private fun ShareFileButton(model: AppModel, title: String, mime: String, produce: suspend () -> SharedFile) {
     val context = LocalContext.current
-    var shared by remember { mutableStateOf<SharedFile?>(null) }
-    var shareUri by remember { mutableStateOf<android.net.Uri?>(null) }
-    var returned by remember { mutableStateOf(false) }
-    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    fun discard() {
-        shareUri?.let { context.revokeUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-        shared?.discard?.invoke()
-        shared = null; shareUri = null; returned = false
-    }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        // A chooser result alone can precede the receiver reading; wait until Noah resumes.
-        returned = true
-        if (owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) discard()
-    }
-    DisposableEffect(owner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME && returned) discard()
-        }
-        owner.lifecycle.addObserver(observer)
-        onDispose { owner.lifecycle.removeObserver(observer); discard() }
-    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
     NoahButton(title, !model.busy && !model.isWalletSuspended) {
         model.action("Couldn't prepare the file for sharing. Please try again.") {
-            discard()
-            val file = withContext(Dispatchers.IO) { produce() }.also { shared = it }.file
+            val file = withContext(Dispatchers.IO) {
+                val staged = produce()
+                try { model.settingsShares.retain(staged.file) }
+                finally { staged.discard() }
+            }
             try {
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
-                shareUri = uri
                 val send = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri)
                     .apply { clipData = ClipData.newRawUri(file.name, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+                androidx.work.WorkManager.getInstance(context).enqueue(
+                    androidx.work.OneTimeWorkRequestBuilder<com.noahwallet.services.sharing.SettingsShareCleanup>()
+                        .setInitialDelay(com.noahwallet.services.sharing.SettingsShareFiles.retentionMillis,
+                            java.util.concurrent.TimeUnit.MILLISECONDS).build())
                 launcher.launch(Intent.createChooser(send, title))
-            } catch (failure: Exception) { discard(); throw failure }
+            } catch (failure: Exception) { model.settingsShares.discard(file); throw failure }
         }
     }
 }
@@ -126,7 +112,7 @@ fun ExportScreen(model: AppModel) {
         Text("Create an encrypted backup file containing your wallet database.")
         Text("You will need your seed phrase to restore this backup. Keep it safe and never share it.")
         ShareFileButton(model, "Export Database", "application/octet-stream") {
-            // The backup service owns the export's folder; it is swept at launch if never discarded.
+            // Only the encrypted archive is retained; the service's staging folder is discarded immediately.
             val export = model.services.backupService.exportEncryptedBackup("noah-${BuildConfig.APP_VARIANT}.noahbackup")
             SharedFile(export.archive.file) { export.discard() }
         }

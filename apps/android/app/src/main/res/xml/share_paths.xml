@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <cache-path name="shared" path="noah-scratch/" />
+    <cache-path name="settings" path="settings-exports/" />
     <cache-path name="history" path="history-exports/" />
 </paths>

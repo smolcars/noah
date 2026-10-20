@@ -38,6 +38,8 @@ class AppModel(application: Application) : AndroidViewModel(application) {
     var localeIdentifier by mutableStateOf(com.noahwallet.services.storage.LegacyLocale.read(application) ?: "en")
         private set
 
+    val settingsShares = com.noahwallet.services.sharing.SettingsShareFiles.live(application)
+        .also { it.sweep() }
     val historyExports = com.noahwallet.history.HistoryExportFiles(java.io.File(application.cacheDir, "history-exports"))
         .also { it.sweep() }
     val history = com.noahwallet.history.HistoryModel(com.noahwallet.history.HistoryModel.Dependencies.live(
