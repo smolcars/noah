@@ -1,6 +1,7 @@
 import BarkBoltFFI
 import Foundation
 import Observation
+import UIKit
 
 /// App-wide state: what to show at launch and the open wallet.
 @MainActor
@@ -53,6 +54,7 @@ final class AppModel {
     private let settings = SettingsStorage.shared
     private let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
     @ObservationIgnored private let creator: WalletCreator
+    @ObservationIgnored private var recurringForeground: RecurringForegroundRunner?
     @ObservationIgnored private var started = false
     @ObservationIgnored private var backupTriggers: (id: UUID, task: Task<Void, Never>)?
     @ObservationIgnored private let lifecycle = WalletLifecycle(dependencies: .live())
@@ -69,12 +71,17 @@ final class AppModel {
             .amountUnit ?? .bip177
         isWalletSuspended = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?
             .isWalletSuspended == true
+        recurringForeground = RecurringForegroundRunner { [weak self] in
+            guard let self, phase == .wallet, !isWalletSuspended else { return }
+            await RecurringExecutor.shared.execute()
+        }
     }
 
     func start() async {
         // `.task` can run again if the root view is rebuilt; launch once.
         guard !started else { return }
         started = true
+        if UIApplication.shared.applicationState == .active { recurringForeground?.start() }
         // An interrupted restore must be settled before the datadir and seed
         // say anything about which wallet this is.
         do {
@@ -338,6 +345,7 @@ final class AppModel {
     }
 
     func appBecameActive() async {
+        if UIApplication.shared.applicationState == .active { recurringForeground?.start() }
         if phase == .wallet {
             try? await server.refreshMailboxIfNeeded()
             await RecurringExecutor.shared.execute()
