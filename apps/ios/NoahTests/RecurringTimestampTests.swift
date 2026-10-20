@@ -11,6 +11,10 @@ import Testing
         h.clock.withLock { $0 = 1001 }
         let original = RecurringScheduleTests.schedule(start: 1000)
         var row = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+        // RN's factory writes nullable keys; JSONEncoder omits nil properties.
+        for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "inFlight"] where row[key] == nil { row[key] = NSNull() }
+        var healthy = row; healthy["id"] = "healthy"
+        let healthyJSON = String(decoding: try JSONSerialization.data(withJSONObject: healthy), as: UTF8.self)
         switch field {
         case "inFlight.startedAt": row["inFlight"] = ["occurrenceIndex": 0, "startedAt": 1000.5]
         case "runs.scheduledFor", "runs.attemptedAt":
@@ -20,8 +24,6 @@ import Testing
         default: row[field] = 1000.5
         }
         let unsupported = String(decoding: try JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]), as: UTF8.self)
-        var healthy = original; healthy.id = "healthy"
-        let healthyJSON = String(decoding: try JSONEncoder().encode(healthy), as: UTF8.self)
         let raw = "{\"version\":0,\"state\":{\"schedules\":{\"rent\":\(unsupported),\"healthy\":\(healthyJSON)}}}"
         h.settings.set(raw, forKey: RecurringStore.key)
         let visible = try #require(h.store.load().schedules[original.id])
