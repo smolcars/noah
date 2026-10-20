@@ -67,6 +67,7 @@ struct WalletLifecycle: Sendable {
 
     /// Clears the flag; the caller then opens the wallet as at launch.
     func resume() throws {
+        guard !RestoreTransaction(location: dependencies.location).settingsPending else { throw SettingsStorage.OpenError() }
         try authority()?.resume()
         try setSuspended(false)
     }

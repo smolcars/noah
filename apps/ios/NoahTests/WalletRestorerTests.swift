@@ -150,10 +150,10 @@ struct WalletRestorerTests {
         try expectNoRestoreLeftovers()
     }
 
-    private func expectNoRestoreLeftovers() throws {
+    private func expectNoRestoreLeftovers(settingsPending: Bool = false) throws {
         let workspace = deviceB.restoreDirectory
         let leftovers = (try? FileManager.default.contentsOfDirectory(atPath: workspace.path)) ?? []
-        #expect(leftovers.isEmpty, "journal, previous wallet and decrypted files are gone: \(leftovers)")
+        #expect(leftovers == (settingsPending ? ["settings-pending"] : []), "Only pending settings completion may remain: \(leftovers)")
     }
 
     private struct UnavailableDeletionSeed: WalletDeletionSeed {
@@ -468,7 +468,7 @@ struct WalletRestorerTests {
         #expect(outcome.backupId == "b1")
         #expect({ seed.current == mnemonic }())
         #expect(deviceBWallet != "previous wallet")
-        try expectNoRestoreLeftovers()
+        try expectNoRestoreLeftovers(settingsPending: true)
         // The open check released the datadir lock.
         #expect(await !session.isOpen)
         try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
@@ -494,7 +494,7 @@ struct WalletRestorerTests {
         _ = try await restorer.restore(mnemonic: mnemonic)
         #expect({ seed.current == mnemonic }())
         #expect(deviceBWallet != "previous wallet")
-        try expectNoRestoreLeftovers()
+        try expectNoRestoreLeftovers(settingsPending: true)
     }
 
     @Test func unknownSeedStateIsLeftForLaunchRecovery() async throws {

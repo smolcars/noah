@@ -96,7 +96,6 @@ struct WalletRestorer: Sendable {
             try await session.unlessReserved { try transaction.removeScratch() }
             return .nothingPending
         }
-        if session === WalletSession.shared { try RecurringStore().protectLegacyBeforeReplacement() }
         let reservation: WalletSession.Reservation
         do {
             reservation = try await session.reserve()

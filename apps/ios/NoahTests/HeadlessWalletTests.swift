@@ -7,7 +7,7 @@ import Testing
 @MainActor struct HeadlessWalletTests {
     private let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 
-    @Test(arguments: ["restore", "deletion", "suspended", "uninitialized", "missing", "noSeed", "locked", "invalid", "conflict"])
+    @Test(arguments: ["restore", "settingsCompletion", "deletion", "suspended", "uninitialized", "missing", "noSeed", "locked", "invalid", "conflict"])
     func unsafeStateNeverChangesSeedOrFiles(state: String) throws {
         SettingsStorage.bootstrap()
         let directory = FileManager.default.temporaryDirectory.appending(path: "headless-\(UUID())")
@@ -26,6 +26,9 @@ import Testing
         if state == "restore" {
             try FileManager.default.createDirectory(at: location.restoreDirectory, withIntermediateDirectories: true)
             marker = location.restoreDirectory.appending(path: RestoreTransaction.journalName)
+        } else if state == "settingsCompletion" {
+            try FileManager.default.createDirectory(at: location.restoreDirectory, withIntermediateDirectories: true)
+            marker = RestoreTransaction(location: location).settingsCompletion
         } else if state == "deletion" { marker = location.deletionMarker }
         if let marker { try Data("pending".utf8).write(to: marker) }
         let seed: KeychainPassword.ReadResult = switch state {

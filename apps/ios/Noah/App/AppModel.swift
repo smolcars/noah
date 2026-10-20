@@ -119,6 +119,7 @@ final class AppModel {
             phase = .restoreIncomplete
             return
         }
+        RestoreTransaction(location: WalletDataLocation(variant: variant)).completeSettings(settings)
         isWalletSuspended = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == true
         let state = readLaunchState()
         switch state {
@@ -186,7 +187,10 @@ final class AppModel {
             committed = true
             try await RestoreCompletion(
                 loadWalletState: { self.settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init() },
-                saveWalletState: { try self.settings.setPersistedState($0, key: PersistedWalletState.key, version: PersistedWalletState.version) },
+                saveWalletState: { _ in
+                    self.settings.completeRestore()
+                    RestoreTransaction(location: WalletDataLocation(variant: variant)).completeSettings(self.settings)
+                },
                 seedRestored: { await AppServices.shared.backupCoordinator.seedRestored(snapshotSha256: $0, backupId: $1) },
                 recover: { try await AppServices.shared.restoreRecovery.settle() },
                 openWallet: {
@@ -390,6 +394,7 @@ final class AppModel {
 
     func appBecameActive() async {
         await session.waitForBackgroundAccess()
+        RestoreTransaction(location: WalletDataLocation(variant: variant)).completeSettings(settings)
         if phase == .wallet, !isWalletSuspended, !(await session.isOpen) { await openExistingWallet() }
         await retrySecureStorage()
         if UIApplication.shared.applicationState == .active { recurringForeground?.start() }

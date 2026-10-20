@@ -13,18 +13,18 @@ struct RestoreCompletion {
     var openWallet: () async -> Void
 
     func finish(_ outcome: WalletRestorer.Outcome) async throws {
+        if outcome.cleanupPending {
+            switch try await recover() {
+            case .completed, .nothingPending: break
+            case .rolledBack, .waitingForKeychain: throw RestartRequired()
+            }
+        }
         var wallet = loadWalletState()
         wallet.isInitialized = true
         wallet.isWalletLoaded = true
         try saveWalletState(wallet)
         if let hash = outcome.snapshotSha256 {
             await seedRestored(hash, outcome.backupId)
-        }
-        if outcome.cleanupPending {
-            switch try await recover() {
-            case .completed, .nothingPending: break
-            case .rolledBack, .waitingForKeychain: throw RestartRequired()
-            }
         }
         await openWallet()
     }

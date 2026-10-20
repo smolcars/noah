@@ -129,9 +129,22 @@ struct RestoreTransaction: Sendable {
         try write(journal)
     }
 
-    /// The seed is saved: drop the previous wallet and the scratch files,
-    /// the journal last.
+    var settingsCompletion: URL { directory.appending(path: "settings-pending") }
+    var settingsPending: Bool { exists(settingsCompletion) }
+
+    /// Wallet recovery is committed independently of preferences; retry on foreground opens.
+    func completeSettings(_ settings: SettingsStorage) {
+        guard settingsPending, settings.completeRestore() else { return }
+        try? FileManager.default.removeItem(at: settingsCompletion)
+        try? Self.fullSync(directory)
+    }
+
+    /// The seed is saved: retain settings completion, then drop the journal last.
     func finish() throws {
+        try Data().write(to: settingsCompletion)
+        try Self.fullSync(settingsCompletion)
+        try Self.fullSync(directory)
+        try RecurringAutomationAuthority(directory: datadir).stop()
         let marker = datadir.appending(path: Self.markerName)
         if exists(marker) {
             try FileManager.default.removeItem(at: marker)

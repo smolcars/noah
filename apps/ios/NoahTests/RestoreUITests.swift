@@ -93,7 +93,7 @@ struct RestoreCompletionTests {
     @Test func savesFlagsSeedsBackupAndRecoversBeforeOpening() async throws {
         let fake = Fake()
         try await fake.completion.finish(.init(backupId: "b1", snapshotSha256: "hash", cleanupPending: true))
-        #expect(fake.events == ["flags", "seed", "recover", "open"])
+        #expect(fake.events == ["recover", "flags", "seed", "open"])
         #expect(fake.state.isInitialized == true)
         #expect(fake.state.isWalletLoaded == true)
         #expect(fake.state.staticVtxoPubkey == "keep")

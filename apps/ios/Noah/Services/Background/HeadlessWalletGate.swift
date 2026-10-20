@@ -6,7 +6,7 @@ enum HeadlessWalletGate {
     static func mnemonic(location: WalletDataLocation, settings: SettingsStorage,
                          readSeed: () -> KeychainPassword.ReadResult) throws -> String {
         try settings.requireCompatibleRNStores()
-        guard !location.restorePending,
+        guard !location.restorePending, !RestoreTransaction(location: location).settingsPending,
               !FileManager.default.fileExists(atPath: location.deletionMarker.path) else {
             throw AppServices.RestoreNotSettled()
         }

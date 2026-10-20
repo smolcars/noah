@@ -151,6 +151,20 @@ final class SettingsStorage: @unchecked Sendable {
         try persist(.init()) // Keep the import marker through re-onboarding.
     }
 
+    /// Only committed restore completion may publish flags in memory after a failed write.
+    @discardableResult func completeRestore() -> Bool {
+        Self.access.lock(); defer { Self.access.unlock() }
+        var state = load()
+        var wallet = persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
+        wallet.isInitialized = true; wallet.isWalletLoaded = true
+        do {
+            let data = try JSONEncoder().encode(PersistedEnvelope(state: wallet, version: PersistedWalletState.version))
+            state.values[PersistedWalletState.key] = try RNStoreCodec.merging(String(decoding: data, as: UTF8.self), into: state.values[PersistedWalletState.key], key: PersistedWalletState.key)
+            try persist(state)
+            return true
+        } catch { fallback = state; return false }
+    }
+
     func beginOnboarding() throws {
         var wallet = persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
         wallet.isInitialized = false
