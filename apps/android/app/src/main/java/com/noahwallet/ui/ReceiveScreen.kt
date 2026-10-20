@@ -81,8 +81,9 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
         runCatching { V0PricesClient(app.services.client).fiatPrices(JsonObject(emptyMap())).value().rates[currency] }
             .getOrNull()?.takeIf { it.isFinite() && it > 0 }?.let { price = it }
     }
-    LaunchedEffect(request) {
-        val current = request ?: return@LaunchedEffect
+    val sessionRevision by app.session.walletChanges.collectAsState()
+    LaunchedEffect(request, sessionRevision) {
+        val current = request?.takeIf { app.session.isOpen } ?: return@LaunchedEffect
         while (isActive) {
             try {
                 when (val event = app.session.receiveCompletion(current)) {

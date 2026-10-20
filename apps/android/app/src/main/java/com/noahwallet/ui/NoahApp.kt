@@ -48,9 +48,14 @@ fun NoahApp(model: AppModel) {
         if (model.recurringNotification) { backStack.add(SettingsDestination.Recurring); model.recurringNotification = false }
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val walletAvailable = model.open && !model.isWalletSuspended
-    LaunchedEffect(model, model.preferredCurrency, lifecycle, walletAvailable) {
-        if (walletAvailable) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.history.observe(model.preferredCurrency) }
+    val sessionRevision by model.session.walletChanges.collectAsState()
+    val walletAvailable = model.open && !model.isWalletSuspended && model.session.isOpen
+    LaunchedEffect(model, model.preferredCurrency, lifecycle, walletAvailable, sessionRevision) {
+        if (walletAvailable) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            model.refresh()
+            model.services.reconcileBackupTriggers()
+            model.history.observe(model.preferredCurrency)
+        }
     }
     if (backStack.last() == Destination.Home) com.noahwallet.onchain.AutoBoardPrompt(model) { model.autoBoardSuccessBanner = it to System.currentTimeMillis() }
     val repeat: (com.noahwallet.history.RepeatPayment) -> Unit = {
