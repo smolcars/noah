@@ -30,6 +30,8 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         private set
     val amountUnit = if ((state("profile-storage")["bitcoinAmountUnit"] as? JsonPrimitive)?.contentOrNull == "sats") BitcoinAmountUnit.sats else BitcoinAmountUnit.bip177
     val preferredCurrency = (state("profile-storage")["preferredCurrency"] as? JsonPrimitive)?.contentOrNull ?: "USD"
+    val historyExports = com.noahwallet.history.HistoryExportFiles(java.io.File(application.cacheDir, "history-exports"))
+        .also { it.sweep() }
     val history = com.noahwallet.history.HistoryModel(com.noahwallet.history.HistoryModel.Dependencies.live(
         session, services.client, BuildConfig.APP_VARIANT,
         suspended = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true },

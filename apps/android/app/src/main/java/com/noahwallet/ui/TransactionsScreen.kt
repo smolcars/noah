@@ -49,13 +49,15 @@ fun TransactionsScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit) 
                         sharing = true; shareError = null
                         val csv = HistoryCSV.content(filtered, app.preferredCurrency)
                         scope.launch {
+                            var export: File? = null
+                            var launched = false
                             try {
                                 val file = withContext(Dispatchers.IO) {
-                                    val directory = File(context.cacheDir, "history-exports").apply { check(isDirectory || mkdirs()) }
-                                    // Retain a share's file while its receiver reads it; remove old exports on the next share.
-                                    directory.listFiles()?.filter { System.currentTimeMillis() - it.lastModified() > 86_400_000 }?.forEach { it.delete() }
-                                    File.createTempFile("noah_transactions_", ".csv", directory).apply { writeText(csv, Charsets.UTF_8) }
+                                    app.historyExports.create(csv).also { export = it }
                                 }
+                                androidx.work.WorkManager.getInstance(context).enqueue(
+                                    androidx.work.OneTimeWorkRequestBuilder<HistoryExportCleanup>()
+                                        .setInitialDelay(HistoryExportFiles.retentionMillis, java.util.concurrent.TimeUnit.MILLISECONDS).build())
                                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.history-files", file)
                                 context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                                     type = "text/csv"
@@ -64,9 +66,13 @@ fun TransactionsScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit) 
                                     clipData = ClipData.newUri(context.contentResolver, "Transactions", uri)
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }, "Export transactions"))
+                                launched = true
                             } catch (cancelled: CancellationException) { throw cancelled }
                             catch (_: Exception) { shareError = "Couldn't export transactions. Please try again." }
-                            finally { sharing = false }
+                            finally {
+                                if (!launched) withContext(NonCancellable + Dispatchers.IO) { export?.delete() }
+                                sharing = false
+                            }
                         }
                     }, enabled = !history.isRefreshing && !sharing, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(if (sharing) "Exporting…" else "Export transactions") }
                 }

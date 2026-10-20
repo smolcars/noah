@@ -187,6 +187,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 - [x] Optional History enrichment runs in a cancellable, single-worker job, publishes incrementally, and leaves wallet observation / Refresh / Export responsive — both platforms
 
+- [x] History CSV lifetime: Android startup sweep, failed-share deletion and scheduled 24-hour expiry; iOS uses in-memory `DataRepresentation` without app-owned CSV files
+
 ## M5 — Settings & recovery
 - [x] SettingsScreen (biometrics, auto-board preference, mailbox, version/debug unlock) — iOS
 - [x] Suspend/resume, delete wallet (files before seed, under a reservation; refused while a restore is pending), re-register: model layer + suspended Home — iOS
