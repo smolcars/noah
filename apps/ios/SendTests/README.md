@@ -1,5 +1,51 @@
 # Native Send verification
 
+## Round-8 override audit recovery and legacy evidence (2026-10-19)
+
+Unreadable `noah-send-overrides.json` data is moved to a unique sibling named
+`noah-send-overrides.json.unreadable-<UUID>` before recording a fresh audit. The
+quarantined bytes are preserved and excluded from backup; Send never deletes
+these files. A failed quarantine, fresh audit write or attempt removal keeps
+Send locked. The new confirmation must be saved before removing the journal.
+
+Identity-free legacy journals remain privately quarantined, unavailable to
+receipt display and reconciliation. Their destructive override now audits the
+original receipt/broadcast txid, movement candidates and possible txids, with
+`ownershipUnverified: true` and no invented current-wallet identity. These new
+audit fields are optional so existing audit histories remain readable.
+
+`SendOverrideAuditTests` covers corrupt-byte preservation before journal removal,
+restart recovery, real filesystem quarantine/write failures, and legacy receipt
+and broadcast txids/candidates reaching the persisted audit. Round-7 failed
+refresh handling and session-owned preparation discard remain unchanged.
+No funded live payment or shared-stack fault injection is needed for this round.
+Base: `feat/native-rewrite` HEAD `337245c2565e7a7296137ebdee1b9e8806ff949d`.
+
+Before the fix, the new suite failed **2 of 3 tests / 3 of 5 individual runs**:
+corrupt audit recovery and both legacy txid cases. Final targeted verification
+passed **29 tests / 53 individual runs**, **6 suites**, zero failures/skips,
+including round-7 refresh/discard, wallet identity, journal migration and prepared
+send recovery coverage.
+
+All runs used Nix, XcodeGen, normal simulator code signing,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2` and disabled parallel testing.
+Dedicated device: **Noah Send R8 Sol 0b94f03c**, iPhone 17 / iOS 27.0, UDID
+`A43F1B2B-439D-4B34-9518-F90AFFDBEB61`. DerivedData:
+`/private/tmp/noah-send-r8-0b94-dd`; result prefix:
+`/private/tmp/noah-send-r8-0b94-{red,targeted,full}.xcresult`.
+Summary JSON exports and logs use the same prefix.
+
+The full `NoahTests` suite ran **once** after the final code/test changes, with
+no suite or target exclusions: **371 total, 355 passed, 16 opt-in skipped,
+0 failed**, across **83 suites**. Parameterized execution reports
+**458 passed / 16 skipped** individual runs.
+
+Cleanup completed after exporting summaries: verified the simulator's exact
+name/UDID and Shutdown state, deleted it and confirmed its absence. Removed only
+the owned DerivedData directory and all three xcresult bundles. Logs and summary
+JSON remain under `/private/tmp`; other simulators, emulators, physical devices
+and Docker were untouched.
+
 ## Round-7 unresolved receipts, offline refresh and discard ownership (2026-10-19)
 
 This section supersedes the historical override refusals below. Round-6 crash
