@@ -4,7 +4,7 @@
       <verify-metadata>false</verify-metadata>
       <verify-signatures>false</verify-signatures>
       <trusted-artifacts>
-         <trust group="^(?!io[.]github[.]niteshbalusu11$|io[.]ktor$|org[.]jetbrains[.]kotlinx$|org[.]slf4j$|androidx[.]work$|androidx[.]biometric$|androidx[.]fragment$|androidx[.]room$|androidx[.]sqlite$|androidx[.]concurrent$|org[.]unifiedpush[.]android$|org[.]apache[.]commons$|commons-io$|commons-codec$|com[.]google[.]zxing$).*" regex="true" reason="Verify the wallet AAR, backup extraction, server networking, push connector and WorkManager dependencies; retain the scaffold trust policy for other groups."/>
+         <trust group="^(?!io[.]github[.]niteshbalusu11$|io[.]ktor$|org[.]jetbrains[.]kotlinx$|org[.]slf4j$|androidx[.]work$|androidx[.]biometric$|androidx[.]fragment$|androidx[.]room$|androidx[.]sqlite$|androidx[.]concurrent$|org[.]unifiedpush[.]android$|org[.]apache[.]commons$|commons-io$|commons-codec$|com[.]google[.]zxing$|org[.]maplibre[.]gl$|com[.]jakewharton[.]timber$|com[.]google[.]code[.]gson$).*" regex="true" reason="Verify the wallet AAR, backup extraction, server networking, push connector, WorkManager, biometric and map dependencies; retain the scaffold trust policy for other groups."/>
       </trusted-artifacts>
    </configuration>
    <components>
@@ -271,6 +271,56 @@
       <component group="org.apache.commons" name="commons-lang3" version="3.18.0">
          <artifact name="commons-lang3-3.18.0.jar">
             <sha256 value="4eeeae8d20c078abb64b015ec158add383ac581571cddc45c68f0c9ae0230720" origin="Maven Central artifact, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="org.maplibre.gl" name="android-sdk" version="13.7.1">
+         <artifact name="android-sdk-13.7.1.aar">
+            <sha256 value="08ebf900c96c3cd22e78ce8b01a098cddf85d146695df2555352e0a512753d39" origin="Maven Central artifact, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="org.maplibre.gl" name="android-sdk-geojson" version="6.0.1">
+         <artifact name="android-sdk-geojson-6.0.1.jar">
+            <sha256 value="0c4e4258ce258da9740c17c76f3ae90f89fcfa5822a797f5d466b35410571363" origin="Maven Central artifact, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="org.maplibre.gl" name="android-sdk-turf" version="6.0.1">
+         <artifact name="android-sdk-turf-6.0.1.jar">
+            <sha256 value="c0fd543d17fbd3b7c2e946515caf2d53b602f0eac1438ad4dca731d9a508af79" origin="Maven Central artifact, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="org.maplibre.gl" name="maplibre-android-gestures" version="0.0.4">
+         <artifact name="maplibre-android-gestures-0.0.4.aar">
+            <sha256 value="44ff4fc2dd8bfbcf54a06f219e7ab40a2062eb6b4a10dcbf1f4e02b4a30c61af" origin="Maven Central artifact, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="com.jakewharton.timber" name="timber" version="5.0.1">
+         <artifact name="timber-5.0.1.aar">
+            <sha256 value="c6edddfcc8eff42a1604c8577fcfa4b4ffd9f252122c52ea36cfe7967f512f71" origin="Maven Central artifact, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="androidx.fragment" name="fragment" version="1.8.9">
+         <artifact name="fragment-1.8.9.aar">
+            <sha256 value="12de5b89ab6641c1d8da82b63dc816652622b06d2781b949b6fbd2dff9fac492" origin="Publisher Maven repository, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="com.google.code.gson" name="gson" version="2.10.1">
+         <artifact name="gson-2.10.1.jar">
+            <sha256 value="4241c14a7727c34feea6507ec801318a3d4a90f070e4525681079fb94ee4c593" origin="Publisher Maven repository, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="com.google.code.gson" name="gson" version="2.11.0">
+         <artifact name="gson-2.11.0.jar">
+            <sha256 value="57928d6e5a6edeb2abd3770a8f95ba44dce45f3b23b7a9dc2b309c581552a78b" origin="Maven Central artifact, independently downloaded (existing Gradle plugin dependency)"/>
+         </artifact>
+      </component>
+      <component group="androidx.fragment" name="fragment" version="1.1.0">
+         <artifact name="fragment-1.1.0.aar">
+            <sha256 value="a14c8b8f2153f128e800fbd266a6beab1c283982a29ec570d2cc05d307d81496" origin="Publisher Maven repository, independently downloaded (existing scaffold dependency)"/>
+         </artifact>
+      </component>
+      <component group="com.google.code.gson" name="gson" version="2.8.9">
+         <artifact name="gson-2.8.9.jar">
+            <sha256 value="d3999291855de495c94c743761b8ab5176cfeabe281a5ab0d8e8d45326fd703e" origin="Publisher Maven repository, independently downloaded (existing scaffold dependency)"/>
          </artifact>
       </component>
    </components>

@@ -120,6 +120,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    // Share the exact RN/iOS snapshots; do not copy 7 MB into another source tree.
+    sourceSets.getByName("main").assets.srcDirs("../../../client/assets/btcmap", "../../../client/assets/geonames")
+    sourceSets.getByName("test").resources.srcDirs("../../../client/assets/btcmap", "../../../client/assets/geonames")
     sourceSets.getByName("test").resources.directories += "../../fixtures"
     sourceSets.getByName("test").resources.directories += "../../../api"
     sourceSets.getByName("androidTest").assets.directories += "../../fixtures"
@@ -128,6 +131,7 @@ android {
 dependencies {
     implementation(libs.biometric)
     implementation(libs.fragment)
+    implementation(libs.maplibre)
     implementation(libs.commons.compress)
     implementation(platform(libs.compose.bom))
     implementation(libs.zxing.core)

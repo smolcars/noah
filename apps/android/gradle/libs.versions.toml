@@ -25,6 +25,7 @@ androidx-test-junit = "1.2.1"
 [libraries]
 biometric = { module = "androidx.biometric:biometric", version = "1.1.0" }
 fragment = { module = "androidx.fragment:fragment", version = "1.8.9" }
+maplibre = { module = "org.maplibre.gl:android-sdk", version = "13.7.1" }
 commons-compress = { module = "org.apache.commons:commons-compress", version = "1.28.0" }
 zxing-core = { module = "com.google.zxing:core", version = "3.5.3" }
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
