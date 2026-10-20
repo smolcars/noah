@@ -84,6 +84,15 @@ struct AppLogTests {
         #expect(lines.last?.hasSuffix("line \(LogFile.maxLines + 99)") == true)
     }
 
+    @Test func normalizedWalletPhraseCannotReachLogs() throws {
+        let phrase = Array(repeating: "abandon", count: 11).joined(separator: " ") + " about"
+        let fullwidth = String(String.UnicodeScalarView(phrase.unicodeScalars.map { scalar in
+            scalar.value >= 97 && scalar.value <= 122 ? UnicodeScalar(scalar.value + 0xFEE0)! : scalar
+        }))
+        #expect(try StoredSeed.normalized(fullwidth) == phrase)
+        #expect(LogFile.redact("failed to import: " + fullwidth) == "[redacted]")
+    }
+
     @Test func redactsMnemonicShapedText() {
         let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
         #expect(LogFile.redact("seed: \(phrase)!") == "[redacted]")

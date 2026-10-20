@@ -200,11 +200,29 @@ final class LogFile: @unchecked Sendable {
             result = pattern.stringByReplacingMatches(in: result,
                 range: NSRange(result.startIndex..., in: result), withTemplate: "[redacted]")
         }
-        let words = wordPattern.matches(in: result, range: NSRange(result.startIndex..., in: result))
+        let decomposed = result.decomposedStringWithCompatibilityMapping
+        let normalized = normalizeMnemonic(result)
+        let runs = mnemonicRanges(in: normalized)
+        // Compatibility expansion/case folding may invalidate offsets into the original.
+        if !runs.isEmpty, decomposed != result || normalized.utf16.count != result.utf16.count {
+            return "[redacted]"
+        }
+        let clean = NSMutableString(string: result)
+        for range in runs.reversed() { clean.replaceCharacters(in: range, with: "[redacted]") }
+        return clean as String
+    }
+
+    private static func normalizeMnemonic(_ text: String) -> String {
+        text.decomposedStringWithCompatibilityMapping.folding(options: .caseInsensitive,
+            locale: Locale(identifier: "en_US_POSIX"))
+    }
+
+    private static func mnemonicRanges(in normalized: String) -> [NSRange] {
+        let words = wordPattern.matches(in: normalized, range: NSRange(normalized.startIndex..., in: normalized))
         var runs: [NSRange] = []
         var start = 0, count = 0
         for (index, word) in words.enumerated() {
-            let text = (result as NSString).substring(with: word.range).lowercased()
+            let text = (normalized as NSString).substring(with: word.range).lowercased()
             if bip39.contains(text) {
                 if count == 0 { start = index }
                 count += 1
@@ -218,9 +236,7 @@ final class LogFile: @unchecked Sendable {
             runs.append(NSRange(location: words[start].range.location,
                                 length: last.range.upperBound - words[start].range.location))
         }
-        let clean = NSMutableString(string: result)
-        for range in runs.reversed() { clean.replaceCharacters(in: range, with: "[redacted]") }
-        return clean as String
+        return runs
     }
 
     static func isSensitiveKey(_ field: String) -> Bool {
@@ -242,7 +258,7 @@ final class LogFile: @unchecked Sendable {
         }
         return Set(text.split(whereSeparator: \.isWhitespace).map(String.init))
     }()
-    private static let wordPattern = try! NSRegularExpression(pattern: "[A-Za-z]+")
+    private static let wordPattern = try! NSRegularExpression(pattern: #"[\p{L}\p{M}]+"#)
     private static let sensitivePatterns = [
         #"(?is)\b[\w.-]*(?:email|lightning[_ -]?address)[\w.-]*["']?\s*[:=].*"#,
         #"(?i)\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,63}\b"#,
