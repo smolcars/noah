@@ -6,9 +6,11 @@ import Testing
     struct Case: Decodable, Sendable { let name: String; let rowJSON: String; let classification: String }
     struct Fixture: Decodable { let cases: [Case] }
     nonisolated static func cases() throws -> [Case] {
-        let file = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent().appending(path: "fixtures/recurring-rn-required-fields.json")
-        return try JSONDecoder().decode(Fixture.self, from: Data(contentsOf: file)).cases
+        let directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().appending(path: "fixtures")
+        return try ["recurring-rn-required-fields", "recurring-rn-numeric-types"].flatMap { name in
+            try JSONDecoder().decode(Fixture.self, from: Data(contentsOf: directory.appending(path: "\(name).json"))).cases
+        }
     }
     @Test(arguments: try cases())
     func firstImportClassifiesBeforeBootstrapAndPreservesUnsupportedBytes(test: Case) async throws {
