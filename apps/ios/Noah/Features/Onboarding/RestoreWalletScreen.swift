@@ -7,6 +7,9 @@ struct RestoreWalletScreen: View {
     @State private var input = RecoveryPhraseInput()
     @State private var focusedWord: Int?
     @State private var invalidPhrase = false
+    @State private var clearGeneration = 0
+    @State private var clipboard = RestorePasteboard()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ScrollViewReader { scroll in
@@ -20,6 +23,7 @@ struct RestoreWalletScreen: View {
                         .foregroundStyle(NoahColor.mutedForeground)
                     if !useStoredSeed {
                         phraseFields
+                            .id(clearGeneration)
                             .secretShield()
                             .disabled(model.isRestoring || model.restoreIssue?.requiresRestart == true)
                     }
@@ -72,7 +76,8 @@ struct RestoreWalletScreen: View {
         .navigationTitle("Restore Wallet")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(model.isRestoring || model.restoreIssue?.requiresRestart == true)
-        .onDisappear { input = RecoveryPhraseInput(); focusedWord = nil }
+        .onDisappear(perform: clear)
+        .onChange(of: scenePhase) { _, phase in if phase != .active { clear() } }
     }
 
     private var phraseFields: some View {
@@ -88,6 +93,9 @@ struct RestoreWalletScreen: View {
                             RecoveryWordField(
                                 text: Binding(get: { input.words[index] }, set: {
                                     input.update($0, at: index)
+                                    if !input.wrongWordCount, RecoveryPhraseInput.normalizedWords($0).count == 12 {
+                                        clipboard.accepted($0)
+                                    }
                                     invalidPhrase = false
                                 }), index: index, focusedWord: $focusedWord)
                                 .frame(height: 44)
@@ -128,28 +136,37 @@ struct RestoreWalletScreen: View {
         }
     }
 
+    private func clear() {
+        clipboard.clearIfUnchanged()
+        focusedWord = nil
+        input = RecoveryPhraseInput()
+        clearGeneration += 1
+    }
+
     private func restore() {
         focusedWord = nil
         guard useStoredSeed || (input.isComplete && RecoveryPhraseInput.isValid(input.phrase)) else {
+            clear()
             invalidPhrase = true
             return
         }
         let phrase = useStoredSeed ? nil : input.phrase
+        clear()
         Task { await model.restoreWallet(phrase: phrase) }
     }
 }
 
 /// UIKit exposes spellCheckingType, which SwiftUI's TextField does not.
 /// Layout and keyboard avoidance remain owned by the SwiftUI scroll view.
-private struct RecoveryWordField: UIViewRepresentable {
+struct RecoveryWordField: UIViewRepresentable {
     @Binding var text: String
     let index: Int
     @Binding var focusedWord: Int?
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
-    func makeUIView(context: Context) -> UITextField {
-        let field = UITextField()
+    func makeUIView(context: Context) -> RecoveryWordTextField {
+        let field = RecoveryWordTextField()
         field.delegate = context.coordinator
         field.autocorrectionType = .no
         field.autocapitalizationType = .none
@@ -175,12 +192,17 @@ private struct RecoveryWordField: UIViewRepresentable {
         return field
     }
 
-    func updateUIView(_ field: UITextField, context: Context) {
+    func updateUIView(_ field: RecoveryWordTextField, context: Context) {
         context.coordinator.parent = self
         if field.text != text { field.text = text }
         field.isEnabled = context.environment.isEnabled
         if focusedWord == index && !field.isFirstResponder { field.becomeFirstResponder() }
         if focusedWord != index && field.isFirstResponder { field.resignFirstResponder() }
+    }
+
+    static func dismantleUIView(_ field: RecoveryWordTextField, coordinator: Coordinator) {
+        field.resignFirstResponder()
+        field.text = ""
     }
 
     final class Coordinator: NSObject, UITextFieldDelegate {
@@ -197,4 +219,9 @@ private struct RecoveryWordField: UIViewRepresentable {
             return true
         }
     }
+}
+
+/// Recovery words must never be retained in UIKit's shared undo manager.
+final class RecoveryWordTextField: UITextField {
+    override var undoManager: UndoManager? { nil }
 }

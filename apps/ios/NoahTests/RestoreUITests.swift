@@ -1,3 +1,5 @@
+import SwiftUI
+import UIKit
 import Foundation
 import OpenAPIRuntime
 import Testing
@@ -166,5 +168,41 @@ struct RestoreIssueTests {
         #expect(!RestoreIssue.from(ServerFailure(message: secret, statusCode: 500)).message.contains(secret))
         #expect(RestoreIssue.from(RestoreTransaction.Failure.journalUnreadable).requiresRestart)
         #expect(RestoreIssue.committed.requiresRestart)
+    }
+}
+
+@MainActor
+struct RestoreFieldPrivacyTests {
+    @Test func recoveryFieldCannotUndoAfterClearingOrDismantling() {
+        let field = RecoveryWordTextField()
+        field.insertText("abandon")
+        #expect(field.undoManager == nil)
+        field.text = ""
+        field.undoManager?.undo()
+        #expect(field.text?.isEmpty == true)
+        field.insertText("about")
+        let wrapper = RecoveryWordField(text: .constant(""), index: 0, focusedWord: .constant(nil))
+        RecoveryWordField.dismantleUIView(field, coordinator: wrapper.makeCoordinator())
+        #expect(field.text?.isEmpty == true)
+        #expect(field.undoManager == nil)
+    }
+
+    @Test func acceptedPasteClearsOnlyMatchingClipboardContent() {
+        let name = UIPasteboard.Name("noah-restore-test-\(UUID().uuidString)")
+        let board = UIPasteboard(name: name, create: true)!
+        defer { UIPasteboard.remove(withName: name) }
+        let clipboard = RestorePasteboard(board)
+        board.string = "public test content"
+        clipboard.accepted("public test content")
+        #expect(board.string == nil)
+        board.string = "replacement"
+        clipboard.clearIfUnchanged()
+        #expect(board.string == "replacement")
+        board.string = "public test content"
+        clipboard.clearIfUnchanged()
+        #expect(board.string == nil)
+        board.string = "replacement before acceptance"
+        clipboard.accepted("public test content")
+        #expect(board.string == "replacement before acceptance")
     }
 }
