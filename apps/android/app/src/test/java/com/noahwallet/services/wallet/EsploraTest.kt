@@ -36,6 +36,34 @@ class EsploraTest {
             assertEquals(test.getValue("valid").jsonPrimitive.boolean, runCatching { EsploraEndpoint.validateTip(test.getValue("value").jsonPrimitive.content) }.isSuccess)
         }
     }
+    @Test fun validationBoundsSilentDripAndOversizedResponses() = runBlocking {
+        for (reply in listOf("silent", "drip", "oversized")) {
+            java.net.ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
+                val socket = CompletableDeferred<java.net.Socket>()
+                val worker = launch(Dispatchers.IO) {
+                    try {
+                        val client = server.accept(); socket.complete(client)
+                        client.use {
+                            val output = it.getOutputStream()
+                            when (reply) {
+                                "silent" -> it.getInputStream().readBytes()
+                                "drip" -> {
+                                    output.write("HTTP/1.1 200 OK\r\nContent-Length: 64\r\n\r\n".toByteArray())
+                                    repeat(64) { output.write('0'.code); output.flush(); delay(150) }
+                                }
+                                else -> output.write(("HTTP/1.1 200 OK\r\nContent-Length: 2097152\r\n\r\n" + "x".repeat(2097152)).toByteArray())
+                            }
+                        }
+                    } catch (_: java.io.IOException) { }
+                }
+                try {
+                    val started = System.nanoTime()
+                    assertTrue(runCatching { EsploraEndpoint.fetch("http://127.0.0.1:${server.localPort}") }.exceptionOrNull() is EsploraEndpoint.Failure)
+                    assertTrue("total deadline must include the body", System.nanoTime() - started < 7_000_000_000L)
+                } finally { if (socket.isCompleted) socket.await().close(); worker.cancelAndJoin() }
+            }
+        }
+    }
     @Test fun effectiveConfigPerVariant() {
         listOf("mainnet", "signet", "regtest").forEach { variant ->
             val config = WalletConfiguration.effective(variant, "custom.example/api/")
