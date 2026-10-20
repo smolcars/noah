@@ -23,6 +23,14 @@ import java.util.Locale
 
 @Composable
 fun HomeBanners(app: AppModel, refresh: Int) {
+    val context = LocalContext.current
+    var upgradeNotices by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        upgradeNotices = withContext(Dispatchers.IO) { com.noahwallet.services.storage.SettingsStorage(context).takeUpgradeNotices() }
+    }
+    upgradeNotices.forEach { message ->
+        Card(Modifier.fillMaxWidth()) { Text(message, Modifier.padding(16.dp)) }
+    }
     val backup by app.services.backupCoordinator.statusChanges.collectAsState()
     val version by app.server.versionChanges.collectAsState()
     LaunchedEffect(app.server) { withContext(Dispatchers.IO) { app.server.checkVersionOnce() } }

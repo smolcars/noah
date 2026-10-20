@@ -5,6 +5,7 @@ struct HomeView: View {
     @Environment(HistoryModel.self) private var history
     @Environment(\.scenePhase) private var scenePhase
     @State private var home = HomeModel()
+    @State private var upgradeNotices: [String] = []
     @State private var showEmail = false
     @State private var showMap = false
     @State private var showQR = false
@@ -23,6 +24,12 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 28) {
+                    Color.clear.frame(height: 0).task {
+                        if upgradeNotices.isEmpty { upgradeNotices = (try? SettingsStorage.shared.takeUpgradeNotices()) ?? [] }
+                    }
+                    ForEach(upgradeNotices, id: \.self) { message in
+                        NoahCard { Text(message).font(NoahFont.callout) }
+                    }
                     if !model.isWalletSuspended { UpdateWarningView() }
                     if let error = model.walletError {
                         NoahCard {
