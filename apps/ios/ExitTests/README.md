@@ -1,5 +1,45 @@
 # Native iOS M6 verification
 
+## bark-bolt-ffi 0.5.0 review round 2 fixes (2026-10-20)
+
+Based on `51c24bc0`. Board crash recovery now reconciles exact local txid evidence
+before its optional network-status lookup. The separately saved lookup error and
+last known status remain visible after restart. Unrelated transactions, errors
+and `notFound` cannot fail or unlock a board; no amount matching or resubmission.
+
+Auto-Board rechecks confirmed onchain funds immediately before claiming the
+reviewed preparation. Selected inputs are reserved by the SDK; unselected reserve
+coins can still be spent by the exit daemon. The latest confirmed balance minus
+the exact signed gross and onchain fee must leave at least the reserve shown in
+the review. Otherwise (or if the balance read fails), Noah discards the preparation
+without journaling/submitting and asks for a new review. Added funds are allowed.
+Invalidation during the read cannot submit, failed cleanup remains session-owned,
+and manual boarding does not impose an automatic reserve.
+
+Both regressions were reproduced before the fixes. Final focused recovery passed
+**32 tests / 38 executions in 6 suites**; boarding passed **39 tests / 57 executions
+in 6 suites**, zero failures/skips. The reserve regression covers a spent separate
+**4,000-sat** coin, **5,000/4,999-sat** reserve edges, zero/insufficient funds,
+unchanged/added funds, read failures, retained failed cleanup and invalidation
+during the read. Error/status restart and acknowledgement locks are covered too.
+[Fix commits and test details](../SendTests/README.md#bark-bolt-ffi-050-review-round-2-fixes-2026-10-20).
+
+Full `NoahTests` ran **once** after final source/test changes: **489 total,
+470 passed, 19 explicitly gated skips, zero failures across 104 suites**;
+parameterized execution **684 passed / 19 skipped**. XcodeGen preceded the run;
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY=-`, signing enabled, two jobs,
+disabled parallel testing, DerivedData `/private/tmp/noah-ffi-r2-ac22-dd`.
+
+Owned simulator **Noah FFI R2 Sol ac22**, iPhone 17 / iOS 27.0,
+`35205DFD-C032-4328-9F1C-231048D534AC`: T3 rejected this new UDID twice as unknown,
+so Xcode targeted it directly. After testing, its exact name/type/UDID and
+**Shutdown** state were checked, only that simulator was deleted and absence
+verified. Its DerivedData, all **five owned `.xcresult` bundles**, logs and scratch
+summaries were removed. Protected simulators, Android devices, physical hardware
+and Docker were untouched. Both findings are fixed; live funded regtest and
+external-network/hardware exercises were not repeated for these deterministic
+production-seam regressions.
+
 ## bark-bolt-ffi 0.5.0 review round 1 fixes (2026-10-20)
 
 Base `be45d670`; boarding fix `89fab615`. Auto-Board starts with a confirmed-only

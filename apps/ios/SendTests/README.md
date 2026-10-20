@@ -1,5 +1,51 @@
 # Native Send verification
 
+## bark-bolt-ffi 0.5.0 review round 2 fixes (2026-10-20)
+
+Base `51c24bc0`. `71bfc2e6` reconciles exact cached wallet txids before the optional
+`transactionStatus` lookup. A lost board receipt recovers from the journaled txid
+in BDK transactions, pending boards or board movement anchors even if that lookup
+fails. Unrelated txids never resolve it. Lookup errors persist separately on the
+attempt and appear beside the last known network status; a successful lookup
+clears the error. Errors and `notFound` never fail or unlock the attempt, and
+recovered boards retain the broadcast/acknowledgement lock until confirmation.
+
+`296b8464` makes Auto-Board reread confirmed onchain funds before claiming its preparation.
+With fixed signed gross and onchain fee, requiring at least the reviewed confirmed
+balance preserves the exact reserve shown, including unselected coins. Added
+funds are allowed; a reduced or unreadable balance discards the preparation,
+records no submission attempt, and uses the existing review-again copy. A review
+invalidated during the read cannot submit. Failed discard remains session-owned.
+Manual boarding retains its existing selected-input validation.
+
+Both regressions failed before their fixes: the exact cached-board probe threw a
+transport error (**1 test / 2 cases**), and the reserve probe submitted and wrote
+a receipt after a **4,000-sat** balance drop (**1 test**, three failed assertions).
+Final targeted runs passed **32 tests / 38 executions in 6 suites** for recovery
+and **39 tests / 57 executions in 6 suites** for boarding, zero failures/skips.
+The runs overlap in journal/model/recovery coverage. They exercise error retention
+and clearing, restart and acknowledgement locks, unrelated txids, **5,000/4,999-sat**
+reserve edges, a **1,000-sat** remainder, zero/insufficient funds, unchanged/added
+funds, balance-read failure, failed cleanup ownership, late invalidation and manual
+boarding. Every method filter included its parentheses; suite filters selected all
+methods. Counts were checked with `xcresulttool`, including nonzero red runs.
+
+Full `NoahTests` ran **once** after final source/test changes: **489 total,
+470 passed, 19 explicitly gated skips, zero failures across 104 suites**;
+parameterized execution **684 passed / 19 skipped**. XcodeGen preceded the run;
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY=-`, signing enabled, two jobs,
+disabled parallel testing, DerivedData `/private/tmp/noah-ffi-r2-ac22-dd`.
+
+Owned simulator **Noah FFI R2 Sol ac22**, iPhone 17 / iOS 27.0,
+`35205DFD-C032-4328-9F1C-231048D534AC`: T3 rejected this new UDID twice as unknown,
+so Xcode targeted it directly. After testing, its exact name/type/UDID and
+**Shutdown** state were checked, only that simulator was deleted and absence
+verified. Its DerivedData, all **five owned `.xcresult` bundles**, logs and scratch
+summaries were removed. Protected simulators, Android devices, physical hardware
+and Docker were untouched. Both findings are fixed; live funded regtest and
+external-network/hardware exercises were not repeated for these deterministic
+production-seam regressions.
+
 ## bark-bolt-ffi 0.5.0 review round 1 fixes (2026-10-20)
 
 Based on `be45d670`. `972aca72` keeps successful BDK reconciliation independent
