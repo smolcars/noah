@@ -137,12 +137,16 @@ fun DebugScreen(model: AppModel) {
     var confirmation by remember { mutableStateOf("") }
     val context = LocalContext.current
     fun execute() { model.action("Action failed. Check your input and connection before trying again.") {
+      result = null
+      try {
         result = if (push) {
             var token: String? = null
             val outcome = com.noahwallet.services.push.PushRuntime(context, model.services).register { token = it }
             token ?: outcome.name
         }
             else model.session.debug(action, input)
+      } catch (cancelled: CancellationException) { throw cancelled }
+      catch (failure: Exception) { result = com.noahwallet.services.logging.SafeErrorDescription.of(failure) }
     } }
     SettingsColumn {
         SectionTitle("Select Action")

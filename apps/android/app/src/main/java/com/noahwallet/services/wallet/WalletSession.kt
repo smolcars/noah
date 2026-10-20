@@ -588,14 +588,14 @@ class WalletSession internal constructor(
         override fun mailboxAuthorization(expiry: Long) = wallet.mailboxAuthorizationAt(expiry)
         override suspend fun debug(action: DebugAction, input: String): String {
             return when (action) {
-                DebugAction.ark -> wallet.arkInfo().toString()
+                DebugAction.ark -> DebugJSON.ark(wallet.arkInfo())
                 DebugAction.refresh -> { wallet.refreshServer(); "Server refreshed" }
                 DebugAction.maintenance -> { wallet.maintenance(); "Maintenance completed" }
                 DebugAction.maintenanceRefresh -> wallet.maintenanceRefresh() ?: "Maintenance refresh completed"
                 DebugAction.delegated -> { wallet.maintenanceDelegated(); "Delegated maintenance completed" }
                 DebugAction.offboard -> wallet.offboardAll(input).toString()
-                DebugAction.decode -> io.github.niteshbalusu11.bark.decodeVtxo(input).toString()
-                DebugAction.importVtxo -> wallet.importVtxos(listOf(input)).toString()
+                DebugAction.decode -> DebugJSON.decoded(io.github.niteshbalusu11.bark.decodeVtxo(input))
+                DebugAction.importVtxo -> DebugJSON.imported(wallet.importVtxos(listOf(input)))
                 DebugAction.drop -> { wallet.dangerousDropVtxo(input); "VTXO removed" }
                 DebugAction.unlock -> { wallet.unlockVtxos(listOf(input), null); "VTXO unlocked" }
             }
