@@ -226,7 +226,7 @@ final class LogFile: @unchecked Sendable {
     static func isSensitiveKey(_ field: String) -> Bool {
         let key = field.lowercased().filter(\.isLetter)
         return key == "key" || ["mnemonic", "seed", "privatekey", "privkey", "secret", "signature",
-            "preimage", "authorization", "password", "token", "xamz", "email", "lightningaddress"].contains { key.contains($0) }
+            "sig", "preimage", "authorization", "password", "token", "xamz", "email", "lightningaddress"].contains { key.contains($0) }
     }
 
     static func prepareRedaction() {
@@ -247,7 +247,7 @@ final class LogFile: @unchecked Sendable {
         #"(?is)\b[\w.-]*(?:email|lightning[_ -]?address)[\w.-]*["']?\s*[:=].*"#,
         #"(?i)\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,63}\b"#,
         // Consume structured/multiline values too; never attempt to parse a credential's end.
-        #"(?is)\b(?:[\w.-]*(?:token|secret|signature|authorization|password)[\w.-]*|mnemonic|seed(?:[_ -]?phrase)?|private[_ -]?key|privkey|preimage|authorization|password|key|x-amz-[\w-]+)["']?\s*[:=({\[].*"#,
+        #"(?is)\b(?:[\w.-]*(?:mnemonic|seed(?:[_ -]?phrase)?|priv(?:ate)?[_ -]?key|secret(?:[_ -]?key)?|preimage|sig(?:nature)?|token|authorization|password)[\w.-]*|key|x-amz-[\w-]+)["']?(?:\s*[:=({\[].*|(?:\s+|["']\s*)["']?[A-Za-z0-9+/_=-]{16,}.*)"#,
         #"(?i)\bhttps?://[^\s<>"']*\?[^\s<>"']*"#,
         #"(?i)\bhttps?%3a%2f%2f[^\s<>"']*"#,
         #"(?i)\bBearer\s+[A-Za-z0-9._~+/-]+=*|\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"#,
