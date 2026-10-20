@@ -67,6 +67,35 @@ class MMKVUpgradeBackupTest {
         b.markReset(); assertFalse(backup(root).hasContent)
         assertTrue(File(b.directory, SettingsStorage.instanceID).exists())
     }
+    @Test fun retirementSurvivesRestartAndRefusesAutomaticRestore() = withRoot { root ->
+        seed(root); val b = backup(root); b.prepare()
+        val original = File(b.directory, SettingsStorage.instanceID).readBytes()
+        b.retire(listOf("wallet-storage", "profile-storage"))
+        File(root, SettingsStorage.instanceID).writeBytes(byteArrayOf(7))
+        val restarted = backup(root); restarted.prepare()
+        assertEquals(listOf("profile-storage", "wallet-storage"), restarted.retiredKeys)
+        assertTrue(runCatching { restarted.restore() }.isFailure)
+        assertArrayEquals(byteArrayOf(7), File(root, SettingsStorage.instanceID).readBytes())
+        assertArrayEquals(original, File(b.directory, SettingsStorage.instanceID).readBytes())
+    }
+    @Test fun failedRetirementSyncCannotAdmitMutationAndRetriesOnRestart() = withRoot { root ->
+        seed(root); backup(root).prepare()
+        val syncing = mutableListOf<File>()
+        val b = backup(root) { syncing += it; error("fsync") }
+        assertTrue(runCatching { b.retire(listOf("wallet-storage")) }.isFailure)
+        val retry = backup(root) { syncing += it }; retry.prepare()
+        assertTrue(syncing.contains(retry.retirementFile))
+        assertTrue(syncing.contains(retry.retirementFile.parentFile))
+        assertTrue(runCatching { retry.restore() }.isFailure)
+    }
+    @Test fun pendingRestoreCannotOverwriteStateAfterRetirement() = withRoot { root ->
+        seed(root); val b = backup(root); b.prepare(); b.retire(listOf("wallet-storage"))
+        File(b.directory, "restore-pending").writeBytes(byteArrayOf(1))
+        File(root, SettingsStorage.instanceID).writeBytes(byteArrayOf(7))
+        b.prepare()
+        assertArrayEquals(byteArrayOf(7), File(root, SettingsStorage.instanceID).readBytes())
+    }
+
     @Test fun lastConfirmedSizeAlsoCountsAsContent() = withRoot { root ->
         seed(root)
         File(root, SettingsStorage.instanceID).writeBytes(ByteArray(4096))

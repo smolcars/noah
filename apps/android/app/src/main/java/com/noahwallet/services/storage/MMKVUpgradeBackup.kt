@@ -9,10 +9,35 @@ import java.nio.ByteOrder
 internal class MMKVUpgradeBackup(private val root: File, private val id: String,
     private val sync: (File) -> Unit = ::syncDirectory) {
     val directory = File(root.path + ".native-backup")
+    val retirementFile = File(root.path + ".native-retired")
+    val retiredKeys: List<String>? get() {
+        if (!retirementFile.exists()) return null
+        val lines = retirementFile.readText().split('\n')
+        check(lines.first() == "1")
+        return lines.drop(1).filter { it.isNotEmpty() }.also { keys -> check(keys.all { it in RNStoreCodec.versions }) }
+    }
+
+    /** Persist admission before native writes; this survives deletion of the support snapshot. */
+    fun retire(keys: List<String>) {
+        val sorted = keys.sorted()
+        if (retiredKeys != sorted) {
+            val temporary = File(retirementFile.path + ".pending")
+            FileOutputStream(temporary).use { it.write(("1\n" + sorted.joinToString("\n")).toByteArray()); it.fd.sync() }
+            check(temporary.renameTo(retirementFile))
+        }
+        sync(retirementFile)
+        sync(retirementFile.parentFile!!)
+    }
+
     private val names = listOf(id, "$id.crc")
     private val manifest get() = File(directory, "manifest")
 
     fun prepare() {
+        if (retiredKeys != null) {
+            sync(retirementFile)
+            sync(retirementFile.parentFile!!)
+            return
+        }
         if (!directory.exists()) {
             val staging = File(directory.path + ".pending")
             if (staging.exists()) check(staging.deleteRecursively())
@@ -49,7 +74,7 @@ internal class MMKVUpgradeBackup(private val root: File, private val id: String,
     val restored get() = File(directory, "restored").exists()
 
     fun restore() {
-        check(manifest.readLines().first() == "1")
+        check(retiredKeys == null && manifest.readLines().first() == "1")
         mark("restore-pending")
         names.forEach { name ->
             val temporary = File(root, "$name.restore")
@@ -65,7 +90,7 @@ internal class MMKVUpgradeBackup(private val root: File, private val id: String,
     }
 
     /** Never resurrect a deliberately deleted wallet from the retained backup. */
-    fun markReset() = mark("reset")
+    fun markReset() { retire(emptyList()); mark("reset") }
 
     private fun recordedSize(): Long {
         val lines = manifest.readLines()

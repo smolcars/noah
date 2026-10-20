@@ -20,11 +20,13 @@ class SettingsStorage(context: Context) {
                 val log = AppLog(context, "mmkv")
                 var store: MMKV? = null
                 try {
-                    MMKV.initialize(context.applicationContext, rootPath, null, MMKVLogLevel.LevelWarning, RecoveryHandler(log))
+                    val recovery = RecoveryHandler(log)
+                    MMKV.initialize(context.applicationContext, rootPath, null, MMKVLogLevel.LevelWarning, recovery)
                     check(File(rootPath).isDirectory || File(rootPath).mkdirs())
                     backup.prepare()
                     store = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, rootPath))
-                    if (backup.hasContent && !hasRNKeys(store)) {
+                    val retired = backup.retiredKeys
+                    if (retired == null && backup.hasContent && !hasRNKeys(store)) {
                         store.close(); store = null
                         check(!backup.restored)
                         backup.restore()
@@ -32,6 +34,9 @@ class SettingsStorage(context: Context) {
                         store = checkNotNull(MMKV.mmkvWithID(instanceID, MMKV.SINGLE_PROCESS_MODE, null, rootPath))
                         check(hasRNKeys(store))
                     }
+                    validate(store, retired.orEmpty())
+                    check(retired == null || !recovery.didRecover) { "Native settings required recovery" }
+                    backup.retire(rnKeys(store))
                     store
                 } catch (_: Exception) {
                     store?.close()
@@ -45,19 +50,22 @@ class SettingsStorage(context: Context) {
     class Unavailable : Exception("Wallet settings need recovery. Restart Noah to retry or contact support; wallet files have been kept.")
     fun requireHealthy() { if (mmkv == null) throw Unavailable() }
     fun string(key: String): String? = mmkv?.decodeString(key)
-    fun set(value: String, key: String) {
-        requireHealthy()
+    fun set(value: String, key: String) = synchronized(openLock) {
+        validateStores()
+        val keys = rnKeys(mmkv!!).toMutableList()
+        if (key in RNStoreCodec.versions && key !in keys) keys.add(key)
+        backup.retire(keys)
         val preserved = if (key in RNStoreCodec.versions) RNStoreCodec.merge(key, string(key), value) else value
         check(mmkv!!.encode(key, preserved))
     }
     fun validateStores() {
         requireHealthy()
-        RNStoreCodec.versions.keys.filter { it != "esplora-storage" }.forEach { key -> string(key)?.let { RNStoreCodec.decode(key, it) } }
-        // A missing wallet-storage with wallet data (RN Delete Wallet unlinked the MMKV folder
-        // while open) is compatible: the existing wallet resumes onboarding, never blocks.
+        validate(mmkv!!, backup.retiredKeys.orEmpty())
+        // Wallet-storage already missing at first open resumes onboarding with the existing wallet.
+        // Losing an admitted key later blocks above.
     }
     fun sync() { requireHealthy(); mmkv!!.sync() }
-    fun removeAll() { requireHealthy(); backup.markReset(); mmkv!!.clearAll(); mmkv.sync() }
+    fun removeAll() = synchronized(openLock) { requireHealthy(); backup.markReset(); mmkv!!.clearAll(); mmkv.sync() }
     inline fun <reified State> persistedState(key: String): State? =
         string(key)?.let { PersistedStateCodec.decode<State>(it) }
     inline fun <reified State> setPersistedState(state: State, key: String, version: Int) =
@@ -67,16 +75,26 @@ class SettingsStorage(context: Context) {
         const val instanceID = "noah-wallet-storage"
         private val openLock = Any()
         private val opened = mutableMapOf<String, MMKV?>()
-        private fun hasRNKeys(store: MMKV) = RNStoreCodec.versions.keys.any(store::containsKey)
+        private fun rnKeys(store: MMKV) = RNStoreCodec.versions.keys.filter(store::containsKey)
+        private fun hasRNKeys(store: MMKV) = rnKeys(store).isNotEmpty()
+        private fun validate(store: MMKV, requiredKeys: List<String>) {
+            check(requiredKeys.all(store::containsKey)) { "Native settings lost persisted keys" }
+            RNStoreCodec.versions.keys.filter { it != "esplora-storage" }.forEach { key ->
+                store.decodeString(key)?.let { RNStoreCodec.decode(key, it) }
+            }
+        }
     }
 }
 
 private class RecoveryHandler(private val log: AppLog) : MMKVHandler {
+    @Volatile var didRecover = false; private set
     override fun onMMKVCRCCheckFail(mmapID: String): MMKVRecoverStrategic {
+        didRecover = true
         log.w("CRC check failed; recovering settings")
         return MMKVRecoverStrategic.OnErrorRecover
     }
     override fun onMMKVFileLengthError(mmapID: String): MMKVRecoverStrategic {
+        didRecover = true
         log.w("File length check failed; recovering settings")
         return MMKVRecoverStrategic.OnErrorRecover
     }

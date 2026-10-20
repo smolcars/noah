@@ -60,9 +60,14 @@ class MMKVRecoveryTest {
         for (mode in listOf("crc", "length", "truncate")) fixture { context, root ->
             corrupt(root, mode); val original = File(root, id).readBytes()
             val store = SettingsStorage(context)
-            store.requireHealthy()
-            assertTrue(RNStoreCodec.versions.keys.any { store.string(it) != null })
-            assertNotNull(store.string("wallet-storage"))
+            if (mode == "truncate") {
+                // Retained keys cannot authorize opening when a JSON envelope is partial.
+                assertTrue(runCatching { store.validateStores() }.isFailure)
+            } else {
+                store.requireHealthy()
+                assertTrue(RNStoreCodec.versions.keys.any { store.string(it) != null })
+                assertNotNull(store.string("wallet-storage"))
+            }
             assertTrue(original.contentEquals(File(root.path + ".native-backup/$id").readBytes()))
         }
     }
@@ -87,11 +92,39 @@ class MMKVRecoveryTest {
         assertTrue(runCatching { store.requireHealthy() }.isFailure)
         assertFalse(crc.exists())
     }
+    private fun closeForRestart(root: File) {
+        MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!.close()
+        val field = SettingsStorage::class.java.getDeclaredField("opened").apply { isAccessible = true }
+        @Suppress("UNCHECKED_CAST")
+        (field.get(null) as MutableMap<String, MMKV?>).remove(root.path)
+    }
+    @Test fun laterEmptyRecoveryNeverRollsBackNativeSuspension() = fixture { context, root ->
+        val store = SettingsStorage(context)
+        val wallet = store.persistedState<PersistedWalletState>("wallet-storage")!!
+        store.setPersistedState(wallet.copy(isWalletSuspended = true), "wallet-storage", 0); store.sync()
+        closeForRestart(root); corrupt(root, "empty")
+        assertTrue(runCatching { SettingsStorage(context).validateStores() }.isFailure)
+        assertFalse(MMKVUpgradeBackup(root, id).restored)
+    }
+    @Test fun laterCRCRecoveryBlocksEvenWhenRNKeysSurvive() = fixture { context, root ->
+        SettingsStorage(context).validateStores(); closeForRestart(root); corrupt(root, "crc")
+        assertTrue(runCatching { SettingsStorage(context).validateStores() }.isFailure)
+    }
+    @Test fun laterMissingWalletKeyBlocksInsteadOfOnboarding() = fixture { context, root ->
+        SettingsStorage(context).validateStores()
+        MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!.removeValueForKey("wallet-storage")
+        closeForRestart(root)
+        assertTrue(runCatching { SettingsStorage(context).validateStores() }.isFailure)
+    }
+
     @Test fun existingDatabaseWithMissingWalletStoreResumesOnboardingInsteadOfBlocking() = fixture { context, root ->
+        MMKV.initialize(app, root.path)
+        MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!.let {
+            it.removeValueForKey("wallet-storage"); it.sync(); it.close()
+        }
         val store = SettingsStorage(context)
         val location = WalletDataLocation(context.filesDir, com.noahwallet.BuildConfig.APP_VARIANT)
         check(location.directory.mkdirs()); File(location.directory, "db.sqlite").writeBytes(byteArrayOf(1))
-        MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!.removeValueForKey("wallet-storage")
         store.validateStores()
         assertFalse(store.persistedState<PersistedWalletState>("wallet-storage")?.isInitialized == true)
         store.set("""{"state":{"isInitialized":false},"version":0}""", "wallet-storage")
