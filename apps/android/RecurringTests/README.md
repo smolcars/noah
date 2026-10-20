@@ -323,3 +323,27 @@ Each location is relative to `apps/android/app/src/`:
    and real session/lifecycle regressions.
 9. Live/storage acceptance: `androidTest/java/com/noahwallet/recurring/RecurringLiveTest.kt:22`
    and `RecurringStorageDeviceTest.kt:16`; portable evidence in this directory.
+
+## 0.5.0 review fixes, round 1 — approval-copy parity
+
+Unattended fee skips now use iOS's reason-specific approval copy: a quoted fee
+shows its actual sats and automatic cap; a published schedule fee shows its
+worst-case sats and cap. Ark copy explains the zero-fee requirement. The fee
+policy, precedence and shared fixtures are unchanged. Exact-copy assertions
+cover both Lightning reasons, simultaneous quote/schedule excess, Ark fees and
+within-cap payments. RecurringStoreTest, RecurringFixtureTest and
+RecurringExecutorTest: **1,357 tests passed**, zero failures/errors/skips.
+
+### Round-1 final Android verification
+
+Ran the requested full check exactly once after all code changes:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**2,770 tests in 70 suites passed**, zero failures/errors/skips; regtest APK
+assembly succeeded in the same **1m 4s** run. Final targeted runs for fixes 1–5
+passed **17 / 40 / 19 / 61 / 1,357 tests**, respectively (overlapping suites).
+No live device, funded broadcast or actual process kill was used; interruption
+and recovery were checked deterministically. No iOS, server or RN files changed.

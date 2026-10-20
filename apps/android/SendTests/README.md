@@ -451,3 +451,17 @@ retry lock. Regressions make both BDK reads fail while offboard status remains
 available, and verify BDK sync failure/reorg rules. SendChainStatusTest,
 SendConflictTest, SendRefreshTest and SendOffboardTest: **19 tests passed**,
 zero failures/errors/skips.
+
+### Round-1 final Android verification
+
+Ran the requested full check exactly once after all code changes:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**2,770 tests in 70 suites passed**, zero failures/errors/skips; regtest APK
+assembly succeeded in the same **1m 4s** run. Final targeted runs for fixes 1–5
+passed **17 / 40 / 19 / 61 / 1,357 tests**, respectively (overlapping suites).
+No live device, funded broadcast or actual process kill was used; interruption
+and recovery were checked deterministically. No iOS, server or RN files changed.

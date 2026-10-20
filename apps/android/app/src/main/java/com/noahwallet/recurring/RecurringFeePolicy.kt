@@ -25,7 +25,10 @@ object RecurringFeePolicy {
     fun approvalReason(amount: Long, method: String, fee: Long, schedule: RecurringFeeSchedule?): String? {
         val d = evaluate(amount, method, fee, schedule)
         if (d.autoPay) return null
-        return if (method == "ark") "This Ark payment has a fee. Review this payment to pay manually."
-        else "The estimated fee or Lightning fee schedule exceeds your automatic limit of ${d.capSat} sats. Review this payment to pay manually."
+        return when (d.reason) {
+            "quote_exceeds_cap" -> "The fee for this payment ($fee sats) is above your automatic limit of ${d.capSat} sats. Review it to pay manually."
+            "schedule_exceeds_cap" -> "Ark's published Lightning fees for this amount can reach ${d.worstCaseFeeSat} sats, above your automatic limit of ${d.capSat} sats. Review it to pay manually."
+            else -> "The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually."
+        }
     }
 }

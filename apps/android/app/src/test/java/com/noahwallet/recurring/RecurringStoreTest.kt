@@ -53,4 +53,17 @@ class RecurringStoreTest {
         assertFalse(RecurringFeePolicy.evaluate(Long.MAX_VALUE, "offer", Long.MAX_VALUE, null).autoPay)
         assertEquals(10_500_000_000_000L, RecurringFeePolicy.evaluate(2_100_000_000_000_000, "offer", 0, null).worstCaseFeeSat)
     }
+    @Test fun approvalCopyExplainsQuoteScheduleAndArkFeesLikeIos() {
+        assertNull(RecurringFeePolicy.approvalReason(1000, "lightning", 20, null))
+        assertEquals("The fee for this payment (41 sats) is above your automatic limit of 40 sats. Review it to pay manually.",
+            RecurringFeePolicy.approvalReason(1000, "lightning", 41, null))
+        val schedule = RecurringFeeSchedule(300, 0, 0)
+        assertEquals("Ark's published Lightning fees for this amount can reach 300 sats, above your automatic limit of 200 sats. Review it to pay manually.",
+            RecurringFeePolicy.approvalReason(1000, "lightning", 50, schedule))
+        assertEquals("The fee for this payment (201 sats) is above your automatic limit of 200 sats. Review it to pay manually.",
+            RecurringFeePolicy.approvalReason(1000, "lightning", 201, schedule))
+        assertEquals("The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually.",
+            RecurringFeePolicy.approvalReason(1000, "ark", 1, null))
+        assertNull(RecurringFeePolicy.approvalReason(1000, "ark", 0, null))
+    }
 }
