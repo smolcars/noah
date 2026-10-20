@@ -55,6 +55,43 @@ class RecoveryPhraseInputTest {
 }
 
 class RestoreIssueTest {
+    private val updateRequired = "This backup was created by a newer version of Noah. Update the app, then try restoring again."
+
+    @Test fun futureEnvelopeVersionsExplainUpdateRequired() {
+        for (version in listOf(3, 255)) {
+            val error = assertThrows(BackupCrypto.Failure::class.java) {
+                BackupCrypto.decrypt(ByteArray(45).also { it[0] = version.toByte() }, "unused", BackupCrypto.Version.snapshot)
+            }
+            assertEquals(BackupCrypto.Reason.newerVersion, error.reason)
+            assertEquals(RestoreIssue(updateRequired), RestoreIssue.from(error))
+        }
+    }
+    @Test fun futureManifestVersionExplainsUpdateRequired() {
+        val manifest = BackupArchive.Manifest(3, "x", "sha", "regtest", "abcd", null, null, 42)
+        val error = assertThrows(BackupArchive.Failure::class.java) {
+            BackupArchive.parseManifest(BackupArchive.encode(manifest))
+        }
+        assertEquals(BackupArchive.Reason.newerVersion, error.reason)
+        assertEquals(RestoreIssue(updateRequired), RestoreIssue.from(error))
+    }
+    @Test fun futureSchemaVersionExplainsUpdateRequired() {
+        val error = io.github.niteshbalusu11.bark.BarkError("Snapshot schema version 9999 is newer than supported version 42")
+        assertEquals(RestoreIssue(updateRequired), RestoreIssue.from(error))
+    }
+    @Test fun wrongPhraseDamagedBackupAndUnrelatedDiagnosticsKeepTheirCopy() {
+        assertEquals("This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order.",
+            RestoreIssue.from(BackupCrypto.Failure(BackupCrypto.Reason.authenticationFailed)).message)
+        assertEquals("The downloaded backup is incomplete or damaged. Check your connection and try again.",
+            RestoreIssue.from(WalletRestorer.Failure(WalletRestorer.Reason.downloadMismatch)).message)
+        val generic = "Noah couldn't restore your wallet. Please try again later."
+        for (error in listOf(BackupCrypto.Failure(BackupCrypto.Reason.unexpectedVersion),
+            BackupArchive.Failure(BackupArchive.Reason.invalidManifest),
+            io.github.niteshbalusu11.bark.BarkError("snapshot is damaged"),
+            Exception("Snapshot schema version 9999 is newer than supported version 42"))) {
+            assertEquals(generic, RestoreIssue.from(error).message)
+        }
+    }
+
     @Test fun everyEngineReasonMapsToActionableFixedCopy() {
         WalletRestorer.Reason.entries.forEach { reason ->
             val issue = RestoreIssue.from(WalletRestorer.Failure(reason))

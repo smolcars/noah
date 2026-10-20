@@ -12,7 +12,7 @@ import javax.crypto.spec.SecretKeySpec
 /** RN v1/v2: version | salt16 | nonce12 | AES-256-GCM ciphertext | tag16; no AAD. */
 object BackupCrypto {
     enum class Version(val byte: Byte) { legacyDirectory(1), snapshot(2) }
-    enum class Reason { tooShort, unexpectedVersion, keyDerivationFailed, authenticationFailed }
+    enum class Reason { tooShort, newerVersion, unexpectedVersion, keyDerivationFailed, authenticationFailed }
     class Failure(val reason: Reason) : Exception(reason.name)
 
     fun encrypt(plaintext: ByteArray, mnemonic: String, version: Version): ByteArray {
@@ -36,6 +36,7 @@ object BackupCrypto {
 
     fun decrypt(envelope: ByteArray, mnemonic: String, expecting: Version): ByteArray {
         if (envelope.size < 45) throw Failure(Reason.tooShort)
+        if ((envelope[0].toInt() and 255) > Version.snapshot.byte.toInt()) throw Failure(Reason.newerVersion)
         if (envelope[0] != expecting.byte) throw Failure(Reason.unexpectedVersion)
         val key = deriveKey(mnemonic, envelope.copyOfRange(1, 17))
         return try {

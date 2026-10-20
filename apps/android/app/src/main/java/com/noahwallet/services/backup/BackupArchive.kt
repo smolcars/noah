@@ -25,11 +25,11 @@ object BackupArchive {
     )
     data class EncryptedFile(val file: File, val sizeBytes: Long, val sha256: String)
     data class Opened(val manifest: Manifest, val snapshot: File)
-    enum class Reason { destinationExists, snapshotMissing, unexpectedEntry, invalidManifest, tooLarge, checksumMismatch, notLegacyBackup }
+    enum class Reason { destinationExists, snapshotMissing, unexpectedEntry, newerVersion, invalidManifest, tooLarge, checksumMismatch, notLegacyBackup }
     class Failure(val reason: Reason) : Exception(reason.name)
 
     fun parseManifest(bytes: ByteArray): Manifest {
-        try {
+        val manifest = try {
             val objectValue = json.parseToJsonElement(bytes.toString(Charsets.UTF_8)).jsonObject
             for (key in listOf("createdAt", "snapshotSha256", "network", "walletFingerprint")) {
                 require((objectValue[key] as? JsonPrimitive)?.isString == true)
@@ -42,8 +42,11 @@ object BackupArchive {
                 val value = objectValue[key] as? JsonPrimitive
                 require(value != null && !value.isString && value.intOrNull != null)
             }
-            return json.decodeFromJsonElement<Manifest>(objectValue).also { require(it.formatVersion == formatVersion) }
+            json.decodeFromJsonElement<Manifest>(objectValue)
         } catch (_: Exception) { throw Failure(Reason.invalidManifest) }
+        if (manifest.formatVersion > formatVersion) throw Failure(Reason.newerVersion)
+        if (manifest.formatVersion != formatVersion) throw Failure(Reason.invalidManifest)
+        return manifest
     }
     fun encode(manifest: Manifest): ByteArray = json.encodeToString(manifest).toByteArray()
     fun timestamp(date: Date = Date()): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)

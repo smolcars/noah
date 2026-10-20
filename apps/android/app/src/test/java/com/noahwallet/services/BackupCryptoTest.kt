@@ -40,7 +40,7 @@ class BackupCryptoTest {
         fails(envelope.copyOf().also { it[it.lastIndex] = (it.last().toInt() xor 1).toByte() }, mnemonic,
             BackupCrypto.Reason.authenticationFailed)
         fails(envelope.copyOf().also { it[0] = 2 }, mnemonic, BackupCrypto.Reason.unexpectedVersion)
-        fails(envelope.copyOf().also { it[0] = 99 }, mnemonic, BackupCrypto.Reason.unexpectedVersion)
+        fails(envelope.copyOf().also { it[0] = 99 }, mnemonic, BackupCrypto.Reason.newerVersion)
         for (size in 0..44) fails(envelope.copyOf(size), mnemonic, BackupCrypto.Reason.tooShort)
     }
 

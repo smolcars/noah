@@ -140,20 +140,19 @@ class CrossPlatformBackupTest {
             val failure = refuseNewer(kind)
             when (kind) {
                 "list" -> assertEquals(WalletRestorer.Reason.unsupportedFormat, (failure as WalletRestorer.Failure).reason)
-                "manifest" -> assertEquals(BackupArchive.Reason.invalidManifest, (failure as BackupArchive.Failure).reason)
-                "envelope" -> assertEquals(BackupCrypto.Reason.unexpectedVersion, (failure as BackupCrypto.Failure).reason)
+                "manifest" -> assertEquals(BackupArchive.Reason.newerVersion, (failure as BackupArchive.Failure).reason)
+                "envelope" -> assertEquals(BackupCrypto.Reason.newerVersion, (failure as BackupCrypto.Failure).reason)
                 else -> assertTrue(failure.message.orEmpty().contains("newer than supported version"))
             }
         }
     }
 
-    /** Known UX bug: explicitly enable this failing acceptance test; recovery files remain unchanged. */
     @Test fun newerBackupsExplainUpdateRequired() = runBlocking<Unit> {
-        assumeTrue(InstrumentationRegistry.getArguments().getString("noahRequireFutureBackupCopy") == "1")
         for (kind in listOf("manifest", "envelope", "schema")) {
             val failure = refuseNewer(kind)
             assertTrue("$kind must explain that an app update is required",
-                com.noahwallet.ui.RestoreIssue.from(failure).message.contains("Update the app before restoring"))
+                com.noahwallet.ui.RestoreIssue.from(failure).message ==
+                    "This backup was created by a newer version of Noah. Update the app, then try restoring again.")
         }
     }
 
