@@ -116,11 +116,11 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
   - [x] Android device pass: placed widget ID 2/provider/host/metadata and controlled pinned MainActivity shortcut survived `install -r` — `apps/android/UpgradeTests/DEVICE.md`.
 
 ### 0.6 Platform services
-- [x] Redacting logger (file-backed, rotating, exportable) — iOS (`AppLog`, bounded async writer/overflow markers, prefixed secrets, NFKD mnemonics, URL userinfo and address privacy; 99 shared vectors; bounded lifecycle drains)
-- [x] Redacting logger — Android (same secret/address detector contract, including Unicode and URL userinfo; 99 shared vectors)
+- [x] Redacting logger (file-backed, rotating, exportable) — iOS (`AppLog`, bounded async writer/overflow markers, prefixed/escaped JSON credentials, redaction-only Unicode mnemonic skeleton, URL userinfo and address privacy; 147 shared vectors; bounded lifecycle drains)
+- [x] Redacting logger — Android (same secret/address detector contract, including decoded JSON views, Unicode skeleton and URL userinfo; 147 shared vectors)
 - [x] Route bark-bolt-ffi `BarkLogger` callbacks into the app log — iOS (ordered bounded async admission, no disk waits in Rust callbacks, RN Debug verbosity)
 - [ ] Route bark-bolt-ffi `BarkLogger` callbacks into the app log — Android
-- [x] Sentry (cocoa), disabled in debug + regtest like RN — iOS (production DSN; recursive secret/address and aggregate mnemonic-leaf scrubbing with fail-closed guard; archive dSYMs require CI credentials)
+- [x] Sentry (cocoa), disabled in debug + regtest like RN — iOS (production DSN; fixed event/context/tag allowlist, PII off, no attachments, redacted messages and fail-closed key/value guard; archive dSYMs require CI credentials)
 - [ ] Sentry (android), disabled in debug + regtest like RN
 - [ ] HTTP clients (URLSession / OkHttp) incl. upload/download
 - [x] Server auth: `/v0/getk1` → sign (offline key `m/350/0`) → `/v0/auth/login` → JWT; refresh near expiry; retry once — iOS (live-tested on regtest)

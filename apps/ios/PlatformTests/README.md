@@ -10,7 +10,7 @@ The iOS writer admits at most 256 pending records, writes in admission order on 
 
 `client/App.tsx` disables Sentry for `__DEV__` and regtest, sets `sendDefaultPii: true`, enables MetricKit and disables the deprecated app-hang detector. It has a committed DSN, not an environment-backed DSN. It does not configure sampling, release, environment, custom breadcrumbs or scrub hooks. Its RN 8.28.0 podspec pins Cocoa 9.29.0; this target uses the same version via SPM.
 
-Native preserves error sampling 1, tracing disabled, production environment and the SDK's `bundleID@version+build` release format (distribution is the build number). The bundle ID distinguishes variants, with an additional `app.variant` tag. Automatic Cocoa breadcrumbs remain enabled. Shared AppLog redaction scrubs breadcrumb messages/data and event messages, parameters, exceptions, tags, contexts and extras recursively, including sensitive dictionary fields. String leaves are collected across nested arrays/dictionaries and the whole event, including breadcrumbs, contexts, extras, tags and exceptions. Mnemonic-bearing containers are redacted; unhandled aggregate phrases, unknown objects and graphs deeper than 32 levels fail closed. Dictionary order is undefined, so independent word fragments are checked conservatively even when metadata separates them. The typed SDK severity is excluded from mnemonic aggregation. A final serialized-event check drops events with remaining secret-shaped data in other SDK fields. This may discard some diagnostics to protect wallet material. No AppLog files, screenshots, view hierarchies or raw MetricKit payloads are attached; SDK Logs stays disabled.
+Native preserves error sampling 1, tracing disabled, production environment and the SDK's `bundleID@version+build` release format (distribution is the build number). The bundle ID distinguishes variants, with an additional enum-valued `app.variant` tag. Round three replaces recursive scrubbing with a fixed event allowlist and disables default PII. Arbitrary payloads, identity, request data and attachments are dropped; approved messages use the shared redactor and every remaining string/key passes a final fail-closed guard. Automatic Cocoa breadcrumbs keep only category, level, timestamp and a redacted message. See the round-three section below for the exact fields, shared detector vectors and verification.
 
 ## Local and CI configuration
 
@@ -345,3 +345,116 @@ verified afterward. Its separate `dd-final` and result bundle were removed.
 Across both owned devices, **two DerivedData directories and eight result
 bundles** were removed. Temporary standalone harness sources/binaries were also
 removed; their before/after result logs and native summaries remain.
+
+### Round-3 telemetry allowlist and detector fixes (base 4f7228c5, 2026-10-20)
+
+Sentry now constructs a fresh `Event` from a fixed allowlist rather than trying to
+scrub arbitrary object graphs. Kept fields are event ID, timestamp, severity,
+platform, release, dist and environment; SDK name/version, integration/feature
+names and package name/version; exception type/module/thread ID and mechanism
+(type/handled/synthetic); thread ID/name/current/crashed/main; stack-frame
+function/module/filename/line; and the following scalar context fields:
+
+- App: type, app_identifier, app_version, app_build, app_start_time, app_memory,
+  in_foreground, build_type.
+- Device: type, family, model, model_id, arch, battery_level, charging, simulator,
+  memory_size, free_memory, usable_memory, storage_size, free_storage, boot_time,
+  processor_count, cpu_description, screen_width_pixels, screen_height_pixels,
+  screen_density, screen_dpi, orientation, thermal_state, low_memory.
+- OS: type, name, version, build, kernel_version, rooted.
+
+The only tag is `app.variant`, restricted to mainnet/signet/regtest. Event and
+exception formatted messages and breadcrumb messages use the shared redactor;
+uncertain decoding or oversized messages are omitted entirely. Breadcrumbs keep
+only category, severity, timestamp and the redacted message. All other fields
+are dropped: extras, arbitrary contexts, user (no app-set anonymous install ID
+exists), request, transaction, fingerprint, logger/server name, modules/debug
+images, message templates/parameters, mechanism data/meta/help, stack registers,
+frame variables/source context and breadcrumb data/type/origin. SDK and context
+objects accept only their explicitly listed shapes and scalar fields.
+`sendDefaultPii` is false. Screenshots, hierarchy, SDK Logs and raw MetricKit
+payloads remain disabled. Both zero attachment allowance and the authoritative
+`beforeSendWithHint` attachment-list removal prevent scope/crash attachments.
+The production DSN, debug/regtest gates, sampling and release format are unchanged.
+
+The final guard checks every remaining string, including dictionary keys, and
+rejects changed strings, unknown types, deep graphs and oversized aggregation.
+Keys and values are aggregated separately so fixed schema names (e.g. `message`)
+cannot turn a safe 11-word excerpt into a phrase. Keys still undergo aggregate
+mnemonic detection, including the reviewer's twelve distinct mnemonic keys.
+Conservative aggregate detection can discard otherwise useful diagnostics.
+
+Both loggers inspect up to four JSON-unescaped views, covering escaped quotes,
+backslashes, controls and `\\uXXXX` labels. Hits in decoded views redact the whole
+original message because offsets cannot be mapped safely. Decoder errors or
+remaining escapes beyond the bound fail closed. The redaction-only mnemonic
+skeleton strips default-ignorable code points and combining marks after NFKD and
+maps common Cyrillic/Greek/Latin lookalikes. Skeleton phrase hits omit the whole
+message. `StoredSeed` validation, logger ordering/overflow and lifecycle drains
+were not changed.
+
+The shared fixture has **147 cases**: all original **99 input/name pairs** plus
+48 new public/synthetic probes and negatives. With explicit user approval, only
+`r2-negative-cyrillic` and `r2-negative-combining` changed expected output to
+`[redacted]`: both are complete disguised public mnemonics and are positives
+under round three. Every other original expected output is unchanged, including
+dotless-letter text, ordinary words, amounts, txids, Bitcoin/Ark addresses and
+BOLT11 invoices. Both platforms load the same fixture with no platform skips;
+new negatives include ordinary Cyrillic, Greek, Arabic, Chinese, Japanese,
+accented prose and safe escaped diagnostics.
+
+Permanent probe-derived coverage includes the mnemonic dictionary-key shape,
+large dropped extras, escaped telemetry JSON, all eleven escaped-label probes,
+single/double/triple JSON escaping, Unicode-escaped credential labels, internal
+ZWJ/ZWNJ/ZWSP/word joiner, soft hyphens, combining marks, variation selectors and
+homoglyph public vectors. iOS also asserts that visually recoverable spellings
+remain invalid `StoredSeed` inputs, unknown/deep final-guard objects fail closed,
+source/variable context and identity/request data are removed, and attachments
+are removed by the installed hook.
+
+Verification evidence is retained as text/JSON under
+`/private/tmp/noah-privacy-allowlist-f558/`:
+
+- Baseline iOS: **23 tests / 18 passed / five failed**, with 251 assertion issues
+  across the allowlist, dictionary-key and escaping/shared-fixture probes.
+  Baseline Android logger: **10 tests / one failed**, plus both independently
+  selected escaped-credential and skeleton probes failed (**two / two**).
+- The first combined post-fix focused run exposed the two now-obsolete fixture
+  expectations, two new negative inputs with trailing spaces, and the fixed
+  `message` schema key completing an 11-word negative. These were corrected
+  before final verification. No detector exception or platform skip was added.
+- Final focused iOS: **33 passed / zero failures**, three suites, all 147 shared
+  vectors including exact output, idempotence and persistence. Final focused
+  Android logger: **12 passed / zero failures**, all 147 vectors including exact
+  output, idempotence and persistence. The copied Android test resource's SHA-256
+  matches the shared source fixture.
+- Full `NoahTests` ran **once after the last code change**, with no suite
+  exclusions: **641 total / 618 passed / 23 existing opt-in skips / zero failed**,
+  123 suites, 108.742 seconds of Swift Testing execution. No observer-teardown
+  panic or host restart occurred in this run.
+- The exact requested Android full test/build command ran **once** through Nix
+  with `--max-workers=2`: **2,956 tests / 92 suites / zero failures or skips**,
+  followed by successful `:app:assembleRegtestDebug` (2 minutes 37 seconds total).
+- iOS used XcodeGen and Xcode 27.1 through Nix, normal ad hoc simulator signing
+  (`CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES`),
+  `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, two jobs, no parallel testing,
+  `-packageAuthorizationProvider netrc` and `-collect-test-diagnostics never`.
+  Individual Swift Testing selectors included the required trailing `()`.
+  One initial setup command found no `xcodegen` on Nix PATH; using
+  `/opt/homebrew/bin/xcodegen` resolved it before any baseline tests executed.
+- Sentry symbol-script/project checks: **five passed / zero failures**.
+
+Android still has logger privacy only; adding Sentry is outside this round.
+Android cancellation/stage admission, iOS lifecycle main-thread drain blocking
+and the SDK observer-teardown crash were explicitly excluded; WalletSession,
+PushJobs, RecurringExecutor, AppDelegate, MMKV recovery, client and server were
+not edited. No live Sentry ingestion, credentialed release archive/symbol upload,
+real push or OS background scheduling was attempted.
+
+Owned simulator: **Noah Privacy Allowlist f558**, iPhone 17 / iOS 27.0,
+`3450F549-460C-4921-AE7E-C118E8814BDC`. Its exact name/UDID and `Shutdown`
+state were verified before deletion, and absence was verified afterward. The
+owned DerivedData and all **six** owned result bundles were removed after
+exporting summaries. Cleanup evidence, logs and test summaries remain under the
+evidence prefix. Protected/shared simulators, Android emulators, physical devices
+and Docker were untouched.
