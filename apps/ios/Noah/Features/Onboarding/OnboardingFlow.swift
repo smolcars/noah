@@ -26,6 +26,7 @@ struct OnboardingFlow: View {
                         RestoreWalletScreen()
                     case .language:
                         PreferenceView(kind: .language)
+                            .toolbar(.visible, for: .navigationBar)
                     }
                 }
         }
