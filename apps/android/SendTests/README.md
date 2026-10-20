@@ -504,3 +504,21 @@ No device, emulator, simulator, Docker command, funded broadcast or live process
 kill was used. Crash/status faults use deterministic tests. Changes are limited
 to Android Send/Onchain code, tests, these verification docs and Android TODO
 lines; recurring, iOS, server and RN code were untouched.
+
+## Initialized launch I/O (base `37ab2125`)
+
+The session's suspension preflight now joins the same non-cancellable IO context
+as its counted reservation; its monitor, Send mutex, drain and teardown ordering
+are unchanged. Journal loading retains the synchronous blocked state until the
+entire reservation returns. Only the matching wallet-change generation may
+publish its result. Failed migration still retains the original read-only evidence.
+Acknowledgement, quarantine and override auditing are awaited on IO; the controller
+remains locked/checking until durable removal succeeds. Override evidence is
+captured before suspension, and audit still precedes removal.
+
+`SendLoadingTest` covers held reads, stale empty reads after wallet invalidation,
+and pending removal; `WalletSessionTest` holds the suspension read off the caller
+thread and proves that no reservation is granted on its suspended result. Existing
+journal-before-payment, migration-failure, audit-failure and counted-session tests
+remain in the targeted runs. Funded-device StrictMode counts and final verification
+are recorded in [ParityTests](../ParityTests/README.md#initialized-wallet-main-thread-io-base-37ab2125).

@@ -76,10 +76,10 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
         dismissButton = { TextButton({ overriding = null }) { Text("Keep stopped") } }) }
     review?.let { item ->
         ModalBottomSheet(onDismissRequest = { if (!executor.controller.locked) review = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-            if (executor.controller.locked) SendOutcome(executor.controller) {
+            if (executor.controller.locked) SendOutcome(executor.controller) { act {
                 executor.controller.acknowledge()
                 if (!executor.controller.locked) { review = null; executor.reload() }
-            }
+            } }
             else SendConfirmation(item.payment, item.quote, executor.controller, confirm = { act {
                 executor.execute(manual = true, approval = item)
                 if (!executor.controller.locked) review = null

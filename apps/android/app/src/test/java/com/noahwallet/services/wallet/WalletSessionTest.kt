@@ -23,6 +23,40 @@ class WalletSessionTest {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
+    @Test fun reservationWaitsForSuspensionReadOffCallerThreadAndFailsClosed() = runBlocking {
+        withLocation { location ->
+            val handles = Handles()
+            val entered = java.util.concurrent.CountDownLatch(1)
+            val release = java.util.concurrent.CountDownLatch(1)
+            var gate = false
+            var readThread: Thread? = null
+            val session = WalletSession("regtest", location, isSuspended = {
+                if (gate) {
+                    readThread = Thread.currentThread(); entered.countDown()
+                    check(release.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                    true
+                } else false
+            }, opener = { _, _, _, _, _ -> handles })
+            session.createNew("public-test-input", false, "test")
+            newSingleThreadContext("launch-main").use { main ->
+                val caller = withContext(main) { Thread.currentThread() }
+                gate = true
+                var submitted = false
+                val work = async(main) { runCatching { session.withSendReservation { submitted = true } } }
+                try {
+                    assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                    assertNotSame("Suspension disk reads must leave the caller thread", caller, readThread)
+                    assertFalse(submitted)
+                    assertFalse(work.isCompleted)
+                } finally { release.countDown() }
+                assertFailure(WalletSession.OpenFailure.suspended, work.await())
+                assertFalse(submitted)
+            }
+            gate = false; session.close()
+        }
+    }
+
     private class Boom : Exception()
     private class Handles : WalletSession.Handles {
         override val send = com.noahwallet.send.FakeSendWallet()

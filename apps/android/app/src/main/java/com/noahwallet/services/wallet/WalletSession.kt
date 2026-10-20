@@ -319,7 +319,7 @@ class WalletSession internal constructor(
     suspend fun claimLightningReceives() = withOpen { it.claimLightningReceives() }
     suspend fun closestExpiryBlocks(): Long? = withOpen { it.closestExpiryBlocks() }
 
-    internal suspend fun <T> withOpen(block: suspend (Handles) -> T): T {
+    internal suspend fun <T> withOpen(block: suspend (Handles) -> T): T = withContext(NonCancellable + Dispatchers.IO) {
         val handles = synchronized(lock) {
             if (isSuspended()) throw OpenError(OpenFailure.suspended)
             if (exclusiveSend) throw OpenError(OpenFailure.busy)
@@ -327,7 +327,7 @@ class WalletSession internal constructor(
             if (runningCalls++ == 0) drained = CompletableDeferred()
             handles
         }
-        try { return withContext(NonCancellable + Dispatchers.IO) { handles.retrySendDiscards(); block(handles) } }
+        try { handles.retrySendDiscards(); block(handles) }
         finally { synchronized(lock) { if (--runningCalls == 0) drained.complete(Unit) } }
     }
 

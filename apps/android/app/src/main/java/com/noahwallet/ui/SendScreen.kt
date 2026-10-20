@@ -42,7 +42,7 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
     var scanner by remember { mutableStateOf(false) }
     var outcomeSheet by remember { mutableStateOf(true) }
     fun leaveReview() { model.discardReview(); model.stage = if (model.isMax) SendStage.source else SendStage.recipient }
-    fun done() { controller.acknowledge(); if (!controller.locked) { model.reset(); scope.launch { app.refresh() }; onDone() } }
+    fun done() { scope.launch { controller.acknowledge(); if (!controller.locked) { model.reset(); app.refresh(); onDone() } } }
     LaunchedEffect(Unit) {
         model.fiatCurrency = app.preferredCurrency
         app.summary?.let { model.arkBalance = it.balance.ark.spendable.toLong(); model.onchainBalance = it.balance.onchain.confirmed.toLong() }
@@ -257,6 +257,6 @@ internal fun keypadInput(amount: String, key: String, decimal: Boolean): String 
     }
     if (overrideStep > 0) AlertDialog(onDismissRequest = { overrideStep = 0 }, title = { Text(if (overrideStep == 1) "Have you checked?" else SendOverrideAudit.titleText) },
         text = { Text(if (overrideStep == 1) "Check your history and confirm with the recipient. This payment may already have been sent." else controller.overrideWarning) },
-        confirmButton = { TextButton(onClick = { if (overrideStep == 1) overrideStep = 2 else { controller.startNewPaymentAfterHistoryCheck(true); overrideStep = 0 } }) { Text(if (overrideStep == 1) "I checked history" else SendOverrideAudit.confirmationText) } },
+        confirmButton = { TextButton(onClick = { if (overrideStep == 1) overrideStep = 2 else { scope.launch { controller.startNewPaymentAfterHistoryCheck(true); overrideStep = 0 } } }) { Text(if (overrideStep == 1) "I checked history" else SendOverrideAudit.confirmationText) } },
         dismissButton = { TextButton(onClick = { overrideStep = 0 }) { Text("Keep checking") } })
 }
