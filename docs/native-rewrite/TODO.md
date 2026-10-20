@@ -75,14 +75,16 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Android RN→native upgrade test run on an emulator
 - [x] Launch decision (`apps/fixtures/launch-state.json`): never auto-delete seed; seed-without-DB and DB-without-seed states — iOS
 - [x] Launch decision — Android
-- [ ] BIP39 validation of the stored seed; conflict handling
+- [x] BIP39 validation of the stored seed; conflict handling
   - [x] iOS: validate 12/24-word BIP39 before create/open/restore; block corrupt/ambiguous seeds and fingerprint conflicts without overwriting data; fixed support guidance, shared safety fixture and real SDK no-write tests
+  - [x] Android: 12/24-word/checksum validation, all-source agreement, read-only seed reads, SDK fingerprint rejection before migration, blocking support state; negative device checks keep DB/source bytes unchanged — `apps/android/UpgradeTests/DEVICE.md`.
 - [x] Server auth token reader (`com.noah.auth-token.<variant>`) — iOS
 - [x] Server auth token reader/writer (RN_KEYCHAIN, existing GCM/CBC alias; excluded from backup) — Android
 - [x] MMKV: open `noah-wallet-storage` + zustand envelope codec, `wallet-storage` decoded — iOS
 - [x] MMKV — Android
 - [ ] Remaining RN store shapes (decode as their screens land)
   - [x] iOS: inventory all 8 stores; validate consumed envelopes/versions, preserve unknown JSON tokens, apply transaction v0 migration; RN-generated fixtures; Esplora decoder remains inactive until its native screen lands — `apps/ios/UpgradeTests/README.md`
+  - [x] Android: all 8 RN envelopes inventoried/validated; unknown fields retained on writes, transaction v0 migration matched; Esplora has a decoder but no native consumer — `apps/android/UpgradeTests/STORES.md`.
 - [x] Verify against a real RN-written MMKV file (in the upgrade test) — iOS
 - [x] GT locale reader (`generaltranslation.locale`) — iOS
 - [x] GT locale reader (`gt_store`) — Android
@@ -94,9 +96,11 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [ ] Extend funded upgrade test: onchain funds, recurring rule, settings values, Expo token
   - [x] iOS: confirmed 10k onchain + 95k Ark, identical movements/fingerprint/recurring policy, native recurring UI with zero payments, non-default settings and locale — `apps/ios/UpgradeTests/README.md`
   - [ ] iOS: actual RN-registered Expo UUID/token continuity requires a physical iPhone; simulator hardware guards prevent RN registration (storage-contract tests and opt-in continuity test exist)
-- [x] Upgrade test Android (emulator), funded: same fingerprint, 2 movements, 95,000 spendable (RN install had no Expo ID, so ID continuity is still unverified)
-- [ ] Upgrade test also checks launcher shortcut + placed widget survive (Android) and widget kind/bundle ID (iOS)
+  - [x] Android: device assertions passed with 95k Ark + 30k confirmed onchain, identical paused RN rule/settings, real RN-runtime Expo UUID/token, and first native foreground launch without payment. Script/flows were corrected during a resumed live procedure; a fresh uninterrupted final-script run remains to be repeated.
+- [x] Upgrade test Android (emulator), funded: same fingerprint, 2 movements, 95,000 spendable (Expo UUID/token continuity verified in the extended run above)
+- [x] Upgrade test also checks launcher shortcut + placed widget survive (Android) and widget kind/bundle ID (iOS)
   - [x] iOS: all three widget identities/app groups match RN; built regtest extension checked; two actual RN-placed SpringBoard widget instance IDs survive native installation
+  - [x] Android device pass: placed widget ID 2/provider/host/metadata and controlled pinned MainActivity shortcut survived `install -r` — `apps/android/UpgradeTests/DEVICE.md`.
 
 ### 0.6 Platform services
 - [x] Redacting logger (file-backed, rotating, exportable) — iOS (`AppLog`, same `Caches/noah_logs` layout as RN)

@@ -157,16 +157,23 @@ RN's `cacheDir/noah_logs/noah.log` rotation (four old 512 KiB segments, 4,000 ex
 ## Upgrade compatibility and secret storage
 
 `services/storage/KeychainPassword.kt` reads RN secrets without migrating or
-removing their original records. Precedence is DataStore `RN_KEYCHAIN`, legacy
-SharedPreferences `RN_KEYCHAIN`, then (mnemonic only) `noah_native_secrets`.
-Only complete absence permits fallback. Partial records, unsupported ciphers,
+removing their original records. Auth tokens use DataStore `RN_KEYCHAIN`, then
+legacy SharedPreferences `RN_KEYCHAIN`. Mnemonics compare **all** present sources:
+DataStore, legacy preferences, `noah_native_secrets`, and the native Keystore store.
+Only complete absence permits another source. Partial records, unsupported ciphers,
 missing keys, malformed UTF-8 and decryption failures return `Unavailable`.
 `Found.toString()` redacts its value; no provider exception text is retained.
 The auth-token reader uses the same RN formats but not the mnemonic fallback.
 
-`SeedStorage.read()` first reads the native store. On a successful legacy read it attempts a verified native copy. If that copy
-fails it still returns the legacy seed and retries migration next time. Migration is serialized across instances. An unreadable native record blocks
-fallback and overwrite. Legacy records are kept even after successful migration.
+`SeedStorage.read()` is read-only. It validates English BIP39 word list/checksum
+(12/24 words, NFKD/case/whitespace normalization for validation) and rejects invalid, unreadable or
+conflicting sources. Native migration waits until the SDK's read-only DB
+fingerprint check succeeds. It retains the exact original credential string for
+RN backup-password compatibility; differing source strings fail closed even if
+they normalize to equivalent BIP39 words. A failed copy retains the readable legacy seed for
+retry; legacy records are never removed by migration. The blocking recovery screen
+has a secret-free support message and offers no wallet replacement action.
+See [the full RN store inventory](UpgradeTests/STORES.md) for MMKV contracts.
 
 The native store uses alias `noah.native.seed.<variant>`, AES-256-GCM, no user
 authentication, and a fresh provider-generated 12-byte nonce. Its version-1 file
@@ -251,44 +258,49 @@ recovery, the EncryptedSharedPreferences fallback, Expo migration and Android's
 backup crypto provider. They use only unique test aliases and preference keys.
 `UpgradeCompatibilityTest` is skipped unless `noahUpgradeCheck=1`.
 
-For the required end-to-end upgrade, boot a **fresh Google APIs emulator with
-Play Services** (root-capable, not a locked Play Store image), then from the repo:
+For the required end-to-end upgrade, create your own **fresh Google APIs emulator
+with Play Services**, on an explicit port **>=5590**. Both `5554` and `5556` are
+reserved. Use a root-capable image, not a locked Play Store image. Boot with
+`-port 5594 -grpc 8594 -grpc-use-token` (pick unused ports). For the funded flow,
+set `EMULATOR_PROTO_DIR` to the host SDK's `emulator/lib` if the Nix SDK differs.
+`clipboard.py` discovers only that serial's authenticated gRPC endpoint.
 
 ```sh
-nix develop --command apps/android/UpgradeTests/run.sh emulator-5558
-# Or reuse an already built RN regtest release APK:
-nix develop --command apps/android/UpgradeTests/run.sh emulator-5558 /absolute/path/to/app-regtest-release.apk
+nix develop --command apps/android/UpgradeTests/run.sh emulator-5594
+# Or reuse an RN regtest release APK built from the current client:
+FUNDED=1 nix develop --command apps/android/UpgradeTests/run.sh emulator-5594 /absolute/path/to/RN.apk
 ```
 
-Use a dedicated emulator you created. `emulator-5554` (BarkRegtest) is reserved and
-rejected. For `FUNDED=1`, boot with `-grpc <unused-port> -grpc-use-token` and set
-`EMULATOR_PROTO_DIR` to the directory containing that emulator's
-`emulator_controller.proto` if it differs from `$ANDROID_HOME/emulator/lib` (for
-example, the Nix build SDK and the host emulator SDK).
-`clipboard.py` discovers the gRPC endpoint by serial, so it never targets another AVD.
+The script refuses an existing Noah installation, builds with two Gradle workers,
+checks matching certificates, and creates RN's wallet through Maestro. FUNDED
+receives 100,000 Ark sats, sends 5,000 back, creates/pauses a 1,234-sat monthly rule,
+sets sats/EUR/hidden balance/name/email-prompt preferences, receives 30,000 confirmed
+onchain sats and declines RN's auto-board prompt using **No, turn off**. It places
+RN's widget and pins a controlled shortcut to the existing MainActivity.
 
-```sh
-FUNDED=1 nix develop --command apps/android/UpgradeTests/run.sh emulator-5558 /absolute/path/to/RN.apk
-```
+RN's `Device.isDevice` gate skips emulator push registration. The separate test-only
+runner (`-PnoahRNUpgradeBaseline=true`) uses the unchanged RN APK's Expo
+InstallationId and FCM runtime, exchanges a real Expo token in RN's foreground,
+and registers it with Noah using the existing RN auth token. It never reads the
+seed or exports credentials; results contain only hashes. The normal test APK is
+rebuilt separately. A missing real token/UUID baseline fails the upgrade gate.
 
-FUNDED runs the RN prepare flow (which resets the fresh test install), receives
-100,000 sats and sends 5,000 back. The script force-stops RN, pulls its datadir with
-any WAL, and requires fingerprint, movement count and spendable expectations from
-SQLite before installing native with `adb install -r`. Instrumentation opens via
-the shared session and compares all three. Missing expectations fail the check.
-The funded RN state must contain at least two movements and 95,000 spendable sats.
-Bark commands use `docker compose run --rm --no-deps` inside the harness: the current
-`just bark` wrapper omits `--no-deps` and can recreate running dependency containers
-when a worktree's Compose configuration differs.
+RN is force-stopped before the full datadir/WAL and MMKV hash are captured. Native
+replaces it with `adb install -r`, with no uninstall or clear-data after wallet
+creation. Instrumentation rejects invalid/foreign seeds without changing DB files,
+then verifies the fingerprint, movement IDs and amounts, Ark/onchain balances,
+settings, every recurring-rule field, Expo UUID/token, shortcut component and widget
+provider metadata. It launches native UI and waits for recurring initialization,
+then confirms the paused rule and balances remain unchanged. Widget bound IDs,
+provider and launcher host are also compared across APK replacement.
 
-The script refuses an existing Noah regtest install, builds RN release with
-`CI_DEBUG_SIGNING=true` and `SENTRY_DISABLE_AUTO_UPLOAD=true` (embedded JS, no Metro or Sentry upload), checks both signing certificates,
-creates the wallet using the RN Maestro subflows, captures only a hash of the Expo
-ID, and replaces RN using `adb install -r`. There is no uninstall or clear-data
-operation between the RN wallet creation and native replacement. The gated test asserts seed readability and verified migration, unchanged
-legacy secret files, RN DB presence, initialized MMKV state, `existingWallet`, and
-unchanged Expo ID when RN had one. Maestro artifacts are private and deleted on
-exit because a failed onboarding flow can capture a recovery phrase.
+The fresh-install prepare flow clears only the new empty test installation.
+Maestro artifacts are private and removed on exit because an onboarding failure
+can capture a recovery phrase. Never restart/reset the shared Docker stack for
+this test. Existing `just bark` now uses `--no-deps`; the harness also uses it
+explicitly. Fund Bark via Bitcoin Core and board if needed, using quiet CLI logs.
+See [2026-10-20 live evidence](UpgradeTests/DEVICE.md#android-migration-safety-upgrade-2026-10-20)
+and the launcher parser self-check: `python3 apps/android/UpgradeTests/test-launcher.py`.
 
 ### Wallet parity verification on 2026-10-19
 

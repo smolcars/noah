@@ -17,6 +17,14 @@ Missing version means v0. No store uses encrypted MMKV. No persisted store in
 | `serverStore.ts` / `server-storage` | `isRegisteredWithServer`, `lightningAddress`, `nostrPubkey`, `isBackupEnabled`, `emailAddress`, `isEmailVerified`, `isEmailPromptDismissed`, `mailboxAuthorizationExpiry`, `isMailboxAuthorizationEnabled`, `lastReportedDeviceFingerprint`, `lastDeviceReportAt` | v0; all data fields; reset keeps mailbox-enabled preference | Account, identity, email, mailbox and backup settings; server registration |
 | `transactionStore.ts` / `transaction-storage` | `isAutoBoardingEnabled`, `hasAttemptedAutoBoarding` | **v1**; v0 migration forces attempted=false; partialize drops transient `autoBoardSuccessBanner` | Auto-board preference/prompt; native preserves unknown/transient legacy fields instead of deleting them |
 
+RN recurring rows persist `id`, `label`, `destination`, `destinationType`, `amountSat`,
+`comment`, `interval` (`unit`, `every`), `startAt`, `endAt`, `maxOccurrences`, `status`,
+`nextOccurrenceIndex`, `nextRunAt`, `occurrencesPaid`, `consecutiveFailures`,
+`lastError`, `retryNotBefore`, `inFlight` (`occurrenceIndex`, `startedAt`), `runs`
+(`occurrenceIndex`, `scheduledFor`, `attemptedAt`, `status`, `amountSat`, optional
+`error`), `createdAt`, and `updatedAt`. Native-only revision/binding fields remain
+unknown to RN; unsupported numeric rows stay preserved and unsendable.
+
 `RNStoreCodec` rejects malformed envelopes, future/incorrectly typed versions and
 incorrect known field types. Existing native consumers are checked before opening
 the wallet. Android keeps the raw full envelope and merges typed writes through
@@ -42,8 +50,10 @@ empty passwords become absent. `walletApi.ts:createWallet` refuses nonempty seed
 or wallet-data-only states, but native validation occurs later when loading.
 `restoreWallet` writes the supplied phrase before loading it. Android deliberately
 strengthens these paths: an empty/corrupt saved phrase is unavailable, every source
-must agree after BIP39 normalization, and seed writes refuse invalid/conflicting
+must agree byte-for-byte after BIP39 validation, and seed writes refuse invalid/conflicting
 existing records. SDK `OnchainWallet.openExisting` checks network/fingerprint read
 only before opening/migrating the DB; seed migration waits until that succeeds.
-The blocking recovery screen offers retry and support guidance, without a delete,
+Validation checks normalized BIP39 while retaining the exact original credential
+string: RN uses it as the backup encryption password. Even valid formatting/case
+differences between sources block automatic selection. The blocking recovery screen offers retry and support guidance, without a delete,
 create or restore action, and never displays any saved phrase.

@@ -87,4 +87,7 @@ It executes all eight actual Zustand stores and the transaction v0 migration.
 See `apps/android/UpgradeTests/STORES.md` for keys, fields, versions, native consumers
 and unknown-field preservation. The Android-specific name avoids concurrent iOS
 fixture edits. `launch-state.json` additionally covers invalid/empty BIP39 records,
-conflicting sources and corrupt secondary sources with and without a wallet DB.
+conflicting sources and corrupt secondary sources with and without a wallet DB,
+plus the blocking state after SDK fingerprint preflight fails. The device upgrade
+test exercises that preflight with a different valid seed and hashes all DB files
+to prove the rejection performs no writes.

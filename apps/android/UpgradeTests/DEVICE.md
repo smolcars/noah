@@ -229,3 +229,171 @@ All timestamps below are UTC; maintenance rows had no error message.
   passed. No build outputs, dependencies, screenshots, or helper APKs were created.
   Temporary host scripts/data and the device UI dump were removed. The installed
   regtest app, funded wallet, home-screen widget and reverse mappings are retained.
+
+# Android migration safety upgrade, 2026-10-20
+
+**PASS: funded RN → native replacement, including native's first foreground
+launch, seed/DB rejection checks, settings/rule continuity, real Expo identity and
+launcher continuity.** The procedure was resumed in stages while correcting UI
+selectors; the final edited `run.sh` has not had a fresh uninterrupted rerun.
+
+## Environment and isolation
+
+- Base: `c6283d16` (`feat/native-rewrite`); Android bark-bolt-ffi **0.5.0**.
+- New owned AVD **NoahMigration5594**, Google APIs Android 15/API 35, ARM64,
+  virtual Pixel 6 hardware, explicit serial **emulator-5594**. Opened in T3's Device
+  panel. Neither reserved emulator nor the physical Pixel 6 was driven.
+- Emulator command used `-port 5594 -grpc 8594 -grpc-use-token -no-snapshot`.
+  During DNS diagnosis it was restarted, preserving userdata, with
+  `-dns-server 8.8.8.8`. Stack access remained through **10.0.2.2**.
+- Built the current RN regtest release locally with embedded JS,
+  `CI_DEBUG_SIGNING=true`, `SENTRY_DISABLE_AUTO_UPLOAD=true`, ARM64 and two Gradle
+  workers. No RN implementation, iOS or server source was changed.
+- RN APK SHA-256: `cac1c175ab9430c2eefcc4577fcd2101ae007d39033bc80ea920c6bf8c2a20a3`.
+- Initial passing native APK SHA-256: `da005157bc1aed0db6370589a66083c1c0501ae06c3f2f9555ec4327dd892e7f`.
+- Final native APK (verbatim RN backup-password preservation) SHA-256:
+  `c41023b5399aa223d2b8572a218f8000320d37e58d46089dca1bd0c7b944c366`.
+  Reinstalled with `install -r`; all funded device assertions passed again.
+- Matching signing certificate SHA-256:
+  `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c`.
+- RN version code 37 → native code 100, same `com.noahwallet.regtest` sandbox.
+  No uninstall or clear-data occurred after wallet creation. All replacements used
+  `install -r`; a diagnostic RN rollback used `install -r -d` before any native
+  SDK wallet open, then the final native replacement used `install -r` again.
+
+## RN baseline and observed native result
+
+- Funded Bark from Core with **200,000 sats**, boarded **180,000 sats** (179,670
+  after its fee), and mined the required three boarding confirmations. RN received
+  **100,000 Ark sats**, then sent **5,000** back through its UI. Core sent RN
+  **30,000 onchain sats**, confirmed with one block. Existing Docker services were
+  never restarted, recreated or reset; CLI containers used `--no-deps`.
+- Same fingerprint **725da6da**, Bark movement IDs **1,2**, **95,000 Ark spendable**,
+  and **30,000 confirmed onchain** sats after replacement. Native history contains
+  the same 100,000 receive, 5,000 send, and confirmed onchain receive (block 636).
+- Maestro created a rule **Android upgrade safety**, recipient
+  **upgrade@example.com**, type **lnurl**, **1,234 sats**, monthly, first date
+  **2099-01-01**, no end limit; then paused it. Native decoded the same full JSON
+  row, not just selected fields. It retained zero runs, zero paid occurrences,
+  and no in-flight payment. Assertions repeated after native UI initialized its
+  recurring wallet binding: no new movement or balance change, row unchanged.
+- Non-default RN settings preserved: **sats**, **EUR**, **hidden balance**, auto-board
+  **disabled**, display name **Android upgrade**, email prompt **dismissed**.
+  Mailbox-enabled remained **true**, matching the actual RN baseline.
+- The original broad `rightOf` switch selectors were no-ops. The assertions caught
+  this before any native SDK open. The RN DB still had the exact byte hash
+  `3831faf6118e57d5624a60f38920361cf2fb0c02e02368a51b0744f94c25a183`, and no native
+  seed file existed. RN was reinstalled in place; its actual **No, turn off**
+  auto-board prompt set the preference, and its email prompt was dismissed.
+  The committed flow now uses that explicit action. The funded wallet was never
+  recreated and no funding/send operation was repeated.
+- Before valid opening, the test tried a **different valid BIP39 seed** and an
+  **invalid seed**. Both failed, all datadir file hashes stayed identical, and no
+  native seed copy appeared. The valid seed then opened the original DB and was
+  copied into Keystore storage; all legacy seed source files remained byte-identical.
+- RN MMKV file bytes were identical immediately across final APK replacement.
+  Typed settings and complete rule data passed before and after first native UI
+  launch. A final safety review retained valid seed credential strings byte-for-byte:
+  RN uses the exact string as a backup password. Validation normalizes only for
+  BIP39 checks/SDK parsing; even formatting-only source differences block selection. Native's ordinary cold launch was also visually checked: hidden balance
+  and the three expected history entries, with no recovery/onboarding gate.
+
+## Expo and launcher proof
+
+RN's JS `Device.isDevice` guard deliberately skips emulator registration. The
+opt-in platform-only `RNPushBaseline` instrumentation used RN's own InstallationId
+and Firebase runtime, opened RN in the foreground, obtained a **real** Expo token,
+and registered it with Noah using RN's existing auth record. It never accessed or
+exported the seed. Early background attempts failed with UnknownHostException;
+foreground registration succeeded. This proves identity/token continuity, not
+RN's automatic emulator registration path.
+
+Native exchanged and registered its own FCM/Expo token and matched both hashes:
+
+- Installation UUID SHA-256:
+  `5510c8659b9dd2f05cc2005aec75b2368db6fcbe751da772a28c18c5a2a4ad87`.
+- Expo token SHA-256:
+  `4935792d8d1aa0ab271e3c496bd0e401e29e4beae58cf8fe5e64e0b7b421f547`.
+- Widget provider metadata SHA-256:
+  `e133e4c35196a5b179b6a2332a6a76e99b6e0ede627f30abeaebf016be9d4f7d`.
+
+Placed widget **2** retained provider
+`com.noahwallet.regtest/com.noahwallet.widgets.NoahWidgetRegtestProvider` and
+Pixel Launcher host **1024**, package `com.google.android.apps.nexuslauncher`.
+Resolved layout name, dimensions, resize/category and update-period metadata
+matched. Before replacement its visible cache showed 125,000 total / 30.0K onchain
+/ 95.0K offchain. RN publishes no dynamic shortcuts; the test pinned
+**noah-upgrade-check** to `com.noahwallet.MainActivity`, and native retained the same
+ID and component. A Maestro transport disconnect after interactive inspection was
+handled by confirming launcher actions through the owned device's agent-device UI.
+
+## Checks and cleanup
+
+- Native instrumentation: **OK (1 test)**, initially 4.053 seconds; all assertions
+  passed again on the final APK in 6.172 seconds. Both runs included funded,
+  onchain, recurring, settings, token, widget and shortcut expectations present.
+- Targeted Android iteration: **49 tests / 6 suites**, then **50 / 6** after adding
+  verbatim-password validation coverage, zero failures. A second round-trip test
+  covers raw credential migration and refusal to replace it with canonical text.
+- Required final command (repeated after the final backup-password hardening):
+  `nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'`:
+  **2,838 tests / 75 suites**, zero failures/skips; APK assembly passed.
+- Launcher gate self-check: **3 Python tests** passed (including changed/missing
+  widget identity and missing shortcut rejection). Shell syntax and diff whitespace
+  checks passed. Commit hooks passed client lint, compiler lint (202 files, zero
+  diagnostics), **148 RN tests**, and typecheck.
+- Shared fixtures: **23 launch cases**, **9 RN-generated store cases**, plus the
+  unchanged recurring-storage/range suites. The Android-specific store fixture is
+  `apps/fixtures/rn-stores-android-shapes.json`; its generator and complete store
+  inventory are linked from [STORES.md](STORES.md).
+- Cleanup confirmation is recorded below after shutdown. Private logs/screenshots,
+  wallet snapshots and temporary continuation scripts are removed; no mnemonic,
+  private key, signature or raw push/auth token is retained in this evidence.
+
+Cleanup completed: immediately before shutdown, `adb -s emulator-5594 emu avd name`
+returned **NoahMigration5594 / OK**. T3 `device_close(shutdown=true)` powered it off;
+adb serial absence and QEMU process absence were checked before
+`avdmanager delete avd -n NoahMigration5594` reported deletion. The AVD registry
+and directory were verified absent. Owned temporary artifacts and scripts were
+removed after recording these results.
+
+## Second clean-start verification on emulator-5604
+
+Created a second owned **NoahMigrationFinal5604** Google APIs/API 35 ARM64 AVD,
+explicit `-port 5604 -grpc 8604 -grpc-use-token -dns-server 8.8.8.8`. Reused the
+locally built matching RN release and final native APK. The current shared Bark
+wallet had 99,270 spendable sats, so 30,000 existing confirmed onchain sats were
+boarded (29,670 net), with exactly three required confirmations. No extra Core
+funding or Docker service restart was needed.
+
+RN creation, 100k/5k Ark flows, confirmed 30k onchain receive, paused recurring
+rule and all six non-default settings ran unattended from the updated script.
+The widget drawer expanded its preview below the viewport: an additional
+`scrollUntilVisible` was added and the complete corrected widget-placement flow
+passed through Maestro. The shortcut was also placed through Maestro; its home
+page text was off-screen, so that viewport assertion was removed in favour of
+the existing persisted ID/component checks. The remaining upgrade ran successfully
+on this same funded RN wallet, without reinstalling RN, clearing state, or
+repeating payments. A fresh uninterrupted entry-point run **after these final two
+launcher selector edits** remains unperformed; each corrected flow and the full
+native assertions passed.
+
+Final result: **OK (1 test), 4.351 seconds**, fingerprint **795dbcf2**, movements
+**1,2**, 95,000 Ark / 30,000 confirmed onchain sats, exact paused rule and settings,
+unchanged real Expo identity, widget **2** / Pixel Launcher host **1024**, and
+**noah-upgrade-check → com.noahwallet.MainActivity**. Foreign/invalid seed
+rejections performed no DB/seed writes; first native foreground launch executed
+no payment.
+
+- Installation UUID SHA-256:
+  `a1aee31d3f95f931e4e450a56d4c4651f3b89992f3c0742f6c662581b9203874`.
+- Expo token SHA-256:
+  `39c9e244a44117f327d4585e97fd7e99f6fa3ef01cb53076bcc49bde5cf53714`.
+- Provider metadata SHA-256 remained
+  `e133e4c35196a5b179b6a2332a6a76e99b6e0ede627f30abeaebf016be9d4f7d`.
+
+Before cleanup, `adb -s emulator-5604 emu avd name` returned
+**NoahMigrationFinal5604 / OK**. It was shut down through T3's Device panel; serial
+and QEMU-process absence were checked before deleting this AVD. Both owned AVDs
+and their private artifacts were removed. Reserved emulators and the physical
+Pixel 6 were left untouched.
