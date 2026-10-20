@@ -36,6 +36,17 @@ struct EsploraTests {
         for test in fixture.genesis { #expect(((try? EsploraEndpoint.validateGenesis(test.value, variant: AppVariant(rawValue: test.variant)!)) != nil) == test.valid) }
         for test in fixture.tipHeight { #expect(((try? EsploraEndpoint.validateTip(test.value)) != nil) == test.valid) }
     }
+    @Test func validationBoundsSilentDripAndOversizedResponses() async throws {
+        for reply in [LocalEsploraServer.Reply.silent, .drip, .oversized] {
+            let server = try LocalEsploraServer(reply)
+            defer { server.stop() }
+            let start = ContinuousClock.now
+            await #expect(throws: EsploraEndpoint.Failure.self) {
+                _ = try await EsploraEndpoint.fetch(server.url, timeout: 0.3)
+            }
+            #expect(start.duration(to: .now) < .seconds(2))
+        }
+    }
     @Test func effectiveConfigPerVariant() {
         for variant in AppVariant.allCases {
             let config = WalletConfiguration.effective(for: variant, endpoint: "custom.example/api/")

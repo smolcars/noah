@@ -72,12 +72,25 @@ enum EsploraEndpoint {
         return endpoint
     }
     static func fetch(_ value: String) async throws -> String {
+        try await fetch(value, timeout: 5)
+    }
+    static func fetch(_ value: String, timeout: TimeInterval) async throws -> String {
         guard let url = URL(string: value) else { throw Failure(message: "Enter a valid Esplora API URL.") }
-        var request = URLRequest(url: url); request.timeoutInterval = 5
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = timeout
+        config.timeoutIntervalForResource = timeout // Includes the whole body, even if bytes keep arriving.
+        let session = URLSession(configuration: config)
+        defer { session.invalidateAndCancel() }
+        let request = URLRequest(url: url)
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard (response as? HTTPURLResponse)?.statusCode == 200, data.count < 1024,
-                  let text = String(data: data, encoding: .utf8) else { throw URLError(.badServerResponse) }
+            let (bytes, response) = try await session.bytes(for: request)
+            guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+            var data = Data()
+            for try await byte in bytes {
+                guard data.count < 1024 else { throw URLError(.dataLengthExceedsMaximum) }
+                data.append(byte)
+            }
+            guard let text = String(data: data, encoding: .utf8) else { throw URLError(.badServerResponse) }
             return text
         } catch { throw Failure(message: "Unable to reach the Esplora endpoint. Check the URL and try again.") }
     }
