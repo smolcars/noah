@@ -283,7 +283,8 @@ extension WalletSession {
     {
         return try await withOpenWallet { handles in
             if quote.action == .board {
-                return try await self.submitBoard(quote, walletID: handles.wallet.fingerprint(), journal: journal)
+                return try await self.submitBoard(quote, walletID: handles.wallet.fingerprint(), journal: journal,
+                    confirmed: { try await handles.onchain.balance().confirmedSats })
             }
             if quote.action == .claim {
                 return try await Self.executeClaim(quote, journal: journal, access: Self.claimAccess(handles))

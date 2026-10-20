@@ -17,6 +17,8 @@ struct BoardPreparedTests {
         var submitted = 0
         var persistence = false
         var failDiscard = false
+        var balanceReads = 0
+        func confirmed(_ balance: UInt64) -> UInt64 { balanceReads += 1; return balance }
         func discard(_ quote: OnchainQuote) throws {
             if persistence { throw BarkError(message: "cache", code: .persistence) }
             if failDiscard { throw URLError(.notConnectedToInternet) }
@@ -29,6 +31,114 @@ struct BoardPreparedTests {
     func journal() -> (OnchainOperationJournal, URL) {
         let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         return (.init(file: file), file)
+    }
+    static var automaticQuote: OnchainQuote {
+        var quote = Self.quote
+        quote.automatic = true
+        quote.confirmed = quote.amount + quote.chainFee + 5_000
+        return quote
+    }
+    @Test(arguments: [UInt64(0), 31_542, 32_543, 36_542, 36_543, 37_543])
+    func automaticConfirmationRevalidatesTheExactReviewedReserve(confirmed: UInt64) async throws {
+        let (journal, file) = journal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        let session = WalletSession()
+        let calls = Calls()
+        let quote = Self.automaticQuote
+        #expect(quote.confirmed - quote.amount - quote.chainFee == 5_000)
+        await session.retainBoardReview(quote, discard: { try await calls.discard(quote) }, submit: {
+            await calls.submit(.init(txid: "exact", broadcast: .accepted, vtxoIds: []))
+        })
+        let submit = {
+            try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: {
+                #expect(await session.boardPreparations["board"]?.claimed == false)
+                return await calls.confirmed(confirmed) // 32,543 leaves only 1,000 sats after an unselected coin is spent.
+            })
+        }
+        let enoughReserve = confirmed >= quote.confirmed
+        if enoughReserve {
+            _ = try await submit()
+            let saved = try #require(try await journal.load())
+            #expect(saved.txid == "exact" && saved.receipt?.txid == "exact")
+        } else {
+            await #expect(throws: OnchainFailure.changed) { try await submit() }
+            #expect(try await journal.loadAll().isEmpty)
+        }
+        #expect(await calls.balanceReads == 1)
+        #expect(await calls.submitted == (enoughReserve ? 1 : 0))
+        #expect(await calls.discarded == [quote.id])
+        #expect(await session.boardPreparations.isEmpty)
+    }
+    @Test(arguments: [false, true])
+    func automaticBalanceReadFailureDiscardsWithoutClaimingOrSubmitting(failCleanup: Bool) async throws {
+        let (journal, file) = journal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        let session = WalletSession()
+        let calls = Calls()
+        let quote = Self.automaticQuote
+        await calls.failCleanup(failCleanup)
+        await session.retainBoardReview(quote, discard: { try await calls.discard(quote) }, submit: {
+            Issue.record("Balance read failure must not submit"); throw OnchainFailure.invalid
+        })
+        await #expect(throws: OnchainFailure.changed) {
+            try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: {
+                #expect(await session.boardPreparations["board"]?.claimed == false)
+                throw URLError(.notConnectedToInternet)
+            })
+        }
+        #expect(try await journal.loadAll().isEmpty)
+        if failCleanup {
+            #expect(await session.boardPreparations["board"]?.claimed == false)
+            #expect(await session.boardPreparations["board"]?.discardRequested == true)
+            await calls.failCleanup(false)
+            try await session.discardBoardReviews()
+        }
+        #expect(await session.boardPreparations.isEmpty)
+        #expect(await calls.discarded == [quote.id])
+    }
+    actor BalanceRead {
+        var continuation: CheckedContinuation<UInt64, Never>?
+        func confirmed() async -> UInt64 { await withCheckedContinuation { continuation = $0 } }
+        func finish(_ value: UInt64) { continuation?.resume(returning: value); continuation = nil }
+    }
+    @Test func invalidationDuringBalanceReadCannotClaimOrSubmit() async throws {
+        let (journal, file) = journal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        let session = WalletSession()
+        let calls = Calls()
+        let balance = BalanceRead()
+        let quote = Self.automaticQuote
+        await session.retainBoardReview(quote, discard: { try await calls.discard(quote) }, submit: {
+            Issue.record("Invalidated review must not submit"); throw OnchainFailure.invalid
+        })
+        let work = Task {
+            try await session.submitBoard(quote, walletID: "wallet", journal: journal,
+                confirmed: { await balance.confirmed() })
+        }
+        for _ in 0..<1000 where await balance.continuation == nil { await Task.yield() }
+        #expect(await balance.continuation != nil)
+        #expect(await session.boardPreparations["board"]?.claimed == false)
+        await session.discardBoard(quote)
+        await balance.finish(quote.confirmed)
+        await #expect(throws: OnchainFailure.changed) { try await work.value }
+        #expect(await session.boardPreparations.isEmpty)
+        #expect(await calls.discarded == [quote.id])
+        #expect(try await journal.loadAll().isEmpty)
+    }
+    @Test func manualBoardDoesNotReadAnAutomaticReserve() async throws {
+        let (journal, file) = journal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        let session = WalletSession()
+        let calls = Calls()
+        let quote = Self.quote
+        await session.retainBoardReview(quote, discard: { try await calls.discard(quote) }, submit: {
+            await calls.submit(.init(txid: "exact", broadcast: .accepted, vtxoIds: []))
+        })
+        _ = try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: {
+            Issue.record("Manual boards have no automatic reserve"); throw OnchainFailure.unavailable
+        })
+        #expect(await calls.submitted == 1)
+        #expect(await calls.discarded == [quote.id])
     }
     @Test func exactValuesAndTwoMinuteExpirySurviveJournalRoundTrip() throws {
         var quote = try JSONDecoder().decode(OnchainQuote.self, from: JSONEncoder().encode(Self.quote))
@@ -56,11 +166,11 @@ struct BoardPreparedTests {
         })
         if case .notAttempted = broadcast {
             await #expect(throws: OnchainFailure.boardNotAttempted) {
-                try await session.submitBoard(quote, walletID: "wallet", journal: journal)
+                try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: { quote.confirmed })
             }
             #expect(try await journal.loadAll().isEmpty)
         } else {
-            _ = try await session.submitBoard(quote, walletID: "wallet", journal: journal)
+            _ = try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: { quote.confirmed })
             let saved = try #require(try await OnchainOperationJournal(file: file).load())
             #expect(saved.receipt?.txid == "exact" && saved.receipt?.onchainFee == 1543 && saved.receipt?.arkFee == 100)
             #expect(saved.blocks(.board, ids: []))
@@ -89,7 +199,7 @@ struct BoardPreparedTests {
             if await calls.submitted == 1 { await calls.setPersistence() }
             return result
         })
-        _ = try await session.submitBoard(quote, walletID: "wallet", journal: journal)
+        _ = try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: { quote.confirmed })
         #expect(await calls.submitted == 2)
         #expect(await calls.discarded == [quote.id])
         #expect(await session.boardPreparations.isEmpty)
@@ -125,15 +235,15 @@ struct BoardPreparedTests {
         expired.prepared?.createdAt = Date().addingTimeInterval(-121)
         for invalid in [edited, expired] {
             await #expect(throws: OnchainFailure.changed) {
-                try await session.submitBoard(invalid, walletID: "wallet", journal: journal)
+                try await session.submitBoard(invalid, walletID: "wallet", journal: journal, confirmed: { quote.confirmed })
             }
         }
         await #expect(throws: OnchainFailure.changed) {
-            try await session.submitBoard(quote, walletID: "other", journal: journal)
+            try await session.submitBoard(quote, walletID: "other", journal: journal, confirmed: { quote.confirmed })
         }
         await session.discardBoard(quote)
         await #expect(throws: OnchainFailure.changed) {
-            try await session.submitBoard(quote, walletID: "wallet", journal: journal)
+            try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: { quote.confirmed })
         }
         #expect(try await journal.loadAll().isEmpty)
     }

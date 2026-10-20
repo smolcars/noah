@@ -73,10 +73,25 @@ extension WalletSession {
         guard boardPreparations.isEmpty else { throw OnchainFailure.uncertain }
     }
 
-    func submitBoard(_ quote: OnchainQuote, walletID: String, journal: OnchainOperationJournal) async throws -> String {
+    func submitBoard(_ quote: OnchainQuote, walletID: String, journal: OnchainOperationJournal,
+                     confirmed: @Sendable () async throws -> UInt64) async throws -> String {
         guard let id = quote.prepared?.id, var held = boardPreparations[id],
               !held.claimed, !held.discardRequested, held.quote == quote, quote.walletID == walletID,
               quote.isCurrent else { throw OnchainFailure.changed }
+        if quote.automatic {
+            do {
+                // Unselected reserve coins are not reserved. Fixed costs require at least the
+                // reviewed confirmed balance to preserve the exact reserve shown.
+                let balance = try await confirmed()
+                guard balance >= quote.confirmed, quote.isCurrent,
+                      let current = boardPreparations[id], !current.claimed, !current.discardRequested,
+                      current.quote == quote else { throw OnchainFailure.changed }
+                held = current
+            } catch {
+                await discardBoard(quote)
+                throw OnchainFailure.changed
+            }
+        }
         held.claimed = true
         held.timeout?.cancel()
         boardPreparations[id] = held
