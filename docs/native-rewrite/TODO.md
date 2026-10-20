@@ -225,9 +225,9 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Server wake sync
 
 ## M8 — BTC Map
-- [x] MapLibre native map, themed styles, clustering — iOS
-- [x] Bundled snapshot + BTC Map v4 sync, GeoNames city search — iOS (RN-generated shared fixtures, persisted viewport)
-- [x] Merchant detail sheet / pane, location — iOS
+- [x] MapLibre native map, themed styles, clustering — iOS, Android
+- [x] Bundled snapshot + BTC Map v4 sync, GeoNames city search — iOS, Android (RN-generated shared fixtures, persisted viewport; Android packages shared assets directly)
+- [x] Merchant detail sheet / pane, location — iOS, Android (Android requests coarse/fine only on user action; verification in `apps/android/MapTests/README.md`)
 
 - [x] BTC Map resource limits — iOS: streamed 32 MiB maximum, 100k records, 16 KiB strings, no immediate oversize retry and five-minute cooldown (measured payloads in `apps/ios/MapTests/README.md`)
 - [ ] Android M8: mirror transfer/record/string limits and oversize cooldown/cache preservation
