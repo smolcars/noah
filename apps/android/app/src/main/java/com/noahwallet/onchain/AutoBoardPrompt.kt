@@ -52,7 +52,7 @@ fun AutoBoardPrompt(app: AppModel) {
         catch (_: Exception) { message = "Unable to estimate boarding fees. Use Settings → Board to Ark to try again." }
     }
     message?.let { text -> AlertDialog(onDismissRequest = { message = null },
-        title = { Text("Board to Ark") }, text = { Text(text + " Your receipt is saved in Settings → Board to Ark.") },
+        title = { Text("Board to Ark") }, text = { Text(text + " Check Settings → Board to Ark for operation status.") },
         confirmButton = { TextButton({ message = null }) { Text("OK") } }) }
     plan?.let { quote -> OnchainReview(app, quote,
         onDismiss = { markAttempted(); plan = null }, cancelTitle = "No, turn off",
