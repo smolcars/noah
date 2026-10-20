@@ -31,7 +31,14 @@ empty list removes every old server wake entry. Existing server test
 Native regression tests assert no payment, an empty payload after admission,
 and pending-state retention/retry on sync failure. No server code changed.
 
-Home shows each applicable message once, without blocking or acknowledgement:
+Home shows each applicable message once, without blocking or acknowledgement.
+The settings message names only preferences that were actually defaulted: biometric
+lock only when its wallet preference was lost, balance visibility only when its
+privacy preference was lost, and currency/display defaults only when the profile
+record was lost. If wallet and privacy preferences survived (for example, only the
+profile record was malformed), it uses: “Some display settings couldn't be carried
+over from the previous version and were reset. Please review Settings.”
+When all three were defaulted, the messages are:
 
 - Some settings couldn't be carried over from the previous version, so they're back to their defaults: biometric lock is off, balances are visible, and currency and display settings are reset. Please review Settings.
 - Recurring payments need to be set up again after this update.
@@ -67,13 +74,29 @@ retry through the existing onboarding error. Public-key lookup happens afterward
 Both backup and phrase restore write the same marker under the restore gate and
 reservation before installing staged data or committing the seed. Existing
 restore completion/recovery still owns marking a completed restore initialized.
+A committed restore settles its wallet transaction before completing settings.
+Before removing the transaction journal, it fsyncs a `settings-pending` marker in
+the restore directory and durably stops the restored wallet's automation authority.
+The foreground publishes `isInitialized=true` / `isWalletLoaded=true` in memory
+when preference writes fail, allowing Home with the loss notice. The completion
+marker survives process death and clears only after those settings persist;
+foreground opens/resumes/refreshes retry completion. Android also retains and
+replays its existing completion receipt, including backup metadata and token
+invalidation. An explicit wallet resume cannot release the automation stop while
+the settings marker remains; completion itself does not automatically resume
+recurring payments.
 Interrupted creation with seed + DB therefore resumes onboarding; an existing
 wallet with missing/unreadable settings still opens Home. Default preferences
 mean biometric lock off, suspension cleared, balances visible, USD/bip177 display,
 and auto-boarding prompts on; boarding still requires confirmation.
 
-Background opens require the seed/DB launch decision Home, no pending restore or
-deletion, no explicit unfinished onboarding, and no suspension. They read seeds
+Background opens require healthy, persisted settings before admission (and again
+before the Android wallet open), the seed/DB launch decision Home, no pending
+restore, restore-settings completion or deletion, no explicit unfinished onboarding,
+and no suspension. Android also defers an outstanding restore-completion receipt.
+An unpersisted, unsuspended fallback never authorizes background work. iOS already
+checked settings health through `requireCompatibleRNStores`; its gate now also
+checks the restore-settings marker. They read seeds
 only; Android's foreground migration remains after verified SDK open. Fresh
 installs create a native file and an absent-source snapshot, never live MMKV files.
 Quarantine, support/settings-blocked states, Continue/model rebuilding, automatic
@@ -126,6 +149,92 @@ checks passed: six test functions / ten expanded cases. Owned iPhone-17 simulato
 and all six result bundles were removed. The same-named owned AVD at port 5600
 was identified, stopped, verified absent and deleted. No physical devices, other
 agents' devices or Docker were used. `client/` and `server/` were unchanged.
+
+
+Settings review round 2 (2026-10-20, base `aea99fe4`)
+
+- iOS recovery `15ef82cf`, Android recovery `3cd20adf`: wallet transaction
+  settlement precedes preference completion. The synced completion marker survives
+  cleanup, foreground defaults carry initialized flags without a successful write,
+  and retry persists those flags before removing the marker. The wallet-local
+  automation authority remains stopped; its existing explicit-resume requirement
+  applies after completion. Android's receipt retains backup/token completion.
+- iOS headless coverage `40440d67`, Android admission `d4c33b91`: unreadable
+  settings plus failed reset cannot admit background work even when a suspension
+  preference was lost. iOS already checked storage health; both platforms now also
+  defer pending restore-settings completion. Android edits in `AppServices` are
+  confined to the admission function and the single approved initializer-line
+  removal. WorkManager and recurring implementation files are unchanged.
+- Notices `ff8badc3` / `8bf4c648`: all eight wallet/privacy/profile-loss
+  combinations retain valid imported bytes and name only defaulted preferences.
+  Profile-only loss gets the generic line. Existing one-time consumption semantics
+  and the native file format are unchanged.
+
+Red/green evidence: with original Android `AppServices` restored, the two device
+regressions failed (background passed the unhealthy fallback; recovery threw
+`EACCES` in its settings preflight). Restoring the fixes made both pass. With the
+original iOS `RestoreCompletion` ordering, the permission-failure regression left
+the restore journal pending; wallet-first ordering passes. The original notice
+failed on both platforms (six incorrect biometric/visibility expectations on iOS).
+The corrected builders pass all eight combinations; the iOS regression additionally
+consumes and reopens each notice to check once-only behavior.
+
+Both `UpgradeTests/settings-restore-faults.sh` runners passed **9/9 actual process
+terminations and fresh-process recoveries per platform**, while settings were
+unreadable and the settings directory unwritable (the final case retains a readable
+unfinished flag but denies its completion write). Checkpoints: journal persisted,
+previous directory moved, restored directory installed, committing recorded, seed
+committed, restore marker removed, previous directory removed, transaction journal
+removed, and preference completion pending. At committed boundaries the initialized
+flags are available in memory, the transaction is settled, background remains
+rejected, automation remains stopped, the notice is nonblocking/once-only, and
+restoring permissions allows a new settings instance to persist completion.
+Android stage/recover uses real Keystore seed storage; iOS uses the controlled
+`FakeSeed` provider. Both fixtures use marker database bytes to test storage and
+recovery routing, rather than claiming a funded SDK restore or visual Home test.
+Existing real SDK restore tests also remain in the full suites.
+
+Android's required final command ran once after the last Android code change:
+`nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'`:
+**3,058 JVM tests / 111 suites / zero failures, errors or skips**; APK assembled
+and instrumentation compiled. The final APKs passed **14/14 instrumentation tests**
+(`SettingsFailureTest`: four, including its nine-boundary loop; `MMKVRecoveryTest`:
+ten). In addition, the process-death runner passed **9 separate recovery
+instrumentation invocations**, each after an intentionally force-stopped staging
+invocation. Thus final device verification includes **23 passing instrumentation
+test invocations**, plus nine deliberate process terminations (not failures).
+
+Final iOS verification ran once after the last test change, following targeted
+checks, with `xcodegen generate`, signing enabled, `ARCHS=arm64`,
+`ONLY_ACTIVE_ARCH=YES`, private `/private/tmp` DerivedData and the owned iPhone-17
+simulator. Full `NoahTests`: **681 total / 658 passed / 23 opt-in skipped /
+zero failures**, **139 suites / 1,024 expanded passing cases**. The process-death
+hook is one of the normal opt-in skips; all nine explicit fresh-process recovery
+runs passed separately. Targeted checks passed **18 functions / one opt-in skip**
+(42 expanded passes), and both adjusted real-SDK cleanup assertions passed again
+before the final full run.
+
+The first iOS process runner attempt watched an app-container path that installation
+replaced; the runner now resolves that path again during staging. Its initial
+cleanup also left a migrated opt-in control file, causing an unrelated preliminary
+full-run fixture error after recovery had already removed the checkpoint. That run
+was stopped, cleanup was corrected to resolve the current container, the stale
+control was removed, and the final full suite was restarted after the last change.
+No app regression was found in those harness failures. The next full run found
+only two existing real-SDK restore assertions that expected an entirely empty
+restore directory. They now require exactly the deliberate `settings-pending`
+marker after a committed restore, while rollback still requires an empty directory;
+all journal, previous-wallet and plaintext cleanup assertions remain enforced.
+
+Owned AVD `NoahSettingsR2eecb` (API 35, console port 5606) was identified by
+`adb emu avd name`, stopped, verified absent and deleted after confirming its AVD
+name. Owned iPhone-17 simulator `NoahSettingsR2eecb`
+(`6687518E-D335-4E0B-8EA3-5E47152F4590`) was identified, shut down, confirmed
+`Shutdown`, deleted and verified absent. Private DerivedData and all **nine**
+explicit result bundles were deleted; default process-run results were inside the
+deleted DerivedData. No owned build/test process remains. No other agent's device,
+physical device or Docker was used; `client/`, `server/`, WorkManager and recurring
+implementation files were unchanged.
 
 
 All eight stores use `client/src/lib/mmkv.ts` instance `noah-wallet-storage` in
