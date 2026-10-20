@@ -224,6 +224,31 @@ class RecurringExecutorTest {
         w.executor.save(fresh, editing = false); w.now += 1000
         w.executor.execute(); assertEquals(2, w.wallet.calls)
     }
+    @Test fun legacyUncertaintyRejectsResumeAndEditBeforeRecoveryEvenWhenFutureOrCompleted() = runBlocking {
+        for (status in listOf("active", "paused", "needs_attention", "completed")) {
+            for (start in listOf(1000L, 2000L)) {
+                val w = RecurringWorld(this)
+                val original = w.add(start).copy(status = status, nativeRevision = UUID.randomUUID().toString())
+                w.store.upsert(original)
+                w.journalRaw = """{"version":2,"attempts":{},"consumed":[],"consumedIndices":[],"legacyUncertainty":[${RecurringStore.json.encodeToString(RecurringJournal.Scope(w.binding, "rent"))}]}"""
+                val raw = w.raw; val journal = w.journalRaw
+                for (action in listOf<suspend () -> Unit>({ w.executor.resume("rent") },
+                    { w.executor.save(original.copy(label = "Edited", startAt = 3000), editing = true) },
+                    { w.executor.overrideAndResume("rent", true) })) {
+                    assertEquals(RecurringJournal.legacyMessage, runCatching { action() }.exceptionOrNull()?.message)
+                    assertEquals(raw, w.raw); assertEquals(journal, w.journalRaw)
+                    assertEquals(original, w.schedule)
+                }
+                assertEquals(0, w.wallet.calls); assertEquals(0, w.quotes); assertEquals(0, w.syncCalls)
+                assertEquals(0, w.audits); assertTrue(w.notifications.isEmpty())
+                w.executor.cancel("rent")
+                assertNull(w.schedule); assertEquals(journal, w.journalRaw)
+                val fresh = original.copy(id = "fresh", status = "active", startAt = 3000, nextRunAt = 3000)
+                w.executor.save(fresh, editing = false)
+                assertEquals(setOf("fresh"), w.store.load().schedules.keys)
+            }
+        }
+    }
     @Test fun malformedIndexAfterRollbackAndZoneChangeCannotPayTwiceOrOverwriteEvidence() = runBlocking {
         for (indices in listOf(listOf(-1), listOf(2))) {
             val w = RecurringWorld(this)

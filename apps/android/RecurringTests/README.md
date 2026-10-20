@@ -52,6 +52,46 @@ Notification targeted run: **1,439 tests / 11 suites**, zero
 failures/errors/skips. An initial test compile failed because an assertion edit
 also matched a different test; that edit was corrected before this passing run.
 
+### Remaining parity alignments
+
+Envelope versions must be numeric: string `"0"` and other non-numeric versions
+stop reads/writes without changing the original bytes. Missing versions and RN's
+numeric `0` remain supported. Resume and edit now check durable legacy uncertainty
+before any policy change, independently of due planning or visible status. They
+return the same guidance as iOS: **“Noah can't reconstruct this schedule's earlier
+payment history. Cancel it and explicitly approve a new recurring payment.”**
+The existing destructive override uses that same check. Tests cover active,
+paused, needs-attention and completed schedules, due and future dates, unchanged
+policy/journal bytes, no audits and cancellation/fresh approval.
+
+Selecting Custom in the editor now defaults to **14 days**, as RN/iOS do. Existing
+intervals retain their values when opening the editor; weekly/monthly defaults
+remain one. Parity targeted run: **1,442 tests / 12 suites**,
+zero failures/errors/skips. All round-3 targeted commands used Nix,
+`--max-workers=2` and `--tests "*Recurring*"`.
+
+### Round-3 final verification and limits
+
+The requested full command ran **once** after the final production/test changes:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**2,830 tests / 73 suites passed**, zero failures/errors/skips; the recurring
+package contributes **1,440 cases**. The targeted pattern also selects two
+session/teardown regressions. Regtest APK assembly passed in the same **1m 8s**
+invocation. Existing native-library stripping warnings were non-fatal. Logs and
+JSON count summaries remain at `/tmp/noah-android-recurring-r3-*`.
+
+Only Android recurring code/tests, this README and the Android M7 TODO line
+changed. RN code ran read-only for writer verification; shared fixtures, iOS,
+Send, Onchain, fee policy and server were untouched. No emulator, physical Pixel 6,
+simulator or Docker was accessed. Device/UI, live/funded payment and notification
+delivery checks were not run, as requested; these changes use JVM regressions
+and APK assembly. Notification taps still open the recurring screen, whose normal
+due-payment execution keeps every existing policy/fee guard.
+
 ## Android parity follow-ups (2026-10-20)
 
 Base: `feat/native-rewrite` local HEAD `51c24bc0` (iOS round 3).
@@ -220,7 +260,7 @@ execution, skipped backlog, finite schedules and exponential retry backoff. The
 
 `RecurringStore` uses RN's **noah-wallet-storage** MMKV instance,
 **recurring-payment-storage** key and version-0 Zustand envelope. Unknown envelope,
-state and schedule fields survive mutations. Invalid/future stores preserve their
+state and schedule fields survive mutations. Invalid/future envelopes preserve their
 bytes and stop reads/writes; a failed write latches automation off until restart.
 Native spending approval binds fingerprint + network + a local instance UUID in
 the wallet datadir. Android backup/transfer rules already exclude this directory;

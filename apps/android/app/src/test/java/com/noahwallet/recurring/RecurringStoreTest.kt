@@ -111,6 +111,24 @@ class RecurringStoreTest {
             assertEquals(setOf("healthy"), store.load().schedules.keys)
         }
     }
+    @Test fun stringAndOtherNonNumericVersionsPreserveBytesAndRejectEveryMutation() {
+        val root = Json.parseToJsonElement(fixture()).jsonObject
+        for (version in listOf(JsonPrimitive("0"), JsonPrimitive("0.0"), JsonPrimitive(false), JsonNull,
+            JsonArray(emptyList()), buildJsonObject {}, JsonPrimitive(1))) {
+            var raw = JsonObject(root + ("version" to version)).toString()
+            val original = raw
+            var writes = 0
+            val store = RecurringStore({ raw }, { writes++; raw = it })
+            assertTrue(runCatching { store.load() }.isFailure)
+            assertTrue(runCatching { store.remove("rent") }.isFailure)
+            assertTrue(runCatching { store.setPending(false) }.isFailure)
+            assertEquals(0, writes); assertEquals(original, raw)
+        }
+        for (supported in listOf(root, JsonObject(root - "version"))) {
+            val store = RecurringStore({ supported.toString() }, {})
+            assertEquals(setOf("rent"), store.load().schedules.keys)
+        }
+    }
     @Test fun failedWriteLatchesSendingOff() {
         val store = RecurringStore({ fixture() }, { error("disk") })
         assertTrue(runCatching { store.setPending(false) }.isFailure)

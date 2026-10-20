@@ -23,7 +23,8 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         check(!writeFailed) { "Recurring payment storage failed. Restart Noah; sending is stopped." }
         val raw = read() ?: return buildJsonObject { put("version", 0); putJsonObject("state") { putJsonObject("schedules") {}; put("serverSyncPending", false) } }
         return json.parseToJsonElement(raw).jsonObject.also {
-            require(it["version"] == null || it["version"]?.jsonPrimitive?.intOrNull == 0) { "Unsupported recurring payment version. Sending is stopped." }
+            val version = it["version"]
+            require(version == null || version is JsonPrimitive && !version.isString && version.intOrNull == 0) { "Unsupported recurring payment version. Sending is stopped." }
             it.getValue("state").jsonObject.getValue("schedules").jsonObject
         }
     }

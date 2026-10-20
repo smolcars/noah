@@ -182,7 +182,10 @@ class RecurringExecutor(private val d: Dependencies,
     suspend fun save(input: RecurringPayment, editing: Boolean) {
         val state = boundState()
         val old = state.schedules[input.id]
-        if (editing) check(old != null && old.inFlight == null && old.status != "needs_attention") { "Check this payment's outcome before editing it." }
+        if (editing) {
+            rejectLegacyUncertainty(input.id)
+            check(old != null && old.inFlight == null && old.status != "needs_attention") { "Check this payment's outcome before editing it." }
+        }
         else check(state.schedules.size < 50 && old == null) { "You've reached the maximum number of recurring payments." }
         input.validateInput(d.now())
         val schedule = input.copy(nativeRevision = UUID.randomUUID().toString())
@@ -198,6 +201,7 @@ class RecurringExecutor(private val d: Dependencies,
     }
     suspend fun resume(id: String) {
         boundState()
+        rejectLegacyUncertainty(id)
         synchronized(RecurringStore.lock) {
             val schedule = d.store.load().schedules[id] ?: return
             check(!schedule.unsupportedStorage) { RecurringPayment.unsupportedMessage }
@@ -215,7 +219,7 @@ class RecurringExecutor(private val d: Dependencies,
         check(!schedule.unsupportedStorage) { RecurringPayment.unsupportedMessage }
         check(schedule.amountSat <= RecurringPayment.maximumAmount) { RecurringPayment.amountLimitMessage }
         val entry = d.journal.load()[id]
-        check(!d.journal.legacyUncertain(d.binding(), id)) { RecurringJournal.legacyMessage }
+        rejectLegacyUncertainty(id)
         // Audit the exact warning before either lock can be removed, including legacy RN markers.
         d.audit(schedule, entry, overrideWarning, overrideConfirmation)
         if (entry != null && controller.attempt?.recurringOccurrenceKey == entry.key) {
@@ -225,6 +229,9 @@ class RecurringExecutor(private val d: Dependencies,
         if (entry != null) d.journal.save(entry.copy(resolved = true, consumed = true))
         check(d.store.updateIf(schedule, schedule.resume(d.now(), d.zone())))
         changed()
+    }
+    private fun rejectLegacyUncertainty(id: String) {
+        check(!d.journal.legacyUncertain(d.binding(), id)) { RecurringJournal.legacyMessage }
     }
     private fun refreshDates() {
         for (schedule in boundState().schedules.values.filter { it.status != "completed" && !it.unsupportedStorage }) {

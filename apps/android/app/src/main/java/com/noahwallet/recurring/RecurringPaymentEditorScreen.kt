@@ -18,6 +18,8 @@ import java.util.Calendar
 import java.util.TimeZone
 import java.util.UUID
 
+internal fun recurringDefaultEvery(unit: String) = if (unit == "day") "14" else "1"
+
 internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault()): Long = Calendar.getInstance(zone).apply {
     timeInMillis = value
     set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
@@ -30,7 +32,7 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
     var amount by remember { mutableStateOf(original?.amountSat?.toString() ?: "") }
     var comment by remember { mutableStateOf(original?.comment ?: "") }
     var unit by remember { mutableStateOf(original?.interval?.unit ?: "month") }
-    var every by remember { mutableStateOf(original?.interval?.every?.toString() ?: "1") }
+    var every by remember { mutableStateOf(original?.interval?.every?.toString() ?: recurringDefaultEvery(unit)) }
     val tomorrow = remember { Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1); set(Calendar.HOUR_OF_DAY, 9); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis }
     var start by remember { mutableLongStateOf(original?.startAt ?: tomorrow) }
     var endMode by remember { mutableStateOf(if (original?.endAt != null) "date" else if (original?.maxOccurrences != null) "count" else "never") }
@@ -61,7 +63,7 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
         if (destination?.second == "lnurl") OutlinedTextField(comment, { comment = it }, label = { Text("Note (optional)") }, supportingText = { Text("Shared with the recipient") }, enabled = !saving, modifier = Modifier.fillMaxWidth())
         Text("Repeat", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("week" to "Weekly", "month" to "Monthly", "day" to "Custom").forEach { (value, title) -> FilterChip(unit == value, { unit = value; every = "1" }, label = { Text(title) }, enabled = !saving) }
+            listOf("week" to "Weekly", "month" to "Monthly", "day" to "Custom").forEach { (value, title) -> FilterChip(unit == value, { unit = value; every = recurringDefaultEvery(value) }, label = { Text(title) }, enabled = !saving) }
         }
         OutlinedTextField(every, { every = it }, label = { Text("Every … ${unit}s") }, enabled = !saving, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), singleLine = true)
         RecurringDatePicker("First payment", start, true, !saving) { start = it }
