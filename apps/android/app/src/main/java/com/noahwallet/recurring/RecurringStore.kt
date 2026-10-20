@@ -76,6 +76,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         val decoded = runCatching {
             // RN writes nullable keys too; absence cannot grant execution defaults.
             require(raw.jsonObject.keys.containsAll(requiredRNFields))
+            requireNumericTokens(raw.jsonObject)
             json.decodeFromJsonElement<RecurringPayment>(raw)
         }.getOrNull()
         return if (decoded != null && decoded.id == id && decoded.validPolicy) decoded
@@ -89,6 +90,19 @@ class RecurringStore(private val read: () -> String?, private val write: (String
                 interval = RecurringInterval("month", 1), startAt = 0, createdAt = 0, updatedAt = 0))
                 .copy(id = id, status = "needs_attention", lastError = RecurringPayment.unsupportedMessage, unsupportedStorage = true)
         }
+    }
+    private fun requireNumericTokens(row: JsonObject) {
+        fun number(value: JsonElement) {
+            require(value is JsonPrimitive && !value.isString && value.longOrNull != null)
+        }
+        fun numbers(fields: JsonObject, vararg keys: String) { keys.forEach { number(fields.getValue(it)) } }
+        numbers(row, "amountSat", "startAt", "nextOccurrenceIndex", "occurrencesPaid", "consecutiveFailures", "createdAt", "updatedAt")
+        for (key in listOf("endAt", "maxOccurrences", "nextRunAt", "retryNotBefore")) {
+            row[key]?.takeUnless { it == JsonNull }?.let(::number)
+        }
+        numbers(row.getValue("interval").jsonObject, "every")
+        row["inFlight"]?.takeUnless { it == JsonNull }?.let { numbers(it.jsonObject, "occurrenceIndex", "startedAt") }
+        row.getValue("runs").jsonArray.forEach { numbers(it.jsonObject, "occurrenceIndex", "scheduledFor", "attemptedAt", "amountSat") }
     }
     fun upsert(schedule: RecurringPayment, reapproval: Boolean = false) = change(if (schedule.unsupportedStorage) null else schedule.id, reapproval) { state ->
         val schedules = state.getValue("schedules").jsonObject.toMutableMap()
