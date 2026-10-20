@@ -1,4 +1,3 @@
-import BarkBoltFFI
 import SwiftUI
 
 struct PreferenceView: View {
@@ -97,7 +96,7 @@ struct ProfileView: View {
             name = SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.displayName ?? ""
             do {
                 // RN displays the server identity's offline derivation, not the wallet's hardened key.
-                key = try derivePublicKeyFromMnemonic(mnemonic: AppServices.shared.readMnemonic(), network: WalletConfiguration.base(for: model.variant).network, index: 0)
+                key = try ServerClient.loginKey(variant: model.variant, mnemonic: AppServices.shared.readMnemonic())
                 try await model.server.refreshProfile()
             } catch { message = "Couldn't refresh your profile. Please try again." }
         }

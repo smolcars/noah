@@ -25,6 +25,26 @@ struct SeedSafetyTests {
         }
     }
 
+    @Test func formattedSeedsUseTheSameWalletAndAuthenticationIdentityButOriginalBackupPassword() throws {
+        let canonical = (Array(repeating: RecoveryPhraseInput.wordList[0], count: 11) + [RecoveryPhraseInput.wordList[3]]).joined(separator: " ")
+        let variants = [canonical.uppercased(), " \n" + canonical.replacingOccurrences(of: " ", with: "\t  ") + "\n",
+                        canonical.applyingTransform(.fullwidthToHalfwidth, reverse: true)!]
+        let key = try ServerClient.loginKey(variant: .regtest, mnemonic: canonical)
+        let signature = try ServerClient.signChallenge("public test challenge", variant: .regtest, mnemonic: canonical)
+        for original in variants {
+            let sameParserInput = try StoredSeed.normalized(original) == canonical
+            #expect(sameParserInput)
+            #expect(try ServerClient.loginKey(variant: .regtest, mnemonic: original) == key)
+            let sameSignature = try ServerClient.signChallenge("public test challenge", variant: .regtest, mnemonic: original) == signature
+            #expect(sameSignature)
+            let sealed = try BackupCrypto.encrypt(Data([1, 2, 3]), mnemonic: original, version: .snapshot)
+            #expect(try BackupCrypto.decrypt(sealed, mnemonic: original, expecting: .snapshot) == Data([1, 2, 3]))
+            #expect(throws: BackupCrypto.Failure.authenticationFailed) {
+                try BackupCrypto.decrypt(sealed, mnemonic: canonical, expecting: .snapshot)
+            }
+        }
+    }
+
     @Test func launchSafetyFixture() throws {
         let cases = try Fixtures.load("launch-seed-safety", input: LaunchStateTests.Input.self, expected: String.self)
         #expect(cases.count == 8)
