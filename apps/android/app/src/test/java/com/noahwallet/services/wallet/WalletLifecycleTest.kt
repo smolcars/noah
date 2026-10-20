@@ -93,6 +93,26 @@ class WalletLifecycleTest {
         } finally { world.clean() }
     }
 
+    @Test fun deletionClearsRecurringLedgerAndBootstrapMarkerForRecreation() = runBlocking {
+        val world = World()
+        try {
+            world.files()
+            val binding = com.noahwallet.recurring.RecurringStore.Binding(com.noahwallet.send.SendIdentity("wallet", "regtest"), java.util.UUID.randomUUID().toString())
+            val ledger = File(world.location.directory, "noah-recurring-journal.json.policies")
+            var raw: String? = null
+            fun store(owner: com.noahwallet.recurring.RecurringStore.Binding) = com.noahwallet.recurring.RecurringStore({ raw }, { raw = it }).also { it.protectPolicies(ledger, sync = {}) { owner } }
+            store(binding).load()
+            assertTrue(ledger.exists()); assertTrue(File("${ledger.path}.initialized").exists())
+            world.lifecycle().delete()
+            assertFalse(ledger.exists()); assertFalse(File("${ledger.path}.initialized").exists())
+            raw = null; world.location.directory.mkdirs()
+            val replacement = binding.copy(instance = java.util.UUID.randomUUID().toString())
+            assertTrue(store(replacement).load().schedules.isEmpty())
+            assertTrue(ledger.readText().contains(replacement.instance))
+            assertFalse(ledger.readText().contains(binding.instance))
+        } finally { world.clean() }
+    }
+
     @Test fun restoreJournalRefusesDeletionAndReleasesReservation() = runBlocking {
         val world = World()
         try {

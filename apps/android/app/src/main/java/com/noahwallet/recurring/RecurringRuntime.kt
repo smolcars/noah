@@ -17,7 +17,7 @@ class RecurringRuntime private constructor(context: Context) {
     private val services = AppServices.shared(context)
     private val settings = SettingsStorage(context)
     private val location = WalletDataLocation(context.filesDir, BuildConfig.APP_VARIANT)
-    private val store = RecurringStore(settings)
+    private val store = RecurringStore(settings) { com.noahwallet.services.logging.AppLog(context, "recurring").w(RecurringPolicyLedger.logMessage) }
     private val audit = SendOverrideAuditStore(File(location.directory, "noah-recurring-overrides.json"))
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     val executor = RecurringExecutor(RecurringExecutor.Dependencies(store,

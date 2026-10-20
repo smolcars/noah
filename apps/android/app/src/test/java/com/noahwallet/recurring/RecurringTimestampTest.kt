@@ -18,6 +18,7 @@ class RecurringTimestampTest(private val field: String) {
     @Test fun fractionalTimeStaysVisibleStoppedLosslessAndCancellable() = runBlocking {
         val w = RecurringWorld(this)
         val original = w.add()
+        w.store.upsert(original.copy(id = "healthy"))
         val row = RecurringStore.json.encodeToJsonElement(original).jsonObject.toMutableMap()
         when (field) {
             "inFlight.startedAt" -> row["inFlight"] = buildJsonObject { put("occurrenceIndex", 0); put("startedAt", 1000.5) }

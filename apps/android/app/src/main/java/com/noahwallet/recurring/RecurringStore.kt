@@ -12,13 +12,25 @@ import java.io.FileOutputStream
 import java.util.UUID
 
 /** RN's version-0 Zustand envelope. Unsupported rows stay visible; invalid envelopes stop mutations. */
-class RecurringStore(private val read: () -> String?, private val write: (String) -> Unit) {
-    constructor(settings: SettingsStorage) : this({ settings.requireHealthy(); settings.string(key) }, { raw ->
+class RecurringStore(private val read: () -> String?, private val write: (String) -> Unit, private val policyWarning: () -> Unit = {}) {
+    constructor(settings: SettingsStorage, policyWarning: () -> Unit = {}) : this({ settings.requireHealthy(); settings.string(key) }, { raw ->
         settings.set(raw, key); settings.sync(); check(settings.string(key) == raw) { "Unable to save recurring payments" }
-    })
+    }, policyWarning)
     @Serializable data class Binding(val wallet: SendIdentity, val instance: String)
     data class State(val schedules: Map<String, RecurringPayment>, val pending: Boolean, val binding: Binding?)
     private var writeFailed = false
+    private var policyLedger: RecurringPolicyLedger? = null
+    private var policyBinding: (() -> Binding)? = null
+    internal fun protectPolicies(file: File, sync: (File) -> Unit = ::syncDirectory, binding: () -> Binding) = synchronized(lock) {
+        if (policyLedger == null) { policyLedger = RecurringPolicyLedger(file, policyWarning, sync); policyBinding = binding }
+    }
+    private fun protected(state: State): State {
+        val ledger = policyLedger ?: return state
+        val stopped = runCatching { ledger.stopped(state.binding ?: policyBinding!!(), state.schedules) }.getOrElse { policyWarning(); state.schedules.keys }
+        return state.copy(schedules = state.schedules.mapValues { (id, schedule) ->
+            if (id in stopped && !schedule.unsupportedStorage) schedule.copy(status = "needs_attention", lastError = RecurringPolicyLedger.message) else schedule
+        })
+    }
     private fun envelope(): JsonObject {
         check(!writeFailed) { "Recurring payment storage failed. Restart Noah; sending is stopped." }
         val raw = read() ?: return buildJsonObject { put("version", 0); putJsonObject("state") { putJsonObject("schedules") {}; put("serverSyncPending", false) } }
@@ -28,7 +40,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
             it.getValue("state").jsonObject.getValue("schedules").jsonObject
         }
     }
-    fun load(): State = synchronized(lock) { decode(envelope()) }
+    fun load(): State = synchronized(lock) { protected(decode(envelope())) }
     private fun decode(envelope: JsonObject): State {
         val state = envelope.getValue("state").jsonObject
         val schedules = state.getValue("schedules").jsonObject.mapValues { (id, raw) ->
@@ -54,15 +66,16 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         }
         return State(visible, state["serverSyncPending"]?.jsonPrimitive?.booleanOrNull ?: true, binding)
     }
-    private fun change(mutate: (MutableMap<String, JsonElement>) -> Unit) = synchronized(lock) {
-        val envelope = envelope(); decode(envelope)
+    private fun change(policyID: String? = null, mutate: (MutableMap<String, JsonElement>) -> Unit) = synchronized(lock) {
+        val envelope = envelope(); val before = decode(envelope)
         val state = envelope.getValue("state").jsonObject.toMutableMap(); mutate(state)
         val updated = JsonObject(envelope + ("state" to JsonObject(state)))
-        decode(updated)
+        val after = decode(updated)
+        policyLedger?.commit(before.binding ?: policyBinding!!(), before.schedules, after.schedules, policyID)
         try { write(updated.toString()) } catch (failure: Exception) { writeFailed = true; throw failure }
     }
     fun bind(binding: Binding) = change { it["nativeWalletBinding"] = json.encodeToJsonElement(binding); it["serverSyncPending"] = JsonPrimitive(true) }
-    fun upsert(schedule: RecurringPayment) = change { state ->
+    fun upsert(schedule: RecurringPayment) = change(if (schedule.unsupportedStorage) null else schedule.id) { state ->
         val schedules = state.getValue("schedules").jsonObject.toMutableMap()
         val previous = (schedules[schedule.id] as? JsonObject).orEmpty()
         schedules[schedule.id] = if (schedule.unsupportedStorage) {
@@ -75,7 +88,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     fun updateIf(expected: RecurringPayment, replacement: RecurringPayment): Boolean = synchronized(lock) {
         if (load().schedules[expected.id] != expected) false else { upsert(replacement); true }
     }
-    fun remove(id: String) = change { it["schedules"] = JsonObject(it.getValue("schedules").jsonObject - id); it["serverSyncPending"] = JsonPrimitive(true) }
+    fun remove(id: String) = change(id) { it["schedules"] = JsonObject(it.getValue("schedules").jsonObject - id); it["serverSyncPending"] = JsonPrimitive(true) }
     fun setPending(value: Boolean) = change { it["serverSyncPending"] = JsonPrimitive(value) }
     fun protectLegacyBeforeReplacement() = synchronized(lock) {
         val state = load()

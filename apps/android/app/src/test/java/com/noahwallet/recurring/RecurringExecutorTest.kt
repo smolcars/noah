@@ -22,7 +22,8 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
     var journalRaw: String? = null
     var journalFails = false; var mmkvFails = false; var auditFails = false
     var quarantineRaw: ByteArray? = null
-    val journal = RecurringJournal(File("unused"), { beforeJournalRead(); journalRaw }, { beforeJournalWrite(it); if (journalFails) error("journal"); journalRaw = it },
+    val policyDirectory = java.nio.file.Files.createTempDirectory("noah-policy-db76c70d-").toFile().also { it.deleteOnExit() }
+    val journal = RecurringJournal(File(policyDirectory, "journal.json"), { beforeJournalRead(); journalRaw }, { beforeJournalWrite(it); if (journalFails) error("journal"); journalRaw = it },
         quarantine = { if (quarantineRaw == null) quarantineRaw = it })
     init { wallet.owner = SendIdentity("wallet-a", "regtest"); wallet.snapshot = SendSnapshot(walletIdentity = wallet.owner) }
     val sendJournal = TestJournal()
@@ -34,6 +35,7 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
     var beforeQuote: suspend () -> Unit = {}; var sync: suspend () -> Unit = {}; var syncCalls = 0
     val notifications = mutableListOf<RecurringPayment>()
     var audits = 0
+    init { store.protectPolicies(File("${journal.file.path}.policies"), sync = { it.listFiles()?.forEach(File::deleteOnExit) }) { binding } }
     val executor = RecurringExecutor(RecurringExecutor.Dependencies(store, journal, controller,
         ensureOpen = {}, binding = { beforeBinding(); binding }, allowed = { check(allowed) },
         quote = { s -> quotes++; beforeQuote(); SendPayment(s.destination, method, s.amountSat) to SendQuote(s.amountSat, fee, s.amountSat + fee, walletIdentity = binding.wallet, lightningFeeSchedule = feeSchedule) },
@@ -58,6 +60,46 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
 }
 
 class RecurringExecutorTest {
+    @Test fun unpaidPauseRollbackCannotPay() = unpaidPolicyRollback("pause")
+    @Test fun unpaidCancelRollbackCannotPay() = unpaidPolicyRollback("cancel")
+    @Test fun unpaidEditRollbackCannotPayOldPolicy() = unpaidPolicyRollback("edit")
+    private fun unpaidPolicyRollback(action: String) = runBlocking {
+        val w = RecurringWorld(this); val original = w.add()
+        w.executor.timeChanged() // First native load without submitting money.
+        val active = w.raw
+        when (action) {
+            "pause" -> w.executor.pause("rent")
+            "cancel" -> w.executor.cancel("rent")
+            else -> w.executor.save(original.copy(amountSat = 500, destination = "new-recipient"), editing = true)
+        }
+        w.raw = active // CRC recovery returns the older, still-unpaid active policy.
+        w.executor.execute(); w.executor.execute(manual = true)
+        assertEquals(action, 0, w.wallet.calls)
+        assertEquals(action, "needs_attention", w.schedule!!.status)
+        assertTrue(action, w.journal.load().isEmpty())
+    }
+
+    @Test fun rollbackDuringFinalPreparationCannotBypassDurablePause() = runBlocking {
+        val w = RecurringWorld(this); w.add()
+        w.wallet.prepareBlock = {
+            val markedActive = w.raw
+            w.executor.pause("rent")
+            w.raw = markedActive
+            w.wallet.snapshot
+        }
+        w.executor.execute()
+        assertEquals(0, w.wallet.calls)
+        assertEquals("needs_attention", w.schedule!!.status)
+    }
+    @Test fun resumeSkipSurvivesRollbackToOriginalActivePolicy() = runBlocking {
+        val w = RecurringWorld(this); w.add(); val active = w.raw
+        w.executor.pause("rent"); w.executor.resume("rent")
+        w.raw = active
+        w.executor.execute(manual = true)
+        assertEquals(0, w.wallet.calls)
+        assertEquals("needs_attention", w.schedule!!.status)
+    }
+
     @Test fun recoveredMMKVRollbackWaitsForHealthyStorageAndCannotPayTwice() = runBlocking {
         val w = RecurringWorld(this); w.add(); val lastConfirmed = w.raw
         w.executor.execute(); assertEquals(1, w.wallet.calls)
@@ -234,10 +276,10 @@ class RecurringExecutorTest {
         w.executor.execute()
         assertEquals("Paid monthly index must never be submitted again", 1, w.wallet.calls)
         assertEquals("needs_attention", w.schedule!!.status)
-        assertEquals(RecurringJournal.legacyMessage, w.schedule!!.lastError)
+        assertEquals(RecurringPolicyLedger.message, w.schedule!!.lastError)
         assertTrue(runCatching { w.executor.overrideAndResume(a.id, true) }.isFailure)
         assertTrue(runCatching { w.executor.resume(a.id) }.isFailure)
-        w.store.upsert(a.copy(nativeRevision = UUID.randomUUID().toString()))
+        assertTrue(runCatching { w.store.upsert(a.copy(nativeRevision = UUID.randomUUID().toString())) }.isFailure)
         w.executor.execute(); assertEquals(1, w.wallet.calls); assertEquals("needs_attention", w.schedule!!.status)
         w.executor.cancel(a.id)
         val fresh = a.copy(id = UUID.randomUUID().toString(), startAt = w.now + 1000, nextOccurrenceIndex = 0, nextRunAt = w.now + 1000)
@@ -288,7 +330,7 @@ class RecurringExecutorTest {
             assertEquals(malformed, w.journalRaw)
             assertArrayEquals(malformed.toByteArray(), w.quarantineRaw)
             assertEquals("needs_attention", w.schedule!!.status)
-            assertEquals(RecurringJournal.invalidMessage, w.schedule!!.lastError)
+            assertEquals(RecurringPolicyLedger.message, w.schedule!!.lastError)
             assertEquals("needs_attention", w.executor.schedules.single().status)
             assertTrue(runCatching { w.executor.overrideAndResume(original.id, true) }.isFailure)
             assertEquals(0, w.audits)

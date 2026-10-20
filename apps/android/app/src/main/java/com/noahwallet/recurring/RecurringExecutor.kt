@@ -18,6 +18,7 @@ class RecurringExecutor(private val d: Dependencies,
         val notify: (List<RecurringPayment>, RecurringPayment?) -> Unit = { _, _ -> },
         val audit: (RecurringPayment, RecurringJournal.Entry?, String, String) -> Unit = { _, _, _, _ -> error("Audit unavailable") },
         val refresh: suspend () -> Unit = {})
+    init { d.store.protectPolicies(java.io.File("${d.journal.file.path}.policies"), binding = d.binding) }
     data class Review(val schedule: RecurringPayment, val plan: RecurringPayment.Plan, val payment: SendPayment, val quote: SendQuote)
     var schedules by mutableStateOf<List<RecurringPayment>>(emptyList()); private set
     var error by mutableStateOf<String?>(null); private set
@@ -50,12 +51,12 @@ class RecurringExecutor(private val d: Dependencies,
     private suspend fun recoverMarkers(state: RecurringStore.State) = storage {
         val entries = try { d.journal.load() } catch (failure: Exception) {
             // Corrupt shared evidence cannot prove any policy in this wallet is safe.
-            for (schedule in state.schedules.values) {
+            for (schedule in state.schedules.values.filter { it.lastError != RecurringPolicyLedger.message }) {
                 d.store.updateIf(schedule, schedule.copy(status = "needs_attention", lastError = RecurringJournal.invalidMessage))
             }
             throw failure
         }
-        for (schedule in state.schedules.values) {
+        for (schedule in state.schedules.values.filter { it.lastError != RecurringPolicyLedger.message }) {
             val planning = if (schedule.status == "needs_approval") schedule.copy(status = "active") else schedule
             val plan = planning.plan(d.now(), d.zone(), true)
             val legacyUncertain = d.journal.legacyUncertain(state.binding!!, schedule.id)
@@ -254,7 +255,7 @@ class RecurringExecutor(private val d: Dependencies,
         check(!d.journal.legacyUncertain(d.binding(), id)) { RecurringJournal.legacyMessage }
     }
     private suspend fun refreshDates() = storage {
-        for (schedule in boundStateNow().schedules.values.filter { it.status != "completed" && !it.unsupportedStorage }) {
+        for (schedule in boundStateNow().schedules.values.filter { it.status != "completed" && !it.unsupportedStorage && it.lastError != RecurringPolicyLedger.message }) {
             val next = schedule.next(schedule.nextOccurrenceIndex, d.zone())
             if (next != schedule.nextRunAt) d.store.updateIf(schedule, schedule.copy(nextRunAt = next))
         }
