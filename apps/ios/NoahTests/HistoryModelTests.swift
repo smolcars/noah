@@ -18,7 +18,7 @@ struct HistoryModelTests {
         var dependencies = dependencies([])
         dependencies.load = { try await session.transactionHistory() }
         let model = HistoryModel(dependencies: dependencies)
-        await model.refresh(currency: "USD")
+        await model.refresh(currency: "USD"); await model.awaitEnrichment()
         #expect(model.transactions.isEmpty)
         #expect(model.error != nil)
         #expect(!model.isLoading && !model.isRefreshing)
@@ -33,7 +33,7 @@ struct HistoryModelTests {
             return 85000
         }
         let model = HistoryModel(dependencies: dependencies)
-        await model.refresh(currency: "EUR")
+        await model.refresh(currency: "EUR"); await model.awaitEnrichment()
         #expect(model.transactions.first?.btcPrice == 85000)
     }
 
@@ -42,7 +42,7 @@ struct HistoryModelTests {
         var dependencies = dependencies([transaction()])
         dependencies.price = { _, _ in throw Offline() }
         let model = HistoryModel(dependencies: dependencies)
-        await model.refresh(currency: "USD")
+        await model.refresh(currency: "USD"); await model.awaitEnrichment()
         #expect(model.transactions.count == 1)
         #expect(model.transactions.first?.btcPrice == nil)
         #expect(model.error == nil)
@@ -58,9 +58,9 @@ struct HistoryModelTests {
         dependencies.price = { _, _ in nil }
         dependencies.currentPrice = { _ in await quotes.next() }
         let model = HistoryModel(dependencies: dependencies)
-        await model.refresh(currency: "USD")
+        await model.refresh(currency: "USD"); await model.awaitEnrichment()
         #expect(model.transactions.first?.btcPrice == 100000)
-        await model.refresh(currency: "USD")
+        await model.refresh(currency: "USD"); await model.awaitEnrichment()
         #expect(model.transactions.first?.btcPrice == 200000)
     }
 
@@ -75,9 +75,9 @@ struct HistoryModelTests {
         var dependencies = dependencies([transaction(), later])
         dependencies.price = { _, _ in await quotes.next() }
         let model = HistoryModel(dependencies: dependencies)
-        await model.refresh(currency: "USD")
+        await model.refresh(currency: "USD"); await model.awaitEnrichment()
         #expect(await quotes.count == 1)
-        await model.refresh(currency: "EUR")
+        await model.refresh(currency: "EUR"); await model.awaitEnrichment()
         #expect(await quotes.count == 2)
     }
 
@@ -98,6 +98,7 @@ struct HistoryModelTests {
         #expect(model.transactions.count == 1) // wallet data is visible before price fetch
         await model.refresh(currency: "EUR")
         await gate.finish()
+        await model.awaitEnrichment()
         await old.value
         #expect(model.transactions.first?.btcPrice == 85000)
     }
@@ -121,6 +122,49 @@ struct HistoryModelTests {
         observation.cancel()
         await observation.value
         #expect(model.transactions.count == 1)
+    }
+
+    @Test func stalledQuotesDoNotBlockSettledWalletEventsAndPublishIncrementally() async {
+        actor Probe {
+            var reads = 0
+            var active = 0
+            var canceled = 0
+            func load(_ rows: [HistoryTransaction]) -> [HistoryTransaction] {
+                reads += 1
+                var rows = rows
+                rows[0].movementStatus = reads == 1 ? "pending" : "successful"
+                return rows
+            }
+            func quote(_ timestamp: Int64) async throws -> Double? {
+                if timestamp == 1784116800 { return 100000 }
+                active += 1
+                #expect(active == 1)
+                defer { active -= 1; canceled += 1 }
+                try await Task.sleep(for: .seconds(60))
+                return nil
+            }
+        }
+        let probe = Probe()
+        var older = transaction("older")
+        older.date = "2026-07-14T12:00:00.000Z"
+        let rows = [transaction(), older]
+        let (stream, continuation) = AsyncThrowingStream<String, Error>.makeStream()
+        var dependencies = dependencies(rows)
+        dependencies.changes = { stream }
+        dependencies.load = { await probe.load(rows) }
+        dependencies.price = { timestamp, _ in try await probe.quote(timestamp) }
+        let model = HistoryModel(dependencies: dependencies)
+        let observation = Task { await model.observe(currency: "USD") }
+        while await probe.active == 0 { await Task.yield() }
+        #expect(!model.isRefreshing && model.transactions.first?.btcPrice == 100000)
+        continuation.yield("databaseChanged")
+        while model.transactions.first?.movementStatus != "successful" { await Task.yield() }
+        #expect(!model.isRefreshing)
+        observation.cancel()
+        await observation.value
+        await model.awaitEnrichment()
+        #expect(await probe.active == 0)
+        #expect(await probe.canceled >= 1)
     }
 
     @Test func csvUsesFilteredSignedAccountingAndEscapesFields() {

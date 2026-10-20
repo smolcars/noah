@@ -18,7 +18,7 @@ class HistoryModelTest {
         for (failure in listOf(WalletSession.SessionError(), AppServices.WalletSuspended())) {
             var closed = false
             val model = HistoryModel(dependencies().copy(load = { if (closed) throw failure else listOf(row()) }))
-            model.refresh("USD"); closed = true; model.refresh("USD")
+            model.refresh("USD"); model.awaitEnrichment(); closed = true; model.refresh("USD")
             assertTrue(model.transactions.isEmpty()); assertNotNull(model.error)
             assertFalse(model.isLoading); assertFalse(model.isRefreshing)
         }
@@ -27,24 +27,24 @@ class HistoryModelTest {
         val model = HistoryModel(dependencies().copy(price = { timestamp, currency ->
             assertEquals(1784116800, timestamp); assertEquals("EUR", currency); 85000.0
         }))
-        model.refresh("EUR"); assertEquals(85000.0, model.transactions.single().btcPrice)
+        model.refresh("EUR"); model.awaitEnrichment(); assertEquals(85000.0, model.transactions.single().btcPrice)
     }
     @Test fun missingMarketDataKeepsPayments() = runBlocking {
         val model = HistoryModel(dependencies().copy(price = { _, _ -> error("offline") }))
-        model.refresh("USD"); assertEquals(1, model.transactions.size); assertNull(model.transactions.single().btcPrice); assertNull(model.error)
+        model.refresh("USD"); model.awaitEnrichment(); assertEquals(1, model.transactions.size); assertNull(model.transactions.single().btcPrice); assertNull(model.error)
     }
     @Test fun missingHistoricalRateUsesUncachedCurrentRate() = runBlocking {
         var calls = 0
         val model = HistoryModel(dependencies().copy(price = { _, _ -> null }, currentPrice = { ++calls * 100000.0 }))
-        model.refresh("USD"); assertEquals(100000.0, model.transactions.single().btcPrice)
-        model.refresh("USD"); assertEquals(200000.0, model.transactions.single().btcPrice)
+        model.refresh("USD"); model.awaitEnrichment(); assertEquals(100000.0, model.transactions.single().btcPrice)
+        model.refresh("USD"); model.awaitEnrichment(); assertEquals(200000.0, model.transactions.single().btcPrice)
     }
     @Test fun quotesAreCachedByDayAndCurrency() = runBlocking {
         var calls = 0
         val model = HistoryModel(dependencies(listOf(row(), row("movement-2").copy(date = "2026-07-15T13:00:00.000Z")))
             .copy(price = { _, _ -> calls++; 100000.0 }))
-        model.refresh("USD"); assertEquals(1, calls)
-        model.refresh("EUR"); assertEquals(2, calls)
+        model.refresh("USD"); model.awaitEnrichment(); assertEquals(1, calls)
+        model.refresh("EUR"); model.awaitEnrichment(); assertEquals(2, calls)
     }
     @Test fun staleEnrichmentCannotOverwriteNewRefresh() = runBlocking {
         val started = CompletableDeferred<Unit>(); val finish = CompletableDeferred<Double>()
@@ -53,7 +53,7 @@ class HistoryModelTest {
         }))
         val old = launch { model.refresh("USD") }; started.await()
         assertEquals(1, model.transactions.size)
-        model.refresh("EUR"); finish.complete(100000.0); old.join()
+        model.refresh("EUR"); model.awaitEnrichment(); finish.complete(100000.0); old.join()
         assertEquals(85000.0, model.transactions.single().btcPrice)
     }
     @Test fun observerSubscribesBeforeReadAndStopsOnCancellation() = runBlocking {
@@ -84,7 +84,7 @@ class HistoryModelTest {
             dateLabel = "Confirmed at block 2", confirmationHeight = 2u, hasOnchainFee = true, onchainFeeSat = 42)
         var blocks = 0
         val model = HistoryModel(dependencies(listOf(movement, chain)).copy(blockTime = { blocks++; Date(1784116800000) }))
-        model.refresh("USD"); model.refresh("USD")
+        model.refresh("USD"); model.awaitEnrichment(); model.refresh("USD"); model.awaitEnrichment()
         assertEquals(1, blocks); assertEquals(1, model.transactions.size)
         assertEquals(100000.0, model.transactions.single().btcPrice)
         assertEquals(42L, model.transactions.single().onchainFeeSat)
@@ -95,6 +95,33 @@ class HistoryModelTest {
         val job = launch { model.refresh("USD") }; started.await(); job.cancelAndJoin()
         assertFalse(model.isRefreshing); assertEquals(1, model.transactions.size); assertNull(model.error)
     }
+    @Test fun stalledPricesDoNotBlockWalletEventsOrRefreshAndPublishIncrementally() = runBlocking {
+        val events = Channel<String>(Channel.UNLIMITED)
+        val started = Channel<Unit>(Channel.UNLIMITED)
+        var settled = false
+        var canceled = 0
+        var active = 0
+        val model = HistoryModel(dependencies().copy(
+            changes = { events.receiveAsFlow() },
+            load = { listOf(row().copy(movementStatus = if (settled) "successful" else "pending"),
+                row("old").copy(date = "2026-07-14T12:00:00.000Z")) },
+            price = { timestamp, _ ->
+                if (timestamp == 1784116800L) 100000.0 else {
+                    active++; assertEquals(1, active); started.send(Unit)
+                    try { awaitCancellation() } finally { active--; canceled++ }
+                }
+            }))
+        val observation = launch { model.observe("USD") }
+        withTimeout(2000) {
+            started.receive()
+            assertFalse(model.isRefreshing); assertEquals(100000.0, model.transactions.first().btcPrice)
+            settled = true; events.send("databaseChanged"); started.receive()
+            assertEquals("successful", model.transactions.first().movementStatus)
+            assertFalse(model.isRefreshing); assertTrue(canceled >= 1)
+        }
+        observation.cancelAndJoin(); assertEquals(0, active)
+    }
+
     @Test fun filteredCSVUsesSignedAccountingAndEscapesFields() {
         val outgoing = row().copy(direction = "outgoing", destination = "a,\"b\"\nc")
         val canceled = row("movement-2").copy(type = "Onchain", movementKind = "exit", movementStatus = "canceled")

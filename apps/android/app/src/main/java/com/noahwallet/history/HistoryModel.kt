@@ -12,6 +12,8 @@ import io.ktor.client.HttpClient
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -36,14 +38,25 @@ class HistoryModel(private val dependencies: Dependencies) {
                     changes = { flow { available(); emitAll(session.stateChanges().map { it.reason }) } },
                     blockTime = { txid ->
                         WalletConfiguration.base(variant).esplora?.let { base ->
-                            withContext(Dispatchers.IO) {
-                                // Esplora has no wallet authentication; never reuse the authenticated server client.
+                            suspendCancellableCoroutine { continuation ->
+                                // Esplora has no wallet authentication; cancellation aborts the network request.
                                 val request = Request.Builder().url(base.trimEnd('/') + "/tx/" + java.net.URLEncoder.encode(txid, "UTF-8")).build()
-                                explorer.newCall(request).execute().use { response ->
-                                    val status = if (response.isSuccessful) Json.parseToJsonElement(response.body.string()).jsonObject["status"] as? JsonObject else null
-                                    if ((status?.get("confirmed") as? JsonPrimitive)?.booleanOrNull == true)
-                                        (status["block_time"] as? JsonPrimitive)?.longOrNull?.let { Date(it * 1000) } else null
-                                }
+                                val call = explorer.newCall(request)
+                                continuation.invokeOnCancellation { call.cancel() }
+                                call.enqueue(object : okhttp3.Callback {
+                                    override fun onFailure(call: okhttp3.Call, failure: java.io.IOException) {
+                                        continuation.resumeWith(Result.failure(failure))
+                                    }
+                                    override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                                        continuation.resumeWith(runCatching {
+                                            response.use {
+                                                val status = if (it.isSuccessful) Json.parseToJsonElement(it.body.string()).jsonObject["status"] as? JsonObject else null
+                                                if ((status?.get("confirmed") as? JsonPrimitive)?.booleanOrNull == true)
+                                                    (status["block_time"] as? JsonPrimitive)?.longOrNull?.let { time -> Date(time * 1000) } else null
+                                            }
+                                        })
+                                    }
+                                })
                             }
                         }
                     },
@@ -62,6 +75,10 @@ class HistoryModel(private val dependencies: Dependencies) {
     private val blockTimes = mutableMapOf<String, Date>()
     private val prices = linkedMapOf<String, Double>()
     private var generation = 0L
+    private var enrichment: Job? = null
+    private val enrichmentLock = Mutex()
+
+    internal suspend fun awaitEnrichment() { enrichment?.join() }
 
     suspend fun observe(currency: String) {
         try {
@@ -86,6 +103,7 @@ class HistoryModel(private val dependencies: Dependencies) {
             refresh(currency)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { refresh(currency) }
+        finally { enrichment?.cancel() }
     }
 
     private suspend fun <T> optional(body: suspend () -> T): T? = try { body() }
@@ -94,39 +112,18 @@ class HistoryModel(private val dependencies: Dependencies) {
 
     suspend fun refresh(currency: String, sync: Boolean = false) {
         val request = ++generation
+        enrichment?.cancel()
         isRefreshing = true
         try {
             if (sync) dependencies.sync()
-            var latest = dependencies.load()
+            val latest = dependencies.load()
             currentCoroutineContext().ensureActive()
             if (request != generation) return
             transactions = HistoryRules.unified(latest); isLoading = false; error = null
-            latest = latest.map { original ->
-                currentCoroutineContext().ensureActive()
-                if (request != generation) return
-                var row = original
-                if (row.source == "onchain-wallet" && row.hasConfirmation == true && row.txid != null) {
-                    val txid = row.txid
-                    val time = blockTimes[txid] ?: optional { dependencies.blockTime(txid) }
-                    if (time != null) {
-                        blockTimes[txid] = time
-                        row = row.copy(date = HistoryRules.isoDate(time), dateLabel = null, sortTimestamp = time.time.toDouble())
-                    }
-                }
-                val date = row.timestamp
-                if (date != null && date.time > 0) {
-                    val key = "$currency:${row.date.take(10)}"
-                    val price = prices[key] ?: optional { dependencies.price(date.time / 1000, currency) }.validRate()
-                    if (price != null) {
-                        prices[key] = price
-                        if (prices.size > 200) prices.remove(prices.keys.first())
-                        row = row.copy(btcPrice = price)
-                    } else row = row.copy(btcPrice = optional { dependencies.currentPrice(currency) }.validRate())
-                }
-                row
+            // One worker bounds optional requests; it never blocks the wallet event consumer.
+            enrichment = CoroutineScope(currentCoroutineContext()).launch {
+                enrichmentLock.withLock { enrich(latest, currency, request) }
             }
-            currentCoroutineContext().ensureActive()
-            if (request == generation) transactions = HistoryRules.unified(latest)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) {
             if (request != generation) return
@@ -139,5 +136,42 @@ class HistoryModel(private val dependencies: Dependencies) {
                 dependencies.warn("History read failed")
             }
         } finally { if (request == generation) { isRefreshing = false; isLoading = false } }
+    }
+
+    private suspend fun enrich(rows: List<HistoryTransaction>, currency: String, request: Long) {
+        val latest = rows.toMutableList()
+        for (index in latest.indices) {
+            currentCoroutineContext().ensureActive()
+            if (request != generation) return
+            var row = latest[index]
+            if (row.source == "onchain-wallet" && row.hasConfirmation == true && row.txid != null) {
+                val txid = row.txid
+                val time = blockTimes[txid] ?: optional { dependencies.blockTime(txid) }
+                currentCoroutineContext().ensureActive()
+                if (request != generation) return
+                if (time != null) {
+                    blockTimes[txid] = time
+                    row = row.copy(date = HistoryRules.isoDate(time), dateLabel = null, sortTimestamp = time.time.toDouble())
+                    latest[index] = row
+                    transactions = HistoryRules.unified(latest)
+                }
+            }
+            val date = row.timestamp
+            if (date != null && date.time > 0) {
+                val key = "$currency:${row.date.take(10)}"
+                val price = prices[key] ?: optional { dependencies.price(date.time / 1000, currency) }.validRate()
+                currentCoroutineContext().ensureActive()
+                if (request != generation) return
+                if (price != null) {
+                    prices[key] = price
+                    if (prices.size > 200) prices.remove(prices.keys.first())
+                    row = row.copy(btcPrice = price)
+                } else row = row.copy(btcPrice = optional { dependencies.currentPrice(currency) }.validRate())
+            }
+            currentCoroutineContext().ensureActive()
+            if (request != generation) return
+            latest[index] = row
+            transactions = HistoryRules.unified(latest)
+        }
     }
 }

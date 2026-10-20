@@ -64,6 +64,9 @@ final class HistoryModel {
     private var prices: [String: Double] = [:]
     private var priceKeys: [String] = []
     private var generation = UUID()
+    private var enrichment: Task<Void, Never>?
+
+    func awaitEnrichment() async { await enrichment?.value }
     private let log = AppLog("history")
 
     init(dependencies: Dependencies) { self.dependencies = dependencies }
@@ -71,6 +74,7 @@ final class HistoryModel {
     /// The view owns this task's lifetime. Subscribe before the initial read;
     /// the session's initial event covers commits that race with mounting.
     func observe(currency: String) async {
+        defer { enrichment?.cancel() }
         do {
             var resubscribe = true
             while resubscribe && !Task.isCancelled {
@@ -98,51 +102,25 @@ final class HistoryModel {
     func refresh(currency: String, sync: Bool = false) async {
         let generation = UUID()
         self.generation = generation
+        let previous = enrichment
+        previous?.cancel()
         isRefreshing = true
         defer {
             if self.generation == generation { isRefreshing = false; isLoading = false }
         }
         do {
             if sync { try await dependencies.sync() }
-            var latest = try await dependencies.load()
+            let latest = try await dependencies.load()
             guard self.generation == generation, !Task.isCancelled else { return }
             // Publish wallet data before optional network enrichment finishes.
             transactions = Self.unified(latest)
             isLoading = false
             error = nil
-            for index in latest.indices {
-                if Task.isCancelled || self.generation != generation { return }
-                if latest[index].source == "onchain-wallet", latest[index].hasConfirmation == true,
-                   let txid = latest[index].txid {
-                    let time: Date?
-                    if let cached = blockTimes[txid] { time = cached }
-                    else { time = try? await dependencies.blockTime(txid) }
-                    if let time {
-                        blockTimes[txid] = time
-                        latest[index].date = HistoryRules.isoDate(time)
-                        latest[index].dateLabel = nil
-                        latest[index].sortTimestamp = time.timeIntervalSince1970 * 1000
-                    }
-                }
-                if let date = latest[index].timestamp, date.timeIntervalSince1970 > 0 {
-                    let seconds = Int64(date.timeIntervalSince1970)
-                    let key = "\(currency):\(latest[index].date.prefix(10))"
-                    let price: Double?
-                    if let cached = prices[key] { price = cached }
-                    else { price = try? await dependencies.price(seconds, currency) }
-                    if let price {
-                        if prices[key] == nil { priceKeys.append(key) }
-                        prices[key] = price
-                        if priceKeys.count > 200 { prices.removeValue(forKey: priceKeys.removeFirst()) }
-                        latest[index].btcPrice = price
-                    } else {
-                        // RN falls back to today's quote, without caching it as historical.
-                        latest[index].btcPrice = try? await dependencies.currentPrice(currency)
-                    }
-                }
+            // One worker bounds optional requests without holding up wallet observation.
+            enrichment = Task {
+                await previous?.value
+                await self.enrich(latest, currency: currency, generation: generation)
             }
-            guard self.generation == generation, !Task.isCancelled else { return }
-            transactions = Self.unified(latest)
         } catch {
             guard self.generation == generation, !Task.isCancelled else { return }
             if error is WalletSession.SessionError {
@@ -153,6 +131,46 @@ final class HistoryModel {
                 // Native errors can contain destinations or full transaction IDs.
                 log.w("History read failed")
             }
+        }
+    }
+
+    private func enrich(_ rows: [HistoryTransaction], currency: String, generation: UUID) async {
+        var latest = rows
+        for index in latest.indices {
+            if Task.isCancelled || self.generation != generation { return }
+            if latest[index].source == "onchain-wallet", latest[index].hasConfirmation == true,
+               let txid = latest[index].txid {
+                let time: Date?
+                if let cached = blockTimes[txid] { time = cached }
+                else { time = try? await dependencies.blockTime(txid) }
+                guard !Task.isCancelled, self.generation == generation else { return }
+                if let time {
+                    blockTimes[txid] = time
+                    latest[index].date = HistoryRules.isoDate(time)
+                    latest[index].dateLabel = nil
+                    latest[index].sortTimestamp = time.timeIntervalSince1970 * 1000
+                    transactions = Self.unified(latest)
+                }
+            }
+            if let date = latest[index].timestamp, date.timeIntervalSince1970 > 0 {
+                let seconds = Int64(date.timeIntervalSince1970)
+                let key = "\(currency):\(latest[index].date.prefix(10))"
+                let price: Double?
+                if let cached = prices[key] { price = cached }
+                else { price = try? await dependencies.price(seconds, currency) }
+                guard !Task.isCancelled, self.generation == generation else { return }
+                if let price, price.isFinite, price > 0 {
+                    if prices[key] == nil { priceKeys.append(key) }
+                    prices[key] = price
+                    if priceKeys.count > 200 { prices.removeValue(forKey: priceKeys.removeFirst()) }
+                    latest[index].btcPrice = price
+                } else {
+                    // RN falls back to today's quote, without caching it as historical.
+                    latest[index].btcPrice = try? await dependencies.currentPrice(currency)
+                }
+            }
+            guard !Task.isCancelled, self.generation == generation else { return }
+            transactions = Self.unified(latest)
         }
     }
 }

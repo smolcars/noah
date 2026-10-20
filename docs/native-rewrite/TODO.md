@@ -185,6 +185,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 - [x] History review: fractional/offset dates, transitive deterministic ordering under partial block-time enrichment, and CSV formula neutralization — both platforms; shared `history-regressions` fixtures
 
+- [x] Optional History enrichment runs in a cancellable, single-worker job, publishes incrementally, and leaves wallet observation / Refresh / Export responsive — both platforms
+
 ## M5 — Settings & recovery
 - [x] SettingsScreen (biometrics, auto-board preference, mailbox, version/debug unlock) — iOS
 - [x] Suspend/resume, delete wallet (files before seed, under a reservation; refused while a restore is pending), re-register: model layer + suspended Home — iOS
