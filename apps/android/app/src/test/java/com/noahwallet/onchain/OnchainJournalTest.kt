@@ -197,6 +197,67 @@ class OnchainJournalTest {
             else assertNull(receipt)
         }
     }
+    @Test fun exactLocalBoardEvidenceRecoversLostReceiptDespiteStatusLookupError() = runBlocking {
+        for (source in listOf("pending", "movement", "bdk", "unrelated", "missing")) fixture { file, journal ->
+            val quote = quote().copy(chainFee = 199, preparedBoard = BoardPrepared("local", "exact", 199, listOf(BoardInput("input", 0u))))
+            runCatching { journal.perform(quote) { record -> record("exact"); error("process died after submit") } }
+            val reopened = journal(file)
+            assertEquals("exact", reopened.loadAll().single().txid)
+            assertNull(reopened.loadAll().single().receipt)
+            var offline = true
+            val trace = mutableListOf<String>()
+            val reads = object : OnchainAttemptReads {
+                override val walletID = "wallet"
+                override suspend fun transactionStatus(txid: String): ChainStatus {
+                    trace.add("status:$txid")
+                    if (offline) error("network unavailable")
+                    return ChainStatus(ChainStatus.Kind.notFound)
+                }
+                override suspend fun transactionIDs(): Set<String> {
+                    trace.add("bdk")
+                    return if (source == "bdk") setOf("exact") else setOf("unrelated")
+                }
+                override suspend fun boardTransactionIDs(): Set<String> {
+                    trace.add("boards")
+                    return when (source) {
+                        "pending", "movement" -> setOf("exact")
+                        "unrelated" -> setOf("other-board-with-same-amount")
+                        else -> emptySet()
+                    }
+                }
+                override suspend fun vtxoState(id: String): String = error("No item reads for boards")
+                override suspend fun exitState(id: String): String? = error("No item reads for boards")
+            }
+            val result = runCatching { checkOnchainAttempt(quote.id, reopened, reads) }
+            assertEquals(listOf("status:exact", "bdk", "boards"), trace)
+            val expected = source in listOf("pending", "movement", "bdk")
+            val saved = journal(file).loadAll().single()
+            if (expected) {
+                assertEquals(true, result.getOrThrow())
+                val receipt = saved.receipt!!
+                assertEquals("exact", receipt.txid); assertEquals(199L, receipt.onchainFee)
+                assertNull(receipt.chainStatus); assertEquals(ChainStatus.errorText, receipt.statusError)
+                assertTrue(receipt.broadcastRetryPending)
+                assertTrue(runCatching { journal(file).acknowledge(quote.id) }.isFailure)
+                offline = false
+                assertTrue(checkOnchainAttempt(quote.id, reopened, reads))
+                val refreshed = journal(file).loadAll().single().receipt!!
+                assertNull(refreshed.statusError)
+                assertEquals(ChainStatus.Kind.notFound, refreshed.chainStatus!!.kind)
+                assertTrue(refreshed.broadcastRetryPending)
+            } else {
+                assertTrue(result.isFailure); assertNull(saved.receipt)
+                offline = false
+                assertFalse(checkOnchainAttempt(quote.id, reopened, reads))
+                assertNull(journal(file).loadAll().single().receipt)
+            }
+            assertTrue(saved.blocks(OnchainAction.board, emptyList()))
+            var submissions = 0
+            val duplicate = runCatching { reopened.perform(quote.copy(id = "new-attempt")) { submissions++; OnchainReceipt("duplicate") } }
+            assertEquals(OnchainFailure.busy, (duplicate.exceptionOrNull() as OnchainException).reason)
+            assertEquals(0, submissions)
+        }
+    }
     @Test fun failedBoardKeepsLockOnNotFoundAndMempoolAndTransportErrorsKeepLastKnownStatus() = runBlocking { fixture { _, journal ->
         val quote = quote().copy(chainFee = 199, preparedBoard = BoardPrepared("local", "exact", 199, emptyList()))
         journal.perform(quote) { record -> record("exact"); OnchainReceipt("Noah will keep retrying", "exact", 199, true) }
@@ -227,7 +288,7 @@ class OnchainJournalTest {
             override suspend fun exitState(id: String) = "Claimed"
         }
         assertTrue(checkOnchainAttempt(quote.id, journal, reads))
-        failure = true; assertTrue(runCatching { checkOnchainAttempt(quote.id, journal, reads) }.isFailure)
+        failure = true; assertTrue(checkOnchainAttempt(quote.id, journal, reads))
         assertEquals(201L, journal.loadAll().single().receipt!!.chainStatus!!.height)
         assertNotNull(journal.loadAll().single().receipt!!.statusError)
     } }

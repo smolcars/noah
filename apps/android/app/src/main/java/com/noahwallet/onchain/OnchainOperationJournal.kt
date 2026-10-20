@@ -6,6 +6,7 @@ import io.github.niteshbalusu11.bark.BarkError
 import io.github.niteshbalusu11.bark.BarkErrorCode
 import java.io.File
 import java.io.FileOutputStream
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
@@ -177,8 +178,10 @@ suspend fun checkOnchainAttempt(id: String, journal: OnchainOperationJournal, re
     val attempt = journal.loadAll().find { it.id == id } ?: fail(OnchainFailure.changed)
     if (attempt.quote.walletID != reads.walletID) fail(OnchainFailure.changed)
     val txid = attempt.receipt?.txid ?: attempt.txid
+    var lookupError: Exception? = null
     val status = try { txid?.let { reads.transactionStatus(it) } }
-        catch (error: Exception) { journal.refreshStatus(id, null, ChainStatus.errorText); throw error }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (error: Exception) { lookupError = error; null }
     val transactions = reads.transactionIDs()
     val boards = if (attempt.quote.action == OnchainAction.board && txid != null) reads.boardTransactionIDs() else emptySet()
     val vtxos = mutableMapOf<String, String>()
@@ -189,6 +192,8 @@ suspend fun checkOnchainAttempt(id: String, journal: OnchainOperationJournal, re
     }
     val resolved = journal.reconcile(id, OnchainOperationJournal.Evidence(reads.walletID, vtxos, exits, transactions,
         if (txid != null && status != null) mapOf(txid to status) else emptyMap(), boards))
-    journal.refreshStatus(id, status)
+    // Exact local evidence remains useful even when the optional chain source is unavailable.
+    journal.refreshStatus(id, status, if (lookupError != null) ChainStatus.errorText else null)
+    if (!resolved && attempt.receipt == null) lookupError?.let { throw it }
     return resolved || attempt.receipt != null
 }
