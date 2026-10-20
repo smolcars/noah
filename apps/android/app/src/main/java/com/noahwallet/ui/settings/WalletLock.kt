@@ -13,7 +13,11 @@ class BiometricLockPolicy(enabled: Boolean) {
     var enabled = enabled; private set
     var locked = enabled; private set
     var generation = 0; private set
-    fun background() { generation++; if (enabled) locked = true }
+    var confirmingCredential = false; private set
+    fun credentialStarted() { confirmingCredential = true }
+    fun credentialFinished() { confirmingCredential = false }
+    fun stopped() { if (!confirmingCredential) background() }
+    fun background() { confirmingCredential = false; generation++; if (enabled) locked = true }
     fun authenticated(generation: Int) { if (this.generation == generation) locked = false }
     fun setEnabled(value: Boolean) { enabled = value; locked = false }
 }
@@ -26,6 +30,12 @@ class WalletLock(private val settings: SettingsStorage) {
     var error by mutableStateOf<String?>(null); private set
     var generation by mutableIntStateOf(0); private set
     private var prompt: BiometricPrompt? = null
+
+    fun credentialStarted() { if (authenticating) policy.credentialStarted() }
+
+    fun stopped() {
+        if (!policy.confirmingCredential) background()
+    }
 
     fun background() {
         policy.background(); generation = policy.generation; locked = policy.locked
@@ -52,7 +62,7 @@ class WalletLock(private val settings: SettingsStorage) {
                     .setAllowedAuthenticators(authenticators).build())
             }
             (passed && started == generation).also { if (!it) error = "Authentication failed. Please try again." }
-        } finally { prompt = null; authenticating = false }
+        } finally { policy.credentialFinished(); prompt = null; authenticating = false }
     }
 
     suspend fun unlock(activity: FragmentActivity) {

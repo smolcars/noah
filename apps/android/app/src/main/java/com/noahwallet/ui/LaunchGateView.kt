@@ -44,10 +44,15 @@ fun LaunchGateView() {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP && !activity.isChangingConfigurations) model.walletLock.background()
+            if (event == Lifecycle.Event.ON_STOP && !activity.isChangingConfigurations) model.walletLock.stopped()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    androidx.compose.runtime.DisposableEffect(activity, model.walletLock.enabled) {
+        if (model.walletLock.enabled) activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        else activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose { }
     }
     var permissionRequested by rememberSaveable { mutableStateOf(false) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {

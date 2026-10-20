@@ -19,6 +19,24 @@ class SettingsFeaturesTest {
         policy.setEnabled(true); assertFalse(policy.locked)
         policy.background(); assertTrue(policy.locked)
     }
+    @Test fun credentialHopKeepsAuthenticationButRealBackgroundRejectsIt() {
+        val policy = BiometricLockPolicy(true)
+        val started = policy.generation
+        policy.credentialStarted(); policy.stopped()
+        assertEquals(started, policy.generation)
+        policy.credentialFinished(); policy.authenticated(started)
+        assertFalse(policy.locked)
+        policy.stopped(); assertTrue(policy.locked)
+        for (leaving in listOf("Home", "Recents", "screen off", "switch apps")) {
+            val request = policy.generation
+            policy.credentialStarted(); policy.stopped()
+            policy.background(); policy.credentialFinished(); policy.authenticated(request)
+            assertTrue(leaving, policy.locked)
+            assertFalse(policy.confirmingCredential)
+        }
+        policy.authenticated(policy.generation); assertFalse(policy.locked)
+    }
+
     @Test fun screenshotBoundedAndMimeChecked() {
         val png = byteArrayOf(0x89.toByte(), 0x50, 0x4e, 0x47, 13, 10, 26, 10).copyOf(FeedbackDraft.maximumScreenshotBytes)
         assertEquals("image/png", FeedbackDraft.imageType(png))
