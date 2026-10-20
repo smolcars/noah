@@ -154,6 +154,7 @@ class RecurringExecutor(private val d: Dependencies,
         val failed = outcome == SendController.State.failed
         if (!paid && !failed) { markUncertain(entry, message); return }
         // Consumption precedes advancing MMKV or releasing Send, so rollback can never replay it.
+        var policyFailure: Exception? = null
         val settled = storage {
             synchronized(RecurringStore.lock) {
                 if (d.binding() != entry.binding || d.store.load().binding != entry.binding) return@storage false
@@ -162,6 +163,7 @@ class RecurringExecutor(private val d: Dependencies,
                 if (saved.policyApplied) return@storage true
                 // Claim application with consumption: interruption may stop advancement, never repeat it.
                 d.journal.save(entry.copy(resolved = true, consumed = paid, policyApplied = true))
+                try {
                 val latest = d.store.load().schedules[entry.scheduleID]
                 if (latest != null && latest.nativeRevision == entry.policyRevision) {
                     val result = when {
@@ -176,10 +178,12 @@ class RecurringExecutor(private val d: Dependencies,
                     }
                     d.store.upsert(result); d.notify(emptyList(), result)
                 } else if (success && original.nativeRevision == entry.policyRevision) d.notify(emptyList(), original.copy(status = "active").success(entry.plan, d.now(), d.zone()))
+                } catch (failure: Exception) { policyFailure = failure }
             }
             true
         }
         if (settled && !retainReceipt) controller.acknowledge(attempt)
+        if (policyFailure != null) error = RecurringPolicyLedger.message
     }
     suspend fun checkStatus(id: String) {
         try {
