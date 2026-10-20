@@ -22,21 +22,17 @@ final class PushRegistration {
     func requestPermission() async -> Bool {
         let center = UNUserNotificationCenter.current()
         let settings = await center.notificationSettings()
-        switch settings.authorizationStatus {
-        case .authorized, .provisional, .ephemeral:
-            return true
-        case .notDetermined:
-            return (try? await center.requestAuthorization(options: [.alert, .badge, .sound])) ?? false
-        default:
-            return false
+        if settings.authorizationStatus != .authorized {
+            _ = try? await center.requestAuthorization(options: [.alert, .badge, .sound])
         }
+        return await center.notificationSettings().authorizationStatus == .authorized
     }
 
     func register(services: AppServices = .shared) async throws -> Outcome {
-        guard await requestPermission() else { return .permissionDenied }
         #if targetEnvironment(simulator)
             return .deviceNotSupported
         #else
+            guard await requestPermission() else { return .permissionDenied }
             let deviceToken = try await deviceToken()
             let request = ExpoPushToken.request(
                 installationID: try ExpoInstallationID.getOrCreate(),

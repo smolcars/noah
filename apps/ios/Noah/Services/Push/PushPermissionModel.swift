@@ -1,0 +1,67 @@
+import Observation
+import UserNotifications
+
+/// Expo's general permission status maps provisional/ephemeral to undetermined.
+/// RN gates only denied, and never gates a simulator or unfinished onboarding.
+@MainActor
+@Observable
+final class PushPermissionModel {
+    enum Status: String, Decodable, Sendable {
+        case checking, undetermined, denied, granted
+
+        init(_ status: UNAuthorizationStatus) {
+            switch status {
+            case .authorized: self = .granted
+            case .denied: self = .denied
+            default: self = .undetermined
+            }
+        }
+    }
+
+    struct Dependencies {
+        var isPhysicalDevice: Bool
+        var status: () async throws -> Status
+        var request: () async throws -> Void
+
+        static var live: Self {
+            #if targetEnvironment(simulator)
+                let physical = false
+            #else
+                let physical = true
+            #endif
+            return Self(
+                isPhysicalDevice: physical,
+                status: { Status(await UNUserNotificationCenter.current().notificationSettings().authorizationStatus) },
+                request: { _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) })
+        }
+    }
+
+    private(set) var status: Status = .checking
+    private(set) var isRequesting = false
+    private let dependencies: Dependencies
+    private var generation = 0
+
+    init(dependencies: Dependencies = .live) { self.dependencies = dependencies }
+
+    func blocksWallet(initialized: Bool) -> Bool {
+        initialized && dependencies.isPhysicalDevice && status == .denied
+    }
+
+    func refresh() async {
+        generation += 1
+        let current = generation
+        guard dependencies.isPhysicalDevice else { status = .checking; return }
+        if let value = try? await dependencies.status(), current == generation { status = value }
+    }
+
+    func retry(request: Bool) async {
+        guard !isRequesting else { return }
+        isRequesting = true
+        defer { isRequesting = false }
+        if request && dependencies.isPhysicalDevice {
+            do { try await dependencies.request() }
+            catch { return } // RN keeps the last permission state on request failure.
+        }
+        await refresh()
+    }
+}

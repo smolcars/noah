@@ -1,0 +1,244 @@
+{
+  "cases": [
+    {
+      "name": "false/false/checking",
+      "input": {
+        "initialized": false,
+        "physical": false,
+        "authorization": "checking",
+        "status": "checking"
+      },
+      "expected": false
+    },
+    {
+      "name": "false/false/notDetermined",
+      "input": {
+        "initialized": false,
+        "physical": false,
+        "authorization": "notDetermined",
+        "status": "undetermined"
+      },
+      "expected": false
+    },
+    {
+      "name": "false/false/denied",
+      "input": {
+        "initialized": false,
+        "physical": false,
+        "authorization": "denied",
+        "status": "denied"
+      },
+      "expected": false
+    },
+    {
+      "name": "false/false/authorized",
+      "input": {
+        "initialized": false,
+        "physical": false,
+        "authorization": "authorized",
+        "status": "granted"
+      },
+      "expected": false
+    },
+    {
+      "name": "false/false/provisional",
+      "input": {
+        "initialized": false,
+        "physical": false,
+        "authorization": "provisional",
+        "status": "undetermined"
+      },
+      "expected": false
+    },
+    {
+      "name": "false/false/ephemeral",
+      "input": {
+        "initialized": false,
+        "physical": false,
+        "authorization": "ephemeral",
+        "status": "undetermined"
+      },
+      "expected": false
+    },
+    {
+      "name": "false/true/checking",
+      "input": {
+        "initialized": false,
+        "physical": true,
+        "authorization": "checking",
+        "status": "checking"
+      },
+      "expected": false
+    },
+    {
+      "name": "false/true/notDetermined",
+      "input": {
+        "initialized": false,
+        "physical": true,
+        "authorization": "notDetermined",
+        "status": "undetermined"
+      },
+      "expected": false
+    },
+    {
+      "name": "false/true/denied",
+      "input": {
+        "initialized": false,
+        "physical": true,
+        "authorization": "denied",
+        "status": "denied"
+      },
+      "expected": false
+    },
+    {
+      "name": "false/true/authorized",
+      "input": {
+        "initialized": false,
+        "physical": true,
+        "authorization": "authorized",
+        "status": "granted"
+      },
+      "expected": false
+    },
+    {
+      "name": "false/true/provisional",
+      "input": {
+        "initialized": false,
+        "physical": true,
+        "authorization": "provisional",
+        "status": "undetermined"
+      },
+      "expected": false
+    },
+    {
+      "name": "false/true/ephemeral",
+      "input": {
+        "initialized": false,
+        "physical": true,
+        "authorization": "ephemeral",
+        "status": "undetermined"
+      },
+      "expected": false
+    },
+    {
+      "name": "true/false/checking",
+      "input": {
+        "initialized": true,
+        "physical": false,
+        "authorization": "checking",
+        "status": "checking"
+      },
+      "expected": false
+    },
+    {
+      "name": "true/false/notDetermined",
+      "input": {
+        "initialized": true,
+        "physical": false,
+        "authorization": "notDetermined",
+        "status": "undetermined"
+      },
+      "expected": false
+    },
+    {
+      "name": "true/false/denied",
+      "input": {
+        "initialized": true,
+        "physical": false,
+        "authorization": "denied",
+        "status": "denied"
+      },
+      "expected": false
+    },
+    {
+      "name": "true/false/authorized",
+      "input": {
+        "initialized": true,
+        "physical": false,
+        "authorization": "authorized",
+        "status": "granted"
+      },
+      "expected": false
+    },
+    {
+      "name": "true/false/provisional",
+      "input": {
+        "initialized": true,
+        "physical": false,
+        "authorization": "provisional",
+        "status": "undetermined"
+      },
+      "expected": false
+    },
+    {
+      "name": "true/false/ephemeral",
+      "input": {
+        "initialized": true,
+        "physical": false,
+        "authorization": "ephemeral",
+        "status": "undetermined"
+      },
+      "expected": false
+    },
+    {
+      "name": "true/true/checking",
+      "input": {
+        "initialized": true,
+        "physical": true,
+        "authorization": "checking",
+        "status": "checking"
+      },
+      "expected": false
+    },
+    {
+      "name": "true/true/notDetermined",
+      "input": {
+        "initialized": true,
+        "physical": true,
+        "authorization": "notDetermined",
+        "status": "undetermined"
+      },
+      "expected": false
+    },
+    {
+      "name": "true/true/denied",
+      "input": {
+        "initialized": true,
+        "physical": true,
+        "authorization": "denied",
+        "status": "denied"
+      },
+      "expected": true
+    },
+    {
+      "name": "true/true/authorized",
+      "input": {
+        "initialized": true,
+        "physical": true,
+        "authorization": "authorized",
+        "status": "granted"
+      },
+      "expected": false
+    },
+    {
+      "name": "true/true/provisional",
+      "input": {
+        "initialized": true,
+        "physical": true,
+        "authorization": "provisional",
+        "status": "undetermined"
+      },
+      "expected": false
+    },
+    {
+      "name": "true/true/ephemeral",
+      "input": {
+        "initialized": true,
+        "physical": true,
+        "authorization": "ephemeral",
+        "status": "undetermined"
+      },
+      "expected": false
+    }
+  ]
+}

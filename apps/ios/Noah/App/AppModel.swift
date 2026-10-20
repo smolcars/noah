@@ -49,6 +49,7 @@ final class AppModel {
 
     let variant = AppVariant.current
     let session = WalletSession.shared
+    let pushPermission = PushPermissionModel()
     let server: ServerRegistration
     private let log = AppLog("app")
     private let settings = SettingsStorage.shared
@@ -72,7 +73,7 @@ final class AppModel {
         isWalletSuspended = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?
             .isWalletSuspended == true
         recurringForeground = RecurringForegroundRunner { [weak self] in
-            guard let self, phase == .wallet, !isWalletSuspended else { return }
+            guard let self, phase == .wallet, !isWalletSuspended, !pushPermission.blocksWallet(initialized: true) else { return }
             await RecurringExecutor.shared.execute()
         }
     }
@@ -200,6 +201,8 @@ final class AppModel {
         wallet.isWalletLoaded = true
         try? settings.setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)
         phase = .wallet
+        await pushPermission.refresh()
+        guard !pushPermission.blocksWallet(initialized: true) else { return }
         await refresh()
         await registerPush()
         await reconcileBackupTriggers()
@@ -261,6 +264,7 @@ final class AppModel {
             walletError = String(localized: "Couldn't open your wallet.")
             return
         }
+        if phase == .wallet { await pushPermission.refresh() }
         await reconcileBackupTriggers()
         await startServerServices()
     }
@@ -314,7 +318,7 @@ final class AppModel {
 
     /// In the wallet, backups switched on, initialized and not suspended.
     private var canCoordinateBackups: Bool {
-        guard phase == .wallet, !isWalletSuspended, server.state.isBackupEnabled == true else { return false }
+        guard phase == .wallet, !pushPermission.blocksWallet(initialized: true), !isWalletSuspended, server.state.isBackupEnabled == true else { return false }
         let wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
         return wallet?.isInitialized == true && wallet?.isWalletSuspended != true
     }
@@ -370,6 +374,11 @@ final class AppModel {
     func appBecameActive() async {
         if UIApplication.shared.applicationState == .active { recurringForeground?.start() }
         if phase == .wallet {
+            let wasBlocked = pushPermission.blocksWallet(initialized: true)
+            await pushPermission.refresh()
+            await reconcileBackupTriggers()
+            guard !pushPermission.blocksWallet(initialized: true) else { return }
+            if wasBlocked { await startServerServices() }
             try? await server.refreshMailboxIfNeeded()
             await RecurringExecutor.shared.execute()
             await refresh()
@@ -379,7 +388,17 @@ final class AppModel {
         await AppServices.shared.backupCoordinator.schedule(.appForeground, immediate: true)
     }
 
+    func resolvePushPermission(request: Bool) async {
+        await pushPermission.retry(request: request)
+        guard phase == .wallet, !pushPermission.blocksWallet(initialized: true) else { return }
+        await startServerServices()
+    }
+
     private func startServerServices() async {
+        if phase == .wallet {
+            await pushPermission.refresh()
+            guard !pushPermission.blocksWallet(initialized: true) else { return }
+        }
         do {
             try await server.ensureRegistered()
             // Registration may have switched backups on.
@@ -391,6 +410,7 @@ final class AppModel {
             return
         }
         await registerPush()
+        guard !pushPermission.blocksWallet(initialized: phase == .wallet) else { return }
         startBackupTriggers()
         await RecurringExecutor.shared.execute()
     }
@@ -400,7 +420,9 @@ final class AppModel {
     private func registerPush() async {
         guard phase == .wallet, server.state.isRegisteredWithServer == true else { return }
         do {
-            switch try await PushRegistration.shared.register() {
+            let outcome = try await PushRegistration.shared.register()
+            await pushPermission.refresh()
+            switch outcome {
             case .registered: break
             case .permissionDenied: log.i("Push permission denied; skipping push registration")
             case .deviceNotSupported: log.i("Push registration unavailable on this device")

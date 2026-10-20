@@ -15,7 +15,11 @@ struct RootView: View {
             case .onboarding:
                 OnboardingFlow()
             case .wallet:
-                WalletTabs()
+                if model.pushPermission.blocksWallet(initialized: true) {
+                    PushNotificationsRequiredView()
+                } else {
+                    WalletTabs()
+                }
             case .blocked(let state):
                 if state == .seedWithoutWalletData {
                     NavigationStack { RestoreWalletScreen(useStoredSeed: true) }

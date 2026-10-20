@@ -150,6 +150,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 
 ## M1 — Shell, onboarding, Home
 - [ ] Launch gating: wallet check, onboarding vs main, push-permission gate, battery gate (Android), biometric lock overlay, beta warning
+- [x] Launch gating: wallet/onboarding, denied-push gate and beta warning — iOS (seed-safety and secure-storage states remain ahead of push)
 - [x] Biometric lock overlay on launch and foreground (device-passcode fallback) — iOS
 - [x] Biometric app lock on launch and foreground, device-credential fallback; Settings seed re-auth and FLAG_SECURE — Android
 - [ ] Tab shell: Home, Receive, Send, History (Liquid Glass tab bar on iOS 26)
@@ -163,7 +164,8 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] RestoreWalletScreen (backup restore with staged progress) — iOS
 - [x] EmailVerificationScreen (send/resend, 6-digit OTP, skip, reconcile verified) — iOS
 - [x] LightningAddressScreen (username/domain, optional npub, skip) — iOS
-- [ ] PushNotificationsRequiredScreen
+- [x] PushNotificationsRequiredScreen — iOS (physical device + initialized + denied only; provisional/ephemeral remain undetermined like Expo; foreground/recheck/settings resolution; existing seed/recovery gates and biometric overlay retain precedence)
+- [ ] PushNotificationsRequiredScreen — Android
 - [ ] BatteryOptimizationScreen (Android)
 - [ ] UnifiedPushScreen (Android, non-GMS)
 - [x] HomeScreen first pass: balance (BIP-177/sats from `profile-storage`), hide toggle (`privacy-storage`), pull-to-sync, variant badge — iOS
