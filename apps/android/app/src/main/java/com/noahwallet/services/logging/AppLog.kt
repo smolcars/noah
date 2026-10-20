@@ -8,6 +8,11 @@ import java.text.SimpleDateFormat
 import java.util.ArrayDeque
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 /** Never pass secrets. Redaction is a backstop for accidental mnemonic-shaped text. */
 class AppLog(private val tag: String, private val file: LogFile) {
@@ -24,21 +29,62 @@ class AppLog(private val tag: String, private val file: LogFile) {
     fun e(message: String) = log(Level.error, message)
 
     private fun log(level: Level, message: String) {
-        val cleaned = LogFile.redact(message)
-        Log.println(level.priority, "com.noah.app", "[${LogFile.redact(tag)}] $cleaned")
-        file.append(level, tag, cleaned)
+        file.append(level, tag, message, systemLog = true)
     }
 }
 
 /** RN Android layout: cacheDir/noah_logs/noah.log and .1 … .4, 512 KiB each. */
-class LogFile(private val directory: File) {
+class LogFile(
+    private val directory: File,
+    private val capacity: Int = maxPendingRecords,
+    private val executor: Executor = writer,
+    private val systemSink: (AppLog.Level, String, String) -> Unit = { level, tag, message ->
+        Log.println(level.priority, "com.noah.app", "[$tag] $message")
+    },
+) {
+    init { require(capacity > 0) }
     private val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
+    private val admission = Any()
+    private var pending = 0
+    private var dropped = 0
 
-    fun append(level: AppLog.Level, tag: String, message: String, date: Date = Date()) = synchronized(lock) {
+    fun append(level: AppLog.Level, tag: String, message: String, date: Date = Date(), systemLog: Boolean = false) {
+        // Raw text lives only in this bounded memory queue; no sink runs on the caller.
+        synchronized(admission) {
+            if (pending >= capacity) { dropped++; return }
+            enqueueDroppedMarker()
+            pending++
+            executor.execute {
+                try {
+                    val cleaned = redact(message)
+                    val safeTag = redact(tag)
+                    if (systemLog) systemSink(level, safeTag, cleaned)
+                    persist(level, safeTag, cleaned, date)
+                } finally {
+                    synchronized(admission) {
+                        pending--
+                        if (pending == 0) enqueueDroppedMarker()
+                    }
+                }
+            }
+        }
+    }
+
+    // Caller holds admission; the marker follows all records admitted before overflow.
+    private fun enqueueDroppedMarker() {
+        if (dropped == 0) return
+        val count = dropped
+        dropped = 0
+        executor.execute { persist(AppLog.Level.warn, "logging", "[dropped $count log records]", Date()) }
+    }
+
+    private fun persist(level: AppLog.Level, tag: String, message: String, date: Date) {
         try {
             check(directory.isDirectory || directory.mkdirs())
             val active = File(directory, fileName)
-            if (active.length() >= maxFileSizeBytes) {
+            val cleaned = message.trim().replace("\n", "\n  ")
+            val line = "${formatter.format(date)} ${level.symbol} [$tag] $cleaned\n"
+            if (active.length() + line.toByteArray(Charsets.UTF_8).size > maxFileSizeBytes) {
                 for (index in maxFiles downTo 1) {
                     val source = File(directory, if (index == 1) fileName else "$fileName.${index - 1}")
                     if (!source.exists()) continue
@@ -47,15 +93,19 @@ class LogFile(private val directory: File) {
                     check(source.renameTo(target))
                 }
             }
-            val cleaned = redact(message).trim().replace("\n", "\n  ")
-            active.appendText("${formatter.format(date)} ${level.symbol} [${redact(tag)}] $cleaned\n")
+            active.appendText(line)
         } catch (_: Exception) {
             // Logging must not fail a wallet operation or include a provider exception's secrets.
         }
     }
 
     /** Newest 4,000 lines across the rotation, oldest first, suitable for export. */
-    fun lines(): List<String> = synchronized(lock) {
+    fun lines(): List<String> = synchronized(admission) {
+        enqueueDroppedMarker()
+        CompletableFuture.supplyAsync({ readLines() }, executor)
+    }.join()
+
+    private fun readLines(): List<String> {
         val lines = ArrayDeque<String>(maxLines)
         for (index in maxFiles downTo 0) {
             val file = File(directory, if (index == 0) fileName else "$fileName.$index")
@@ -65,34 +115,59 @@ class LogFile(private val directory: File) {
                 lines.addLast(it)
             } }
         }
-        lines.toList()
+        return lines.toList()
     }
 
-    fun flush() { synchronized(lock) {} }
+    private fun barrier(): CompletableFuture<Void> = synchronized(admission) {
+        enqueueDroppedMarker()
+        CompletableFuture.runAsync({}, executor)
+    }
+
+    fun flush() { barrier().join() }
+
+    suspend fun flushAsync() = suspendCancellableCoroutine { continuation ->
+        barrier().thenRun { continuation.resume(Unit) }
+    }
 
     companion object {
         const val fileName = "noah.log"
         const val maxFileSizeBytes = 512 * 1024
         const val maxFiles = 4
         const val maxLines = 4000
+        const val maxPendingRecords = 256
         private val lock = Any()
+        private val writer = Executors.newSingleThreadExecutor { task ->
+            Thread(task, "noah-log-writer").apply { isDaemon = true }
+        }
         private const val maxMessageBytes = 16 * 1024
         private val bip39 = requireNotNull(LogFile::class.java.getResourceAsStream("/bip39-english.txt"))
             .bufferedReader().use { it.readLines().toSet() }
         private val words = Regex("[\\p{L}\\p{M}]+")
-        private val urlUserinfo = Regex("""(?i)(\b[a-z][a-z0-9+.-]*://)[^\s/@<>"']+@""")
+        private val boundary = Regex("""\b""")
+        private val labelTokens = Regex("""[\w.-]+""")
+        private val addressKeyword = Regex("""email|lightning[_-]?address""")
+        private val credentialKeyword = Regex("""mnemonic|seed|priv(?:ate)?[_-]?key|secret(?:[_-]?key)?|preimage|sig(?:nature)?|token|authorization|password""")
+        private val addressTail = Regex("""["']?\s*[:=]""")
+        private val credentialTail = Regex("""["']?(?:\s*[:=({\[]|(?:\s+|["']\s*)["']?[A-Za-z0-9+/_=-]{16,})""")
+        private val schemeTokens = Regex("""(?i)[a-z0-9+.-]+""")
+        private val schemeStart = Regex("""(?i)\b[a-z]""")
+        private val urlUserinfo = Regex("""(?i)(\b[a-z][a-z0-9+.-]*+://)[^\s/@<>"']++@""")
+        private val emailTokens = Regex("""(?i)[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+""")
+        private val emailLocal = Regex("""(?i)\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]++@""")
+        private val domainPart = Regex("""(?i)[A-Z0-9-]+""")
+        private val domainTLD = Regex("""(?i)[A-Z]{2,63}\b""")
+        private val specialLabel = Regex("""(?i)\b(?:key$|x-amz-[\w-]++)""")
+        private val jwtTokens = Regex("""[A-Za-z0-9_-]+""")
+        private val jwt = Regex("""\b[A-Za-z0-9_-]{8,}+\.[A-Za-z0-9_-]{8,}+\.[A-Za-z0-9_-]{8,}+""")
+        private val urlTokens = Regex("""(?i)\bhttps?://[^\s<>"']*+""")
+        private val pushTokens = Regex("""(?i)\bExpo(?:nent)?PushToken\[[^\]]*+(?:\]|$)""")
         private val sensitivePatterns = listOf(
-            """(?is)\b[\w.-]*(?:email|lightning[_ -]?address)[\w.-]*["']?\s*[:=].*""",
-            """(?i)\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,63}\b""",
-            """(?is)\b(?:[\w.-]*(?:mnemonic|seed(?:[_ -]?phrase)?|priv(?:ate)?[_ -]?key|secret(?:[_ -]?key)?|preimage|sig(?:nature)?|token|authorization|password)[\w.-]*|key|x-amz-[\w-]+)["']?(?:\s*[:=({\[].*|(?:\s+|["']\s*)["']?[A-Za-z0-9+/_=-]{16,}.*)""",
-            """(?i)\bhttps?://[^\s<>"']*\?[^\s<>"']*""",
             """(?i)\bhttps?%3a%2f%2f[^\s<>"']*""",
-            """(?i)\bBearer\s+[A-Za-z0-9._~+/-]+=*|\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}""",
-            """(?i)\bExpo(?:nent)?PushToken\[[^\]]*\]""",
-            """\b(?:[xt]prv[1-9A-HJ-NP-Za-km-z]{20,}|[59][1-9A-HJ-NP-Za-km-z]{50}|[KLc][1-9A-HJ-NP-Za-km-z]{51})\b""",
+            """(?i)\bBearer\s+[A-Za-z0-9._~+/-]++=*""",
+            """\b(?:[xt]prv[1-9A-HJ-NP-Za-km-z]{20,}+|[59][1-9A-HJ-NP-Za-km-z]{50}|[KLc][1-9A-HJ-NP-Za-km-z]{51})\b""",
         ).map(::Regex)
 
-        private val jsonEscapes = Regex("""(?:\\u[0-9a-fA-F]{4})+|\\["\\/bfnrt]""")
+        private val jsonEscapes = Regex("""(?:\\u[0-9a-fA-F]{4})++|\\["\\/bfnrt]""")
 
         fun redact(message: String): String {
             if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return "[oversized log message omitted]"
@@ -118,8 +193,18 @@ class LogFile(private val directory: File) {
 
         // Decoded views cannot preserve source offsets; their hits omit the whole message.
         private fun redactPlain(message: String): String {
-            var result = urlUserinfo.replace(message) { "${it.groupValues[1]}[redacted]@" }
-            for (pattern in sensitivePatterns) result = pattern.replace(result, "[redacted]")
+            var result = replaceTokens(message, schemeTokens, urlUserinfo, schemeStart) { "${it.group(1)}[redacted]@" }
+            result = redactLabels(result, addresses = true)
+            result = replaceEmails(result)
+            result = redactLabels(result, addresses = false)
+            result = urlTokens.replace(result) { if ('?' in it.value) "[redacted]" else it.value }
+            for ((index, pattern) in sensitivePatterns.withIndex()) {
+                result = pattern.replace(result, "[redacted]")
+                if (index == 1) {
+                    result = replaceTokens(result, jwtTokens, jwt)
+                    result = pushTokens.replace(result) { if (it.value.endsWith(']')) "[redacted]" else it.value }
+                }
+            }
             val decomposed = Normalizer.normalize(result, Normalizer.Form.NFKD)
             val normalized = decomposed.lowercase(Locale.ROOT).replace("ß", "ss")
             val skeleton = detectionSkeleton(normalized)
@@ -140,9 +225,110 @@ class LogFile(private val directory: File) {
             if (count >= 12) runs += matches[start].range.first..matches.last().range.last
             // Compatibility expansion/case folding may invalidate offsets into the original.
             if (runs.isNotEmpty() && (decomposed != result || normalized.length != result.length)) return "[redacted]"
-            for (range in runs.asReversed()) result = result.replaceRange(range, "[redacted]")
-            return result
+            return buildString {
+                var offset = 0
+                for (range in runs) {
+                    append(result, offset, range.first)
+                    append("[redacted]")
+                    offset = range.last + 1
+                }
+                append(result, offset, result.length)
+            }
         }
+        // Each maximal token is attempted once, including failed dot/hyphen candidates.
+        private fun replaceTokens(
+            text: String, tokens: Regex, pattern: Regex, start: Regex = boundary,
+            replacement: (java.util.regex.Matcher) -> String = { "[redacted]" },
+        ): String = buildString {
+            val candidates = tokens.toPattern().matcher(text)
+            val beginning = start.toPattern().matcher(text).useTransparentBounds(true)
+            val match = pattern.toPattern().matcher(text).useTransparentBounds(true)
+            var offset = 0
+            while (candidates.find()) {
+                if (candidates.start() < offset) continue
+                if (tokens === schemeTokens && !text.startsWith("://", candidates.end())) continue
+                beginning.region(candidates.start(), candidates.end())
+                if (!beginning.find()) continue
+                match.region(beginning.start(), text.length)
+                if (!match.lookingAt()) continue
+                append(text, offset, match.start())
+                append(replacement(match))
+                offset = match.end()
+            }
+            append(text, offset, text.length)
+        }
+
+        private fun replaceEmails(text: String): String = buildString {
+            val candidates = emailTokens.toPattern().matcher(text)
+            val beginning = boundary.toPattern().matcher(text).useTransparentBounds(true)
+            val local = emailLocal.toPattern().matcher(text).useTransparentBounds(true)
+            val part = domainPart.toPattern().matcher(text)
+            val tld = domainTLD.toPattern().matcher(text).useTransparentBounds(true)
+            var consumed = 0
+            while (candidates.find()) {
+                if (candidates.start() < consumed) continue
+                beginning.region(candidates.start(), candidates.end())
+                if (!beginning.find()) continue
+                local.region(beginning.start(), text.length)
+                if (!local.lookingAt()) continue
+                var offset = local.end()
+                var end: Int? = null
+                var first = true
+                while (true) {
+                    part.region(offset, text.length)
+                    if (!part.lookingAt()) break
+                    tld.region(offset, text.length)
+                    if (!first && tld.lookingAt()) end = tld.end()
+                    first = false
+                    offset = part.end()
+                    if (offset >= text.length || text[offset] != '.') break
+                    offset++
+                }
+                if (end != null) {
+                    append(text, consumed, beginning.start())
+                    append("[redacted]")
+                    consumed = end
+                }
+            }
+            append(text, consumed, text.length)
+        }
+
+        private fun redactLabels(text: String, addresses: Boolean): String {
+            val keyword = if (addresses) addressKeyword else credentialKeyword
+            val tail = (if (addresses) addressTail else credentialTail).toPattern().matcher(text).useTransparentBounds(true)
+            val beginning = boundary.toPattern().matcher(text).useTransparentBounds(true)
+            val candidates = labelTokens.toPattern().matcher(text)
+            val next = labelTokens.toPattern().matcher(text)
+            val special = specialLabel.toPattern().matcher(text).useTransparentBounds(true)
+            val pairs = if (addresses) listOf("lightning" to "address") else
+                listOf("seed" to "phrase", "priv" to "key", "private" to "key", "secret" to "key")
+            while (candidates.find()) {
+                beginning.region(candidates.start(), candidates.end())
+                if (!beginning.find()) continue
+                val label = candidates.group().lowercase(Locale.ROOT)
+                val ends = mutableListOf<Int>()
+                for ((left, right) in pairs) if (label.endsWith(left)) {
+                    val end = candidates.end()
+                    if (end < text.length && text[end] == ' ') {
+                        next.region(end + 1, text.length)
+                        if (next.lookingAt() && next.group().startsWith(right, ignoreCase = true)) ends += next.end()
+                    }
+                }
+                if (keyword.containsMatchIn(label)) ends += candidates.end()
+                for (end in ends) {
+                    tail.region(end, text.length)
+                    if (tail.lookingAt()) return text.take(beginning.start()) + "[redacted]"
+                }
+                if (!addresses) {
+                    val suffix = candidates.start() + candidates.group().lastIndexOf('.') + 1
+                    special.region(suffix, candidates.end())
+                    tail.region(candidates.end(), text.length)
+                    if (special.find() && tail.lookingAt()) return text.take(special.start()) + "[redacted]"
+                }
+            }
+            return text
+        }
+
         // Unicode Default_Ignorable_Code_Point ranges, including supplementary format controls.
         private val ignorableOrMark = Regex("""[\p{M}\u00AD\u061C\u115F-\u1160\u17B4-\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\uFFF0-\uFFF8\x{1BCA0}-\x{1BCA3}\x{1D173}-\x{1D17A}\x{E0000}-\x{E0FFF}]""")
         private val latinConfusables = mapOf(

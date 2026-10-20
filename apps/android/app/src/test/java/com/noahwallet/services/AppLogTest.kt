@@ -8,11 +8,107 @@ import java.nio.file.Files
 import java.util.Date
 import org.junit.Assert.*
 import org.junit.Test
+import java.util.ArrayDeque
+import java.util.concurrent.Executor
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 
 class AppLogTest {
+    @Test fun redactionPerformance() {
+        LogFile.redact("warmup")
+        var slowest = 0L
+        for ((name, unit) in performanceInputs) for (size in listOf(1024, 4096, 16384)) {
+            val input = unit.repeat((size + unit.length - 1) / unit.length).take(size)
+            val elapsed = List(3) {
+                val start = System.nanoTime()
+                LogFile.redact(input)
+                System.nanoTime() - start
+            }.sorted()[1]
+            println("REDACTION $name $size ${elapsed / 1e6} ms")
+            slowest = maxOf(slowest, elapsed)
+        }
+        assertTrue("slowest redaction ${slowest / 1e6} ms exceeds 100 ms CI budget", slowest < 100_000_000)
+    }
+
+    private val performanceInputs = listOf(
+        "punctuation" to "!@#$%^&*()[]{}:;,?", "hyphen" to "x-", "dot" to "x.",
+        "digit" to "1234567890", "mixed" to "wallet sync completed xyzzy ",
+        "escaped" to "\\u0078\\u002e",
+    )
+
+    @Test fun callerOnlyEnqueuesAndEverySinkWaitsForRedaction() = withFile { directory, _ ->
+        val tasks = ArrayDeque<Runnable>()
+        val sinks = mutableListOf<String>()
+        val file = LogFile(directory, capacity = 100, executor = Executor { tasks.addLast(it) },
+            systemSink = { _, tag, message -> sinks += "[$tag] $message" })
+        AppLog("warmup", file).i("warmup")
+        var slowest = 0L
+        for ((_, unit) in performanceInputs) {
+            val input = unit.repeat((16384 + unit.length - 1) / unit.length).take(16384)
+            val started = System.nanoTime()
+            AppLog(input, file).e(input)
+            slowest = maxOf(slowest, System.nanoTime() - started)
+        }
+        assertTrue("caller ${slowest / 1e6} ms", slowest < 5_000_000)
+        println("LOG ADMISSION maximum ${slowest / 1e6} ms")
+        val phrase = "abandon ".repeat(11) + "about"
+        AppLog(phrase, file).e(phrase)
+        assertTrue(sinks.isEmpty())
+        assertFalse(directory.resolve("noah.log").exists())
+        while (tasks.isNotEmpty()) tasks.removeFirst().run()
+        assertEquals(8, sinks.size)
+        assertEquals("[[redacted]] [redacted]", sinks.last())
+        assertFalse(directory.resolve("noah.log").readText().contains(phrase))
+    }
+
+    @Test fun boundedWriterKeepsOverflowAndAwaitableFlushInOrder() = withFile { directory, _ ->
+        val tasks = ArrayDeque<Runnable>()
+        val file = LogFile(directory, capacity = 2, executor = Executor { tasks.addLast(it) })
+        repeat(5) { file.append(AppLog.Level.info, "test", "record $it") }
+        assertFalse(directory.resolve("noah.log").exists())
+        runBlocking {
+            var flushed = false
+            val flush = async(start = CoroutineStart.UNDISPATCHED) { file.flushAsync(); flushed = true }
+            assertFalse(flushed)
+            while (tasks.isNotEmpty()) tasks.removeFirst().run()
+            flush.await()
+            assertTrue(flushed)
+        }
+        val lines = directory.resolve("noah.log").readLines()
+        assertEquals(3, lines.size)
+        assertTrue(lines[0].endsWith("record 0"))
+        assertTrue(lines[1].endsWith("record 1"))
+        assertTrue(lines[2].endsWith("[dropped 3 log records]"))
+    }
+
+    @Test fun failedTokenCandidatesStayBounded() {
+        for (unit in listOf("seed.", "http://", "ExpoPushToken[", "x@x.", "xprv", "\\u0078!")) {
+            val input = unit.repeat((16384 + unit.length - 1) / unit.length).take(16384)
+            val elapsed = List(3) {
+                val started = System.nanoTime()
+                LogFile.redact(input)
+                System.nanoTime() - started
+            }.sorted()[1]
+            assertTrue("failed candidate $unit: ${elapsed / 1e6} ms", elapsed < 100_000_000)
+        }
+    }
+
+    @Test fun tokenScanPreservesBoundaryAndTrailingPunctuationBehavior() {
+        for ((input, expected) in listOf(
+            "foo@b.co." to "[redacted].", "foo@b.co-" to "[redacted]-",
+            "-key=fake" to "-[redacted]", "foo.key=fake" to "foo.[redacted]",
+            "x-amz-foo.bar: ordinary" to "x-amz-foo.bar: ordinary",
+            "seed phrase: fake" to "[redacted]", "private keyStore: fake" to "[redacted]",
+            "http://http://ordinary" to "http://http://ordinary",
+            "ExpoPushToken[unfinished" to "[redacted]",
+        )) assertEquals(input, expected, LogFile.redact(input))
+    }
+
     private fun withFile(test: (java.io.File, LogFile) -> Unit) {
         val directory = Files.createTempDirectory("log-test").toFile()
-        try { test(directory, LogFile(directory)) } finally { directory.deleteRecursively() }
+        val file = LogFile(directory, capacity = 5000)
+        try { test(directory, file) } finally { file.flush(); directory.deleteRecursively() }
     }
     @Test fun sharedSecretRedactionVectors() = withFile { _, file ->
         for (case in SharedFixtures.load("log-redaction").filterNot { it.name.startsWith("address-") }) {
@@ -79,6 +175,7 @@ class AppLogTest {
         val normal = "wallet loaded in 3 seconds after sync"
         assertEquals(normal, LogFile.redact(normal))
         file.append(AppLog.Level.info, "test", "seed: $phrase!")
+        file.flush()
         assertFalse(directory.resolve("noah.log").readText().contains(phrase))
         assertTrue(file.lines().single().endsWith("[redacted]"))
     }
