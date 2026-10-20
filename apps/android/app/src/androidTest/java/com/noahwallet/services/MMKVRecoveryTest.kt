@@ -117,6 +117,23 @@ class MMKVRecoveryTest {
         assertTrue(runCatching { SettingsStorage(context).validateStores() }.isFailure)
     }
 
+    @Test fun presentButUndecodableWalletValueBlocksReadsAndWrites() = fixture { context, root ->
+        val file = File(root, id); val bytes = file.readBytes()
+        val needle = "{\"state\":{\"isInitialized".toByteArray()
+        val offset = (0..bytes.size - needle.size).last { start -> needle.indices.all { bytes[start + it] == needle[it] } }
+        bytes[offset + 3] = 0xff.toByte(); file.writeBytes(bytes); corrupt(root, "crc")
+        val store = SettingsStorage(context)
+        assertTrue(runCatching { store.validateStores() }.isFailure)
+        assertTrue(runCatching { store.set("""{"state":{},"version":0}""", "wallet-storage") }.isFailure)
+    }
+    @Test fun stringValuesExposeTheirExactUtf8ThroughTheByteGetter() = fixture { context, root ->
+        val store = SettingsStorage(context)
+        val raw = """{"state":{"displayName":"Noah ₿ 🌱"},"version":0}"""
+        store.set(raw, "profile-storage")
+        val native = MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!
+        assertArrayEquals(store.string("profile-storage")!!.toByteArray(), native.decodeBytes("profile-storage"))
+    }
+
     @Test fun existingDatabaseWithMissingWalletStoreResumesOnboardingInsteadOfBlocking() = fixture { context, root ->
         MMKV.initialize(app, root.path)
         MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!.let {

@@ -1,6 +1,8 @@
 package com.noahwallet.services.storage
 
 import kotlinx.serialization.json.*
+import java.nio.ByteBuffer
+import java.nio.charset.CodingErrorAction
 
 /** Validate the persisted RN contract before any mutation; retain the complete JSON envelope. */
 object RNStoreCodec {
@@ -48,6 +50,16 @@ object RNStoreCodec {
         if (key == "backup-storage") state["lastBackupStatus"]?.let { require(it.jsonPrimitive.content in setOf("idle", "in_progress", "success", "failed")) }
         root
     } catch (_: Exception) { throw Unreadable() }
+
+    /** JNI string getters may replace invalid UTF-8; never turn a present value into defaults. */
+    fun storedString(present: Boolean, bytes: ByteArray?): String? {
+        if (!present) return null
+        if (bytes == null) throw Unreadable()
+        return try {
+            Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString()
+        } catch (_: Exception) { throw Unreadable() }
+    }
 
     /** Merge complete envelopes and nested state so typed writers never drop future fields. */
     fun merge(key: String, previous: String?, next: String): String {

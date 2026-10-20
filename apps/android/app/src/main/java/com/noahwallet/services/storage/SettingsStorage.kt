@@ -49,7 +49,10 @@ class SettingsStorage(context: Context) {
 
     class Unavailable : Exception("Wallet settings need recovery. Restart Noah to retry or contact support; wallet files have been kept.")
     fun requireHealthy() { if (mmkv == null) throw Unavailable() }
-    fun string(key: String): String? = mmkv?.decodeString(key)
+    fun string(key: String): String? = mmkv?.let { store ->
+        if (key in RNStoreCodec.versions) RNStoreCodec.storedString(store.containsKey(key), store.decodeBytes(key))
+        else store.decodeString(key)
+    }
     fun set(value: String, key: String) = synchronized(openLock) {
         validateStores()
         val keys = rnKeys(mmkv!!).toMutableList()
@@ -80,7 +83,7 @@ class SettingsStorage(context: Context) {
         private fun validate(store: MMKV, requiredKeys: List<String>) {
             check(requiredKeys.all(store::containsKey)) { "Native settings lost persisted keys" }
             RNStoreCodec.versions.keys.filter { it != "esplora-storage" }.forEach { key ->
-                store.decodeString(key)?.let { RNStoreCodec.decode(key, it) }
+                RNStoreCodec.storedString(store.containsKey(key), store.decodeBytes(key))?.let { RNStoreCodec.decode(key, it) }
             }
         }
     }
