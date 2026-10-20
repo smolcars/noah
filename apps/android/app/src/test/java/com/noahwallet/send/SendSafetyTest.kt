@@ -105,7 +105,7 @@ class SendSafetyTest {
             receipt = SendReceipt(1000, txid = "exact", status = SendReceipt.Status.confirmed, proof = SendReceipt.Proof.preparedTxid)) }
         wallet.reconciliation = { SendReconciliation.onchain(it, listOf(transaction())) }
         val subject = controller(wallet, journal, this); subject.reloadForWalletChange(); subject.checkStatus(); assertEquals(SendReceipt.Status.submitted, subject.attempt!!.receipt!!.status)
-        wallet.reconciliation = { error("sync failed") }; subject.checkStatus(); assertEquals(SendController.State.uncertain, subject.state); assertTrue(subject.message!!.startsWith("Unable to check")); assertTrue(subject.locked)
+        wallet.reconciliation = { error("sync failed") }; subject.checkStatus(); assertEquals(SendController.State.succeeded, subject.state); assertEquals(SendReceipt.Status.submitted, subject.attempt!!.receipt!!.status); assertTrue(subject.message!!.startsWith("Couldn't check")); assertTrue(subject.locked)
     }
     @Test fun railEvidenceCannotCrossIntoAnotherRail() {
         val m = movement("ark", hash = null)

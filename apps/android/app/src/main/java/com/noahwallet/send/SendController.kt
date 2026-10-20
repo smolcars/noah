@@ -99,15 +99,25 @@ class SendController(private val dependencies: Dependencies,
     }
     suspend fun checkStatus() {
         if (checking || attempt == null || (state != State.uncertain && attempt?.receipt?.txid == null)) return
+        val current = generation
         checking = true
-        try { dependencies.reservation { wallet -> reconcile(wallet) } }
-        catch (_: Exception) { message = "Unable to reserve the wallet to check payment status." }
-        finally { checking = false }
+        try { dependencies.reservation { wallet -> if (current == generation) reconcile(wallet) } }
+        catch (_: Exception) { if (current == generation) showRefreshFailure() }
+        finally { if (current == generation) checking = false }
     }
     private suspend fun reconcile(wallet: SendWallet) {
         val saved = attempt ?: return
-        try { finish(wallet.reconcile(saved)) }
-        catch (_: Exception) { finish(SendResolution.Uncertain); message = "Unable to check payment status. It may have been sent. Do not pay again." }
+        val current = generation
+        try {
+            val resolution = wallet.reconcile(saved)
+            if (current != generation) return
+            message = null
+            finish(resolution)
+        } catch (_: Exception) { if (current == generation) showRefreshFailure() }
+    }
+    private fun showRefreshFailure() {
+        message = "Couldn't check the latest status; showing the last known status." +
+            if (attempt?.receipt == null || attempt?.receipt?.broadcastRetryPending == true) " This payment may still complete. Do not pay again." else ""
     }
     private fun finish(resolution: SendResolution) {
         var saved = attempt ?: return
