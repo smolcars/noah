@@ -147,6 +147,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         let message: String?
     }
     struct Attempt: Codable, Sendable {
+        var recurringAttemptID: UUID?
         var recurringOccurrenceKey: String?
         var walletIdentity: SendWalletIdentity?
         var inspectionPending: Bool?
