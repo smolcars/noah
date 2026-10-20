@@ -6,6 +6,9 @@ import java.util.Locale
 object LightningIdentity {
     fun normalizeUsername(value: String) = value.trim().lowercase(Locale.ROOT)
 
+    fun unchanged(username: String, npub: String, address: String?, nostrPubkey: String?, domain: String): Boolean =
+        "${normalizeUsername(username)}@$domain" == address && npub.trim() == Nostr.npub(nostrPubkey)
+
     fun payload(username: String, npub: String): UpdateLightningIdentityPayload {
         val normalized = normalizeUsername(username)
         val key = npub.trim()

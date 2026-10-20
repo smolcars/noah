@@ -209,6 +209,7 @@ fun LightningScreen(model: AppModel, onContinue: (suspend () -> Unit)? = null) {
     var npub by rememberSaveable { mutableStateOf(Nostr.npub(model.server.state.nostrPubkey)) }
     val focus = LocalFocusManager.current
     val domain = LightningIdentity.domain(BuildConfig.APP_VARIANT)
+    val unchanged = LightningIdentity.unchanged(username, npub, model.server.state.lightningAddress, model.server.state.nostrPubkey, domain)
     fun finish() { focus.clearFocus(); model.action("Couldn't finish setup. Please try again.") { if (onContinue != null) onContinue() else model.finish() } }
     NoahForm("Choose your Lightning Address") {
         Text(tr("Choose a Lightning username. You can optionally link a Nostr public key so the same address also works as a NIP-05 identifier."))
@@ -219,7 +220,8 @@ fun LightningScreen(model: AppModel, onContinue: (suspend () -> Unit)? = null) {
         OutlinedTextField(npub, { npub = it }, label = { Text(tr("Nostr public key (optional)")) },
             modifier = Modifier.fillMaxWidth(), enabled = !model.busy, singleLine = true)
         Text(tr("Leave this blank to use Lightning without NIP-05. Only npub public keys are accepted; never paste an nsec private key."), style = MaterialTheme.typography.bodySmall)
-        NoahButton("Save", !model.busy && username.isNotBlank()) {
+        NoahButton(if (unchanged) "Continue" else "Save", !model.busy && username.isNotBlank()) {
+            if (unchanged) { finish(); return@NoahButton }
             try { LightningIdentity.payload(username, npub) }
             catch (failure: IllegalArgumentException) { model.error = failure.message; return@NoahButton }
             focus.clearFocus()
