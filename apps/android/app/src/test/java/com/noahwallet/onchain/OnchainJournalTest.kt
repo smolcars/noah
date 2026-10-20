@@ -23,7 +23,14 @@ class OnchainJournalTest {
     @Test fun savesBeforeNativeAndSurvivesRestartWithoutResubmitting() = runBlocking { fixture { file, journal ->
         val quote = quote()
         var calls = 0
-        uncertain(journal, quote)
+        var observedDurableAttempt = false
+        val original = runCatching { journal.perform(quote) {
+            assertEquals(quote, journal(file).loadAll().single().quote)
+            observedDurableAttempt = true
+            throw BarkError("unclassified", BarkErrorCode.OTHER)
+        } }.exceptionOrNull()
+        assertEquals(OnchainFailure.uncertain, (original as OnchainException).reason)
+        assertTrue(observedDurableAttempt)
         val reopened = journal(file)
         assertEquals(quote, reopened.loadAll().single().quote)
         val result = runCatching { reopened.perform(quote.copy(id = "repeat")) { calls++; OnchainReceipt("bad") } }

@@ -1,0 +1,39 @@
+{
+  "tip": 462,
+  "states": [
+    "Processing"
+  ],
+  "claimableHeight": [
+    null
+  ],
+  "timeline": [
+    "Start",
+    "Processing"
+  ],
+  "details": [
+    {
+      "kind": "processing",
+      "tip_height": 462,
+      "transactions": [
+        {
+          "txid": "f273402a19de72335595d407d338a40fdb65cb0e801602cb787a1f5bc7d15c4a",
+          "status": {
+            "kind": "confirmed",
+            "child_txid": "24a1167e6c368c2cee8a18b52b57b81797988114dc14ac1bc6d8bcdc61f84a8b",
+            "block": {
+              "height": 462,
+              "hash": "0a64adcbcda744623e8f17dac0c651112fbb0d0c19d3cf56fcbb5455fe0d7141"
+            }
+          }
+        },
+        {
+          "txid": "6f5bc20cd42758d9595bcbf222eb9d2b08974568843c490a7e7539ffab59dd93",
+          "status": {
+            "kind": "awaiting-confirmation",
+            "child_txid": "22c7ba7c1dd1bc1fe6b9a8a59e28a19af8ccabccddc857dd569b3f90e2b61645"
+          }
+        }
+      ]
+    }
+  ]
+}

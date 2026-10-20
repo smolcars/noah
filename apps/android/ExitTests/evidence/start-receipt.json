@@ -1,0 +1,28 @@
+[
+  {
+    "quote": {
+      "action": "startExit",
+      "walletID": "0eb559eb",
+      "ids": [
+        "6f5bc20cd42758d9595bcbf222eb9d2b08974568843c490a7e7539ffab59dd93:0"
+      ],
+      "destination": null,
+      "amount": 29401,
+      "fee": 1295,
+      "chainFee": 7630,
+      "confirmed": 68457,
+      "feeRate": 10,
+      "createdAt": 1792467593352,
+      "automatic": false,
+      "boardAll": false,
+      "id": "899989de-9867-453d-b04d-50f5d1cba3ee"
+    },
+    "receipt": {
+      "message": "Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance.",
+      "txid": null,
+      "onchainFee": null
+    },
+    "txid": null,
+    "overrideAudit": null
+  }
+]

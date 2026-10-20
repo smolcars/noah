@@ -1,0 +1,9 @@
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
+
+> Task :app:testRegtestDebugUnitTest
+> Task :app:assembleRegtestDebug
+> Task :app:compileRegtestDebugAndroidTestKotlin
+BUILD SUCCESSFUL in 56s
+56 actionable tasks: 6 executed, 50 up-to-date
+
+JUnit XML: 786 tests, 786 passed, 0 failures, 0 errors, 0 skipped; 46 suites.

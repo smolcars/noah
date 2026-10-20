@@ -1,0 +1,15 @@
+Page: com.noahwallet.regtest
+App: com.noahwallet.regtest
+Snapshot: 9 visible nodes (23 total)
+Collapsed 14 Android helper nodes from the agent-facing text snapshot; use --raw or --json for the full hierarchy.
+@e1 [scroll-area] [scrollable]
+  [content above scroll-area hidden]
+  [content below scroll-area hidden]
+@e2 [group] "Ark Info, Ark server, wallet, and explorer configuration"
+@e5 [group] "Show Seed Phrase, Keep your recovery phrase safe. Never share it."
+@e8 [group] "Show VTXOs, Inspect and refresh your Ark funds"
+@e11 [group] "Board to Ark, Move onchain bitcoin into Ark"
+@e14 [group] "Emergency Exit, Recover Ark funds onchain"
+@e17 [group] "Backup & Restore, Automatic and manual encrypted backups"
+@e20 [group] "Auto-Board to Ark" [unchecked]
+@e22 [group] "Back"

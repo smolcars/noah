@@ -303,7 +303,10 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [ ] Durable operation IDs for pre-ID ambiguous board/refresh outcomes — FFI 19; iOS never reconciles by amount or automatically resubmits
 - [x] Live exit start → automatic daemon broadcast/CPFP → 144-block timelock → reviewed manual progress → claim/confirmation — iOS; manual boarding/MAX actual fees and suspended UI verified (see `apps/ios/ExitTests/README.md`)
 - [x] Live exit cancellation before final broadcast — iOS throwaway wallet; canceled detail/timeline and overview retained after reopen; simulated lost board receipt leaves exits available and read-only Check status resolves exact txid (see `apps/ios/ExitTests/README.md`)
-- [ ] BoardArkScreen, auto-boarding, VTXOs/details/refresh, all exit screens — Android
+- [x] BoardArkScreen + persisted confirmation-only Auto-Board, estimated fees/reserve and actual receipt fees by exact txid; RN `boardAll` MAX — Android
+- [x] VTXO list/filter/selection/detail + reviewed delegated refresh; suspended/background gates — Android
+- [x] Emergency-exit overview/estimates/deposit/detail timelines, fresh start/progress/claim/cancel reviews, automatic Bark daemon consent, persisted terminal/legacy exit discovery and scoped durable journals/retained overrides — Android
+- [x] Android M6 verification: 187 shared RN fixture cases; full JVM suite 786 passed / 0 failed/skipped; APK + Android-test compile; owned regtest emulator board/refresh/estimate → automatic exit/144 blocks/claim and cancel → reopen timeline (funding/initial serial deviations and limits in `apps/android/ExitTests/README.md`)
 
 ## M7 — Recurring payments
 - [x] Schedule math (local calendar, DST, month-end) — iOS; 1,260 RN-generated shared calendar cases, 36 policy cases, RN storage fixture

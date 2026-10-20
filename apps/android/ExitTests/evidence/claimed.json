@@ -1,0 +1,27 @@
+{
+  "tip": 608,
+  "states": [
+    "Claimed"
+  ],
+  "claimableHeight": [
+    null
+  ],
+  "timeline": [
+    "Start",
+    "Processing",
+    "AwaitingDelta",
+    "Claimable",
+    "Claimed"
+  ],
+  "details": [
+    {
+      "kind": "claimed",
+      "tip_height": 608,
+      "block": {
+        "height": 608,
+        "hash": "0dc7bbd88121054dc85db7225a28597fd934a4125b56c3bab56de1b678c748a6"
+      },
+      "txid": "3c4528a69d512f3544ee215615aff72becc8dc01227071304b60ee1e749c09d6"
+    }
+  ]
+}
