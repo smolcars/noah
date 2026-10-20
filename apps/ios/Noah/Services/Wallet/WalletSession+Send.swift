@@ -141,6 +141,11 @@ extension WalletSession {
                 default: throw SendFailure.unresolved
                 }
             }
+            if payment.source == .onchain, let txid = receipt.txid,
+               let transactions = try? await handles.onchain.transactions(),
+               let tx = transactions.first(where: { $0.txid == txid }) {
+                receipt.fee = tx.onchainFeeSats
+            }
             // Metadata failure is never a payment failure and must never enable resubmission.
             if let patch = payment.repeatMetadata, let history = try? await handles.wallet.history(),
                 let movement = history.first(where: {

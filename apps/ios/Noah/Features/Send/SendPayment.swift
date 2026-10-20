@@ -27,6 +27,7 @@ struct SendQuote: Codable, Sendable, Equatable {
     var feeRate: UInt64?
     var approximate = false
     var vtxoIDs: [String]?
+    static let feeEstimateExplanation = "The fee and total are estimates based on two inputs and two outputs. The final fee and total may be higher if more coins are needed."
 }
 struct SendReceipt: Codable, Equatable, Sendable {
     var amount: UInt64

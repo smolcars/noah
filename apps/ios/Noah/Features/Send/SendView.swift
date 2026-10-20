@@ -265,9 +265,9 @@ struct SendConfirmation: View {
                                     ? (payment.source?.label ?? "On-chain")
                                     : payment.method == "ark" ? "Ark" : "Lightning")
                             LabeledContent(quote.approximate ? "Estimated fee" : "Fee", value: "\(quote.fee) sats")
-                            LabeledContent("Total", value: "\(quote.total) sats")
+                            LabeledContent(quote.approximate ? "Estimated total" : "Total", value: "\(quote.total) sats")
                             if quote.approximate {
-                                Text("Estimate assumes two inputs and two outputs. The actual network fee may differ.")
+                                Text(SendQuote.feeEstimateExplanation)
                                     .font(NoahFont.callout)
                             }
                             if !payment.comment.isEmpty { Text(payment.comment) }
@@ -354,7 +354,14 @@ struct SendOutcomeView: View {
                     }
                     Text("\(receipt.amountIsEstimated == true ? "About " : "")\(receipt.amount) sats").font(
                         NoahFont.largeTitle)
-                    if let fee = receipt.fee { Text("Fee: \(fee) sats") }
+                    if let fee = receipt.fee {
+                        Text(controller.attempt?.payment.source == .onchain ? "Actual fee: \(fee) sats" : "Fee: \(fee) sats")
+                    } else if let quote = controller.attempt?.quote, quote.approximate {
+                        Text("Estimated fee: \(quote.fee) sats")
+                        Text("Estimated total: \(quote.total) sats")
+                        Text("The actual fee is not yet available. \(SendQuote.feeEstimateExplanation)")
+                            .font(NoahFont.callout)
+                    }
                     transactionDetails(receipt)
                     NoahButton(title: "Done") {
                         controller.acknowledge()

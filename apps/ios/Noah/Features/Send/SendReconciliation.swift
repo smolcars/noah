@@ -99,6 +99,7 @@ enum SendReconciliation {
         if var receipt = attempt.receipt, let txid = receipt.txid {
             if let tx = transactions.first(where: { $0.txid == txid }) {
                 receipt.status = tx.confirmation == nil ? .submitted : .confirmed
+                receipt.fee = tx.onchainFeeSats ?? receipt.fee
             } else {
                 // External offboards aren't in BDK's wallet history (FFI handoff item 15).
                 receipt.status = attempt.payment.source == .offchain ? .submitted : .unlocated

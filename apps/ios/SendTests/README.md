@@ -34,6 +34,12 @@ wrong-destination-amount assertions; both pass after the fix.
 
 ## Round-3 payment safety (2026-10-19)
 
+- Entered-amount onchain-wallet sends remain enabled by user decision. Review
+  labels both fee and total as estimates and explicitly warns that more input
+  coins may raise the final fee/total. Receipts show the actual BDK fee when
+  available (including after refresh); otherwise they retain the estimate labels
+  and warning. FFI item 14 now prioritizes prepared sends with a fee ceiling.
+
 - Before BOLT11 submission, SDK 0.3.0 `lightningSendState(paymentHash:)` reads the
   paid fact/checkpoint without driving it. Existing checkpoints never call pay,
   including checkpoints inherited before any movement existed. Their actual

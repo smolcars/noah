@@ -199,7 +199,23 @@ import Testing
         }
         #expect(restarted.state == .succeeded(receipt))
         await restarted.checkStatus()
-        #expect(restarted.state == .succeeded(.init(amount: 1000, txid: "new", status: .confirmed)))
+        #expect(restarted.state == .succeeded(.init(amount: 1000, txid: "new", status: .confirmed, fee: 100)))
+    }
+
+    @Test func submittedBdkReceiptUsesActualFeeEvenAboveEstimate() throws {
+        var saved = attempt("onchain", source: .onchain)
+        saved.quote = quote
+        saved.receipt = .init(amount: 1000, txid: "new", status: .submitted)
+        var tx = try transaction()
+        tx.onchainFeeSats = 500
+        guard case .paid(let receipt) = try SendReconciliation.onchain(saved, transactions: [tx]) else {
+            Issue.record("Returned transaction must remain tracked")
+            return
+        }
+        #expect(receipt.fee == 500)
+        #expect(receipt.fee! > quote.fee)
+        #expect(receipt.amount == 1000)
+        #expect(try roundTrip(.init(payment: saved.payment, snapshot: saved.snapshot, receipt: receipt)).receipt?.fee == 500)
     }
 
     @Test func unrelatedBdkDestinationDoesNotEstablishPayment() throws {
@@ -289,13 +305,13 @@ import Testing
 
     @Test func confirmedReceiptRevalidatesThroughReorgAndMissingHistory() async throws {
         var saved = attempt("onchain", source: .onchain)
-        saved.receipt = .init(amount: 1000, txid: "new", status: .confirmed)
+        saved.receipt = .init(amount: 1000, txid: "new", status: .confirmed, fee: 100)
         let storage = SendPaymentTests.Storage()
         storage.attempt = try roundTrip(saved)
         let pending = try transaction()
         let subject = controller(storage) { try SendReconciliation.onchain($0, transactions: [pending]) }
         await subject.checkStatus()
-        #expect(subject.state == .succeeded(.init(amount: 1000, txid: "new", status: .submitted)))
+        #expect(subject.state == .succeeded(.init(amount: 1000, txid: "new", status: .submitted, fee: 100)))
         storage.attempt = try roundTrip(#require(storage.attempt))
         let missing = controller(storage) { try SendReconciliation.onchain($0, transactions: []) }
         await missing.checkStatus()
