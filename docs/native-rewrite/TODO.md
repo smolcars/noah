@@ -97,7 +97,8 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Funded upgrade test iOS (`FUNDED=1`): RN receives 100k + sends 5k → native sees same fingerprint, 2 movements, 95,000 spendable
 - [ ] Extend funded upgrade test: onchain funds, recurring rule, settings values, Expo token
   - [x] iOS: confirmed 10k onchain + 95k Ark, identical movements/fingerprint/recurring policy, native recurring UI with zero payments, non-default settings and locale — `apps/ios/UpgradeTests/README.md`
-  - [ ] iOS: actual RN-registered Expo UUID/token continuity requires a physical iPhone; simulator hardware guards prevent RN registration (storage-contract tests and opt-in continuity test exist)
+  - [x] iOS: Expo token continuity verified on a physical iPhone 17 (iOS 27.2): native re-registered RN's exact token after an in-place install; installation ID reused (`apps/ios/UpgradeTests/README.md`)
+  - [ ] Both: an install while RN is running lost all RN MMKV stores on a real iPhone (MMKV discard on open; native then resumed onboarding). Recover instead of discard, back up RN MMKV before first open, block rather than fall into onboarding, and cover "install while RN runs" in both upgrade scripts
   - [x] Android: device assertions passed with 95k Ark + 30k confirmed onchain, identical paused RN rule/settings, real RN-runtime Expo UUID/token, and first native foreground launch without payment. Script/flows were corrected during a resumed live procedure; a fresh uninterrupted final-script run remains to be repeated.
 - [x] Upgrade test Android (emulator), funded: same fingerprint, 2 movements, 95,000 spendable (Expo UUID/token continuity verified in the extended run above)
 - [x] Upgrade test also checks launcher shortcut + placed widget survive (Android) and widget kind/bundle ID (iOS)

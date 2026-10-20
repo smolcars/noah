@@ -121,13 +121,19 @@ struct UpgradeCompatibilityTests {
 
     /// Simulators cannot acquire RN APNs/Expo registration. Missing expectations
     /// are a visible skip, never a generated UUID masquerading as continuity.
-    @Test(.enabled(if: ProcessInfo.processInfo.environment["NOAH_UPGRADE_EXPECT_EXPO_ID"] != nil && ProcessInfo.processInfo.environment["NOAH_UPGRADE_EXPECT_EXPO_TOKEN"] != nil))
+    /// The installation ID lives only in RN's keychain item, so a physical-device
+    /// run may supply just the RN-registered token: Expo derives the token from
+    /// that ID, so an unchanged token proves the ID was reused.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["NOAH_UPGRADE_EXPECT_EXPO_TOKEN"] != nil))
     func registeredExpoIdentityAndTokenAreUnchanged() async throws {
         let env = ProcessInfo.processInfo.environment
-        let id = try #require(env["NOAH_UPGRADE_EXPECT_EXPO_ID"])
         let token = try #require(env["NOAH_UPGRADE_EXPECT_EXPO_TOKEN"])
-        let sameID = try ExpoInstallationID.existing() == id
-        #expect(sameID)
+        if let id = env["NOAH_UPGRADE_EXPECT_EXPO_ID"] {
+            let sameID = try ExpoInstallationID.existing() == id
+            #expect(sameID)
+        } else {
+            #expect(try ExpoInstallationID.existing() != nil)
+        }
         guard case .registered(let actual) = try await PushRegistration.shared.register() else {
             Issue.record("Physical RN-to-native Expo registration is required")
             return

@@ -135,6 +135,32 @@ RN-registered physical iPhone before upgrading. Keep the installed app and
 keychain, install native with the same signing identity, run that test, and
 verify a delivered push separately. This remains a release gate.
 
+**Physical-device run, passed (2026-10-20).** Setup: an iPhone 17 on iOS 27.2 (UDID
+`00008150-001444D90A28C01C`), with only `com.noahwallet.regtest` touched.
+- RN 0.1.14 regtest was built for the device (Release, `EXPO_PUBLIC_REGTEST_URL` /
+  `EXPO_PUBLIC_REGTEST_SERVER_URL` pointing at the Mac's LAN IP) and installed.
+  Onboarding was completed by hand, with notifications and local network allowed.
+- RN registered an Expo push token with the regtest server for wallet `0357e728`;
+  its MD5 prefix is `27614e59222c`.
+- Native 0.2.0 (100) was then installed over RN with `devicectl` (no uninstall), built
+  with `-configuration Release-Regtest NOAH_REGTEST_HOST=<lan-ip>
+  NOAH_REGTEST_SERVER_URL=http://<lan-ip>:3000`.
+- Native opened the same wallet with RN's keychain seed: server login at 09:51:38 UTC
+  for `0357e728`, and no new user.
+- `registeredExpoIdentityAndTokenAreUnchanged()` then ran on the device with
+  `TEST_RUNNER_NOAH_UPGRADE_CHECK=1` and the RN token supplied privately from the
+  server DB. RN's installation ID can't be read outside its keychain item, so the test
+  now accepts the token alone: Expo derives the token from that ID, and an unchanged
+  token proves reuse. Native's actual registration returned RN's exact token, and an
+  installation ID was present. **1 test passed.** The token was never printed, and the
+  result bundle was deleted.
+- **Finding, fixed separately:** RN was still running when native was installed. On
+  native's first launch RN's MMKV contents were gone; meta sequence=1 shows MMKV
+  discarded them on open, almost certainly an integrity failure after the install
+  killed RN mid-write. Native then resumed onboarding ("Your Recovery Phrase"). The
+  simulator runs above terminate RN before installing native, so they missed this.
+  See the MMKV recovery/backup fix.
+
 `ExpoInstallationIDTests` verifies real Expo-shaped keychain-item and legacy
 UserDefaults reuse with isolated fake bundle IDs; those tests prove the storage
 contract, not live registration or delivery.
