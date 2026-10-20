@@ -41,6 +41,9 @@ class RecurringRuntime private constructor(context: Context) {
                 com.noahwallet.services.push.WidgetDataWriter.write(context, it.balance, null, BuildConfig.APP_VARIANT)
             }
         }), scope)
+    internal val foregroundRunner = RecurringForegroundRunner(scope) { budget ->
+        if (services.isOnboarded()) executor.execute(budget = budget)
+    }
     fun foreground() { scope.launch { executor.execute() } }
     fun timeChanged() { scope.launch { executor.timeChanged(); executor.execute() } }
     suspend fun execute(budget: RecurringBudget = RecurringBudget()) = withContext(Dispatchers.Main) { executor.execute(budget = budget) }

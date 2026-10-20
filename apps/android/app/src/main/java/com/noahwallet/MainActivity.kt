@@ -67,6 +67,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lifecycle.addObserver(com.noahwallet.recurring.RecurringRuntime.shared(this).foregroundRunner)
         if (intent.getBooleanExtra("recurring", false)) model.recurringNotification = true
         if (model.walletLock.enabled) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         if (Build.VERSION.SDK_INT < 29) ContextCompat.registerReceiver(this, backgroundReceiver,
