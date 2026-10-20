@@ -1,5 +1,9 @@
 # Noah native Android
 
+Regtest Lightning-address previews default to `localhost.com`. Override the domain with
+`-PnoahRegtestLnurlDomain=wallet.test` when building against a custom LNURL host.
+This does not change mainnet/signet domains or the server URL.
+
 Kotlin/Compose `:app` with Navigation 3, onboarding, Home and Receive. Launch
 opens through the process-wide `WalletSession.shared(context)` and resumes unfinished
 onboarding at the recovery phrase. It never creates a wallet at launch or deletes

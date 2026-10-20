@@ -1,6 +1,7 @@
 package com.noahwallet.services.server
 
 import com.noahwallet.api.generated.models.UpdateLightningIdentityPayload
+import com.noahwallet.BuildConfig
 import java.util.Locale
 
 object LightningIdentity {
@@ -20,10 +21,10 @@ object LightningIdentity {
         return UpdateLightningIdentityPayload(nostrPubkey = key.ifEmpty { null }, username = normalized)
     }
 
-    fun domain(variant: String): String = when (variant) {
+    fun domain(variant: String, regtestDomain: String = BuildConfig.REGTEST_LNURL_DOMAIN): String = when (variant) {
         "mainnet" -> "noahwallet.io"
         "signet" -> "signet.noahwallet.io"
-        "regtest" -> "localhost.com"
+        "regtest" -> regtestDomain
         else -> error("Unknown app variant")
     }
 }

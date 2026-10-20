@@ -84,6 +84,9 @@ android {
         val regtestServer = providers.gradleProperty("noahRegtestServerURL").orElse("http://$regtestHost:3000").get()
         require(regtestServer.matches(Regex("https?://[a-zA-Z0-9.:-]+"))) { "Invalid regtest server URL" }
         buildConfigField("String", "REGTEST_SERVER_URL", "\"$regtestServer\"")
+        val regtestLnurlDomain = providers.gradleProperty("noahRegtestLnurlDomain").orElse("localhost.com").get()
+        require(regtestLnurlDomain.matches(Regex("[a-zA-Z0-9.-]+"))) { "Invalid regtest Lightning-address domain" }
+        buildConfigField("String", "REGTEST_LNURL_DOMAIN", "\"$regtestLnurlDomain\"")
         buildConfigField("String", "SENTRY_DSN", "\"${sentryDsn.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         versionCode = 100
         versionName = "0.2.0"
