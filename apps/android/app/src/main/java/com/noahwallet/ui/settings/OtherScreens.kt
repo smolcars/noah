@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
@@ -29,6 +30,7 @@ fun FeedbackScreen(model: AppModel) {
     var subject by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
     var screenshot by remember { mutableStateOf<ByteArray?>(null) }
+    var cropImage by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
     var success by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -37,9 +39,12 @@ fun FeedbackScreen(model: AppModel) {
     val uriHandler = LocalUriHandler.current
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) scope.launch {
-            loading = true; screenshot = null; error = null
+            loading = true; error = null
             try {
-                screenshot = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use(FeedbackDraft::readScreenshot) ?: error("Unreadable image") }
+                cropImage = withContext(Dispatchers.IO) {
+                    val bytes = context.contentResolver.openInputStream(uri)?.use(FeedbackDraft::readScreenshot) ?: error("Unreadable image")
+                    decodeScreenshot(bytes)
+                }
             } catch (validation: IllegalArgumentException) { error = validation.message }
             catch (_: Exception) { error = "Couldn't read the screenshot. Please try again." }
             finally { loading = false }
@@ -56,13 +61,14 @@ fun FeedbackScreen(model: AppModel) {
             SectionTitle("Screenshot (optional)")
             NoahButton("Add Screenshot", !model.busy && !loading, secondary = true) { picker.launch("image/*") }
             if (screenshot != null) {
-                Text(tr("Screenshot selected · ${screenshot!!.size / 1024} KiB"))
+                val preview = remember(screenshot) { android.graphics.BitmapFactory.decodeByteArray(screenshot, 0, screenshot!!.size)?.asImageBitmap() }
+                preview?.let { androidx.compose.foundation.Image(it, tr("Selected screenshot"), Modifier.fillMaxWidth().heightIn(max = 180.dp)) }
                 TextButton({ screenshot = null }, enabled = !model.busy) { Text(tr("Remove Screenshot")) }
             }
             Text(tr("JPEG or PNG, 5 MB or smaller"), style = MaterialTheme.typography.bodySmall)
             error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
             if (loading || model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            NoahButton("Send Feedback", !model.busy && !loading && name.isNotBlank() && subject.isNotBlank() && body.isNotBlank()) {
+            NoahButton("Send Feedback", !model.busy && !loading && cropImage == null && name.isNotBlank() && subject.isNotBlank() && body.isNotBlank()) {
                 model.action("Failed to submit feedback. Please try again.") {
                     val payload = try { FeedbackDraft(name, email, subject, body, screenshot).payload(DeviceInfo.current()) { Base64.encodeToString(it, Base64.NO_WRAP) } }
                     catch (validation: IllegalArgumentException) { error = validation.message; return@action }
@@ -72,6 +78,19 @@ fun FeedbackScreen(model: AppModel) {
             }
         }
         TextButton({ uriHandler.openUri("https://t.me/blixtwallet/605026") }) { Text(tr("Telegram Support")) }
+    }
+    cropImage?.let { image ->
+        ScreenshotCropDialog(image, onCancel = { cropImage = null }) { crop ->
+            cropImage = null
+            scope.launch {
+                loading = true
+                try {
+                    screenshot = withContext(Dispatchers.Default) { cropScreenshot(image, crop) }
+                } catch (validation: IllegalArgumentException) { error = validation.message }
+                catch (_: Exception) { error = "Could not read the selected screenshot." }
+                finally { loading = false }
+            }
+        }
     }
 }
 
