@@ -41,6 +41,8 @@ struct WalletRestorer: Sendable {
     let makeClient: @Sendable (_ mnemonic: String) -> Client
     var walletChanged: @Sendable () async -> Void = { await SendPaymentController.shared.reloadForWalletChange() }
 
+    var beginOnboarding: @Sendable () throws -> Void = {}
+
     struct Outcome: Equatable, Sendable {
         let backupId: String?
         let snapshotSha256: String?
@@ -126,6 +128,7 @@ struct WalletRestorer: Sendable {
             progress(.fetching)
             let outcome = try await fetchAndStage(mnemonic: mnemonic, transaction: transaction, progress: progress)
             do {
+                try beginOnboarding()
                 try transaction.begin(seed: mnemonic)
                 progress(.loading)
                 try await session.verify(reservation, mnemonic: mnemonic, appVersion: "restore")

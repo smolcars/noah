@@ -42,6 +42,7 @@ actor WalletCreator {
         /// Leaves the wallet open (ending the reservation) or fails with the
         /// reservation still held and nothing running on the files.
         var createNew: @Sendable (WalletSession.Reservation, _ mnemonic: String) async throws -> Void
+        var beginOnboarding: @Sendable () throws -> Void = {}
     }
 
     private enum Plan: Equatable {
@@ -105,6 +106,7 @@ actor WalletCreator {
         // since the first look.
         guard try plan() == .fresh else { throw WalletSession.OpenError.busy }
         let datadirExisted = dependencies.datadirExists()
+        try dependencies.beginOnboarding()
         let mnemonic = try dependencies.generateMnemonic()
         _ = try StoredSeed.normalized(mnemonic)
         try dependencies.saveSeed(mnemonic)
@@ -125,7 +127,7 @@ actor WalletCreator {
 }
 
 extension WalletCreator.Dependencies {
-    static func live(session: WalletSession, variant: AppVariant, appVersion: String) -> Self {
+    static func live(session: WalletSession, variant: AppVariant, appVersion: String, settings: SettingsStorage = .shared) -> Self {
         let seedItem = KeychainPassword.mnemonic(for: variant)
         let location = WalletDataLocation(variant: variant)
         return Self(
@@ -165,6 +167,7 @@ extension WalletCreator.Dependencies {
             openExisting: { try await session.ensureOpen(mnemonic: $0, runDaemon: true, appVersion: appVersion) },
             reserve: { try await session.reserve() },
             release: { await session.release($0) },
-            createNew: { try await session.createNew($0, mnemonic: $1, runDaemon: true, appVersion: appVersion) })
+            createNew: { try await session.createNew($0, mnemonic: $1, runDaemon: true, appVersion: appVersion) },
+            beginOnboarding: { try settings.beginOnboarding() })
     }
 }

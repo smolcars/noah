@@ -110,6 +110,36 @@ struct WalletRestorerTests {
         return (restorer, mnemonic)
     }
 
+    @Test func failedOnboardingMarkerPreservesWalletAndAllowsRestoreRetry() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let seed = FakeSeed(Self.previousSeed)
+        var (restorer, mnemonic) = try await setUp(seed: seed)
+        restorer.beginOnboarding = { throw SettingsStorage.OpenError() }
+        await #expect(throws: SettingsStorage.OpenError.self) { try await restorer.restore(mnemonic: mnemonic) }
+        try expectPreviousWalletBack(seed)
+        let settings = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
+        restorer.beginOnboarding = { try settings.beginOnboarding() }
+        _ = try await restorer.restore(mnemonic: mnemonic)
+        #expect(settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == false)
+        #expect(seed.current == mnemonic)
+    }
+
+    @Test func restorePersistsUnfinishedOnboardingBeforeInstallingBackupOrPhrase() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let settings = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
+        let seed = FakeSeed(Self.previousSeed)
+        var (restorer, mnemonic) = try await setUp(seed: seed)
+        restorer.beginOnboarding = { try settings.beginOnboarding() }
+        _ = try await restorer.restore(mnemonic: mnemonic) { step in
+            if step == .loading || step == .finalizing {
+                let reopened = try? SettingsStorage(rootPath: root.appending(path: "mmkv").path)
+                #expect(reopened?.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == false)
+            }
+        }
+        let reopened = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
+        #expect(reopened.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == false)
+    }
+
     private var deviceBWallet: String? {
         (try? Data(contentsOf: deviceB.database)).map { String(decoding: $0, as: UTF8.self) }
     }

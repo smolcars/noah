@@ -71,7 +71,7 @@ final class AppModel {
         self.settleRestore = settleRestore
         server = ServerRegistration(variant: .current, settings: settings, client: AppServices.shared.client)
         creator = WalletCreator(
-            dependencies: .live(session: session, variant: variant, appVersion: appVersion))
+            dependencies: .live(session: session, variant: variant, appVersion: appVersion, settings: settings))
         isBalanceHidden = settings.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key)?
             .isHomeBalanceHidden ?? false
         let currency = settings.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.preferredCurrency ?? "USD"
@@ -143,7 +143,6 @@ final class AppModel {
             throw error
         }
         var wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
-        wallet.isInitialized = false
         wallet.staticVtxoPubkey = try await session.peekPublicKey(index: 0)
         try settings.setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)
         // Registration failure must not hide the newly created recovery phrase.
@@ -177,7 +176,8 @@ final class AppModel {
             let restorer = WalletRestorer(
                 variant: variant, session: session, location: location,
                 seed: KeychainPassword.mnemonic(for: variant),
-                makeClient: { ServerClient.makeRestore(variant: variant, mnemonic: $0) })
+                makeClient: { ServerClient.makeRestore(variant: variant, mnemonic: $0) },
+                beginOnboarding: { [settings] in try settings.beginOnboarding() })
             let outcome = try await restorer.restore(mnemonic: mnemonic) { [weak self] step in
                 Task { @MainActor in
                     if self?.isRestoring == true { self?.restoreStep = step }

@@ -151,6 +151,12 @@ final class SettingsStorage: @unchecked Sendable {
         try persist(.init()) // Keep the import marker through re-onboarding.
     }
 
+    func beginOnboarding() throws {
+        var wallet = persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
+        wallet.isInitialized = false
+        try setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)
+    }
+
     /// Reads a zustand-persisted store. Returns `nil` when the key is absent
     /// or does not decode; callers fall back to their defaults.
     func persistedState<State: Decodable>(_ type: State.Type, key: String) -> State? {
