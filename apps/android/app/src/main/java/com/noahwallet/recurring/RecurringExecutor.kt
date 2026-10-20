@@ -35,7 +35,8 @@ class RecurringExecutor(private val d: Dependencies,
     suspend fun execute(manual: Boolean = false, approval: Review? = null, budget: RecurringBudget = RecurringBudget()) {
         task?.takeIf { !it.isCompleted }?.let { it.await(); return }
         task = null
-        val work = scope.async(start = CoroutineStart.LAZY) { run(manual, approval, budget) }
+        val caller = currentCoroutineContext()[Job]
+        val work = scope.async(start = CoroutineStart.LAZY) { run(manual, approval, budget, caller) }
         task = work; work.start()
         try { work.await() } finally { if (work.isCompleted && task === work) task = null }
     }
@@ -68,24 +69,24 @@ class RecurringExecutor(private val d: Dependencies,
             }
         }
     }
-    private suspend fun requireStage(budget: RecurringBudget) {
+    private suspend fun requireStage(budget: RecurringBudget, caller: Job?) {
         currentCoroutineContext().ensureActive()
-        check(budget.available) { "Recurring background work stopped." }
+        check(budget.available && caller?.isActive != false) { "Recurring background work stopped." }
     }
-    private suspend fun run(manual: Boolean, approval: Review?, budget: RecurringBudget) {
+    private suspend fun run(manual: Boolean, approval: Review?, budget: RecurringBudget, caller: Job?) {
         running = true; error = null
         try {
-            requireStage(budget)
+            requireStage(budget, caller)
             val generation = storage { d.automationGeneration() }
             val durableGeneration = storage { d.store.automationGeneration() }
-            requireStage(budget)
+            requireStage(budget, caller)
             d.ensureOpen()
-            requireStage(budget)
+            requireStage(budget, caller)
             refreshDates()
             val initial = boundState(); recoverMarkers(initial)
             for (id in initial.schedules.keys.sorted()) {
                 if (approval != null && approval.schedule.id != id) continue
-                if (!budget.available) break
+                if (!budget.available || caller?.isActive == false) break
                 val schedule = boundState().schedules[id] ?: continue
                 if (approval != null && (schedule != approval.schedule || schedule.status != "needs_approval")) continue
                 val planning = if (approval != null) schedule.copy(status = "active") else schedule
@@ -97,7 +98,7 @@ class RecurringExecutor(private val d: Dependencies,
                 if (plan.kind != "pay" || controller.locked || approval != null && approval.plan != plan) continue
                 try {
                     val (payment, quote) = approval?.let { it.payment to it.quote } ?: d.quote(schedule)
-                    if (!budget.available) break
+                    if (!budget.available || caller?.isActive == false) break
                     val state = boundState()
                     if (state.schedules[id] != schedule || planning.plan(d.now(), d.zone(), manual) != plan || quote.walletIdentity != state.binding!!.wallet) continue
                     require(payment.amount == schedule.amountSat && quote.amount == schedule.amountSat && !payment.max)
@@ -120,7 +121,7 @@ class RecurringExecutor(private val d: Dependencies,
                             d.allowed()
                             val current = d.store.load()
                             val currentPlan = marked.copy(inFlight = null, status = "active").plan(d.now(), d.zone(), manual)
-                            check(budget.available && currentPlan == entry.plan && generation == d.automationGeneration() && durableGeneration == d.store.automationGeneration() && marked.amountSat <= RecurringPayment.maximumAmount)
+                            check(budget.available && caller?.isActive != false && currentPlan == entry.plan && generation == d.automationGeneration() && durableGeneration == d.store.automationGeneration() && marked.amountSat <= RecurringPayment.maximumAmount)
                             check(current.binding == d.binding() && current.binding == entry.binding && current.schedules[id] == marked)
                             check(!d.journal.consumed(entry.binding, id, entry.plan.scheduledFor!!, entry.policyRevision, entry.plan.occurrenceIndex))
                             check(approval != null || RecurringFeePolicy.evaluate(payment.amount, payment.method, quote.fee, quote.lightningFeeSchedule).autoPay)
@@ -138,18 +139,18 @@ class RecurringExecutor(private val d: Dependencies,
                     }
                 }
             }
-            requireStage(budget)
+            requireStage(budget, caller)
             refreshDates()
-            requireStage(budget)
-            syncServer { requireStage(budget) }
-            requireStage(budget)
+            requireStage(budget, caller)
+            syncServer { requireStage(budget, caller) }
+            requireStage(budget, caller)
             d.refresh()
         } catch (failure: Exception) { error = failure.message ?: "Recurring sending is stopped." }
         finally { try {
             reload()
-            if (budget.available && currentCoroutineContext().isActive) {
+            if (budget.available && caller?.isActive != false && currentCoroutineContext().isActive) {
                 val visible = storage { runCatching { d.store.load().schedules.values.toList() }.getOrDefault(emptyList()) }
-                requireStage(budget)
+                requireStage(budget, caller)
                 d.notify(visible, null)
             }
         } finally { running = false } }
