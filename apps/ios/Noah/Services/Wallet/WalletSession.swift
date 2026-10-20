@@ -631,6 +631,7 @@ actor WalletSession {
             let endpoint: String?
             if let selection = EsploraOpening.selection { endpoint = selection.endpoint }
             else { endpoint = try await EsploraSettings().resolve(for: variant) }
+            EndpointLogPrivacy.register(endpoint)
             let configuration = WalletConfiguration.effective(for: variant, endpoint: endpoint)
             let config = configuration.sdkConfig(
                 userAgent: WalletConfiguration.userAgent(variant: variant, version: appVersion))

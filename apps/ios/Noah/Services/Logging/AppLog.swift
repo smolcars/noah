@@ -412,9 +412,9 @@ final class LogFile: @unchecked Sendable {
     private static func replaceURLs(_ text: String) -> String {
         let source = text as NSString
         let matches = urlTokens.matches(in: text, range: NSRange(text.startIndex..., in: text))
-        return replacing(text, ranges: matches.compactMap { match in
+        return EndpointLogPrivacy.redact(replacing(text, ranges: matches.compactMap { match in
             source.substring(with: match.range).contains("?") ? (match.range, "[redacted]") : nil
-        })
+        }))
     }
 
     private static func replacePushTokens(_ text: String) -> String {
