@@ -104,7 +104,9 @@ struct OnchainRecoveryTests {
             try await restarted.perform(duplicate) { Issue.record("duplicate board"); return "bad" }
         }
         try await restarted.discardUncertain(board.id)
-        #expect(try await OnchainOperationJournal(file: file).loadAll().isEmpty)
+        let retained = try #require(try await OnchainOperationJournal(file: file).load())
+        #expect(retained.id == board.id && retained.overrideAudit != nil)
+        #expect(!retained.blocks(.board, ids: []))
     }
     @Test func checkStatusRequiresConclusiveEvidenceAndNeverMatchesAmount() async throws {
         let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)

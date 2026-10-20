@@ -44,7 +44,16 @@ Other deliberate differences from RN:
   transactions. Bark’s daemon keeps the cache fresh. Inconclusive checks say
   “Noah checks again automatically as your wallet syncs.” Only conclusive evidence resolves
   an attempt. Missing IDs, locked refresh inputs and unknown errors remain uncertain.
-  **Clear unresolved attempt…** requires explicit destructive repeat-risk consent.
+  **Override repeat protection…** requires explicit destructive repeat-risk consent.
+  The original attempt remains atomically saved with the override time, quote,
+  IDs, status message, and the exact alert/confirmation text. Overrides do not
+  block new submissions. Screen refresh/polling/relaunch reconciles all unresolved
+  attempts from cached evidence, including overridden originals; a late original
+  receipt remains visible separately from a new submission. Done hides that
+  receipt while retaining its audit record. Saves retain the newest 100 overrides
+  by override time (including acknowledged records), pruning only older overrides;
+  active attempts are never pruned. Existing single/array journals decode without
+  override metadata and migrate on their next atomic write.
   There is no automatic retry or amount-only reconciliation. Receipts stay until
   acknowledged; durable operation lookup for the pre-ID window remains FFI 19.
 - Claims compare the built PSBT's fee to the reviewed estimate before broadcasting.
@@ -404,3 +413,78 @@ before deletion, `simctl list devices --json` was checked for the exact name
 **Noah M6 Recovery Sol ee0d**, UDID `386B936B-02F3-4480-B542-F4FF386CDB92`, and
 **Shutdown** state. Deleted only that UDID and verified its absence. No other
 simulator, Android emulator, physical device or Docker lifecycle was changed.
+
+## Round-2 read-only and override fixes (2026-10-19)
+
+The earlier recovery verification's unchanged transaction set did **not** prove
+Check status was read-only: pinned Bark BDK sync calls `rebroadcast_txs`, which
+can resend eligible transactions the user already authorized. Check status now
+uses only cached transactions, exact VTXO states and persisted exit status, via
+`WalletSession.OnchainAttemptReads`. That seam exposes no sync/progression/
+broadcast capability. Missing transaction IDs, locked inputs and insufficient
+cached evidence stay unresolved. The UI explains: **Noah checks again
+automatically as your wallet syncs.** The normal authorized daemon is unchanged.
+
+The audit covered every M6 read path: manual/automatic boarding estimates,
+refresh/exit/claim/cancel fee reviews, VTXO list/detail, exit overview/detail,
+legacy exit-movement discovery, and exact-txid receipt-fee lookup. The SDK 0.3.1
+core adapters and pinned Bark `fees.rs`, `exit/estimate.rs`, `exit/mod.rs` and
+`onchain/bdk.rs` were inspected. These other reads do not invoke wallet/BDK sync,
+exit progression or broadcast; chain-tip/status/fee queries are read-only. All
+fund-moving calls remain inside the existing reviewed, journaled execute path.
+
+Override confirmation now atomically updates the attempt rather than deleting
+it. The retained quote/IDs, override time, visible status, alert title, warning
+and confirmation text survive restart. Overridden attempts never block repeats,
+including after their original receipt becomes known. Screen refreshes reconcile
+them without resubmission, and late original receipts appear separately from a
+new operation. Done records acknowledgement and hides the receipt while keeping
+the audit. The newest 100 overrides are retained by timestamp; normal attempts
+are never pruned. Both prior single-object and array journals migrate on write.
+
+Dedicated simulator: **Noah M6 Round2 Sol 1a9053**, iPhone 17 Pro, iOS 27.0,
+UDID `145E75FF-469C-49D6-BDA7-CE44CA3705BF`. Derived data:
+`/tmp/noah-m6-round2-1a9053-dd`. XcodeGen was regenerated after adding
+`OnchainOverrideTests.swift`. All runs use arm64, `ONLY_ACTIVE_ARCH=YES`, ad-hoc
+signing, `-jobs 2`, disabled parallel testing, and only this owned simulator.
+T3's Device service rejected the newly created UDID twice as unknown despite
+`simctl` confirming it, so Xcode targeted its exact UDID directly.
+
+Targeted verification:
+
+- Cached reader / model: **12 tests in 2 suites**, zero skips/failures; result
+  `/tmp/noah-m6-round2-1a9053-readonly.xcresult`.
+- Recovery, journal, model, override, receipt fees and exit history: **25 tests
+  in 6 suites**, zero skips/failures (**26 passed device executions**, including
+  the two journal-schema arguments); result
+  `/tmp/noah-m6-round2-1a9053-overrides.xcresult`.
+- Acknowledgement follow-up: **4 tests in 1 suite**, zero skips/failures
+  (**5 passed device executions**), including entering another review after Done
+  without resurfacing an acknowledged override; result
+  `/tmp/noah-m6-round2-1a9053-acknowledgement.xcresult`.
+
+Tests exercise exact cached-read call traces, insufficient/mismatched evidence,
+operation/item scopes, the closed pre-broadcast allowlist, persistence before
+submission, single/array migration, override → new submission → late original
+receipt, exact original fee lookup, restart, bounded pruning, and retained audit
+acknowledgement. The model fake verifies one authorized new submission and no
+additional submission during checks/refresh/relaunch. Live wallet broadcasts,
+cancellation/claim lifecycle, external networks and physical hardware were not
+rerun for these changes; no Docker command or unrelated device was used.
+
+The full `NoahTests` suite was run **once**, after the final code changes:
+**316 tests total, 303 passed, 13 explicitly gated skips, 0 failures**, across
+**74 suites**. Parameterized device execution is **349 passed, 13 skipped**.
+`xcresulttool get test-results summary` confirms both counts. Result:
+`/tmp/noah-m6-round2-1a9053-full.xcresult`; log:
+`/tmp/noah-m6-round2-1a9053-full.log`; summary:
+`/tmp/noah-m6-round2-1a9053-full-summary.json`. All targeted result logs use the
+same basename as their `.xcresult` with a `.log` suffix. `git diff --check` passes.
+
+Cleanup: Xcode shut down the owned simulator after testing. Immediately before
+deletion, `simctl list devices --json` was checked for its exact name
+**Noah M6 Round2 Sol 1a9053**, UDID `145E75FF-469C-49D6-BDA7-CE44CA3705BF`, and
+**Shutdown** state. Deleted only that UDID and verified its absence; before/after
+inventories are `/tmp/noah-m6-round2-1a9053-before-delete.json` and
+`/tmp/noah-m6-round2-1a9053-after-delete.json`. No other simulator, Android emulator,
+physical device, or Docker lifecycle was changed.

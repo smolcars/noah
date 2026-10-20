@@ -20,11 +20,25 @@ struct OnchainStatusSection: View {
             ProgressView().frame(maxWidth: .infinity).accessibilityLabel("Updating wallet")
         }
         ForEach(model.attempts) { attempt in
-            Section(attempt.receipt == nil ? "Check operation status" : "Submitted") {
+            Section(
+                attempt.overrideAudit != nil ? "Overridden attempt"
+                    : attempt.receipt == nil ? "Check operation status" : "Submitted"
+            ) {
                 Text(attempt.quote.action.title).font(NoahFont.headline)
                 OnchainAmountRow(title: "Reviewed amount", sats: attempt.quote.amount)
                 Text(attempt.quote.createdAt, style: .date).font(NoahFont.footnote)
                 Text(attempt.receipt?.message ?? OnchainFailure.uncertain.errorDescription!).textSelection(.enabled)
+                if let audit = attempt.overrideAudit {
+                    LabeledContent("Repeat protection overridden") {
+                        Text(audit.overriddenAt, format: .dateTime)
+                    }
+                    DisclosureGroup("Override confirmation") {
+                        Text(audit.statusMessage)
+                        Text(audit.title)
+                        Text(audit.warning)
+                        Text(audit.confirmation)
+                    }
+                }
                 if let fee = attempt.receipt?.onchainFee {
                     OnchainAmountRow(title: "Actual onchain fee", sats: fee)
                 }
@@ -35,20 +49,23 @@ struct OnchainStatusSection: View {
                 if attempt.receipt != nil {
                     Button("Done") { Task { await model.acknowledge(attempt.id) } }.disabled(model.busy)
                 } else {
+                    Text("Noah checks again automatically as your wallet syncs.")
                     Button("Check status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
-                    Button("Clear unresolved attempt…", role: .destructive) { discardID = attempt.id }
-                        .disabled(model.busy)
+                    if attempt.overrideAudit == nil {
+                        Button("Override repeat protection…", role: .destructive) { discardID = attempt.id }
+                            .disabled(model.busy)
+                    }
                 }
             }
-            .alert("Clear unresolved attempt?", isPresented: Binding(
+            .alert(OnchainOperationJournal.OverrideAudit.titleText, isPresented: Binding(
                 get: { discardID == attempt.id }, set: { if !$0 { discardID = nil } })) {
                 Button("Keep attempt", role: .cancel) { discardID = nil }
-                Button("I understand this may repeat the operation", role: .destructive) {
+                Button(OnchainOperationJournal.OverrideAudit.confirmationText, role: .destructive) {
                     discardID = nil
                     Task { await model.discardUncertain(attempt.id) }
                 }
             } message: {
-                Text("Clearing this record cannot cancel a submitted operation. Submitting again may spend additional funds or fees. Check status first.")
+                Text(OnchainOperationJournal.OverrideAudit.warningText)
             }
         }
         if let error = model.error { Section { Text(error).foregroundStyle(NoahColor.destructive) } }

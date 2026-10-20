@@ -2,14 +2,28 @@ import Foundation
 
 /// Durable attempts are scoped to the operation/items they could duplicate; never auto-retry.
 actor OnchainOperationJournal {
+    struct OverrideAudit: Codable, Sendable {
+        static let titleText = "Override repeat protection?"
+        static let warningText = "This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs."
+        static let confirmationText = "I understand this may repeat the operation"
+        var overriddenAt: Date
+        var title = OverrideAudit.titleText
+        var warning = OverrideAudit.warningText
+        var confirmation = OverrideAudit.confirmationText
+        var statusMessage = OnchainFailure.uncertain.errorDescription!
+        var acknowledgedAt: Date?
+    }
+    // Bound audit storage without aging out sparse history or pruning active attempts.
+    static let maxOverriddenAttempts = 100
     struct Attempt: Codable, Sendable, Identifiable {
         var quote: OnchainQuote
         var receipt: OnchainReceipt?
         var txid: String?
+        var overrideAudit: OverrideAudit?
         var id: UUID { quote.id }
 
         func blocks(_ action: OnchainAction, ids: [String]) -> Bool {
-            guard quote.action == action else { return false }
+            guard overrideAudit == nil, quote.action == action else { return false }
             // Pinned Bark start skips active IDs; cancel of an already-canceled ID is a no-op.
             // Claims skip non-claimable IDs, but until chain observation a second PSBT can differ
             // (destination/locktime/fee). Progress can spend more on CPFP; board can spend new coins.
@@ -67,7 +81,13 @@ actor OnchainOperationJournal {
     }
     func load() throws -> Attempt? { try loadAll().first }
     private func save(_ values: [Attempt]) throws {
-        try JSONEncoder().encode(values).write(
+        let retainedOverrides = Set(values.filter { $0.overrideAudit != nil }.sorted {
+            let left = $0.overrideAudit!.overriddenAt
+            let right = $1.overrideAudit!.overriddenAt
+            return left == right ? $0.id.uuidString > $1.id.uuidString : left > right
+        }.prefix(Self.maxOverriddenAttempts).map(\.id))
+        let retained = values.filter { $0.overrideAudit == nil || retainedOverrides.contains($0.id) }
+        try JSONEncoder().encode(retained).write(
             to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         var url = file
         var attributes = URLResourceValues()
@@ -127,15 +147,26 @@ actor OnchainOperationJournal {
         if changed { try save(attempts) }
     }
     func acknowledge(_ id: UUID? = nil) throws {
-        guard !running, let attempt = try loadAll().first(where: { id == nil || $0.id == id }),
-            attempt.receipt != nil else { throw OnchainFailure.uncertain }
-        try save(try loadAll().filter { $0.id != attempt.id })
+        guard !running else { throw OnchainFailure.busy }
+        var attempts = try loadAll()
+        guard let index = attempts.firstIndex(where: { id == nil || $0.id == id }),
+            attempts[index].receipt != nil else { throw OnchainFailure.uncertain }
+        if attempts[index].overrideAudit != nil {
+            attempts[index].overrideAudit?.acknowledgedAt = Date()
+        } else {
+            attempts.remove(at: index)
+        }
+        try save(attempts)
     }
-    /// Only called after the user explicitly accepts the risk of repeating this operation.
-    func discardUncertain(_ id: UUID) throws {
-        guard !running, let attempt = try loadAll().first(where: { $0.id == id }), attempt.receipt == nil else {
+    /// Only called after the user explicitly accepts the displayed repeat-risk confirmation.
+    func discardUncertain(_ id: UUID, now: Date = Date()) throws {
+        guard !running else { throw OnchainFailure.busy }
+        var attempts = try loadAll()
+        guard let index = attempts.firstIndex(where: { $0.id == id }),
+            attempts[index].receipt == nil, attempts[index].overrideAudit == nil else {
             throw OnchainFailure.busy
         }
-        try save(try loadAll().filter { $0.id != id })
+        attempts[index].overrideAudit = .init(overriddenAt: now)
+        try save(attempts)
     }
 }

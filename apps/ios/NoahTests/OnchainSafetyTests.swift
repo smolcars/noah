@@ -20,8 +20,8 @@ struct OnchainJournalTests {
             try await journal.perform(Self.quote) {
                 #expect(
                     try JSONDecoder().decode(
-                        OnchainOperationJournal.Attempt.self, from: Data(contentsOf: file)
-                    ).quote.amount == 20000)
+                        [OnchainOperationJournal.Attempt].self, from: Data(contentsOf: file)
+                    ).first?.quote.amount == 20000)
                 throw OnchainFailure.unavailable
             }
         }
@@ -227,8 +227,8 @@ struct OnchainModelTests {
         await model.checkStatus(board.id)
         #expect(model.error == OnchainFailure.unavailable.errorDescription)
         await model.discardUncertain(board.id)
-        #expect(model.attempts.isEmpty)
-        #expect(try await OnchainOperationJournal(file: file).loadAll().isEmpty)
+        #expect(model.attempts.first?.overrideAudit != nil)
+        #expect(try await OnchainOperationJournal(file: file).load()?.overrideAudit != nil)
         #expect(await calls.mutations == 0)
     }
     @Test func expiredQuoteRequiresReviewAgain() async {

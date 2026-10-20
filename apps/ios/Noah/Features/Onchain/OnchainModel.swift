@@ -63,16 +63,21 @@ final class OnchainModel {
         loading = true
         defer { loading = false }
         do {
-            attempts = try await dependencies.attempt()
+            let saved = try await dependencies.attempt()
+            attempts = saved.filter { $0.overrideAudit?.acknowledgedAt == nil }
             guard await dependencies.ready() else {
                 overview = nil
                 exit = nil
                 invalidate()
                 throw OnchainFailure.unavailable
             }
+            // Reconcile retained originals too; a later daemon sync can resolve an override.
+            for attempt in saved where attempt.receipt == nil {
+                _ = try? await dependencies.check(attempt.id)
+            }
             // Fee lookup is optional after submission; it must never hide an existing receipt.
             try? await dependencies.refreshReceipts()
-            attempts = try await dependencies.attempt()
+            attempts = try await dependencies.attempt().filter { $0.overrideAudit?.acknowledgedAt == nil }
             let token = generation
             if let detailID {
                 let detail = try await dependencies.detail(detailID)
@@ -101,7 +106,7 @@ final class OnchainModel {
         defer { busy = false }
         do {
             guard await dependencies.ready() else { throw OnchainFailure.unavailable }
-            attempts = try await dependencies.attempt()
+            attempts = try await dependencies.attempt().filter { $0.overrideAudit?.acknowledgedAt == nil }
             guard !attempts.contains(where: { $0.blocks(action, ids: ids) }) else { throw OnchainFailure.busy }
             let fresh = try await dependencies.quote(action, ids, amount, destination)
             guard generation == token, await dependencies.ready() else { return }
@@ -160,8 +165,8 @@ final class OnchainModel {
         defer { busy = false }
         do {
             try await dependencies.discard(id)
-            attempts.removeAll { $0.id == id }
-            message = "Attempt cleared. Review the current wallet state before submitting again."
+            attempts = try await dependencies.attempt().filter { $0.overrideAudit?.acknowledgedAt == nil }
+            message = "Repeat protection overridden. The original attempt is still saved. Review the current wallet state before submitting again."
         } catch { self.error = OnchainFailure.uncertain.errorDescription }
     }
 
