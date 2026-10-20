@@ -34,10 +34,10 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         })
     }
     internal fun automationGeneration(): String? = synchronized(lock) { automation?.generation() }
-    private fun envelope(): JsonObject {
+    private fun envelope(raw: String? = read()): JsonObject {
         check(!writeFailed) { "Recurring payment storage failed. Restart Noah; sending is stopped." }
-        val raw = read() ?: return buildJsonObject { put("version", 0); putJsonObject("state") { putJsonObject("schedules") {}; put("serverSyncPending", false) } }
-        return json.parseToJsonElement(raw).jsonObject.also {
+        val stored = raw ?: return buildJsonObject { put("version", 0); putJsonObject("state") { putJsonObject("schedules") {}; put("serverSyncPending", false) } }
+        return json.parseToJsonElement(stored).jsonObject.also {
             val version = it["version"]
             require(version == null || version is JsonPrimitive && !version.isString && version.content == "0") { "Unsupported recurring payment version. Sending is stopped." }
             it.getValue("state").jsonObject.getValue("schedules").jsonObject
@@ -46,20 +46,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     fun load(): State = synchronized(lock) { protected(decode(envelope())) }
     private fun decode(envelope: JsonObject): State {
         val state = envelope.getValue("state").jsonObject
-        val schedules = state.getValue("schedules").jsonObject.mapValues { (id, raw) ->
-            val decoded = runCatching { json.decodeFromJsonElement<RecurringPayment>(raw) }.getOrNull()
-            if (decoded != null && decoded.id == id && decoded.validPolicy) decoded
-            else {
-                val fields = raw as? JsonObject
-                // The original JSON remains authoritative for rows native code cannot represent.
-                (decoded ?: RecurringPayment(id, (fields?.get("label") as? JsonPrimitive)?.contentOrNull ?: "Saved recurring payment",
-                    (fields?.get("destination") as? JsonPrimitive)?.contentOrNull.orEmpty(),
-                    (fields?.get("destinationType") as? JsonPrimitive)?.contentOrNull.orEmpty(),
-                    (fields?.get("amountSat") as? JsonPrimitive)?.longOrNull ?: 0,
-                    interval = RecurringInterval("month", 1), startAt = 0, createdAt = 0, updatedAt = 0))
-                    .copy(id = id, status = "needs_attention", lastError = RecurringPayment.unsupportedMessage, unsupportedStorage = true)
-            }
-        }
+        val schedules = state.getValue("schedules").jsonObject.mapValues { (id, raw) -> payment(id, raw) }
         val binding = state["nativeWalletBinding"]?.takeUnless { it == JsonNull }?.let { json.decodeFromJsonElement<Binding>(it) }
         binding?.let { require(it.wallet.fingerprint.isNotBlank() && it.wallet.network.isNotBlank()); UUID.fromString(it.instance) }
         // RN may store amounts above native approval limits; retain each row and its original bytes.
@@ -70,18 +57,37 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         return State(visible, state["serverSyncPending"]?.jsonPrimitive?.booleanOrNull ?: true, binding)
     }
     private fun change(policyID: String? = null, reapproval: Boolean = false, mutate: (MutableMap<String, JsonElement>) -> Unit) = synchronized(lock) {
-        val envelope = envelope(); val before = decode(envelope)
+        val original = read(); val envelope = envelope(original); val before = decode(envelope)
         val state = envelope.getValue("state").jsonObject.toMutableMap(); mutate(state)
         val updated = JsonObject(envelope + ("state" to JsonObject(state)))
         val after = decode(updated)
         policyLedger?.commit(before.binding ?: policyBinding!!(), before.schedules, after.schedules, policyID, reapproval)
-        try { write(updated.toString()) } catch (failure: Exception) { writeFailed = true; throw failure }
+        val raw = if (original == null) updated.toString() else preserveRows(original, envelope, updated)
+        try { write(raw) } catch (failure: Exception) { writeFailed = true; throw failure }
     }
     fun bind(binding: Binding) = change { it["nativeWalletBinding"] = json.encodeToJsonElement(binding); it["serverSyncPending"] = JsonPrimitive(true) }
+    private fun payment(id: String, raw: JsonElement): RecurringPayment {
+        val decoded = runCatching {
+            // RN writes nullable keys too; absence cannot grant execution defaults.
+            require(raw.jsonObject.keys.containsAll(requiredRNFields))
+            json.decodeFromJsonElement<RecurringPayment>(raw)
+        }.getOrNull()
+        return if (decoded != null && decoded.id == id && decoded.validPolicy) decoded
+        else {
+            val fields = raw as? JsonObject
+            // The original JSON remains authoritative for rows native code cannot represent.
+            (decoded ?: RecurringPayment(id, (fields?.get("label") as? JsonPrimitive)?.contentOrNull ?: "Saved recurring payment",
+                (fields?.get("destination") as? JsonPrimitive)?.contentOrNull.orEmpty(),
+                (fields?.get("destinationType") as? JsonPrimitive)?.contentOrNull.orEmpty(),
+                (fields?.get("amountSat") as? JsonPrimitive)?.longOrNull ?: 0,
+                interval = RecurringInterval("month", 1), startAt = 0, createdAt = 0, updatedAt = 0))
+                .copy(id = id, status = "needs_attention", lastError = RecurringPayment.unsupportedMessage, unsupportedStorage = true)
+        }
+    }
     fun upsert(schedule: RecurringPayment, reapproval: Boolean = false) = change(if (schedule.unsupportedStorage) null else schedule.id, reapproval) { state ->
         val schedules = state.getValue("schedules").jsonObject.toMutableMap()
         val previous = (schedules[schedule.id] as? JsonObject).orEmpty()
-        schedules[schedule.id] = if (schedule.unsupportedStorage) {
+        schedules[schedule.id] = if (schedule.unsupportedStorage || schedules[schedule.id]?.let { payment(schedule.id, it).unsupportedStorage } == true) {
             check(schedules.containsKey(schedule.id)) { RecurringPayment.unsupportedMessage }
             schedules.getValue(schedule.id)
         } else JsonObject(previous + json.encodeToJsonElement(schedule).jsonObject)
@@ -97,7 +103,22 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         val state = load()
         if (state.binding == null && state.schedules.isNotEmpty()) bind(Binding(SendIdentity("unverified-previous-wallet", "unknown"), UUID.randomUUID().toString()))
     }
+    private fun preserveRows(raw: String, before: JsonObject, after: JsonObject): String {
+        val originalRows = recurringRawFields(recurringRawFields(recurringRawFields(raw).getValue("state")).getValue("schedules"))
+        val oldRows = before.getValue("state").jsonObject.getValue("schedules").jsonObject
+        val state = after.getValue("state").jsonObject
+        val rows = state.getValue("schedules").jsonObject.mapValues { (id, row) ->
+            if (row == oldRows[id]) originalRows.getValue(id) else row.toString()
+        }
+        fun objectJSON(fields: Map<String, String>) = fields.entries.joinToString(",", "{", "}") { (key, value) -> "${JsonPrimitive(key)}:$value" }
+        val stateJSON = objectJSON(state.mapValues { it.value.toString() } + ("schedules" to objectJSON(rows)))
+        return objectJSON(after.mapValues { it.value.toString() } + ("state" to stateJSON))
+    }
     companion object {
+        // createRecurringPayment in client/src/lib/recurringSchedule.ts (retryNotBefore is optional).
+        private val requiredRNFields = setOf("id", "label", "destination", "destinationType", "amountSat", "comment",
+            "interval", "startAt", "endAt", "maxOccurrences", "status", "nextOccurrenceIndex", "nextRunAt",
+            "occurrencesPaid", "consecutiveFailures", "lastError", "inFlight", "runs", "createdAt", "updatedAt")
         const val key = "recurring-payment-storage"
         internal val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
         internal val lock = Any()
@@ -123,4 +144,38 @@ internal fun durableRecurringWrite(file: File, bytes: ByteArray, sync: (File) ->
         check(temporary.renameTo(file)) { "Unable to save recurring payment evidence" }
         sync(file.parentFile!!)
     } finally { temporary.delete() }
+}
+
+/** Input has already passed JSON validation; retain original value slices on unrelated writes. */
+private fun recurringRawFields(raw: String): Map<String, String> {
+    val fields = linkedMapOf<String, String>()
+    var index = raw.indexOf('{') + 1
+    fun whitespace() { while (raw[index].isWhitespace()) index++ }
+    whitespace()
+    while (raw[index] != '}') {
+        val keyStart = index++
+        while (raw[index] != '"') { if (raw[index] == '\\') index++; index++ }
+        index++
+        val key = RecurringStore.json.decodeFromString<String>(raw.substring(keyStart, index))
+        whitespace(); index++; whitespace()
+        val start = index
+        var depth = 0; var quoted = false; var escaped = false
+        while (index < raw.length) {
+            val char = raw[index]
+            if (quoted) {
+                if (escaped) escaped = false
+                else if (char == '\\') escaped = true
+                else if (char == '"') quoted = false
+            } else {
+                if (depth == 0 && (char == ',' || char == '}')) break
+                if (char == '"') quoted = true
+                else if (char == '{' || char == '[') depth++
+                else if (char == '}' || char == ']') depth--
+            }
+            index++
+        }
+        fields[key] = raw.substring(start, index)
+        if (raw[index] == ',') { index++; whitespace() }
+    }
+    return fields
 }
