@@ -1,0 +1,132 @@
+name: Native iOS CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/**"
+      - "client/assets/btcmap/places.btcmap"
+      - "client/assets/geonames/cities.geonames"
+      - ".github/workflows/native-ios.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: blacksmith-6vcpu-macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check runner default Xcode
+        id: toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+          echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
+          echo "xcode=$(xcodebuild -version | awk '/Build version/ {print $3}')" >> "$GITHUB_OUTPUT"
+
+      - name: Install XcodeGen
+        run: command -v xcodegen || brew install xcodegen
+
+      - name: Prepare temporary build directory
+        run: echo "NATIVE_IOS_TEMP=$(mktemp -d /private/tmp/noah-native-ci.XXXXXX)" >> "$GITHUB_ENV"
+
+      - name: Cache Swift packages
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: |
+            apps/ios/build/SourcePackages
+            ~/Library/Caches/org.swift.swiftpm
+          key: native-ios-spm-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.xcode }}-${{ hashFiles('apps/ios/project.yml') }}
+
+      - name: Generate Xcode project
+        working-directory: apps/ios
+        run: xcodegen generate
+
+      - name: Build all schemes without signing
+        working-directory: apps/ios
+        run: |
+          for scheme in Noah Noah-Signet Noah-Regtest; do
+            xcodebuild -project Noah.xcodeproj -scheme "$scheme" \
+              -destination 'generic/platform=iOS Simulator' \
+              -clonedSourcePackagesDirPath "$GITHUB_WORKSPACE/apps/ios/build/SourcePackages" \
+              -derivedDataPath "$NATIVE_IOS_TEMP/DerivedData" -jobs 2 \
+              CODE_SIGNING_ALLOWED=NO build
+          done
+
+      - name: Create dedicated test simulator
+        run: |
+          runtime=$(xcrun simctl list runtimes -j | python3 -c '
+          import json, sys
+          runtimes = [r for r in json.load(sys.stdin)["runtimes"] if r["isAvailable"] and
+                      any(d["identifier"] == "com.apple.CoreSimulator.SimDeviceType.iPhone-17"
+                          for d in r.get("supportedDeviceTypes", []))]
+          print(max(runtimes, key=lambda r: tuple(map(int, r["version"].split("."))))["identifier"])
+          ')
+          name="Noah CI $(basename "$NATIVE_IOS_TEMP")"
+          echo "$name" > "$NATIVE_IOS_TEMP/simulator-name"
+          xcrun simctl create "$name" com.apple.CoreSimulator.SimDeviceType.iPhone-17 "$runtime" > "$NATIVE_IOS_TEMP/simulator-id"
+          simulator_id=$(cat "$NATIVE_IOS_TEMP/simulator-id")
+          xcrun simctl boot "$simulator_id"
+          xcrun simctl bootstatus "$simulator_id" -b
+
+      - name: Run NoahTests
+        working-directory: apps/ios
+        run: |
+          simulator_id=$(cat "$NATIVE_IOS_TEMP/simulator-id")
+          # Ad hoc simulator signing gives keychain tests their entitlements without secrets.
+          xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest \
+            -destination "platform=iOS Simulator,id=$simulator_id" \
+            -clonedSourcePackagesDirPath "$GITHUB_WORKSPACE/apps/ios/build/SourcePackages" \
+            -derivedDataPath "$NATIVE_IOS_TEMP/DerivedData" -jobs 2 \
+            -parallel-testing-enabled NO -only-testing:NoahTests \
+            -resultBundlePath "$NATIVE_IOS_TEMP/NoahTests.xcresult" \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES test
+
+      - name: Summarize test results
+        if: always() && env.NATIVE_IOS_TEMP != ''
+        run: |
+          if [[ -d "$NATIVE_IOS_TEMP/NoahTests.xcresult" ]]; then
+            xcrun xcresulttool get test-results summary --path "$NATIVE_IOS_TEMP/NoahTests.xcresult" > "$NATIVE_IOS_TEMP/NoahTests-summary.json"
+          fi
+
+      - name: Upload XCTest results
+        if: always() && env.NATIVE_IOS_TEMP != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-ios-xcresult
+          path: |
+            ${{ env.NATIVE_IOS_TEMP }}/NoahTests.xcresult
+            ${{ env.NATIVE_IOS_TEMP }}/NoahTests-summary.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Delete dedicated simulator and build directory
+        if: always() && env.NATIVE_IOS_TEMP != ''
+        run: |
+          if [[ -s "$NATIVE_IOS_TEMP/simulator-id" ]]; then
+            simulator_id=$(cat "$NATIVE_IOS_TEMP/simulator-id")
+            xcrun simctl list devices -j > "$NATIVE_IOS_TEMP/devices.json"
+            python3 -c '
+          import json, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          devices = json.loads((root / "devices.json").read_text())["devices"]
+          device = next(d for group in devices.values() for d in group
+                        if d["udid"] == (root / "simulator-id").read_text().strip())
+          assert device["name"] == (root / "simulator-name").read_text().strip(), device
+          ' "$NATIVE_IOS_TEMP"
+            xcrun simctl shutdown "$simulator_id" || true
+            xcrun simctl list devices -j > "$NATIVE_IOS_TEMP/devices.json"
+            python3 -c '
+          import json, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          devices = json.loads((root / "devices.json").read_text())["devices"]
+          device = next(d for group in devices.values() for d in group
+                        if d["udid"] == (root / "simulator-id").read_text().strip())
+          assert device["state"] == "Shutdown", device
+          ' "$NATIVE_IOS_TEMP"
+            xcrun simctl delete "$simulator_id"
+          fi
+          rm -rf "$NATIVE_IOS_TEMP"

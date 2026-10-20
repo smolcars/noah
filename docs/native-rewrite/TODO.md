@@ -24,7 +24,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] `apps/fixtures/` shared JSON fixtures + XCTest/JUnit loaders
 - [x] `justfile` recipes: `ios-native-*`
 - [x] `justfile` recipes: `android-native-*`
-- [ ] CI: build + unit tests for both apps (all three variants compile)
+- [x] CI: build + unit tests for both apps (all three variants compile)
 
 ### 0.3 Wallet SDK integration
 - [x] FFI gaps P0+P1 shipped in bark-bolt-ffi v0.2.0
@@ -55,7 +55,19 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] All notification variants decode + round-trip from server-generated fixtures — iOS
 - [x] All six notification variants decode + round-trip from server fixtures — Android
 - [x] `just generate-api`; server tests fail on a stale `api/openapi.json` or `apps/fixtures/server-notification-data.json`
-- [ ] CI drift gate for generated native code
+- [x] CI drift gate for generated native code
+
+#### Native CI
+
+The native workflows run on `pull_request` with path filters and `workflow_dispatch` only; none run on branch pushes or require secrets. `apps/**` includes the shared `apps/fixtures/**` inputs.
+
+- [native-android.yml](../../.github/workflows/native-android.yml): `build-and-test` on `blacksmith-8vcpu-ubuntu-2404`, using the existing `android-ci` Nix shell, Nix/Gradle/SDK caches, all three debug assemblies and `:app:testRegtestDebugUnitTest`. Gradle uses `--max-workers=2 --dependency-verification=strict`; JUnit XML is uploaded even on failure.
+- [native-ios.yml](../../.github/workflows/native-ios.yml): `build-and-test` on `blacksmith-6vcpu-macos-latest`, XcodeGen, cached Swift packages, unsigned simulator builds of `Noah`, `Noah-Signet`, and `Noah-Regtest`, then `NoahTests` on a dedicated iPhone 17 simulator. Tests use ad hoc signing for simulator keychain entitlements, without signing credentials. Live tests opt in through environment variables. The `.xcresult` bundle and JSON summary are uploaded even on failure; the owned simulator and temporary DerivedData are deleted afterwards.
+- [native-generated.yml](../../.github/workflows/native-generated.yml): `server-contract` on `blacksmith-4vcpu-ubuntu-2404` mirrors Server CI's Rust/dependency setup and runs the offline `UPDATE_OPENAPI=1 cargo test -p server --bin server openapi::export`. It checks `api/openapi.json` and notification fixtures, without database/cache services. After that passes, `native-clients` on `blacksmith-6vcpu-macos-latest` runs `nix develop .#android-ci --command just generate-api-ios generate-api-android` and rejects tracked diffs and untracked generated files. Filters also cover `api/**`, `server/**`, Cargo inputs, generator recipes and Nix inputs.
+
+Native clients are generated from Rust/Utoipa's OpenAPI document, not the RN TypeScript file. The existing recipes pin Apple's Swift OpenAPI generator to 1.14.2 and Fabrikt to 28.1.1 with a JAR checksum. RN's `client/src/types/serverTypes.ts` remains a separate ts-rs export from `server/src/types.rs`.
+
+Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all three workflows; the exact Gradle command assembled all three flavors and passed 2,842 tests. Xcode 27.1 built all three schemes unsigned, then passed 481 tests with 19 opt-in skips using ad hoc simulator signing. Both offline server exports passed and both native clients regenerated without drift. The dedicated simulator was checked, shut down and deleted, and `/private/tmp` DerivedData was removed. Hosted runner setup, caches and artifact uploads still need their first CI run; no branch was pushed or workflow dispatched.
 
 ### 0.5 Upgrade compatibility (gate before any funded-wallet milestone)
 - [x] iOS seed reader: keychain service `com.noah.mnemonic.<variant>`, account `noah` (read + in-place save, RN attributes)
