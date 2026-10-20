@@ -48,8 +48,11 @@ class AuthTokenProvider(
                     result
                 } catch (cancelled: CancellationException) {
                     throw cancelled
-                } catch (_: Exception) {
-                    throw ServerFailure("Server authentication failed")
+                } catch (failure: Exception) {
+                    val offline = failure is java.io.IOException ||
+                        (failure is ServerFailure && failure.kind == ServerFailure.Kind.connectivity)
+                    throw ServerFailure("Server authentication failed", kind =
+                        if (offline) ServerFailure.Kind.connectivity else ServerFailure.Kind.request)
                 } finally {
                     mutex.withLock { inFlight = null }
                 }

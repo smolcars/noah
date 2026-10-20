@@ -31,11 +31,13 @@ data class RestoreIssue(val message: String, val requiresRestart: Boolean = fals
             }
             is BackupCrypto.Failure -> if (error.reason == BackupCrypto.Reason.authenticationFailed)
                 RestoreIssue("This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order.") else generic
-            is ServerFailure -> if (error.status == 404 || error.code == "USER_NOT_FOUND")
+            is ServerFailure -> if (error.kind == ServerFailure.Kind.connectivity) connectivity
+            else if (error.status == 404 || error.code == "USER_NOT_FOUND")
                 RestoreIssue("No backup was found for this recovery phrase. Check the words and make sure this wallet had backups enabled.") else generic
-            is IOException -> RestoreIssue("Noah couldn't download your backup. Check your internet connection and try again.")
+            is IOException -> connectivity
             else -> generic
         }
+        private val connectivity = RestoreIssue("Noah couldn't download your backup. Check your internet connection and try again.")
         private val generic = RestoreIssue("Noah couldn't restore your wallet. Please try again later.")
     }
 }

@@ -2,6 +2,7 @@ package com.noahwallet.ui
 
 import com.noahwallet.services.backup.*
 import com.noahwallet.services.launch.LaunchState
+import com.noahwallet.services.server.value
 import com.noahwallet.services.server.ServerFailure
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.services.wallet.WalletSession
@@ -73,6 +74,24 @@ class RestoreIssueTest {
         assertTrue(RestoreIssue.from(BackupCrypto.Failure(BackupCrypto.Reason.authenticationFailed)).message.contains("unlock the backup"))
         assertTrue(RestoreIssue.from(IOException(raw)).message.contains("internet connection"))
         listOf(ServerFailure(raw, 500), IOException(raw), Exception(raw)).forEach { assertFalse(RestoreIssue.from(it).message.contains(raw)) }
+    }
+    @Test fun offlineLoginAndBackupListKeepConnectivityThroughRealConversion() = runBlocking {
+        val client = com.noahwallet.services.server.ServerClient.make("http://offline", engine =
+            io.ktor.client.engine.mock.MockEngine { throw IOException("sensitive transport details") })
+        client.use {
+            val listError = runCatching {
+                com.noahwallet.api.generated.client.V0BackupV2ListClient(client).listBackupObjects().value()
+            }.exceptionOrNull() as Exception
+            val tokens = com.noahwallet.services.server.AuthTokenProvider({ null }, {}, {}, { "private input" },
+                { com.noahwallet.services.server.ServerClient.login(client, "regtest", it) })
+            val loginError = runCatching { tokens.token() }.exceptionOrNull() as Exception
+            for (error in listOf(listError, loginError)) {
+                assertEquals(ServerFailure.Kind.connectivity, (error as ServerFailure).kind)
+                assertNull(error.cause)
+                assertTrue(RestoreIssue.from(error).message.contains("internet connection"))
+                assertFalse(error.message.orEmpty().contains("sensitive"))
+            }
+        }
     }
     @Test fun pendingOrUncertainStateBlocksRetry() {
         RestoreTransaction.Reason.entries.forEach { assertTrue(RestoreIssue.from(RestoreTransaction.Failure(it)).requiresRestart) }
