@@ -79,6 +79,7 @@ import Observation
         }
         for var schedule in state.schedules.values {
             let entry = entries[schedule.id]
+            let legacyUncertain = try d.journal.legacyUncertain(binding: state.binding!, scheduleID: schedule.id)
             let pendingMarker = entry.map { !$0.resolved && $0.binding == state.binding } == true
             var planning = schedule
             if planning.status == "needs_approval" { planning.status = "active" }
@@ -87,9 +88,10 @@ import Observation
                 try d.journal.consumed(binding: state.binding!, scheduleID: schedule.id, at: at,
                                        policyRevision: schedule.nativeRevision, occurrenceIndex: plan.occurrenceIndex!)
             } ?? false
-            if (schedule.inFlight != nil || pendingMarker || consumed), schedule.status != "needs_attention" {
+            if ((legacyUncertain || schedule.inFlight != nil || pendingMarker || consumed) && schedule.status != "needs_attention")
+                || (legacyUncertain && schedule.lastError != RecurringJournal.legacyMessage) {
                 schedule.status = "needs_attention"
-                schedule.lastError = "Noah was interrupted while sending this payment. Check your transaction history before resuming."
+                schedule.lastError = legacyUncertain ? RecurringJournal.legacyMessage : "Noah was interrupted while sending this payment. Check your transaction history before resuming."
                 // Retain the marker; ordinary pause/resume/edit cannot erase uncertainty.
                 try d.store.upsert(schedule)
                 await d.notifications([], schedule)
@@ -273,6 +275,7 @@ import Observation
         var schedule = input
         let state = try boundState()
         if editing {
+            try rejectLegacyUncertainty(schedule.id)
             guard let old = state.schedules[schedule.id], old.inFlight == nil, old.status != "needs_attention" else { throw RecurringError.message("Check this payment's outcome before editing it.") }
         } else if state.schedules.count >= 50 { throw RecurringError.message("You've reached the maximum number of recurring payments.") }
         if editing { schedule.nativeRevision = UUID() }
@@ -292,6 +295,7 @@ import Observation
     }
     func resume(_ id: String) async throws {
         _ = try boundState()
+        try rejectLegacyUncertainty(id)
         guard var schedule = try d.store.load().schedules[id], schedule.status != "completed" else { return }
         guard schedule.inFlight == nil, schedule.status != "needs_attention" else { throw RecurringError.message("Check your transaction history, then confirm the destructive override before resuming.") }
         schedule.resume(now: d.now(), zone: d.zone())
@@ -307,6 +311,7 @@ import Observation
         guard confirmed, !running else { return }
         _ = try boundState()
         guard var schedule = try d.store.load().schedules[id] else { return }
+        try rejectLegacyUncertainty(id)
         if let entry = try d.journal.load()[id], d.controller.attempt?.recurringOccurrenceKey == entry.key {
             d.controller.startNewPaymentAfterHistoryCheck(confirmed: true, confirmationText: Self.overrideConfirmation, warningText: Self.overrideWarning)
             guard !d.controller.locked else { throw RecurringError.message("Unable to save the override confirmation. Sending remains locked.") }
@@ -317,6 +322,11 @@ import Observation
         schedule.resume(now: d.now(), zone: d.zone())
         try d.store.upsert(schedule)
         await changed()
+    }
+    private func rejectLegacyUncertainty(_ id: String) throws {
+        guard try !d.journal.legacyUncertain(binding: d.binding(), scheduleID: id) else {
+            throw RecurringError.message(RecurringJournal.legacyMessage)
+        }
     }
     private func auditLegacyOverride(_ schedule: RecurringPayment) throws {
         let entry = try d.journal.load()[schedule.id]

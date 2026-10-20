@@ -55,6 +55,7 @@ struct RecurringJournal {
             }
         }
     }
+    static let legacyMessage = "Noah can't reconstruct this schedule's earlier payment history. Cancel it and explicitly approve a new recurring payment."
     private static let invalidMessage = "Recurring payment history needs attention. Its saved evidence has been preserved; sending remains stopped."
     var quarantineFile: URL { file.appendingPathExtension("quarantine") }
 
@@ -135,6 +136,9 @@ struct RecurringJournal {
         return migrated
     }
     func load() throws -> [String: Entry] { try state().attempts }
+    func legacyUncertain(binding: RecurringStore.Binding, scheduleID: String) throws -> Bool {
+        try state().legacyUncertainty.contains(.init(binding: binding, scheduleID: scheduleID))
+    }
     func consumed(binding: RecurringStore.Binding, scheduleID: String, at: Double,
                   policyRevision: UUID?, occurrenceIndex: Int) throws -> Bool {
         let state = try state()
