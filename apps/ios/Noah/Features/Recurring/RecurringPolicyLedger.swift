@@ -23,7 +23,8 @@ final class RecurringPolicyLedger: @unchecked Sendable {
     let file: URL
     var marker: URL { file.appendingPathExtension("initialized") }
     private var failed = false
-    init(file: URL) { self.file = file }
+    private let sync: @Sendable (URL) throws -> Void
+    init(file: URL, sync: @escaping @Sendable (URL) throws -> Void = RestoreTransaction.fullSync) { self.file = file; self.sync = sync }
     private func key(_ binding: RecurringStore.Binding, _ id: String) throws -> String {
         let encoder = JSONEncoder(); encoder.outputFormatting = .sortedKeys
         return SHA256.hash(data: try encoder.encode(binding)).map { String(format: "%02x", $0) }.joined() + ":" + id
@@ -40,13 +41,13 @@ final class RecurringPolicyLedger: @unchecked Sendable {
         let currentDigest = try digest(schedule)
         return entry.binding == binding && entry.scheduleID == schedule.id && entry.revision == schedule.nativeRevision && entry.status == schedule.status && entry.digest == currentDigest
     }
-    private func write(_ state: State) throws { try RecurringStore.durableWrite(JSONEncoder().encode(state), to: file) }
+    private func write(_ state: State) throws { try RecurringStore.durableWrite(JSONEncoder().encode(state), to: file, sync: sync) }
     private func state(binding: RecurringStore.Binding, schedules: [String: RecurringPayment]) throws -> State {
         guard !failed else { throw RecurringError.message(Self.message) }
         do {
             if !FileManager.default.fileExists(atPath: marker.path), !FileManager.default.fileExists(atPath: file.path) {
                 // Marker first: interrupted bootstrap must never silently import a second time.
-                try RecurringStore.durableWrite(JSONEncoder().encode(Marker(version: 1, binding: binding)), to: marker)
+                try RecurringStore.durableWrite(JSONEncoder().encode(Marker(version: 1, binding: binding)), to: marker, sync: sync)
                 try write(.init(version: 1, binding: binding, generation: 0, entries: Dictionary(uniqueKeysWithValues: try schedules.map { (try key(binding, $0.key), try entry(binding, $0.value, generation: 0)) })))
             }
             let marker = try JSONDecoder().decode(Marker.self, from: Data(contentsOf: marker))

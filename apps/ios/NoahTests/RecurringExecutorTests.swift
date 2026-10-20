@@ -47,7 +47,7 @@ import Testing
         let clock = Locked(1_800_000_000_000.0)
         init() throws {
             SettingsStorage.bootstrap()
-            directory = FileManager.default.temporaryDirectory.appending(path: "recurring-executor-\(UUID())")
+            directory = FileManager.default.temporaryDirectory.appending(path: "recurring-executor-\(UUID())/noah-data-regtest")
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             settings = try .init(rootPath: directory.appending(path: "mmkv").path, instanceID: UUID().uuidString)
             let settings = settings, storeWriteFails = storeWriteFails
@@ -57,6 +57,8 @@ import Testing
             })
             journal = .init(file: directory.appending(path: "journal.json"))
             owner = Locked(.init(wallet: .init(fingerprint: "test", network: "regtest"), instance: UUID()))
+            let owner = owner
+            store.protectPolicies(file: journal.file.appendingPathExtension("policies"), sync: { _ in }, binding: { owner.withLock { $0 } })
             rebuild()
         }
         func rebuild() {

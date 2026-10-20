@@ -19,9 +19,9 @@ final class RecurringStore: @unchecked Sendable {
     private var writeFailed = false
     private var policyLedger: RecurringPolicyLedger?
     private var policyBinding: (@Sendable () throws -> Binding)?
-    func protectPolicies(file: URL, binding: @escaping @Sendable () throws -> Binding) {
+    func protectPolicies(file: URL, sync: @escaping @Sendable (URL) throws -> Void = RestoreTransaction.fullSync, binding: @escaping @Sendable () throws -> Binding) {
         lock.withLock {
-            if policyLedger == nil { policyLedger = RecurringPolicyLedger(file: file); policyBinding = binding }
+            if policyLedger == nil { policyLedger = RecurringPolicyLedger(file: file, sync: sync); policyBinding = binding }
         }
     }
     private func protected(_ state: State) -> State {
@@ -173,16 +173,16 @@ final class RecurringStore: @unchecked Sendable {
         }
         return .init(wallet: .init(fingerprint: properties.fingerprint, network: properties.network), instance: id)
     }
-    static func durableWrite(_ data: Data, to file: URL) throws {
+    static func durableWrite(_ data: Data, to file: URL, sync: @Sendable (URL) throws -> Void = RestoreTransaction.fullSync) throws {
         let temporary = file.deletingLastPathComponent().appending(path: ".recurring-\(UUID())")
         defer { try? FileManager.default.removeItem(at: temporary) }
         try data.write(to: temporary, options: .completeFileProtectionUntilFirstUserAuthentication)
         var excluded = temporary
         var values = URLResourceValues(); values.isExcludedFromBackup = true
         try excluded.setResourceValues(values)
-        try RestoreTransaction.fullSync(temporary)
+        try sync(temporary)
         guard Darwin.rename(temporary.path, file.path) == 0 else { throw RestoreTransaction.Failure.syncFailed(errno) }
-        try RestoreTransaction.fullSync(file.deletingLastPathComponent())
+        try sync(file.deletingLastPathComponent())
     }
 }
 
