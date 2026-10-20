@@ -103,6 +103,7 @@ struct TransactionsView: View {
 }
 
 struct TransactionRow: View {
+    @Environment(\.locale) private var locale
     let transaction: HistoryTransaction
     let unit: BitcoinAmountUnit
     var recent = false
@@ -118,7 +119,7 @@ struct TransactionRow: View {
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 5) {
-                Text(transaction.signedAmount(unit: unit))
+                Text(transaction.signedAmount(unit: unit, locale: locale))
                     .font(NoahFont.headline).monospacedDigit().foregroundStyle(transaction.amountColor)
                 if !recent, let status = transaction.statusLabel {
                     Text(LocalizedStringKey(status)).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
@@ -153,8 +154,8 @@ extension HistoryTransaction {
     var formattedDate: String {
         confirmationLabel ?? timestamp?.formatted(date: .abbreviated, time: .shortened) ?? date
     }
-    func signedAmount(unit: BitcoinAmountUnit) -> String {
+    func signedAmount(unit: BitcoinAmountUnit, locale: Locale = .current) -> String {
         let prefix = isCanceled || isInternalTransfer ? "" : direction == "outgoing" ? "−" : "+"
-        return prefix + BitcoinAmount.format(sats: amount, unit: unit)
+        return prefix + BitcoinAmount.format(sats: amount, unit: unit, locale: locale)
     }
 }

@@ -54,6 +54,7 @@ fun HistoryDetailsHost(app: AppModel, selectedID: String?, onClose: () -> Unit,
 
 @Composable
 private fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: (RepeatPayment) -> Unit, onClose: () -> Unit) {
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     var technical by rememberSaveable(row.id) { mutableStateOf(false) }
     var explorerError by remember(row.id) { mutableStateOf(false) }
     val context = LocalContext.current
@@ -67,8 +68,8 @@ private fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: 
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(painterResource(transactionIcon(row)), null, Modifier.size(36.dp), tint = transactionColor(row))
             Text(tr(when (row.accounting.direction) { "Transfer" -> "Transferred"; "None" -> "Canceled"; "Outgoing" -> "Sent"; else -> "Received" }))
-            Text(tr(BitcoinAmount.format(row.amount, app.amountUnit)), style = MaterialTheme.typography.headlineLarge)
-            Text(tr(row.btcPrice?.let { FiatCurrency.display(row.amount, it, app.preferredCurrency) } ?: "Historical value unavailable"),
+            Text(tr(BitcoinAmount.format(row.amount, app.amountUnit, locale)), style = MaterialTheme.typography.headlineLarge)
+            Text(tr(row.btcPrice?.let { FiatCurrency.display(row.amount, it, app.preferredCurrency, locale) } ?: "Historical value unavailable"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(tr(row.receiptStatus))
             row.destination?.takeIf(String::isNotEmpty)?.let { destination ->
@@ -116,7 +117,7 @@ private fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: 
             row.chainAnchor?.let { DetailValue("Chain anchor", it, true) }
             row.metadataJson?.takeIf(String::isNotEmpty)?.let { DetailValue("Metadata", it, true) }
             listOf("Sent to" to row.sentTo, "Received on" to row.receivedOn).forEach { (label, values) ->
-                if (!values.isNullOrEmpty()) DetailValue(label, values.joinToString("\n") { "${it.destination} · ${BitcoinAmount.format(it.amount_sat, app.amountUnit)}" }, true)
+                if (!values.isNullOrEmpty()) DetailValue(label, values.joinToString("\n") { "${it.destination} · ${BitcoinAmount.format(it.amount_sat, app.amountUnit, locale)}" }, true)
             }
             listOf("Input VTXOs" to row.inputVtxos, "Output VTXOs" to row.outputVtxos, "Exited VTXOs" to row.exitedVtxos).forEach { (label, values) ->
                 if (!values.isNullOrEmpty()) DetailValue(label, values.joinToString("\n"), true)
@@ -148,5 +149,5 @@ private fun DetailValue(label: String, value: String, copyable: Boolean = false)
 }
 @Composable
 private fun AmountDetail(label: String, amount: Long?, unit: BitcoinAmountUnit) {
-    if (amount != null) DetailValue(label, BitcoinAmount.format(amount, unit))
+    if (amount != null) DetailValue(label, BitcoinAmount.format(amount, unit, androidx.compose.ui.platform.LocalConfiguration.current.locales[0]))
 }

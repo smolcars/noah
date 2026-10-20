@@ -132,7 +132,7 @@ fun TransactionRow(row: HistoryTransaction, unit: BitcoinAmountUnit, recent: Boo
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 val prefix = if (row.isCanceled || row.isInternalTransfer) "" else if (row.direction == "outgoing") "−" else "+"
-                Text(tr(prefix + BitcoinAmount.format(row.amount, unit)), style = MaterialTheme.typography.titleLarge, color = color)
+                Text(tr(prefix + BitcoinAmount.format(row.amount, unit, androidx.compose.ui.platform.LocalConfiguration.current.locales[0])), style = MaterialTheme.typography.titleLarge, color = color)
                 if (!recent) row.statusLabel?.let { Text(tr(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }

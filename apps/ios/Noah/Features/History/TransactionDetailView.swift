@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TransactionDetailView: View {
+    @Environment(\.locale) private var locale
     @Environment(AppModel.self) private var app
     let transaction: HistoryTransaction
     let onRepeatPayment: (RepeatPayment) -> Void
@@ -20,11 +21,11 @@ struct TransactionDetailView: View {
                 VStack(spacing: 12) {
                     Image(systemName: transaction.symbol).font(.largeTitle).foregroundStyle(transaction.amountColor)
                     Text(receiptAction).font(NoahFont.callout).foregroundStyle(NoahColor.mutedForeground)
-                    Text(BitcoinAmount.format(sats: transaction.amount, unit: app.amountUnit))
+                    Text(BitcoinAmount.format(sats: transaction.amount, unit: app.amountUnit, locale: locale))
                         .font(NoahFont.inter(36, .bold, relativeTo: .largeTitle))
                         .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                     if let price = transaction.btcPrice {
-                        Text(FiatCurrency.display(sats: transaction.amount, btcPrice: price, currency: app.preferredCurrency))
+                        Text(FiatCurrency.display(sats: transaction.amount, btcPrice: price, currency: app.preferredCurrency, locale: locale))
                             .foregroundStyle(NoahColor.mutedForeground)
                     } else {
                         Text("Historical value unavailable").font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
@@ -123,11 +124,11 @@ struct TransactionDetailView: View {
     }
 
     @ViewBuilder private func amountDetail(_ label: String, _ amount: Int64?) -> some View {
-        if let amount { detail(label, BitcoinAmount.format(sats: amount, unit: app.amountUnit)) }
+        if let amount { detail(label, BitcoinAmount.format(sats: amount, unit: app.amountUnit, locale: locale)) }
     }
     @ViewBuilder private func destinations(_ label: String, _ values: [HistoryTransaction.Destination]?) -> some View {
         if let values, !values.isEmpty {
-            detail(label, values.map { "\($0.destination) · \(BitcoinAmount.format(sats: $0.amount_sat, unit: app.amountUnit))" }.joined(separator: "\n"), copyable: true)
+            detail(label, values.map { "\($0.destination) · \(BitcoinAmount.format(sats: $0.amount_sat, unit: app.amountUnit, locale: locale))" }.joined(separator: "\n"), copyable: true)
         }
     }
     @ViewBuilder private func vtxos(_ label: String, _ values: [String]?) -> some View {
