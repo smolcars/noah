@@ -3,6 +3,119 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Round-3 cross-platform review fixes (2026-10-20)
+
+Base: `feat/native-rewrite` at `be45d670`. Only iOS recurring code,
+WalletLifecycle's stop latch, notification-response routing, tests and these docs
+changed. The user-decided fee policy and `apps/fixtures/recurring-fee-cap.json`
+are unchanged. Android, RN, server, Send/Onchain and SDK pins were untouched.
+
+- **Journal validation/quarantine** (`RecurringJournal.swift:62`): validate all
+  scopes, nonnegative sorted unique consumption indices, pay-plan/attempt identity,
+  timestamps and consumed/resolved consistency before accepting or mutating any
+  journal. A consumed v2 attempt must also have its exact revision/index and a
+  covering timestamp watermark. Validate legacy inputs before migration and the
+  migrated state before writing. Invalid original bytes stay untouched; the first
+  `.quarantine` copy is fsynced and retained. A quarantined journal stops this
+  wallet across relaunch; all its policies show **Needs attention**. No automatic
+  repair or replacement of malformed evidence occurs.
+- **Foreground revocation** (`RecurringForegroundRunner.swift:27`, final guard
+  `RecurringExecutor.swift:172`): each minute tick owns an inherited revocable
+  submission budget. Scene deactivation revokes it before cancelling the timer,
+  so an already-started quote/preparation cannot submit. A submitted payment still
+  settles and consumes once; reactivation starts a fresh budget.
+- **Failed stop writes** (`RecurringStore.swift:24`, `WalletLifecycle.swift:138`,
+  `RecurringExecutor.swift:166`): a failed policy write latches that store off until
+  relaunch reads durable state. A failed lifecycle generation write latches the
+  associated settings instance off before throwing; resume/reads cannot clear it,
+  but a successful durable stop can. Both latches are checked immediately before
+  submission. Injected pause/cancel/edit and suspend/delete write failures submit
+  zero payments even after the underlying writer recovers.
+- **Legacy uncertainty** (`RecurringExecutor.swift:82`, `:329`): check it separately
+  from due planning, including paused/future/already-needs-attention policies.
+  Resume, edit and destructive override reject it before clearing errors, Send
+  locks or audit/consumption state. Android's guidance is used verbatim:
+  “Noah can't reconstruct this schedule's earlier payment history. Cancel it and
+  explicitly approve a new recurring payment.” Cancel plus approval of a fresh ID
+  remains available and preserves old evidence.
+- **LNURL notes** (`RecurringLive.swift:72`): retain Lightning for any nonempty note,
+  including when an Ark route exists. RN `recurringPayments.ts:461` forwards the
+  comment to `usePayments.ts:519`; `repeatPayment.ts:153` allows Ark direct only
+  without a comment. Amount bounds and recipient-visible notes are retained.
+- **Notification taps** (`AppDelegate.swift:21`, `RootView.swift:91`): register the
+  notification-response delegate and open the recurring screen for reminder,
+  result and due taps, including Expo/nested payloads. A cold-launch tap remains
+  pending until wallet navigation exists. Result notifications now carry their
+  recurring type as reminders already did; attention notifications use the saved
+  reason instead of suggesting an unsafe resume.
+- **End date** (`RecurringPaymentEditorView.swift:107`): retain **23:59:00.000**.
+  RN `RecurringPaymentEditorScreen.tsx:132` calls `parseLocalDateTime(endDate,
+  "23:59")`, whose Date constructor (`:52`) explicitly sets seconds/milliseconds
+  to zero. Tests pin the final included millisecond in UTC and New York's fall DST
+  day. The Android 23:59:59.999 value would extend the approved RN policy.
+- **Amounts/version** (`RecurringSchedule.swift:47`, `RecurringStore.swift:38`,
+  `:52`): new/edited approval is capped at **2,100,000,000,000,000 sats**. An
+  oversized RN policy remains visible as **Needs attention**, with its exact amount
+  and original bytes retained; resume/override cannot activate it. Other valid
+  policies still run. Reject string, boolean, null, object, array, fractional and
+  unsupported envelope versions without changing their bytes; an absent version
+  remains the legacy v0 case.
+
+### Round-3 verification
+
+All four `/private/tmp/noah-m7-review-probes.swift` probes are permanent regressions
+in `RecurringJournalValidationTests`, `RecurringBackgroundRegressionTests` and
+`RecurringLegacyRegressionTests`. Before fixes, **4 tests ran: 3 failed / 1 passed**:
+quote-after-deactivation submitted once, the negative-index rollback submitted
+again and overwrote evidence, and legacy override cleared needs-attention status.
+The revision-A / failed-B / zone-rollback probe already passed and remains pinned.
+The pre-fix Xcode process stalled finalizing its result bundle after reporting
+those verdicts; only that owned process was terminated. Its raw log is retained.
+
+Passing focused runs, each with zero failures/skips (test definitions / expanded
+individual runs):
+
+- Journal/executor/store: **43 / 82**, three suites.
+- Foreground/executor/reservation: **43 / 74**, four suites.
+- Write-failure/executor/store/reservation/lifecycle: **62 / 118**, five suites.
+- Legacy/executor/journal validation: **40 / 81**, three suites.
+- Parity/legacy/fee/schedule/store/executor/push/LNURL: **64 / 111**, eight suites.
+
+The final focused run also verifies the updated legacy guidance for policies
+already marked needs attention. The first parity compile caught Swift 6's
+non-Sendable notification-response capture; parsing now occurs before crossing
+to MainActor and only the routing decision crosses. That attempt ran zero tests;
+it is separate from the passing focused run above. All targeted selectors named
+whole suites; all ran nonzero tests. Function selectors, when used, require `()`.
+
+Full **NoahTests ran once**, without exclusions: **477 total / 458 passed /
+19 opt-in skipped / 0 failed**, **104 suites**, **49.822 seconds** of test
+execution. Parameterized execution reports **654 passed / 19 skipped** individual
+runs. All Xcode invocations used Nix, XcodeGen, normal signing,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, disabled parallel testing and
+DerivedData under `/private/tmp`. The 24 shared fee-cap cases passed unchanged.
+No funded/live payment, physical push, timed OS notification, external provider
+or funded RN upgrade was attempted; deterministic tests cover these changes.
+
+Owned simulator: **Noah Recurring R3 Sol 7511ef4b**, iPhone 17 / iOS 27.0,
+UDID **6C0724A5-D277-4D93-AC32-EAE37B49D8EA**. After the full pass, confirmed
+its exact identity and **Shutdown** state, deleted it and verified absence.
+Removed `/private/tmp/noah-recurring-r3-sol-dd` and all **eight** owned result
+bundles (including the incomplete pre-fix and failed-build bundles). Logs,
+summary JSONs and cleanup evidence remain under `/private/tmp/noah-recurring-r3-sol-`.
+Protected simulators, Android devices, the physical Pixel 6 and Docker were untouched.
+
+### Android follow-ups (inspection only; no Android changes or test runs)
+
+- Align new end dates with RN's 23:59:00.000, or obtain an explicit cross-platform
+  product decision to extend the boundary. Preserve existing approved timestamps.
+- Preserve oversized RN policies as visible needs-attention rows. Android currently
+  rejects the entire store via its amount-bound `validPolicy` check.
+- Consider the stricter v2 cross-record checks added here: Android validates
+  consumed attempts, watermarks and index arrays separately, without requiring a
+  consumed attempt's index/timestamp to be represented by the other evidence.
+  This is a source-inspection follow-up, not a reproduced Android payment claim.
+
 ## Round-2 safety fixes (2026-10-20)
 
 Base: `feat/native-rewrite` at `211ecdf2`. The ArkInfo fee policy below is unchanged.
