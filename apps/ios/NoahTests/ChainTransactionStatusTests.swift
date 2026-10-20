@@ -132,6 +132,54 @@ import Testing
             #expect(saved.receipt?.broadcastRetryPending == true)
         } else { #expect(saved.receipt == nil) }
     }
+    @Test(arguments: [false, true])
+    func exactCachedBoardRecoverySurvivesOptionalStatusFailure(known: Bool) async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let journal = OnchainOperationJournal(file: file)
+        let quote = BoardPreparedTests.quote
+        await #expect(throws: OnchainFailure.uncertain) {
+            try await journal.perform(quote) {
+                try await journal.recordTransaction("exact", for: quote.id)
+                throw OnchainFailure.uncertain // Crash after submission, before saving its receipt.
+            }
+        }
+        let restarted = OnchainOperationJournal(file: file)
+        let reads = WalletSession.OnchainAttemptReads(walletID: "wallet",
+            transactionIDs: { known ? ["exact"] : ["lookalike"] },
+            vtxoState: { _ in Issue.record("Never match boards by amount or VTXO"); return "Spendable" },
+            exitState: { _ in nil }, transactionStatus: { txid in
+                #expect(txid == "exact")
+                throw URLError(.notConnectedToInternet)
+            })
+        #expect(try await WalletSession.checkOnchainAttempt(quote.id, journal: restarted, reads: reads) == known)
+        let saved = try #require(try await OnchainOperationJournal(file: file).load())
+        #expect((saved.receipt != nil) == known)
+        #expect(saved.txid == "exact" && saved.blocks(.board, ids: []))
+        #expect(saved.chainStatusError == "Couldn't check network status. Showing the last known network status.")
+        if known {
+            #expect(saved.receipt?.txid == "exact" && saved.receipt?.onchainFee == 1543)
+            #expect(saved.receipt?.arkFee == 100 && saved.receipt?.broadcastRetryPending == true)
+        }
+        await #expect(throws: OnchainFailure.uncertain) { try await restarted.acknowledge(quote.id) }
+        let calls = OnchainModelTests.Calls()
+        var dependencies = OnchainModelTests().dependencies(calls)
+        dependencies.attempt = { try await restarted.loadAll() }
+        dependencies.check = { try await WalletSession.checkOnchainAttempt($0, journal: restarted, reads: reads) }
+        let model = OnchainModel(dependencies: dependencies)
+        await model.checkStatus(quote.id)
+        #expect(model.attempts.first?.receipt?.txid == (known ? "exact" : nil))
+        #expect(model.attempts.first?.chainStatusError == saved.chainStatusError)
+        #expect(model.message == (known ? "Status resolved. Review the receipt."
+            : "Status remains uncertain. Noah checks again automatically as your wallet syncs."))
+        #expect(await calls.mutations == 0)
+        var recovered = reads
+        recovered.transactionStatus = { _ in .notFound }
+        #expect(try await WalletSession.checkOnchainAttempt(quote.id, journal: restarted, reads: recovered) == known)
+        let checked = try #require(try await OnchainOperationJournal(file: file).load())
+        #expect(checked.chainStatusError == nil && (checked.receipt != nil) == known)
+        await #expect(throws: OnchainFailure.uncertain) { try await restarted.acknowledge(quote.id) }
+    }
     @Test func boardAndClaimStatusSurviveRestartAndTransportErrors() async throws {
         for action in [OnchainAction.board, .claim] {
             let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
@@ -147,10 +195,13 @@ import Testing
             #expect(try await WalletSession.checkOnchainAttempt(quote.id, journal: journal, reads: reads))
             var failed = reads
             failed.transactionStatus = { _ in throw URLError(.notConnectedToInternet) }
-            await #expect(throws: URLError.self) {
-                try await WalletSession.checkOnchainAttempt(quote.id, journal: journal, reads: failed)
-            }
-            #expect(try await OnchainOperationJournal(file: file).load()?.receipt?.chainStatus == .confirmed(123))
+            #expect(try await WalletSession.checkOnchainAttempt(quote.id, journal: journal, reads: failed))
+            let saved = try #require(try await OnchainOperationJournal(file: file).load())
+            #expect(saved.receipt?.chainStatus == .confirmed(123))
+            #expect(saved.receipt?.txid == "exact" && saved.receipt?.onchainFee == 1543)
+            #expect(saved.chainStatusError != nil)
+            #expect(try await WalletSession.checkOnchainAttempt(quote.id, journal: journal, reads: reads))
+            #expect(try await OnchainOperationJournal(file: file).load()?.chainStatusError == nil)
         }
     }
     @Test func persistedTerminalExitsUseSDKAmountsAndTypedHistory() {

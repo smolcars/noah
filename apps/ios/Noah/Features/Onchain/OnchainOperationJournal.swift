@@ -19,6 +19,7 @@ actor OnchainOperationJournal {
         var quote: OnchainQuote
         var receipt: OnchainReceipt?
         var txid: String?
+        var chainStatusError: String?
         var overrideAudit: OverrideAudit?
         var id: UUID { quote.id }
 
@@ -110,15 +111,28 @@ actor OnchainOperationJournal {
     }
     func recordTransaction(_ txid: String, for id: UUID) throws { try update(id, txid: txid) }
 
+    func recordStatusError(for id: UUID) throws {
+        guard !running else { return }
+        var attempts = try loadAll()
+        guard let index = attempts.firstIndex(where: { $0.id == id }) else { return }
+        attempts[index].chainStatusError = "Couldn't check network status. Showing the last known network status."
+        try save(attempts)
+    }
+
     func observe(_ status: ChainTransactionStatus, for id: UUID) throws {
         guard !running else { return }
-        guard let attempt = try loadAll().first(where: { $0.id == id }), var receipt = attempt.receipt else { return }
-        receipt.chainStatus = status
-        if case .confirmed = status, receipt.broadcastRetryPending == true {
-            receipt.broadcastRetryPending = nil
-            receipt.message = OnchainReceipt.boardingMessage(fee: receipt.onchainFee)
+        var attempts = try loadAll()
+        guard let index = attempts.firstIndex(where: { $0.id == id }) else { return }
+        attempts[index].chainStatusError = nil
+        if var receipt = attempts[index].receipt {
+            receipt.chainStatus = status
+            if case .confirmed = status, receipt.broadcastRetryPending == true {
+                receipt.broadcastRetryPending = nil
+                receipt.message = OnchainReceipt.boardingMessage(fee: receipt.onchainFee)
+            }
+            attempts[index].receipt = receipt
         }
-        try update(id, receipt: receipt)
+        try save(attempts)
     }
 
     func perform(_ quote: OnchainQuote, action: @Sendable () async throws -> OnchainReceipt) async throws -> String {

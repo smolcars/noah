@@ -47,6 +47,7 @@ struct OnchainStatusSection: View {
                     OnchainAmountRow(title: "Actual onchain fee", sats: fee)
                 }
                 if let status = attempt.receipt?.chainStatus { Text(status.message) }
+                if let error = attempt.chainStatusError { Text(error).foregroundStyle(NoahColor.destructive) }
                 if let txid = attempt.receipt?.txid {
                     ExitTransactionRow(title: "Transaction ID", txid: txid)
                     Button("Copy transaction ID") { UIPasteboard.general.string = txid }

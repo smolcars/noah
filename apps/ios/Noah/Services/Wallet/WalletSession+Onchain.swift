@@ -387,13 +387,22 @@ extension WalletSession {
             if attempt.quote.action == .refresh { evidence.vtxoStates[id] = try await reads.vtxoState(id) }
             evidence.exitStates[id] = try await reads.exitState(id)
         }
-        let status: ChainTransactionStatus?
+        var resolved = try await journal.reconcile(id, evidence: evidence)
         if let txid = attempt.txid ?? attempt.receipt?.txid {
-            status = try await reads.transactionStatus(txid)
-            if let status, status != .notFound { evidence.transactionIDs.insert(txid) }
-        } else { status = nil }
-        let resolved = try await journal.reconcile(id, evidence: evidence)
-        if let status { try await journal.observe(status, for: id) }
+            let status: ChainTransactionStatus?
+            do { status = try await reads.transactionStatus(txid) }
+            catch {
+                try await journal.recordStatusError(for: id)
+                return resolved || attempt.receipt != nil
+            }
+            if let status {
+                if status != .notFound {
+                    evidence.transactionIDs.insert(txid)
+                    if !resolved { resolved = try await journal.reconcile(id, evidence: evidence) }
+                }
+                try await journal.observe(status, for: id)
+            }
+        }
         return resolved || attempt.receipt != nil
     }
 
