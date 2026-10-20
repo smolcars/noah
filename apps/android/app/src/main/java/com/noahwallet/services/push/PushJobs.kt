@@ -18,6 +18,7 @@ class PushJobs(private val dependencies: Dependencies) {
         val log: (String) -> Unit,
         val backup: suspend () -> Unit,
         val reportBackup: suspend (String, Boolean) -> Unit,
+        val recurring: suspend (com.noahwallet.recurring.RecurringBudget) -> Unit = {},
     )
 
     suspend fun handle(notification: NotificationData) = com.noahwallet.services.wallet.WalletBackgroundActivity.during {
@@ -66,7 +67,9 @@ class PushJobs(private val dependencies: Dependencies) {
                 bestEffort("Failed to report backup status") { d.reportBackup(notification.notificationK1, failure == null) }
                 if (failure != null) throw failure
             }
-            is NotificationDataRecurringPaymentDue -> d.log("Recurring payment wake-up received; executor not ported yet")
+            is NotificationDataRecurringPaymentDue -> com.noahwallet.recurring.RecurringPushDeadline().run { budget ->
+                d.ensureWalletOpen(); d.recurring(budget)
+            }
         }
     }
 

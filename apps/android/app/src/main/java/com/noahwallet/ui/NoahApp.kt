@@ -39,6 +39,9 @@ enum class Destination(val title: Int, val icon: Int) : NavKey {
 @Composable
 fun NoahApp(model: AppModel) {
     val backStack = rememberNavBackStack(Destination.Home)
+    LaunchedEffect(model.recurringNotification) {
+        if (model.recurringNotification) { backStack.add(SettingsDestination.Recurring); model.recurringNotification = false }
+    }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val walletAvailable = model.open && !model.isWalletSuspended
     LaunchedEffect(model, model.preferredCurrency, lifecycle, walletAvailable) {

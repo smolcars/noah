@@ -116,6 +116,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         suspended = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true },
         warn = com.noahwallet.services.logging.AppLog(application, "history")::w,
     ))
+    var recurringNotification by mutableStateOf(false)
     var repeatPayment by mutableStateOf<com.noahwallet.history.RepeatPayment?>(null)
 
     fun preference(key: String, value: String) {
@@ -233,7 +234,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         val location = WalletDataLocation(getApplication<Application>().filesDir, BuildConfig.APP_VARIANT)
         check(launchState == LaunchState.onboarding && !isWalletSuspended && restore.canLeave)
         if (location.restorePending || location.deletionMarker.exists()) throw RestoreCompletion.RestartRequired()
-        withContext(Dispatchers.IO) { creator.createOrResume() }
+        services.lifecycle.withWalletMutation { withContext(Dispatchers.IO) { creator.createOrResume() } }
         val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
         val key = session.peekPublicKey(0u)
         settings.setPersistedState(wallet.copy(isInitialized = false, staticVtxoPubkey = key), PersistedWalletState.key, 0)

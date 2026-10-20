@@ -154,6 +154,14 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
             }
         }
         ModalBottomSheet(onDismissRequest = { if (!controller.locked) leaveReview() }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+            SendConfirmation(payment, quote, controller,
+                confirm = { focus.clearFocus(); controller.submit(payment, quote); model.showReview = false }, cancel = ::leaveReview)
+        }
+    }
+}
+
+
+@Composable internal fun SendConfirmation(payment: SendPayment, quote: SendQuote, controller: SendController, confirm: () -> Unit, cancel: () -> Unit) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 Text("Confirm payment", style = MaterialTheme.typography.headlineMedium)
                 SelectionContainer { Text(payment.destination, style = MaterialTheme.typography.bodySmall) }
@@ -167,11 +175,9 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
                 if (payment.comment.isNotEmpty()) ReviewRow("Note", payment.comment)
                 quote.checkpoint?.let { Text("An existing Lightning payment will be checked. No new payment will be created.") }
                 if (quote.approximate) Text("The fee is an estimate. The final fee may change before submission.", style = MaterialTheme.typography.bodySmall)
-                NoahButton("Confirm") { focus.clearFocus(); controller.submit(payment, quote); model.showReview = false }
-                NoahButton("Back", secondary = true) { leaveReview() }
+                NoahButton("Confirm", !controller.locked, onClick = confirm)
+                NoahButton("Back", !controller.locked, secondary = true, onClick = cancel)
             }
-        }
-    }
 }
 
 @Composable private fun PasteRecipient(onPaste: (String) -> Unit) {
@@ -208,7 +214,7 @@ internal fun keypadInput(amount: String, key: String, decimal: Boolean): String 
 @Composable private fun ReviewRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(label, Modifier.weight(1f)); Text(value, Modifier.weight(1f)) }
 }
-@Composable private fun SendOutcome(controller: SendController, onDone: () -> Unit) {
+@Composable internal fun SendOutcome(controller: SendController, onDone: () -> Unit) {
     val scope = rememberCoroutineScope(); var overrideStep by remember { mutableIntStateOf(0) }
     val receipt = controller.attempt?.alreadyPaid ?: controller.attempt?.receipt
     NoahForm(when (controller.state) {

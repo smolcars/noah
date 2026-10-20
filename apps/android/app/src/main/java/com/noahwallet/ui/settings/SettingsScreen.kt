@@ -29,7 +29,7 @@ enum class SettingsDestination(val title: String) : NavKey {
     Settings("Settings"), Profile("Profile"), Language("Language"), Currency("Currency"), Unit("Bitcoin Unit"),
     Backup("Backup & Restore"), Seed("Your Recovery Phrase"), Ark("Ark Info"), Export("Export Database"),
     Logs("Logs"), Feedback("Send Feedback"), Story("Noah's Ark Story"), Debug("Debug"),
-    Vtxos("VTXOs"), Board("Board to Ark"), Exits("Emergency Exit"),
+    Recurring("Recurring payments"), Vtxos("VTXOs"), Board("Board to Ark"), Exits("Emergency Exit"),
     Email("Emergency Email"), Lightning("Lightning Address"), Battery("Battery Optimization"),
 }
 
@@ -50,6 +50,7 @@ fun SettingsPage(model: AppModel, destination: SettingsDestination, navigate: (S
         SettingsDestination.Email -> EmergencyEmailScreen(model) { navigate(SettingsDestination.Profile) }
         SettingsDestination.Lightning -> LightningScreen(model) { navigate(SettingsDestination.Profile) }
         SettingsDestination.Battery -> BatteryScreen()
+        SettingsDestination.Recurring -> com.noahwallet.recurring.RecurringPaymentsScreen(model)
         SettingsDestination.Vtxos -> com.noahwallet.onchain.VtxosScreen(model)
         SettingsDestination.Board -> com.noahwallet.onchain.BoardArkScreen(model)
         SettingsDestination.Exits -> com.noahwallet.onchain.UnilateralExitScreen(model)
@@ -115,7 +116,7 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
         SettingRow("Show VTXOs", "Inspect and refresh your Ark funds") { navigate(SettingsDestination.Vtxos) }
         SettingRow("Board to Ark", "Move onchain bitcoin into Ark") { navigate(SettingsDestination.Board) }
         SettingRow("Emergency Exit", "Recover Ark funds onchain") { navigate(SettingsDestination.Exits) }
-        SettingRow("Recurring Payments", "Coming soon", false)
+        SettingRow("Recurring Payments", "Automatic payments from your Ark balance") { navigate(SettingsDestination.Recurring) }
         SettingRow("Backup & Restore", "Automatic and manual encrypted backups") { navigate(SettingsDestination.Backup) }
         SettingToggle("Auto-Board to Ark", threshold?.let { "Ask to board when onchain funds cover ${maxOf(it, 20_000u)} sats, fees, and a 5,000 sats reserve." } ?: "Auto-board threshold unavailable",
             autoBoard, !model.busy) { value ->

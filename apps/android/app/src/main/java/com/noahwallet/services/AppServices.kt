@@ -78,6 +78,8 @@ class AppServices private constructor(private val context: Context) {
     }
 
     private val restoreRecovery = RestoreRecovery {
+        val location = WalletDataLocation(context.filesDir, variant)
+        if (location.restorePending) { stopRecurringAutomation(); com.noahwallet.recurring.RecurringStore(settings).protectLegacyBeforeReplacement() }
         WalletRestorer.recoverInterruptedRestore(session, WalletDataLocation(context.filesDir, variant), SeedItem(seed))
     }
     /**
@@ -88,7 +90,10 @@ class AppServices private constructor(private val context: Context) {
     suspend fun recoverRestore(walletMutationHeld: Boolean = false): RestoreTransaction.Recovery =
         lifecycle.recoverRestoreAndDeletion(walletMutationHeld) { restoreRecovery.settle() }
 
-    fun restorer() = WalletRestorer(variant, session, WalletDataLocation(context.filesDir, variant), SeedItem(seed),
+    fun restorer(): WalletRestorer {
+        stopRecurringAutomation()
+        com.noahwallet.recurring.RecurringStore(settings).protectLegacyBeforeReplacement()
+        return WalletRestorer(variant, session, WalletDataLocation(context.filesDir, variant), SeedItem(seed),
         makeClient = { phrase ->
             var temporaryToken: String? = null
             val temporaryTokens = AuthTokenProvider(
@@ -96,6 +101,16 @@ class AppServices private constructor(private val context: Context) {
                 readMnemonic = { phrase }, login = { ServerClient.login(publicClient, variant, it) })
             ServerClient.make(ServerEndpoint.baseURL(variant, BuildConfig.REGTEST_SERVER_URL), temporaryTokens)
         })
+    }
+
+    @Volatile var recurringAutomationStorageFailed = false; private set
+    fun stopRecurringAutomation() {
+        val generation = java.util.UUID.randomUUID().toString()
+        try {
+            settings.set(generation, com.noahwallet.services.wallet.WalletLifecycle.automationStopKey); settings.sync()
+            check(settings.string(com.noahwallet.services.wallet.WalletLifecycle.automationStopKey) == generation)
+        } catch (failure: Exception) { recurringAutomationStorageFailed = true; throw failure }
+    }
 
     val lifecycle = com.noahwallet.services.wallet.WalletLifecycle(
         session, WalletDataLocation(context.filesDir, variant),
@@ -130,7 +145,7 @@ class AppServices private constructor(private val context: Context) {
         syncFiles = {
             val fd = android.system.Os.open(context.filesDir.path, android.system.OsConstants.O_RDONLY, 0)
             try { android.system.Os.fsync(fd) } finally { android.system.Os.close(fd) }
-        }, warn = log::w,
+        }, warn = log::w, stopAutomation = ::stopRecurringAutomation,
     )
 
     private val startup = Mutex()
@@ -149,6 +164,7 @@ class AppServices private constructor(private val context: Context) {
      * removes plaintext a restore left before writing one) and even while suspended (no opening).
      */
     suspend fun ensureWalletOpen(walletMutationHeld: Boolean = false) {
+        if (!walletMutationHeld) { lifecycle.withWalletMutation { ensureWalletOpen(walletMutationHeld = true) }; return }
         if (recoverRestore(walletMutationHeld) == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
         if (settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
             throw WalletSuspended()
@@ -164,6 +180,7 @@ class AppServices private constructor(private val context: Context) {
                 if (!session.isOpen || !isOnboarded() || settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) return@withLock
                 try {
                     registration.ensureRegistered()
+                    com.noahwallet.recurring.RecurringRuntime.shared(context).foreground()
                     reconcileBackupTriggers()
                     try { registration.refreshMailboxIfNeeded() }
                     catch (cancelled: CancellationException) { throw cancelled }

@@ -22,6 +22,7 @@ class PushRuntime(private val context: Context, private val services: AppService
     private val client = services.client
     val jobs = PushJobs(PushJobs.Dependencies(
         ensureWalletOpen = services::ensureWalletOpen,
+        recurring = { com.noahwallet.recurring.RecurringRuntime.shared(context).execute(it) },
         maintenance = services.session::maintenanceDelegated,
         backup = { services.backupCoordinator.flush(com.noahwallet.services.backup.BackupCoordinator.Reason.push, requireEnabled = false) },
         reportBackup = { k1, success ->

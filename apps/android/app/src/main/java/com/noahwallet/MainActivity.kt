@@ -50,6 +50,7 @@ class MainActivity : FragmentActivity() {
         // An exported singleTask relaunch can dismiss credential UI without a background broadcast.
         model.walletLock.background()
         super.onNewIntent(intent)
+        if (intent.getBooleanExtra("recurring", false)) model.recurringNotification = true
     }
 
     override fun onDestroy() {
@@ -61,10 +62,12 @@ class MainActivity : FragmentActivity() {
         model.walletLock.resumed()
         super.onResume()
         com.noahwallet.services.AppServices.shared(this).reconcileBackupTriggers(foreground = true)
+        if (model.services.isOnboarded()) com.noahwallet.recurring.RecurringRuntime.shared(this).foreground()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (intent.getBooleanExtra("recurring", false)) model.recurringNotification = true
         if (model.walletLock.enabled) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         if (Build.VERSION.SDK_INT < 29) ContextCompat.registerReceiver(this, backgroundReceiver,
             IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_CLOSE_SYSTEM_DIALOGS) },

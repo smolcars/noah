@@ -17,6 +17,7 @@ class PushJobsTest {
             if (openFails) error("private provider error")
         },
         backup = { events += "backup" },
+        recurring = { assertTrue(it.available); events += "recurring" },
         reportBackup = { k1, success -> events += "backup-report:$k1:$success" },
         maintenance = { events += "maintenance" },
         createInvoice = { events += "invoice:$it"; "bolt11" },
@@ -53,10 +54,10 @@ class PushJobsTest {
         jobs.handle(NotificationDataHeartbeat("id"))
         assertEquals(listOf("heartbeat:id", "log"), events)
     }
-    @Test fun backupReportsSuccessAndRecurringRemainsLogOnly() = runBlocking {
+    @Test fun backupReportsSuccessAndRecurringOpensThenExecutes() = runBlocking {
         jobs.handle(NotificationDataBackupTrigger("k1"))
         jobs.handle(NotificationDataRecurringPaymentDue(1))
-        assertEquals(listOf("open", "backup", "backup-report:k1:true", "log"), events)
+        assertEquals(listOf("open", "backup", "backup-report:k1:true", "open", "recurring"), events)
     }
     @Test fun backupOpenFailureReportsFailure() = runBlocking {
         openFails = true
