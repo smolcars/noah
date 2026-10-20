@@ -55,17 +55,67 @@ struct RecurringJournal {
             }
         }
     }
+    private static let invalidMessage = "Recurring payment history needs attention. Its saved evidence has been preserved; sending remains stopped."
+    var quarantineFile: URL { file.appendingPathExtension("quarantine") }
+
+    private func validate(_ state: State, complete: Bool = true) throws {
+        func require(_ valid: Bool) throws {
+            guard valid else { throw RecurringError.message(Self.invalidMessage) }
+        }
+        func scope(_ binding: RecurringStore.Binding, _ id: String) throws {
+            try require(!id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        && !binding.wallet.fingerprint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        && !binding.wallet.network.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            // Binding.instance and policyRevision are decoded as UUIDs.
+        }
+        for (id, entry) in state.attempts {
+            try scope(entry.binding, id)
+            try require(id == entry.scheduleID && entry.plan.kind == "pay"
+                        && entry.plan.occurrenceIndex.map { $0 >= 0 } == true
+                        && entry.plan.scheduledFor?.isFinite == true && entry.markedAt.isFinite
+                        && (entry.consumed != true || entry.resolved))
+            if complete, entry.consumed == true {
+                try require(state.consumed.contains { $0.binding == entry.binding && $0.scheduleID == id && $0.through >= entry.plan.scheduledFor! }
+                            && state.consumedIndices.contains { $0.binding == entry.binding && $0.scheduleID == id
+                                && $0.policyRevision == entry.policyRevision && $0.indices.contains(entry.plan.occurrenceIndex!) })
+            }
+        }
+        for watermark in state.consumed {
+            try scope(watermark.binding, watermark.scheduleID)
+            try require(watermark.through.isFinite)
+        }
+        for indices in state.consumedIndices {
+            try scope(indices.binding, indices.scheduleID)
+            try require(!indices.indices.isEmpty && indices.indices.allSatisfy { $0 >= 0 }
+                        && indices.indices == Array(Set(indices.indices)).sorted())
+        }
+        for uncertain in state.legacyUncertainty { try scope(uncertain.binding, uncertain.scheduleID) }
+    }
     private struct Header: Decodable { var version: Int }
     private struct V1: Decodable { var attempts: [String: Entry]; var consumed: [Watermark] }
     var file: URL
     private func state() throws -> State {
+        guard !FileManager.default.fileExists(atPath: quarantineFile.path) else { throw RecurringError.message(Self.invalidMessage) }
         guard FileManager.default.fileExists(atPath: file.path) else { return State() }
         let bytes = try Data(contentsOf: file)
+        do { return try decode(bytes) }
+        catch {
+            // Preserve the original and the first quarantine copy, including across relaunch.
+            if !FileManager.default.fileExists(atPath: quarantineFile.path) {
+                try RecurringStore.durableWrite(bytes, to: quarantineFile)
+            }
+            throw RecurringError.message(Self.invalidMessage)
+        }
+    }
+    private func decode(_ bytes: Data) throws -> State {
         let decoder = JSONDecoder()
         var migrated: State
         if let header = try? decoder.decode(Header.self, from: bytes) {
             switch header.version {
-            case 2: return try decoder.decode(State.self, from: bytes)
+            case 2:
+                let decoded = try decoder.decode(State.self, from: bytes)
+                try validate(decoded)
+                return decoded
             case 1:
                 let old = try decoder.decode(V1.self, from: bytes)
                 migrated = State(attempts: old.attempts, consumed: old.consumed)
@@ -79,6 +129,7 @@ struct RecurringJournal {
             // Even a legacy failed attempt may have replaced earlier consumed evidence.
             migrated.legacyUncertainty = entries.values.map { Scope(binding: $0.binding, scheduleID: $0.scheduleID) }
         }
+        try validate(migrated, complete: false)
         for entry in migrated.attempts.values { try migrated.remember(entry) }
         try write(migrated)
         return migrated
@@ -94,12 +145,14 @@ struct RecurringJournal {
             }
     }
     private func write(_ state: State) throws {
+        try validate(state)
         try RecurringStore.durableWrite(JSONEncoder().encode(state), to: file)
     }
     func save(_ entry: Entry) throws {
         var state = try state()
-        try state.remember(entry)
         state.attempts[entry.scheduleID] = entry
+        try validate(state, complete: false)
+        try state.remember(entry)
         try write(state)
     }
 }

@@ -65,7 +65,17 @@ import Observation
         return state
     }
     private func recoverMarkers(_ state: RecurringStore.State) async throws {
-        let entries = try d.journal.load()
+        let entries: [String: RecurringJournal.Entry]
+        do { entries = try d.journal.load() }
+        catch {
+            // A corrupt journal cannot identify which policies are safe in this wallet.
+            for var schedule in state.schedules.values {
+                schedule.status = "needs_attention"
+                schedule.lastError = error.localizedDescription
+                try d.store.upsert(schedule)
+            }
+            throw error
+        }
         for var schedule in state.schedules.values {
             let entry = entries[schedule.id]
             let pendingMarker = entry.map { !$0.resolved && $0.binding == state.binding } == true
