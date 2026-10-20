@@ -694,3 +694,147 @@ remove your disposable AVD. These commands never restart the shared stack. Direc
 iOS-device ↔ Android-device restore, physical devices, API 24–34 and hardware power
 loss remain unverified. Unit tests inject each journal boundary and sync failure;
 they do not emulate a filesystem losing writes after power removal.
+
+## Android logging and telemetry
+
+`NoahApplication` installs `BarkLog` before starting telemetry, including headless
+process startup. Like native iOS and RN's nitro-ark logger, Bark uses Debug for
+all variants; Trace maps to verbose, Debug/debug, Info/info, Warn/warn and
+Error/error. The SDK retains the callback. Callback bodies only map the level and
+admit raw target/message strings to `LogFile`'s existing ordered, bounded writer;
+no Bark reentry, redaction or filesystem work runs on the Rust/JNI caller.
+Registration failures log a fixed message without the provider's error contents.
+
+The writer holds at most 256 pending records and redacts targets/messages before
+Logcat and rotating cache files. Overflow produces ordered `[dropped N log records]`
+markers. Export reads the same redacted files. Logging and telemetry share the
+unchanged 147-case `apps/fixtures/log-redaction.json` contract. Telemetry additionally
+omits oversized or uncertain messages, checks well-formed UTF-16, and detects
+mnemonic fragments across approved strings and dictionary keys. Individual and
+aggregate inspection failures drop the event; keys and values are aggregated
+separately and bounded to 16 KiB, with a nesting limit of 32.
+
+### Sentry configuration and event coverage
+
+The pinned Sentry Android **8.57.0 core** dependency includes neither NDK nor replay
+artifacts; both core artifacts have independently checked Maven Central SHA-256
+pins. Auto-init and performance providers are removed from the manifest.
+`AppTelemetry` starts only in mainnet/signet release builds with a nonblank DSN.
+The production public DSN matches RN/iOS and lives in `Config/sentry.properties`,
+compiled into `BuildConfig.SENTRY_DSN`; `NOAH_SENTRY_DSN` in the environment, then
+ignored `local.properties`, can override it. Upload credentials never enter app
+configuration. Debug, every regtest build and blank-DSN builds do not initialize
+Sentry. Release is `<applicationId>@<versionName>+<versionCode>`, dist is the version
+code, environment is production, error sampling is 1 and tracing is disabled.
+`sendDefaultPii=false`; SDK diagnostics use a no-op logger and scope persistence
+is disabled.
+
+The event hook constructs a fresh allowlisted model, matching iOS. Its conservative
+aggregate detector can discard otherwise useful diagnostic events:
+
+
+- Event ID, timestamp, severity, platform, release, dist and environment.
+- SDK name/version, integration names, package name/version. Unknown SDK/package
+  fields and global package-set mutation are excluded.
+- Exception type/module/thread ID, a redacted value, mechanism type/handled/synthetic.
+- Thread ID/name/current/crashed/main and stack traces. Frames retain only
+  function/module/filename/line; no variables, source context, absolute-path fields or registers.
+- App identifier/version/build/start time/build type/in-foreground.
+- Device family/model/model ID/architectures, battery level/charging/simulator,
+  memory/free/usable memory, storage/free storage, boot time, processor count/CPU
+  description, screen dimensions/density/DPI, orientation and low-memory flag.
+- OS name/version/build/kernel version/rooted. The Java SDK has no typed equivalents
+  for iOS app-memory and device thermal-state fields, so those are omitted.
+- Only the `app.variant` tag, with enum values mainnet/signet/regtest.
+- Redacted formatted messages and breadcrumb messages. Breadcrumbs retain only
+  timestamp/category/severity/message; their data/type/unknown fields are removed.
+- Android's generated ProGuard mapping UUID is the sole debug metadata exception:
+  a fresh `proguard` image containing only this build's UUID is constructed from
+  SDK options loaded from the generated asset. Incoming debug images are dropped. Cached errors from another release omit the
+  current build's mapping UUID rather than risk an incorrect mapping association.
+
+Extras, arbitrary contexts, user/request data, transaction/fingerprint, logger,
+server name, modules, arbitrary debug images, message templates/parameters,
+mechanism payloads and new/unknown SDK fields have no admission path. Every
+remaining serialized string and key passes the shared redactor and final guard.
+Attachments are cleared from all hint slots; their size allowance is zero.
+Screenshots, hierarchy, NDK/tombstone capture, app-start/performance tracing,
+profiling, replay and feedback UI are disabled. Live/historical **ANR errors and
+JVM crashes/handled errors** pass through the same event hook; ANR raw thread dumps
+and profiling attachments are disabled. Separate log/metric channels are disabled
+and have explicit drop callbacks. Transaction/replay/feedback callbacks also drop.
+
+A final transport filter covers cached envelopes and SDK APIs that bypass
+`beforeSend`, including deprecated user feedback. It admits only rescrubbed error
+events and minimal **Release Health sessions**. All other envelope types (including
+attachments, both feedback paths, spans/transactions, profiles/profile chunks,
+replay, logs, metrics, check-ins, client reports and unknown types) are dropped.
+Envelope headers are rebuilt without arbitrary fields or trace context.
+Automatic session tracking stays **ON**, per the 2026-10-20 product decision.
+Sessions keep canonical random session/install UUIDs, init/start/timestamp/status,
+sequence/error count/duration and release/environment; IP, user-agent and arbitrary
+attributes are removed. Their remaining strings also pass the final guard.
+
+### R8 mappings and CI
+
+Release builds enable R8 with Android's default optimized rules and four narrow
+`dontwarn` entries for absent optional Zstd/XZ classes. Backup extraction already
+accepts only stored/deflate ZIP entries; no unsupported codec is enabled. Bark's AAR already
+keeps its JNI callback classes. A generated `sentry-debug-meta.properties` asset
+uses a UUID derived from the **actual mapping bytes**, so incremental builds cannot
+associate a changed mapping with stale metadata. Both assembly and bundles depend
+on the upload task for mainnet/signet release; regtest never uploads.
+
+Local builds generate metadata without invoking the upload CLI. CI (`CI=true` or
+`CI=1`) requires `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` and `sentry-cli`
+on PATH (or `SENTRY_CLI_EXECUTABLE`). Eligible CI releases fail before upload when
+these are missing, and fail on CLI errors. Only the mapping file and generated
+UUID are passed to `upload-proguard`; no source bundle or app data is uploaded.
+CLI diagnostics and credentials are kept out of build output. See the
+[Sentry mapping documentation](https://docs.sentry.io/platforms/android/enhance-errors/proguard/).
+
+Mainnet release still refuses a debug signing fallback. For local build verification
+without release credentials, pass `-PnoahUnsignedRelease=true` to produce an unsigned
+artifact; this explicitly clears the release signing configuration.
+
+### Verification (2026-10-20, base 8b70bb34)
+
+Final focused JVM logging/telemetry/startup coverage: **43 passed / zero failures**, including
+four Bark callback tests, 21 telemetry tests, 17 logger tests and one startup test. Tests cover 2,000 concurrent
+callbacks, a blocked writer with 1,000 callbacks under a 100 ms budget, overflow
+ordering, all 147 shared vectors at SDK and telemetry boundaries, all six build
+gates, allowlisted fields, final key/value/aggregate guards, attachment slots,
+SDK channel drops and Release Health sessions. Python mapping-upload tests:
+**seven passed / zero failures**, without credentials or network access. Application
+startup plus the existing WorkManager integration checks: **five passed / zero
+failures**, including a merged-manifest check for both removed Sentry providers.
+An earlier focused run exceeded the unchanged 100 ms escaped-input redactor budget
+(135.9 ms) and had a logger-wrapper assertion failure. The assertion now matches
+the SDK's diagnostic wrapper; the subsequent 42-test run passed the same timing
+limit without a threshold change.
+
+The full JVM suite ran once: **3,098 passed / zero failures or skips**, **116
+suites**, 71.658 seconds of test execution. The exact requested final Nix command
+ran once and stopped before tasks at the existing mainnet signing guard because
+this worktree has no release credentials. The unsigned fallback ran the full
+suite and built regtest debug, then R8 reported the four optional codec classes.
+After the narrow rules above, unsigned mainnet release and release vital lint
+passed. The last focused run covers the later cached-release UUID guard; the full
+suite was not repeated for that metadata-only change. The final focused build
+command passed **43 tests** and assembled both regtest debug and unsigned mainnet
+release with `--max-workers=2`; release vital lint also passed. Final APK inspection
+verified the generated UUID against the mapping bytes and the embedded asset,
+confirmed absence of Sentry native libraries and APK signatures, and checked
+Application/provider declarations in both merged manifests. All build commands
+completed and their single-use Gradle processes exited; shared idle daemons were
+left untouched.
+
+Run focused tests with `./gradlew --max-workers=2 :app:testRegtestDebugUnitTest
+--tests com.noahwallet.services.BarkLogTest --tests
+com.noahwallet.services.AppTelemetryTest` from `apps/android`; run upload checks
+with `python3 apps/android/PlatformTests/test_sentry_mapping.py -v` from the root.
+
+No live Sentry ingestion, credentialed mapping upload or physical/device crash/ANR
+was attempted. These require the team's CI credentials or an owned test device.
+No emulator, simulator, physical device or Docker was used for this change.
+Android-only commits bypassed the client/server Husky checks.
