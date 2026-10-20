@@ -14,9 +14,9 @@ import java.util.UUID
 import kotlinx.serialization.json.*
 
 /** Also gates cached envelopes and legacy user feedback, which bypass beforeSend. */
-internal class TelemetryTransport(private val delegate: ITransport, private val mappingUuid: () -> String? = { null }) : ITransport by delegate {
+internal class TelemetryTransport(private val delegate: ITransport, private val options: SentryOptions) : ITransport by delegate {
     override fun send(envelope: SentryEnvelope, hint: Hint) {
-        filter(envelope, mappingUuid())?.let { delegate.send(it, hint) }
+        filter(envelope, options.proguardUuid, options.release)?.let { delegate.send(it, hint) }
     }
 
     override fun send(envelope: SentryEnvelope) { send(envelope, Hint()) }
@@ -24,10 +24,10 @@ internal class TelemetryTransport(private val delegate: ITransport, private val 
     companion object {
         private val serializer = JsonSerializer(SentryOptions.empty())
 
-        internal fun filter(envelope: SentryEnvelope, mappingUuid: String? = null): SentryEnvelope? = try {
+        internal fun filter(envelope: SentryEnvelope, mappingUuid: String? = null, mappingRelease: String? = null): SentryEnvelope? = try {
             val items = envelope.items.mapNotNull { item ->
                 when (item.header.type) {
-                    SentryItemType.Event -> item.getEvent(serializer)?.let { AppTelemetry.scrub(it, mappingUuid) }?.let {
+                    SentryItemType.Event -> item.getEvent(serializer)?.let { AppTelemetry.scrub(it, mappingUuid, mappingRelease) }?.let {
                         SentryEnvelopeItem.fromEvent(serializer, it)
                     }
                     SentryItemType.Session -> session(item)

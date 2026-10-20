@@ -67,7 +67,7 @@ object AppTelemetry {
         isSendModules = false
         setSendClientReports(false)
         setTransportFactory { configured, details ->
-            TelemetryTransport(io.sentry.AsyncHttpTransportFactory().create(configured, details)) { configured.proguardUuid }
+            TelemetryTransport(io.sentry.AsyncHttpTransportFactory().create(configured, details), configured)
         }
         setAttachServerName(false)
         isAttachScreenshot = false
@@ -111,7 +111,7 @@ object AppTelemetry {
         setBeforeBreadcrumb { breadcrumb, _ -> scrub(breadcrumb) }
         setBeforeSend { event, hint ->
             clearAttachments(hint)
-            scrub(event, proguardUuid)
+            scrub(event, proguardUuid, release)
         }
     }
 
@@ -124,7 +124,7 @@ object AppTelemetry {
         hint.replayRecording = null
     }
 
-    internal fun scrub(event: SentryEvent, mappingUuid: String? = null): SentryEvent? = try {
+    internal fun scrub(event: SentryEvent, mappingUuid: String? = null, mappingRelease: String? = null): SentryEvent? = try {
         // Never traverse dropped extras or arbitrary contexts, even to serialize them.
         val clean = SentryEvent(event.timestamp).apply {
             eventId = event.eventId
@@ -138,7 +138,8 @@ object AppTelemetry {
             }
             sdk = event.sdk?.let(::sdk)
             // Only this build's mapping identifier; no incoming debug image has admission.
-            if (mappingUuid != null) {
+            // Cached errors from another release must never use the current build's mapping.
+            if (mappingUuid != null && (mappingRelease == null || event.release == mappingRelease)) {
                 require(UUID.fromString(mappingUuid).toString() == mappingUuid)
                 debugMeta = DebugMeta().apply { images = listOf(DebugImage().apply {
                     type = DebugImage.PROGUARD; uuid = mappingUuid

@@ -387,9 +387,17 @@ class AppTelemetryTest {
         assertEquals("proguard", image.type); assertEquals(uuid, image.uuid)
         assertNull(image.debugFile); assertNull(image.codeFile)
         assertNull(AppTelemetry.scrub(original, "preimage=fake"))
+        val currentRelease = "com.noahwallet.mainnet@0.2.0+100"
+        original.release = currentRelease
+        assertNotNull(AppTelemetry.scrub(original, uuid, currentRelease)!!.debugMeta)
+        original.release = "com.noahwallet.mainnet@0.1.0+99"
+        assertNull(AppTelemetry.scrub(original, uuid, currentRelease)!!.debugMeta)
         val envelope = SentryEnvelope.from(serializer, clean, null)
         val filtered = requireNotNull(TelemetryTransport.filter(envelope, uuid))
         assertEquals(uuid, filtered.items.single().getEvent(serializer)!!.debugMeta!!.images!!.single().uuid)
+        clean.release = "com.noahwallet.mainnet@0.1.0+99"
+        val cached = requireNotNull(TelemetryTransport.filter(SentryEnvelope.from(serializer, clean, null), uuid, currentRelease))
+        assertNull(cached.items.single().getEvent(serializer)!!.debugMeta)
     }
 
     private class UnexpectedValue {
