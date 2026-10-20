@@ -444,7 +444,7 @@
     {
       "name": "r2-negative-cyrillic",
       "input": "аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbout",
-      "expected": "аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbout"
+      "expected": "[redacted]"
     },
     {
       "name": "r2-negative-dotless",
@@ -454,7 +454,7 @@
     {
       "name": "r2-negative-combining",
       "input": "ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábout",
-      "expected": "ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábout"
+      "expected": "[redacted]"
     },
     {
       "name": "r2-userinfo-ipv4",
@@ -635,6 +635,106 @@
       "name": "r3-escaped-negative-27",
       "input": "{\\\"txid\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}",
       "expected": "{\\\"txid\\\":\\\"abababababababababababababababababababababababababababababababab\\\"}"
+    },
+    {
+      "name": "r3-skeleton-zwsp",
+      "input": "restore failed: a​ba​ndon a​ba​ndon a​ba​ndon a​ba​ndon a​ba​ndon a​ba​ndon a​ba​ndon a​ba​ndon a​ba​ndon a​ba​ndon a​ba​ndon a​bout",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-skeleton-zwnj",
+      "input": "restore failed: a‌ba‌ndon a‌ba‌ndon a‌ba‌ndon a‌ba‌ndon a‌ba‌ndon a‌ba‌ndon a‌ba‌ndon a‌ba‌ndon a‌ba‌ndon a‌ba‌ndon a‌ba‌ndon a‌bout",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-skeleton-zwj",
+      "input": "restore failed: a‍ba‍ndon a‍ba‍ndon a‍ba‍ndon a‍ba‍ndon a‍ba‍ndon a‍ba‍ndon a‍ba‍ndon a‍ba‍ndon a‍ba‍ndon a‍ba‍ndon a‍ba‍ndon a‍bout",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-skeleton-word-joiner",
+      "input": "restore failed: a⁠ba⁠ndon a⁠ba⁠ndon a⁠ba⁠ndon a⁠ba⁠ndon a⁠ba⁠ndon a⁠ba⁠ndon a⁠ba⁠ndon a⁠ba⁠ndon a⁠ba⁠ndon a⁠ba⁠ndon a⁠ba⁠ndon a⁠bout",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-skeleton-soft-hyphen",
+      "input": "restore failed: a­ba­ndon a­ba­ndon a­ba­ndon a­ba­ndon a­ba­ndon a­ba­ndon a­ba­ndon a­ba­ndon a­ba­ndon a­ba­ndon a­ba­ndon a­bout",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-skeleton-acute",
+      "input": "restore failed: ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábándon ábout",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-skeleton-variation-selector",
+      "input": "restore failed: a️ba️ndon a️ba️ndon a️ba️ndon a️ba️ndon a️ba️ndon a️ba️ndon a️ba️ndon a️ba️ndon a️ba️ndon a️ba️ndon a️ba️ndon a️bout",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-skeleton-cyrillic-a",
+      "input": "restore failed: аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbаndon аbout",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-skeleton-greek-alpha",
+      "input": "restore failed: αbαndon αbαndon αbαndon αbαndon αbαndon αbαndon αbαndon αbαndon αbαndon αbαndon αbαndon αbout",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-skeleton-mixed",
+      "input": "аЬаոԁοո аЬаոԁοո аЬаոԁοո аЬаոԁοո аЬаոԁοո аЬаոԁοո аЬаոԁοո аЬаոԁοո аЬаոԁοո аЬаոԁοո аЬаոԁοո аЬουτ",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r3-skeleton-negative-10",
+      "input": "Обычный текст кошелька без секретов",
+      "expected": "Обычный текст кошелька без секретов"
+    },
+    {
+      "name": "r3-skeleton-negative-11",
+      "input": "Το πορτοφόλι συγχρονίστηκε κανονικά",
+      "expected": "Το πορτοφόλι συγχρονίστηκε κανονικά"
+    },
+    {
+      "name": "r3-skeleton-negative-12",
+      "input": "ウォレットの同期が完了しました",
+      "expected": "ウォレットの同期が完了しました"
+    },
+    {
+      "name": "r3-skeleton-negative-13",
+      "input": "钱包同步完成，余额为一千聪",
+      "expected": "钱包同步完成，余额为一千聪"
+    },
+    {
+      "name": "r3-skeleton-negative-14",
+      "input": "محفظة بيتكوين متزامنة",
+      "expected": "محفظة بيتكوين متزامنة"
+    },
+    {
+      "name": "r3-skeleton-negative-15",
+      "input": "café résumé naïve, balance 1000 sat",
+      "expected": "café résumé naïve, balance 1000 sat"
+    },
+    {
+      "name": "r3-skeleton-negative-16",
+      "input": "обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст",
+      "expected": "обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст обычный текст"
+    },
+    {
+      "name": "r3-skeleton-negative-17",
+      "input": "αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ",
+      "expected": "αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ αβγ δεζ"
+    },
+    {
+      "name": "r3-skeleton-negative-18",
+      "input": "a​bout 1000 sat",
+      "expected": "a​bout 1000 sat"
+    },
+    {
+      "name": "r3-skeleton-mixed-public-vector",
+      "input": "οzοnе drill grαb fibеr ϲurtαin grαϲе ρudding thαnk ϲruisе еldеr еight ρiϲniϲ",
+      "expected": "[redacted]"
     }
   ]
 }

@@ -107,6 +107,16 @@ struct AppLogTests {
         #expect(lines.last?.hasSuffix("line \(LogFile.maxLines + 99)") == true)
     }
 
+    @Test func visuallyRecoverableMnemonicsStayInvalidSeedsAndCannotReachLogs() throws {
+        let phrase = Array(repeating: "abandon", count: 11).joined(separator: " ") + " about"
+        for mark in ["\u{200B}", "\u{200C}", "\u{200D}", "\u{2060}", "\u{00AD}", "\u{0301}", "а", "α"] {
+            let replacement = ["а", "α"].contains(mark) ? mark : "a" + mark
+            let transformed = phrase.replacingOccurrences(of: "a", with: replacement)
+            #expect((try? StoredSeed.normalized(transformed)) == nil)
+            #expect(LogFile.redact("restore failed: " + transformed) == "[redacted]")
+        }
+    }
+
     @Test func normalizedWalletPhraseCannotReachLogs() throws {
         let phrase = Array(repeating: "abandon", count: 11).joined(separator: " ") + " about"
         let fullwidth = String(String.UnicodeScalarView(phrase.unicodeScalars.map { scalar in

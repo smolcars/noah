@@ -254,6 +254,8 @@ final class LogFile: @unchecked Sendable {
         }
         let decomposed = result.decomposedStringWithCompatibilityMapping
         let normalized = normalizeMnemonic(result)
+        let skeleton = detectionSkeleton(result)
+        if skeleton != normalized, !mnemonicRanges(in: skeleton).isEmpty { return "[redacted]" }
         let runs = mnemonicRanges(in: normalized)
         // Compatibility expansion/case folding may invalidate offsets into the original.
         if !runs.isEmpty, decomposed != result || normalized.utf16.count != result.utf16.count {
@@ -268,6 +270,30 @@ final class LogFile: @unchecked Sendable {
         text.decomposedStringWithCompatibilityMapping.folding(options: .caseInsensitive,
             locale: Locale(identifier: "en_US_POSIX"))
     }
+
+    // For privacy detection only; wallet seed validation intentionally stays stricter.
+    private static func detectionSkeleton(_ text: String) -> String {
+        let scalars = normalizeMnemonic(text).unicodeScalars.compactMap { scalar -> UnicodeScalar? in
+            if scalar.properties.isDefaultIgnorableCodePoint { return nil }
+            switch scalar.properties.generalCategory {
+            case .nonspacingMark, .spacingMark, .enclosingMark: return nil
+            default: return latinConfusables[scalar] ?? scalar
+            }
+        }
+        return String(String.UnicodeScalarView(scalars))
+    }
+
+    private static let latinConfusables: [UnicodeScalar: UnicodeScalar] = {
+        let groups = ["a": "аα", "b": "ьβ", "c": "сϲσ", "d": "ԁ", "e": "еε", "f": "ғ",
+                      "g": "ɡ", "h": "һн", "i": "іι", "j": "ј", "k": "κк", "l": "ӏ",
+                      "m": "мμ", "n": "ո", "o": "оο", "p": "рρ", "s": "ѕ", "t": "тτ",
+                      "u": "υս", "v": "νѵ", "w": "ԝω", "x": "хχ", "y": "уγ", "z": "ζ"]
+        var result: [UnicodeScalar: UnicodeScalar] = [:]
+        for (latin, lookalikes) in groups {
+            for scalar in lookalikes.unicodeScalars { result[scalar] = latin.unicodeScalars.first! }
+        }
+        return result
+    }()
 
     private static func mnemonicRanges(in normalized: String) -> [NSRange] {
         let words = wordPattern.matches(in: normalized, range: NSRange(normalized.startIndex..., in: normalized))
@@ -297,10 +323,11 @@ final class LogFile: @unchecked Sendable {
         let joined = leaves.joined(separator: " ")
         guard joined.utf8.count <= maxMessageBytes else { return true }
         guard let views = decodedViews(joined) else { return true }
-        if views.contains(where: { !mnemonicRanges(in: normalizeMnemonic($0)).isEmpty }) { return true }
+        if views.contains(where: { !mnemonicRanges(in: detectionSkeleton($0)).isEmpty }) { return true }
         var count = 0
         for leaf in leaves {
-            let normalized = normalizeMnemonic(leaf)
+            guard let decoded = decodedViews(leaf)?.last else { return true }
+            let normalized = detectionSkeleton(decoded)
             let words = wordPattern.matches(in: normalized, range: NSRange(normalized.startIndex..., in: normalized))
             if !words.isEmpty, words.allSatisfy({ bip39.contains((normalized as NSString).substring(with: $0.range)) }) {
                 count += words.count
@@ -308,12 +335,6 @@ final class LogFile: @unchecked Sendable {
             }
         }
         return false
-    }
-
-    static func isSensitiveKey(_ field: String) -> Bool {
-        let key = field.lowercased().filter(\.isLetter)
-        return key == "key" || ["mnemonic", "seed", "privatekey", "privkey", "secret", "signature",
-            "sig", "preimage", "authorization", "password", "token", "xamz", "email", "lightningaddress"].contains { key.contains($0) }
     }
 
     static func prepareRedaction() {
