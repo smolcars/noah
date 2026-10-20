@@ -13885,6 +13885,18 @@
         }
       }
     },
+    "Endpoint not changed. The wallet is using the previous endpoint.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint not changed. The wallet is using the previous endpoint."
+          }
+        }
+      }
+    },
     "Endpoint updated": {
       "comment": "GT 10e1d528cb7f8ba5; arguments: none",
       "extractionState": "manual",
@@ -42349,6 +42361,18 @@
         }
       }
     },
+    "The custom server isn't responding.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The custom server isn't responding."
+          }
+        }
+      }
+    },
     "The downloaded backup is incomplete or damaged. Check your connection and try again.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -42969,6 +42993,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "The selected items have reached a state that resolves this attempt. Review their current status and history before continuing."
+          }
+        }
+      }
+    },
+    "The server isn't responding; switching back…": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server isn't responding; switching back…"
           }
         }
       }
@@ -46089,6 +46125,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Den uppladdade säkerhetskopians storlek stämmer inte med den som angavs när uppladdningen påbörjades"
+          }
+        }
+      }
+    },
+    "Use default server": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use default server"
           }
         }
       }

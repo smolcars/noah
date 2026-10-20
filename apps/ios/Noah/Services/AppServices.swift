@@ -109,17 +109,60 @@ final class AppServices: Sendable {
                 let store = EsploraSettings()
                 let prepared = try store.prepare(candidate)
                 let reservation = try await session.reserveForConfigurationChange()
-                do {
-                    try await store.change(to: candidate, prepared: prepared) { [self] selection, commit in
-                        try await EsploraOpening.$selection.withValue(selection) {
-                            try await session.reopen(reservation, mnemonic: mnemonic, appVersion: appVersion, commit: commit)
+                try await EsploraOpenWait().run(operation: { [self] wait in
+                    do {
+                        try await store.change(to: candidate, prepared: prepared, commitCandidate: { try wait.commit($0) }) { [self] selection, commit in
+                            try await EsploraOpening.$selection.withValue(selection) {
+                                try await session.reopen(reservation, mnemonic: mnemonic, appVersion: appVersion, commit: commit)
+                            }
                         }
+                        await session.release(reservation)
+                    } catch {
+                        await session.release(reservation)
+                        throw error
                     }
-                    await session.release(reservation)
-                } catch {
-                    await session.release(reservation)
-                    throw error
-                }
+                }, lateCompletion: { _ in
+                    NotificationCenter.default.post(name: Self.esploraReopened, object: nil)
+                })
+            }
+        }
+    }
+
+    static let esploraReopened = Notification.Name("noah.esplora-reopened")
+
+    /// Foreground only: timeout offers a default selection while the worker keeps the datadir reserved.
+    func openWalletInForeground(mnemonic: String, wait: EsploraOpenWait,
+                                lateCompletion: @escaping @Sendable (Bool) async -> Void) async throws {
+        let store = EsploraSettings()
+        guard variant != .regtest, let endpoint = try await store.resolve(for: variant), !(await session.isOpen) else {
+            try await session.ensureOpen(mnemonic: mnemonic, runDaemon: true, appVersion: appVersion)
+            return
+        }
+        let selection = EsploraSettings.Selection(endpoint: endpoint, variant: variant.rawValue)
+        try await Self.configurationAccess.withLock { [self] in
+            try await restoreRecovery.withSettled { [self] in
+                let reservation = try await session.reserve()
+                try await wait.run(operation: { [self] wait in
+                    do {
+                        do {
+                            try await EsploraOpening.$selection.withValue(selection) {
+                                try await session.reopen(reservation, mnemonic: mnemonic, appVersion: appVersion, commit: { try wait.commit({}) })
+                            }
+                        } catch {
+                            guard wait.timedOut else { throw error }
+                            await wait.waitForDefault()
+                            let fallback = EsploraSettings.Selection(variant: variant.rawValue)
+                            SettingsStorage.shared.useDefaultEsplora(for: variant)
+                            try await EsploraOpening.$selection.withValue(fallback) {
+                                try await session.reopen(reservation, mnemonic: mnemonic, appVersion: appVersion, commit: {})
+                            }
+                        }
+                        await session.release(reservation)
+                    } catch {
+                        await session.release(reservation)
+                        throw error
+                    }
+                }, lateCompletion: lateCompletion)
             }
         }
     }

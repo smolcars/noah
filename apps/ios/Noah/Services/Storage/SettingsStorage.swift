@@ -132,6 +132,16 @@ final class SettingsStorage: @unchecked Sendable {
         do { try persist(state) }
         catch { fallback = previous; throw error }
     }
+    /// User-selected safe fallback: foreground keeps it even when disk writes fail.
+    func useDefaultEsplora(for variant: AppVariant) {
+        Self.access.lock(); defer { Self.access.unlock() }
+        var state = load()
+        do {
+            let record = EsploraSettings.Record(active: .init(variant: variant.rawValue))
+            state.values[EsploraSettings.key] = String(decoding: try JSONEncoder().encode(record), as: UTF8.self)
+            try persist(state)
+        } catch { fallback = state }
+    }
     func remove(forKey key: String) {
         Self.access.lock(); defer { Self.access.unlock() }
         let previous = load()

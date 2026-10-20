@@ -48,6 +48,10 @@ struct EsploraSettingsScreen: View {
         }
         .settingsStyle("Edit Esplora API")
         .onAppear { input = selection.input ?? effectiveEndpoint }
+        .onReceive(NotificationCenter.default.publisher(for: AppServices.esploraReopened)) { _ in
+            selection = EsploraSettings().selection(for: .current)
+            error = L10n.text("Endpoint not changed. The wallet is using the previous endpoint.")
+        }
     }
     private func apply(_ value: String?) {
         guard !busy else { return }
@@ -59,6 +63,8 @@ struct EsploraSettingsScreen: View {
                 selection = EsploraSettings().selection(for: .current)
                 input = effectiveEndpoint
                 message = selection.endpoint == nil ? "The wallet is now using Noah's default Esplora endpoint." : "The wallet is now using the new Esplora endpoint."
+            } catch is EsploraOpenWait.Timeout {
+                error = L10n.text("The server isn't responding; switching back…")
             } catch { self.error = error.localizedDescription }
             await model.walletConfigurationChanged()
         }

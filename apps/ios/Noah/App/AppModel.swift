@@ -20,6 +20,9 @@ final class AppModel {
     private(set) var summary: WalletSession.Summary?
     private(set) var walletSessionRevision = 0
     private(set) var walletError: String?
+    private(set) var customServerUnresponsive = false
+    private(set) var switchingToDefaultServer = false
+    @ObservationIgnored private var customOpenWait: EsploraOpenWait?
     private(set) var resumeOnboarding = false
     private(set) var isRestoring = false
     private(set) var restoreStep: WalletRestorer.Step?
@@ -141,7 +144,7 @@ final class AppModel {
         case .existingWallet:
             resumeOnboarding = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == false
             await openExistingWallet()
-            if phase == .launching { phase = resumeOnboarding ? .onboarding : .wallet }
+            if phase == .launching && !customServerUnresponsive { phase = resumeOnboarding ? .onboarding : .wallet }
         case .onboarding:
             phase = .onboarding
         case .seedWithoutWalletData, .walletDataWithoutSeed, .secureStorageUnavailable, .invalidSeed, .seedConflict:
@@ -269,21 +272,43 @@ final class AppModel {
         SafeErrorDescription.forLogging(error)
     }
 
+    func useDefaultEsploraServer() {
+        switchingToDefaultServer = true
+        // Persist the choice now so a restart can recover even if native never returns.
+        settings.useDefaultEsplora(for: variant)
+        customOpenWait?.chooseDefault()
+    }
+
+    private func customOpenFinished(_ success: Bool) async {
+        customServerUnresponsive = false; switchingToDefaultServer = false; customOpenWait = nil
+        if success { await openExistingWallet(); await walletConfigurationChanged() }
+        else { walletError = L10n.text("Couldn't open your wallet."); phase = .wallet }
+    }
+
     private func openExistingWallet() async {
-        guard !isWalletSuspended else { return }
+        guard !isWalletSuspended, !customServerUnresponsive else { return }
         guard case .found(let mnemonic) = KeychainPassword.mnemonic(for: variant).read() else {
             phase = .blocked(.secureStorageUnavailable)
             return
         }
         do {
-            try await session.ensureOpen(mnemonic: mnemonic, runDaemon: true, appVersion: appVersion)
+            let wait = EsploraOpenWait()
+            customOpenWait = wait
+            try await AppServices.shared.openWalletInForeground(mnemonic: mnemonic, wait: wait) { [weak self] success in
+                await self?.customOpenFinished(success)
+            }
+            customOpenWait = nil
             if let latest = try await session.summary() {
                 summary = latest
                 walletError = nil
             }
             // Identity checks must finish before exposing wallet/settings actions.
-            if phase == .launching { phase = resumeOnboarding ? .onboarding : .wallet }
+            if phase == .launching && !customServerUnresponsive { phase = resumeOnboarding ? .onboarding : .wallet }
+        } catch is EsploraOpenWait.Timeout {
+            customServerUnresponsive = customOpenWait != nil
+            return
         } catch {
+            customOpenWait = nil
             if let failure = error as? StoredSeed.Failure {
                 phase = .blocked(failure == .invalid ? .invalidSeed : .seedConflict)
                 return

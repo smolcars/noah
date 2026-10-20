@@ -1,4 +1,5 @@
 import BarkBoltFFI
+import Darwin
 import Foundation
 import Testing
 @testable import Noah
@@ -166,6 +167,22 @@ struct EsploraTests {
         }
         #expect(await calls.values == [Self.candidate.endpoint!, Self.previous.endpoint!])
         #expect(try await faulty.resolve(for: .signet) == Self.previous.endpoint)
+    }
+
+    @Test func defaultChoiceRemainsEffectiveWhenSettingsCannotPersist() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "esplora-disk-full-\(UUID())")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let settings = try SettingsStorage(rootPath: directory.appending(path: "mmkv").path)
+        let store = EsploraSettings(storage: settings)
+        try store.save(.init(active: Self.candidate))
+        #expect(chmod(directory.path, 0o500) == 0)
+        defer { chmod(directory.path, 0o700); try? FileManager.default.removeItem(at: directory) }
+        settings.useDefaultEsplora(for: .signet)
+        #expect(store.selection(for: .signet).endpoint == nil)
+        #expect(try await store.resolve(for: .signet) == nil)
+        #expect(throws: (any Error).self) { try settings.requireHealthy() }
+        let reread = EsploraSettings(storage: try SettingsStorage(rootPath: directory.appending(path: "mmkv").path))
+        #expect(reread.selection(for: .signet).endpoint == nil)
     }
 
     @Test func interruptedCommitRetainsPreviousSelection() async throws {

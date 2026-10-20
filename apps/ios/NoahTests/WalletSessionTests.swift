@@ -139,8 +139,9 @@ struct WalletSessionTests {
     }
 
     /// Real bark wallet, created without a server so the test runs offline.
-    private func offlineSession() -> WalletSession {
+    private func offlineSession(beforeOpen: @escaping @Sendable () async throws -> Void = {}) -> WalletSession {
         WalletSession(variant: .regtest, location: location) { mnemonic, datadir, _, _, create in
+            try await beforeOpen()
             let config = WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "test")
             let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
             let wallet = try await Wallet.openWithOnchain(
@@ -151,6 +152,105 @@ struct WalletSessionTests {
                 onchain: onchain)
             return WalletSession.Handles(wallet: wallet, onchain: onchain)
         }
+    }
+
+    @Test(.timeLimit(.minutes(1))) func silentEsploraReleasesUIGateButKeepsReservationUntilRollback() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        for lateSuccess in [false, true] {
+            let server = try LocalEsploraServer(.silent)
+            defer { server.stop() }
+            let candidate = EsploraSettings.Selection(endpoint: server.url, variant: "signet")
+            let previous = EsploraSettings.Selection(variant: "signet")
+            let session = offlineSession {
+                if EsploraOpening.selection == candidate {
+                    do { _ = try await URLSession.shared.data(from: URL(string: server.url)!) }
+                    catch { if !lateSuccess { throw error } }
+                }
+            }
+            let mnemonic = try generateMnemonic()
+            // Each iteration uses a fresh wallet directory.
+            try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+            let store = EsploraSettings(storage: try SettingsStorage(rootPath: documents.appending(path: "settings").path))
+            try store.save(.init(active: previous))
+            let prepared = try store.prepare(candidate)
+            let reservation = try await session.reserveForConfigurationChange()
+            let gate = WalletMutationGate()
+            let wait = EsploraOpenWait()
+            let completion = AsyncStream.makeStream(of: Bool.self)
+            await #expect(throws: EsploraOpenWait.Timeout.self) {
+                try await gate.withLock {
+                    try await wait.run(timeout: .milliseconds(300), operation: { wait in
+                        do {
+                            try await store.change(to: candidate, prepared: prepared, commitCandidate: { try wait.commit($0) }) { selection, commit in
+                                try await EsploraOpening.$selection.withValue(selection) {
+                                    try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test", commit: commit)
+                                }
+                            }
+                            await session.release(reservation)
+                        } catch { await session.release(reservation); throw error }
+                    }, lateCompletion: { success in completion.continuation.yield(success); completion.continuation.finish() })
+                }
+            }
+            try #require(wait.timedOut)
+            #expect(await gate.withLock { true })
+            #expect(await session.unlessReserved {} == false)
+            await #expect(throws: WalletSession.OpenError.busy) {
+                try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+            }
+            server.stop()
+            #expect(await completion.stream.first(where: { _ in true }) == false)
+            #expect(await session.isOpen)
+            #expect(try store.record()?.active == previous)
+            try await session.close()
+            try FileManager.default.removeItem(at: location.directory)
+        }
+    }
+
+    @Test(.timeLimit(.minutes(1))) func launchDefaultWaitsForNativeAndReopensDespiteStorageFailure() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let candidate = EsploraSettings.Selection(endpoint: "https://custom.invalid/api", variant: "signet")
+        let fallback = EsploraSettings.Selection(variant: "signet")
+        let native = Gate()
+        let session = offlineSession {
+            if EsploraOpening.selection == candidate { await native.enter(); throw OpenerFailed() }
+        }
+        let mnemonic = try generateMnemonic()
+        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        let fingerprint = try await session.summary()?.fingerprint
+        try await session.close()
+        let reservation = try await session.reserve()
+        let wait = EsploraOpenWait()
+        let completion = AsyncStream.makeStream(of: Bool.self)
+        let storage = EsploraSettings(read: { _ in nil }, write: { _, _ in throw OpenerFailed() })
+        await #expect(throws: EsploraOpenWait.Timeout.self) {
+            try await wait.run(timeout: .milliseconds(100), operation: { wait in
+                do {
+                    do {
+                        try await EsploraOpening.$selection.withValue(candidate) {
+                            try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test", commit: { try wait.commit({}) })
+                        }
+                    } catch {
+                        guard wait.timedOut else { throw error }
+                        await wait.waitForDefault()
+                        try? storage.save(.init(active: fallback))
+                        try await EsploraOpening.$selection.withValue(fallback) {
+                            try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test", commit: {})
+                        }
+                    }
+                    await session.release(reservation)
+                } catch { await session.release(reservation); throw error }
+            }, lateCompletion: { success in completion.continuation.yield(success); completion.continuation.finish() })
+        }
+        try #require(wait.timedOut)
+        wait.chooseDefault()
+        #expect(await session.isOpen == false)
+        #expect(await session.unlessReserved {} == false)
+        while await native.calls == 0 { await Task.yield() }
+        await native.release()
+        #expect(await completion.stream.first(where: { _ in true }) == true)
+        #expect(await session.isOpen)
+        #expect(try await session.summary()?.fingerprint == fingerprint)
+        try await session.close()
     }
 
     @Test func esploraReloadRefusesInFlightMoneyOperations() async throws {

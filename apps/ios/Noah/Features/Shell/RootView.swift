@@ -11,7 +11,13 @@ struct RootView: View {
         Group {
             switch model.phase {
             case .launching:
-                NoahColor.background.ignoresSafeArea()
+                if model.customServerUnresponsive {
+                    VStack(spacing: 16) {
+                        Text(model.switchingToDefaultServer ? L10n.text("The server isn't responding; switching back…") : L10n.text("The custom server isn't responding."))
+                        Button("Use default server") { model.useDefaultEsploraServer() }
+                            .disabled(model.switchingToDefaultServer)
+                    }.padding()
+                } else { NoahColor.background.ignoresSafeArea() }
             case .onboarding:
                 OnboardingFlow()
             case .wallet:
@@ -34,6 +40,9 @@ struct RootView: View {
                     title: model.walletError == nil ? "Restore didn't finish" : "Wallet cleanup didn't finish",
                     message: LocalizedStringKey(model.walletError ?? "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."))
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AppServices.esploraReopened)) { _ in
+            Task { await model.walletConfigurationChanged() }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.protectedDataDidBecomeAvailableNotification)) { _ in
             Task { await model.retrySecureStorage() }

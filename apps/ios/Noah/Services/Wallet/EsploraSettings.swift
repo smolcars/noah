@@ -65,10 +65,11 @@ struct EsploraSettings: Sendable {
     }
     /// Called under the lifecycle gate and a closed-session reservation.
     func change(to candidate: Selection, prepared: Record? = nil,
+                commitCandidate: @escaping @Sendable (@Sendable () throws -> Void) throws -> Void = { try $0() },
                 reopen: @Sendable (Selection, @escaping @Sendable () throws -> Void) async throws -> Void) async throws {
         let previous = try (prepared ?? prepare(candidate)).active
         do {
-            try await reopen(candidate) { try save(Record(active: candidate)) }
+            try await reopen(candidate) { try commitCandidate { try save(Record(active: candidate)) } }
         } catch {
             // Keep pending if rollback storage fails: cold launch still selects active.
             try? save(Record(active: previous))
