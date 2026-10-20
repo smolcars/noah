@@ -71,6 +71,9 @@ targets:
       - path: Noah
         excludes:
           - API/openapi-generator-config.yaml
+          - Resources/Localizable.xcstrings
+      - path: Noah/Resources/Localizable.xcstrings
+        buildPhase: resources
       - path: ../../client/assets/btcmap/places.btcmap
         buildPhase: resources
       - path: ../../client/assets/geonames/cities.geonames
