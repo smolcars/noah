@@ -1,0 +1,15 @@
+{
+  "blockHeight": [
+    {"variant":"mainnet","override":null,"host":"192.0.2.1","expected":"https://mempool.second.tech/api/blocks/tip/height"},
+    {"variant":"signet","override":null,"host":"192.0.2.1","expected":"https://mempool.space/signet/api/blocks/tip/height"},
+    {"variant":"mainnet","override":"https://custom.example/api/","host":"192.0.2.1","expected":"https://custom.example/api/blocks/tip/height"},
+    {"variant":"signet","override":"https://custom.example/api/","host":"192.0.2.1","expected":"https://custom.example/api/blocks/tip/height"},
+    {"variant":"regtest","override":"https://ignored.example","host":"192.0.2.1","expected":"http://192.0.2.1:18443"}
+  ],
+  "filenames": [
+    {"milliseconds":0,"expected":"noah_backup_1970-01-01T00-00-00-000Z.noahbackup"},
+    {"milliseconds":1234,"expected":"noah_backup_1970-01-01T00-00-01-234Z.noahbackup"}
+  ],
+  "imports": {"ids":["id\"1","id2"],"pretty":"[\n  \"id\\\"1\",\n  \"id2\"\n]"},
+  "logs": {"lines":["older","newest"],"error":"Failed to fetch logs."}
+}
