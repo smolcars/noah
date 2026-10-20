@@ -6,12 +6,14 @@ import WidgetKit
 struct WalletLifecycle: Sendable {
     enum Failure: LocalizedError, Equatable {
         /// An interrupted restore must be settled first (relaunch).
+        case waitingForSecureStorage
         case restorePending
         case temporaryFiles
         case backupBusy
 
         var errorDescription: String? {
             switch self {
+            case .waitingForSecureStorage: "Waiting for secure storage. Unlock your device and try again."
             case .backupBusy: "Noah is still finishing a backup. Try again in a moment."
             case .temporaryFiles: "Noah couldn't remove temporary wallet files. Restart Noah and try again."
             case .restorePending: "Restart Noah to settle the pending restore before deleting."
@@ -56,7 +58,8 @@ struct WalletLifecycle: Sendable {
     }
 
     /// Finish a committed deletion before launch inspects the seed and datadir.
-    func recoverDeletion() async throws {
+    @discardableResult
+    func recoverDeletion() async throws -> RestoreTransaction.Recovery {
         try await dependencies.mutation.withLock { try await recoverDeletionLocked() }
     }
 
@@ -70,27 +73,39 @@ struct WalletLifecycle: Sendable {
         // must not reauthorize deletion of the previous wallet on the next launch.
         if dependencies.location.restorePending {
             if FileManager.default.fileExists(atPath: dependencies.location.deletionMarker.path) {
+                if try dependencies.location.deletionStatus(seed: dependencies.seed.read()) == .waitingForKeychain {
+                    return .waitingForKeychain
+                }
                 try discardDeletionMarker()
             } else {
                 // Retry a prior marker unlink whose directory sync failed.
                 try RestoreTransaction.fullSync(dependencies.location.directory.deletingLastPathComponent())
             }
         }
+        if !FileManager.default.fileExists(atPath: dependencies.location.deletionMarker.path) {
+            try dependencies.location.removeDiscardedDeletionData()
+        }
         let result = try await recoverRestore()
         guard result != .waitingForKeychain else { return result }
-        try await recoverDeletionLocked()
+        if try await recoverDeletionLocked() == .waitingForKeychain { return .waitingForKeychain }
         return result
     }
 
     /// Called by RestoreRecovery while it owns the same mutation gate.
-    func recoverDeletionLocked() async throws {
+    @discardableResult
+    func recoverDeletionLocked() async throws -> RestoreTransaction.Recovery {
         let location = dependencies.location
-        guard FileManager.default.fileExists(atPath: location.deletionMarker.path) else { return }
-        guard try location.deletionMatchesWallet(seed: dependencies.seed.read()) else {
-            try discardDeletionMarker()
-            return
+        if FileManager.default.fileExists(atPath: location.deletionMarker.path) {
+            switch try location.deletionStatus(seed: dependencies.seed.read()) {
+            case .waitingForKeychain: return .waitingForKeychain
+            case .mismatched: try discardDeletionMarker()
+            case .matching:
+                try await deleteLocked()
+                return .nothingPending
+            }
         }
-        try await deleteLocked()
+        try location.removeDiscardedDeletionData()
+        return .nothingPending
     }
 
     private func discardDeletionMarker() throws {
@@ -123,8 +138,17 @@ struct WalletLifecycle: Sendable {
                 do { try dependencies.scratch.sweepForWalletDeletion() }
                 catch { throw Failure.temporaryFiles }
                 let marker = dependencies.location.deletionMarker
-                if try !FileManager.default.fileExists(atPath: marker.path) || !dependencies.location.deletionMatchesWallet(seed: dependencies.seed.read()) {
-                    try dependencies.location.writeDeletionIdentity(seed: dependencies.seed.read())
+                let seed = dependencies.seed.read()
+                if FileManager.default.fileExists(atPath: marker.path) {
+                    switch try dependencies.location.deletionStatus(seed: seed) {
+                    case .waitingForKeychain: throw Failure.waitingForSecureStorage
+                    case .mismatched: try discardDeletionMarker()
+                    case .matching: break
+                    }
+                }
+                if !FileManager.default.fileExists(atPath: marker.path) {
+                    if case .unavailable = seed { throw Failure.waitingForSecureStorage }
+                    try dependencies.location.writeDeletionIdentity(seed: seed)
                     let handle = try FileHandle(forWritingTo: marker)
                     try handle.synchronize()
                     try handle.close()
@@ -154,6 +178,10 @@ struct WalletLifecycle: Sendable {
         let location = dependencies.location
         guard !location.restorePending else { throw Failure.restorePending }
         if fileManager.fileExists(atPath: location.directory.path) {
+            // Also finishes an older app's committed marker over abandoned staging.
+            if fileManager.fileExists(atPath: location.deletionDirectory.path) {
+                try fileManager.removeItem(at: location.deletionDirectory)
+            }
             // Rename before recursive removal: recovery never sees a partial instance identity.
             try fileManager.moveItem(at: location.directory, to: location.deletionDirectory)
             try RestoreTransaction.fullSync(location.directory.deletingLastPathComponent())

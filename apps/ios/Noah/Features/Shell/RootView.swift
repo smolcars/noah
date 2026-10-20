@@ -138,7 +138,7 @@ private struct LaunchMessageView: View {
         switch state {
         case .seedWithoutWalletData: "Recovery phrase found"
         case .walletDataWithoutSeed: "Recovery phrase needed"
-        case .secureStorageUnavailable: "Unlock your device"
+        case .secureStorageUnavailable: "Waiting for secure storage"
         case .existingWallet, .onboarding: ""
         }
     }

@@ -69,10 +69,12 @@ struct RestoreTransaction: Sendable {
         case syncFailed(Int32)
     }
 
+    private let location: WalletDataLocation
     let datadir: URL
     let directory: URL
 
     init(location: WalletDataLocation) {
+        self.location = location
         datadir = location.directory
         directory = location.restoreDirectory
     }
@@ -90,6 +92,7 @@ struct RestoreTransaction: Sendable {
     func prepare() throws {
         guard !isPending else { throw Failure.alreadyPending }
         guard !exists(previous) else { throw Failure.orphanedPreviousWallet }
+        try location.removeDiscardedDeletionData()
         try ensureWorkspace()
         try removeScratch()
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: false)

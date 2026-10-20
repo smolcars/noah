@@ -33,6 +33,7 @@ struct WalletDataLocation: Sendable {
 
     func writeDeletionIdentity(seed: KeychainPassword.ReadResult) throws {
         if case .unavailable(let status) = seed { throw KeychainPassword.WriteError(status: status) }
+        if !FileManager.default.fileExists(atPath: deletionMarker.path) { try removeDiscardedDeletionData() }
         var salt = Data(count: 32)
         let status = salt.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
         guard status == errSecSuccess else { throw RestoreTransaction.Failure.randomUnavailable }
@@ -51,21 +52,35 @@ struct WalletDataLocation: Sendable {
         try JSONEncoder().encode(identity).write(to: deletionMarker, options: .atomic)
     }
 
-    func deletionMatchesWallet(seed: KeychainPassword.ReadResult) throws -> Bool {
+    enum DeletionStatus { case matching, mismatched, waitingForKeychain }
+
+    func deletionStatus(seed: KeychainPassword.ReadResult) throws -> DeletionStatus {
         let marker = try Data(contentsOf: deletionMarker)
         // UUID-only and one-byte legacy markers cannot prove seed ownership, even without a datadir.
         guard let identity = try? JSONDecoder().decode(DeletionIdentity.self, from: marker),
               identity.version == 1, identity.seedSalt.count == 32,
-              identity.seedTag == nil || identity.seedTag?.count == 32 else { return false }
+              identity.seedTag == nil || identity.seedTag?.count == 32 else { return .mismatched }
         switch seed {
         case .found(let mnemonic):
-            guard RestoreTransaction.tag(mnemonic, salt: identity.seedSalt) == identity.seedTag else { return false }
-        case .unavailable: return false
+            guard RestoreTransaction.tag(mnemonic, salt: identity.seedSalt) == identity.seedTag else { return .mismatched }
+        case .unavailable: return .waitingForKeychain
         case .notFound: break // Only non-seed cleanup remains.
         }
-        guard FileManager.default.fileExists(atPath: directory.path) else { return true }
-        guard FileManager.default.fileExists(atPath: instanceIdentity.path) else { return false }
-        return try Data(contentsOf: instanceIdentity) == Data(identity.id.uuidString.utf8)
+        guard FileManager.default.fileExists(atPath: directory.path) else { return .matching }
+        guard FileManager.default.fileExists(atPath: instanceIdentity.path) else { return .mismatched }
+        return try Data(contentsOf: instanceIdentity) == Data(identity.id.uuidString.utf8) ? .matching : .mismatched
+    }
+
+    /// Only unmarked staging belongs to an already committed, discarded deletion.
+    /// Cleanup must never consume staging still owned by a pending marker.
+    func removeDiscardedDeletionData(sync: (URL) throws -> Void = RestoreTransaction.fullSync) throws {
+        guard !FileManager.default.fileExists(atPath: deletionMarker.path) else { throw WalletSession.OpenError.restorePending }
+        if FileManager.default.fileExists(atPath: deletionDirectory.path) {
+            try FileManager.default.removeItem(at: deletionDirectory)
+        }
+        // Retry an earlier unlink whose directory sync failed, even if staging is now absent.
+        let parent = directory.deletingLastPathComponent()
+        if FileManager.default.fileExists(atPath: parent.path) { try sync(parent) }
     }
 
     var database: URL { directory.appending(path: "db.sqlite", directoryHint: .notDirectory) }

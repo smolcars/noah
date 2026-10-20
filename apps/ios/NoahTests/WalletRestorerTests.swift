@@ -125,6 +125,52 @@ struct WalletRestorerTests {
         #expect(leftovers.isEmpty, "journal, previous wallet and decrypted files are gone: \(leftovers)")
     }
 
+    private struct UnavailableDeletionSeed: WalletDeletionSeed {
+        func read() -> KeychainPassword.ReadResult { .unavailable(-25308) }
+        func deleteWalletSeed() throws { Issue.record("Locked seed must not be deleted") }
+    }
+
+    @Test(arguments: [true, false])
+    func stagedDeletionUnlockRestoreAndDeleteUsesRealRestorePipeline(pending: Bool) async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let mnemonic = try generateMnemonic()
+        let backup = try await makeBackup(mnemonic: mnemonic)
+        try FileManager.default.createDirectory(at: deviceB.directory, withIntermediateDirectories: true)
+        try Data("previous wallet".utf8).write(to: deviceB.database)
+        let seed = KeychainPassword(service: "com.noah.tests.restore-r5.\(UUID().uuidString)", account: "seed")
+        let token = KeychainPassword(service: "com.noah.tests.restore-r5.\(UUID().uuidString)", account: "token")
+        defer { seed.remove(); token.remove() }
+        try seed.save(mnemonic)
+        try deviceB.writeDeletionIdentity(seed: seed.read())
+        try FileManager.default.moveItem(at: deviceB.directory, to: deviceB.deletionDirectory)
+        let session = WalletSession(variant: .regtest, location: deviceB)
+        let mutation = WalletMutationGate()
+        let settings = try SettingsStorage(rootPath: root.appending(path: "mmkv").path, instanceID: UUID().uuidString)
+        let dependencies = WalletLifecycle.Dependencies(session: session, location: deviceB, seed: seed, authToken: token,
+            settings: settings, scratch: ScratchSpace(root: root.appending(path: "scratch")), appGroup: nil,
+            mutation: mutation, deregister: {}, walletChanged: {})
+        var lockedDependencies = dependencies
+        lockedDependencies.seed = UnavailableDeletionSeed()
+        let locked = WalletLifecycle(dependencies: lockedDependencies)
+        #expect(try await locked.recoverDeletion() == .waitingForKeychain)
+        #expect(FileManager.default.fileExists(atPath: deviceB.deletionMarker.path))
+        #expect(FileManager.default.fileExists(atPath: deviceB.deletionDirectory.path))
+        let lifecycle = WalletLifecycle(dependencies: dependencies)
+        if pending { try await lifecycle.recoverDeletion() }
+        else { try FileManager.default.removeItem(at: deviceB.deletionMarker) } // Older app left staging and seed.
+        let restorer = WalletRestorer(mutation: mutation, variant: .regtest, session: session, location: deviceB, seed: seed,
+            makeClient: { _ in Client(serverURL: URL(string: "http://fake")!, transport: FakeServer(backupId: "b1", encrypted: backup)) },
+            walletChanged: {})
+        _ = try await restorer.restore(mnemonic: mnemonic)
+        #expect(deviceB.databaseExists); #expect(seed.read() == .found(mnemonic))
+        #expect(!FileManager.default.fileExists(atPath: deviceB.deletionDirectory.path))
+        try await lifecycle.delete()
+        #expect(seed.read() == .notFound)
+        #expect(!deviceB.databaseExists)
+        #expect(!FileManager.default.fileExists(atPath: deviceB.deletionMarker.path))
+    }
+
     @MainActor @Test func sendReceiptIsInvalidatedByRealDeleteAndDifferentSeedRestore() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

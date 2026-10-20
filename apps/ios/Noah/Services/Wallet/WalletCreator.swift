@@ -130,6 +130,8 @@ extension WalletCreator.Dependencies {
                 guard !FileManager.default.fileExists(atPath: location.deletionMarker.path) else {
                     return .unavailable(errSecInteractionNotAllowed)
                 }
+                do { try location.removeDiscardedDeletionData() }
+                catch { return .unavailable(errSecIO) }
                 return seedItem.read()
             },
             saveSeed: { try seedItem.save($0) },
