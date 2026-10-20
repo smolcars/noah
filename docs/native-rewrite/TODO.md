@@ -34,7 +34,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Funded RN→native upgrade re-run on 0.3.0 — iOS (fingerprint, 2 movements, 95,000 spendable; opened via `openExisting`)
 - [x] Funded RN→native upgrade on 0.3.0 — Android, real Pixel 6 (Android 17): fingerprint, 2 movements, 95,000 spendable; Expo UUID and token unchanged (see `apps/android/UpgradeTests/DEVICE.md`)
 - [x] Pixel 6: background-job callbacks, killed-process delivery and widget refresh — real Expo heartbeat `responded` / maintenance `Success` in both states; placed widget refreshed 95,000 → 96,234 sats after a push (2026-10-19 follow-up in `apps/android/UpgradeTests/DEVICE.md`)
-- [x] bark-bolt-ffi Android libraries 16 KB-aligned (FFI handoff item 13) — both platforms on 0.3.1; arm64-v8a, armeabi-v7a and x86_64 `libbark_bolt_ffi.so` LOAD segments all `Align 0x4000` (checked with llvm-readelf on the published AAR)
+- [x] bark-bolt-ffi Android libraries 16 KB-aligned (FFI handoff item 13) — fixed in 0.3.1, both platforms now on 0.4.0; arm64-v8a, armeabi-v7a and x86_64 `libbark_bolt_ffi.so` LOAD segments all `Align 0x4000` (checked with llvm-readelf on the published AAR)
 - [ ] `WalletService` protocol/interface over bark-bolt-ffi (Swift + Kotlin), with a fake for UI work
 - [x] Config mapping per variant with **fee units: sat/kvB → sat/kwu** — iOS
 - [x] Config mapping — Android (sat/kwu; regtest via `10.0.2.2`)
@@ -183,6 +183,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Round-4 direct Ark success persists SDK-returned-success provenance; close-before-Done receipts survive reload for Ark, BOLT11, LNURL, offers, onchain and offboard without weakening history-candidate rules — iOS
 - [x] Round-4 verification: full NoahTests 291 total / 278 passed / 13 opt-in skipped / 0 failed (323 passed individual runs); live 1,000-sat Ark receipt survives kill/relaunch before Done; Ark→onchain MAX actual output/fee and exact reviewed VTXOs independently verified — iOS; `apps/ios/SendTests/README.md`
 - [ ] Restore onchain MAX only with prepared sends / coin control (FFI 14); expose broadcast/chain status for offboards (FFI 15); replace weak history correlation with durable operation IDs (FFI 16)
+- [ ] Adopt bark-bolt-ffi 0.4.0 (both platforms pinned; builds/tests pass unchanged): onchain-wallet sends via `prepareSend` → review exact fee/amount/vsize → `broadcastPrepared(id)` with the prepared txid journaled before broadcast; onchain MAX via `.drainAll` + `confirmedOnly`; `BroadcastResult` accepted/failed/notAttempted; replace message-prefix error allowlists (Send, M6) with typed `BarkError.code`; Lightning resume only on matching hash + amount + fee — iOS, then Android Send
 - [ ] External LNURL/BOLT12 provider acceptance and camera hardware verification — iOS
 
 ## M4 — History
