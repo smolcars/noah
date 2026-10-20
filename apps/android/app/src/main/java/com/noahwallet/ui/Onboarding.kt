@@ -35,7 +35,13 @@ fun Onboarding(model: AppModel) {
     if (choosingLanguage) ModalBottomSheet(onDismissRequest = { choosingLanguage = false }) {
         com.noahwallet.ui.settings.PreferenceScreen(model, com.noahwallet.ui.settings.SettingsDestination.Language) { choosingLanguage = false }
     }
-    BackHandler { if (!model.busy && model.restore.canLeave && model.step in listOf("beta", "restore")) model.step = "welcome" }
+    var history by rememberSaveable { mutableStateOf(listOf(model.step)) }
+    LaunchedEffect(model.step) { history = OnboardingNavigation.visit(history, model.step) }
+    fun goBack() {
+        history = OnboardingNavigation.back(OnboardingNavigation.visit(history, model.step), model.busy, model.restore.canLeave)
+        model.step = history.last()
+    }
+    BackHandler(enabled = model.step != "welcome") { goBack() }
     when (model.step) {
         "welcome" -> NoahForm("Welcome to Noah") {
             TextButton({ choosingLanguage = true }) { Text(tr("Language")) }
@@ -57,7 +63,7 @@ fun Onboarding(model: AppModel) {
             com.noahwallet.ui.launch.PlatformAccess.unifiedPush(model.getApplication()),
             com.noahwallet.ui.launch.PlatformAccess.batteryEnabled(model.getApplication())) }
         "unified-push" -> com.noahwallet.ui.launch.UnifiedPushScreen(fromOnboarding = true) { model.step = "battery" }
-        "battery" -> com.noahwallet.ui.launch.BatteryOptimizationScreen(model) { model.step = "lightning" }
+        "battery" -> com.noahwallet.ui.launch.BatteryOptimizationScreen(model, onBack = { goBack() }) { model.step = "lightning" }
         "lightning" -> LightningScreen(model)
     }
 }

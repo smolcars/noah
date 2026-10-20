@@ -38,7 +38,7 @@ fun PushNotificationsRequiredScreen(requesting: Boolean, request: () -> Unit, re
 }
 
 @Composable
-fun BatteryOptimizationScreen(model: AppModel, onContinue: () -> Unit) {
+fun BatteryOptimizationScreen(model: AppModel, onBack: (() -> Unit)? = null, onContinue: () -> Unit) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var failed by remember { mutableStateOf(false) }
@@ -64,7 +64,7 @@ fun BatteryOptimizationScreen(model: AppModel, onContinue: () -> Unit) {
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
-    BackHandler { }
+    BackHandler { if (!proceeding) onBack?.invoke() }
     NoahForm("Disable battery optimization") {
         Text(tr("Android can put Noah to sleep in the background to save energy. This has a negligible effect on battery life, but can cause push notifications to stop arriving entirely. Disabling battery optimization for Noah keeps the wallet operating correctly."))
         Text(tr("Push notifications keep arriving"), style = MaterialTheme.typography.titleMedium)
@@ -104,7 +104,7 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
             awaitCancellation()
         }
     }
-    BackHandler { onContinue() }
+    BackHandler(enabled = !fromOnboarding) { onContinue() }
     NoahForm(if (fromOnboarding) "UnifiedPush Setup" else "UnifiedPush") {
         Text(tr("Google Play Services is not available. To receive notifications, please use a UnifiedPush distributor (like ntfy)."))
         Text(tr("Select Distributor"), style = MaterialTheme.typography.titleMedium)
