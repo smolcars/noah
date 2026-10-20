@@ -35,6 +35,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         val automationStopped = owner != null && automationOverlay && automation?.allowed() == false
         return state.copy(schedules = state.schedules.mapValues { (id, schedule) ->
             if ((id in stopped || automationStopped) && !schedule.unsupportedStorage) schedule.copy(status = "needs_attention", lastError = if (id in stopped) RecurringPolicyLedger.message else RecurringAutomationAuthority.message,
+                issue = RecurringIssue(if (id in stopped) RecurringIssue.Code.policyEvidence else RecurringIssue.Code.automationStopped),
                 stopReason = if (id in stopped) RecurringPayment.StopReason.policyEvidence else RecurringPayment.StopReason.automationStopped) else schedule
         })
     }
@@ -81,7 +82,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         binding?.let { require(it.wallet.fingerprint.isNotBlank() && it.wallet.network.isNotBlank()); UUID.fromString(it.instance) }
         // RN may store amounts above native approval limits; retain each row and its original bytes.
         val visible = schedules.mapValues { (_, schedule) ->
-            if (!schedule.unsupportedStorage && schedule.amountSat > RecurringPayment.maximumAmount) schedule.copy(status = "needs_attention", lastError = RecurringPayment.amountLimitMessage)
+            if (!schedule.unsupportedStorage && schedule.amountSat > RecurringPayment.maximumAmount) schedule.copy(status = "needs_attention", lastError = RecurringPayment.amountLimitMessage, issue = RecurringIssue(RecurringIssue.Code.amountLimit))
             else schedule
         }
         return State(visible, state["serverSyncPending"]?.jsonPrimitive?.booleanOrNull ?: true, binding)
@@ -106,7 +107,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
             requireNumericTokens(raw.jsonObject)
             json.decodeFromJsonElement<RecurringPayment>(raw)
         }.getOrNull()
-        return if (decoded != null && decoded.id == id && decoded.validPolicy) decoded
+        return if (decoded != null && decoded.id == id && decoded.validPolicy) decoded.decodeLegacyIssue()
         else {
             val fields = raw as? JsonObject
             // The original JSON remains authoritative for rows native code cannot represent.
@@ -115,7 +116,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
                 (fields?.get("destinationType") as? JsonPrimitive)?.contentOrNull.orEmpty(),
                 (fields?.get("amountSat") as? JsonPrimitive)?.content?.toLongOrNull() ?: 0,
                 interval = RecurringInterval("month", 1), startAt = 0, createdAt = 0, updatedAt = 0))
-                .copy(id = id, status = "needs_attention", lastError = RecurringPayment.unsupportedMessage, unsupportedStorage = true)
+                .copy(id = id, status = "needs_attention", lastError = RecurringPayment.unsupportedMessage, issue = RecurringIssue(RecurringIssue.Code.unsupported), unsupportedStorage = true)
         }
     }
     private fun requireNumericTokens(row: JsonObject) {

@@ -160,6 +160,7 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
         private fun sameScope(a: RecurringStore.Binding, aID: String, b: RecurringStore.Binding, bID: String) =
             aID == bID && a.wallet == b.wallet && UUID.fromString(a.instance) == UUID.fromString(b.instance)
         private fun sameRevision(a: String?, b: String?) = a.equals(b, ignoreCase = true)
+        val legacyReason = RecurringIssue(RecurringIssue.Code.legacyHistory)
         const val legacyMessage = "Noah can't reconstruct this schedule's earlier payment history. Cancel it and explicitly approve a new recurring payment."
     }
 }

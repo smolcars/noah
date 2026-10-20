@@ -14,14 +14,25 @@ import java.util.TimeZone
     val comment: String = "", val interval: RecurringInterval, val startAt: Long,
     val endAt: Long? = null, val maxOccurrences: Long? = null, val nativeRevision: String? = null,
     val status: String = "active", val nextOccurrenceIndex: Int = 0, val nextRunAt: Long? = startAt,
-    val occurrencesPaid: Int = 0, val consecutiveFailures: Int = 0, val lastError: String? = null,
+    val occurrencesPaid: Int = 0, val consecutiveFailures: Int = 0, val lastError: String? = null, val issue: RecurringIssue? = null,
     val retryNotBefore: Long? = null, val inFlight: InFlight? = null, val runs: List<Run> = emptyList(),
     val createdAt: Long, val updatedAt: Long,
     @kotlinx.serialization.Transient val unsupportedStorage: Boolean = false,
     @kotlinx.serialization.Transient val stopReason: StopReason? = null,
 ) {
     enum class StopReason { policyEvidence, automationStopped }
-    val requiresPolicyApproval get() = stopReason == StopReason.policyEvidence
+    val requiresPolicyApproval get() = stopReason == StopReason.policyEvidence || issue?.code == RecurringIssue.Code.policyEvidence
+    fun decodeLegacyIssue(): RecurringPayment {
+        val decoded = (issue ?: lastError?.let(RecurringIssue::legacy))?.let { if (it.valid) it else RecurringIssue(RecurringIssue.Code.unknown) }
+        val approval = decoded?.code in listOf(RecurringIssue.Code.quoteExceedsCap, RecurringIssue.Code.scheduleExceedsCap, RecurringIssue.Code.arkFee)
+        return when {
+            decoded == null -> this
+            decoded.code == RecurringIssue.Code.retryableFailure -> copy(issue = decoded)
+            approval -> copy(issue = decoded, status = if (status == "active") "needs_approval" else status, retryNotBefore = null)
+            else -> copy(issue = decoded, status = if (status in listOf("active", "needs_approval")) "needs_attention" else status,
+                retryNotBefore = if (status in listOf("active", "needs_approval")) null else retryNotBefore)
+        }
+    }
     companion object {
         const val unsupportedMessage = "Noah can't safely read this schedule. Cancel it and explicitly approve a new recurring payment."
         const val maximumAmount = 2_100_000_000_000_000L
@@ -84,18 +95,18 @@ import java.util.TimeZone
         return copy(nextOccurrenceIndex = index, nextRunAt = next, status = if (next == null) "completed" else status)
     }
     fun resume(now: Long, zone: TimeZone): RecurringPayment {
-        val active = copy(status = "active", inFlight = null, retryNotBefore = null, lastError = null, consecutiveFailures = 0, updatedAt = now)
+        val active = copy(status = "active", inFlight = null, retryNotBefore = null, lastError = null, issue = null, consecutiveFailures = 0, updatedAt = now)
         return active.plan(now, zone, true).occurrenceIndex?.let { active.advance(it + 1, zone) } ?: active
     }
     fun success(plan: Plan, now: Long, zone: TimeZone): RecurringPayment {
         val added = plan.skippedIndices.orEmpty().map { Run(it, occurrence(it, zone), now, "skipped", amountSat) } +
             Run(plan.occurrenceIndex!!, plan.scheduledFor!!, now, "success", amountSat)
         return copy(runs = (added.reversed() + runs).take(24), occurrencesPaid = occurrencesPaid + 1,
-            consecutiveFailures = 0, lastError = null, retryNotBefore = null, inFlight = null, updatedAt = now).advance(plan.occurrenceIndex + 1, zone)
+            consecutiveFailures = 0, lastError = null, issue = null, retryNotBefore = null, inFlight = null, updatedAt = now).advance(plan.occurrenceIndex + 1, zone)
     }
-    fun failure(plan: Plan, message: String, retryable: Boolean, now: Long): RecurringPayment {
+    fun failure(plan: Plan, message: String, retryable: Boolean, now: Long, issue: RecurringIssue? = null): RecurringPayment {
         val failures = consecutiveFailures + 1
-        return copy(inFlight = null, consecutiveFailures = failures, lastError = message, updatedAt = now,
+        return copy(inFlight = null, consecutiveFailures = failures, lastError = message, issue = issue ?: RecurringIssue(if (retryable) RecurringIssue.Code.retryableFailure else RecurringIssue.Code.uncertain), updatedAt = now,
             status = if (retryable) status else "needs_attention",
             retryNotBefore = if (retryable) now + minOf(900_000L * (1L shl (failures.coerceIn(1, 16) - 1)), 21_600_000) else null,
             runs = (listOf(Run(plan.occurrenceIndex!!, plan.scheduledFor!!, now, "failed", amountSat, message)) + runs).take(24))

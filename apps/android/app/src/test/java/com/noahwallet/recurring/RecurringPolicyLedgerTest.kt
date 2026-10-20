@@ -38,7 +38,8 @@ class RecurringPolicyLedgerTest {
         assertEquals("needs_attention", stopped.status)
         assertTrue(stopped.requiresPolicyApproval)
         assertTrue(stopped.copy(lastError = "Translated or revised display copy").requiresPolicyApproval)
-        assertFalse(stopped.copy(stopReason = null).requiresPolicyApproval)
+        assertTrue(stopped.copy(stopReason = null).requiresPolicyApproval)
+        assertFalse(stopped.copy(stopReason = null, issue = null).requiresPolicyApproval)
         assertArrayEquals(first, w.file.readBytes())
     }
     @Test fun missingCorruptLedgerOrMarkerCannotReseedOrMutate() {

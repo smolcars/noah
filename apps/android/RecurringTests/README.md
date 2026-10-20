@@ -1346,3 +1346,27 @@ errors/skips, with APK assembly in the same run. Owned-AVD Recurring entry and a
 75-second foreground sample covering the timer tick measured zero main-thread
 StrictMode violations. The initialized wallet was unfunded; settlement races use
 permanent deterministic tests, with no live recurring payment or power loss.
+
+## Stable recurring reasons (2026-10-20)
+
+Base `0b3b545d`. Recurring decisions use persisted `RecurringIssue` codes and
+fee arguments, `requiresPolicyApproval` and the journal-owned `legacyReason`;
+`lastError` and terminal messages retain evidence only. Display resolves the code
+through localization. The 13 fixed English messages and two anchored fee templates
+migrate while decoding. Unknown text/codes/arguments stop execution; existing
+paused/completed rows retain their stop state and failure metadata. Old policy
+digests may require explicit revision reapproval. Journal v3 outcomes, settlement
+IDs, consumption, history/release flags and raw evidence are preserved.
+
+The localization regressions cover both recovery loops, date refresh, explicit
+resume/edit, legacy-history notification latching, all fee approvals, retry gates,
+ambiguity, unknown journal outcomes, storage-write latches and legacy decoding in
+all five languages. No upstream protocol-text classifier was changed.
+
+Verification: targeted recurring + translation tests **1,940 passed**; final
+`--max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug`
+**3,536 tests passed, zero failures/errors/skips; APK assembled**. New
+`RecurringLocalizationTest`: **8 tests / 60 language-scenario executions**,
+including **80 legacy decode cases** inside the five decode scenarios.
+Translation generation/check and all seven translation-tool tests passed.
+No Android device, Docker, server, RN source or Esplora file was touched.

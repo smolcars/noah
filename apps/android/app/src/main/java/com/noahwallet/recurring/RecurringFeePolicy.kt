@@ -22,6 +22,15 @@ object RecurringFeePolicy {
         val reason = when { quoteFee > cap || quoteFee == Long.MAX_VALUE -> "quote_exceeds_cap"; worst > cap || worst == Long.MAX_VALUE -> "schedule_exceeds_cap"; else -> "within_cap" }
         return Decision(worst, cap, reason == "within_cap", reason)
     }
+    fun approvalIssue(amount: Long, method: String, fee: Long, schedule: RecurringFeeSchedule?): RecurringIssue? {
+        val d = evaluate(amount, method, fee, schedule)
+        if (d.autoPay) return null
+        return when (d.reason) {
+            "quote_exceeds_cap" -> RecurringIssue(RecurringIssue.Code.quoteExceedsCap, listOf(fee.toString(), d.capSat.toString()))
+            "schedule_exceeds_cap" -> RecurringIssue(RecurringIssue.Code.scheduleExceedsCap, listOf(d.worstCaseFeeSat.toString(), d.capSat.toString()))
+            else -> RecurringIssue(RecurringIssue.Code.arkFee)
+        }
+    }
     fun approvalReason(amount: Long, method: String, fee: Long, schedule: RecurringFeeSchedule?): String? {
         val d = evaluate(amount, method, fee, schedule)
         if (d.autoPay) return null

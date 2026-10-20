@@ -51,7 +51,7 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
             if (s.status == "active") s.nextRunAt?.let { Text(tr("Next payment: {_gt_value_2}", recurringDate(it))) }
             s.endAt?.let { Text(tr("Ends: {_gt_value_2}", recurringDay(it))) }
             s.runs.firstOrNull()?.let { Text(tr("Last attempt: {_gt_value_2} ({_gt_value_3})", recurringDate(it.attemptedAt), when (it.status) { "success" -> "Successful"; "skipped" -> "Skipped"; else -> "Failed" }), style = MaterialTheme.typography.bodySmall) }
-            s.lastError?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+            s.lastError?.let { Text(s.issue?.message(androidx.compose.ui.platform.LocalContext.current) ?: tr(it), color = MaterialTheme.colorScheme.error) }
             if (s.status == "needs_approval") NoahButton("Review and pay manually", !executor.running && !executor.controller.locked && !app.isWalletSuspended) { act { review = executor.review(s.id) } }
             if (s.status == "needs_attention" || s.inFlight != null) {
                 TextButton({ act { executor.checkStatus(s.id) } }, enabled = !executor.running) { Text(tr("Check payment status")) }

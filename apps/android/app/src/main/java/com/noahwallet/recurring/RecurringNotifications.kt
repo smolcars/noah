@@ -24,7 +24,7 @@ object RecurringNotifications {
                 val (title, body) = when {
                     result.status == "needs_approval" -> L10n.text(context, "Recurring payment needs approval") to L10n.text(context, "Automatic payment to {recipient} was skipped. Open the schedule to review its fee and pay manually.", result.label)
                     result.status == "needs_attention" -> L10n.text(context, "Recurring payment needs your attention") to L10n.text(context, "A payment to {recipient} was interrupted. Check your history, then resume it.", result.label)
-                    result.runs.firstOrNull()?.status == "failed" -> L10n.text(context, "Recurring payment will retry") to L10n.text(context, "{amount} to {recipient} could not be sent yet: {error}", amount, result.label, L10n.text(context, result.lastError ?: "unknown error"))
+                    result.runs.firstOrNull()?.status == "failed" -> L10n.text(context, "Recurring payment will retry") to L10n.text(context, "{amount} to {recipient} could not be sent yet: {error}", amount, result.label, result.issue?.message(context) ?: L10n.text(context, result.lastError ?: "unknown error"))
                     else -> L10n.text(context, "Recurring payment sent") to L10n.text(context, "{amount} sent to {recipient}.", amount, result.label)
                 }
                 show(context, "recurring-result-${result.id}-${result.updatedAt}", title, body)
