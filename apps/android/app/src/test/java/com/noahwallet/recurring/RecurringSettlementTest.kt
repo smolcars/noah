@@ -45,15 +45,15 @@ class RecurringSettlementTest {
             try {
                 withTimeout(5000) { terminal.await() }
                 key = w.controller.attempt!!.recurringOccurrenceKey!!
-                val result = w.controller.resultForSettlement(key)!!
+                val result = w.journal.load().getValue(schedule.id).terminal!!
                 originalMessage = result.message
-                assertEquals(if (change == "failed") SendController.State.failed else if (change == "ambiguous") SendController.State.uncertain else SendController.State.succeeded, result.outcome)
+                assertEquals(if (change == "failed") RecurringJournal.Outcome.failed else if (change == "ambiguous") RecurringJournal.Outcome.uncertain else RecurringJournal.Outcome.succeeded, result.outcome)
                 w.controller.acknowledge()
                 if (change == "ambiguous") assertTrue(w.controller.locked) else {
                     assertFalse(w.controller.locked)
                     assertNull(w.controller.attempt)
-                    assertEquals(result, w.controller.resultForSettlement(key))
-                    assertNotNull("Done must retain the durable Send evidence until settlement", w.sendJournal.attempt)
+                    assertNull(w.controller.attempt)
+                    assertNotNull(w.journal.load().getValue(schedule.id).terminal)
                 }
                 if (change in listOf("replacement", "sameKeyReplacement")) {
                     wallet.payBlock = { throw SendNotSubmitted(SendFailure.Reason.recurringStopped) }
@@ -71,15 +71,15 @@ class RecurringSettlementTest {
             } finally { release.complete(Unit) }
             withTimeout(5000) { run.await() }
             if (change == "foreignReload") {
-                assertNull(w.controller.resultForSettlement(key))
+                assertNull(w.controller.attempt)
                 assertFalse(w.journal.load().getValue(schedule.id).consumed)
                 assertEquals(0, w.schedule!!.occurrencesPaid)
                 assertEquals(1, wallet.calls)
                 return@runBlocking
             }
             if (change == "blocked") {
-                assertNotNull(w.controller.resultForSettlement(key))
-                assertNotNull(w.sendJournal.attempt)
+                assertNull(w.controller.attempt)
+                assertNull(w.sendJournal.attempt)
                 assertTrue(w.journal.quarantineFile.delete())
                 assertFalse(w.journal.load().getValue(schedule.id).consumed)
                 w.executor.checkStatus(schedule.id)
@@ -93,7 +93,7 @@ class RecurringSettlementTest {
                 assertSame("Only the original generation may be acknowledged", replacement, w.controller.attempt)
                 assertTrue(w.controller.locked)
             } else if (change != "ambiguous") {
-                assertNull(w.controller.resultForSettlement(key))
+                assertNull(w.controller.attempt)
                 assertNull(w.sendJournal.attempt)
             }
             val calls = wallet.calls
@@ -184,7 +184,7 @@ class RecurringSettlementTest {
         val original = w.add()
         w.beforeJournalWrite = { raw ->
             // Paid receipt is durable; only its subsequent acknowledged removal fails.
-            if (raw.contains("\"consumed\":true")) w.sendJournal.fail = true
+            if (raw.contains("\"outcome\":\"succeeded\"")) w.sendJournal.fail = true
         }
         w.executor.execute()
         assertEquals(1, w.wallet.calls)
@@ -228,7 +228,7 @@ class RecurringSettlementTest {
                 yield() // Status reconciliation suspends before settlement reloads the policy.
                 when (outcome) {
                     "success" -> SendResolution.Paid(SendReceipt(1000, proof = SendReceipt.Proof.submitReturnedArkSuccess))
-                    "alreadyPaid" -> SendResolution.AlreadyPaid(SendReceipt(1000, proof = SendReceipt.Proof.actualMovement))
+                    "alreadyPaid" -> SendResolution.AlreadyPaid(SendReceipt(1000, proof = SendReceipt.Proof.submitReturnedArkSuccess))
                     "failed" -> SendResolution.Failed
                     else -> SendResolution.Uncertain
                 }

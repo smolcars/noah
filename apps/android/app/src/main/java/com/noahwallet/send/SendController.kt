@@ -7,7 +7,6 @@ import kotlinx.coroutines.*
 class SendController(private val dependencies: Dependencies,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)) {
     enum class State { ready, submitting, uncertain, succeeded, alreadyPaid, failed, storageBlocked }
-    data class TerminalResult(val generation: Int, val walletGeneration: Int, val attempt: SendAttempt, val outcome: State, val message: String?)
     internal var persistRecurringEvidence: ((SendAttempt, Int, Int, State, String?) -> Unit)? = dependencies.recurringEvidence
     private var recurringEvidenceDurable = false
     class Dependencies(val read: suspend () -> SendAttempt?, val write: (SendAttempt?) -> Unit,
@@ -95,7 +94,7 @@ class SendController(private val dependencies: Dependencies,
         }
     }
     /** Must be invoked on Main: take the lock before launching any coroutine. */
-    fun submit(payment: SendPayment, quote: SendQuote, recurringKey: String? = null, beforeSubmit: (() -> Unit)? = null): Deferred<TerminalResult?>? {
+    fun submit(payment: SendPayment, quote: SendQuote, recurringKey: String? = null, beforeSubmit: (() -> Unit)? = null): Deferred<Unit>? {
         if (locked) return null
         state = State.submitting; message = null
         val current = ++generation
@@ -160,12 +159,7 @@ class SendController(private val dependencies: Dependencies,
             } catch (_: Exception) {
                 if (current == generation) { state = if (attempt == null) State.ready else State.uncertain; message = "Unable to reserve the wallet. Check payment status before sending again." }
             }
-            if (current == generation && recurringKey != null) resultForSettlement(recurringKey) else null
         }
-    }
-    fun resultForSettlement(key: String): TerminalResult? {
-        val current = attempt
-        return if (current?.recurringOccurrenceKey == key) TerminalResult(generation, walletGeneration, current, state, message) else null
     }
     internal suspend fun releaseRecurring(attemptID: String?, expectedGeneration: Int, expectedWalletGeneration: Int, retainReceipt: Boolean) {
         if (generation == expectedGeneration && walletGeneration == expectedWalletGeneration && attemptID != null && attempt?.recurringAttemptID == attemptID && !retainReceipt) clear()
