@@ -195,7 +195,8 @@ final class LogFile: @unchecked Sendable {
     /// Shared by persistence and telemetry. Unlabelled hashes/txids remain useful diagnostics.
     static func redact(_ message: String) -> String {
         guard message.utf8.count <= maxMessageBytes else { return "[oversized log message omitted]" }
-        var result = message
+        var result = urlUserinfo.stringByReplacingMatches(in: message,
+            range: NSRange(message.startIndex..., in: message), withTemplate: "$1[redacted]@")
         for pattern in sensitivePatterns {
             result = pattern.stringByReplacingMatches(in: result,
                 range: NSRange(result.startIndex..., in: result), withTemplate: "[redacted]")
@@ -259,6 +260,8 @@ final class LogFile: @unchecked Sendable {
         return Set(text.split(whereSeparator: \.isWhitespace).map(String.init))
     }()
     private static let wordPattern = try! NSRegularExpression(pattern: #"[\p{L}\p{M}]+"#)
+    private static let urlUserinfo = try! NSRegularExpression(
+        pattern: #"(?i)(\b[a-z][a-z0-9+.-]*://)[^\s/@<>"']+@"#)
     private static let sensitivePatterns = [
         #"(?is)\b[\w.-]*(?:email|lightning[_ -]?address)[\w.-]*["']?\s*[:=].*"#,
         #"(?i)\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,63}\b"#,
