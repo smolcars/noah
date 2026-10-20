@@ -1,0 +1,57 @@
+{
+  "cases": [
+    {
+      "name": "current",
+      "input": {
+        "currentVersion": "0.2.0",
+        "response": {
+          "update_required": false,
+          "minimum_required_version": "0.0.1"
+        }
+      },
+      "expected": {
+        "update_required": false,
+        "minimum_required_version": "0.0.1"
+      }
+    },
+    {
+      "name": "update",
+      "input": {
+        "currentVersion": "0.2.0",
+        "response": {
+          "update_required": true,
+          "minimum_required_version": "1.0.0"
+        }
+      },
+      "expected": {
+        "update_required": true,
+        "minimum_required_version": "1.0.0"
+      }
+    },
+    {
+      "name": "server decision is authoritative",
+      "input": {
+        "currentVersion": "2.0.0",
+        "response": {
+          "update_required": true,
+          "minimum_required_version": "1.0.0"
+        }
+      },
+      "expected": {
+        "update_required": true,
+        "minimum_required_version": "1.0.0"
+      }
+    },
+    {
+      "name": "offline",
+      "input": {
+        "currentVersion": "0.2.0",
+        "response": null
+      },
+      "expected": {
+        "update_required": false,
+        "minimum_required_version": "0.0.1"
+      }
+    }
+  ]
+}
