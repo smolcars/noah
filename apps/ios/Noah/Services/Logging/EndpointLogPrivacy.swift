@@ -21,6 +21,8 @@ enum EndpointLogPrivacy {
     }
     private static func origin(_ value: String) -> String? {
         guard var url = URLComponents(string: value), url.host != nil else { return nil }
+        url.scheme = url.scheme?.lowercased(); url.host = url.host?.lowercased()
+        if url.port == (url.scheme == "http" ? 80 : 443) { url.port = nil }
         url.path = ""; url.query = nil; url.fragment = nil; url.user = nil; url.password = nil
         return url.string
     }
@@ -51,11 +53,13 @@ enum EndpointLogPrivacy {
         if let match = responseStatus.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) {
             return "HttpResponse { status: " + (text as NSString).substring(with: match.range(at: 1)) + " }"
         }
+        if text.contains("HttpResponse") { return "HttpResponse" }
         guard let views = LogFile.decodedViews(text, percentEncoded: true) else { return nil }
         for view in views {
             if let match = responseStatus.firstMatch(in: view, range: NSRange(view.startIndex..., in: view)) {
                 return "HttpResponse { status: " + (view as NSString).substring(with: match.range(at: 1)) + " }"
             }
+            if view.contains("HttpResponse") { return "HttpResponse" }
         }
         guard !registered.isEmpty else { return text }
         var result = text
