@@ -57,11 +57,11 @@ class RecurringReminderWorker(context: Context, parameters: WorkerParameters) : 
         return try {
             val settings = SettingsStorage(applicationContext)
             val store = RecurringStore(settings)
-            val state = store.load()
+            val location = WalletDataLocation(applicationContext.filesDir, BuildConfig.APP_VARIANT)
+            val s = store.reminderSchedule(java.io.File(location.directory, "noah-recurring-journal.json.policies"),
+                { RecurringStore.binding(location) }, inputData.getString("id"), inputData.getLong("due", -1)) ?: return Result.success()
             val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
-            val s = state.schedules[inputData.getString("id")] ?: return Result.success()
-            if (s.status != "active" || s.inFlight != null || s.nextRunAt != inputData.getLong("due", -1) || wallet?.isInitialized != true || wallet.isWalletSuspended == true ||
-                state.binding != RecurringStore.binding(WalletDataLocation(applicationContext.filesDir, BuildConfig.APP_VARIANT))) return Result.success()
+            if (wallet?.isInitialized != true || wallet.isWalletSuspended == true) return Result.success()
             val reminder = inputData.getString("kind") == "reminder"
             RecurringNotifications.show(applicationContext, "recurring-${s.id}-${inputData.getString("kind")}",
                 if (reminder) "Upcoming recurring payment" else "Recurring payment waiting",
@@ -69,4 +69,13 @@ class RecurringReminderWorker(context: Context, parameters: WorkerParameters) : 
             Result.success()
         } catch (_: Exception) { Result.failure() }
     }
+}
+
+/** The worker uses the same policy/automation authority as Send before displaying a reminder. */
+internal fun RecurringStore.reminderSchedule(ledger: java.io.File, binding: () -> RecurringStore.Binding,
+    id: String?, due: Long, sync: (java.io.File) -> Unit = ::syncDirectory,
+    syncFile: (java.io.FileDescriptor) -> Unit = { it.sync() }): RecurringPayment? {
+    protectPolicies(ledger, sync, syncFile, binding)
+    val state = load()
+    return state.schedules[id]?.takeIf { it.status == "active" && it.inFlight == null && it.nextRunAt == due && state.binding == binding() }
 }
