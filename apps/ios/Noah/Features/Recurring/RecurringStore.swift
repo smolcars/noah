@@ -78,7 +78,10 @@ final class RecurringStore: @unchecked Sendable {
         return value
     }
     private static func payment(id: String, raw: String) -> RecurringPayment {
-        let decoded = try? JSONDecoder().decode(RecurringPayment.self, from: Data(raw.utf8))
+        let decoded = try? { () throws -> RecurringPayment in
+            try Self.requireNumericTokens(raw)
+            return try JSONDecoder().decode(RecurringPayment.self, from: Data(raw.utf8))
+        }()
         var schedule: RecurringPayment
         if let decoded, let fields = try? RawObject(raw), requiredRNFields.allSatisfy({ fields.fields[$0] != nil }),
            decoded.id == id, decoded.validPolicy {
@@ -88,7 +91,8 @@ final class RecurringStore: @unchecked Sendable {
             // Display only: the original row remains authoritative and is never encoded from this placeholder.
             schedule = decoded ?? RecurringPayment(id: id, label: fields?["label"] as? String ?? "Saved recurring payment",
                 destination: fields?["destination"] as? String ?? "", destinationType: fields?["destinationType"] as? String ?? "",
-                amountSat: (fields?["amountSat"] as? NSNumber)?.uint64Value ?? 0, comment: fields?["comment"] as? String ?? "",
+                amountSat: (try? RawObject(raw)).flatMap { $0.fields["amountSat"] }
+                    .flatMap { UInt64($0.trimmingCharacters(in: .whitespacesAndNewlines)) } ?? 0, comment: fields?["comment"] as? String ?? "",
                 interval: .init(unit: "month", every: 1), startAt: 0, createdAt: 0, updatedAt: 0)
             schedule.id = id
             schedule.unsupportedStorage = true
@@ -100,6 +104,42 @@ final class RecurringStore: @unchecked Sendable {
             schedule.lastError = RecurringPayment.amountLimitMessage
         }
         return schedule
+    }
+    private static func requireNumericTokens(_ raw: String) throws {
+        func number(_ token: String, _ minimum: Int64, _ maximum: Int64) throws {
+            // Int64 parses the original token exactly; Double/NSNumber may round before validation.
+            guard let value = Int64(token.trimmingCharacters(in: .whitespacesAndNewlines)),
+                  value >= minimum, value <= maximum else { throw RecurringError.message(RecurringPayment.unsupportedMessage) }
+        }
+        func numbers(_ fields: [String: String], _ minimum: Int64, _ maximum: Int64, _ keys: [String]) throws {
+            for key in keys {
+                if let token = fields[key], token.trimmingCharacters(in: .whitespacesAndNewlines) != "null" {
+                    try number(token, minimum, maximum)
+                }
+            }
+        }
+        let row = try RawObject(raw).fields
+        guard requiredRNFields.allSatisfy({ row[$0] != nil }) else { throw RecurringError.message(RecurringPayment.unsupportedMessage) }
+        let safeInteger: Int64 = 9_007_199_254_740_991
+        let timeLimit: Int64 = 8_639_999_999_999_999
+        try numbers(row, 1, safeInteger, ["amountSat"])
+        try numbers(row, 1, Int64.max, ["maxOccurrences"])
+        try numbers(row, -timeLimit, timeLimit, ["startAt", "endAt", "nextRunAt", "retryNotBefore", "createdAt", "updatedAt"])
+        try numbers(row, 0, Int64(Int32.max), ["nextOccurrenceIndex", "occurrencesPaid", "consecutiveFailures"])
+        let interval = try RawObject(row["interval"]!).fields
+        guard let rawUnit = interval["unit"], let every = interval["every"] else { throw RecurringError.message(RecurringPayment.unsupportedMessage) }
+        let unit = try JSONDecoder().decode(String.self, from: Data(rawUnit.utf8))
+        try number(every, 1, unit == "day" ? 365 : 12)
+        if let flight = row["inFlight"], flight.trimmingCharacters(in: .whitespacesAndNewlines) != "null" {
+            let fields = try RawObject(flight).fields
+            try numbers(fields, 0, Int64(Int32.max), ["occurrenceIndex"])
+            try numbers(fields, -timeLimit, timeLimit, ["startedAt"])
+        }
+        for run in try RawObject.arrayObjects(row["runs"]!) {
+            try numbers(run.fields, 0, Int64(Int32.max), ["occurrenceIndex"])
+            try numbers(run.fields, -timeLimit, timeLimit, ["scheduledFor", "attemptedAt"])
+            try numbers(run.fields, 1, safeInteger, ["amountSat"])
+        }
     }
     private func rawState() throws -> State {
         try settings.requireHealthy()
@@ -244,6 +284,33 @@ struct RawObject {
             fields[key] = String(decoding: bytes[valueStart..<index], as: UTF8.self)
             if bytes[index] == 44 { index += 1; whitespace() }
         }
+    }
+    static func arrayObjects(_ raw: String) throws -> [RawObject] {
+        guard try JSONSerialization.jsonObject(with: Data(raw.utf8)) is [Any] else {
+            throw RecurringError.message(RecurringPayment.unsupportedMessage)
+        }
+        let bytes = Array(raw.utf8)
+        var start = bytes.firstIndex(of: 91)! + 1
+        var depth = 0, quoted = false, escaped = false
+        var result: [RawObject] = []
+        for index in start..<bytes.count {
+            let byte = bytes[index]
+            if quoted {
+                if escaped { escaped = false }
+                else if byte == 92 { escaped = true }
+                else if byte == 34 { quoted = false }
+            } else {
+                if depth == 0, byte == 44 || byte == 93 {
+                    let value = String(decoding: bytes[start..<index], as: UTF8.self)
+                    if !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { result.append(try RawObject(value)) }
+                    start = index + 1
+                    if byte == 93 { break }
+                } else if byte == 34 { quoted = true }
+                else if byte == 123 || byte == 91 { depth += 1 }
+                else if byte == 125 || byte == 93 { depth -= 1 }
+            }
+        }
+        return result
     }
     func json() throws -> String {
         let entries = try fields.keys.sorted().map { key in

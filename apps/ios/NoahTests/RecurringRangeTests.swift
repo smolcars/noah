@@ -71,8 +71,8 @@ import Testing
         #expect(state.schedules["count-1"]?.maxOccurrences == 3_000_000_000)
         #expect(state.schedules["count-2"]?.maxOccurrences == 9_007_199_254_740_991)
         #expect(state.schedules["count-3"]?.maxOccurrences == 9_223_372_036_854_775_000)
-        #expect(state.schedules["start-0"]?.startAt == 1000.5)
-        #expect(state.schedules["end-fraction"]?.endAt == 2000.5)
+        #expect(state.schedules["start-0"]?.unsupportedStorage == true)
+        #expect(state.schedules["end-fraction"]?.unsupportedStorage == true)
         let reopened = RecurringStore(settings: h.settings)
         let saved = try #require(h.settings.string(forKey: RecurringStore.key))
         for id in Self.unsupported {

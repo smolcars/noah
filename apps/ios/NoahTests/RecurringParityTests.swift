@@ -67,7 +67,9 @@ import Testing
         let originalBytes = h.settings.string(forKey: RecurringStore.key)
         let saved = try #require(h.store.load().schedules[invalid.id])
         #expect(saved.amountSat == amount && saved.status == "needs_attention")
-        #expect(saved.lastError == RecurringPayment.amountLimitMessage)
+        let unsupported = amount > 9_007_199_254_740_991
+        #expect(saved.unsupportedStorage == unsupported)
+        #expect(saved.lastError == (unsupported ? RecurringPayment.unsupportedMessage : RecurringPayment.amountLimitMessage))
         #expect(h.settings.string(forKey: RecurringStore.key) == originalBytes)
         await h.executor.execute()
         #expect(h.calls.withLock { $0 } == 0)

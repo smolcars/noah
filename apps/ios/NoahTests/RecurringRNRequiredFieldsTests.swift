@@ -8,7 +8,7 @@ import Testing
     nonisolated static func cases() throws -> [Case] {
         let directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent().appending(path: "fixtures")
-        return try ["recurring-rn-required-fields", "recurring-rn-numeric-types"].flatMap { name in
+        return try ["recurring-rn-required-fields", "recurring-rn-numeric-types", "recurring-rn-numeric-ranges"].flatMap { name in
             try JSONDecoder().decode(Fixture.self, from: Data(contentsOf: directory.appending(path: "\(name).json"))).cases
         }
     }
