@@ -123,10 +123,7 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
         model.walletLock.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         SettingToggle("Mailbox Notifications", "Allow Noah to wake the app to claim incoming payments", server.isMailboxAuthorizationEnabled != false, !model.busy && !model.isWalletSuspended) {
             model.action("Couldn't update mailbox notifications.") {
-                model.server.setMailboxEnabled(it) {
-                    val auth = model.session.mailboxAuthorization(System.currentTimeMillis() / 1000 + 89 * 86400)
-                    AuthorizeMailboxPayload(auth.encoded, auth.expiry, auth.mailboxId)
-                }
+                model.server.setMailboxEnabled(it)
                 server = model.server.state
             }
         }

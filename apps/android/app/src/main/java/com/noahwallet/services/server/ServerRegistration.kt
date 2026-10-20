@@ -15,12 +15,14 @@ class ServerRegistration(
     private val device: () -> com.noahwallet.api.generated.models.DeviceInfo = DeviceInfo::current,
     private val now: () -> Long = System::currentTimeMillis,
     private val warn: (String) -> Unit,
+    private val mailboxAuthorization: suspend (Long) -> AuthorizeMailboxPayload = { throw ServerFailure("Wallet unavailable") },
 ) {
     val state get() = storage.state
     @Volatile var versionInfo: AppVersionInfo? = null
         private set
     private val registration = Mutex()
     private val reporting = Mutex()
+    private val mailbox = Mutex()
     private var checkedVersion = false
 
     suspend fun ensureRegistered() = registration.withLock {
@@ -95,15 +97,32 @@ class ServerRegistration(
         storage.update { it.copy(isBackupEnabled = enabled) }
     }
 
-    suspend fun setMailboxEnabled(enabled: Boolean, authorization: suspend () -> AuthorizeMailboxPayload) {
-        if (enabled) {
-            val payload = authorization()
-            V0MailboxAuthorizeClient(client).authorizeMailbox(payload).value()
-            storage.update { it.copy(isMailboxAuthorizationEnabled = true, mailboxAuthorizationExpiry = payload.expiry.toDouble()) }
-        } else {
-            V0MailboxRevokeClient(client).revokeMailboxAuthorization().value()
-            storage.update { it.copy(isMailboxAuthorizationEnabled = false, mailboxAuthorizationExpiry = null) }
-        }
+    suspend fun setMailboxEnabled(enabled: Boolean) {
+        if (!mailbox.tryLock()) throw ServerFailure("Mailbox update is in progress.")
+        try {
+            if (enabled) {
+                authorizeMailbox()
+                storage.update { it.copy(isMailboxAuthorizationEnabled = true) }
+            } else {
+                V0MailboxRevokeClient(client).revokeMailboxAuthorization().value()
+                storage.update { it.copy(isMailboxAuthorizationEnabled = false, mailboxAuthorizationExpiry = null) }
+            }
+        } finally { mailbox.unlock() }
+    }
+
+    suspend fun refreshMailboxIfNeeded() {
+        if (!mailbox.tryLock()) return
+        try {
+            if (state.isRegisteredWithServer != true || state.isMailboxAuthorizationEnabled == false ||
+                (state.mailboxAuthorizationExpiry ?: 0.0) >= now() / 1000 + 60 * 86400) return
+            authorizeMailbox()
+        } finally { mailbox.unlock() }
+    }
+
+    private suspend fun authorizeMailbox() {
+        val payload = mailboxAuthorization(now() / 1000 + 89 * 86400)
+        V0MailboxAuthorizeClient(client).authorizeMailbox(payload).value()
+        storage.update { it.copy(mailboxAuthorizationExpiry = payload.expiry.toDouble()) }
     }
 
     suspend fun saveDisplayName(name: String) {

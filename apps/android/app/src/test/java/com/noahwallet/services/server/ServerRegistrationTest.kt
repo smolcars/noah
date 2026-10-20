@@ -14,6 +14,47 @@ class ServerRegistrationTest {
     private val response = """{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK","user_status":"active"}"""
     private val device = DevicePayload(appVersion = "0.2.0", appBuild = "100")
 
+    @Test fun mailboxRefreshMatchesIOSDefaultsThresholdAndReregistration() = runBlocking {
+        val values = mutableMapOf<String, String>()
+        val storage = ServerStateStorage(values::get, { k, v -> values[k] = v })
+        var requests = 0
+        var fail = false
+        val now = 1_800_000_000_000L
+        val engine = MockEngine { request ->
+            if (request.url.encodedPath == "/v0/mailbox/authorize") {
+                requests++
+                val payload = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+                assertEquals(now / 1000 + 89 * 86400, payload.getValue("expiry").jsonPrimitive.long)
+                if (fail) return@MockEngine respond("unavailable", HttpStatusCode.ServiceUnavailable)
+            }
+            respond("""{"success":true}""", headers = headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+        ServerClient.make("https://example.test", engine = engine).use { client ->
+            val service = ServerRegistration(client, storage, { "ark-test" }, { device }, { now }, {},
+                mailboxAuthorization = { com.noahwallet.api.generated.models.AuthorizeMailboxPayload("encoded", it, "mailbox") })
+            service.refreshMailboxIfNeeded(); assertEquals(0, requests) // not registered
+            storage.update { it.copy(isRegisteredWithServer = true) }
+            service.refreshMailboxIfNeeded(); assertEquals(1, requests) // new wallet's default is enabled
+            assertNull(service.state.isMailboxAuthorizationEnabled)
+            service.refreshMailboxIfNeeded(); assertEquals(1, requests)
+            storage.update { it.copy(mailboxAuthorizationExpiry = (now / 1000 + 60 * 86400).toDouble()) }
+            service.refreshMailboxIfNeeded(); assertEquals(1, requests) // exact iOS threshold
+            storage.update { it.copy(mailboxAuthorizationExpiry = (now / 1000 + 60 * 86400 - 1).toDouble()) }
+            fail = true
+            val before = service.state
+            assertTrue(runCatching { service.refreshMailboxIfNeeded() }.isFailure)
+            assertEquals(before, service.state)
+            fail = false; service.refreshMailboxIfNeeded(); assertEquals(3, requests)
+            service.setMailboxEnabled(false)
+            service.refreshMailboxIfNeeded(); assertEquals(3, requests)
+            service.resetRegistration(); service.apply(Json.decodeFromString(response), device)
+            service.refreshMailboxIfNeeded(); assertEquals(3, requests) // explicit opt-out survives registration
+            service.setMailboxEnabled(true); assertEquals(4, requests)
+            service.resetRegistration(); service.apply(Json.decodeFromString(response), device)
+            service.refreshMailboxIfNeeded(); assertEquals(5, requests) // registration clears expiry
+        }
+    }
+
     @Test fun backupPreferenceCommitsAfterServerSuccessAndResetMatchesRN() = runBlocking {
         val values = mutableMapOf(PersistedServerState.key to ServerStateTest.rnJSON)
         val storage = ServerStateStorage(values::get, { k, v -> values[k] = v })

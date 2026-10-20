@@ -89,6 +89,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
     suspend fun reRegisterWithServer() {
         check(!isWalletSuspended)
         server.resetRegistration(); server.ensureRegistered()
+        server.refreshMailboxIfNeeded()
         services.reconcileBackupTriggers()
         com.noahwallet.services.push.PushRuntime(getApplication(), services).register()
     }

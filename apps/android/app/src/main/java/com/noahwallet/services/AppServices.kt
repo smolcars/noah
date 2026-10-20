@@ -31,7 +31,11 @@ class AppServices private constructor(private val context: Context) {
     )
     val client = ServerClient.make(ServerEndpoint.baseURL(variant, BuildConfig.REGTEST_SERVER_URL), tokens)
     val registration = ServerRegistration(client, ServerStateStorage(SettingsStorage(context)),
-        peekAddress = { session.peekAddress(0u) }, warn = log::w)
+        peekAddress = { session.peekAddress(0u) }, warn = log::w,
+        mailboxAuthorization = { expiry ->
+            val authorization = session.mailboxAuthorization(expiry)
+            com.noahwallet.api.generated.models.AuthorizeMailboxPayload(authorization.encoded, authorization.expiry, authorization.mailboxId)
+        })
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val settings = SettingsStorage(context)
     val scratch = ScratchSpace(java.io.File(context.cacheDir, "noah-scratch")).also { it.sweepAbandoned() }
@@ -146,6 +150,9 @@ class AppServices private constructor(private val context: Context) {
                 try {
                     registration.ensureRegistered()
                     reconcileBackupTriggers()
+                    try { registration.refreshMailboxIfNeeded() }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) { log.w("Mailbox authorization failed; it will retry on resume") }
                     com.noahwallet.services.push.PushWork.register(context)
                     if (!started) {
                         registration.reportLastLogin()
