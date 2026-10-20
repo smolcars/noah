@@ -144,6 +144,16 @@ extension WalletSession {
                 }
             }
             if receipt.txid != nil { receipt.proof = .submitReturnedTxid }
+            if payment.method == "onchain", payment.source == .offchain {
+                if payment.max {
+                    // offboardVtxos binds reviewed coins, but Bark recomputes the fee/output at submit.
+                    receipt.amount = 0
+                    receipt.amountIsPending = true
+                }
+                if let movements = try? await handles.wallet.history() {
+                    receipt = SendReconciliation.offboardReceipt(receipt, payment: payment, movements: movements)
+                }
+            }
             if payment.source == .onchain, let txid = receipt.txid,
                let transactions = try? await handles.onchain.transactions(),
                let tx = transactions.first(where: { $0.txid == txid }) {
@@ -169,7 +179,12 @@ extension WalletSession {
             if attempt.payment.method == "onchain", attempt.payment.source == .onchain || attempt.receipt?.txid != nil {
                 // Read even if sync fails: a persist error can leave the transaction only in BDK memory.
                 _ = try? await handles.onchain.sync()
-                return try SendReconciliation.onchain(attempt, transactions: try await handles.onchain.transactions())
+                let resolution = try SendReconciliation.onchain(attempt, transactions: try await handles.onchain.transactions())
+                if case .paid(let receipt) = resolution, attempt.payment.source == .offchain,
+                   let movements = try? await handles.wallet.history() {
+                    return .paid(SendReconciliation.offboardReceipt(receipt, payment: attempt.payment, movements: movements))
+                }
+                return resolution
             }
             if ["lightning", "lnurl"].contains(attempt.payment.method), let hash = attempt.paymentHash {
                 // Status checks must not drive an inherited checkpoint with an unreviewed amount.

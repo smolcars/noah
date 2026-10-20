@@ -27,6 +27,9 @@ struct SendQuote: Codable, Sendable, Equatable {
     var feeRate: UInt64?
     var approximate = false
     var vtxoIDs: [String]?
+    var recipientIsEstimated: Bool { vtxoIDs?.isEmpty == false }
+    var recipientDescription: String { recipientIsEstimated ? "Recipient receives about \(amount) sats" : "\(amount) sats" }
+    static let recipientEstimateExplanation = "The exact amount depends on the network fee when sent. The total is exactly the reviewed coins."
     static let feeEstimateExplanation = "The fee and total are estimates based on two inputs and two outputs. The final fee and total may be higher if more coins are needed."
 }
 struct SendReceipt: Codable, Equatable, Sendable {
@@ -35,16 +38,21 @@ struct SendReceipt: Codable, Equatable, Sendable {
     var paymentHash: String?
     var movementID: UInt32?
     var amountIsEstimated: Bool?
+    var amountIsPending: Bool?
     var status: Status?
     var fee: UInt64?
     var proof: Proof?
     enum Proof: String, Codable, Sendable { case submitReturnedTxid, actualMovement }
     enum Status: String, Codable, Sendable { case submitted, confirmed, unlocated }
+    var amountDescription: String {
+        amountIsPending == true ? "Recipient amount pending" : "\(amountIsEstimated == true ? "About " : "")\(amount) sats"
+    }
     var isSubmitted: Bool { txid != nil && status != .confirmed }
     func isProven(for payment: SendPayment, knownHash: String? = nil, alreadyPaid: Bool = false) -> Bool {
         switch proof {
         case .submitReturnedTxid:
-            return payment.method == "onchain" && txid?.isEmpty == false && amount > 0
+            return payment.method == "onchain" && txid?.isEmpty == false
+                && (amount > 0 || (payment.max && payment.source == .offchain && amountIsPending == true))
                 && (payment.max || amount == payment.amount)
         case .actualMovement:
             return ["lightning", "offer", "lnurl"].contains(payment.method)
@@ -142,6 +150,14 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         do {
             attempt = try dependencies.read()
             if var saved = attempt {
+                // Older MAX receipts used the quote as the outcome; retain identity but await actual outputs.
+                if saved.payment.max, saved.payment.source == .offchain,
+                   saved.receipt?.proof == .submitReturnedTxid, saved.receipt?.amountIsPending == nil {
+                    saved.receipt?.amount = 0
+                    saved.receipt?.fee = nil
+                    saved.receipt?.amountIsPending = true
+                    try dependencies.write(saved)
+                }
                 let old = saved.safetyVersion != 3
                 let unsafeReceipt = saved.receipt.map { old || !$0.isProven(for: saved.payment, knownHash: saved.paymentHash) } ?? false
                 let unsafeAlreadyPaid = saved.alreadyPaid.map { old || !$0.isProven(for: saved.payment, knownHash: saved.paymentHash, alreadyPaid: true) } ?? false

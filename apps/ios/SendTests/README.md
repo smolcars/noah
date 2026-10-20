@@ -45,6 +45,16 @@ and a durable uncertain lock. Regression spies assert zero payment calls for an
 LNURL checkpoint collision and an unrelated pending checkpoint before an offer;
 normal BOLT11/resolved LNURL and empty-checkpoint offer paths still call pay once.
 
+Ark→onchain MAX stays enabled with exact reviewed VTXO IDs and total coins.
+Review says “Recipient receives about …” and explains network fee changes;
+the fee is estimated and the total is labeled “Total (reviewed coins)”. Receipts
+read actual recipient outputs and fees only from an offboard movement whose
+metadata txid equals the SDK-returned txid. Missing/malformed/ambiguous evidence
+leaves the recipient amount and fee pending, never filled from the quote.
+Refresh fills them when available. Older MAX receipts lacking actual-amount
+provenance are normalized to pending while preserving their submitted txid/lock.
+FFI item 14 now requests recipient amount/fee binding for prepared offboards.
+
 ## Round-3 payment safety (2026-10-19)
 
 Full `NoahTests` target: **264 tests, 253 passed, 11 opt-in tests skipped,

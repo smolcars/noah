@@ -94,6 +94,27 @@ enum SendReconciliation {
         return .uncertain
     }
 
+    /// The SDK-returned txid binds the result; destination/time-only candidates remain unproven.
+    static func offboardReceipt(_ receipt: SendReceipt, payment: SendPayment, movements: [Movement]) -> SendReceipt {
+        guard receipt.proof == .submitReturnedTxid, let txid = receipt.txid else { return receipt }
+        struct Metadata: Decodable { var offboard_txid: String; var offboard_tx: String }
+        let matches = movements.filter {
+            $0.subsystemName == "bark.offboard" && $0.subsystemKind == (payment.max ? "offboard" : "send_onchain")
+                && (try? JSONDecoder().decode(Metadata.self, from: Data($0.metadataJson.utf8)))?.offboard_txid == txid
+        }
+        guard matches.count == 1, let movement = matches.first,
+              let metadata = try? JSONDecoder().decode(Metadata.self, from: Data(movement.metadataJson.utf8)),
+              let actual = try? SendTransaction.amount(to: payment.destination, hex: metadata.offboard_tx), actual > 0,
+              payment.max || actual == payment.amount
+        else { return receipt }
+        var result = receipt
+        result.amount = actual
+        result.amountIsPending = false
+        result.fee = movement.offchainFeeSats
+        result.movementID = movement.id
+        return result
+    }
+
     static func onchain(_ attempt: SendPaymentController.Attempt, transactions: [WalletTransaction])
         throws
         -> SendPaymentController.Resolution

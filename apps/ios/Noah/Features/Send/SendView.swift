@@ -257,15 +257,18 @@ struct SendConfirmation: View {
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 24) {
-                            Text("\(quote.amount) sats").font(NoahFont.largeTitle)
+                            Text(quote.recipientDescription).font(NoahFont.largeTitle)
                             Text(payment.destination).font(NoahFont.callout).textSelection(.enabled)
                             LabeledContent(
                                 "Method",
                                 value: payment.method == "onchain"
                                     ? (payment.source?.label ?? "On-chain")
                                     : payment.method == "ark" ? "Ark" : "Lightning")
-                            LabeledContent(quote.approximate ? "Estimated fee" : "Fee", value: "\(quote.fee) sats")
-                            LabeledContent(quote.approximate ? "Estimated total" : "Total", value: "\(quote.total) sats")
+                            LabeledContent(quote.approximate || quote.recipientIsEstimated ? "Estimated fee" : "Fee", value: "\(quote.fee) sats")
+                            LabeledContent(quote.recipientIsEstimated ? "Total (reviewed coins)" : quote.approximate ? "Estimated total" : "Total", value: "\(quote.total) sats")
+                            if quote.recipientIsEstimated {
+                                Text(SendQuote.recipientEstimateExplanation).font(NoahFont.callout)
+                            }
                             if quote.approximate {
                                 Text(SendQuote.feeEstimateExplanation)
                                     .font(NoahFont.callout)
@@ -356,10 +359,12 @@ struct SendOutcomeView: View {
                             Task { await controller.checkStatus() }
                         }
                     }
-                    Text("\(receipt.amountIsEstimated == true ? "About " : "")\(receipt.amount) sats").font(
+                    Text(receipt.amountDescription).font(
                         NoahFont.largeTitle)
                     if let fee = receipt.fee {
-                        Text(controller.attempt?.payment.source == .onchain ? "Actual fee: \(fee) sats" : "Fee: \(fee) sats")
+                        Text(controller.attempt?.payment.method == "onchain" ? "Actual fee: \(fee) sats" : "Fee: \(fee) sats")
+                    } else if receipt.amountIsPending == true {
+                        Text("Actual fee pending")
                     } else if let quote = controller.attempt?.quote, quote.approximate {
                         Text("Estimated fee: \(quote.fee) sats")
                         Text("Estimated total: \(quote.total) sats")

@@ -179,6 +179,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Round-3 journal safety v3: v1/early-v2 receipts reopen uncertain, recorded txids retained only as evidence, migration writes fail closed; new receipt provenance is persisted — iOS
 - [x] Round-3 verification: full NoahTests 264 total / 253 passed / 11 opt-in skipped / 0 failed; live amountless BOLT11 reuse without a second send and entered-amount BDK estimate/actual-fee UI — iOS; `apps/ios/SendTests/README.md`
 - [x] Round-4 LNURL resolve-only → exact-amount/network/expiry validation → BOLT11 checkpoint guard; offers refuse any pending checkpoint before pay, remaining locked across restart — iOS
+- [x] Round-4 Ark→onchain MAX keeps exact reviewed VTXOs/total, accessible recipient and fee estimates, and txid-bound actual output/fee receipts (pending until readable); prepared-offboard amount/fee binding added to FFI 14 — iOS
 - [ ] Restore onchain MAX only with prepared sends / coin control (FFI 14); expose broadcast/chain status for offboards (FFI 15); replace weak history correlation with durable operation IDs (FFI 16)
 - [ ] External LNURL/BOLT12 provider acceptance and camera hardware verification — iOS
 
