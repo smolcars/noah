@@ -375,3 +375,43 @@ assembly succeeded in the same **1m 4s** run. Final targeted runs for fixes 1–
 passed **17 / 40 / 19 / 61 / 1,357 tests**, respectively (overlapping suites).
 No live device, funded broadcast or actual process kill was used; interruption
 and recovery were checked deterministically. No iOS, server or RN files changed.
+
+
+## 0.5.0 review fixes, round 2 — exact board recovery despite status errors (2026-10-20)
+
+Base: local `feat/native-rewrite` HEAD `51c24bc0`. Fix: `483a298e`.
+Check status now reconciles the exact journaled board txid from cached BDK
+transactions, pending boards or board movement anchors even when the optional
+network lookup throws. It saves the recovered receipt and a separate lookup
+warning, using the existing shared copy: **Couldn't check network status.
+Showing the last known status. Try again.** Existing receipts keep their last
+known chain status. Recovery neither submits another board nor matches amounts.
+Without exact evidence the attempt remains unresolved; a lookup error is still
+reported, and notFound never means failure or permission to board again.
+
+The new OnchainJournalTest regression simulates submission followed by loss of
+the receipt, reopens the durable exact txid, then makes the status call throw
+before reading local pending-board, movement or BDK evidence. Exact matches
+recover the receipt/fee and retain the delivery/acknowledgement lock across
+reopen; unrelated IDs and missing evidence cannot resolve it. A later notFound
+clears only the warning and retains the retry lock. Duplicate submission remains
+blocked. The regression failed before the fix. Existing claim-receipt coverage
+now expects a successful local check with the saved lookup warning and retained
+chain status. Targeted OnchainJournalTest, OnchainOperationsTest and
+OnchainModelTest: **52 tests / 3 suites passed**, zero failures/errors/skips.
+
+The Send eviction/conflict fix is recorded in the
+[SendTests round-2 section](../SendTests/README.md#050-review-fixes-round-2--bdk-downgrades-survive-status-errors-2026-10-20).
+
+The requested full check ran **once**, after both fixes and all test changes:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**2,773 tests / 70 suites passed**, zero failures/errors/skips, with no suite
+exclusions. Regtest APK assembly succeeded in the same **2m 25s** invocation.
+
+No device, emulator, simulator, Docker command, funded broadcast or live process
+kill was used. Crash/status faults use deterministic tests. Recurring, iOS,
+server and RN code were untouched.

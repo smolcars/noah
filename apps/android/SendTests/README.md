@@ -465,3 +465,42 @@ assembly succeeded in the same **1m 4s** run. Final targeted runs for fixes 1–
 passed **17 / 40 / 19 / 61 / 1,357 tests**, respectively (overlapping suites).
 No live device, funded broadcast or actual process kill was used; interruption
 and recovery were checked deterministically. No iOS, server or RN files changed.
+
+
+## 0.5.0 review fixes, round 2 — BDK downgrades survive status errors (2026-10-20)
+
+Base: local `feat/native-rewrite` HEAD `51c24bc0`. Fix: `556f9840`.
+After a successful BDK sync, eviction and confirmed competing-input evidence now
+reach SendController and its durable journal even when the subsequent network
+status lookup throws. The lookup error is saved separately on the updated
+receipt, retaining its last known chain status. The existing Send receipt UI
+shows the shared warning: **Couldn't check network status. Showing the last
+known status. Try again.** A successful lookup clears that warning. Behaviour
+follows iOS `beb2586e`: chain status adds evidence and cannot block a BDK-required
+downgrade. Failed BDK sync still gates cached evidence.
+
+Two new SendConflictTest regressions start with a confirmed receipt and no retry
+flag, then sync eviction or a confirmed competitor before the status lookup
+fails. Both assert durable unlocated/conflicted receipts, preserved chain status,
+separate lookup errors and held acknowledgement/restart locks. The same checks
+cover notFound, mempool and confirmed responses; none overrides BDK's downgrade.
+A subsequent successful lookup clears only the warning. Both new tests failed
+before the fix. Targeted SendConflictTest, SendChainStatusTest, SendRefreshTest and
+SendOffboardTest: **21 tests / 4 suites passed**, zero failures/errors/skips.
+
+Board crash recovery with optional status errors is recorded in the
+[ExitTests round-2 section](../ExitTests/README.md#050-review-fixes-round-2--exact-board-recovery-despite-status-errors-2026-10-20).
+
+The requested full check ran **once**, after both fixes and all test changes:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**2,773 tests / 70 suites passed**, zero failures/errors/skips, with no suite
+exclusions. Regtest APK assembly succeeded in the same **2m 25s** invocation.
+
+No device, emulator, simulator, Docker command, funded broadcast or live process
+kill was used. Crash/status faults use deterministic tests. Changes are limited
+to Android Send/Onchain code, tests, these verification docs and Android TODO
+lines; recurring, iOS, server and RN code were untouched.
