@@ -9,7 +9,7 @@
   "catalogEntries": 1287,
   "coverage": {
     "ios": {
-      "rnTranslated": 602,
+      "rnTranslated": 601,
       "nativeOnlyEnglish": 414,
       "nativeOnly": [
         "#{nativeValue1} · {nativeValue2} · {nativeValue3} sats",
@@ -1006,7 +1006,6 @@
         "Your feedback was sent to the Noah team.",
         "Your wallet has been backed up successfully.",
         "Your wallet is currently suspended. All wallet operations are disabled.",
-        "blocks",
         "e.g. Rent, Donation, VPN",
         "fiatjaf",
         "https://mempool.space/api",
@@ -1033,7 +1032,7 @@
       ]
     },
     "android": {
-      "rnTranslated": 519,
+      "rnTranslated": 518,
       "nativeOnlyEnglish": 504,
       "nativeOnly": [
         "6-digit code",
@@ -2046,7 +2045,6 @@
         "Your Recovery Phrase",
         "Your feedback was sent to the Noah team.",
         "Your wallet has been backed up successfully.",
-        "blocks",
         "e.g. Rent, Donation, VPN",
         "https://mempool.space/api",
         "name@domain.com, ark1… or lno1…",
