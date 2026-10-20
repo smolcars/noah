@@ -16,7 +16,7 @@ import Testing
         #expect(try h.store.load().schedules[original.id]?.occurrencesPaid == 1)
         #expect(h.controller.locked)
         if legacy {
-            var entry = try #require(h.journal.load()[original.id]); entry.policyApplied = nil
+            var entry = try #require(h.journal.load()[original.id]); entry.historyApplied = nil; entry.released = nil
             try h.journal.save(entry)
         }
         let applied = try h.store.load().schedules[original.id], notices = h.notified

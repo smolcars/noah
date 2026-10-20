@@ -45,7 +45,7 @@ import Testing
         let zone = Locked(TimeZone.current)
         var reminders: [RecurringPayment] = []
         let clock = Locked(1_800_000_000_000.0)
-        init() throws {
+        init(journalWrite: (@Sendable (Data, URL) throws -> Void)? = nil) throws {
             SettingsStorage.bootstrap()
             directory = FileManager.default.temporaryDirectory.appending(path: "recurring-executor-\(UUID())/noah-data-regtest")
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -55,7 +55,7 @@ import Testing
                 if storeWriteFails.withLock({ $0 }) { throw CocoaError(.fileWriteUnknown) }
                 try settings.setDurably($0, forKey: RecurringStore.key)
             })
-            journal = .init(file: directory.appending(path: "journal.json"))
+            journal = .init(file: directory.appending(path: "journal.json"), persist: journalWrite ?? { try RecurringStore.durableWrite($0, to: $1) })
             owner = Locked(.init(wallet: .init(fingerprint: "test", network: "regtest"), instance: UUID()))
             let owner = owner
             store.protectPolicies(file: journal.file.appendingPathExtension("policies"), sync: { _ in }, binding: { owner.withLock { $0 } })
@@ -84,7 +84,8 @@ import Testing
                     calls.withLock { $0 += 1 }
                     try await afterPayment()
                     if await isAmbiguous() { throw URLError(.timedOut) }
-                    return .init(amount: payment.amount, proof: .submitReturnedArkSuccess)
+                    if payment.method == "ark" { return .init(amount: payment.amount, proof: .submitReturnedArkSuccess) }
+                    return .init(amount: payment.amount, paymentHash: PaymentEncoding.invoice(payment.destination)?.hash ?? "test-hash", movementID: 1, fee: 0, proof: .actualMovement)
                 }))
             executor = .init(dependencies: .init(store: store, journal: journal, controller: controller,
                 ensureOpen: {}, binding: { owner.withLock { $0 } }, allowed: {
@@ -104,7 +105,7 @@ import Testing
             return fees
         }
         func quoted(_ schedule: RecurringPayment, fees: LightningSendFees) -> (SendPayment, SendQuote, LightningSendFees?) {
-            (SendPayment(destination: schedule.destination, method: method, amount: schedule.amountSat),
+            (SendPayment(destination: method == "lightning" ? (try! SendLightningSafetyTests().payment()).destination : schedule.destination, method: method, amount: schedule.amountSat),
              .init(amount: schedule.amountSat, fee: fee, total: schedule.amountSat + fee, walletIdentity: owner.withLock { $0.wallet }), fees)
         }
         func notification(_ schedules: [RecurringPayment], _ result: RecurringPayment?) async {
@@ -529,7 +530,7 @@ import Testing
         try bytes.write(to: h.journal.file)
         _ = try h.journal.load()
         let migrated = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: h.journal.file)) as? [String: Any])
-        #expect(migrated["version"] as? Int == 2)
+        #expect(migrated["version"] as? Int == 3)
         let indices = try #require(migrated["consumedIndices"] as? [[String: Any]])
         #expect(indices.first?["indices"] as? [Int] == [old.plan.occurrenceIndex!])
         #expect(indices.first?["policyRevision"] as? String == old.policyRevision?.uuidString)
@@ -765,7 +766,7 @@ import Testing
         let notificationsBefore = h.notified
         switch outcome {
         case "success": h.resolution = .paid(.init(amount: original.amountSat, proof: .submitReturnedArkSuccess))
-        case "alreadyPaid": h.resolution = .alreadyPaid(.init(amount: original.amountSat, movementID: 1, proof: .actualMovement))
+        case "alreadyPaid": h.resolution = .alreadyPaid(.init(amount: original.amountSat, proof: .submitReturnedArkSuccess))
         case "failed": h.resolution = .failed
         default: h.resolution = .uncertain
         }

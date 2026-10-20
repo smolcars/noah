@@ -28,7 +28,7 @@ import Testing
         h.afterPay = { h.storeWriteFails.withLock { $0 = true } }
         await h.executor.execute()
         #expect(h.controller.locked)
-        #expect(try h.journal.load()[original.id]?.policyApplied == true)
+        #expect(try h.journal.load()[original.id]?.historyApplied != true)
         #expect(throws: (any Error).self) { try h.store.load() }
         h.writeRemovalFails = false
         h.storeWriteFails.withLock { $0 = false }
