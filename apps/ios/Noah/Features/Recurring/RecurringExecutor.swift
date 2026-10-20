@@ -43,7 +43,7 @@ import Observation
             syncPending = state.pending
         } catch { self.error = error.localizedDescription }
     }
-    /// Join push/foreground/manual triggers. The executor owns the task, not the trigger's budget.
+    /// Join triggers. Settlement outlives the caller; new submissions respect its deadline.
     func execute(manual: Bool = false, approval: Review? = nil) async {
         if let task { await task.value; return }
         let work = Task { await run(manual: manual, approval: approval) }
@@ -95,6 +95,7 @@ import Observation
             try await recoverMarkers(initial)
             for id in initial.schedules.keys.sorted() {
                 if let approval, approval.schedule.id != id { continue }
+                guard RecurringExecutionBudget.available else { break }
                 guard var schedule = try boundState().schedules[id] else { continue }
                 guard schedule.validPolicy else { throw SendFailure.invalid }
                 var planning = schedule
@@ -121,6 +122,7 @@ import Observation
                         guard plan == approval.plan else { continue }
                         (payment, quote) = (approval.payment, approval.quote)
                     } else { (payment, quote) = try await d.quote(schedule) }
+                    guard RecurringExecutionBudget.available else { break }
                     let state = try boundState()
                     guard let latest = state.schedules[id], latest == schedule,
                           planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual) == plan,
@@ -151,7 +153,8 @@ import Observation
                         var currentPlan = marked
                         currentPlan.inFlight = nil
                         if !unattended { currentPlan.status = "active" }
-                        guard currentPlan.plan(now: now(), zone: zone(), ignoreBackoff: manual) == entry.plan,
+                        guard RecurringExecutionBudget.available,
+                              currentPlan.plan(now: now(), zone: zone(), ignoreBackoff: manual) == entry.plan,
                               generation() == automationGeneration,
                               state.binding == (try binding()), state.binding == entry.binding,
                               state.schedules[id] == marked,

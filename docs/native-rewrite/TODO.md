@@ -321,7 +321,9 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Foreground + `recurring_payment_due` through existing push jobs and `AppServices.ensureWalletOpen` — iOS; restore/deletion gates, asynchronous reminders/results
 - [x] Server wake sync — iOS; generated authenticated client, serialized replacement payloads, durable pending retry flag
 - [x] Live regtest + full NoahTests evidence — iOS; exactly one 1,000-sat Ark send across push/foreground/repeat/pause/cancel; 405 total / 388 passed / 17 opt-in skipped / 0 failed, 88 suites; `apps/ios/RecurringTests/README.md`
-- [ ] Physical recurring-wake delivery, timed local reminder delivery, external LNURL/BOLT12 live acceptance and funded RN-recurring upgrade — iOS
+- [x] M7 iOS round-1 safety: persistent teardown stop generation; cross-revision consumed timestamp watermarks + migration; max(1% of amount, 200 sats) fee policy with needs-approval/manual Send review (unbounded Lightning gated); final current-clock due/backoff guard; time-zone/idle wake refresh; independent push deadline + submission budget
+- [x] M7 iOS round-1 verification: 59 focused tests / 108 runs; full suite once, 421 total / 403 passed / 18 opt-in skipped / 0 failed, 90 suites; live BOLT12 20,000 sats skipped automatically then paid once on explicit approval (75-sat quote below cap; above-cap tested deterministically); `apps/ios/RecurringTests/README.md`
+- [ ] Physical recurring-wake delivery, timed local reminder delivery, external LNURL/BOLT12 provider live acceptance and funded RN-recurring upgrade — iOS
 - [ ] Schedule math/executor, MMKV, screens, triggers and server wake sync — Android (shared recurring fixtures ready)
 
 ## M8 — BTC Map

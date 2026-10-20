@@ -3,6 +3,92 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Round-1 unattended safety (2026-10-20)
+
+Base: `feat/native-rewrite` HEAD `b46fc2e2`. Six focused fixes:
+
+- Suspend/Delete durably rotate an automation generation before teardown. Even
+  when the Send reservation makes close fail and the suspension flag is restored,
+  an older execution cannot submit. Both races use the real session reservation.
+- Journal v1 stores consumed timestamp watermarks per wallet instance + schedule,
+  separately from the latest attempt, across every policy revision. Legacy
+  dictionaries migrate durably before another attempt can replace their evidence.
+  A revision-A → revision-B → MMKV rollback-to-A regression never pays A again.
+- The automatic fee limit is max(1% of the amount, 200 sats), rounded down to
+  whole sats. Excessive fees stop at `needs_approval`, without an occurrence or
+  Send marker, consumption, uncertainty or automatic retry; a result notification
+  asks the user to open the schedule. **Review and pay manually** opens the normal
+  Send review with the exact quote; confirmation retains recurring identity,
+  occurrence/policy guards, journaling and settlement.
+  BarkBoltFFI 0.4.0's invoice/offer calls have no maximum-fee argument and can
+  advance before returning even with `wait:false`; inspecting pending Lightning
+  sends afterwards cannot enforce a ceiling. All Lightning routes therefore need
+  approval even below the cap. LNURL resolved to a same-server Ark route remains
+  eligible. Pinned bark's `fees.rs` and Arkoor implementation charge no Arkoor
+  fee; the quote and final submission guard require that zero-fee path. A future
+  SDK with variable Arkoor fees must provide a bound before enabling automation.
+- Immediately before submission the plan is recomputed with the current clock
+  and zone, excluding only this executor's in-flight marker and honoring backoff.
+  It must still be the same latest due occurrence. Backward/forward jumps and a
+  jump behind backoff abort without consuming or introducing uncertainty.
+- Every execution pass (including idle ones), significant-time-change and
+  `NSSystemTimeZoneDidChange` refresh persisted next dates, reminders and server
+  wake entries. Three new shared RN-generated zone-change cases include the
+  New York Feb 28 2026 23:00 monthly schedule: switching to UTC moves its next
+  date from Mar 29 03:00 UTC to Apr 1 04:00 UTC (73 hours).
+- The silent-push callback returns at its monotonic 25-second deadline independently
+  of cancellation-shielded work. The deadline follows executor/controller/session
+  tasks and forbids new submissions after expiry. A payment already submitted
+  still settles and consumes its occurrence once.
+
+Verification: targeted **59 tests / 108 individual runs, six suites, zero
+failures/skips**; funded opt-in **one test, zero failures/skips**. One intermediate
+compile attempt caught a sendability annotation in the deadline test; it was
+corrected before the passing targeted run. The full `NoahTests` suite ran **once**,
+with no exclusions: **421 total, 403 passed, 18 opt-in skipped, zero failed**,
+**90 suites**, 46.939 seconds of test execution. Parameterized execution reports
+**539 passed / 18 skipped** individual runs. It includes the final additional
+clock/backoff regression.
+All runs used Nix, XcodeGen, normal signing, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`,
+`-jobs 2`, and disabled parallel testing. Owned simulator: **Noah Recurring
+Round1 Sol**, iPhone 17 / iOS 27.0, UDID
+`7A9668D6-65C5-4F70-A344-8C2DCD88BEEE`. DerivedData:
+`/private/tmp/noah-recurring-r1-sol-dd`; logs/results/summary JSON prefix:
+`/private/tmp/noah-recurring-r1-sol-`.
+
+Live evidence: a fresh wallet received **30,000 Ark sats once**. A **20,000-sat
+BOLT12** schedule became **Needs approval** across repeated automatic/manual-run
+triggers, with **zero new movements** and no recurring journal entry. Its real
+quote was **75 sats**, below the **200-sat** cap, so this exercised the unbounded
+submission-fee gate. Explicit manual confirmation through the production executor,
+Send controller and SDK then produced exactly **one** successful sender movement,
+**ID 2**; replaying the same review did not pay again. CLN independently recorded
+`paid`, **20,000,000 msat received**, payment hash prefix `35d2ec477338`, pay index
+**6**. The test cancelled the schedule and deleted its disposable wallet using
+production lifecycle code. No service was restarted, no fee configuration changed
+and no block mined. This was a programmatic confirmation of the action used by
+Send's review sheet; no UI tap or physical push-delivery claim is made.
+
+A live **above-cap** quote was not exercised: this funded wallet quoted 75 sats,
+and changing the shared server fee policy was outside the allowed scope.
+Above-cap/refusal/copy and below-cap unbounded Lightning behavior use deterministic
+tests; the shared server was left alone.
+The opt-in check can be reproduced on a fresh dedicated simulator with
+`TEST_RUNNER_NOAH_RECURRING_FEE_LIVE=1`, a fresh reusable regtest CLN offer in
+`TEST_RUNNER_NOAH_RECURRING_FEE_OFFER`, and
+`TEST_RUNNER_NOAH_REGTEST_SERVER_URL=http://127.0.0.1:3100`, selecting
+`NoahTests/RecurringFeeLiveTests`. Fund the published
+`Documents/recurring-fee-funding-address.txt` **once** with 30,000 sats within
+180 seconds. Never retry a failed payment without inspecting history and journals.
+Non-secret evidence is written to `Documents/recurring-fee-evidence.json`.
+
+Cleanup completed after exporting the summaries and non-secret live evidence:
+confirmed the owned simulator's exact name/UDID and **Shutdown** state, deleted
+it, and verified its absence. Removed the owned DerivedData and all **five**
+xcresult bundles. Logs, summaries and evidence remain under the `/private/tmp`
+prefix above. Protected simulators and other devices were untouched; no Docker
+service was stopped, restarted or reconfigured.
+
 ## Contract and safety
 
 `RecurringStore` reads and writes RN's `noah-wallet-storage` MMKV instance,

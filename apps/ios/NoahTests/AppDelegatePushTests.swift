@@ -23,4 +23,22 @@ struct AppDelegatePushTests {
         #expect(result == .newData)
         #expect(Date().timeIntervalSince(started) < 26, "stays inside the background budget")
     }
+    @Test func deadlineCompletesWhileCancellationShieldedWorkerIsStillRunning() async throws {
+        let gate = RecurringReservationTests.Gate()
+        var settled = false
+        let started = ContinuousClock.now
+        let result = await AppDelegate.completeWithin(.milliseconds(30)) {
+            await Task { await gate.wait() }.value
+            await MainActor.run { settled = true }
+        }
+        #expect(result == .failed)
+        #expect(ContinuousClock.now - started < .seconds(1))
+        #expect(!settled)
+        try #require(await gate.entered)
+        await gate.release()
+        let limit = ContinuousClock.now + .seconds(2)
+        while !settled, ContinuousClock.now < limit { await Task.yield() }
+        #expect(settled)
+    }
+
 }

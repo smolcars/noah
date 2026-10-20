@@ -392,6 +392,39 @@ import Testing
         }
     }
 
+    @Test(arguments: [false, true]) func expiredPushBudgetNeverStartsSubmission(duringPreparation: Bool) async throws {
+        let h = try Harness(); let schedule = try h.add()
+        let gate = RecurringReservationTests.Gate()
+        let hold: @MainActor @Sendable () async throws -> Void = { await gate.wait() }
+        if duringPreparation { h.beforePay = hold } else { h.preflight = hold }
+        let result = await AppDelegate.completeWithin(.seconds(2)) { await h.executor.execute() }
+        #expect(result == .failed)
+        #expect(h.calls.withLock { $0 } == 0)
+        try #require(await gate.entered)
+        await gate.release()
+        await h.executor.execute() // Join settlement, without extending the expired worker's budget.
+        #expect(h.calls.withLock { $0 } == 0)
+        #expect(try h.store.load().schedules[schedule.id]?.inFlight == nil)
+        #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == 0)
+        #expect(try h.store.load().schedules[schedule.id]?.status == "active")
+        #expect(try h.journal.load()[schedule.id]?.consumed != true)
+        #expect(!h.controller.locked)
+    }
+    @Test func paymentAlreadySubmittedSettlesAfterPushDeadline() async throws {
+        let h = try Harness(); let schedule = try h.add()
+        let gate = RecurringReservationTests.Gate()
+        h.afterPay = { await gate.wait() }
+        let result = await AppDelegate.completeWithin(.seconds(2)) { await h.executor.execute() }
+        #expect(result == .failed)
+        #expect(h.calls.withLock { $0 } == 1)
+        try #require(await gate.entered)
+        await gate.release()
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 1)
+        #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == 1)
+        #expect(try h.journal.load()[schedule.id]?.consumed == true)
+    }
+
     @Test func clockJumpBehindBackoffStopsEvenWhenSameOccurrenceIsDue() async throws {
         let h = try Harness(); var schedule = try h.add()
         schedule.startAt -= 5000; schedule.retryNotBefore = h.now - 1000
@@ -402,6 +435,5 @@ import Testing
         #expect(try h.journal.load()[schedule.id]?.consumed != true)
         #expect(!h.controller.locked)
     }
-
 
 }
