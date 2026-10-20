@@ -23,6 +23,73 @@ struct AppDelegatePushTests {
         #expect(result == .newData)
         #expect(Date().timeIntervalSince(started) < 26, "stays inside the background budget")
     }
+    @Test(arguments: [true, false])
+    func backgroundCompletionDrainsAcceptedRecords(push: Bool) async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "lifecycle-log-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let queue = DispatchQueue(label: "test.delayed-lifecycle-writer")
+        queue.suspend()
+        let file = LogFile(directory: directory, queue: queue)
+        // Let the writer run after completion would have returned without a drain.
+        DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(100)) { queue.resume() }
+        if push {
+            let result = await AppDelegate.completeWithin(.seconds(2), logFile: file) {
+                file.append(level: .warn, tag: "test", message: "Wallet operation failed")
+            }
+            #expect(result == .newData)
+        } else {
+            let result = await withCheckedContinuation { continuation in
+                _ = BackgroundExecution(timeout: .seconds(2), logFile: file, completion: {
+                    continuation.resume(returning: $0)
+                }) { file.append(level: .warn, tag: "test", message: "Wallet operation failed") }
+            }
+            #expect(result)
+        }
+        #expect(FileManager.default.fileExists(atPath: directory.appending(path: "noah.log").path))
+        await file.flushAsync()
+    }
+
+    @Test(arguments: [true, false])
+    func lifecycleCallbacksDrainAcceptedRecords(resigning: Bool) async {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "delegate-log-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let queue = DispatchQueue(label: "test.delegate-drain")
+        queue.suspend()
+        let file = LogFile(directory: directory, queue: queue)
+        let delegate = AppDelegate(logFile: file)
+        file.append(level: .info, tag: "test", message: "Accepted before lifecycle callback")
+        DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { queue.resume() }
+        if resigning { delegate.applicationWillResignActive(UIApplication.shared) }
+        else { delegate.applicationDidEnterBackground(UIApplication.shared) }
+        #expect(FileManager.default.fileExists(atPath: directory.appending(path: "noah.log").path))
+        await file.flushAsync()
+    }
+
+    @Test func expiryDuringLogDrainStillCompletesExactlyOnce() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "expiry-log-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let queue = DispatchQueue(label: "test.expiry-drain")
+        queue.suspend()
+        let file = LogFile(directory: directory, queue: queue)
+        var completed: [Bool] = []
+        let recorder = PushJobsTests.Recorder()
+        let execution = BackgroundExecution(logFile: file, completion: { completed.append($0) }) {
+            file.append(level: .info, tag: "test", message: "Accepted")
+            recorder.add("operation finished")
+        }
+        let limit = ContinuousClock.now + .seconds(2)
+        while recorder.all.isEmpty, ContinuousClock.now < limit { await Task.yield() }
+        // Allow the worker to enter its drain before the OS revokes execution.
+        try await Task.sleep(for: .milliseconds(10))
+        execution.systemExpired()
+        while completed.isEmpty, ContinuousClock.now < limit { await Task.yield() }
+        #expect(completed == [false])
+        queue.resume()
+        await file.flushAsync()
+        execution.expire()
+        #expect(completed == [false])
+    }
+
     @Test func deadlineCompletesWhileCancellationShieldedWorkerIsStillRunning() async throws {
         let gate = RecurringReservationTests.Gate()
         var settled = false

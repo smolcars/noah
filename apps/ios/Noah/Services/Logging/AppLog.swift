@@ -153,6 +153,26 @@ final class LogFile: @unchecked Sendable {
         }
     }
 
+    /// Lifecycle callbacks alone may wait briefly; SDK/Rust admission never calls this.
+    @discardableResult
+    func drain(timeout: TimeInterval = 0.2) -> Bool {
+        guard timeout > 0 else { return false }
+        let done = DispatchSemaphore(value: 0)
+        lock.withLock {
+            enqueueDroppedMarker()
+            queue.async { done.signal() }
+        }
+        return done.wait(timeout: .now() + min(timeout, 0.2)) == .success
+    }
+
+    func drainAsync(until deadline: ContinuousClock.Instant) async {
+        _ = await Task.detached { [self] in
+            let remaining = ContinuousClock.now.duration(to: deadline).components
+            let seconds = Double(remaining.seconds) + Double(remaining.attoseconds) / 1e18
+            drain(timeout: seconds)
+        }.value
+    }
+
     func linesForExport() async -> [String] {
         await flushAsync()
         return await withCheckedContinuation { continuation in

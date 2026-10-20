@@ -46,6 +46,22 @@ struct AppLogTests {
         #expect(file.lines().last?.hasSuffix("recovered") == true)
     }
 
+    @Test func lifecycleDrainIsBoundedAndKeepsWriterOrdering() async {
+        let queue = DispatchQueue(label: "test.blocked-lifecycle-drain")
+        queue.suspend()
+        let file = LogFile(directory: directory, capacity: 2, queue: queue)
+        for index in 0..<5 { file.append(level: .info, tag: "test", message: "record \(index)") }
+        let started = ContinuousClock.now
+        #expect(!file.drain(timeout: 0.02))
+        #expect(ContinuousClock.now - started < .seconds(1))
+        queue.resume()
+        let lines = await file.linesForExport()
+        #expect(lines.count == 3)
+        #expect(lines[0].hasSuffix("record 0"))
+        #expect(lines[1].hasSuffix("record 1"))
+        #expect(lines[2].hasSuffix("[dropped 3 log records]"))
+    }
+
     @Test func writesReactNativeLineFormat() throws {
         let file = LogFile(directory: directory, capacity: 5000)
         let date = Date(timeIntervalSince1970: 0)

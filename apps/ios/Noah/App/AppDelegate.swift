@@ -5,6 +5,18 @@ import UserNotifications
 /// Hosts the UIKit callbacks SwiftUI does not expose (APNs registration,
 /// background remote notifications). Push handling lands in Phase 0.6.
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    private let logFile: LogFile
+
+    override init() {
+        logFile = .shared
+        super.init()
+    }
+
+    init(logFile: LogFile) {
+        self.logFile = logFile
+        super.init()
+    }
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -21,11 +33,24 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         ScratchSpace.shared.sweepAbandoned()
         NotificationCenter.default.addObserver(self, selector: #selector(timeZoneChanged),
                                                name: .NSSystemTimeZoneDidChange, object: nil)
+        // SwiftUI scenes do not deliver every UIApplicationDelegate lifecycle callback.
+        for name in [UIScene.willDeactivateNotification, UIScene.didEnterBackgroundNotification] {
+            NotificationCenter.default.addObserver(self, selector: #selector(drainLifecycleLogs), name: name, object: nil)
+        }
         return true
+    }
+
+    @objc private func drainLifecycleLogs() {
+        logFile.drain(timeout: UIApplication.shared.backgroundTimeRemaining)
+    }
+
+    func applicationWillResignActive(_ application: UIApplication) {
+        logFile.drain(timeout: application.backgroundTimeRemaining)
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         Task { await BackgroundScheduler.shared.schedule() }
+        logFile.drain(timeout: application.backgroundTimeRemaining)
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
@@ -73,9 +98,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     /// Unstructured workers may settle native work after this callback has returned.
     /// A task group would wait for that work even after cancelling it.
-    static func completeWithin(_ timeout: Duration, operation: @escaping @Sendable () async throws -> Void) async -> UIBackgroundFetchResult {
+    static func completeWithin(_ timeout: Duration, logFile: LogFile = .shared, operation: @escaping @Sendable () async throws -> Void) async -> UIBackgroundFetchResult {
         await withCheckedContinuation { continuation in
-            _ = BackgroundExecution(timeout: timeout, completion: {
+            _ = BackgroundExecution(timeout: timeout, logFile: logFile, completion: {
                 continuation.resume(returning: $0 ? .newData : .failed)
             }, operation: operation)
         }

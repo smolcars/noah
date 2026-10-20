@@ -10,7 +10,7 @@ import Foundation
     private var timer: Task<Void, Never>?
     private var completion: ((Bool) -> Void)?
 
-    init(timeout: Duration = .seconds(25), completion: @escaping (Bool) -> Void,
+    init(timeout: Duration = .seconds(25), logFile: LogFile = .shared, completion: @escaping (Bool) -> Void,
          operation: @escaping @Sendable () async throws -> Void) {
         self.completion = completion
         let deadline = ContinuousClock.now + timeout
@@ -23,7 +23,11 @@ import Foundation
                     catch { return false }
                 }
             }
-            finish(success)
+            // Expiry still completes immediately while a bounded drain is pending.
+            let canDrain = RecurringSubmissionBudget.$current.withValue(budget) { RecurringSubmissionBudget.available }
+            if canDrain { await logFile.drainAsync(until: deadline) }
+            let stillActive = RecurringSubmissionBudget.$current.withValue(budget) { RecurringSubmissionBudget.available }
+            finish(success && stillActive && ContinuousClock.now < deadline)
             Self.active[id] = nil
         }
         timer = Task {
