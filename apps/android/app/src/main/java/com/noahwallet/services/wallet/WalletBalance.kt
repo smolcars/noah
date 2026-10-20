@@ -31,6 +31,9 @@ data class WalletBalance(val ark: Ark, val onchain: Onchain) {
     val totalSats: ULong get() = offchainSats + onchainSats
     val pendingSats: ULong get() = onchain.total - onchain.confirmed + ark.pending
 
+    fun pendingRoundMessage(amount: String): String? = if (ark.pendingInRound == 0uL) null else
+        "$amount pending in a round. These funds become available after the round confirms."
+
     @Serializable data class Detail(val label: String, val sats: ULong)
     val details get() = listOf(
         Detail("Onchain", onchain.total), Detail("Confirmed", onchain.confirmed),

@@ -13,6 +13,9 @@ class HomeBalanceDetailsTest {
             val balance = Json.decodeFromJsonElement(WalletBalance.serializer(), fixture.input)
             val expected = Json.decodeFromJsonElement(kotlinx.serialization.builtins.ListSerializer(WalletBalance.Detail.serializer()), fixture.expected)
             assertEquals(fixture.name, expected, balance.details)
+            assertEquals("200 sats pending in a round. These funds become available after the round confirms.", balance.pendingRoundMessage("200 sats"))
+            assertTrue(balance.pendingRoundMessage("••••")!!.startsWith("•••• pending"))
+            assertNull(balance.copy(ark = balance.ark.copy(pendingInRound = 0uL)).pendingRoundMessage("0 sats"))
             for (row in balance.details) for (unit in BitcoinAmountUnit.entries) {
                 assertEquals("••••", WalletBalance.display(row.sats, true, unit, Locale.US))
             }

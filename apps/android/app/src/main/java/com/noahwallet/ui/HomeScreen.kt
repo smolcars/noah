@@ -99,6 +99,7 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
                 model.summary?.balance?.let { balance ->
                     fun display(sats: ULong) = com.noahwallet.services.wallet.WalletBalance.display(sats, model.hidden, model.amountUnit, locale)
                     if (balance.pendingSats > 0uL) Text("Pending balance: ${display(balance.pendingSats)}")
+                    balance.pendingRoundMessage(display(balance.ark.pendingInRound))?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                     if (balanceExpanded) Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Balance Details", style = MaterialTheme.typography.titleMedium)

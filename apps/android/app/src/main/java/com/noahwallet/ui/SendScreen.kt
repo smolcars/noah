@@ -49,6 +49,9 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
         runCatching { app.session.pendingSendHashes() }.getOrNull()?.let { model.pendingLightningHashes = it }
         controller.checkStatus()
     }
+    LaunchedEffect(app.summary) {
+        app.summary?.let { model.arkBalance = it.balance.ark.spendable.toLong(); model.onchainBalance = it.balance.onchain.confirmed.toLong() }
+    }
     LaunchedEffect(controller.attempt?.receipt?.txid, app.isWalletSuspended) {
         if (controller.attempt?.receipt?.txid == null || app.isWalletSuspended) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -114,6 +117,11 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
                     Text(model.amount.ifEmpty { "0" }, style = MaterialTheme.typography.displaySmall, modifier = Modifier.semantics { contentDescription = "Amount ${model.amount.ifEmpty { "0" }}" })
                     TextButton(onClick = model::toggleCurrency, enabled = model.btcPrice != null && !model.busy && model.parsed.isAmountEditable) { Text(if (model.useFiat) model.fiatCurrency else "sats") }
                     Text("${model.arkBalance} sats available in Ark", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    app.summary?.balance?.let { balance ->
+                        balance.pendingRoundMessage("${balance.ark.pendingInRound} sats")?.let {
+                            Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                     if (!model.parsed.isAmountEditable) Text("Amount set by payment request")
                     AmountKeypad(model.amount, model.useFiat, !model.busy && model.parsed.isAmountEditable) { model.amount = it }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
