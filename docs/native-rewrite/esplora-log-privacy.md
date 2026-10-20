@@ -2,6 +2,7 @@
 
 Round-4 base: `feat/native-rewrite` at `a5866b02`; review: `54b44dc5`.
 Round-5 work starts at the supplied `be132094` HEAD, after the lifecycle merge.
+Round 6 starts at `2fa950f1`, with the reviewed `4565c735` in its ancestry.
 All test credentials are fake.
 
 A custom endpoint's entire identity is private, including scheme, hostname,
@@ -14,23 +15,61 @@ settings error text and iOS `SafeErrorDescription.of` use `LogFile.redact`.
 queue; the writer applies the boundary before either sink. Ark Info continues
 to show/copy the full endpoint on screen.
 
-Registered origins and any URL below them become `[custom-esplora]`. Matching
-uses canonical origins, not a guess about which hostname/path segments resemble
-credentials. Percent, JSON and HTML entity decoding is bounded to four layers;
-uncertain decoding omits the text. Unsupported named HTML entities fail closed
-rather than passing an undecoded hostname through; numeric entities also support
-the optional semicolon accepted by HTML. Encoded matches omit the whole message because
-decoding changes source offsets. URLs belonging to other origins are excluded
-from relative-path matching. Authorities are extracted before URL parsing, so
-trailing log delimiters never enter host canonicalization. Registrations and every raw/decoded token use the
-same canonical origin: lowercase scheme/host, IDNA ASCII, no DNS root dot or
-explicit default port, and compressed lowercase IPv6. There is no literal-prefix
-fallback or alternate-spelling registry.
-Host/port continuations cannot match another origin by prefix; adjacent log text
-cannot hide the beginning of the URL. A relative reference matching a registered base
-path has no independent origin, so its whole record is conservatively omitted.
-There is no global list of credential-shaped or route-name segments. Default
-servers are never registered by default configuration and remain visible.
+## Current policy (round 6)
+
+The round-5 review at `4565c735` showed why a denylist of equivalent spellings
+cannot be the primary URL boundary. Round 6 inverts admission: once any current
+or retired custom endpoint has been registered, every `scheme://` URL token is
+replaced with `[custom-esplora]` unless its canonical origin is explicitly public.
+The scheme, userinfo, host, port, path, query and fragment are removed together,
+through the token's end. Whitespace, quotes and angle brackets end the token;
+other trailing punctuation is conservatively removed with it. Even malformed
+ports and authorities are removed without needing to recognize a registered host.
+
+The allowlist is built once from native `ServerEndpoint.baseURL` and
+`WalletConfiguration.base` for all variants, including configured Noah, Ark,
+default Esplora and regtest Bitcoin Core origins. iOS uses its bundle/build and
+regtest launch configuration; Android uses `BuildConfig.REGTEST_SERVER_URL` and
+`REGTEST_HOST`. A fixed public list in each `EndpointLogPrivacy` covers shipped
+mempool explorer/prices, Expo push, BTC Map/map tiles/attribution, directions,
+support, repository and store links. No selection, imported endpoint or other
+user input contributes to this allowlist. A registered custom origin overrides
+the allowlist, including a user-entered endpoint equal to a default.
+
+Only a strict ASCII authority without userinfo can inherit public admission.
+A token must contain exactly one authority; a public origin cannot hide a nested
+URL in its path. The public URL tail also passes through registered-host
+inspection, so appended fields, JSON arrays and encoded bare hosts cannot inherit
+the public origin's admission.
+Backslashes, noncanonical IP spellings, unusual authority characters, malformed
+ports/percent escapes and parse failures redact. Public URL parsing is local and
+never resolves DNS. Percent, JSON and HTML entity decoding remains bounded to
+four layers; uncertain decoding has no admission path. A redaction in a decoded
+view omits the whole message because decoding changes source offsets. Unsupported
+named HTML entities fail closed; numeric entities retain optional-semicolon support.
+
+With no custom history and no fail-closed state, URL handling keeps the previous
+behaviour, including full unrelated-origin diagnostics; ordinary credential,
+mnemonic, provider-body and uncertain-decoding guards still apply. The durable
+fail-closed marker is unchanged: it replaces whole records with `[custom-esplora]`
+for the installation lifetime, even after healthy writes/reset.
+
+Registered-host canonicalization remains a second layer for scheme-less SDK
+mentions such as `host:port`, including single-label hosts, IDNA, bracketed or
+unbracketed IPv6, and WHATWG IPv4 forms. Brackets only group IPv6 tokens; other
+bracket/JSON contents still receive ordinary host inspection. Uncertain
+host parsing redacts. Host lookups use a set rather than scanning the registered
+endpoints for each token. Relative references matching registered base paths
+still omit the whole record; allowed public URLs are excluded from those checks.
+Status/error context outside redacted URL or scheme-less host tokens stays visible;
+provider errors continue to retain only their recognized type and status.
+
+This intentionally supersedes round 4's unrelated-origin preservation rule while
+custom history exists: LNURL callbacks and other origins outside that configuration and fixed list
+are also removed, even when unrelated to Esplora. This loses some diagnostics to
+avoid another alternate-spelling escape. Resetting to a default does not restore
+those diagnostics because retired history remains protected. Ark Info still
+shows/copies the full endpoint on screen and never logs it.
 
 Provider response text has no admission path: recognized `HttpResponse` errors
 retain only the variant and three-digit status, for example
@@ -95,9 +134,12 @@ release logging configuration was changed to suppress this test-only finding.
 
 ## Normalization decisions
 
-The shared `apps/fixtures/esplora.json` now contains 36 normalization cases,
-eight genesis cases, and four height cases (48 total).
+The shared `apps/fixtures/esplora.json` now contains 41 normalization cases,
+eight genesis cases, and four height cases (53 total, retaining the original 48).
 
+- Match RN/Android: reject scoped IPv6 before Foundation can embed an interface
+  index in the address, and validate the raw supplied port before parsing can
+  discard an overflowing value. Ports must be decimal integers in 1...65535.
 - Match RN: preserve empty `?` and `#`, including the authority's separating `/`;
   remove embedded ASCII tab, LF and CR; compress `[0:0::1]` to `[::1]`.
 - Intentional divergence: both natives reject all userinfo, including empty `@`
@@ -175,22 +217,17 @@ simulator, and DerivedData under `/private/tmp`. No active owned build remains.
 
 ## Rule locations
 
-1. Whole endpoint identity/canonical authority: iOS `EndpointLogPrivacy.swift:27`;
-   Android `EndpointLogPrivacy.kt:16`. HTML decoding: iOS `AppLog.swift:241`;
-   Android `AppLog.kt:189`.
-2. Shared provider boundary: iOS `EndpointLogPrivacy.swift:61` and
-   `AppLog.swift:232`; Android `EndpointLogPrivacy.kt:51` and `AppLog.kt:180`.
-   Historical records: iOS `EndpointLogPrivacy.swift:46`; Android `:35`.
-   Error display: iOS `EsploraSettingsScreen.swift:72`; Android `:45`.
-3. Durable history: iOS `EsploraSettings.swift:37`; Android `EsploraSettings.kt:18`.
-   Unknown-history marker: iOS `SettingsStorage.swift:104` /
-   `EsploraSettings.swift:43`; Android `SettingsStorage.kt:58` /
-   `EsploraSettings.kt:23`. Startup: iOS `AppDelegate.swift:25`; Android
-   `NoahApplication.kt:10`. Reset retention: both `retainingLogPrivacy` helpers.
-4. Other-origin exclusion: iOS `EndpointLogPrivacy.swift:84`; Android `:66`.
-5. Normalization: iOS `EsploraEndpoint.swift:10`; Android `EsploraEndpoint.kt:13`.
-   Shared cases: `apps/fixtures/esplora.json`; authority cases:
-   `apps/fixtures/esplora-log-authorities.json`.
+- URL admission, registered-host layer, provider boundary and historical records:
+  both `Services/Logging/EndpointLogPrivacy.swift` and
+  `services/logging/EndpointLogPrivacy.kt`.
+- Decoding and common file/system/telemetry boundary: both `AppLog` files;
+  Sentry admission and final payload guards: both `AppTelemetry` files.
+- Durable history/unknown marker: both `EsploraSettings` and `SettingsStorage`
+  files. Startup restores protection before SDK logging. Both
+  `retainingLogPrivacy` helpers preserve it through reset.
+- URL validation: both `EsploraEndpoint` files. Shared normalization cases:
+  `apps/fixtures/esplora.json`; shared exact authority outputs:
+  `apps/fixtures/esplora-log-authorities.json`.
 
 ## Round-4 implementation commits
 
@@ -286,3 +323,109 @@ Compiler: 202 files, 148 JS unit tests, TypeScript, Rust formatting). Native
 translation `--check` is clean; no UI strings/catalogs changed. Device
 instrumentation was compiled rather than run. All runtime probes used local
 fakes; no public network requests were made. No owned build remains active.
+
+## Round-6 regression evidence
+
+The shared authority fixture retains the previous 135 cases and adds 107 inputs
+(242 total), now with identical exact expected outputs on both platforms. It
+covers all reviewer inputs: `user!name@host`, fullwidth-plus hosts, decimal/octal/
+hex/shortened IPv4, invalid and multiply-coloned ports, arbitrary delimiters,
+encoded forms, bare hosts and public-origin lookalikes. Both platform runners
+exercise app/system log delivery, file/export and Sentry messages, exceptions and
+breadcrumbs; iOS also checks SafeErrorDescription. Separate policy snapshots test
+all fixture inputs with no registrations and verify that user-entered defaults
+are never admitted as public.
+
+Before implementation, the expanded permanent Android authority test failed;
+normalization already rejected all five new cases on Android. A standalone Swift
+probe compiled the unmodified production privacy/normalization functions and
+the production decoder against these same fixtures: 95 mismatches, including the
+reviewed authority leaks, scoped IPv6 rewrite and overflowing port. The fixed
+Swift probe passes all cases. A later self-check found that an allowed public URL
+could hide a private URL/host in its path, and that single-label/bracketed bare
+hosts could be skipped. Permanent shared probes reproduced these gaps before the
+final boundary changes (including a failing Android fixture test and 12 Swift
+probe mismatches, then three bracket/array mismatches). The final lexer checks
+single-label registrations without treating ordinary long words as hostnames;
+punctuation/JSON separators stay visible. A real-logger Swift probe also
+reproduced two composition failures: registering a credential-label hostname or
+a BIP39 word could replace that text before the general secret detector saw it.
+The boundary now inspects both the original view and its general-secret-redacted
+view before emitting text. Provider type/status extraction still runs first.
+Explicit policy snapshots reuse four vectors from the unchanged 147-case fixture
+(mnemonic and credential labels), also asserting a retained HTTP 503/error prefix;
+they avoid changing process-global registrations. The real Swift logger probe
+passes all authority cases and both composition probes after the fix. All 242 shared cases pass the final
+Swift probe and focused Android run. Final full suites run after these last
+source/test changes; the earlier successful full runs are not the final verification.
+
+The original 147-case redaction fixture is unchanged. It is checked under an
+explicit clean-install policy so process-global registrations cannot make the
+baseline expectations depend on test order. SDK/Sentry/file sinks additionally
+check the active policy, whose neutral URL marker deliberately differs for some
+original URL inputs. Scaling retains the 1/16-KiB, 64x-plus-20-ms and two-second
+limits with 1,000 registrations, adding allowed-origin, malformed-authority and
+scheme-less-host families. Scans are bounded at scheme/open-bracket candidates;
+repeated failed candidates do not rescan the remaining suffix.
+
+Initial focused verification passed **69 Android tests / five suites** and **64 iOS
+tests / five suites**. iOS used a signed arm64 regtest build on the owned
+`Noah Esplora R6 adb1ee9c` simulator, with package updates disabled. All probes
+use fake credentials and local fakes; no public endpoint requests are required.
+Native translation `--check` is clean. The pre-commit hook's lint, React Compiler
+(202 files), 148 JavaScript tests, TypeScript and Rust formatting checks pass.
+The fresh worktree's missing Husky shims/dependency links were restored locally;
+no tracked RN or server files changed.
+
+## Round-6 implementation commits
+
+- `6f35f104` test(native): share round-six Esplora authority privacy regressions
+- `fbd35dbe` fix(android): redact URL authorities unless configured public
+- `fcb9377b` fix(ios): allow only configured public URL authorities in private logs
+  (also adds the two shared URL-adjacent prefix cases)
+- `3a619ec9` test(native): cover nested authorities and single-label log hosts
+- `6607e79f` fix(android): inspect public URL tails and bare custom hosts
+- `975ea4ea` fix(ios): inspect public URL tails and bare custom hosts
+  (also preserves general secret detection and adds the two bare IPv6 cases)
+- `d1f47e39` fix(android): preserve secret detection during endpoint redaction
+
+Each commit retains the requested Claude Opus 5.5 co-author trailer. The final
+documentation commit records the policy, verification and cleanup below.
+
+## Round-6 final verification and cleanup
+
+Final signed arm64 iOS verification: **789 tests / 157 suites**, **763 passed,
+26 opt-in skipped, zero failed**. The complete NoahTests suite ran once after the
+last source/test change, with `xcodegen generate` first, normal signing,
+`ARCHS=arm64`, `ONLY_ACTIVE_ARCH=YES`, package updates disabled, Nix, and
+DerivedData at `/private/tmp/noah-esplora-r6-dd`. A pre-final full run passed;
+a subsequent rerun was interrupted to fix the demonstrated general-secret
+composition gap. Neither substitutes for this final full result.
+
+Both owned simulator identities and shutdown states were confirmed before
+removal: `Noah Esplora R6 adb1ee9c`
+(`17B74D08-03A2-456E-BA2E-5F9944BF7267`, `Shutdown`) and
+`Noah Esplora R6 Final adb1ee9c`
+(`F3DC7DEF-E3E4-49E4-80B0-B0A91D5C9AF6`, `Shutdown`). Both simulators, all owned
+DerivedData and all four named result bundles (focused, pre-final full,
+interrupted, final complete) were removed before the final Android command.
+No shared/forbidden simulator, emulator, physical device or Docker instance was
+used. All runtime probes used local fakes; no public endpoint requests were made.
+
+Final Android verification: **3,577 JVM tests / 138 suites**, zero failures,
+errors or skips; regtest APK assembled and instrumentation Kotlin compiled. The
+required full command ran once after the last source/test change, with all owned
+iOS resources already removed:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
+```
+
+Both final suites include all 242 authority cases, the unchanged 147-case
+redaction fixture, all 53 Esplora cases (the original 48 plus five regressions),
+and the 1,000-registration scaling checks at their original limits. Native
+translation `--check` is clean. Instrumentation was compiled rather than run.
+Every commit passed the normal repository pre-commit hook; no tracked RN,
+server, screen, recurring, lifecycle/lock or EsploraOpenWait source changed.
+No owned native build remains active. Temporary dependency links are removed
+after the documentation hook completes.
