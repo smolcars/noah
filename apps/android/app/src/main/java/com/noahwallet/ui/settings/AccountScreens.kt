@@ -10,6 +10,7 @@ import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.noahwallet.BuildConfig
@@ -36,7 +37,7 @@ fun CopyRow(title: String, value: String) {
 
 @Composable
 fun ProfileScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
-    var name by remember { mutableStateOf(limitedProfileName(SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.jsonPrimitive?.contentOrNull ?: "")) }
+    var name by rememberSaveable { mutableStateOf(limitedProfileName(SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.jsonPrimitive?.contentOrNull ?: "")) }
     var server by remember { mutableStateOf(model.server.state) }
     var key by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }

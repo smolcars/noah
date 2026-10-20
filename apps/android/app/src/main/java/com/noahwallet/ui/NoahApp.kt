@@ -1,6 +1,7 @@
 package com.noahwallet.ui
 
 import com.noahwallet.localization.tr
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -10,6 +11,8 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -40,12 +43,26 @@ enum class Destination(val title: Int, val icon: Int) : NavKey {
 @Serializable
 data object QRDestination : NavKey
 
+internal fun mainTabEntries(tab: Destination, homeStack: List<NavKey>): List<NavKey> =
+    if (tab == Destination.Home) homeStack else listOf(tab)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoahApp(model: AppModel) {
     val backStack = rememberNavBackStack(Destination.Home)
+    var selectedTab by rememberSaveable { mutableStateOf(Destination.Home) }
+    val tabState = rememberSaveableStateHolder()
+    fun showHome() { backStack.clear(); backStack.add(Destination.Home); selectedTab = Destination.Home }
+    fun showSend() { backStack.clear(); backStack.add(Destination.Home); selectedTab = Destination.Send }
+    fun goBack() {
+        if (!model.busy) {
+            if (selectedTab != Destination.Home) selectedTab = Destination.Home
+            else if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+        }
+    }
+    BackHandler(enabled = selectedTab != Destination.Home) { goBack() }
     LaunchedEffect(model.recurringNotification) {
-        if (model.recurringNotification) { backStack.add(SettingsDestination.Recurring); model.recurringNotification = false }
+        if (model.recurringNotification) { selectedTab = Destination.Home; backStack.add(SettingsDestination.Recurring); model.recurringNotification = false }
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val sessionRevision by model.session.walletChanges.collectAsState()
@@ -57,23 +74,23 @@ fun NoahApp(model: AppModel) {
             model.history.observe(model.preferredCurrency)
         }
     }
-    if (backStack.last() == Destination.Home) com.noahwallet.onchain.AutoBoardPrompt(model) { model.autoBoardSuccessBanner = it to System.currentTimeMillis() }
+    if (selectedTab == Destination.Home && backStack.last() == Destination.Home) com.noahwallet.onchain.AutoBoardPrompt(model) { model.autoBoardSuccessBanner = it to System.currentTimeMillis() }
     val repeat: (com.noahwallet.history.RepeatPayment) -> Unit = {
         model.repeatPayment = it
-        backStack.clear(); backStack.add(Destination.Home); backStack.add(Destination.Send)
+        showSend()
     }
     Scaffold(
         topBar = {
-            val destination = backStack.last() as? SettingsDestination
+            val destination = if (selectedTab == Destination.Home) backStack.last() as? SettingsDestination else null
             if (destination != null) TopAppBar(title = { Text(tr(destination.title)) }, navigationIcon = {
-                TextButton({ if (!model.busy && backStack.size > 1) backStack.removeAt(backStack.lastIndex) }) { Text(tr("Back")) }
+                TextButton({ goBack() }) { Text(tr("Back")) }
             })
         },
         bottomBar = {
-            if (backStack.last() !is SettingsDestination) NavigationBar {
+            NavigationBar {
                 Destination.entries.forEach { destination ->
                     NavigationBarItem(
-                        selected = backStack.last() == destination || (destination == Destination.Home && backStack.last() == QRDestination),
+                        selected = selectedTab == destination,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.onSurface,
                             selectedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -81,11 +98,7 @@ fun NoahApp(model: AppModel) {
                             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
                         ),
-                        onClick = {
-                            backStack.clear()
-                            backStack.add(Destination.Home)
-                            if (destination != Destination.Home) backStack.add(destination)
-                        },
+                        onClick = { selectedTab = destination },
                         icon = { Icon(painterResource(destination.icon), contentDescription = null) },
                         label = { Text(tr(stringResource(destination.title))) },
                     )
@@ -93,40 +106,42 @@ fun NoahApp(model: AppModel) {
             }
         },
     ) { padding ->
-        NavDisplay(
-            backStack = backStack,
-            modifier = Modifier.padding(padding),
-            onBack = { if (!model.busy && backStack.size > 1) backStack.removeAt(backStack.lastIndex) },
-            entryProvider = entryProvider {
-                entry<QRDestination> {
-                    QRHubScreen(model.server.state.lightningAddress,
-                        com.noahwallet.services.storage.SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull } ?: "",
-                        onBack = { backStack.removeAt(backStack.lastIndex) },
-                        onProfile = { backStack.add(SettingsDestination.Profile) },
-                        onScan = { value ->
-                            model.scannedDestination = value
-                            backStack.clear(); backStack.add(Destination.Home); backStack.add(Destination.Send)
-                        })
-                }
-                entry<SettingsDestination> { destination ->
-                    SettingsPage(model, destination, onBack = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }) { next ->
-                        if (next == SettingsDestination.Settings && backStack.last() == SettingsDestination.UnifiedPush) backStack.removeAt(backStack.lastIndex)
-                        else if (next == SettingsDestination.Profile && backStack.last() in listOf(SettingsDestination.Email, SettingsDestination.Lightning)) backStack.removeAt(backStack.lastIndex)
-                        else backStack.add(next)
+        tabState.SaveableStateProvider(selectedTab) {
+            NavDisplay(
+                backStack = mainTabEntries(selectedTab, backStack),
+                modifier = Modifier.padding(padding),
+                onBack = { goBack() },
+                entryProvider = entryProvider {
+                    entry<QRDestination> {
+                        QRHubScreen(model.server.state.lightningAddress,
+                            com.noahwallet.services.storage.SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull } ?: "",
+                            onBack = { backStack.removeAt(backStack.lastIndex) },
+                            onProfile = { backStack.add(SettingsDestination.Profile) },
+                            onScan = { value ->
+                                model.scannedDestination = value
+                                showSend()
+                            })
                     }
-                }
-                entry<Destination> { destination ->
-                    if (destination == Destination.Home || model.isWalletSuspended) HomeScreen(model, onViewAll = {
-                        backStack.add(Destination.History)
-                    }, onRepeatPayment = repeat, onQR = { backStack.add(QRDestination) }) { backStack.add(SettingsDestination.Settings) }
-                    else if (destination == Destination.History) TransactionsScreen(model, repeat)
-                    else if (destination == Destination.Receive) ReceiveScreen(model) {
-                        backStack.clear(); backStack.add(Destination.Home)
-                    } else SendScreen(model) {
-                        backStack.clear(); backStack.add(Destination.Home)
+                    entry<SettingsDestination> { destination ->
+                        SettingsPage(model, destination, onBack = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }) { next ->
+                            if (next == SettingsDestination.Settings && backStack.last() == SettingsDestination.UnifiedPush) backStack.removeAt(backStack.lastIndex)
+                            else if (next == SettingsDestination.Profile && backStack.last() in listOf(SettingsDestination.Email, SettingsDestination.Lightning)) backStack.removeAt(backStack.lastIndex)
+                            else backStack.add(next)
+                        }
                     }
-                }
-            },
-        )
+                    entry<Destination> { destination ->
+                        if (destination == Destination.Home || model.isWalletSuspended) HomeScreen(model, onViewAll = {
+                            selectedTab = Destination.History
+                        }, onRepeatPayment = repeat, onQR = { backStack.add(QRDestination) }) { backStack.add(SettingsDestination.Settings) }
+                        else if (destination == Destination.History) TransactionsScreen(model, repeat)
+                        else if (destination == Destination.Receive) ReceiveScreen(model) {
+                            showHome()
+                        } else SendScreen(model) {
+                            showHome()
+                        }
+                    }
+                },
+            )
+        }
     }
 }
