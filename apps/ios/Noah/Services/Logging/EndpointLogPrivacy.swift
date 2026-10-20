@@ -45,10 +45,11 @@ enum EndpointLogPrivacy {
             for match in urls.matches(in: view, range: NSRange(view.startIndex..., in: view)).reversed() {
                 guard let range = Range(match.range, in: clean), let origin = origin(String(clean[range])),
                       registered.contains(origin) else { continue }
-                clean.replaceSubrange(range, with: origin)
+                clean.replaceSubrange(range, with: "[custom-esplora]")
             }
             // Decoding loses offsets; omit the message when any relative path or segment matches.
-            if sensitive.contains(where: { clean.contains($0) }) || index > 0 && clean != view { return "[redacted]" }
+            if sensitive.contains(where: { clean.contains($0) }) { return "[redacted]" }
+            if index > 0 && clean != view { return "[custom-esplora]" }
             if index == 0 { result = clean }
         }
         return result

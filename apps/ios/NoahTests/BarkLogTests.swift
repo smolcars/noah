@@ -10,14 +10,14 @@ struct BarkLogTests {
         let endpoint = "https://esplora-privacy.example/api/syntheticOpaqueToken"
         EndpointLogPrivacy.register(endpoint)
         let message = "Using Esplora at \(endpoint)/block-height/0"
-        #expect(EndpointLogPrivacy.redact(message) == "Using Esplora at https://esplora-privacy.example")
-        #expect(LogFile.redact(message) == "Using Esplora at https://esplora-privacy.example")
-        #expect(LogFile.redactForTelemetry(message) == "Using Esplora at https://esplora-privacy.example")
+        #expect(EndpointLogPrivacy.redact(message) == "Using Esplora at [custom-esplora]")
+        #expect(LogFile.redact(message) == "Using Esplora at [custom-esplora]")
+        #expect(LogFile.redactForTelemetry(message) == "Using Esplora at [custom-esplora]")
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let file = LogFile(directory: directory)
         BarkLog(file: file).log(level: .info, target: "wallet", message: message)
-        #expect(file.lines().last?.hasSuffix("Using Esplora at https://esplora-privacy.example") == true)
+        #expect(file.lines().last?.hasSuffix("Using Esplora at [custom-esplora]") == true)
     }
 
     @Test func relativeAndEscapedProviderErrorsCannotLeakEndpointCredentials() async throws {
