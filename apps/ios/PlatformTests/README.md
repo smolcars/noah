@@ -2,9 +2,9 @@
 
 Bark 0.5.0's generated `BarkLogger.log(level:target:message:)` is called synchronously by Rust's `log` bridge on arbitrary worker threads (`src/ffi/logger.rs`). `BarkLog` never calls Bark from a callback. File admission orders concurrent callbacks under a short lock; callbacks never wait for the filesystem queue. The bundled BIP39 dictionary is loaded before registering the sink. The SDK retains the registered sink. Like nitro-ark 0.0.144's `bark-cpp/src/lib.rs::init_logger`, all variants use Debug (Trace maps to verbose but is filtered out). RN forwards these to OSLog under `com.nitro.ark` and collects them during log export; native writes them directly through AppLog.
 
-AppLog redacts before OSLog and at file admission. The shared detector covers NFKD/case-folded BIP39 word runs across punctuation/JSON/newlines (omitting the whole message when original offsets are uncertain), credential labels with prefixes/suffixes and punctuation/quote/whitespace separators, URL userinfo on any scheme, Bearer credentials/JWTs, Expo tokens, extended/WIF private keys, labelled hex keys/signatures, presigned URL parameters and email/Lightning addresses. Oversized messages are omitted before regex processing. Unlabelled txids/hashes, ordinary prose, amounts and Ark addresses remain available for diagnostics; URL queries remain conservatively omitted.
+AppLog admits raw records under a short lock, then redacts messages and tags on the serial writer before OSLog or file persistence. Export reads only those redacted files. The shared detector covers NFKD/case-folded BIP39 word runs across punctuation/JSON/newlines (omitting the whole message when original offsets are uncertain), credential labels with prefixes/suffixes and punctuation/quote/whitespace separators, URL userinfo on any scheme, Bearer credentials/JWTs, Expo tokens, extended/WIF private keys, labelled hex keys/signatures, presigned URL parameters and email/Lightning addresses. Oversized messages are omitted before regex processing. Unlabelled txids/hashes, ordinary prose, amounts and Ark addresses remain available for diagnostics; URL queries remain conservatively omitted.
 
-The iOS writer admits at most 256 pending records, writes in admission order on a serial queue, and emits `[dropped N log records]` on overflow. Disk work holds no admission lock. Export awaits `flushAsync()` and reads through `linesForExport()`. Active/background lifecycle callbacks and SwiftUI scene notifications start an asynchronous drain and return immediately. A UIKit background execution lease bounds the drain to the smaller of 200 ms and the remaining OS execution time; it ends exactly once on drain completion or expiry. Push/BGTask completion uses an asynchronous bounded drain capped by the original deadline; expiry still completes immediately and exactly once. SDK/Rust callbacks only enqueue and never wait on disk. Files remain `Caches/noah_logs/noah.log` plus `.1`–`.4`, each at most 512 KiB; export keeps the newest 4,000 lines.
+The iOS writer admits at most 256 pending records, writes in admission order on a serial queue, and emits `[dropped N log records]` on overflow. Disk work holds no admission lock. Export awaits `flushAsync()` and reads through `linesForExport()`. Active/background lifecycle callbacks and SwiftUI scene notifications start an asynchronous drain and return immediately. A UIKit background execution lease bounds the drain to the smaller of 200 ms and the remaining OS execution time; it ends exactly once on drain completion or expiry. Push/BGTask completion uses an asynchronous bounded drain capped by the original deadline; expiry still completes immediately and exactly once. SDK/Rust callbacks only enqueue and never wait on redaction or disk. Files remain `Caches/noah_logs/noah.log` plus `.1`–`.4`, each at most 512 KiB; export keeps the newest 4,000 lines.
 
 ## RN Sentry parity
 
@@ -552,3 +552,162 @@ filing was attempted. Client/server checks and their Husky hook were omitted
 for these native-only commits. SDK crash reproduction is still intermittent;
 the measured baseline was clean, and the upstream diagnosis is explicitly an
 inference rather than a demonstrated second completion call.
+
+
+## Native logging performance and background redaction (2026-10-20)
+
+Base: `feat/native-rewrite` at `b6b3538d`. The fixture
+`apps/fixtures/log-redaction.json` is unchanged: **147/147 exact outputs on each
+platform**, including persisted output. Both original detectors also matched
+the revised detector on **10,280 generated synthetic inputs per platform**.
+The temporary differential harnesses were removed; punctuation/boundary probes
+remain in both platform test suites. Only public BIP39 vectors and fake tokens
+were used.
+
+Each detector scans maximal label, email, scheme and JWT tokens once, instead of
+retrying an unbounded regex at every internal word boundary. Constant-size
+keyword alternatives and possessive runs handle the remaining patterns. Domain
+labels are scanned without recursive domain-group backtracking; successful
+replacements are assembled in one pass. Swift also caches the NSString view
+used for mnemonic lookup and assembles decoded views without repeated suffix
+copies. The BIP39 sets, **16 KiB UTF-8 omission limit**, and **four decode layers**
+remain unchanged. No fixture expectations, seed-validation rules or Sentry
+options changed.
+
+Both writers admit at most **256 raw records**, preserving admission order under
+a short lock. Raw text exists only in the bounded memory queue. Redaction of
+both message and tag runs on the serial background writer before OSLog/Logcat
+and file persistence; iOS telemetry can only observe the redacted app-log sink
+text. Its independent Cocoa event/breadcrumb scrub hooks retain their existing
+allowlist and fail-closed guard. Overflow still emits `[dropped N log records]`
+in order. Swift retains `flushAsync()` and bounded lifecycle drains; Kotlin adds
+a suspending `flushAsync()` and ordered file/export barriers. Existing synchronous
+snapshot/flush APIs intentionally wait for the writer; logging calls do not.
+
+With explicit user approval, the iOS SDK error call path uses
+`SafeErrorDescription.forLogging` for AppModel/receive log messages. It returns
+SDK text only for immediate admission to AppLog's queue. `SafeErrorDescription.of`
+continues to redact before server reports; changing it to return raw text would
+have leaked outside the logger.
+
+### Timing method and budgets
+
+`redactionPerformance` covers ASCII punctuation (`!@#$%^&*()[]{}:;,?`), hyphens
+(`x-`), dots (`x.`), digits (`1234567890`), mixed words
+(`wallet sync completed xyzzy `), and literal Unicode escapes
+(`\u0078\u002e`), repeated and truncated to exactly **1, 4 and 16 KiB**.
+Missing terminators/repeated candidates (`seed.`, `http://`, `ExpoPushToken[`,
+`x@x.`, `xprv`, separated Unicode escapes) have separate regressions.
+
+The automated CI budget is **100 ms for the median of three warm redactions of
+each input**, with one warmup outside measurement. This leaves margin above the
+roughly 50 ms target on shared, unoptimized CI machines. A single-sample version
+observed unrelated scheduling/GC pauses above 200 ms during concurrent builds;
+three samples prevent one such pause from failing a fast detector. Sustained
+quadratic work still fails. Caller admission is timed separately against a
+**5 ms maximum**, with the writer paused and both long tags and messages; iOS
+runs on `@MainActor` and also exercises Bark callbacks. Android has a JVM caller
+test and a separate instrumented `Looper.getMainLooper()` test.
+
+The following values are **milliseconds** on this shared Apple Silicon host;
+load was not controlled, so small differences are noise. Swift before/after are
+single warm samples of the exact iOS source in a macOS `swiftc`/Foundation/OSLog
+harness (`-Onone`; only the bundled dictionary URL is substituted); its 16 KiB
+pathologies were stopped at 10 seconds. Android before is the failing original
+Gradle/JVM performance test, and after is the final focused test's median of
+three. These are host measurements, not physical-device benchmarks.
+
+| Input | KiB | Swift before | Swift after | Android JVM before | Android JVM after |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| punctuation | 1 | 0.628 | 0.420 | 4.764 | 0.577 |
+| punctuation | 4 | 1.708 | 1.278 | 3.910 | 1.932 |
+| punctuation | 16 | 3.921 | 5.023 | 10.304 | 2.753 |
+| hyphen | 1 | 729.416 | 0.594 | 99.100 | 0.290 |
+| hyphen | 4 | 9444.029 | 1.900 | 692.387 | 1.134 |
+| hyphen | 16 | >10,000 | 21.382 | 9235.973 | 9.130 |
+| dot | 1 | 331.592 | 1.031 | 38.367 | 0.299 |
+| dot | 4 | 6243.736 | 4.713 | 480.522 | 1.171 |
+| dot | 16 | >10,000 | 16.541 | 7777.336 | 8.288 |
+| digit | 1 | 0.810 | 0.349 | 0.771 | 0.201 |
+| digit | 4 | 5.154 | 2.249 | 2.112 | 0.777 |
+| digit | 16 | 10.570 | 4.033 | 4.721 | 15.092 |
+| mixed | 1 | 0.812 | 1.216 | 0.739 | 0.747 |
+| mixed | 4 | 5.128 | 8.662 | 1.349 | 1.090 |
+| mixed | 16 | 13.121 | 31.044 | 4.891 | 32.547 |
+| escaped | 1 | 6.307 | 3.062 | 12.188 | 0.368 |
+| escaped | 4 | 158.182 | 10.982 | 20.480 | 1.765 |
+| escaped | 16 | 3492.642 | 36.901 | 233.123 | 9.756 |
+
+The signed iOS 27.0 simulator's expanded focused run independently measured
+16 KiB medians of **4.232 / 5.994 / 12.827 / 3.449 / 14.069 / 18.171 ms** in the
+same input order. Its maximum main-actor/SDK admission was **0.002458 ms**;
+Android's JVM admission maximum was **0.020167 ms**. A separate Swift host probe
+of 2 KiB dot text measured redaction **2,741.435 → 1.997 ms**, and `AppLog.e`
+**12,760.543 → 0.0335 ms** (flush excluded from caller timing). These samples were
+also taken under shared host load.
+
+### Changed code and verification
+
+- `apps/ios/Noah/Services/Logging/AppLog.swift:25`, `:76`: admission before
+  redaction/OSLog; `:239`, `:319`, `:378`, `:428`, `:457`: bounded decoding,
+  mnemonic lookup and token/domain/label scans.
+- `apps/ios/Noah/Services/Logging/SafeErrorDescription.swift:14`,
+  `apps/ios/Noah/App/AppModel.swift:207`, `:258`, and
+  `apps/ios/Noah/Features/Receive/ReceiveView.swift:131`: defer log-only SDK
+  inspection, preserving server-report scrubbing.
+- `apps/ios/NoahTests/AppLogTests.swift:10`: performance, main-actor/SDK
+  admission, SDK-error routing and boundary regressions; existing fixture,
+  overflow, lifecycle, rotation and export tests remain in place.
+- `apps/android/app/src/main/java/com/noahwallet/services/logging/AppLog.kt:31`,
+  `:51`, `:103`, `:121`: bounded writer, sink ordering and barriers; `:195`,
+  `:239`, `:261`, `:296`: detector scans and one-pass replacements.
+- `apps/android/app/src/test/java/com/noahwallet/services/AppLogTest.kt:18`:
+  performance/caller latency, sink isolation, ordered overflow/async flush and
+  boundary regressions; rotation/export tests explicitly await the async writer.
+- `apps/android/app/src/androidTest/java/com/noahwallet/services/AppLogMainThreadTest.kt:18`:
+  real Android main-looper admission test with paused writer/sinks.
+
+Evidence: `/private/tmp/noah-redaction-1a25/` (text, JSON and JUnit XML).
+Expanded focused iOS: **38 functions / 43 expanded runs / zero failures** in
+three suites; Android: **17/17 focused tests**, **1/1 differential harness**, plus
+successful instrumentation APK assembly. Final suite/build results and cleanup
+are recorded below.
+
+
+Final verification after the last code change:
+
+- Full `NoahTests` ran **once**: **675 total / 652 passed / 23 existing opt-in
+  skips / zero failures**, 131 suites, 140.563 seconds of Swift Testing execution
+  (950 expanded passing runs). The final full run's six 16 KiB medians were
+  **7.738 / 11.107 / 18.861 / 6.471 / 29.204 / 38.489 ms**; maximum main-actor/SDK
+  admission **0.002375 ms**. All shared-fixture persistence and telemetry checks
+  passed. Existing opt-in live/integration/upgrade skips were not provisioned.
+- iOS ran through Nix with `xcodegen generate`, signed arm64 simulator builds,
+  `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, no parallel testing,
+  `CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES`,
+  `-packageAuthorizationProvider netrc` and `-collect-test-diagnostics never`.
+  Whole-suite selectors were used; individual Swift Testing selectors still
+  require trailing `()`.
+- The exact final Android command ran **once**:
+  `nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'`.
+  **2,993 tests / 103 suites / zero failures or skips**, plus successful APK
+  assembly, in 2 minutes 12 seconds. All 147 shared fixtures were checked.
+  Full-run 16 KiB medians were **4.806 / 7.555 / 6.111 / 4.678 / 7.489 / 7.301 ms**;
+  JVM caller admission maximum **0.003167 ms**.
+- `:app:assembleRegtestDebugAndroidTest` built the actual Android main-looper
+  regression. It was **not executed**: this environment has no Android emulator
+  binary or installed system image, and protected/shared physical devices were
+  explicitly excluded. The JVM caller/paused-sink regressions did run. No physical
+  performance measurements, live Sentry ingestion or credentialed release archive
+  was attempted; simulator/JVM tests and installed Sentry scrub-hook assertions
+  cover this change. Sentry options/session tracking are untouched.
+
+Owned iPhone 17 / iOS 27.0 simulator **Noah Redaction 1a25**,
+`AE58E872-5073-4EE4-8C52-E4E1956C36C6`, was identified by name/UDID, shut down,
+verified `Shutdown`, deleted and verified absent. The Device panel could not
+resolve this CLI-created simulator; Xcode used its exact UDID. Owned
+`/private/tmp/noah-redaction-1a25-dd` and all **three** result bundles were removed
+after exporting summaries. No owned build remains running. Protected simulators,
+Android devices, physical devices and Docker were untouched. Settings/MMKV,
+launch gating, recurring payments, `server/` and `client/` were not edited.
+Client/server Husky checks were skipped for the native-only platform commits.

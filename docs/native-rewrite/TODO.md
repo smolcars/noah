@@ -120,8 +120,8 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
   - [x] Android device pass: placed widget ID 2/provider/host/metadata and controlled pinned MainActivity shortcut survived `install -r` — `apps/android/UpgradeTests/DEVICE.md`.
 
 ### 0.6 Platform services
-- [x] Redacting logger (file-backed, rotating, exportable) — iOS (`AppLog`, bounded async writer/overflow markers, prefixed/escaped JSON credentials, redaction-only Unicode mnemonic skeleton, URL userinfo and address privacy; 147 shared vectors; nonblocking lifecycle drains with bounded UIKit background execution)
-- [x] Redacting logger — Android (same secret/address detector contract, including decoded JSON views, Unicode skeleton and URL userinfo; 147 shared vectors)
+- [x] Redacting logger (file-backed, rotating, exportable) — iOS (`AppLog`, linear token scans; bounded raw-record admission and background redaction before all sinks/overflow markers; prefixed/escaped JSON credentials, redaction-only Unicode mnemonic skeleton, URL userinfo and address privacy; 147 shared vectors; nonblocking lifecycle drains with bounded UIKit background execution)
+- [x] Redacting logger — Android (linear token scans; bounded async raw-record queue, background redaction before Logcat/files, ordered overflow and awaitable flush; same decoded JSON/Unicode/address contract; 147 shared vectors)
 - [x] Route bark-bolt-ffi `BarkLogger` callbacks into the app log — iOS (ordered bounded async admission, no disk waits in Rust callbacks, RN Debug verbosity)
 - [ ] Route bark-bolt-ffi `BarkLogger` callbacks into the app log — Android
 - [x] Sentry (cocoa), disabled in debug + regtest like RN — iOS (production DSN; fixed event/context/tag allowlist, PII off, no attachments, redacted messages and fail-closed key/value guard; archive dSYMs require CI credentials)
