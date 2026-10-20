@@ -5,6 +5,7 @@ import android.content.ContextWrapper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.services.storage.*
+import com.noahwallet.services.wallet.EsploraSettings
 import com.tencent.mmkv.*
 import java.io.File
 import java.util.UUID
@@ -70,7 +71,7 @@ class MMKVRecoveryTest {
             val meta = File(root, "$id.crc").readBytes().apply { this[offset] = (this[offset].toInt() xor 255).toByte() }
             File(root, "$id.crc").writeBytes(meta); val before = bytes(root)
             val settings = SettingsStorage(context)
-            assertTrue(settings.nativeFile.load().values.isEmpty())
+            assertEquals(mapOf(EsploraSettings.historyUnavailableKey to "1"), settings.nativeFile.load().values)
             assertEquals(listOf(SettingsStorage.settingsNotice), settings.takeUpgradeNotices())
             assertEquals(before, bytes(root))
         }
@@ -103,7 +104,7 @@ class MMKVRecoveryTest {
         val settings = SettingsStorage(context)
         settings.nativeFile.file.writeText("damaged")
         val reset = SettingsStorage(context)
-        assertTrue(reset.nativeFile.load().values.isEmpty())
+        assertEquals(mapOf(EsploraSettings.historyUnavailableKey to "1"), reset.nativeFile.load().values)
         assertEquals(listOf(SettingsStorage.settingsNotice), reset.takeUpgradeNotices())
         assertTrue(SettingsStorage(context).takeUpgradeNotices().isEmpty())
     }
