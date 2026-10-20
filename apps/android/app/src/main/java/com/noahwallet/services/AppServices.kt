@@ -150,6 +150,7 @@ class AppServices private constructor(private val context: Context) {
             val fd = android.system.Os.open(context.filesDir.path, android.system.OsConstants.O_RDONLY, 0)
             try { android.system.Os.fsync(fd) } finally { android.system.Os.close(fd) }
         }, warn = log::w, stopAutomation = ::stopRecurringAutomation,
+        cancelPeriodicWork = { com.noahwallet.services.background.PeriodicWork.cancel(androidx.work.WorkManager.getInstance(context)) },
     )
 
     private val startup = Mutex()
@@ -158,16 +159,25 @@ class AppServices private constructor(private val context: Context) {
     fun isOnboarded(): Boolean = WalletDataLocation(context.filesDir, variant).databaseExists && SettingsStorage(context)
         .persistedState<PersistedWalletState>(PersistedWalletState.key)?.isInitialized != false
 
+    internal suspend fun backgroundWalletEligible(): Boolean = withContext(Dispatchers.IO) {
+        try { requireBackgroundWallet(); true }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { false }
+    }
+
+    private suspend fun requireBackgroundWallet() {
+        settings.requireHealthy()
+        val location = WalletDataLocation(context.filesDir, variant)
+        check(com.noahwallet.services.background.BackgroundWalletAdmission.allowed(
+            LaunchState.current(context, variant), settings.persistedState(PersistedWalletState.key), isOnboarded(),
+            location.restorePending, location.deletionMarker.exists(), recurringAutomationStorageFailed,
+        )) { "Wallet is not eligible for background work" }
+    }
+
     class WalletSuspended : Exception("Wallet suspended")
     class RestoreNotSettled : Exception("Interrupted restore not settled yet")
 
-    /**
-     * Opens the wallet if needed (RN `loadWalletIfNeeded`): never while the user suspended it, and
-     * only after an interrupted restore is settled, so headless launches (FCM, WorkManager) recover
-     * it too instead of failing until the app is opened. Recovery runs even without a journal (it
-     * removes plaintext a restore left before writing one) and even while suspended (no opening).
-     * Committed deletion waits for foreground recovery so a headless open never deletes a seed.
-     */
+    /** Headless opens only read seeds; pending restore/deletion always waits for foreground recovery. */
     private val walletOpener = StoredWalletOpener(seed, { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) }) { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) }
 
     suspend fun ensureWalletOpen(walletMutationHeld: Boolean = false) = openWallet(walletMutationHeld, foreground = false)
@@ -177,10 +187,7 @@ class AppServices private constructor(private val context: Context) {
     private suspend fun openWallet(walletMutationHeld: Boolean, foreground: Boolean): Unit = withContext(Dispatchers.IO) {
         if (!walletMutationHeld) { lifecycle.withWalletMutation { openWallet(walletMutationHeld = true, foreground) }; return@withContext }
         settings.validateStores()
-        if (!foreground) walletOpener.requireHeadlessAdmission()
-        val location = WalletDataLocation(context.filesDir, variant)
-        if (!foreground && (location.restorePending || location.deletionMarker.exists())) throw RestoreNotSettled()
-        if (!foreground && LaunchState.current(context, variant) != LaunchState.existingWallet) throw RestoreNotSettled()
+        if (!foreground) requireBackgroundWallet()
         if (foreground && recoverRestore(walletMutationHeld) == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
         if (settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
             throw WalletSuspended()
@@ -191,6 +198,9 @@ class AppServices private constructor(private val context: Context) {
 
     fun startServerServices() {
         scope.launch {
+            try { com.noahwallet.services.background.PeriodicWork.reconcile(context, this@AppServices) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { log.w("Periodic wallet work scheduling failed") }
             startup.withLock {
                 if (!session.isOpen || !isOnboarded() || settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) return@withLock
                 try {

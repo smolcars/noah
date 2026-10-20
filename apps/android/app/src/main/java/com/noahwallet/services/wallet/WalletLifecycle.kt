@@ -32,6 +32,7 @@ class WalletLifecycle(
     private val drainTimeoutMillis: Long = 30_000,
     private val warn: (String) -> Unit = {},
     private val stopAutomation: () -> Unit = {},
+    private val cancelPeriodicWork: () -> Unit = {},
 ) {
     companion object { const val automationStopKey = "native-recurring-automation-stop-generation" }
     class WaitingForSecureStorage : Exception("Waiting for secure storage. Unlock your device and try again.")
@@ -151,6 +152,7 @@ class WalletLifecycle(
                     location.writeDeletionIdentity(seed, syncIdentityDirectory)
                     syncFiles()
                 }
+                cancelPeriodicWork()
                 try { deregister() } catch (_: Exception) { warn("Deregistration failed while deleting wallet") }
                 if (location.directory.exists()) {
                     // Also finishes an older app's committed marker over abandoned staging.
