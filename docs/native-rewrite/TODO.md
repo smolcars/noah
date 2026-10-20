@@ -250,6 +250,16 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 - [x] M5 round-2 verification: 526 Android JVM tests (36 suites, no failures/skips), regtest APK and instrumentation compilation; four API 28 device privacy/deletion-grant cases; full iOS NoahTests 293 total / 281 passed / 12 opt-in skipped / 0 failed (66 suites), both full suites run once; disposable devices mapped/shut down/deleted — `apps/android/SettingsTests/README.md`
 
+- [x] M5 round-3 deletion identity — iOS: one shared gate for Settings deletion, creation, restore and UI/headless recovery; marker rechecked after ownership, mismatched markers discarded without touching the current wallet; deterministic committed-delete → queued creation/recovery regression
+
+- [x] M5 round-3 deletion identity — both platforms: durable random local instance IDs, atomic rename before recursive removal, matching-marker recovery across partial removal; legacy one-byte markers only auto-finish without a live datadir, with typed explicit deletion available for incomplete wallets
+
+- [x] M5 round-3 bounded deletion drain — both platforms: cancel in-flight backup uploads, at most 30 s waiting for backup/export settlement before commit, actionable retry error with database/seed intact; iOS upload total resource timeout 60 s, matching Android
+
+- [x] M5 round-3 export durability — Android: checked History/Settings export removal followed by directory fsync before deletion commit; sync-failure/retry tests preserve database/seed/preferences. iOS retained shares already use the checked, synced scratch sweep; CSV remains in memory
+
+- [x] M5 round-3 verification: 532 Android JVM tests (36 suites, zero failures/errors/skips), regtest APK and instrumentation Kotlin compilation; iOS NoahTests 321 total / 308 passed / 13 opt-in skipped / 0 failed (73 suites). Each full suite ran once; own simulator verified, shut down and deleted — `apps/android/SettingsTests/README.md`
+
 ## M6 — Onchain & exits
 - [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt with txid-only read refresh/relaunch reconciliation for missing fees (prepared boarding awaits FFI 18, same priority as 14)
 - [x] VTXOsScreen + VTXODetailScreen + delegated refresh review dialog — iOS

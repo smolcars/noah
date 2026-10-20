@@ -183,3 +183,84 @@ then only `NoahSettingsR2dd034` was deleted. The iOS UUID/name was checked with
 No protected devices or Docker were touched. Physical biometric hardware and
 API 24–27/29 handoff behavior were not re-tested; the requested API 28 regression
 and existing PIN/Home/onboarding cases passed.
+
+
+## Round-3 deletion review follow-up (2026-10-19)
+
+Disposable iOS 27.0 simulator `Noah Deletion R3 Sol 7c062`
+(`79139208-60C2-48E0-B902-5CE79AF313FD`), isolated DerivedData
+`/tmp/noah-deletion-r3-7c062-ios`. Signing was enabled for Keychain tests.
+No Android emulator, protected simulator, physical device or Docker service was used.
+
+- iOS Settings deletion, interrupted-deletion recovery, wallet creation and restore
+  share one mutation gate. Recovery reads the marker inside that gate and returns
+  if Settings already removed it. A deterministic test pauses Settings at its
+  committed marker, queues the real WalletCreator before push recovery, then
+  verifies the replacement database and Keychain seed survive both queued and
+  late recovery. The test also checks recovery has not entered background
+  settlement while Settings still owns the gate.
+- Both platforms write a random local instance ID into the wallet directory and
+  its durable deletion marker. Recovery discards mismatched/invalid markers with
+  a fixed, secret-free log message and leaves the current wallet untouched.
+  One-byte legacy markers only auto-finish when no live datadir exists; a populated
+  or partly removed legacy wallet requires a fresh explicit confirmation. The
+  incomplete-wallet screens provide typed deletion, so this conservative handling
+  cannot strand a seed behind a broken database.
+- The live datadir is atomically renamed to `.noah-data-<variant>-deleting-data`
+  and its parent synced before recursive removal. Relaunch fixtures cover the
+  committed marker, rename, partial recursive removal (including the instance ID),
+  files removed, seed removed and preferences removed. This keeps a partial
+  cleanup from looking like a different wallet. All wallet and scratch files are
+  removed and synced before seed deletion; creation/restore refuse a pending
+  deletion marker.
+- Deletion cancels the coordinator's in-flight backup pass, including its network
+  upload, and allows at most 30 s for backup/export settlement before committing.
+  A non-cooperative pass remains owned by its coordinator. Timeout fails with
+  “Noah is still finishing a backup. Try again in a moment.” Database, seed, token
+  and preferences remain intact; the original suspension state and export gate
+  are restored for retry. Tests cover cancellation, an uncooperative iOS pass,
+  export timeout/retry and Android background-settlement timeout. iOS uploads use
+  a 60 s resource timeout as well as the 60 s inactivity timeout, matching
+  Android's total call timeout.
+- History and Settings exports on Android sync their own directories after
+  checked unlink/revocation. Injected sync failures for each directory stop before
+  the marker and keep the database/seed/preferences; retry syncs even an already
+  empty directory. iOS retained encrypted/log shares already run through the
+  checked scratch sweep, which syncs the scratch directory and its parent;
+  History CSV has no retained app-owned file.
+
+Full-suite commands (each full suite run once after targeted checks):
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
+nix develop --command sh -c 'cd apps/ios && /opt/homebrew/bin/xcodegen generate && xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest -destination "platform=iOS Simulator,id=79139208-60C2-48E0-B902-5CE79AF313FD" -derivedDataPath /tmp/noah-deletion-r3-7c062-ios -resultBundlePath /tmp/noah-deletion-r3-7c062-full.xcresult -jobs 2 ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -parallel-testing-enabled NO test'
+```
+
+Final results: **532 Android JVM tests**, 36 suites, **0 failures / 0 errors /
+0 skips**; regtest APK assembly and instrumentation Kotlin compilation passed.
+Full iOS `NoahTests`: **321 tests**, 73 suites, **308 passed / 13 opt-in skipped /
+0 failed** (top-level xcresult summary; expanded parameterized runs: 353 passed,
+13 skipped). Each full suite ran once. Targeted checks passed: 53 iOS tests in
+five lifecycle/creator/restorer/scratch/coordinator suites, followed by the final
+12 lifecycle tests after strengthening the creation seam; 29 Android tests across
+lifecycle/coordinator/share suites, followed by the final 15 lifecycle tests.
+Logs: `/tmp/noah-r3-android-full.log`, `/tmp/noah-r3-ios-full.log`; iOS result bundle:
+`/tmp/noah-deletion-r3-7c062-full.xcresult`.
+
+After testing, the simulator UUID and exact name were checked, it was shut down
+through the Device panel, its `Shutdown` state was verified with `simctl`, and
+only that UUID was deleted. No Android device was started or changed.
+
+The initial iOS targeted build exposed a missing `try`; a subsequent targeted run
+exposed a reservation test that expected an immediate error from a second restore
+now queued by the shared gate. That run was stopped, and the test now uses a
+separate injected gate to verify the underlying session reservation still rejects
+competing mutations. A new incomplete-wallet retry fixture also required relaxing
+its database-present assertion to directory-present. Corrected targeted checks
+passed before the full runs. No full suite was rerun during iteration.
+
+No funded-wallet acceptance or Android instrumentation was rerun for this round;
+the requested instrumentation sources were compiled. The new incomplete-wallet
+confirmation UI was compiled, with its deletion/retry behavior covered through
+lifecycle tests, but not manually driven. Protected devices and infrastructure
+were untouched.
