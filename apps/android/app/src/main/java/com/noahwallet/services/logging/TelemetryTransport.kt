@@ -10,7 +10,6 @@ import io.sentry.SentryOptions
 import io.sentry.Session
 import io.sentry.transport.ITransport
 import java.io.StringReader
-import java.util.UUID
 import kotlinx.serialization.json.*
 
 /** Also gates cached envelopes and legacy user feedback, which bypass beforeSend. */
@@ -23,10 +22,12 @@ internal class TelemetryTransport(private val delegate: ITransport, private val 
 
     companion object {
         private val serializer = JsonSerializer(SentryOptions.empty())
+        private val sessionID = Regex("(?:[0-9a-fA-F]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})")
 
         internal fun filter(envelope: SentryEnvelope, mappingUuid: String? = null, mappingRelease: String? = null): SentryEnvelope? = try {
             val items = envelope.items.mapNotNull { item ->
-                when (item.header.type) {
+                // A corrupt cached item must not discard a crash in the same envelope.
+                try { when (item.header.type) {
                     SentryItemType.Event -> item.getEvent(serializer)?.let { AppTelemetry.scrub(it, mappingUuid, mappingRelease) }?.let {
                         SentryEnvelopeItem.fromEvent(serializer, it)
                     }
@@ -34,7 +35,7 @@ internal class TelemetryTransport(private val delegate: ITransport, private val 
                     // Includes attachments, all feedback APIs, transactions/spans, profiles,
                     // replays, logs, metrics, check-ins, client reports and future item types.
                     else -> null
-                }
+                } } catch (_: Throwable) { null }
             }
             if (items.isEmpty()) null else {
                 val header = SentryEnvelopeHeader(envelope.header.eventId,
@@ -46,8 +47,8 @@ internal class TelemetryTransport(private val delegate: ITransport, private val 
         private fun session(item: SentryEnvelopeItem): SentryEnvelopeItem? {
             val original = Json.parseToJsonElement(item.data.toString(Charsets.UTF_8)).jsonObject
             // Release Health needs random session/install IDs, never an app-set user identity.
-            for (key in listOf("sid", "did")) original[key]?.jsonPrimitive?.content?.let {
-                if (UUID.fromString(it).toString() != it) return null
+            for (key in listOf("sid", "did")) original[key]?.let {
+                if (it !is JsonPrimitive || !it.isString || !sessionID.matches(it.content)) return null
             }
             val attrs = original["attrs"]?.jsonObject ?: return null
             val clean = buildJsonObject {
