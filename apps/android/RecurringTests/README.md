@@ -3,6 +3,84 @@
 Initial implementation base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
 Kotlin / Compose, API 24 minimum, bark-bolt-ffi **0.4.0**.
 
+## Exact numeric ranges and lifecycle admission (2026-10-20)
+
+Base: `feat/native-rewrite` at `aea99fe4`, bark-bolt-ffi **0.5.0**.
+
+Every numeric policy field is checked against its original JSON integer token
+before typed decoding. Android uses `BigInteger`; iOS parses the raw field slices
+with exact `Int64` conversion, including run-array objects. Neither floating-point
+rounding nor kotlinx `longOrNull` overflow can turn an unapproved token into an
+executable value. Unsupported display amounts also use exact conversion.
+
+Amounts (including history) must be positive RN safe integers, at most
+`9_007_199_254_740_991`; the existing native 21-million-BTC approval cap still
+stops representable larger policies with its specific message. All nine timestamp
+fields use the established native/RN date bound, ±`8_639_999_999_999_999` whole
+milliseconds. Counts/indices must be nonnegative and fit Android's signed 32-bit
+fields; the existing top-level occurrence-index cap remains. `maxOccurrences`
+is positive signed 64-bit: RN requires an integer here, not a safe integer, so the
+existing wide-count fixtures remain supported. Intervals retain RN's 365-day or
+12-week/month bounds. Quoted, fractional, exponent-form and out-of-range tokens
+remain unsupported; native-supported RN values serialize as integer literals.
+
+`apps/fixtures/recurring-rn-numeric-ranges.json` adds **92 shared cases** across all
+18 numeric fields: signed overflow, domain limits, fractions that floating-point
+conversion rounds to integers, both reported overflowing amounts, and an
+executable integer control. Both required-field harnesses consume the same rows
+and classifications, asserting no unsupported submission or consumption, refused
+edit/resume, cancellation, and byte-exact preservation through unrelated writes,
+display-copy writes and reopen. RN recurring schedules still **never import**.
+
+Admission, binding resolution, authority access and wallet open now run together
+under the existing lifecycle/mutation gate. The live binding is revalidated before
+authority and after open, and retained for subsequent execution checks. Protected
+bound reads also take the gate. Android storage operations use that same gate,
+and live `ensureWalletOpen(walletMutationHeld = true)` avoids reentering it.
+iOS uses `WalletMutationGate.shared`. The lifecycle → restore recovery → session
+reservation order is retained; no new recovery path or reentrant acquisition is
+introduced. Executor/runtime public entry-point signatures are unchanged.
+
+Missing or replaced wallets exit quietly, including skipping the final reload
+that could touch replacement authority. Genuine authority/storage failures on an
+existing wallet still fail closed with the existing failure latches. Stop epochs,
+final synchronous Send guards, ambiguous-outcome locks, idempotent settlement,
+pause/cancel/edit/suspend/delete and explicit reapproval remain in force.
+
+`RecurringAdmissionRaceTest(s)` adapts the supplied review deletion probe and adds
+replacement at the same path plus a trigger queued behind the lifecycle gate.
+The old trigger submits nothing, writes no new authority and leaves a replacement
+wallet's authority healthy. Android's JVM probe injects the existing durable test
+writer so its final assertion does not call unavailable Android OS fsync stubs.
+The corrected original deletion probe failed before the executor fix on both
+platforms. Review sources: `/private/tmp/noah-r4-review-7b6c-RecurringReviewProbeTest.kt`
+and `/private/tmp/noah-r4-review-7b6c-RecurringReviewProbeTests.swift`.
+
+Android numeric baseline with the final permanent fixture: **150 cases / 49
+failures / 101 passes**; the corrected deletion probe separately failed **1/1**.
+The broad recurring/headless check passed **1,665 tests / 32 suites**, followed by
+passing checks for the added replacement case and exact display conversion.
+
+The required final command ran **once after the last Android code/test change**:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**3,151 tests / 111 suites / zero failures, errors or skips**, plus successful
+regtest APK assembly, in **4m 4s**. No active owned Android build/test process
+remains; shared idle daemons were not stopped.
+
+Commits: `f595c03b` (numeric ranges, fixture and compatibility expectations),
+`2ec94eee` (lifecycle admission and regressions). All Gradle invocations used Nix,
+`--max-workers=2` and `NIX_CONFIG='eval-cache = false'`. Logs and baseline/final
+XML are retained under `/private/tmp/noah-r5-android-*`.
+
+No funded payment, real power cut/process-kill boundary, physical push delivery
+or live UI acceptance was attempted. No server/client source, Docker service,
+shared simulator, emulator or physical device was changed. Platform builds/tests
+and deterministic money-path/lifecycle regressions are the verification evidence.
+
 ## Live admission and numeric token review fixes (2026-10-20)
 
 Base: `feat/native-rewrite` at `10c0b996`, bark-bolt-ffi **0.5.0**.

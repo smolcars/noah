@@ -3,6 +3,95 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Exact numeric ranges and lifecycle admission (2026-10-20)
+
+Base: `feat/native-rewrite` at `aea99fe4`, bark-bolt-ffi **0.5.0**.
+
+Every numeric policy field is checked against its original JSON integer token
+before typed decoding. Android uses `BigInteger`; iOS parses the raw field slices
+with exact `Int64` conversion, including run-array objects. Neither floating-point
+rounding nor kotlinx `longOrNull` overflow can turn an unapproved token into an
+executable value. Unsupported display amounts also use exact conversion.
+
+Amounts (including history) must be positive RN safe integers, at most
+`9_007_199_254_740_991`; the existing native 21-million-BTC approval cap still
+stops representable larger policies with its specific message. All nine timestamp
+fields use the established native/RN date bound, ±`8_639_999_999_999_999` whole
+milliseconds. Counts/indices must be nonnegative and fit Android's signed 32-bit
+fields; the existing top-level occurrence-index cap remains. `maxOccurrences`
+is positive signed 64-bit: RN requires an integer here, not a safe integer, so the
+existing wide-count fixtures remain supported. Intervals retain RN's 365-day or
+12-week/month bounds. Quoted, fractional, exponent-form and out-of-range tokens
+remain unsupported; native-supported RN values serialize as integer literals.
+
+`apps/fixtures/recurring-rn-numeric-ranges.json` adds **92 shared cases** across all
+18 numeric fields: signed overflow, domain limits, fractions that floating-point
+conversion rounds to integers, both reported overflowing amounts, and an
+executable integer control. Both required-field harnesses consume the same rows
+and classifications, asserting no unsupported submission or consumption, refused
+edit/resume, cancellation, and byte-exact preservation through unrelated writes,
+display-copy writes and reopen. RN recurring schedules still **never import**.
+
+Admission, binding resolution, authority access and wallet open now run together
+under the existing lifecycle/mutation gate. The live binding is revalidated before
+authority and after open, and retained for subsequent execution checks. Protected
+bound reads also take the gate. Android storage operations use that same gate,
+and live `ensureWalletOpen(walletMutationHeld = true)` avoids reentering it.
+iOS uses `WalletMutationGate.shared`. The lifecycle → restore recovery → session
+reservation order is retained; no new recovery path or reentrant acquisition is
+introduced. Executor/runtime public entry-point signatures are unchanged.
+
+Missing or replaced wallets exit quietly, including skipping the final reload
+that could touch replacement authority. Genuine authority/storage failures on an
+existing wallet still fail closed with the existing failure latches. Stop epochs,
+final synchronous Send guards, ambiguous-outcome locks, idempotent settlement,
+pause/cancel/edit/suspend/delete and explicit reapproval remain in force.
+
+`RecurringAdmissionRaceTest(s)` adapts the supplied review deletion probe and adds
+replacement at the same path plus a trigger queued behind the lifecycle gate.
+The old trigger submits nothing, writes no new authority and leaves a replacement
+wallet's authority healthy. Android's JVM probe injects the existing durable test
+writer so its final assertion does not call unavailable Android OS fsync stubs.
+The corrected original deletion probe failed before the executor fix on both
+platforms. Review sources: `/private/tmp/noah-r4-review-7b6c-RecurringReviewProbeTest.kt`
+and `/private/tmp/noah-r4-review-7b6c-RecurringReviewProbeTests.swift`.
+
+iOS numeric baseline with the final permanent fixture: **150 expanded cases /
+58 failures / 92 passes**; both reported overflowing amounts already failed typed
+decoding. Other fields and rounded fractions needed the new exact checks. The
+original deletion probe separately failed **1/1**. Final focused numeric,
+executor, authority, timestamp, store and race verification passed **59 definitions /
+258 expanded cases / 6 suites**, zero failures or skips. The older parity/range
+suites then passed **12 definitions / 2 suites**, including wide occurrence limits,
+unsafe amounts and byte-preserved fractional rows; their display assertions now
+expect unsupported placeholders rather than typed invalid timestamp values.
+
+Full **NoahTests ran once after the last code/test change**, with no exclusions:
+**679 definitions / 138 suites: 657 passed, 22 opt-in skipped, zero failed**;
+**1,107 expanded passes / 22 skipped**, **164.240 seconds** of test execution.
+Android's required JVM/APK command also passed; see its notes.
+
+Commits: `508683bc` (exact numeric ranges and parity expectations), `e32fcde6`
+(lifecycle admission and regressions). All Xcode runs used Nix, `xcodegen generate`,
+normal code signing, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, disabled
+parallel testing/diagnostic collection and owned DerivedData under `/private/tmp`.
+One initial attempt stopped before building because `xcodegen` was not on Nix's
+PATH; subsequent runs used the installed `/opt/homebrew/bin/xcodegen`.
+
+Owned iPhone 17 / iOS 27.0 simulator **Noah Recurring R5 Sol f061**,
+UDID **5F9FCEE7-4F11-4008-A49D-AA678D24A9FF**, was opened in the Device panel.
+After verification its exact identity, runtime and **Shutdown** state were checked
+before deletion, and absence was confirmed afterward. Removed owned
+`/private/tmp/noah-r5-f061-dd` and all **eight** result bundles after exporting
+summary/test-tree JSON. Cleanup receipt: `/private/tmp/noah-r5-f061-cleanup.json`.
+Logs, exported results and counts remain under `/private/tmp/noah-r5-*`.
+No active owned build/test process remains; shared processes were left alone.
+
+No funded payment, real power cut/process-kill boundary, physical push delivery
+or live UI acceptance was attempted. No server/client source, Docker service,
+shared simulator, emulator or physical device was changed. Platform builds/tests
+and deterministic money-path/lifecycle regressions are the verification evidence.
+
 ## Live admission and numeric token review fixes (2026-10-20)
 
 Base: `feat/native-rewrite` at `10c0b996`, bark-bolt-ffi **0.5.0**.
