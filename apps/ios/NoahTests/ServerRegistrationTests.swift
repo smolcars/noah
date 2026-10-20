@@ -7,6 +7,60 @@ import OpenAPIRuntime
 
 @MainActor
 struct ServerRegistrationTests {
+    actor ResetTransport: ClientTransport {
+        var paths: [String] = []
+        let failMailbox: Bool
+        init(failMailbox: Bool) { self.failMailbox = failMailbox }
+        func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+            paths.append(request.path ?? "")
+            if operationID == Operations.CheckAppVersion.id {
+                return (.init(status: .ok), HTTPBody(#"{"update_required":false,"minimum_required_version":"0.0.1"}"#))
+            }
+            if operationID == Operations.Register.id {
+                return (.init(status: .ok), HTTPBody(#"{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK","user_status":"active"}"#))
+            }
+            if failMailbox { throw URLError(.notConnectedToInternet) }
+            return (.init(status: .ok), HTTPBody(#"{"success":true}"#))
+        }
+    }
+
+    @Test(arguments: ["load", "push", "mailbox", "disabled", "success"])
+    func resetRegistrationPropagatesServiceFailuresAndCommitsLast(stop: String) async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "reset-registration-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let settings = try SettingsStorage(rootPath: root.path)
+        _ = try settings.updateServerState { $0.isRegisteredWithServer = true; $0.isMailboxAuthorizationEnabled = stop != "disabled" }
+        let transport = ResetTransport(failMailbox: stop == "mailbox")
+        let service = ServerRegistration(variant: .regtest, settings: settings,
+            client: Client(serverURL: URL(string: "http://localhost")!, transport: transport),
+            registrationAddress: { "ark-test" }, mailboxAuthorization: { .init(encoded: "encoded", expiry: $0, mailboxId: "mailbox") })
+        var steps: [String] = []
+        do {
+            try await service.reRegister(loadWallet: {
+                #expect(service.state.isRegisteredWithServer == false)
+                steps.append("load")
+                if stop == "load" { throw URLError(.notConnectedToInternet) }
+            }, registerPush: {
+                #expect(service.state.isRegisteredWithServer == false)
+                steps.append("push")
+                if stop == "push" { try PushRegistration.Outcome.permissionDenied.requireCompleted() }
+            })
+            #expect(stop == "success")
+        } catch { #expect(stop != "success") }
+        #expect(steps == (stop == "load" ? ["load"] : ["load", "push"]))
+        #expect(service.state.isRegisteredWithServer == (stop == "success"))
+        #expect(service.state.isBackupEnabled == (stop == "success"))
+        #expect((service.state.mailboxAuthorizationExpiry != nil) == (stop == "success"))
+        let paths = await transport.paths
+        #expect(paths.contains("/v0/mailbox/authorize") == (stop == "success" || stop == "mailbox"))
+    }
+
+    @Test func explicitPushRegistrationOnlySkipsUnsupportedDevices() throws {
+        try PushRegistration.Outcome.registered(expoToken: "test").requireCompleted()
+        try PushRegistration.Outcome.deviceNotSupported.requireCompleted()
+        #expect(throws: IdentityValidationError.self) { try PushRegistration.Outcome.permissionDenied.requireCompleted() }
+    }
+
     @Test func registrationReconcilesIdentityAndPreservesPreferences() throws {
         SettingsStorage.bootstrap()
         let root = FileManager.default.temporaryDirectory.appending(path: "registration-\(UUID())")

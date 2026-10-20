@@ -361,10 +361,14 @@ final class AppModel {
 
     /// RN `resetAndReRegisterWithServer`.
     func reRegisterWithServer() async throws {
-        try server.resetRegistration()
-        try await server.ensureRegistered()
+        guard !isWalletSuspended else { throw BackupCoordinator.NotReady() }
+        try await server.reRegister(loadWallet: {
+            try await AppServices.shared.openWalletInForeground(mnemonic: AppServices.shared.readMnemonic())
+        }, registerPush: {
+            try await PushRegistration.shared.register().requireCompleted()
+        })
+        await pushPermission.refresh()
         await reconcileBackupTriggers()
-        await registerPush()
     }
 
     // MARK: Backups (RN `useBackupCoordinator`)

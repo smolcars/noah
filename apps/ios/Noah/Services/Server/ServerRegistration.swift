@@ -11,21 +11,26 @@ final class ServerRegistration {
     private let client: Client
     private let settings: SettingsStorage
     private let session: WalletSession
+    private let registrationAddress: (() async throws -> String)?
+    private let mailboxAuthorization: ((Int64) async throws -> Components.Schemas.AuthorizeMailboxPayload)?
     private let log = AppLog("serverRegistration")
     @ObservationIgnored private var registration: Task<Void, Error>?
     private var checkedVersion = false
     private var updatingMailbox = false
 
     init(variant: AppVariant, settings: SettingsStorage = .shared, session: WalletSession = .shared,
-         client: Client? = nil) {
+         client: Client? = nil, registrationAddress: (() async throws -> String)? = nil,
+         mailboxAuthorization: ((Int64) async throws -> Components.Schemas.AuthorizeMailboxPayload)? = nil) {
         self.settings = settings
         self.session = session
+        self.registrationAddress = registrationAddress
+        self.mailboxAuthorization = mailboxAuthorization
         self.client = client ?? ServerClient.make(variant: variant,
             tokens: AuthTokenProvider(dependencies: .live(variant: variant)))
         state = settings.persistedState(PersistedServerState.self, key: PersistedServerState.key) ?? .init()
     }
 
-    func ensureRegistered() async throws {
+    func ensureRegistered(completeServices: (@MainActor () async throws -> Void)? = nil) async throws {
         if let registration { return try await registration.value }
         let attempt = Task {
             if !checkedVersion {
@@ -38,10 +43,13 @@ final class ServerRegistration {
                 checkedVersion = true
             }
             guard state.isRegisteredWithServer != true else { return }
-            let address = try await session.peekAddress(index: 0)
+            let address: String
+            if let registrationAddress { address = try await registrationAddress() }
+            else { address = try await session.peekAddress(index: 0) }
             let device = DeviceInfo.current()
             let result = try await client.register(body: .json(.init(
                 arkAddress: address, deviceInfo: device.registrationPayload, lnAddress: nil))).ok.body.json
+            try await completeServices?()
             try apply(result, device: device)
             log.d("Successfully registered with server")
         }
@@ -124,6 +132,24 @@ final class ServerRegistration {
         }
     }
 
+    /// Publish success only after the explicit reset flow has registered every service.
+    func reRegister(loadWallet: @escaping @MainActor () async throws -> Void,
+                    registerPush: @escaping @MainActor () async throws -> Void) async throws {
+        guard registration == nil else { throw IdentityValidationError("Registration is in progress.") }
+        try resetRegistration()
+        try await ensureRegistered {
+            try await loadWallet()
+            try await registerPush()
+            guard self.state.isMailboxAuthorizationEnabled != false else {
+                throw IdentityValidationError("Mailbox authorization is disabled")
+            }
+            guard !self.updatingMailbox else { throw IdentityValidationError("Mailbox update is in progress.") }
+            self.updatingMailbox = true
+            defer { self.updatingMailbox = false }
+            try await self.authorizeMailbox()
+        }
+    }
+
     /// Re-reads `server-storage` (after the wallet was deleted).
     func reload() {
         state = settings.persistedState(PersistedServerState.self, key: PersistedServerState.key) ?? .init()
@@ -158,10 +184,14 @@ final class ServerRegistration {
 
     private func authorizeMailbox() async throws {
         let expiry = Int64(Date().timeIntervalSince1970) + 89 * 86400
-        let authorization = try await session.withOpenWallet { try $0.wallet.mailboxAuthorization(authorizationExpiry: expiry) }
-        _ = try await client.authorizeMailbox(body: .json(.init(
-            encoded: authorization.encoded, expiry: authorization.expiry, mailboxId: authorization.mailboxId))).ok
-        try update { $0.mailboxAuthorizationExpiry = Double(authorization.expiry) }
+        let payload: Components.Schemas.AuthorizeMailboxPayload
+        if let mailboxAuthorization { payload = try await mailboxAuthorization(expiry) }
+        else {
+            let authorization = try await session.withOpenWallet { try $0.wallet.mailboxAuthorization(authorizationExpiry: expiry) }
+            payload = .init(encoded: authorization.encoded, expiry: authorization.expiry, mailboxId: authorization.mailboxId)
+        }
+        _ = try await client.authorizeMailbox(body: .json(payload)).ok
+        try update { $0.mailboxAuthorizationExpiry = Double(payload.expiry) }
     }
 
     func setBackupEnabled(_ enabled: Bool) async throws {

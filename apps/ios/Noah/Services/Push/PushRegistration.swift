@@ -14,6 +14,10 @@ final class PushRegistration {
         case permissionDenied
         /// Simulator: no real APNs token, like the RN app's `device_not_supported`.
         case deviceNotSupported
+
+        func requireCompleted() throws {
+            if case .permissionDenied = self { throw IdentityValidationError("Push notification registration did not complete.") }
+        }
     }
 
     private var tokenWaiters: [CheckedContinuation<Data, Error>] = []
