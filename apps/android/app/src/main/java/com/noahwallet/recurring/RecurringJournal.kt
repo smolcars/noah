@@ -8,7 +8,8 @@ import java.util.UUID
 
 /** Independent of MMKV: consumed indices and timestamps survive revisions, zones and policy rollback. */
 class RecurringJournal(val file: File, private val read: () -> String? = { if (file.exists()) file.readText() else null },
-    private val write: (String) -> Unit = { durableRecurringWrite(file, it.toByteArray(), ::syncDirectory) }) {
+    private val write: (String) -> Unit = { durableRecurringWrite(file, it.toByteArray(), ::syncDirectory) },
+    private val quarantine: (ByteArray) -> Unit = { durableRecurringWrite(File("${file.path}.quarantine"), it) }) {
     @Serializable data class Entry(val binding: RecurringStore.Binding, val scheduleID: String, val plan: RecurringPayment.Plan,
         val markedAt: Long, val policyRevision: String? = null, val resolved: Boolean = false, val consumed: Boolean = false) {
         val key get() = "$scheduleID:${plan.occurrenceIndex}"
@@ -35,13 +36,25 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
         }
     }
     private val json = RecurringStore.json
+    val quarantineFile get() = File("${file.path}.quarantine")
     private var blocked = false
     private fun persist(state: State) { try { write(json.encodeToString(state)) } catch (failure: Exception) { blocked = true; throw failure } }
     private fun state(): State {
-        check(!blocked) { "Recurring journal write failed. Sending remains stopped." }
+        check(!blocked && !quarantineFile.exists()) { invalidMessage }
         val raw = read() ?: return State()
+        val bytes = if (file.exists()) file.readBytes() else raw.toByteArray()
+        return try { decode(bytes.decodeToString(throwOnInvalidSequence = true)) } catch (_: Exception) {
+            blocked = true
+            // Keep the original journal and the first durable copy, including across relaunch.
+            if (!quarantineFile.exists()) quarantine(bytes)
+            error(invalidMessage)
+        }
+    }
+    private fun decode(raw: String): State {
         val root = json.parseToJsonElement(raw).jsonObject
-        var migrated = when (root["version"]?.jsonPrimitive?.int) {
+        val version = root["version"]?.jsonPrimitive
+        require(version == null || !version.isString && version.intOrNull != null)
+        var migrated = when (version?.int) {
             2 -> {
                 require(root.keys.containsAll(listOf("attempts", "consumed", "consumedIndices", "legacyUncertainty")))
                 return json.decodeFromJsonElement<State>(root).also(::validate)
@@ -61,23 +74,30 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
             }
             else -> error("Unsupported recurring journal version. Sending remains stopped.")
         }
-        validate(migrated)
+        validate(migrated, complete = false)
         migrated = migrated.attempts.values.fold(migrated) { saved, entry -> saved.remember(entry) }
         validate(migrated); persist(migrated)
         return migrated
     }
-    private fun validate(state: State) {
+    private fun validate(state: State, complete: Boolean = true) {
+        fun uuid(value: String) { require(UUID.fromString(value).toString().equals(value, ignoreCase = true)) }
         fun scope(binding: RecurringStore.Binding, id: String) {
             require(id.isNotBlank() && binding.wallet.fingerprint.isNotBlank() && binding.wallet.network.isNotBlank())
-            UUID.fromString(binding.instance)
+            uuid(binding.instance)
         }
         state.attempts.forEach { (id, e) ->
             scope(e.binding, id)
+            e.policyRevision?.let(::uuid)
             require(id == e.scheduleID && e.plan.kind == "pay" && e.plan.occurrenceIndex != null && e.plan.occurrenceIndex >= 0 && e.plan.scheduledFor != null && (!e.consumed || e.resolved))
+            if (complete && e.consumed) {
+                require(state.consumed.any { sameScope(it.binding, it.scheduleID, e.binding, id) && it.through >= e.plan.scheduledFor } &&
+                    state.consumedIndices.any { sameScope(it.binding, it.scheduleID, e.binding, id) && sameRevision(it.policyRevision, e.policyRevision) && e.plan.occurrenceIndex in it.indices })
+            }
         }
         state.consumed.forEach { scope(it.binding, it.scheduleID) }
         state.consumedIndices.forEach {
             scope(it.binding, it.scheduleID)
+            it.policyRevision?.let(::uuid)
             require(it.indices.isNotEmpty() && it.indices.all { index -> index >= 0 } && it.indices == it.indices.distinct().sorted())
         }
         state.legacyUncertainty.forEach { scope(it.binding, it.scheduleID) }
@@ -92,11 +112,12 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
     }
     @Synchronized fun save(entry: Entry) {
         val previous = state()
-        validate(previous.copy(attempts = previous.attempts + (entry.scheduleID to entry)))
+        validate(previous.copy(attempts = previous.attempts + (entry.scheduleID to entry)), complete = false)
         val state = previous.remember(entry).let { it.copy(attempts = it.attempts + (entry.scheduleID to entry)) }
         validate(state); persist(state)
     }
     companion object {
+        const val invalidMessage = "Recurring payment history needs attention. Its saved evidence has been preserved; sending remains stopped."
         private fun sameScope(a: RecurringStore.Binding, aID: String, b: RecurringStore.Binding, bID: String) =
             aID == bID && a.wallet == b.wallet && UUID.fromString(a.instance) == UUID.fromString(b.instance)
         private fun sameRevision(a: String?, b: String?) = a.equals(b, ignoreCase = true)

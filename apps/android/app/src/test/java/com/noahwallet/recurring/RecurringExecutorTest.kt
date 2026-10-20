@@ -2,7 +2,7 @@ package com.noahwallet.recurring
 
 import com.noahwallet.send.*
 import kotlinx.coroutines.*
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
@@ -15,7 +15,9 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
     val store = RecurringStore({ raw }, { if (mmkvFails) error("MMKV"); raw = it })
     var journalRaw: String? = null
     var journalFails = false; var mmkvFails = false; var auditFails = false
-    val journal = RecurringJournal(File("unused"), { journalRaw }, { if (journalFails) error("journal"); journalRaw = it })
+    var quarantineRaw: ByteArray? = null
+    val journal = RecurringJournal(File("unused"), { journalRaw }, { if (journalFails) error("journal"); journalRaw = it },
+        quarantine = { if (quarantineRaw == null) quarantineRaw = it })
     init { wallet.owner = SendIdentity("wallet-a", "regtest"); wallet.snapshot = SendSnapshot(walletIdentity = wallet.owner) }
     val sendJournal = TestJournal()
     val controller = if (reservation == null) controller(wallet, sendJournal, scope) else SendController(SendController.Dependencies(
@@ -113,7 +115,7 @@ class RecurringExecutorTest {
     @Test fun consumedWatermarkBlocksMMKVRollbackAcrossRevisions() = runBlocking {
         val w = RecurringWorld(this); val a = w.add(); val rollback = w.raw
         w.executor.execute(); assertEquals(1, w.wallet.calls)
-        w.store.upsert(a.copy(nativeRevision = "revision-b", startAt = 2000, nextRunAt = 2000)); w.now = 2000
+        w.store.upsert(a.copy(nativeRevision = UUID.randomUUID().toString(), startAt = 2000, nextRunAt = 2000)); w.now = 2000
         w.executor.execute(); assertEquals(2, w.wallet.calls)
         w.raw = rollback; w.executor.execute(); assertEquals(2, w.wallet.calls); assertEquals("needs_attention", w.schedule!!.status)
     }
@@ -152,6 +154,45 @@ class RecurringExecutorTest {
         w.executor.save(fresh, editing = false); w.now += 1000
         w.executor.execute(); assertEquals(2, w.wallet.calls)
     }
+    @Test fun malformedIndexAfterRollbackAndZoneChangeCannotPayTwiceOrOverwriteEvidence() = runBlocking {
+        for (indices in listOf(listOf(-1), listOf(2))) {
+            val w = RecurringWorld(this)
+            w.zone = TimeZone.getTimeZone("America/New_York"); w.now = 1774753200000
+            val original = w.add(1772337600000).copy(interval = RecurringInterval("month", 1), nextOccurrenceIndex = 1, nextRunAt = w.now)
+            w.store.upsert(original); val rollback = w.raw
+            w.executor.execute(); assertEquals(1, w.wallet.calls)
+            val root = RecurringStore.json.parseToJsonElement(w.journalRaw!!).jsonObject
+            val scope = root.getValue("consumedIndices").jsonArray.single().jsonObject
+            val malformed = JsonObject(root + ("consumedIndices" to JsonArray(listOf(JsonObject(scope +
+                ("indices" to JsonArray(indices.map(::JsonPrimitive)))))))).toString()
+            w.journalRaw = malformed; w.raw = rollback
+            w.zone = TimeZone.getTimeZone("UTC"); w.now = 1775016000000
+            assertEquals(w.now, original.plan(w.now, w.zone).scheduledFor)
+            w.executor.execute(); w.executor.execute()
+            assertEquals(1, w.wallet.calls)
+            assertEquals(malformed, w.journalRaw)
+            assertArrayEquals(malformed.toByteArray(), w.quarantineRaw)
+            assertEquals("needs_attention", w.schedule!!.status)
+            assertEquals(RecurringJournal.invalidMessage, w.schedule!!.lastError)
+            assertEquals("needs_attention", w.executor.schedules.single().status)
+            assertTrue(runCatching { w.executor.overrideAndResume(original.id, true) }.isFailure)
+            assertEquals(0, w.audits)
+            assertEquals(malformed, w.journalRaw)
+        }
+    }
+    @Test fun invalidSharedJournalStopsEveryVisiblePolicy() = runBlocking {
+        val w = RecurringWorld(this); val original = w.add()
+        for (status in listOf("active", "paused", "completed", "needs_approval")) {
+            w.store.upsert(original.copy(id = status, status = status, startAt = w.now + 86_400_000))
+        }
+        w.journalRaw = "{broken"
+        w.executor.execute()
+        assertEquals(5, w.executor.schedules.size)
+        assertTrue(w.executor.schedules.all { it.status == "needs_attention" })
+        assertEquals(0, w.wallet.calls); assertEquals(0, w.quotes)
+        assertEquals("{broken", w.journalRaw)
+        assertArrayEquals("{broken".toByteArray(), w.quarantineRaw)
+    }
     @Test fun consumedDailyIndexSurvivesSpringAndFallDSTZoneRollback() = runBlocking {
         for (fall in listOf(false, true)) {
             val w = RecurringWorld(this)
@@ -173,7 +214,7 @@ class RecurringExecutorTest {
         val a = RecurringJournal.Entry(binding, "rent", RecurringPayment.Plan("pay", 0, 1000, emptyList()), 1000, resolved = true, consumed = true)
         raw = RecurringStore.json.encodeToString(mapOf("rent" to a))
         val j = RecurringJournal(File("unused"), { raw }, { raw = it })
-        j.save(a.copy(plan = a.plan.copy(scheduledFor = 2000), consumed = false, resolved = false, policyRevision = "b"))
+        j.save(a.copy(plan = a.plan.copy(scheduledFor = 2000), consumed = false, resolved = false, policyRevision = UUID.randomUUID().toString()))
         assertTrue(raw!!.contains("\"version\":2")); assertTrue(j.consumed(binding, "rent", 1000)); assertTrue(j.consumed(binding, "rent", 2000))
     }
     @Test fun failedLegacyMigrationCannotOverwriteConsumption() {
@@ -255,7 +296,7 @@ class RecurringExecutorTest {
     @Test fun manualReviewCannotApproveAnEditedOrResumedPolicy() = runBlocking {
         val w = RecurringWorld(this); val original = w.add(); w.fee = 1; w.executor.execute()
         val review = w.executor.review("rent")
-        w.store.upsert(original.copy(destination = "different-recipient", nativeRevision = "new"))
+        w.store.upsert(original.copy(destination = "different-recipient", nativeRevision = UUID.randomUUID().toString()))
         w.executor.execute(true, review); assertEquals(0, w.wallet.calls)
     }
     @Test fun pauseOrCancelDuringSubmittedPaymentWinsOverSettlement() = runBlocking {

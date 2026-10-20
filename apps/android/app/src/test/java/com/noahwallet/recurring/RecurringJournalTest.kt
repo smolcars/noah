@@ -59,10 +59,45 @@ class RecurringJournalTest {
             """{"version":1,"attempts":{},"consumed":[{"binding":${RecurringStore.json.encodeToString(binding)},"scheduleID":"rent"}]}"""
         )) {
             var writes = 0
-            val journal = RecurringJournal(File("unused"), { raw }, { writes++ })
+            val journal = RecurringJournal(File("unused"), { raw }, { writes++ }, quarantine = {})
             assertTrue(runCatching { journal.load() }.isFailure)
             assertEquals(0, writes)
         }
+    }
+    @Test fun invalidUtf8BytesAndTheFirstQuarantineCopySurviveRelaunch() {
+        val directory = Files.createTempDirectory("recurring-bytes").toFile()
+        try {
+            val file = File(directory, "journal.json")
+            val bytes = """{"version":2,"attempts":{},"consumed":[],"consumedIndices":[],"legacyUncertainty":[],"unknown":"""".toByteArray() +
+                byteArrayOf(0xff.toByte()) + "\"}".toByteArray()
+            file.writeBytes(bytes)
+            val journal = RecurringJournal(file, quarantine = { durableRecurringWrite(File("${file.path}.quarantine"), it) {} })
+            assertTrue(runCatching { journal.load() }.isFailure)
+            assertArrayEquals(bytes, file.readBytes()); assertArrayEquals(bytes, journal.quarantineFile.readBytes())
+            file.writeText("{}")
+            assertTrue(runCatching { RecurringJournal(file).load() }.isFailure)
+            assertArrayEquals(bytes, journal.quarantineFile.readBytes())
+        } finally { directory.deleteRecursively() }
+    }
+    @Test fun failedQuarantineWritePreservesOriginalAndLatchesReadsAndSavesOff() {
+        var raw: String? = "{broken"; var writes = 0; var quarantines = 0
+        val journal = RecurringJournal(File("unused"), { raw }, { writes++ }, quarantine = { quarantines++; error("disk") })
+        assertTrue(runCatching { journal.load() }.isFailure)
+        assertEquals("{broken", raw)
+        raw = null
+        val entry = RecurringJournal.Entry(binding, "rent", RecurringPayment.Plan("pay", 1, 1000), 1000)
+        assertTrue(runCatching { journal.load() }.isFailure)
+        assertTrue(runCatching { journal.save(entry) }.isFailure)
+        assertEquals(0, writes); assertEquals(1, quarantines)
+    }
+    @Test fun invalidNewEntryCannotMutateOrQuarantineValidJournal() {
+        var raw: String? = null; var quarantines = 0
+        val journal = RecurringJournal(File("unused"), { raw }, { raw = it }, quarantine = { quarantines++ })
+        val entry = RecurringJournal.Entry(binding, "rent", RecurringPayment.Plan("pay", 1, 1000), 1000)
+        journal.save(entry); val saved = raw
+        assertTrue(runCatching { journal.save(entry.copy(plan = entry.plan.copy(occurrenceIndex = -1), consumed = true, resolved = true)) }.isFailure)
+        assertEquals(saved, raw); assertEquals(0, quarantines)
+        assertEquals(entry, journal.load().getValue("rent"))
     }
     @Test fun fsyncedJournalReopensWithoutLosingCrossRevisionWatermark() {
         val directory = Files.createTempDirectory("recurring-journal").toFile()
@@ -72,7 +107,7 @@ class RecurringJournalTest {
             val entry = RecurringJournal.Entry(binding, "rent", RecurringPayment.Plan("pay", 0, 1000), 1000, resolved = true, consumed = true)
             val journal = RecurringJournal(file, write = { durableRecurringWrite(file, it.toByteArray()) {} })
             journal.save(entry)
-            journal.save(entry.copy(plan = entry.plan.copy(scheduledFor = 2000), consumed = false, resolved = false, policyRevision = "new"))
+            journal.save(entry.copy(plan = entry.plan.copy(scheduledFor = 2000), consumed = false, resolved = false, policyRevision = UUID.randomUUID().toString()))
             val reopened = RecurringJournal(file)
             assertTrue(reopened.consumed(binding, "rent", 1000)); assertFalse(reopened.consumed(binding.copy(instance = UUID.randomUUID().toString()), "rent", 1000))
             assertFalse(reopened.load().getValue("rent").resolved)

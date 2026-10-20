@@ -18,11 +18,55 @@ Base: `feat/native-rewrite` local HEAD `51c24bc0` (iOS round 3).
   unrelated policies continue to execute. New/edited approvals retain the
   **2,100,000,000,000,000-sat** cap; resume/override reject oversized policies before
   auditing or clearing locks, and the final submission guard checks the cap.
+- Journal validation now requires each consumed attempt to have a covering
+  wallet/schedule timestamp watermark and its exact wallet/schedule/revision/index
+  record. Binding/revision UUIDs, attempt identity/pay plan, resolved/consumed state,
+  nonnegative sorted unique indices and required timestamps are validated before
+  reads or writes. Legacy inputs validate before migration; new consumed entries
+  gain complete evidence before validation/persistence.
+- Invalid evidence retains the original bytes and a file/directory-fsynced first
+  `.quarantine` copy. That file blocks reads and writes across relaunch, including
+  if the journal is later replaced or removed. A quarantine-write failure latches
+  that journal off. The shared journal stops this wallet's policies, all visible
+  as **Needs attention**; malformed bytes are never automatically repaired.
+- Journal regressions include **37 malformed-evidence cases**, invalid UTF-8,
+  failed quarantine writes and valid-evidence preservation. The reviewer's monthly
+  index-1 case pays once in New York at `1774753200000`, restores the original
+  MMKV policy, records an invalid `-1` (also tested with a wrong nonnegative index),
+  then switches to UTC at `1775016000000`. It remains at **one submission**, keeps
+  both original/quarantine bytes and shows **Needs attention**; override cannot
+  clear it. Persisted v1/dictionary inputs are still migrated conservatively.
+- Both journal targeted runs passed **1,432 tests / 11 suites**, zero
+  failures/errors/skips. The second also pins strict UTF-8 rejection and isolates
+  invalid v1 revision evidence from invalid attempt indices.
 - Amount targeted run: **1,390 tests / 10 suites**, zero failures/errors/skips.
   Store and executor regressions cover the maximum, maximum + 1, Long.MAX_VALUE,
   unknown fields, cancellation and an unaffected healthy payment.
 - End-date targeted run: **1,387 tests / 10 suites**, zero failures/errors/skips,
   using Nix and `--max-workers=2 :app:testRegtestDebugUnitTest --tests "*Recurring*"`.
+
+### Parity final verification and limits
+
+The required full command ran **once**, without exclusions, after the final code
+change: **2,817 tests / 72 suites / zero failures, errors or skips**. The recurring
+package contributes **1,430 cases**; the targeted pattern additionally selects
+**two** session/teardown regressions. APK assembly passed in the same **57-second**
+invocation. Existing native-library stripping warnings were non-fatal.
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+All Gradle invocations used Nix and `--max-workers=2`; targeted iterations selected
+`--tests "*Recurring*"`. Logs and the JSON count summary remain under
+`/tmp/noah-android-recurring-parity-*`. All targeted runs passed; no pre-fix
+Android duplicate-payment claim is made (negative indices already stopped sends;
+this round additionally preserves quarantine and visible attention status).
+Only Android recurring code/tests, this README and the Android M7 TODO line
+changed. Shared fixtures needed no edits. iOS, RN, Send, Onchain, fee policy and
+server were untouched. No emulator, physical Pixel 6, simulator or Docker was
+accessed. No device/UI, funded/live, physical-push or real-power-loss verification
+was run; these changes are covered by deterministic JVM tests and APK assembly.
 
 ## Round-1 fixes (2026-10-20)
 

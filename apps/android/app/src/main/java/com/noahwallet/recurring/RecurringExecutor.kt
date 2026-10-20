@@ -46,7 +46,13 @@ class RecurringExecutor(private val d: Dependencies,
         return state
     }
     private fun recoverMarkers(state: RecurringStore.State) {
-        val entries = d.journal.load()
+        val entries = try { d.journal.load() } catch (failure: Exception) {
+            // Corrupt shared evidence cannot prove any policy in this wallet is safe.
+            for (schedule in state.schedules.values) {
+                d.store.updateIf(schedule, schedule.copy(status = "needs_attention", lastError = RecurringJournal.invalidMessage))
+            }
+            throw failure
+        }
         for (schedule in state.schedules.values) {
             val planning = if (schedule.status == "needs_approval") schedule.copy(status = "active") else schedule
             val plan = planning.plan(d.now(), d.zone(), true)
