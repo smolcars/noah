@@ -13,7 +13,7 @@ Base: `feat/native-rewrite` at `c7b5f3e6`. Verified 2026-10-20 on the dedicated 
 ## Deliberate native differences
 
 - Seed recovery and secure-storage states are retained, including the safe stored-seed-without-database flow. RN's stale-Keychain deletion is not ported. Native session identity verification still occurs before the notification UI decision, and shared wallet/daemon lifetime remains under the existing session owner; this change does not implement RN WalletLoader's best-effort unmount close. Foreground UI/services are gated without changing the launch/session internals under separate review.
-- Backup/boarding presentation reads the existing stores/journal once per second. Successful automatic boarding receipts provide the banner event without editing the boarding service; old receipts do not replay. The existing native boarding review/receipt messages remain.
+- Backup presentation consumes saved status snapshots from the existing coordinator; automatic boarding presentation rereads receipts after successful journal-write events. Neither path polls persisted presentation state. One-shot timers expire success banners after five seconds; historical receipts do not replay. The additive hooks enqueue updates without calling UI observers, adding persistence work, or changing producer decisions. The existing native boarding review/receipt messages remain.
 - The existing native scanner recognizes QR only; RN additionally recognizes EAN-13. Scanner paste uses iOS PasteButton consent, and the reused native scanner retains its Cancel/navigation wording. An in-progress native payment is never replaced by a scan.
 - Existing native styles are used throughout. This is a behaviour pass, with no design system work.
 
@@ -62,3 +62,5 @@ The simulator's exact name/UDID and Shutdown state were checked before deletion.
 ## M1 review fixes — round 1
 
 Background completion is observable through a buffered running/revision snapshot; overlapping jobs still use the existing counter. Home also observes committed wallet changes and retains a refresh requested during an in-flight query. The short-job regression starts and finishes a job before consuming another event and discovers a new pending round with no timer tick.
+
+Idle Home has no presentation timer. The round deadline exists only while rounds are active; wallet events discover rounds from idle and otherwise retain the 30-second deadline (the SDK round query itself writes pending state). Observation and deadlines stop outside the active scene or while the wallet is suspended. Backup and boarding successes share a one-shot earliest-expiry deadline; cancellation leaves current state intact. Hook tests verify uploaded/deduplicated backup snapshots and durable journal receipts/repeat protection.

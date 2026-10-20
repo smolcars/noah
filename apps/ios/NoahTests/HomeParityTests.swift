@@ -72,31 +72,28 @@ struct HomeParityTests {
     @Test func pollsActiveRoundsEveryThirtySecondsAndStopsWhenFinal() async {
         var now = Date(timeIntervalSince1970: 10_000)
         var calls = 0
+        var sleeps: [Duration] = []
         var rounds = [HomeRound(roundID: 1, status: "pending", isFinal: false, isSuccess: false)]
-        var background = false
         var deps = dependencies()
         deps.rounds = { calls += 1; return rounds }
         deps.now = { now }
-        deps.backgroundSnapshot = { .init(isRunning: background, completionRevision: background ? 0 : 1) }
+        deps.sleep = { duration in sleeps.append(duration); now += 30 }
         let model = HomeModel(dependencies: deps)
         await model.refreshRounds(force: true)
-        await model.tick()
+        await model.refreshRounds()
         #expect(calls == 1)
-        now += 30
-        background = true
-        await model.tick()
+        await model.backgroundChanged(.init(isRunning: true, completionRevision: 0))
+        await model.waitForRoundCheck()
         #expect(calls == 1)
-        background = false
-        await model.tick()
+        await model.backgroundChanged(.init(isRunning: false, completionRevision: 1))
         #expect(calls == 2)
         rounds = [HomeRound(roundID: 1, status: "confirmed", isFinal: true, isSuccess: true)]
-        now += 30
-        await model.tick()
+        await model.waitForRoundCheck()
         #expect(calls == 3)
-        #expect(model.activeRounds.isEmpty)
+        #expect(model.activeRounds.isEmpty && model.nextRoundCheck == nil)
         now += 300
-        await model.tick()
-        #expect(calls == 3)
+        await model.waitForRoundCheck()
+        #expect(calls == 3 && sleeps == [.seconds(30), .seconds(30)])
         await model.refreshRounds(force: true)
         #expect(calls == 4)
     }
@@ -111,7 +108,7 @@ struct HomeParityTests {
         await model.refresh(currency: "USD")
         #expect(calls == 0)
         background = false
-        await model.tick()
+        await model.backgroundChanged(await deps.backgroundSnapshot())
         #expect(calls == 1)
     }
 
@@ -171,6 +168,24 @@ struct HomeParityTests {
         #expect(calls == 1)
     }
 
+    @Test func walletEventsFromRoundSyncKeepTheThirtySecondCadence() async {
+        let (events, continuation) = AsyncThrowingStream<String, Error>.makeStream()
+        var deps = dependencies()
+        var calls = 0
+        deps.rounds = {
+            calls += 1
+            continuation.yield("databaseChanged")
+            continuation.finish()
+            return [.init(roundID: 1, status: "pending", isFinal: false, isSuccess: false)]
+        }
+        deps.walletChanges = { events }
+        let model = HomeModel(dependencies: deps)
+        continuation.yield("databaseChanged")
+        await model.observeWallet()
+        #expect(calls == 1 && model.activeRounds.count == 1)
+        #expect(model.nextRoundCheck != nil)
+    }
+
     @Test func autoBoardSuccessShowsNewReceiptsForFiveSecondsWithoutReplay() async {
         var now = Date(timeIntervalSince1970: 10_000)
         var completions = [HomeModel.AutoBoardCompletion(id: UUID(), netSats: 20_000)]
@@ -178,18 +193,18 @@ struct HomeParityTests {
         deps.now = { now }
         deps.autoBoards = { completions }
         let model = HomeModel(dependencies: deps)
-        await model.tick()
+        await model.refreshAutoBoards()
         #expect(model.autoBoard == nil, "historical receipts must not replay on launch")
         completions.append(.init(id: UUID(), netSats: 25_000))
-        await model.tick()
+        await model.refreshAutoBoards()
         #expect(model.autoBoard?.netSats == 25_000)
         now += 4.999
-        await model.tick()
+        await model.refreshAutoBoards()
         #expect(model.autoBoard != nil)
         now += 0.001
-        await model.tick()
+        await model.refreshAutoBoards()
         #expect(model.autoBoard == nil)
-        await model.tick()
+        await model.refreshAutoBoards()
         #expect(model.autoBoard == nil)
     }
 
@@ -201,12 +216,81 @@ struct HomeParityTests {
         deps.backup = { state }
         deps.retryBackup = { calls += 1; state.markInProgress(now: 1000) }
         let model = HomeModel(dependencies: deps)
-        await model.tick()
+        await model.observeBackup()
         #expect(model.backup.lastBackupStatus == .failed)
         await model.retryBackup()
         #expect(calls == 1)
         #expect(!model.isRetryingBackup)
         #expect(model.backup.lastBackupStatus == .inProgress)
+    }
+
+    @Test func idleStatusReadsOnlyAtSubscriptionAndJournalEvents() async {
+        let (backupEvents, backupContinuation) = AsyncStream<PersistedBackupState>.makeStream()
+        let (boardEvents, boardContinuation) = AsyncStream<Void>.makeStream()
+        var backupReads = 0
+        var boardReads = 0
+        var sleeps = 0
+        var deps = dependencies()
+        deps.backup = { backupReads += 1; return .init() }
+        deps.autoBoards = { boardReads += 1; return [] }
+        deps.backupChanges = { backupEvents }
+        deps.boardingChanges = { boardEvents }
+        deps.sleep = { _ in sleeps += 1 }
+        var failed = PersistedBackupState()
+        failed.markFailed("Offline")
+        backupContinuation.yield(failed)
+        backupContinuation.finish()
+        boardContinuation.yield(())
+        boardContinuation.finish()
+        let model = HomeModel(dependencies: deps)
+        await model.observeBackup()
+        await model.observeBoarding()
+        #expect(model.backup == failed)
+        #expect(backupReads == 1 && boardReads == 2)
+        await model.waitForRoundCheck()
+        await model.waitForBannerExpiry()
+        #expect(sleeps == 0 && backupReads == 1 && boardReads == 2)
+    }
+
+    @Test func backupAndBoardingExpireWithOneShotTimers() async {
+        var now = Date(timeIntervalSince1970: 10)
+        var sleeps: [Duration] = []
+        var completions: [HomeModel.AutoBoardCompletion] = []
+        var deps = dependencies()
+        deps.now = { now }
+        deps.sleep = { duration in
+            sleeps.append(duration)
+            now += Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
+        }
+        deps.autoBoards = { completions }
+        let model = HomeModel(dependencies: deps)
+        var state = PersistedBackupState()
+        state.markSuccess(snapshotSha256: "sha", backupId: nil, uploaded: true, stillPending: false, now: 10_000)
+        model.updateBackup(state)
+        await model.refreshAutoBoards()
+        now += 2
+        completions.append(.init(id: UUID(), netSats: 25_000))
+        await model.refreshAutoBoards()
+        #expect(model.nextBannerExpiry == Date(timeIntervalSince1970: 15))
+        await model.waitForBannerExpiry()
+        #expect(HomeBanner.backup(model.backup, now: model.bannerNow.timeIntervalSince1970 * 1000, locale: .current) == nil)
+        #expect(model.autoBoard != nil)
+        await model.waitForBannerExpiry()
+        #expect(model.autoBoard == nil && model.nextBannerExpiry == nil)
+        await model.waitForBannerExpiry()
+        #expect(sleeps == [.seconds(3), .seconds(2)])
+    }
+
+    @Test func cancelledExpiryDoesNotClearANewBanner() async {
+        var deps = dependencies()
+        deps.now = { Date(timeIntervalSince1970: 10) }
+        deps.sleep = { _ in throw CancellationError() }
+        let model = HomeModel(dependencies: deps)
+        var state = PersistedBackupState()
+        state.markSuccess(snapshotSha256: "sha", backupId: nil, uploaded: true, stillPending: false, now: 10_000)
+        model.updateBackup(state)
+        await model.waitForBannerExpiry()
+        #expect(model.nextBannerExpiry == Date(timeIntervalSince1970: 15))
     }
 
     private func dependencies() -> HomeModel.Dependencies {

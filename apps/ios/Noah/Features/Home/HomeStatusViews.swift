@@ -6,16 +6,14 @@ struct HomeStatusBanners: View {
     @State private var showRounds = false
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            if let banner = HomeBanner.backup(home.backup, now: context.date.timeIntervalSince1970 * 1000, locale: locale) {
-                NoahCard {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(banner.title).font(NoahFont.headline)
-                        Text(banner.message).font(NoahFont.footnote)
-                        if banner.retry {
-                            Button("Retry") { Task { await home.retryBackup() } }
-                                .disabled(home.isRetryingBackup)
-                        }
+        if let banner = HomeBanner.backup(home.backup, now: home.bannerNow.timeIntervalSince1970 * 1000, locale: locale) {
+            NoahCard {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(banner.title).font(NoahFont.headline)
+                    Text(banner.message).font(NoahFont.footnote)
+                    if banner.retry {
+                        Button("Retry") { Task { await home.retryBackup() } }
+                            .disabled(home.isRetryingBackup)
                     }
                 }
             }

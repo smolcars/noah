@@ -61,6 +61,9 @@ final class HomeModel {
         var backgroundSnapshot: () async -> WalletBackgroundActivity.Snapshot
         var backgroundChanges: () async -> AsyncStream<WalletBackgroundActivity.Snapshot> = { AsyncStream { $0.finish() } }
         var walletChanges: () async throws -> AsyncThrowingStream<String, Error> = { AsyncThrowingStream { $0.finish() } }
+        var backupChanges: () -> AsyncStream<PersistedBackupState> = { AsyncStream { $0.finish() } }
+        var boardingChanges: () -> AsyncStream<Void> = { AsyncStream { $0.finish() } }
+        var sleep: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
         var now: () -> Date = { Date() }
 
         static var live: Self {
@@ -91,7 +94,9 @@ final class HomeModel {
                         }
                         continuation.onTermination = { _ in task.cancel() }
                     }
-                })
+                },
+                backupChanges: { AppServices.shared.backupCoordinator.statusUpdates.stream() },
+                boardingChanges: { OnchainOperationJournal.shared.changes.stream() })
         }
     }
 
@@ -109,7 +114,8 @@ final class HomeModel {
     private var roundsRefreshPending = false
     private var completionRevision: UInt64?
     private var backgroundRevision: UInt64?
-    private var nextRoundCheck: Date?
+    private(set) var nextRoundCheck: Date?
+    private(set) var bannerNow = Date()
     private var seenAutoBoards: Set<UUID>?
 
     init(dependencies: Dependencies = .live) { self.dependencies = dependencies }
@@ -167,17 +173,38 @@ final class HomeModel {
                 resubscribe = false
                 for try await reason in try await dependencies.walletChanges() {
                     guard !Task.isCancelled else { return }
-                    await refreshRounds(force: true)
+                    // Round sync writes its own pending state; those events must retain the 30 s cadence.
+                    await refreshRounds(force: activeRounds.isEmpty)
                     if reason == "resyncRequired" { resubscribe = true; break }
                 }
             }
         } catch { AppLog("home").w("Wallet status observation unavailable") }
     }
 
-    /// Poll only presentation state; round progression stays at RN's 30 s cadence.
-    func tick() async {
-        backup = dependencies.backup()
-        await backgroundChanged(await dependencies.backgroundSnapshot())
+    func observeBackup() async {
+        let updates = dependencies.backupChanges()
+        updateBackup(dependencies.backup())
+        for await state in updates {
+            guard !Task.isCancelled else { return }
+            updateBackup(state)
+        }
+    }
+
+    func observeBoarding() async {
+        let updates = dependencies.boardingChanges()
+        await refreshAutoBoards()
+        for await _ in updates {
+            guard !Task.isCancelled else { return }
+            await refreshAutoBoards()
+        }
+    }
+
+    func updateBackup(_ state: PersistedBackupState) {
+        backup = state
+        expireBanners()
+    }
+
+    func refreshAutoBoards() async {
         if let completed = try? await dependencies.autoBoards() {
             let ids = Set(completed.map(\.id))
             if let seenAutoBoards, let latest = completed.last(where: { !seenAutoBoards.contains($0.id) }) {
@@ -185,13 +212,45 @@ final class HomeModel {
             }
             seenAutoBoards = ids
         }
-        if let autoBoard, dependencies.now().timeIntervalSince(autoBoard.createdAt) >= 5 { self.autoBoard = nil }
+        expireBanners()
+    }
+
+    func expireBanners() {
+        bannerNow = dependencies.now()
+        if let autoBoard, bannerNow.timeIntervalSince(autoBoard.createdAt) >= 5 { self.autoBoard = nil }
+    }
+
+    var nextBannerExpiry: Date? {
+        var dates: [Date] = []
+        if backup.lastBackupStatus == .success, !backup.backupPending, let time = backup.lastBackupAt {
+            let expiry = Date(timeIntervalSince1970: time / 1000 + 5)
+            if expiry > bannerNow { dates.append(expiry) }
+        }
+        if let autoBoard { dates.append(autoBoard.createdAt.addingTimeInterval(5)) }
+        return dates.min()
+    }
+
+    func waitForBannerExpiry() async {
+        guard let expiry = nextBannerExpiry else { return }
+        do { try await dependencies.sleep(.seconds(max(0, expiry.timeIntervalSince(dependencies.now())))) }
+        catch { return }
+        guard !Task.isCancelled else { return }
+        expireBanners()
+    }
+
+    func waitForRoundCheck() async {
+        guard let nextRoundCheck else { return }
+        do { try await dependencies.sleep(.seconds(max(0, nextRoundCheck.timeIntervalSince(dependencies.now())))) }
+        catch { return }
+        guard !Task.isCancelled else { return }
         await refreshRounds()
     }
 
     func refresh(currency: String) async {
         fact = HomeFacts.values.randomElement() ?? ""
-        await tick()
+        updateBackup(dependencies.backup())
+        await backgroundChanged(await dependencies.backgroundSnapshot())
+        await refreshAutoBoards()
         await refreshRounds(force: true)
         await loadPrice(currency: currency)
     }
@@ -199,7 +258,7 @@ final class HomeModel {
     func retryBackup() async {
         guard !isRetryingBackup else { return }
         isRetryingBackup = true
-        defer { isRetryingBackup = false; backup = dependencies.backup() }
+        defer { isRetryingBackup = false; updateBackup(dependencies.backup()) }
         do { try await dependencies.retryBackup() }
         catch { AppLog("home").w("Manual backup failed") }
     }

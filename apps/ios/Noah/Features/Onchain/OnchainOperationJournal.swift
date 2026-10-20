@@ -77,6 +77,7 @@ actor OnchainOperationJournal {
     }
     static let shared = OnchainOperationJournal(
         file: WalletDataLocation(variant: .current).directory.appending(path: "noah-onchain-attempt.json"))
+    nonisolated let changes = HomeStatusUpdates<Void>()
     private let file: URL
     private var running = false
     init(file: URL) { self.file = file }
@@ -101,6 +102,7 @@ actor OnchainOperationJournal {
         var attributes = URLResourceValues()
         attributes.isExcludedFromBackup = true
         try url.setResourceValues(attributes)
+        changes.send(())
     }
     private func update(_ id: UUID, receipt: OnchainReceipt? = nil, txid: String? = nil) throws {
         var attempts = try loadAll()

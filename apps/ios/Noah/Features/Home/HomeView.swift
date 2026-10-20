@@ -14,6 +14,10 @@ struct HomeView: View {
     let onOpenHistory: () -> Void
     let onRepeatPayment: (RepeatPayment) -> Void
 
+    private var observationWalletID: String? {
+        scenePhase == .active && !model.isWalletSuspended ? model.summary?.fingerprint : nil
+    }
+
     var body: some View {
         @Bindable var model = model
         NavigationStack {
@@ -115,32 +119,35 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
             }
             .task { await model.versionCheck.checkOnce() }
-            .task(id: model.summary?.fingerprint) {
-                guard model.summary != nil, !model.isWalletSuspended else { return }
+            .task(id: observationWalletID) {
+                guard observationWalletID != nil else { return }
                 await home.refresh(currency: model.preferredCurrency)
-                while !Task.isCancelled {
-                    do { try await Task.sleep(for: .seconds(1)) } catch { return }
-                    if scenePhase == .active { await home.tick() }
-                }
             }
-            .task(id: model.summary?.fingerprint) {
-                guard model.summary != nil, !model.isWalletSuspended else { return }
+            .task(id: observationWalletID) {
+                guard observationWalletID != nil else { return }
                 await home.observeBackground()
             }
-            .task(id: model.summary?.fingerprint) {
-                guard model.summary != nil, !model.isWalletSuspended else { return }
+            .task(id: observationWalletID) {
+                guard observationWalletID != nil else { return }
                 await home.observeWallet()
             }
-            .task(id: model.preferredCurrency) { await home.loadPrice(currency: model.preferredCurrency) }
-            .onChange(of: scenePhase) { _, phase in
-                if phase == .active && !model.isWalletSuspended {
-                    Task {
-                        await home.tick()
-                        await home.refreshRounds(force: true)
-                        await home.loadPrice(currency: model.preferredCurrency)
-                    }
-                }
+            .task(id: observationWalletID) {
+                guard observationWalletID != nil else { return }
+                await home.observeBackup()
             }
+            .task(id: observationWalletID) {
+                guard observationWalletID != nil else { return }
+                await home.observeBoarding()
+            }
+            .task(id: observationWalletID == nil ? nil : home.nextRoundCheck) {
+                guard observationWalletID != nil else { return }
+                await home.waitForRoundCheck()
+            }
+            .task(id: observationWalletID == nil ? nil : home.nextBannerExpiry) {
+                guard observationWalletID != nil else { return }
+                await home.waitForBannerExpiry()
+            }
+            .task(id: model.preferredCurrency) { await home.loadPrice(currency: model.preferredCurrency) }
             .refreshable {
                 guard !model.isWalletSuspended else { return }
                 await model.sync()

@@ -37,6 +37,7 @@ actor BackupCoordinator {
     static let firstRetry = Duration.seconds(15)
     static let maxRetry = Duration.seconds(15 * 60)
 
+    nonisolated let statusUpdates = HomeStatusUpdates<PersistedBackupState>()
     private let dependencies: Dependencies
     private let log = AppLog("backupCoordinator")
     private var requestedGeneration = 0
@@ -269,6 +270,7 @@ actor BackupCoordinator {
             var state = dependencies.loadState()
             change(&state)
             dependencies.saveState(state)
+            statusUpdates.send(state)
         }
     }
 
