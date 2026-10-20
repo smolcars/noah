@@ -108,7 +108,7 @@ class SettingsStorage(context: Context) {
 
     companion object {
         const val instanceID = "noah-wallet-storage"
-        const val settingsNotice = "Some settings couldn't be carried over from the previous version. Please check Settings, including security, currency and Esplora server."
+        const val settingsNotice = "Some settings couldn't be carried over from the previous version, so they're back to their defaults: biometric lock is off, balances are visible, and currency and display settings are reset. Please review Settings."
         const val recurringNotice = "Recurring payments need to be set up again after this update."
         const val emptyRecurring = """{"state":{"schedules":{},"serverSyncPending":true},"version":0}"""
         private val openLock = Any()
