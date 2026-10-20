@@ -1020,7 +1020,7 @@
     },
     "android": {
       "rnTranslated": 517,
-      "nativeOnlyEnglish": 493,
+      "nativeOnlyEnglish": 494,
       "nativeOnly": [
         "6-digit code",
         "A payment of {nativeValue1} sats for this invoice is already in progress. Do not pay again.",
@@ -1335,6 +1335,7 @@
         "Recover your Ark funds onchain if the Ark server is unavailable. Exits require confirmed onchain funds for broadcast fees and a timelock before claiming.",
         "Recovery phrase found",
         "Recurring background work stopped.",
+        "Recurring evidence storage unavailable",
         "Recurring payment data couldn't be read. Your saved schedules have been preserved. Sending is stopped.",
         "Recurring payment history needs attention. Its saved evidence has been preserved; sending remains stopped.",
         "Recurring payment needs approval",
