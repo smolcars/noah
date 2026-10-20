@@ -1,5 +1,6 @@
 package com.noahwallet.ui
 
+import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.Intent
 import androidx.core.content.FileProvider
@@ -42,9 +43,9 @@ fun TransactionsScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit) 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
             FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Transactions", style = MaterialTheme.typography.headlineLarge)
+                Text(tr("Transactions"), style = MaterialTheme.typography.headlineLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton({ scope.launch { history.refresh(app.preferredCurrency, true) } }, enabled = !history.isRefreshing, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text("Refresh") }
+                    TextButton({ scope.launch { history.refresh(app.preferredCurrency, true) } }, enabled = !history.isRefreshing, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(tr("Refresh")) }
                     TextButton({
                         sharing = true; shareError = null
                         val csv = HistoryCSV.content(filtered, app.preferredCurrency)
@@ -76,15 +77,15 @@ fun TransactionsScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit) 
                                 sharing = false
                             }
                         }
-                    }, enabled = !history.isRefreshing && !sharing, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(if (sharing) "Exporting…" else "Export transactions") }
+                    }, enabled = !history.isRefreshing && !sharing, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(tr(if (sharing) "Exporting…" else "Export transactions")) }
                 }
             }
-            shareError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            shareError?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 HistoryFilter.entries.forEachIndexed { index, option ->
                     SegmentedButton(selected = filter == option, onClick = { filterName = option.name },
                         shape = SegmentedButtonDefaults.itemShape(index, HistoryFilter.entries.size), icon = {}) {
-                        Text(option.name, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                        Text(tr(option.name), style = MaterialTheme.typography.labelMedium, maxLines = 1)
                     }
                 }
             }
@@ -96,15 +97,15 @@ fun TransactionsScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit) 
                         history.isLoading -> item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.semantics { contentDescription = "Loading transactions" }) } }
                         history.error != null -> item {
                             Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("Couldn't load transactions", style = MaterialTheme.typography.titleLarge)
-                                Text(history.error!!)
-                                TextButton({ scope.launch { history.refresh(app.preferredCurrency) } }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text("Retry") }
+                                Text(tr("Couldn't load transactions"), style = MaterialTheme.typography.titleLarge)
+                                Text(tr(history.error!!))
+                                TextButton({ scope.launch { history.refresh(app.preferredCurrency) } }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(tr("Retry")) }
                             }
                         }
                         filtered.isEmpty() -> item {
                             Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("No transactions yet", style = MaterialTheme.typography.titleLarge)
-                                Text("Your payments will appear here.")
+                                Text(tr("No transactions yet"), style = MaterialTheme.typography.titleLarge)
+                                Text(tr("Your payments will appear here."))
                             }
                         }
                         else -> items(filtered, key = { it.id }) { row ->
@@ -126,13 +127,13 @@ fun TransactionRow(row: HistoryTransaction, unit: BitcoinAmountUnit, recent: Boo
             .padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(painterResource(transactionIcon(row)), null, Modifier.size(28.dp), tint = color)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(row.displayLabel, style = MaterialTheme.typography.titleLarge)
-                Text(row.formattedDate(recent), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr(row.displayLabel), style = MaterialTheme.typography.titleLarge)
+                Text(tr(row.formattedDate(recent)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 val prefix = if (row.isCanceled || row.isInternalTransfer) "" else if (row.direction == "outgoing") "−" else "+"
-                Text(prefix + BitcoinAmount.format(row.amount, unit), style = MaterialTheme.typography.titleLarge, color = color)
-                if (!recent) row.statusLabel?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                Text(tr(prefix + BitcoinAmount.format(row.amount, unit)), style = MaterialTheme.typography.titleLarge, color = color)
+                if (!recent) row.statusLabel?.let { Text(tr(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
     }

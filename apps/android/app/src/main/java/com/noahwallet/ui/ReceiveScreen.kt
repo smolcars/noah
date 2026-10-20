@@ -1,5 +1,6 @@
 package com.noahwallet.ui
 
+import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -111,16 +112,16 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
         NoahForm("Funds received") {
             Image(painterResource(R.drawable.ic_received), null,
                 Modifier.size(100.dp).graphicsLayer { scaleX = scale; scaleY = scale })
-            Text(BitcoinAmount.format(received!!, app.amountUnit, locale), style = MaterialTheme.typography.displaySmall)
-            price?.let { Text("≈ " + FiatCurrency.display(received!!, it, currency, locale)) }
+            Text(tr(BitcoinAmount.format(received!!, app.amountUnit, locale)), style = MaterialTheme.typography.displaySmall)
+            price?.let { Text(tr("≈ " + FiatCurrency.display(received!!, it, currency, locale))) }
             HorizontalDivider()
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Status"); Text("Settled", color = MaterialTheme.colorScheme.primary)
+                Text(tr("Status")); Text(tr("Settled"), color = MaterialTheme.colorScheme.primary)
             }
             HorizontalDivider()
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Wallet balance")
-                Text(app.summary?.let { BitcoinAmount.format(it.balance.totalSats.toLong(), app.amountUnit, locale) } ?: "…")
+                Text(tr("Wallet balance"))
+                Text(tr(app.summary?.let { BitcoinAmount.format(it.balance.totalSats.toLong(), app.amountUnit, locale) } ?: "…"))
             }
             NoahButton("Done", onClick = onDone)
         }
@@ -128,18 +129,18 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Receive", style = MaterialTheme.typography.headlineLarge)
+        Text(tr("Receive"), style = MaterialTheme.typography.headlineLarge)
         val current = request
         if (current != null) {
             val uri = current.uri()
             ReceiveQR(uri) { sheet = "copy" }
             current.amountSat?.let {
-                Text(BitcoinAmount.format(it, app.amountUnit, locale), style = MaterialTheme.typography.headlineLarge)
-                price?.let { rate -> Text(FiatCurrency.display(it, rate, currency, locale)) }
+                Text(tr(BitcoinAmount.format(it, app.amountUnit, locale)), style = MaterialTheme.typography.headlineLarge)
+                price?.let { rate -> Text(tr(FiatCurrency.display(it, rate, currency, locale))) }
             }
-            Text("Scan to receive bitcoin with Noah")
-            if (current.amountSat == null) Text("Add an amount to receive over Lightning", style = MaterialTheme.typography.bodySmall)
-            if (current.description.isNotEmpty()) Text(current.description)
+            Text(tr("Scan to receive bitcoin with Noah"))
+            if (current.amountSat == null) Text(tr("Add an amount to receive over Lightning"), style = MaterialTheme.typography.bodySmall)
+            if (current.description.isNotEmpty()) Text(tr(current.description))
             NoahButton(if (current.amountSat == null) "Add amount" else "Edit amount", !saving) { sheet = "amount" }
             NoahButton("Payment details", secondary = true) { sheet = "copy" }
             NoahButton("Share", secondary = true) {
@@ -148,7 +149,7 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
                 }, "Share payment request"))
             }
         } else if (error != null) {
-            Text(error!!, color = MaterialTheme.colorScheme.error)
+            Text(tr(error!!), color = MaterialTheme.colorScheme.error)
             NoahButton("Retry") { retry++ }
         } else CircularProgressIndicator()
     }
@@ -199,7 +200,7 @@ internal fun ReceiveQR(uri: String, actionLabel: String = "Show payment details"
         if (bitmap != null) {
             Image(bitmap, null, Modifier.fillMaxSize())
             Image(painterResource(R.drawable.receive_logo), null, Modifier.size(44.dp).background(Color.White).padding(4.dp))
-        } else Text("QR unavailable. Tap to copy payment details.", color = Color.Black)
+        } else Text(tr("QR unavailable. Tap to copy payment details."), color = Color.Black)
     }
 }
 
@@ -210,10 +211,10 @@ private fun ReceiveCopySheet(request: ReceiveRequest) {
     val items = listOf("Unified request" to request.uri(), "Ark address" to request.arkAddress,
         "Onchain address" to request.onchainAddress) + listOfNotNull(request.lightningInvoice?.let { "Lightning invoice" to it })
     Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Payment details", style = MaterialTheme.typography.headlineMedium)
+        Text(tr("Payment details"), style = MaterialTheme.typography.headlineMedium)
         items.forEach { (label, value) ->
-            Text(label, style = MaterialTheme.typography.titleLarge)
-            Text(value, style = MaterialTheme.typography.bodySmall)
+            Text(tr(label), style = MaterialTheme.typography.titleLarge)
+            Text(tr(value), style = MaterialTheme.typography.bodySmall)
             NoahButton(if (copied == label) "Copied $label" else "Copy $label", secondary = true) {
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label, value))
                 copied = label
@@ -234,20 +235,20 @@ private fun ReceiveAmountSheet(request: ReceiveRequest, unit: BitcoinAmountUnit,
         else normalized.toLongOrNull() ?: 0
     val valid = runCatching { ReceiveRequest.validate(sats, note) }.isSuccess
     Column(Modifier.imePadding().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Text(if (request.amountSat == null) "Add amount" else "Edit amount", style = MaterialTheme.typography.headlineMedium)
-        OutlinedTextField(amount, { amount = it }, label = { Text(if (fiat) "Amount ($currency)" else "Amount (sats)") },
+        Text(tr(if (request.amountSat == null) "Add amount" else "Edit amount"), style = MaterialTheme.typography.headlineMedium)
+        OutlinedTextField(amount, { amount = it }, label = { Text(tr(if (fiat) "Amount ($currency)" else "Amount (sats)")) },
             keyboardOptions = KeyboardOptions(keyboardType = if (fiat) KeyboardType.Decimal else KeyboardType.Number),
             singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth())
         TextButton(onClick = {
             amount = if (fiat) sats.toString() else FiatCurrency.satsToFiat(sats, price!!, currency)
             fiat = !fiat
         }, enabled = price != null && !saving) {
-            Text(if (price == null) "$currency rate unavailable" else if (fiat) "Switch to sats · ${BitcoinAmount.format(sats, unit, locale)}"
-                else "Switch to $currency · ${FiatCurrency.display(sats, price, currency, locale)}")
+            Text(tr(if (price == null) tr("{currency} rate unavailable", currency) else if (fiat) "Switch to sats · ${BitcoinAmount.format(sats, unit, locale)}"
+                else "Switch to $currency · ${FiatCurrency.display(sats, price, currency, locale)}"))
         }
-        OutlinedTextField(note, { note = it }, label = { Text("Description") }, minLines = 2,
+        OutlinedTextField(note, { note = it }, label = { Text(tr("Description")) }, minLines = 2,
             enabled = !saving, modifier = Modifier.fillMaxWidth())
-        if (note.trim().length > 639) Text("Note must be 639 characters or fewer.", color = MaterialTheme.colorScheme.error)
+        if (note.trim().length > 639) Text(tr("Note must be 639 characters or fewer."), color = MaterialTheme.colorScheme.error)
         NoahButton(if (saving) "Creating invoice…" else "Save request", valid && !saving) { focus.clearFocus(); onSave(sats, note) }
         if (request.amountSat != null) NoahButton("Remove amount", !saving, secondary = true) { focus.clearFocus(); onRemove() }
     }

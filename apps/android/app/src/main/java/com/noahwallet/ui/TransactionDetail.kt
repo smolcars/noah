@@ -1,5 +1,6 @@
 package com.noahwallet.ui
 
+import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -38,8 +39,8 @@ fun HistoryDetailsHost(app: AppModel, selectedID: String?, onClose: () -> Unit,
                 Box(Modifier.weight(1f).fillMaxHeight()) {
                     if (selected != null) TransactionDetail(app, selected, repeat, onClose)
                     else Column(Modifier.align(Alignment.Center).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Select a transaction", style = MaterialTheme.typography.titleLarge)
-                        Text("Choose a payment to see its details.")
+                        Text(tr("Select a transaction"), style = MaterialTheme.typography.titleLarge)
+                        Text(tr("Choose a payment to see its details."))
                     }
                 }
             }
@@ -59,21 +60,21 @@ private fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: 
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Payment details", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-            TextButton(onClose, Modifier.semantics { contentDescription = "Close payment details" }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text("Close") }
+            Text(tr("Payment details"), Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+            TextButton(onClose, Modifier.semantics { contentDescription = "Close payment details" }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(tr("Close")) }
         }
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(painterResource(transactionIcon(row)), null, Modifier.size(36.dp), tint = transactionColor(row))
-            Text(when (row.accounting.direction) { "Transfer" -> "Transferred"; "None" -> "Canceled"; "Outgoing" -> "Sent"; else -> "Received" })
-            Text(BitcoinAmount.format(row.amount, app.amountUnit), style = MaterialTheme.typography.headlineLarge)
-            Text(row.btcPrice?.let { FiatCurrency.display(row.amount, it, app.preferredCurrency) } ?: "Historical value unavailable",
+            Text(tr(when (row.accounting.direction) { "Transfer" -> "Transferred"; "None" -> "Canceled"; "Outgoing" -> "Sent"; else -> "Received" }))
+            Text(tr(BitcoinAmount.format(row.amount, app.amountUnit)), style = MaterialTheme.typography.headlineLarge)
+            Text(tr(row.btcPrice?.let { FiatCurrency.display(row.amount, it, app.preferredCurrency) } ?: "Historical value unavailable"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(row.receiptStatus)
+            Text(tr(row.receiptStatus))
             row.destination?.takeIf(String::isNotEmpty)?.let { destination ->
-                Text(destination, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(tr(destination), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 CopyButton("destination", destination)
             }
-            if (row.canRepeat) Button({ onRepeat(row.repeatPayment!!) }) { Text("Repeat payment") }
+            if (row.canRepeat) Button({ onRepeat(row.repeatPayment!!) }) { Text(tr("Repeat payment")) }
         }
         DetailValue("Date", row.formattedDate())
         DetailValue("Route", if (row.type == "Lnurl") "Lightning address" else row.displayLabel)
@@ -86,7 +87,7 @@ private fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: 
         AmountDetail("Ark fee", row.offchainFeeSat, app.amountUnit)
         if (row.hasOnchainFee == true) AmountDetail("Onchain fee", row.onchainFeeSat, app.amountUnit)
         TextButton({ technical = !technical }, Modifier.fillMaxWidth().semantics { stateDescription = if (technical) "Expanded" else "Collapsed" }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) {
-            Text(if (technical) "Hide technical details" else "Technical details")
+            Text(tr(if (technical) "Hide technical details" else "Technical details"))
         }
         if (technical) {
             DetailValue("Payment ID", row.id, true)
@@ -95,8 +96,8 @@ private fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: 
                 TextButton({
                     try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
                     catch (_: android.content.ActivityNotFoundException) { explorerError = true }
-                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text("View in block explorer") }
-                if (explorerError) Text("No browser available to open the explorer.")
+                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(tr("View in block explorer")) }
+                if (explorerError) Text(tr("No browser available to open the explorer."))
             }
             row.receivedOn?.singleOrNull()?.destination?.takeIf(String::isNotEmpty)?.let { DetailValue("Invoice", it, true) }
             if (row.source == "onchain-wallet" || row.balanceChangeSat != null) {
@@ -130,16 +131,16 @@ private fun CopyButton(label: String, value: String) {
     TextButton({
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label, value))
         copied = true
-    }, Modifier.semantics { contentDescription = "Copy $label" }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(if (copied) "Copied" else "Copy $label") }
+    }, Modifier.semantics { contentDescription = "Copy $label" }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(tr(if (copied) "Copied" else "Copy $label")) }
 }
 @Composable
 private fun DetailValue(label: String, value: String, copyable: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr(label), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (copyable) CopyButton(label, value)
         }
-        SelectionContainer { Text(value) }
+        SelectionContainer { Text(tr(value)) }
         HorizontalDivider(Modifier.padding(top = 8.dp))
     }
 }

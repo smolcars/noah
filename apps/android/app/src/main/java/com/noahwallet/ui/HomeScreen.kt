@@ -1,5 +1,6 @@
 package com.noahwallet.ui
 
+import com.noahwallet.localization.tr
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.background
@@ -66,72 +67,72 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(28.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Text("Noah", Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
+                    Text(tr("Noah"), Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(settings) { Text("Settings") }
-                    TextButton({ map = true }) { Text("Bitcoin Map") }
-                    if (!model.isWalletSuspended) TextButton(onQR) { Text("QR Code") }
+                    TextButton(settings) { Text(tr("Settings")) }
+                    TextButton({ map = true }) { Text(tr("Bitcoin Map")) }
+                    if (!model.isWalletSuspended) TextButton(onQR) { Text(tr("QR Code")) }
                 }
                 com.noahwallet.ui.home.UpgradeNotices()
                 // Like RN, a suspended wallet shows only the suspended card.
                 if (model.isWalletSuspended) {
                     Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Wallet Suspended", style = MaterialTheme.typography.titleLarge)
-                        Text("All wallet operations are disabled. Resume your wallet in Settings.")
-                        TextButton(settings) { Text("Open Settings") }
+                        Text(tr("Wallet Suspended"), style = MaterialTheme.typography.titleLarge)
+                        Text(tr("All wallet operations are disabled. Resume your wallet in Settings."))
+                        TextButton(settings) { Text(tr("Open Settings")) }
                     } }
                     return@Column
                 }
-                if (BuildConfig.APP_VARIANT != "mainnet") Text(BuildConfig.APP_VARIANT.uppercase(),
+                if (BuildConfig.APP_VARIANT != "mainnet") Text(tr(BuildConfig.APP_VARIANT.uppercase()),
                     Modifier.background(if (BuildConfig.APP_VARIANT == "regtest") Color(0xFFFFCC00) else Color(0xFFFF9500), CircleShape)
                         .padding(horizontal = 10.dp, vertical = 4.dp), color = Color.Black,
                     style = MaterialTheme.typography.labelMedium)
                 com.noahwallet.ui.home.HomeBanners(model, refreshRevision)
                 val locale = java.util.Locale.forLanguageTag(model.localeIdentifier)
                 val fiat = com.noahwallet.ui.home.HomeRules.fiat(model.summary?.balance?.totalSats?.toLong(), price, currency, locale, model.hidden)
-                if (fiat != null) Text(fiat, style = MaterialTheme.typography.headlineMedium)
+                if (fiat != null) Text(tr(fiat), style = MaterialTheme.typography.headlineMedium)
                 else CircularProgressIndicator(Modifier.size(24.dp))
-                Text(if (model.hidden) "••••" else model.summary?.let {
+                Text(tr(if (model.hidden) "••••" else model.summary?.let {
                     BitcoinAmount.format(it.balance.totalSats.toLong(), model.amountUnit, java.util.Locale.forLanguageTag(model.localeIdentifier))
-                } ?: "Loading…", style = MaterialTheme.typography.displaySmall)
-                TextButton({ balanceExpanded = !balanceExpanded }) { Text(if (balanceExpanded) "Hide balance details" else "Show balance details") }
+                } ?: "Loading…"), style = MaterialTheme.typography.displaySmall)
+                TextButton({ balanceExpanded = !balanceExpanded }) { Text(tr(if (balanceExpanded) "Hide balance details" else "Show balance details")) }
                 model.summary?.balance?.let { balance ->
                     fun display(sats: ULong) = com.noahwallet.services.wallet.WalletBalance.display(sats, model.hidden, model.amountUnit, locale)
-                    if (balance.pendingSats > 0uL) Text("Pending balance: ${display(balance.pendingSats)}")
-                    balance.pendingRoundMessage(display(balance.ark.pendingInRound))?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                    if (balance.pendingSats > 0uL) Text(tr("Pending balance: {_gt_value_2}", display(balance.pendingSats)))
+                    balance.pendingRoundMessage(display(balance.ark.pendingInRound))?.let { Text(tr(it), style = MaterialTheme.typography.bodySmall) }
                     if (balanceExpanded) Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Balance Details", style = MaterialTheme.typography.titleMedium)
+                            Text(tr("Balance Details"), style = MaterialTheme.typography.titleMedium)
                             balance.details.forEach { row ->
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text(row.label, Modifier.weight(1f)); Text(display(row.sats))
+                                    Text(tr(row.label), Modifier.weight(1f)); Text(tr(display(row.sats)))
                                 }
                             }
                         }
                     }
                 }
-                TextButton(model::toggleBalance) { Text(if (model.hidden) "Show balance" else "Hide balance") }
+                TextButton(model::toggleBalance) { Text(tr(if (model.hidden) "Show balance" else "Hide balance")) }
                 if (!dismissed && model.server.state.isEmailVerified != true) Card {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Add Emergency Email", style = MaterialTheme.typography.titleLarge)
-                        Text("Optional alerts can help us reach you if your VTXOs need attention before they expire.")
-                        TextButton({ email = true }) { Text("Add email") }
-                        TextButton({ model.server.dismissEmailPrompt(); dismissed = true }) { Text("Dismiss emergency email prompt") }
+                        Text(tr("Add Emergency Email"), style = MaterialTheme.typography.titleLarge)
+                        Text(tr("Optional alerts can help us reach you if your VTXOs need attention before they expire."))
+                        TextButton({ email = true }) { Text(tr("Add email")) }
+                        TextButton({ model.server.dismissEmailPrompt(); dismissed = true }) { Text(tr("Dismiss emergency email prompt")) }
                     }
                 }
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Recent Activity", style = MaterialTheme.typography.titleLarge)
+                        Text(tr("Recent Activity"), style = MaterialTheme.typography.titleLarge)
                         if (model.history.transactions.isEmpty()) {
-                            Text(model.history.error ?: if (model.history.isLoading) "Loading transactions…" else "No activity yet")
+                            Text(tr(model.history.error ?: if (model.history.isLoading) "Loading transactions…" else "No activity yet"))
                         } else model.history.transactions.take(3).forEach { row ->
                             TransactionRow(row, model.amountUnit, recent = true) { selectedID = row.id }
                         }
-                        TextButton(onViewAll, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text("View all") }
+                        TextButton(onViewAll, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(tr("View all")) }
                     }
                 }
-                Text(fact, style = MaterialTheme.typography.bodySmall)
+                Text(tr(fact), style = MaterialTheme.typography.bodySmall)
             }
         }
     }

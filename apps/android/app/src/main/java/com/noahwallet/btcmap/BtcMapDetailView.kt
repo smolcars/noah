@@ -1,5 +1,6 @@
 package com.noahwallet.btcmap
 
+import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -53,50 +54,50 @@ fun BtcMapDetailView(model: BtcMapModel, place: BtcMapPlace, modifier: Modifier 
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(merchant.name, style = MaterialTheme.typography.headlineMedium)
-                Text(merchant.category.label, style = MaterialTheme.typography.bodySmall)
-                merchant.verified_at?.let { Text("Verified ${it.take(10)}", style = MaterialTheme.typography.bodySmall) }
-                if ((merchant.boosted_until ?: "") > btcMapTimestamp(System.currentTimeMillis())) Text("Featured", color = MaterialTheme.colorScheme.primary)
-                model.userLocation?.let { Text(BtcMapDistance.format(BtcMapDistance.kilometers(it, place.center)), style = MaterialTheme.typography.bodySmall) }
+                Text(tr(merchant.category.label), style = MaterialTheme.typography.bodySmall)
+                merchant.verified_at?.let { Text(tr("Verified {date}", it.take(10)), style = MaterialTheme.typography.bodySmall) }
+                if ((merchant.boosted_until ?: "") > btcMapTimestamp(System.currentTimeMillis())) Text(tr("Featured"), color = MaterialTheme.colorScheme.primary)
+                model.userLocation?.let { Text(tr(BtcMapDistance.format(BtcMapDistance.kilometers(it, place.center))), style = MaterialTheme.typography.bodySmall) }
             }
-            TextButton(model::closeDetail) { Text("Close") }
+            TextButton(model::closeDetail) { Text(tr("Close")) }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton({ open(BtcMapLinks.directions(place)) }) { Text("Directions") }
-            fields["website"]?.let { OutlinedButton({ open(BtcMapLinks.web(it)) }) { Text("Website") } }
-            fields["phone"]?.let { OutlinedButton({ open(BtcMapLinks.phone(it)) }) { Text("Call") } }
-            fields["email"]?.let { OutlinedButton({ open(BtcMapLinks.email(it)) }) { Text("Email") } }
+            OutlinedButton({ open(BtcMapLinks.directions(place)) }) { Text(tr("Directions")) }
+            fields["website"]?.let { OutlinedButton({ open(BtcMapLinks.web(it)) }) { Text(tr("Website")) } }
+            fields["phone"]?.let { OutlinedButton({ open(BtcMapLinks.phone(it)) }) { Text(tr("Call")) } }
+            fields["email"]?.let { OutlinedButton({ open(BtcMapLinks.email(it)) }) { Text(tr("Email")) } }
             OutlinedButton({
                 try { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"; putExtra(Intent.EXTRA_TEXT, "${place.name}\nhttps://btcmap.org/merchant/${place.id}")
                 }, "Share place")) }
                 catch (_: android.content.ActivityNotFoundException) { model.alert = "No app is available to share this place." }
-            }) { Text("Share") }
+            }) { Text(tr("Share")) }
         }
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (failed) {
-            Text("Live details are unavailable. The bundled places still work offline.")
-            TextButton({ retry++ }) { Text("Retry details") }
+            Text(tr("Live details are unavailable. The bundled places still work offline."))
+            TextButton({ retry++ }) { Text(tr("Retry details")) }
         }
         fields["address"]?.let { address ->
             TextButton({
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Address", address))
                 copied = true
-            }) { Text(if (copied) "Address copied" else "Copy address: $address") }
+            }) { Text(tr(if (copied) "Address copied" else tr("Copy address: {value1}", address))) }
         }
-        fields["opening_hours"]?.let { Text("Hours: $it") }
-        fields["description"]?.let { SelectionContainer { Text(it) } }
+        fields["opening_hours"]?.let { Text(tr("Hours: $it")) }
+        fields["description"]?.let { SelectionContainer { Text(tr(it)) } }
         val payments = listOf("osm:payment:lightning" to "Lightning", "osm:payment:lightning_contactless" to "Contactless",
             "osm:payment:onchain" to "On-chain").filter { fields[it.first] == "yes" }.map { it.second } + listOfNotNull(fields["payment_provider"])
-        if (payments.isNotEmpty()) { Text("Pay with", style = MaterialTheme.typography.titleLarge); Text(payments.joinToString(" · ")) }
-        fields["required_app_url"]?.let { TextButton({ open(BtcMapLinks.web(it)) }) { Text("This place may require another payment app") } }
+        if (payments.isNotEmpty()) { Text(tr("Pay with"), style = MaterialTheme.typography.titleLarge); Text(tr(payments.joinToString(" · "))) }
+        fields["required_app_url"]?.let { TextButton({ open(BtcMapLinks.web(it)) }) { Text(tr("This place may require another payment app")) } }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("twitter", "facebook", "instagram", "telegram").forEach { key ->
-                fields[key]?.let { TextButton({ open(BtcMapLinks.web(it)) }) { Text(if (key == "twitter") "X" else key.replaceFirstChar(Char::titlecase)) } }
+                fields[key]?.let { TextButton({ open(BtcMapLinks.web(it)) }) { Text(tr(if (key == "twitter") "X" else key.replaceFirstChar(Char::titlecase))) } }
             }
         }
         detail?.comments?.forEach { comment ->
             HorizontalDivider(); SelectionContainer { Text(comment.text) }
-            Text(comment.createdAt.take(10), style = MaterialTheme.typography.bodySmall)
+            Text(tr(comment.createdAt.take(10)), style = MaterialTheme.typography.bodySmall)
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.noahwallet.ui.home
 
+import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -66,15 +67,15 @@ fun HomeBanners(app: AppModel, refresh: Int) {
     val active = rounds.filter { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) }
     if (active.isNotEmpty()) Card(onClick = { showRounds = true }, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
-            Text(if (active.size == 1) "Round in progress" else "Rounds in progress", style = MaterialTheme.typography.titleMedium)
-            Text(if (active.size == 1) "Round #${active[0].roundId} ${active[0].status.name.lowercase().replaceFirstChar(Char::uppercase)}" else "${active.size} rounds pending")
-            TextButton({ showRounds = true }) { Text("View") }
+            Text(tr(if (active.size == 1) "Round in progress" else "Rounds in progress"), style = MaterialTheme.typography.titleMedium)
+            Text(tr(if (active.size == 1) tr("Round #{id} {status}", active[0].roundId, active[0].status.name.lowercase().replaceFirstChar(Char::uppercase)) else tr("{count} rounds pending", active.size)))
+            TextButton({ showRounds = true }) { Text(tr("View")) }
         }
     }
     background.message?.let { message ->
         Card(Modifier.fillMaxWidth()) {
             Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CircularProgressIndicator(Modifier.size(20.dp)); Text(message)
+                CircularProgressIndicator(Modifier.size(20.dp)); Text(tr(message))
             }
         }
     }
@@ -85,9 +86,9 @@ fun HomeBanners(app: AppModel, refresh: Int) {
 internal fun StatusBanner(banner: HomeRules.Banner, retrying: Boolean = false, retry: () -> Unit = {}) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(banner.title, style = MaterialTheme.typography.titleMedium, color = if (banner.failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-            Text(banner.message)
-            if (banner.retry) TextButton(retry, enabled = !retrying) { Text(if (retrying) "Working" else "Retry") }
+            Text(tr(banner.title), style = MaterialTheme.typography.titleMedium, color = if (banner.failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+            Text(tr(banner.message))
+            if (banner.retry) TextButton(retry, enabled = !retrying) { Text(tr(if (retrying) "Working" else "Retry")) }
         }
     }
 }
@@ -97,10 +98,10 @@ internal fun UpdateWarningBanner(info: AppVersionInfo, currentVersion: String, v
     val uri = LocalUriHandler.current
     Card(onClick = { uri.openUri(HomeRules.updateURL(variant)) }, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Update Available", style = MaterialTheme.typography.titleMedium)
-            Text("Please update to the latest version of the app for bug fixes and improvements.")
-            Text("Current Version: $currentVersion")
-            Text("Latest Version: ${info.minimumRequiredVersion}")
+            Text(tr("Update Available"), style = MaterialTheme.typography.titleMedium)
+            Text(tr("Please update to the latest version of the app for bug fixes and improvements."))
+            Text(tr("Current Version: $currentVersion"))
+            Text(tr("Latest Version: ${info.minimumRequiredVersion}"))
         }
     }
 }
@@ -110,16 +111,16 @@ internal fun UpdateWarningBanner(info: AppVersionInfo, currentVersion: String, v
 internal fun PendingRoundsSheet(rounds: List<PendingRoundStatus>, close: () -> Unit) {
     ModalBottomSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         com.noahwallet.ui.settings.SettingsColumn {
-            TextButton(close) { Text("Close") }
-            Text("Pending Rounds", style = MaterialTheme.typography.headlineMedium)
+            TextButton(close) { Text(tr("Close")) }
+            Text(tr("Pending Rounds"), style = MaterialTheme.typography.headlineMedium)
             rounds.forEach { round ->
-                Text("Round #${round.roundId}", style = MaterialTheme.typography.titleLarge)
-                Text("Status: ${round.status.name.lowercase().replaceFirstChar(Char::uppercase)}")
-                Text("Final: ${if (round.isFinal) "Yes" else "No"}")
-                Text("Successful: ${if (round.isSuccess) "Yes" else "No"}")
+                Text(tr("Round #{_gt_value_2}", round.roundId), style = MaterialTheme.typography.titleLarge)
+                Text(tr("Status: ${round.status.name.lowercase().replaceFirstChar(Char::uppercase)}"))
+                Text(tr("Final: ${if (round.isFinal) "Yes" else "No"}"))
+                Text(tr("Successful: ${if (round.isSuccess) "Yes" else "No"}"))
                 round.fundingTxid?.let { RoundTransaction("Funding tx", it, copyable = true) }
                 round.unsignedFundingTxids.forEachIndexed { index, txid -> RoundTransaction("Unsigned tx ${index + 1}", txid) }
-                round.error?.let { Text("Error: $it") }
+                round.error?.let { Text(tr("Error: $it")) }
             }
         }
     }
@@ -129,13 +130,13 @@ internal fun PendingRoundsSheet(rounds: List<PendingRoundStatus>, close: () -> U
 private fun RoundTransaction(label: String, txid: String, copyable: Boolean = false) {
     val context = LocalContext.current
     val uri = LocalUriHandler.current
-    Text("$label: $txid")
+    Text(tr("$label: $txid"))
     if (copyable) TextButton({
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label, txid))
-    }) { Text("Copy $label") }
+    }) { Text(tr("Copy $label")) }
     TextButton({
         uri.openUri("https://mempool.space/${if (BuildConfig.APP_VARIANT == "mainnet") "" else "signet/"}tx/$txid")
-    }) { Text("Open $label in browser") }
+    }) { Text(tr("Open {value1} in browser", label)) }
 }
 
 @Composable
@@ -152,6 +153,6 @@ fun UpgradeNotices() {
         }
     }
     upgradeNotices.forEach { message ->
-        Card(Modifier.fillMaxWidth()) { Text(message, Modifier.padding(16.dp)) }
+        Card(Modifier.fillMaxWidth()) { Text(tr(message), Modifier.padding(16.dp)) }
     }
 }

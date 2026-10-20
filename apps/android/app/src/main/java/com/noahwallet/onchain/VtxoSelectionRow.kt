@@ -1,5 +1,6 @@
 package com.noahwallet.onchain
 
+import com.noahwallet.localization.tr
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
@@ -20,8 +21,8 @@ internal fun VtxoSelectionRow(id: String, amount: String, status: String, checke
     Row(vtxoSelectionModifier(id, amount, status, checked, enabled, onCheckedChange)) {
         Checkbox(checked, onCheckedChange = null, enabled = enabled)
         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Text("${id.take(12)}… · $status")
-            Text(amount)
+            Text(tr("${id.take(12)}… · $status"))
+            Text(tr(amount))
         }
     }
 }

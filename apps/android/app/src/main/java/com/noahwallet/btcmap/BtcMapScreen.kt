@@ -1,5 +1,7 @@
 package com.noahwallet.btcmap
 
+import com.noahwallet.localization.trPlural
+import com.noahwallet.localization.tr
 import android.Manifest
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -97,19 +99,19 @@ fun BtcMapScreen(onClose: () -> Unit) {
             Row(Modifier.fillMaxSize()) {
                 Column(Modifier.weight(1f).fillMaxHeight()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClose) { Text("Back") }
-                        Text("Bitcoin Map", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                        TextButton(onClose) { Text(tr("Back")) }
+                        Text(tr("Bitcoin Map"), Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
                         TextButton({ scope.launch { model.refresh() }; styleRevision++ }, enabled = !model.syncing) {
-                            Text(if (model.syncing) "Syncing…" else "Refresh")
+                            Text(tr(if (model.syncing) "Syncing…" else "Refresh"))
                         }
                     }
                     OutlinedTextField(model.query, model::updateQuery, Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                         .onFocusChanged { searchFocused = it.isFocused },
-                        label = { Text("Search cities or places") }, singleLine = true,
-                        trailingIcon = { if (model.query.isNotEmpty()) TextButton({ model.updateQuery("") }) { Text("Clear") } })
+                        label = { Text(tr("Search cities or places")) }, singleLine = true,
+                        trailingIcon = { if (model.query.isNotEmpty()) TextButton({ model.updateQuery("") }) { Text(tr("Clear")) } })
                     LazyRow(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(PlaceCategory.entries) { category ->
-                            FilterChip(model.category == category, { model.category = category }, label = { Text(category.label) })
+                            FilterChip(model.category == category, { model.category = category }, label = { Text(tr(category.label)) })
                         }
                     }
                     if (cities.isNotEmpty() || results.merchants.isNotEmpty()) {
@@ -130,9 +132,9 @@ fun BtcMapScreen(onClose: () -> Unit) {
                             }
                         }
                     }
-                    if (cityError) Text("City search is unavailable.", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall)
+                    if (cityError) Text(tr("City search is unavailable."), Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall)
                     if (model.loadError) {
-                        Text("The bundled places could not be read. Reopen the map to try again.", Modifier.padding(16.dp))
+                        Text(tr("The bundled places could not be read. Reopen the map to try again."), Modifier.padding(16.dp))
                     }
                     Box(Modifier.fillMaxWidth().weight(1f)) {
                         BtcMapCanvas(model, results.filtered, isSystemInDarkTheme(), if (selected != null && !wide) sheetTop else null, styleRevision, Modifier.fillMaxSize())
@@ -142,7 +144,7 @@ fun BtcMapScreen(onClose: () -> Unit) {
                         items(results.inView, key = { it.id }) { place ->
                             TextButton({ model.select(place); focus.clearFocus() }, Modifier.fillMaxWidth()) {
                                 Text(place.name, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                model.userLocation?.let { Text(BtcMapDistance.format(BtcMapDistance.kilometers(it, place.center)), style = MaterialTheme.typography.bodySmall) }
+                                model.userLocation?.let { Text(tr(BtcMapDistance.format(BtcMapDistance.kilometers(it, place.center))), style = MaterialTheme.typography.bodySmall) }
                             }
                         }
                     }
@@ -150,15 +152,15 @@ fun BtcMapScreen(onClose: () -> Unit) {
                         TextButton({
                             if (BtcMapLocation.hasPermission(context)) locate()
                             else permissions.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION))
-                        }, enabled = !locating) { Text(if (locating) "Locating…" else "My location") }
-                        TextButton({ showPlaces = !showPlaces }) { Text(if (showPlaces) "Hide places" else "Places in view") }
+                        }, enabled = !locating) { Text(tr(if (locating) "Locating…" else "My location")) }
+                        TextButton({ showPlaces = !showPlaces }) { Text(tr(if (showPlaces) "Hide places" else "Places in view")) }
                     }
-                    Text(when {
+                    Text(tr(when {
                         model.basemapUnavailable -> "Street map unavailable · places and city search still work"
                         model.syncUnavailable -> "Offline places · live updates unavailable"
                         !model.loading && results.filtered.isEmpty() -> "No matching places · try another search or category"
-                        else -> "${results.filtered.size} places · BTC Map · GeoNames CC BY 4.0"
-                    }, Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
+                        else -> trPlural("{_gt_value_4} places{_gt_value_3}", results.filtered.size, " · BTC Map · GeoNames CC BY 4.0")
+                    }), Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
                 }
                 if (wide && selected != null) {
                     VerticalDivider()
@@ -175,8 +177,8 @@ fun BtcMapScreen(onClose: () -> Unit) {
             }
         }
         model.alert?.let { message ->
-            AlertDialog(onDismissRequest = { model.alert = null }, title = { Text("Bitcoin Map") }, text = { Text(message) },
-                confirmButton = { TextButton({ model.alert = null }) { Text("OK") } })
+            AlertDialog(onDismissRequest = { model.alert = null }, title = { Text(tr("Bitcoin Map")) }, text = { Text(tr(message)) },
+                confirmButton = { TextButton({ model.alert = null }) { Text(tr("OK")) } })
         }
     }
 }

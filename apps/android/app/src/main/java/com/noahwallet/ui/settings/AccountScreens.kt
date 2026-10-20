@@ -1,5 +1,6 @@
 package com.noahwallet.ui.settings
 
+import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -47,20 +48,20 @@ fun ProfileScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
     }
     SettingsColumn {
         SectionTitle("Name")
-        OutlinedTextField(name, { name = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = !model.busy)
+        OutlinedTextField(name, { name = it }, label = { Text(tr("Name")) }, modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = !model.busy)
         NoahButton("Save", !model.busy) {
             model.action("Couldn't save your name.") { model.server.saveDisplayName(name); name = name.trim(); message = "Saved" }
         }
-        message?.let { Text(it) }
+        message?.let { Text(tr(it)) }
         SectionTitle("Lightning Address")
         server.lightningAddress?.let { CopyRow("Lightning Address", it) }
         SettingRow("Edit Lightning Address") { navigate(SettingsDestination.Lightning) }
         SectionTitle("Emergency Email")
-        Text(server.emailAddress ?: "No emergency email")
-        Text(if (server.isEmailVerified == true) "Verified" else "Not verified")
+        Text(tr(server.emailAddress ?: "No emergency email"))
+        Text(tr(if (server.isEmailVerified == true) "Verified" else "Not verified"))
         SettingRow("Edit Emergency Email") { navigate(SettingsDestination.Email) }
         SectionTitle("Public Keys")
-        if (key.isNotEmpty()) CopyRow("Wallet Public Key", key)
+        if (key.isNotEmpty()) CopyRow("Wallet public key", key)
         Nostr.npub(server.nostrPubkey).takeIf { it.isNotEmpty() }?.let { CopyRow("Nostr Public Key", it) }
     }
 }
@@ -108,7 +109,7 @@ fun ArkInfoScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
     SettingsColumn {
         NoahButton("Refresh", !loading && !model.isWalletSuspended, secondary = true) { model.action("Couldn't load Ark info.") { load() } }
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-        if (info == null) Text("Ark server info is unavailable. Try refreshing.")
+        if (info == null) Text(tr("Ark server info is unavailable. Try refreshing."))
         info?.let {
             SectionTitle("Keys")
             CopyRow("Server pubkey", it.serverPubkey); CopyRow("Mailbox pubkey", it.mailboxPubkey)
@@ -150,8 +151,8 @@ fun BatteryScreen() {
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
     SettingsColumn {
-        Text("Allow Noah to receive payment notifications and maintain your wallet while it is in the background.")
-        Text(if (exempt) "Battery optimization is disabled for Noah." else "Battery optimization may delay background payments.")
+        Text(tr("Allow Noah to receive payment notifications and maintain your wallet while it is in the background."))
+        Text(tr(if (exempt) "Battery optimization is disabled for Noah." else "Battery optimization may delay background payments."))
         NoahButton("Open battery settings", secondary = true) { context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
     }
 }

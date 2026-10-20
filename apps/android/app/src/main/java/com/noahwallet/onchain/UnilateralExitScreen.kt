@@ -1,5 +1,6 @@
 package com.noahwallet.onchain
 
+import com.noahwallet.localization.tr
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
@@ -39,49 +40,49 @@ fun UnilateralExitScreen(app: AppModel) {
     }
     LaunchedEffect(destination, app.isWalletSuspended, model.overview?.walletID) { model.checkClaimDestination() }
     OnchainScreen(app, model) {
-        Text("Emergency Exit", style = MaterialTheme.typography.headlineSmall)
-        Text("Recover your Ark funds onchain if the Ark server is unavailable. Exits require confirmed onchain funds for broadcast fees and a timelock before claiming.")
-        Text("Reading this screen and estimating fees never broadcasts an exit.")
+        Text(tr("Emergency Exit"), style = MaterialTheme.typography.headlineSmall)
+        Text(tr("Recover your Ark funds onchain if the Ark server is unavailable. Exits require confirmed onchain funds for broadcast fees and a timelock before claiming."))
+        Text(tr("Reading this screen and estimating fees never broadcasts an exit."))
         model.overview?.let { overview ->
             AmountRow(app, "Pending exit value", overview.pendingTotal)
             AmountRow(app, "Confirmed onchain funds", overview.confirmed)
-            Text("Block height: ${overview.tip}")
-            overview.claimableHeight?.let { Text("All claimable at: Block $it") }
+            Text(tr("Block height: ${overview.tip}"))
+            overview.claimableHeight?.let { Text(tr("All claimable at: Block $it")) }
         }
-        TextButton({ deposit = true }) { Text("Deposit onchain funds") }
-        Text("Start an exit", style = MaterialTheme.typography.titleLarge)
-        Text("VTXOs below 330 sats cannot exit onchain.")
-        TextButton({ selected = eligible.map { it.id }.toSet(); model.invalidate() }, enabled = !model.busy) { Text("Select all eligible VTXOs") }
+        TextButton({ deposit = true }) { Text(tr("Deposit Onchain Funds")) }
+        Text(tr("Start an exit"), style = MaterialTheme.typography.titleLarge)
+        Text(tr("VTXOs below 330 sats cannot exit onchain."))
+        TextButton({ selected = eligible.map { it.id }.toSet(); model.invalidate() }, enabled = !model.busy) { Text(tr("Select all eligible VTXOs")) }
         eligible.forEach { vtxo ->
             VtxoSelectionRow(vtxo.id, amountText(app, vtxo.amount), vtxo.status, vtxo.id in selected, !model.busy) { checked ->
                 selected = if (checked) selected + vtxo.id else selected - vtxo.id; model.invalidate()
             }
         }
-        if (eligible.isEmpty()) Text("No eligible spendable VTXOs.")
-        Button({ scope.launch { model.review(OnchainAction.startExit, selected.toList()) } }, enabled = !model.busy && selected.isNotEmpty()) { Text("Review selected exit") }
-        TextButton({ scope.launch { model.review(OnchainAction.startExit, eligible.map { it.id }) } }, enabled = !model.busy && eligible.isNotEmpty()) { Text("Review entire wallet exit") }
+        if (eligible.isEmpty()) Text(tr("No eligible spendable VTXOs."))
+        Button({ scope.launch { model.review(OnchainAction.startExit, selected.toList()) } }, enabled = !model.busy && selected.isNotEmpty()) { Text(tr("Review selected exit")) }
+        TextButton({ scope.launch { model.review(OnchainAction.startExit, eligible.map { it.id }) } }, enabled = !model.busy && eligible.isNotEmpty()) { Text(tr("Review entire wallet exit")) }
         if (pending.isNotEmpty()) {
             HorizontalDivider()
-            Text("Noah progresses exits automatically. You can also progress all pending exits manually.")
-            Button({ scope.launch { model.review(OnchainAction.progress, pending.map { it.id }) } }, enabled = !model.busy) { Text("Progress Exits") }
+            Text(tr("Noah progresses exits automatically. You can also progress all pending exits manually."))
+            Button({ scope.launch { model.review(OnchainAction.progress, pending.map { it.id }) } }, enabled = !model.busy) { Text(tr("Progress Exits")) }
         }
         if (exits.any { it.claimable }) {
-            Text("Claim recovered funds", style = MaterialTheme.typography.titleLarge)
-            OutlinedTextField(destination, model::editClaimDestination, label = { Text("Bitcoin destination address") },
-                supportingText = { Text(model.claimDestinationError ?: if (model.claimDestinationIsMine == false)
-                    "This address isn't in your Noah wallet. The claimed funds will be sent there." else "") },
+            Text(tr("Claim recovered funds"), style = MaterialTheme.typography.titleLarge)
+            OutlinedTextField(destination, model::editClaimDestination, label = { Text(tr("Bitcoin destination address")) },
+                supportingText = { Text(tr(model.claimDestinationError ?: if (model.claimDestinationIsMine == false)
+                    "This address isn't in your Noah wallet. The claimed funds will be sent there." else "")) },
                 isError = model.claimDestinationError != null || model.claimDestinationIsMine == false,
                 singleLine = true, enabled = !model.busy)
-            TextButton({ scope.launch { model.useWalletClaimAddress() } }, enabled = !model.busy) { Text("Use my Noah wallet address") }
+            TextButton({ scope.launch { model.useWalletClaimAddress() } }, enabled = !model.busy) { Text(tr("Use my Noah wallet address")) }
             Button({ scope.launch { model.review(OnchainAction.claim, exits.filter { it.claimable }.map { it.id }, destination = destination.trim()) } },
-                enabled = !model.busy && destination.isNotBlank()) { Text("Review claim") }
+                enabled = !model.busy && destination.isNotBlank()) { Text(tr("Review Claim")) }
         }
         HorizontalDivider()
-        Text("Exits", style = MaterialTheme.typography.titleLarge)
+        Text(tr("Exits"), style = MaterialTheme.typography.titleLarge)
         FilterMenu(filter, listOf("All") + ExitTimeline.labels.keys.toList()) { filter = it }
-        if (exits.isEmpty()) Text("No exits have been started.")
+        if (exits.isEmpty()) Text(tr("No exits have been started."))
         exits.filter { filter == "All" || it.state == filter }.forEach { exit ->
-            TextButton({ detailID = exit.id }, enabled = !model.busy) { Text("${ExitTimeline.labels[exit.state] ?: exit.state} · ${amountText(app, exit.amount)} · ${exit.id.take(12)}…") }
+            TextButton({ detailID = exit.id }, enabled = !model.busy) { Text(tr("${ExitTimeline.labels[exit.state] ?: exit.state} · ${amountText(app, exit.amount)} · ${exit.id.take(12)}…")) }
         }
     }
     if (deposit && !app.isWalletSuspended) ExitDepositSheet(app, depositFee) { deposit = false }
@@ -92,36 +93,36 @@ fun ExitVtxoDetailScreen(app: AppModel, id: String, back: () -> Unit) {
     val model = rememberOnchainModel(app, id)
     val scope = rememberCoroutineScope()
     OnchainScreen(app, model) {
-        TextButton(back) { Text("Back to exits") }
-        Text("Exit Details", style = MaterialTheme.typography.headlineSmall)
+        TextButton(back) { Text(tr("Back to exits")) }
+        Text(tr("Exit Details"), style = MaterialTheme.typography.headlineSmall)
         val exit = model.exit
         if (exit != null) {
             AmountRow(app, "Amount", exit.amount)
-            DetailRow("VTXO ID", id); Text("State: ${ExitTimeline.labels[exit.state] ?: exit.state}")
+            DetailRow("VTXO ID", id); Text(tr("State: ${ExitTimeline.labels[exit.state] ?: exit.state}"))
             exit.details.claimable_height?.let { height ->
-                Text("Claimable at: Block $height"); Text("Remaining: ${maxOf(0, height - (model.overview?.tip ?: 0))} blocks")
+                Text(tr("Claimable at: Block $height")); Text(tr("Remaining: ${maxOf(0, height - (model.overview?.tip ?: 0))} blocks"))
             }
-            if (exit.cancelable) TextButton({ scope.launch { model.review(OnchainAction.cancel, listOf(id)) } }, enabled = !model.busy) { Text("Cancel exit", color = MaterialTheme.colorScheme.error) }
+            if (exit.cancelable) TextButton({ scope.launch { model.review(OnchainAction.cancel, listOf(id)) } }, enabled = !model.busy) { Text(tr("Cancel Exit"), color = MaterialTheme.colorScheme.error) }
             exit.timeline.forEach { item ->
                 HorizontalDivider()
-                Text(item.label + if (item.isCurrent) " · Current" else "", style = MaterialTheme.typography.titleLarge)
-                Text(item.description)
-                if (item.count > 1) Text("Updates: ${item.count}")
-                item.startHeight?.let { Text("First height: $it") }; item.endHeight?.let { Text("Latest height: $it") }
+                Text(tr(item.label + if (item.isCurrent) " · Current" else ""), style = MaterialTheme.typography.titleLarge)
+                Text(tr(item.description))
+                if (item.count > 1) Text(tr("Updates: ${item.count}"))
+                item.startHeight?.let { Text(tr("First height: $it")) }; item.endHeight?.let { Text(tr("Latest height: $it")) }
                 item.details?.let { details ->
-                    details.tip_height?.let { Text("Synced tip: $it") }
-                    details.confirmed_block?.let { Text("Confirmed block: ${it.height}") }
-                    details.claimable_since?.let { Text("Claimable since: ${it.height}") }
-                    details.last_scanned_block?.let { Text("Last scanned: ${it.height}") }
+                    details.tip_height?.let { Text(tr("Synced tip: $it")) }
+                    details.confirmed_block?.let { Text(tr("Confirmed block: ${it.height}")) }
+                    details.claimable_since?.let { Text(tr("Claimable since: ${it.height}")) }
+                    details.last_scanned_block?.let { Text(tr("Last scanned: ${it.height}")) }
                     (details.claim_txid ?: details.txid)?.let { TransactionRow(it) }
                     details.transactions.orEmpty().forEachIndexed { index, tx ->
-                        Text("Exit transaction ${index + 1}"); TransactionRow(tx.txid); Text(tx.status.kind.replace('-', ' '))
-                        tx.status.child_txid?.let { Text("Child transaction"); TransactionRow(it) }
-                        tx.status.block?.let { Text("Confirmed: Block ${it.height}") }
+                        Text(tr("Exit transaction ${index + 1}")); TransactionRow(tx.txid); Text(tr(tx.status.kind.replace('-', ' ')))
+                        tx.status.child_txid?.let { Text(tr("Child transaction")); TransactionRow(it) }
+                        tx.status.block?.let { Text(tr("Confirmed: Block ${it.height}")) }
                     }
                 }
             }
-        } else if (!model.loading) Text("Exit status is unavailable. Pull to refresh.")
+        } else if (!model.loading) Text(tr("Exit status is unavailable. Pull to refresh."))
     }
 }
 
@@ -137,16 +138,16 @@ private fun ExitDepositSheet(app: AppModel, fee: Long, dismiss: () -> Unit) {
     }
     ModalBottomSheet(onDismissRequest = dismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Deposit Onchain Funds", style = MaterialTheme.typography.headlineSmall)
+            Text(tr("Deposit Onchain Funds"), style = MaterialTheme.typography.headlineSmall)
             if (fee > 0) AmountRow(app, "Suggested deposit", fee)
-            Text("Broadcast fees are paid separately from confirmed onchain funds. Deposit bitcoin and wait for confirmation before progressing an exit. The amount required may vary.")
+            Text(tr("Broadcast fees are paid separately from confirmed onchain funds. Deposit bitcoin and wait for confirmation before progressing an exit. The amount required may vary."))
             address?.let { value ->
                 com.noahwallet.ui.ReceiveQR(value) { copy(context, value) }
                 DetailRow("Bitcoin deposit address", value)
-                TextButton({ copy(context, value) }) { Text("Copy Bitcoin address") }
-                TextButton({ context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, value), "Share Bitcoin address")) }) { Text("Share") }
-            } ?: Text(error ?: "Loading address…")
-            TextButton(dismiss) { Text("Done") }
+                TextButton({ copy(context, value) }) { Text(tr("Copy Bitcoin address")) }
+                TextButton({ context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, value), "Share Bitcoin address")) }) { Text(tr("Share")) }
+            } ?: Text(tr(error ?: "Loading address…"))
+            TextButton(dismiss) { Text(tr("Done")) }
         }
     }
 }

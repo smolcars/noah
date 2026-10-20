@@ -1,5 +1,6 @@
 package com.noahwallet.ui.settings
 
+import com.noahwallet.localization.tr
 import android.os.SystemClock
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -67,7 +68,7 @@ fun SettingsColumn(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 fun SettingRow(title: String, detail: String = "", enabled: Boolean = true, onClick: (() -> Unit)? = null) {
-    ListItem(headlineContent = { Text(title) }, supportingContent = if (detail.isEmpty()) null else ({ Text(detail) }),
+    ListItem(headlineContent = { Text(tr(title)) }, supportingContent = if (detail.isEmpty()) null else ({ Text(tr(detail)) }),
         modifier = Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier),
         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background,
             headlineColor = if (enabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant))
@@ -75,15 +76,15 @@ fun SettingRow(title: String, detail: String = "", enabled: Boolean = true, onCl
 
 @Composable
 fun SectionTitle(title: String) {
-    Text(title, Modifier.padding(top = 20.dp, bottom = 4.dp), style = MaterialTheme.typography.titleLarge)
+    Text(tr(title), Modifier.padding(top = 20.dp, bottom = 4.dp), style = MaterialTheme.typography.titleLarge)
 }
 
 @Composable
 fun SettingToggle(title: String, detail: String, checked: Boolean, enabled: Boolean, change: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f).padding(end = 12.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (detail.isNotEmpty()) Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr(title), style = MaterialTheme.typography.bodyLarge)
+            if (detail.isNotEmpty()) Text(tr(detail), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Switch(checked, change, enabled = enabled, modifier = Modifier.semantics { contentDescription = title })
     }
@@ -130,7 +131,7 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
         if (WalletLock.available(activity) || model.walletLock.enabled) SettingToggle("Biometric Authentication", "Require authentication to unlock your wallet", model.walletLock.enabled, !model.walletLock.authenticating) {
             model.action("Couldn't save authentication preference.") { model.walletLock.setEnabled(activity, it) }
         }
-        model.walletLock.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        model.walletLock.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
         SettingToggle("Mailbox Notifications", "Allow Noah to wake the app to claim incoming payments", server.isMailboxAuthorizationEnabled != false, !model.busy && !model.isWalletSuspended) {
             model.action("Couldn't update mailbox notifications.") {
                 model.server.setMailboxEnabled(it)
@@ -149,7 +150,7 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
             model.action("Couldn't change wallet suspension. Please try again.") { if (suspend) model.suspendWallet() else model.resumeWallet() }
         }
         SettingRow("Export Database", "Create an encrypted .noahbackup file", !model.isWalletSuspended) { navigate(SettingsDestination.Export) }
-        TextButton({ deleteText = ""; confirmation = "delete" }, enabled = !model.busy) { Text("Delete Wallet", color = MaterialTheme.colorScheme.error) }
+        TextButton({ deleteText = ""; confirmation = "delete" }, enabled = !model.busy) { Text(tr("Delete Wallet"), color = MaterialTheme.colorScheme.error) }
         HorizontalDivider()
         TextButton({
             if (wallet.isDebugModeEnabled != true) {
@@ -161,29 +162,29 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
                     model.settings.setPersistedState(wallet, PersistedWalletState.key, 0); taps = 0
                 }
             }
-        }) { Text("v${BuildConfig.VERSION_NAME}" + if (taps > 0) " (${5 - taps} taps to unlock debug)" else "") }
-        Text("Made with love from Noah team", style = MaterialTheme.typography.bodySmall)
-        TextButton({ uri.openUri("https://t.me/blixtwallet/605026") }) { Text("Telegram support") }
-        TextButton({ uri.openUri("https://github.com/smolcars/noah") }) { Text("Noah on GitHub") }
-        message?.let { Text(it) }
+        }) { Text(tr("v${BuildConfig.VERSION_NAME}" + if (taps > 0) tr(" ({count} taps to unlock debug)", 5 - taps) else "")) }
+        Text(tr("Made with love from Noah team"), style = MaterialTheme.typography.bodySmall)
+        TextButton({ uri.openUri("https://t.me/blixtwallet/605026") }) { Text(tr("Telegram support")) }
+        TextButton({ uri.openUri("https://github.com/smolcars/noah") }) { Text(tr("Noah on GitHub")) }
+        message?.let { Text(tr(it)) }
         if (model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     }
     confirmation?.let { action ->
         AlertDialog(onDismissRequest = { if (!model.busy) confirmation = null },
-            title = { Text(if (action == "delete") "Delete Wallet" else "Reset Server Registration") },
+            title = { Text(tr(if (action == "delete") "Delete Wallet" else "Reset Server Registration")) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(if (action == "delete") "This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm."
-                    else "Clear local server registration and register again? Your wallet will be kept.")
-                if (action == "delete") OutlinedTextField(deleteText, { deleteText = it }, label = { Text("delete") }, enabled = !model.busy, singleLine = true)
+                Text(tr(if (action == "delete") "This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm."
+                    else "Clear local server registration and register again? Your wallet will be kept."))
+                if (action == "delete") OutlinedTextField(deleteText, { deleteText = it }, label = { Text(tr("delete")) }, enabled = !model.busy, singleLine = true)
             } },
-            dismissButton = { TextButton({ confirmation = null }, enabled = !model.busy) { Text("Cancel") } },
+            dismissButton = { TextButton({ confirmation = null }, enabled = !model.busy) { Text(tr("Cancel")) } },
             confirmButton = { TextButton({
                 model.action(if (action == "delete") "Couldn't delete wallet. Restart Noah if a restore is pending, then try again." else "Couldn't register again. Please retry.") {
                     if (action == "delete") model.deleteWallet() else { model.reRegisterWithServer(); message = "Registered with the server again"; server = model.server.state }
                     confirmation = null
                 }
             }, enabled = !model.busy && (action != "delete" || deleteText.trim().equals("delete", true))) {
-                Text(if (model.busy) "Please wait…" else if (action == "delete") "Delete Wallet" else "Reset", color = MaterialTheme.colorScheme.error)
+                Text(tr(if (model.busy) "Please wait…" else if (action == "delete") "Delete Wallet" else "Reset"), color = MaterialTheme.colorScheme.error)
             } })
     }
 }

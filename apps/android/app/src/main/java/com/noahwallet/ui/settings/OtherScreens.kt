@@ -1,5 +1,6 @@
 package com.noahwallet.ui.settings
 
+import com.noahwallet.localization.tr
 import android.media.MediaPlayer
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -43,21 +44,21 @@ fun FeedbackScreen(model: AppModel) {
         }
     }
     SettingsColumn {
-        if (success) { SectionTitle("Thank You"); Text("Your feedback has been sent to the Noah team.") }
+        if (success) { SectionTitle("Thank You"); Text(tr("Your feedback has been sent to the Noah team.")) }
         else {
-            Text("Report a bug or share what would make Noah better.")
-            OutlinedTextField(name, { name = it }, label = { Text("Name") }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(email, { email = it }, label = { Text("Email (optional)") }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(subject, { subject = it }, label = { Text("Subject") }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(body, { body = it }, label = { Text("Message") }, minLines = 5, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
+            Text(tr("Report a bug or share what would make Noah better."))
+            OutlinedTextField(name, { name = it }, label = { Text(tr("Name")) }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(email, { email = it }, label = { Text(tr("Email (Optional)")) }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(subject, { subject = it }, label = { Text(tr("Subject")) }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(body, { body = it }, label = { Text(tr("Message")) }, minLines = 5, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
             SectionTitle("Screenshot (optional)")
             NoahButton("Add Screenshot", !model.busy && !loading, secondary = true) { picker.launch("image/*") }
             if (screenshot != null) {
-                Text("Screenshot selected · ${screenshot!!.size / 1024} KiB")
-                TextButton({ screenshot = null }, enabled = !model.busy) { Text("Remove Screenshot") }
+                Text(tr("Screenshot selected · ${screenshot!!.size / 1024} KiB"))
+                TextButton({ screenshot = null }, enabled = !model.busy) { Text(tr("Remove Screenshot")) }
             }
-            Text("JPEG or PNG, 5 MB or smaller", style = MaterialTheme.typography.bodySmall)
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            Text(tr("JPEG or PNG, 5 MB or smaller"), style = MaterialTheme.typography.bodySmall)
+            error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
             if (loading || model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             NoahButton("Send Feedback", !model.busy && !loading && name.isNotBlank() && subject.isNotBlank() && body.isNotBlank()) {
                 model.action("Failed to submit feedback. Please try again.") {
@@ -68,7 +69,7 @@ fun FeedbackScreen(model: AppModel) {
                 }
             }
         }
-        TextButton({ uriHandler.openUri("https://t.me/blixtwallet/605026") }) { Text("Telegram Support") }
+        TextButton({ uriHandler.openUri("https://t.me/blixtwallet/605026") }) { Text(tr("Telegram Support")) }
     }
 }
 
@@ -99,13 +100,13 @@ fun StoryScreen() {
     fun time(ms: Float): String { val seconds = ms.toInt() / 1000; return "%d:%02d".format(seconds / 60, seconds % 60) }
     SettingsColumn {
         SectionTitle("The Story of Noah's Ark")
-        Text("Listen to the biblical story that inspired our wallet's name")
+        Text(tr("Listen to the biblical story that inspired our wallet's name"))
         Slider(position, { seeking = true; position = it }, valueRange = 0f..duration,
             onValueChangeFinished = { player?.seekTo(position.toInt()); seeking = false }, enabled = player != null)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(time(position)); Text(time(duration)) }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(tr(time(position))); Text(tr(time(duration))) }
         NoahButton(if (playing) "Pause" else "Play", player != null) { player?.let { if (it.isPlaying) it.pause() else it.start(); playing = it.isPlaying } }
         NoahButton("Stop", player != null, secondary = true) { player?.pause(); player?.seekTo(0); position = 0f; playing = false }
-        error?.let { Text(it) }
+        error?.let { Text(tr(it)) }
     }
 }
 
@@ -130,23 +131,23 @@ fun DebugScreen(model: AppModel) {
     SettingsColumn {
         SectionTitle("Select Action")
         Box {
-            OutlinedButton({ menu = true }, enabled = !model.busy) { Text(if (push) "Get Push Token" else action.title) }
+            OutlinedButton({ menu = true }, enabled = !model.busy) { Text(tr(if (push) "Get Push Token" else action.title)) }
             DropdownMenu(menu, { menu = false }) {
-                DebugAction.entries.forEach { candidate -> DropdownMenuItem(text = { Text(candidate.title) }, onClick = { action = candidate; push = false; input = ""; result = null; menu = false }) }
-                DropdownMenuItem(text = { Text("Get Push Token") }, onClick = { push = true; result = null; menu = false })
+                DebugAction.entries.forEach { candidate -> DropdownMenuItem(text = { Text(tr(candidate.title)) }, onClick = { action = candidate; push = false; input = ""; result = null; menu = false }) }
+                DropdownMenuItem(text = { Text(tr("Get Push Token")) }, onClick = { push = true; result = null; menu = false })
             }
         }
-        if (!push && action.needsInput) OutlinedTextField(input, { input = it }, label = { Text(if (action == DebugAction.offboard) "Bitcoin address" else "VTXO hex or ID") }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
+        if (!push && action.needsInput) OutlinedTextField(input, { input = it }, label = { Text(tr(if (action == DebugAction.offboard) "Bitcoin address" else "VTXO hex or ID")) }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
         NoahButton("Execute", !model.busy && !model.isWalletSuspended && (push || !action.needsInput || input.isNotBlank())) {
             if (!push && action.destructive) { confirmation = ""; confirming = true } else execute()
         }
         if (model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         result?.let { CopyRow("Result", it) }
     }
-    if (confirming) AlertDialog(onDismissRequest = { confirming = false }, title = { Text(action.title) },
+    if (confirming) AlertDialog(onDismissRequest = { confirming = false }, title = { Text(tr(action.title)) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("This action changes your wallet and may cause loss of funds. Type delete to confirm.")
-            OutlinedTextField(confirmation, { confirmation = it }, label = { Text("delete") })
-        } }, dismissButton = { TextButton({ confirming = false }) { Text("Cancel") } },
-        confirmButton = { TextButton({ confirming = false; execute() }, enabled = confirmation.equals("delete", true)) { Text("Confirm") } })
+            Text(tr("This action changes your wallet and may cause loss of funds. Type delete to confirm."))
+            OutlinedTextField(confirmation, { confirmation = it }, label = { Text(tr("delete")) })
+        } }, dismissButton = { TextButton({ confirming = false }) { Text(tr("Cancel")) } },
+        confirmButton = { TextButton({ confirming = false; execute() }, enabled = confirmation.equals("delete", true)) { Text(tr("Confirm")) } })
 }

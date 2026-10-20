@@ -1,5 +1,6 @@
 package com.noahwallet.ui
 
+import com.noahwallet.localization.tr
 import android.app.Activity
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
@@ -59,9 +60,9 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
     // Read the revision so changes to the non-saveable, redacted input redraw the fields.
     val words = remember(revision) { input.words }
     NoahForm(if (useStoredSeed) "Recovery phrase found" else "Restore Wallet") {
-        Text(if (useStoredSeed)
+        Text(tr(if (useStoredSeed)
             "Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."
-        else "Enter your 12 words in order, or paste the whole phrase into any word field.")
+        else "Enter your 12 words in order, or paste the whole phrase into any word field."))
         if (!useStoredSeed && !blocked) {
             key(clearGeneration) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -82,7 +83,7 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
                     }
                 }
             }
-            Text("${input.wordCount} of 12 words", style = MaterialTheme.typography.bodySmall)
+            Text(tr("${input.wordCount} of 12 words"), style = MaterialTheme.typography.bodySmall)
             focused?.let { index ->
                 val suggestions = input.suggestions(index)
                 if (suggestions.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
@@ -91,20 +92,20 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
                     suggestions.forEach { word -> TextButton({
                         input.update(word, index); revision++; flow.clearIssue()
                         if (index < 11) requesters[index + 1].requestFocus() else focus.clearFocus()
-                    }) { Text(word) } }
+                    }) { Text(tr(word)) } }
                 }
             }
         }
-        if (input.wrongWordCount) Text("Paste exactly 12 words. Your entries haven't been replaced.", color = MaterialTheme.colorScheme.error,
+        if (input.wrongWordCount) Text(tr("Paste exactly 12 words. Your entries haven't been replaced."), color = MaterialTheme.colorScheme.error,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         if (model.busy || flow.running) {
             LinearProgressIndicator(Modifier.fillMaxWidth())
-            Text(flow.step.restoreMessage(), Modifier.testTag("restore-progress").semantics { liveRegion = LiveRegionMode.Polite })
+            Text(tr(flow.step.restoreMessage()), Modifier.testTag("restore-progress").semantics { liveRegion = LiveRegionMode.Polite })
         }
-        flow.issue?.let { Text(it.message, color = MaterialTheme.colorScheme.error,
+        flow.issue?.let { Text(tr(it.message), color = MaterialTheme.colorScheme.error,
             modifier = Modifier.testTag("restore-error").semantics { liveRegion = LiveRegionMode.Assertive }) }
         if (useStoredSeed && model.isWalletSuspended) {
-            Text("Your wallet is suspended. Resume recovery to restore its backup, or delete this wallet from your device.")
+            Text(tr("Your wallet is suspended. Resume recovery to restore its backup, or delete this wallet from your device."))
             NoahButton("Resume Recovery", !blocked) {
                 model.action("Couldn't resume recovery. Restart Noah and try again.") { model.resumeRestoreRecovery() }
             }

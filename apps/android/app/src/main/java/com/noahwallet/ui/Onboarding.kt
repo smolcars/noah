@@ -1,5 +1,6 @@
 package com.noahwallet.ui
 
+import com.noahwallet.localization.tr
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -31,13 +32,13 @@ fun Onboarding(model: AppModel) {
     when (model.step) {
         "welcome" -> NoahForm("Welcome to Noah") {
             Spacer(Modifier.height(80.dp))
-            Text("Create a new wallet or restore an existing one.")
+            Text(tr("Create a new wallet or restore an existing one."))
             NoahButton("Create Wallet") { model.step = "beta" }
             NoahButton("Restore Wallet", secondary = true) { model.step = "restore" }
         }
         "restore" -> RestoreWalletScreen(model)
         "beta" -> NoahForm("Noah is in beta") {
-            Text("Noah is still in beta. There is a possibility you could lose money. Only deposit funds you are willing to lose.")
+            Text(tr("Noah is still in beta. There is a possibility you could lose money. Only deposit funds you are willing to lose."))
             NoahButton(if (model.busy) "Creating wallet…" else "I accept", !model.busy) {
                 model.action("Creation failed. Please try again.") { model.create() }
             }
@@ -94,12 +95,12 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
         }
     }
     NoahForm("Your Recovery Phrase") {
-        Text("Write down these ${words.size} words in order and store them in a safe place. This is the only way to recover your wallet.")
+        Text(tr("Write down these ${words.size} words in order and store them in a safe place. This is the only way to recover your wallet."))
         Card {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 words.chunked(2).forEachIndexed { row, pair ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        pair.forEachIndexed { col, word -> Text("${row * 2 + col + 1}  $word", Modifier.weight(1f)) }
+                        pair.forEachIndexed { col, word -> Text(tr("${row * 2 + col + 1}  $word"), Modifier.weight(1f)) }
                     }
                 }
             }
@@ -112,7 +113,7 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
             copied = true
         }
         if (fromSettings && words.isEmpty()) {
-            model.walletLock.error?.let { Text(it) }
+            model.walletLock.error?.let { Text(tr(it)) }
             NoahButton("Authenticate to view seed phrase", !model.walletLock.authenticating) {
                 scope.launch {
                     val started = model.walletLock.generation
@@ -150,9 +151,9 @@ fun EmergencyEmailScreen(model: AppModel, onContinue: () -> Unit) {
     }
     NoahForm("Emergency Email") {
         if (sent) {
-            Text("We sent a 6-digit verification code to $email")
+            Text(tr("We sent a 6-digit verification code to $email"))
             OutlinedTextField(code, { code = it.filter { c -> c in '0'..'9' }.take(6) },
-                label = { Text("6-digit code") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                label = { Text(tr("6-digit code")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                 modifier = Modifier.fillMaxWidth(), enabled = !model.busy, singleLine = true)
             NoahButton("Verify Email", code.length == 6 && !model.busy) {
                 focus.clearFocus()
@@ -161,11 +162,11 @@ fun EmergencyEmailScreen(model: AppModel, onContinue: () -> Unit) {
                 }
             }
             NoahButton("Resend Code", !model.busy, secondary = true) { send() }
-            TextButton({ sent = false; code = "" }, enabled = !model.busy) { Text("Change email address") }
-            Text("The verification code will expire in 10 minutes.", style = MaterialTheme.typography.bodySmall)
+            TextButton({ sent = false; code = "" }, enabled = !model.busy) { Text(tr("Change email address")) }
+            Text(tr("The verification code will expire in 10 minutes."), style = MaterialTheme.typography.bodySmall)
         } else {
-            Text("Email is optional. Noah uses it only for urgent wallet safety messages, such as when your VTXOs are close to expiring and you need to come online to refresh them.")
-            OutlinedTextField(email, { email = it }, label = { Text("Email address") },
+            Text(tr("Email is optional. Noah uses it only for urgent wallet safety messages, such as when your VTXOs are close to expiring and you need to come online to refresh them."))
+            OutlinedTextField(email, { email = it }, label = { Text(tr("Email Address")) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth(),
                 enabled = !model.busy, singleLine = true)
             if (!registered) NoahButton("Retry registration", !model.busy, secondary = true) { register() }
@@ -183,14 +184,14 @@ fun LightningScreen(model: AppModel, onContinue: (suspend () -> Unit)? = null) {
     val domain = LightningIdentity.domain(BuildConfig.APP_VARIANT)
     fun finish() { focus.clearFocus(); model.action("Couldn't finish setup. Please try again.") { if (onContinue != null) onContinue() else model.finish() } }
     NoahForm("Choose your Lightning Address") {
-        Text("Choose a Lightning username. You can optionally link a Nostr public key so the same address also works as a NIP-05 identifier.")
-        OutlinedTextField(username, { username = LightningIdentity.normalizeUsername(it) }, label = { Text("Username") },
+        Text(tr("Choose a Lightning username. You can optionally link a Nostr public key so the same address also works as a NIP-05 identifier."))
+        OutlinedTextField(username, { username = LightningIdentity.normalizeUsername(it) }, label = { Text(tr("Username")) },
             modifier = Modifier.fillMaxWidth(), enabled = !model.busy, singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
-        Text("$username@$domain")
-        OutlinedTextField(npub, { npub = it }, label = { Text("Nostr public key (optional)") },
+        Text(tr("$username@$domain"))
+        OutlinedTextField(npub, { npub = it }, label = { Text(tr("Nostr public key (optional)")) },
             modifier = Modifier.fillMaxWidth(), enabled = !model.busy, singleLine = true)
-        Text("Leave this blank to use Lightning without NIP-05. Only npub public keys are accepted; never paste an nsec private key.", style = MaterialTheme.typography.bodySmall)
+        Text(tr("Leave this blank to use Lightning without NIP-05. Only npub public keys are accepted; never paste an nsec private key."), style = MaterialTheme.typography.bodySmall)
         NoahButton("Save", !model.busy && username.isNotBlank()) {
             try { LightningIdentity.payload(username, npub) }
             catch (failure: IllegalArgumentException) { model.error = failure.message; return@NoahButton }

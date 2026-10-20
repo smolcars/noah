@@ -1,5 +1,6 @@
 package com.noahwallet.ui.settings
 
+import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -35,19 +36,19 @@ fun BackupSettingsScreen(model: AppModel) {
         while (isActive) { state = PersistedBackupState.decode(model.settings.string(PersistedBackupState.key)); delay(1000) }
     }
     SettingsColumn {
-        Text("Backups are encrypted with your seed phrase and stored securely on our servers. We can never access your funds or data.")
+        Text(tr("Backups are encrypted with your seed phrase and stored securely on our servers. We can never access your funds or data."))
         SettingToggle("Enable Automatic Backups", "", enabled, !model.busy) {
             model.action("Couldn't update backup settings.") {
                 model.server.setBackupEnabled(it); enabled = it; model.services.reconcileBackupTriggers(foreground = true)
             }
         }
         SectionTitle("Last Backup")
-        Text(state.lastBackupAt?.let { DateFormat.getDateTimeInstance().format(Date(it.toLong())) } ?: "No backups yet")
-        Text(when (state.lastBackupStatus) {
+        Text(tr(state.lastBackupAt?.let { DateFormat.getDateTimeInstance().format(Date(it.toLong())) } ?: "No backups yet"))
+        Text(tr(when (state.lastBackupStatus) {
             "in_progress" -> "Backing up…"; "success" -> "Backup complete"; "failed" -> "Backup failed. Please try again."
             else -> "Up to date or waiting for changes"
-        })
-        if (state.backupPending) Text("Backup pending")
+        }))
+        if (state.backupPending) Text(tr("Backup pending"))
         NoahButton("Backup Now", !model.busy && !model.isWalletSuspended) {
             model.action("Couldn't back up your wallet. Please try again.") {
                 model.services.backupCoordinator.flush(BackupCoordinator.Reason.manual, requireEnabled = false)
@@ -57,24 +58,24 @@ fun BackupSettingsScreen(model: AppModel) {
         }
         NoahButton("List Backups", !model.busy, secondary = true) { model.action("Couldn't list backups.") { list() } }
         if (model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        message?.let { Text(it) }
+        message?.let { Text(tr(it)) }
         backups?.let { records ->
             SectionTitle("Available Backups")
-            if (records.isEmpty()) Text("No backups found")
+            if (records.isEmpty()) Text(tr("No backups found"))
             records.forEach { backup ->
                 SettingRow("Encrypted wallet snapshot", "${backup.createdAt} · ${backup.encryptedSize / 1024} KiB")
-                TextButton({ deleting = backup }, enabled = !model.busy) { Text("Delete Backup", color = MaterialTheme.colorScheme.error) }
+                TextButton({ deleting = backup }, enabled = !model.busy) { Text(tr("Delete Backup"), color = MaterialTheme.colorScheme.error) }
                 HorizontalDivider()
             }
         }
     }
-    deleting?.let { backup -> AlertDialog(onDismissRequest = { if (!model.busy) deleting = null }, title = { Text("Delete encrypted backup?") },
-        dismissButton = { TextButton({ deleting = null }, enabled = !model.busy) { Text("Cancel") } },
+    deleting?.let { backup -> AlertDialog(onDismissRequest = { if (!model.busy) deleting = null }, title = { Text(tr("Delete encrypted backup?")) },
+        dismissButton = { TextButton({ deleting = null }, enabled = !model.busy) { Text(tr("Cancel")) } },
         confirmButton = { TextButton({ model.action("Couldn't delete backup.") {
             V0BackupV2DeleteClient(model.services.client).deleteBackupObject(DeleteBackupObjectPayload(backup.backupId)).value()
             model.services.backupCoordinator.forgetUploadedBackup(backup.backupId)
             deleting = null; list()
-        } }, enabled = !model.busy) { Text("Delete Backup") } }) }
+        } }, enabled = !model.busy) { Text(tr("Delete Backup")) } }) }
 }
 
 /** A produced file and how to remove its temporary staging folder. */
@@ -111,8 +112,8 @@ private fun ShareFileButton(model: AppModel, title: String, mime: String, produc
 @Composable
 fun ExportScreen(model: AppModel) {
     SettingsColumn {
-        Text("Create an encrypted backup file containing your wallet database.")
-        Text("You will need your seed phrase to restore this backup. Keep it safe and never share it.")
+        Text(tr("Create an encrypted backup file containing your wallet database."))
+        Text(tr("You will need your seed phrase to restore this backup. Keep it safe and never share it."))
         ShareFileButton(model, "Export Database", "application/octet-stream") {
             // Only the encrypted archive is retained; the service's staging folder is discarded immediately.
             val export = model.services.backupService.exportEncryptedBackup("noah-${BuildConfig.APP_VARIANT}.noahbackup")
@@ -137,9 +138,9 @@ fun LogScreen(model: AppModel) {
                 SharedFile(file) { scratch.discard(folder) }
             } catch (failure: Exception) { scratch.discard(folder); throw failure }
         }
-        if (lines.isEmpty()) Text("No logs found")
+        if (lines.isEmpty()) Text(tr("No logs found"))
         androidx.compose.foundation.text.selection.SelectionContainer {
-            Text(lines.joinToString("\n"), style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
+            Text(tr(lines.joinToString("\n")), style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
         }
     }
 }

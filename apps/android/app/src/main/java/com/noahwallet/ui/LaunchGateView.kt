@@ -1,5 +1,6 @@
 package com.noahwallet.ui
 
+import com.noahwallet.localization.tr
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.safeDrawing
 import android.Manifest
@@ -135,8 +136,8 @@ fun LaunchGateView(model: AppModel) {
     }
     if (!model.walletLock.locked) model.error?.let { message ->
         androidx.compose.material3.AlertDialog(onDismissRequest = { model.error = null },
-            title = { Text("Please try again") }, text = { Text(message) },
-            confirmButton = { androidx.compose.material3.TextButton({ model.error = null }) { Text("OK") } })
+            title = { Text(tr("Please try again")) }, text = { Text(tr(message)) },
+            confirmButton = { androidx.compose.material3.TextButton({ model.error = null }) { Text(tr("OK")) } })
     }
     if (model.walletLock.locked) androidx.compose.ui.window.Dialog(onDismissRequest = {}, properties = androidx.compose.ui.window.DialogProperties(
         dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false,
@@ -144,8 +145,8 @@ fun LaunchGateView(model: AppModel) {
     )) {
         androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             NoahForm("Noah is Locked") {
-                Text("Authenticate to access your wallet")
-                model.walletLock.error?.let { Text(it) }
+                Text(tr("Authenticate to access your wallet"))
+                model.walletLock.error?.let { Text(tr(it)) }
                 NoahButton("Unlock", !model.walletLock.authenticating) { scope.launch { model.walletLock.unlock(activity) } }
             }
         }
@@ -172,9 +173,9 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(stringResource(message.first), style = MaterialTheme.typography.headlineMedium)
+        Text(tr(stringResource(message.first)), style = MaterialTheme.typography.headlineMedium)
         androidx.compose.foundation.text.selection.SelectionContainer {
-            Text(stringResource(message.second), textAlign = TextAlign.Center)
+            Text(tr(stringResource(message.second)), textAlign = TextAlign.Center)
         }
         if (state == LaunchState.secureStorageUnavailable || (state == LaunchState.existingWallet && openFailed)) {
             val context = LocalContext.current
@@ -184,7 +185,7 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
                     "Noah Android ${com.noahwallet.BuildConfig.VERSION_NAME} (${com.noahwallet.BuildConfig.APP_VARIANT}): " +
                         "saved wallet data could not be safely verified after an update. Data has been kept. Please help me recover access. " +
                         "I will not share my recovery phrase."))
-            }) { Text("Copy support message") }
+            }) { Text(tr("Copy support message")) }
         }
         if (state != null) NoahButton("Try again", onClick = retry)
         if (state == LaunchState.seedWithoutWalletData || state == LaunchState.walletDataWithoutSeed) {
@@ -198,20 +199,20 @@ internal fun DeleteWalletFallback(model: AppModel) {
     var showingDelete by rememberSaveable { mutableStateOf(false) }
     var confirmation by rememberSaveable { mutableStateOf("") }
     val enabled = model.canDeleteRecoveryWallet
-    androidx.compose.material3.TextButton({ showingDelete = true }, enabled = enabled) { Text("Delete Wallet") }
+    androidx.compose.material3.TextButton({ showingDelete = true }, enabled = enabled) { Text(tr("Delete Wallet")) }
     if (showingDelete) androidx.compose.material3.AlertDialog(
         onDismissRequest = { if (enabled) showingDelete = false },
-        title = { Text("Delete Wallet") },
+        title = { Text(tr("Delete Wallet")) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm.")
+            Text(tr("This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm."))
             androidx.compose.material3.OutlinedTextField(confirmation, { confirmation = it },
-                label = { Text("delete") }, enabled = enabled, singleLine = true)
+                label = { Text(tr("delete")) }, enabled = enabled, singleLine = true)
         } },
-        dismissButton = { androidx.compose.material3.TextButton({ showingDelete = false }, enabled = enabled) { Text("Cancel") } },
+        dismissButton = { androidx.compose.material3.TextButton({ showingDelete = false }, enabled = enabled) { Text(tr("Cancel")) } },
         confirmButton = { androidx.compose.material3.TextButton({
             model.action("Couldn't delete wallet. Restart Noah and try again.") {
                 model.deleteWallet(); showingDelete = false
             }
-        }, enabled = enabled && confirmation.trim().equals("delete", true)) { Text("Delete Wallet") } },
+        }, enabled = enabled && confirmation.trim().equals("delete", true)) { Text(tr("Delete Wallet")) } },
     )
 }

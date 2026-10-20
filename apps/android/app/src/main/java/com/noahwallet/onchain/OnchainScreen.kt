@@ -1,5 +1,6 @@
 package com.noahwallet.onchain
 
+import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -83,7 +84,7 @@ internal fun OnchainScreen(app: AppModel, model: OnchainModel, content: @Composa
     PullToRefreshBox(model.loading, onRefresh = { model.invalidate(); scope.launch { model.load() } }) {
         Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (app.isWalletSuspended) Text("Wallet suspended. Resume your wallet in Settings.")
+            if (app.isWalletSuspended) Text(tr("Wallet suspended. Resume your wallet in Settings."))
             else content()
             OnchainStatus(app, model)
         }
@@ -95,14 +96,14 @@ internal fun OnchainScreen(app: AppModel, model: OnchainModel, content: @Composa
 
 @Composable
 internal fun AmountRow(app: AppModel, title: String, sats: Long) {
-    ListItem(headlineContent = { Text(title) }, supportingContent = { Text(amountText(app, sats)) })
+    ListItem(headlineContent = { Text(tr(title)) }, supportingContent = { Text(tr(amountText(app, sats))) })
 }
 internal fun amountText(app: AppModel, sats: Long) = BitcoinAmount.format(sats, app.amountUnit, java.util.Locale.forLanguageTag(app.localeIdentifier))
 
 @Composable
 internal fun DetailRow(title: String, value: String) {
-    Text(title, style = MaterialTheme.typography.labelLarge)
-    SelectionContainer { Text(value) }
+    Text(tr(title), style = MaterialTheme.typography.labelLarge)
+    SelectionContainer { Text(tr(value)) }
 }
 internal fun copy(context: Context, value: String) {
     (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Noah", value))
@@ -112,8 +113,8 @@ internal fun TransactionRow(txid: String) {
     val context = LocalContext.current
     val uri = LocalUriHandler.current
     DetailRow("Transaction ID", txid)
-    TextButton({ copy(context, txid) }) { Text("Copy transaction ID") }
-    if (BuildConfig.APP_VARIANT != "regtest") TextButton({ uri.openUri("https://mempool.space/" + (if (BuildConfig.APP_VARIANT == "signet") "signet/" else "") + "tx/$txid") }) { Text("View in explorer") }
+    TextButton({ copy(context, txid) }) { Text(tr("Copy transaction ID")) }
+    if (BuildConfig.APP_VARIANT != "regtest") TextButton({ uri.openUri("https://mempool.space/" + (if (BuildConfig.APP_VARIANT == "signet") "signet/" else "") + "tx/$txid") }) { Text(tr("View in explorer")) }
 }
 
 @Composable
@@ -123,17 +124,17 @@ private fun OnchainStatus(app: AppModel, model: OnchainModel) {
     if (model.loading || model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     model.attempts.forEach { attempt ->
         HorizontalDivider()
-        Text(if (attempt.overrideAudit != null) "Overridden attempt" else if (attempt.receipt == null) "Check operation status" else "Submitted", style = MaterialTheme.typography.titleLarge)
-        Text(attempt.quote.action.title)
+        Text(tr(if (attempt.overrideAudit != null) "Overridden attempt" else if (attempt.receipt == null) "Check operation status" else "Submitted"), style = MaterialTheme.typography.titleLarge)
+        Text(tr(attempt.quote.action.title))
         AmountRow(app, "Reviewed amount", attempt.quote.amount)
-        Text(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(attempt.quote.createdAt)))
-        Text(attempt.receipt?.message ?: OnchainFailure.uncertain.text)
+        Text(tr(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(attempt.quote.createdAt))))
+        Text(tr(attempt.receipt?.message ?: OnchainFailure.uncertain.text))
         attempt.overrideAudit?.let { audit ->
-            Text("Repeat protection overridden: " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(audit.overriddenAt)))
-            Text(audit.statusMessage); Text(audit.title); Text(audit.warning); Text(audit.confirmation)
+            Text(tr("Repeat protection overridden: " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(audit.overriddenAt))))
+            Text(tr(audit.statusMessage)); Text(tr(audit.title)); Text(tr(audit.warning)); Text(tr(audit.confirmation))
         }
-        attempt.receipt?.chainStatus?.let { Text(it.text) }
-        attempt.receipt?.statusError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        attempt.receipt?.chainStatus?.let { Text(tr(it.text)) }
+        attempt.receipt?.statusError?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
         attempt.receipt?.onchainFee?.let { AmountRow(app, "Actual onchain fee", it) }
         if (attempt.receipt != null && attempt.quote.action == OnchainAction.board) {
             val amounts = attempt.receipt.boardAmounts(attempt.quote)
@@ -143,21 +144,21 @@ private fun OnchainStatus(app: AppModel, model: OnchainModel) {
         }
         (attempt.receipt?.txid ?: attempt.txid)?.let { TransactionRow(it) }
         if (attempt.receipt != null && !attempt.receipt.broadcastRetryPending) {
-            TextButton({ scope.launch { model.acknowledge(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text("Done") }
-            if (attempt.receipt.txid != null) TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text("Check status") }
+            TextButton({ scope.launch { model.acknowledge(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Done")) }
+            if (attempt.receipt.txid != null) TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Check status")) }
         }
         else {
-            Text("Noah checks again automatically as your wallet syncs.")
-            TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text("Check status") }
-            if (attempt.receipt == null && attempt.overrideAudit == null) TextButton({ overrideID = attempt.id }, enabled = !model.busy && !app.isWalletSuspended) { Text("Override repeat protection…", color = MaterialTheme.colorScheme.error) }
+            Text(tr("Noah checks again automatically as your wallet syncs."))
+            TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Check status")) }
+            if (attempt.receipt == null && attempt.overrideAudit == null) TextButton({ overrideID = attempt.id }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Override repeat protection…"), color = MaterialTheme.colorScheme.error) }
         }
     }
     overrideID?.let { id -> AlertDialog(onDismissRequest = { overrideID = null },
-        title = { Text(OnchainOperationJournal.overrideTitle) }, text = { Text(OnchainOperationJournal.overrideWarning) },
-        dismissButton = { TextButton({ overrideID = null }) { Text("Keep attempt") } },
-        confirmButton = { TextButton({ overrideID = null; scope.launch { model.overrideUncertain(id) } }) { Text(OnchainOperationJournal.overrideConfirmation) } }) }
-    model.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-    model.message?.let { Text(it) }
+        title = { Text(tr(OnchainOperationJournal.overrideTitle)) }, text = { Text(tr(OnchainOperationJournal.overrideWarning)) },
+        dismissButton = { TextButton({ overrideID = null }) { Text(tr("Keep attempt")) } },
+        confirmButton = { TextButton({ overrideID = null; scope.launch { model.overrideUncertain(id) } }) { Text(tr(OnchainOperationJournal.overrideConfirmation)) } }) }
+    model.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+    model.message?.let { Text(tr(it)) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -168,9 +169,9 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
     LaunchedEffect(quote) { while (isActive && current) { delay(250); current = quote.current() } }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(quote.action.title, style = MaterialTheme.typography.headlineSmall)
+            Text(tr(quote.action.title), style = MaterialTheme.typography.headlineSmall)
             AmountRow(app, if (quote.action == OnchainAction.board) "Amount boarded" else "Amount selected", quote.amount)
-            if (quote.ids.isNotEmpty()) Text("VTXOs selected: ${quote.ids.size}")
+            if (quote.ids.isNotEmpty()) Text(tr("VTXOs selected: ${quote.ids.size}"))
             if (quote.action != OnchainAction.cancel) {
                 AmountRow(app, when (quote.action) { OnchainAction.board -> "Ark fee"; OnchainAction.refresh -> "Refresh fee"; else -> "Estimated claim fee" }, quote.fee)
                 if (quote.action in setOf(OnchainAction.board, OnchainAction.startExit, OnchainAction.progress))
@@ -184,15 +185,15 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
             }
             if (quote.automatic) AmountRow(app, "Onchain reserve left", quote.confirmed - quote.amount - quote.chainFee)
             quote.destination?.let { DetailRow("Destination", it) }
-            quote.externalDestinationWarning?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Text(reviewExplanation(quote))
+            quote.externalDestinationWarning?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+            Text(tr(reviewExplanation(quote)))
             if (quote.action in setOf(OnchainAction.startExit, OnchainAction.progress, OnchainAction.claim)) {
-                ExitRules.warning(quote.amount, quote.fee, quote.totalFee, quote.action == OnchainAction.claim)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                if (!quote.fundable) Text("Additional confirmed onchain funds would be required to progress this exit.")
+                ExitRules.warning(quote.amount, quote.fee, quote.totalFee, quote.action == OnchainAction.claim)?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+                if (!quote.fundable) Text(tr("Additional confirmed onchain funds would be required to progress this exit."))
             }
-            if (!current) Text(OnchainFailure.changed.text, color = MaterialTheme.colorScheme.error)
-            Button(confirm, enabled = current && !app.isWalletSuspended) { Text(quote.action.title) }
-            TextButton(cancel) { Text(cancelTitle) }
+            if (!current) Text(tr(OnchainFailure.changed.text), color = MaterialTheme.colorScheme.error)
+            Button(confirm, enabled = current && !app.isWalletSuspended) { Text(tr(quote.action.title)) }
+            TextButton(cancel) { Text(tr(cancelTitle)) }
         }
     }
 }

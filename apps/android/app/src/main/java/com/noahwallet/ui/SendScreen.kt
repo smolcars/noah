@@ -1,5 +1,6 @@
 package com.noahwallet.ui
 
+import com.noahwallet.localization.tr
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.activity.compose.BackHandler
@@ -106,61 +107,61 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
     }
     Column(Modifier.fillMaxSize().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            TextButton(onClick = { focus.clearFocus(); model.reset() }, enabled = !model.busy) { Text("Start over") }
-            TextButton(onClick = { focus.clearFocus(); scanner = true }, enabled = !model.busy) { Text("Scan QR") }
+            TextButton(onClick = { focus.clearFocus(); model.reset() }, enabled = !model.busy) { Text(tr("Start over")) }
+            TextButton(onClick = { focus.clearFocus(); scanner = true }, enabled = !model.busy) { Text(tr("Scan QR")) }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             when (model.stage) {
                 SendStage.amount -> {
-                    Text("How much?", style = MaterialTheme.typography.headlineLarge)
-                    Text(model.amount.ifEmpty { "0" }, style = MaterialTheme.typography.displaySmall, modifier = Modifier.semantics { contentDescription = "Amount ${model.amount.ifEmpty { "0" }}" })
-                    TextButton(onClick = model::toggleCurrency, enabled = model.btcPrice != null && !model.busy && model.parsed.isAmountEditable) { Text(if (model.useFiat) model.fiatCurrency else "sats") }
-                    Text("${model.arkBalance} sats available in Ark", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tr("How much?"), style = MaterialTheme.typography.headlineLarge)
+                    Text(tr(model.amount.ifEmpty { "0" }), style = MaterialTheme.typography.displaySmall, modifier = Modifier.semantics { contentDescription = "Amount ${model.amount.ifEmpty { "0" }}" })
+                    TextButton(onClick = model::toggleCurrency, enabled = model.btcPrice != null && !model.busy && model.parsed.isAmountEditable) { Text(tr(if (model.useFiat) model.fiatCurrency else "sats")) }
+                    Text(tr("${model.arkBalance} sats available in Ark"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     app.summary?.balance?.let { balance ->
                         balance.pendingRoundMessage("${balance.ark.pendingInRound} sats")?.let {
-                            Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr(it), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    if (!model.parsed.isAmountEditable) Text("Amount set by payment request")
+                    if (!model.parsed.isAmountEditable) Text(tr("Amount set by payment request"))
                     AmountKeypad(model.amount, model.useFiat, !model.busy && model.parsed.isAmountEditable) { model.amount = it }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(onClick = model::maxSend, enabled = !model.busy && model.parsed.isAmountEditable && (model.arkBalance > 0 || model.onchainBalance > 0)) { Text("MAX") }
-                        TextButton(onClick = model::recipientFirst, enabled = !model.busy) { Text("Choose recipient first") }
+                        TextButton(onClick = model::maxSend, enabled = !model.busy && model.parsed.isAmountEditable && (model.arkBalance > 0 || model.onchainBalance > 0)) { Text(tr("MAX")) }
+                        TextButton(onClick = model::recipientFirst, enabled = !model.busy) { Text(tr("Choose recipient first")) }
                     }
                     PasteRecipient { value -> scope.launch { model.importRecipient(value) } }
                 }
                 SendStage.recipient -> {
-                    Text("Who are you paying?", style = MaterialTheme.typography.headlineMedium)
-                    OutlinedTextField(model.destination, model::setRecipient, label = { Text("Address, invoice, or payment request") },
+                    Text(tr("Who are you paying?"), style = MaterialTheme.typography.headlineMedium)
+                    OutlinedTextField(model.destination, model::setRecipient, label = { Text(tr("Address, invoice, or payment request")) },
                         enabled = !model.busy, minLines = 2, maxLines = 5, modifier = Modifier.fillMaxWidth())
                     PasteRecipient { value -> focus.clearFocus(); scope.launch { model.importRecipient(value) } }
                     model.matchingRoute?.let { route ->
-                        Text("Recipient verified", color = MaterialTheme.colorScheme.primary)
+                        Text(tr("Recipient verified"), color = MaterialTheme.colorScheme.primary)
                         if (route.commentAllowed > 0) {
-                            OutlinedTextField(model.comment, { model.comment = it }, label = { Text("Add a note") }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
-                            Text("${model.comment.length}/${route.commentAllowed}", style = MaterialTheme.typography.bodySmall)
-                            if (model.comment.isNotEmpty() && route.arkAddress != null) Text("Adding a note uses Lightning.", style = MaterialTheme.typography.bodySmall)
+                            OutlinedTextField(model.comment, { model.comment = it }, label = { Text(tr("Add a note")) }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
+                            Text(tr("${model.comment.length}/${route.commentAllowed}"), style = MaterialTheme.typography.bodySmall)
+                            if (model.comment.isNotEmpty() && route.arkAddress != null) Text(tr("Adding a note uses Lightning."), style = MaterialTheme.typography.bodySmall)
                         }
                     }
-                    model.suggestions.forEach { suggestion -> TextButton(onClick = { model.setRecipient(suggestion) }) { Text(suggestion) } }
+                    model.suggestions.forEach { suggestion -> TextButton(onClick = { model.setRecipient(suggestion) }) { Text(tr(suggestion)) } }
                 }
                 SendStage.method -> {
-                    Text("Choose payment method", style = MaterialTheme.typography.headlineMedium)
+                    Text(tr("Choose payment method"), style = MaterialTheme.typography.headlineMedium)
                     model.rails.forEach { rail ->
                         SendChoice(rail.label, model.progress.selectedRail == rail, model.availability[rail.name] == true && !model.busy) { model.progress = model.progress.copy(selectedRail = rail, railConfirmed = true) }
                     }
                 }
                 SendStage.source -> {
-                    Text("Choose balance", style = MaterialTheme.typography.headlineMedium)
+                    Text(tr("Choose balance"), style = MaterialTheme.typography.headlineMedium)
                     SendSource.entries.forEach { source ->
                         SendChoice("${source.label} · ${if (source == SendSource.offchain) model.arkBalance else model.onchainBalance} sats", model.source == source, source in model.sources && !model.busy) { model.source = source }
                     }
                 }
-                SendStage.review -> Text("Review payment", style = MaterialTheme.typography.headlineMedium)
+                SendStage.review -> Text(tr("Review payment"), style = MaterialTheme.typography.headlineMedium)
             }
-            model.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            controller.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            model.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+            controller.message?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
             Spacer(Modifier.height(8.dp))
         }
         Box(Modifier.padding(16.dp)) { NoahButton(if (model.busy || model.resolvingRecipient) "Preparing…" else "Continue", !model.busy && !model.resolvingRecipient) { focus.clearFocus(); scope.launch { model.continueStage() } } }
@@ -183,18 +184,18 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
 
 @Composable internal fun SendConfirmation(payment: SendPayment, quote: SendQuote, controller: SendController, confirm: () -> Unit, cancel: () -> Unit) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                Text("Confirm payment", style = MaterialTheme.typography.headlineMedium)
+                Text(tr("Confirm payment"), style = MaterialTheme.typography.headlineMedium)
                 SelectionContainer { Text(payment.destination, style = MaterialTheme.typography.bodySmall) }
-                Text(if (!quote.vtxoIDs.isNullOrEmpty()) "Recipient receives about ${quote.amount} sats" else "${quote.amount} sats", style = MaterialTheme.typography.headlineLarge)
-                if (!quote.vtxoIDs.isNullOrEmpty()) Text("The exact amount depends on the network fee when sent. The total is exactly the reviewed coins.", style = MaterialTheme.typography.bodySmall)
+                Text(tr(if (!quote.vtxoIDs.isNullOrEmpty()) "Recipient receives about ${quote.amount} sats" else "${quote.amount} sats"), style = MaterialTheme.typography.headlineLarge)
+                if (!quote.vtxoIDs.isNullOrEmpty()) Text(tr("The exact amount depends on the network fee when sent. The total is exactly the reviewed coins."), style = MaterialTheme.typography.bodySmall)
                 ReviewRow(if (quote.approximate) "Estimated fee" else "Fee", "${quote.fee} sats")
                 ReviewRow(if (quote.approximate && quote.vtxoIDs.isNullOrEmpty()) "Estimated total" else "Total", "${quote.total} sats")
                 quote.prepared?.let { ReviewRow("Transaction size", "${it.vsize} vB · ${it.inputCount} ${if (it.inputCount == 1) "input" else "inputs"}") }
                 quote.feeRate?.let { ReviewRow("Fee rate", "$it sat/vB") }
                 payment.source?.let { ReviewRow("From", it.label) }
                 if (payment.comment.isNotEmpty()) ReviewRow("Note", payment.comment)
-                quote.checkpoint?.let { Text("An existing Lightning payment will be checked. No new payment will be created.") }
-                if (quote.approximate) Text("The fee is an estimate. The final fee may change before submission.", style = MaterialTheme.typography.bodySmall)
+                quote.checkpoint?.let { Text(tr("An existing Lightning payment will be checked. No new payment will be created.")) }
+                if (quote.approximate) Text(tr("The fee is an estimate. The final fee may change before submission."), style = MaterialTheme.typography.bodySmall)
                 NoahButton("Confirm", !controller.locked, onClick = confirm)
                 NoahButton("Back", !controller.locked, secondary = true, onClick = cancel)
             }
@@ -205,11 +206,11 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
     TextButton(onClick = {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(context)?.toString()?.let(onPaste)
-    }) { Text("Paste") }
+    }) { Text(tr("Paste")) }
 }
 @Composable private fun SendChoice(label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
     OutlinedButton(onClick, Modifier.fillMaxWidth().heightIn(min = 56.dp), enabled = enabled) {
-        RadioButton(selected, onClick = null, enabled = enabled); Spacer(Modifier.width(12.dp)); Text(label, Modifier.weight(1f))
+        RadioButton(selected, onClick = null, enabled = enabled); Spacer(Modifier.width(12.dp)); Text(tr(label), Modifier.weight(1f))
     }
 }
 @Composable internal fun AmountKeypad(amount: String, decimal: Boolean, enabled: Boolean, onChange: (String) -> Unit) {
@@ -218,7 +219,7 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { key ->
                     TextButton(onClick = { onChange(keypadInput(amount, key, decimal)) }, enabled = enabled && key.isNotEmpty(), modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
-                        Text(key, style = if (key == "Delete") MaterialTheme.typography.labelMedium else MaterialTheme.typography.headlineMedium)
+                        Text(tr(key), style = if (key == "Delete") MaterialTheme.typography.labelMedium else MaterialTheme.typography.headlineMedium)
                     }
                 }
             }
@@ -232,7 +233,7 @@ internal fun keypadInput(amount: String, key: String, decimal: Boolean): String 
     else -> amount
 }
 @Composable private fun ReviewRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(label, Modifier.weight(1f)); Text(value, Modifier.weight(1f)) }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(tr(label), Modifier.weight(1f)); Text(tr(value), Modifier.weight(1f)) }
 }
 @Composable internal fun SendOutcome(controller: SendController, onDone: () -> Unit) {
     val scope = rememberCoroutineScope(); var overrideStep by remember { mutableIntStateOf(0) }
@@ -247,25 +248,25 @@ internal fun keypadInput(amount: String, key: String, decimal: Boolean): String 
     }) {
         if (controller.state == SendController.State.submitting) CircularProgressIndicator()
         receipt?.let {
-            Text(if (it.amountIsPending) "Recipient amount pending" else "${it.amount} sats", style = MaterialTheme.typography.displaySmall)
+            Text(tr(if (it.amountIsPending) "Recipient amount pending" else "${it.amount} sats"), style = MaterialTheme.typography.displaySmall)
             if (it.txid != null) ReviewRow("Status", when (it.status) { SendReceipt.Status.confirmed -> "Confirmed"; SendReceipt.Status.unlocated -> "Unable to locate"; SendReceipt.Status.conflicted -> "Conflicted"; SendReceipt.Status.submitted -> "Submitted" })
             it.fee?.let { fee -> ReviewRow("Actual fee", "$fee sats") }
-            it.txid?.let { txid -> SelectionContainer { Text(txid, style = MaterialTheme.typography.bodySmall) } }
-            it.conflictDescription?.let { description -> Text(description) }
-            if (it.broadcastRetryPending) Text(SendReceipt.broadcastPendingMessage)
-            it.chainStatus?.let { status -> Text(status.text) }
+            it.txid?.let { txid -> SelectionContainer { Text(tr(txid), style = MaterialTheme.typography.bodySmall) } }
+            it.conflictDescription?.let { description -> Text(tr(description)) }
+            if (it.broadcastRetryPending) Text(tr(SendReceipt.broadcastPendingMessage))
+            it.chainStatus?.let { status -> Text(tr(status.text)) }
             if (it.txid != null && it.chainStatus == null && !it.broadcastRetryPending)
-                Text(SendReceipt.submittedMessage)
+                Text(tr(SendReceipt.submittedMessage))
         }
-        controller.attempt?.existingLightning?.let { Text(it.message); ReviewRow("Existing fee", "${it.fee} sats") }
-        controller.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        if (controller.state == SendController.State.uncertain) Text(SendReceipt.uncertainMessage)
+        controller.attempt?.existingLightning?.let { Text(tr(it.message)); ReviewRow("Existing fee", "${it.fee} sats") }
+        controller.message?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+        if (controller.state == SendController.State.uncertain) Text(tr(SendReceipt.uncertainMessage))
         if (controller.state in listOf(SendController.State.uncertain, SendController.State.storageBlocked) || receipt?.txid != null) NoahButton(if (controller.checking) "Checking…" else if (controller.state == SendController.State.storageBlocked) "Retry" else "Check status", !controller.checking) { scope.launch { controller.checkStatus() } }
         if (controller.state in listOf(SendController.State.succeeded, SendController.State.alreadyPaid, SendController.State.failed)) NoahButton("Done", receipt?.broadcastRetryPending != true, onClick = onDone)
-        if (controller.canOverride) TextButton(onClick = { overrideStep = 1 }) { Text("Start a new payment after checking history", color = MaterialTheme.colorScheme.error) }
+        if (controller.canOverride) TextButton(onClick = { overrideStep = 1 }) { Text(tr("Start a new payment after checking history"), color = MaterialTheme.colorScheme.error) }
     }
-    if (overrideStep > 0) AlertDialog(onDismissRequest = { overrideStep = 0 }, title = { Text(if (overrideStep == 1) "Have you checked?" else SendOverrideAudit.titleText) },
-        text = { Text(if (overrideStep == 1) "Check your history and confirm with the recipient. This payment may already have been sent." else controller.overrideWarning) },
-        confirmButton = { TextButton(onClick = { if (overrideStep == 1) overrideStep = 2 else { scope.launch { controller.startNewPaymentAfterHistoryCheck(true); overrideStep = 0 } } }) { Text(if (overrideStep == 1) "I checked history" else SendOverrideAudit.confirmationText) } },
-        dismissButton = { TextButton(onClick = { overrideStep = 0 }) { Text("Keep checking") } })
+    if (overrideStep > 0) AlertDialog(onDismissRequest = { overrideStep = 0 }, title = { Text(tr(if (overrideStep == 1) "Have you checked?" else SendOverrideAudit.titleText)) },
+        text = { Text(tr(if (overrideStep == 1) "Check your history and confirm with the recipient. This payment may already have been sent." else controller.overrideWarning)) },
+        confirmButton = { TextButton(onClick = { if (overrideStep == 1) overrideStep = 2 else { scope.launch { controller.startNewPaymentAfterHistoryCheck(true); overrideStep = 0 } } }) { Text(tr(if (overrideStep == 1) "I checked history" else SendOverrideAudit.confirmationText)) } },
+        dismissButton = { TextButton(onClick = { overrideStep = 0 }) { Text(tr("Keep checking")) } })
 }

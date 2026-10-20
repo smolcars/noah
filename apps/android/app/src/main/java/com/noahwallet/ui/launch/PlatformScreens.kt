@@ -1,5 +1,6 @@
 package com.noahwallet.ui.launch
 
+import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -23,11 +24,11 @@ fun PushNotificationsRequiredScreen(requesting: Boolean, request: () -> Unit, re
     val context = LocalContext.current
     BackHandler { }
     NoahForm("Turn on push notifications") {
-        Text("Push notifications are critical for the app to function and enabling them helps prevent VTXOs from expiring.")
-        Text("Refresh expiring VTXOs", style = MaterialTheme.typography.titleMedium)
-        Text("We attempt to refresh VTXOs in the background to prevent them from expiring.")
-        Text("Receive while app is closed", style = MaterialTheme.typography.titleMedium)
-        Text("Lightning and Ark payments keep flowing, even in the background.")
+        Text(tr("Push notifications are critical for the app to function and enabling them helps prevent VTXOs from expiring."))
+        Text(tr("Refresh expiring VTXOs"), style = MaterialTheme.typography.titleMedium)
+        Text(tr("We attempt to refresh VTXOs in the background to prevent them from expiring."))
+        Text(tr("Receive while app is closed"), style = MaterialTheme.typography.titleMedium)
+        Text(tr("Lightning and Ark payments keep flowing, even in the background."))
         NoahButton(if (requesting) "Requesting..." else "Enable notifications", !requesting, onClick = request)
         NoahButton("I turned them on - check again", !requesting, secondary = true, onClick = retry)
         NoahButton("Open settings to allow notifications", !requesting, secondary = true) { PlatformAccess.openSettings(context) }
@@ -63,17 +64,17 @@ fun BatteryOptimizationScreen(model: AppModel, onContinue: () -> Unit) {
     }
     BackHandler { }
     NoahForm("Disable battery optimization") {
-        Text("Android can put Noah to sleep in the background to save energy. This has a negligible effect on battery life, but can cause push notifications to stop arriving entirely. Disabling battery optimization for Noah keeps the wallet operating correctly.")
-        Text("Push notifications keep arriving", style = MaterialTheme.typography.titleMedium)
-        Text("Without optimization, notifications can drop off completely, not just be delayed.")
-        Text("Background activity keeps working", style = MaterialTheme.typography.titleMedium)
-        Text("VTXOs keep refreshing in the background so they don't expire while the app is closed.")
+        Text(tr("Android can put Noah to sleep in the background to save energy. This has a negligible effect on battery life, but can cause push notifications to stop arriving entirely. Disabling battery optimization for Noah keeps the wallet operating correctly."))
+        Text(tr("Push notifications keep arriving"), style = MaterialTheme.typography.titleMedium)
+        Text(tr("Without optimization, notifications can drop off completely, not just be delayed."))
+        Text(tr("Background activity keeps working"), style = MaterialTheme.typography.titleMedium)
+        Text(tr("VTXOs keep refreshing in the background so they don't expire while the app is closed."))
         NoahButton("Open battery settings") { failed = !PlatformAccess.openBattery(context) }
         NoahButton("Skip", secondary = true) { proceed() }
     }
-    if (failed) AlertDialog(onDismissRequest = { failed = false }, title = { Text("Couldn't open battery settings") },
-        text = { Text("Please open your device settings and allow Noah to run in the background, then continue.") },
-        confirmButton = { TextButton({ failed = false }) { Text("OK") } })
+    if (failed) AlertDialog(onDismissRequest = { failed = false }, title = { Text(tr("Couldn't open battery settings")) },
+        text = { Text(tr("Please open your device settings and allow Noah to run in the background, then continue.")) },
+        confirmButton = { TextButton({ failed = false }) { Text(tr("OK")) } })
 }
 
 @Composable
@@ -103,10 +104,10 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
     }
     BackHandler { onContinue() }
     NoahForm(if (fromOnboarding) "UnifiedPush Setup" else "UnifiedPush") {
-        Text("Google Play Services is not available. To receive notifications, please use a UnifiedPush distributor (like ntfy).")
-        Text("Select Distributor", style = MaterialTheme.typography.titleMedium)
-        if (loading) Text("Loading distributors…")
-        else if (distributors.isEmpty()) Text("No distributors detected. Install ntfy or another UnifiedPush distributor.")
+        Text(tr("Google Play Services is not available. To receive notifications, please use a UnifiedPush distributor (like ntfy)."))
+        Text(tr("Select Distributor"), style = MaterialTheme.typography.titleMedium)
+        if (loading) Text(tr("Loading distributors…"))
+        else if (distributors.isEmpty()) Text(tr("No distributors detected. Install ntfy or another UnifiedPush distributor."))
         distributors.forEach { distributor ->
             NoahButton(distributor.name, !registering && !loading, secondary = selected != distributor.id) {
                 scope.launch {
@@ -118,14 +119,14 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
                     } finally { loading = false }
                 }
             }
-            Text(distributor.id, style = MaterialTheme.typography.bodySmall)
+            Text(tr(distributor.id), style = MaterialTheme.typography.bodySmall)
         }
-        Text("Current Endpoint:", style = MaterialTheme.typography.titleMedium)
-        Text(endpoint ?: "Not registered")
+        Text(tr("Current Endpoint:"), style = MaterialTheme.typography.titleMedium)
+        Text(tr(endpoint ?: "Not registered"))
         if (endpoint != null) NoahButton("Copy Endpoint", secondary = true) {
             (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("UnifiedPush endpoint", endpoint))
         }
-        if (failed) Text("Couldn't register with UnifiedPush. Please try again.", color = MaterialTheme.colorScheme.error)
+        if (failed) Text(tr("Couldn't register with UnifiedPush. Please try again."), color = MaterialTheme.colorScheme.error)
         if (endpoint != null && !registering) NoahButton(if (fromOnboarding) "Continue" else "Done", onClick = onContinue)
         else NoahButton(if (registering) "Registering..." else if (fromOnboarding) "Register" else "Register with UnifiedPush", !registering && !loading && registration != null) {
             scope.launch {
@@ -158,6 +159,6 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
             }
         }
         if (fromOnboarding) NoahButton("Skip", secondary = true, onClick = onContinue)
-        Text("Install a distributor app like \"ntfy\" from F-Droid to enable push notifications.")
+        Text(tr("Install a distributor app like \"ntfy\" from F-Droid to enable push notifications."))
     }
 }

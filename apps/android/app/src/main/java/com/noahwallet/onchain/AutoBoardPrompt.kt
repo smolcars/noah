@@ -1,5 +1,6 @@
 package com.noahwallet.onchain
 
+import com.noahwallet.localization.tr
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.lifecycle.Lifecycle
@@ -69,8 +70,8 @@ fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
         catch (failure: Exception) { if (token == generation) message = (failure as? OnchainException)?.message ?: "Unable to prepare boarding. Use Settings → Board to Ark to try again." }
     }
     message?.let { text -> AlertDialog(onDismissRequest = { message = null },
-        title = { Text("Board to Ark") }, text = { Text(text + " Check Settings → Board to Ark for operation status.") },
-        confirmButton = { TextButton({ message = null }) { Text("OK") } }) }
+        title = { Text(tr("Board to Ark")) }, text = { Text(tr(text + " Check Settings → Board to Ark for operation status.")) },
+        confirmButton = { TextButton({ message = null }) { Text(tr("OK")) } }) }
     plan?.let { quote -> OnchainReview(app, quote,
         onDismiss = { markAttempted(); releasePlan() }, cancelTitle = "No, turn off",
         cancel = {

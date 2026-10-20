@@ -1,5 +1,6 @@
 package com.noahwallet.ui
 
+import com.noahwallet.localization.tr
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -47,8 +48,8 @@ fun NoahTheme(content: @Composable () -> Unit) {
 
 @Composable
 fun NoahButton(title: String, enabled: Boolean = true, secondary: Boolean = false, onClick: () -> Unit) {
-    if (secondary) OutlinedButton(onClick, Modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = enabled) { Text(title) }
-    else Button(onClick, Modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = enabled) { Text(title) }
+    if (secondary) OutlinedButton(onClick, Modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = enabled) { Text(tr(title)) }
+    else Button(onClick, Modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = enabled) { Text(tr(title)) }
 }
 
 /** Scrollable forms resize above the IME, including their actions. */
@@ -56,7 +57,7 @@ fun NoahButton(title: String, enabled: Boolean = true, secondary: Boolean = fals
 fun NoahForm(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Text(title, style = MaterialTheme.typography.headlineLarge)
+        Text(tr(title), style = MaterialTheme.typography.headlineLarge)
         content()
     }
 }

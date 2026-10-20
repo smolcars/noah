@@ -1,5 +1,6 @@
 package com.noahwallet.ui
 
+import com.noahwallet.localization.tr
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
@@ -36,8 +37,8 @@ import java.util.concurrent.atomic.AtomicBoolean
     BackHandler(onBack = onClose)
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Scan QR code", style = MaterialTheme.typography.headlineMedium)
-            TextButton(onClick = onClose) { Text("Close") }
+            Text(tr("Scan QR code"), style = MaterialTheme.typography.headlineMedium)
+            TextButton(onClick = onClose) { Text(tr("Close")) }
         }
         if (permitted) {
             val preview = remember { PreviewView(context) }
@@ -74,16 +75,16 @@ import java.util.concurrent.atomic.AtomicBoolean
                 }
             }
             AndroidView(factory = { preview }, modifier = Modifier.weight(1f).fillMaxWidth())
-            Text("Point your camera at a payment QR code.")
+            Text(tr("Point your camera at a payment QR code."))
         }
-        cameraError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        cameraError?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
         if (denied) {
-            Text("Permission required", style = MaterialTheme.typography.titleLarge)
-            Text("Camera permission is required to scan QR codes.")
+            Text(tr("Permission required"), style = MaterialTheme.typography.titleLarge)
+            Text(tr("Camera permission is required to scan QR codes."))
             NoahButton("Allow camera") { permission.launch(Manifest.permission.CAMERA) }
             TextButton(onClick = {
                 context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:${context.packageName}")))
-            }) { Text("Open settings") }
+            }) { Text(tr("Open settings")) }
         }
     }
 }

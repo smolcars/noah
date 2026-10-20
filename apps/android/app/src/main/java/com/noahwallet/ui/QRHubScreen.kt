@@ -1,5 +1,6 @@
 package com.noahwallet.ui
 
+import com.noahwallet.localization.tr
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -44,33 +45,33 @@ fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Un
     if (scanning) Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) { SendScanner(onClose = { scanning = false }, onScan = ::scan) }
         TextButton({ clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()?.takeIf { it.trim().isNotEmpty() }?.let(::scan) },
-            modifier = Modifier.fillMaxWidth()) { Text("Paste") }
+            modifier = Modifier.fillMaxWidth()) { Text(tr("Paste")) }
     } else NoahForm("QR Code") {
-        TextButton(onBack) { Text("Back") }
+        TextButton(onBack) { Text(tr("Back")) }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            FilledTonalButton({}, Modifier.weight(1f)) { Text("My code") }
+            FilledTonalButton({}, Modifier.weight(1f)) { Text(tr("My code")) }
             OutlinedButton({
                 if (context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) scanning = true
                 else permission.launch(Manifest.permission.CAMERA)
-            }, Modifier.weight(1f)) { Text("Scan") }
+            }, Modifier.weight(1f)) { Text(tr("Scan")) }
         }
         if (address != null) {
             ReceiveQR(address, actionLabel = "Copy Lightning address") {
                 clipboard.setPrimaryClip(ClipData.newPlainText("Lightning address", address)); copied = true
             }
-            if (displayName.trim().isNotEmpty()) Text(displayName, style = MaterialTheme.typography.titleLarge)
-            Text(if (copied) "Copied" else address.replace("@", "@\u200b").replace(".", ".\u200b"),
+            if (displayName.trim().isNotEmpty()) Text(tr(displayName), style = MaterialTheme.typography.titleLarge)
+            Text(tr(if (copied) "Copied" else address.replace("@", "@\u200b").replace(".", ".\u200b")),
                 Modifier.clickable { clipboard.setPrimaryClip(ClipData.newPlainText("Lightning address", address)); copied = true })
-            Text("This QR contains only your Lightning address.")
+            Text(tr("This QR contains only your Lightning address."))
         } else Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Lightning address unavailable", style = MaterialTheme.typography.titleLarge)
-                Text("Finish setting up your Lightning address before sharing your QR.")
+                Text(tr("Lightning address unavailable"), style = MaterialTheme.typography.titleLarge)
+                Text(tr("Finish setting up your Lightning address before sharing your QR."))
                 NoahButton("Open Profile", onClick = onProfile)
             }
         }
     }
-    if (permissionDenied) AlertDialog(onDismissRequest = { permissionDenied = false }, title = { Text("Permission required") },
-        text = { Text("Camera permission is required to scan QR codes.") },
-        confirmButton = { TextButton({ permissionDenied = false }) { Text("OK") } })
+    if (permissionDenied) AlertDialog(onDismissRequest = { permissionDenied = false }, title = { Text(tr("Permission required")) },
+        text = { Text(tr("Camera permission is required to scan QR codes.")) },
+        confirmButton = { TextButton({ permissionDenied = false }) { Text(tr("OK")) } })
 }

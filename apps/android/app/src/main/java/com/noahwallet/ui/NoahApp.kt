@@ -1,5 +1,6 @@
 package com.noahwallet.ui
 
+import com.noahwallet.localization.tr
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -59,8 +60,8 @@ fun NoahApp(model: AppModel) {
     Scaffold(
         topBar = {
             val destination = backStack.last() as? SettingsDestination
-            if (destination != null) TopAppBar(title = { Text(destination.title) }, navigationIcon = {
-                TextButton({ if (!model.busy && backStack.size > 1) backStack.removeAt(backStack.lastIndex) }) { Text("Back") }
+            if (destination != null) TopAppBar(title = { Text(tr(destination.title)) }, navigationIcon = {
+                TextButton({ if (!model.busy && backStack.size > 1) backStack.removeAt(backStack.lastIndex) }) { Text(tr("Back")) }
             })
         },
         bottomBar = {
@@ -81,7 +82,7 @@ fun NoahApp(model: AppModel) {
                             if (destination != Destination.Home) backStack.add(destination)
                         },
                         icon = { Icon(painterResource(destination.icon), contentDescription = null) },
-                        label = { Text(stringResource(destination.title)) },
+                        label = { Text(tr(stringResource(destination.title))) },
                     )
                 }
             }
