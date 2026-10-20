@@ -14,18 +14,29 @@ struct AppTelemetryTests {
     @Test func sharedSecretsAreScrubbedAtEveryTelemetryBoundary() throws {
         for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
             where !fixture.name.hasPrefix("address-") {
-            let event = Event(level: .error)
-            event.message = SentryMessage(formatted: fixture.input)
-            event.exceptions = [Exception(value: fixture.input, type: "WalletError")]
-            event.context = ["nested": ["array": [["text": fixture.input]]]]
-            let crumb = Breadcrumb(level: .info, category: "test")
-            crumb.message = fixture.input
-            crumb.setData(value: ["text": fixture.input], key: "nested")
-            event.breadcrumbs = [crumb]
-            let clean = try #require(AppTelemetry.scrub(event), "\(fixture.name)")
-            #expect(clean.message?.formatted == fixture.expected)
-            #expect(clean.exceptions?.first?.value == fixture.expected)
-            #expect(clean.breadcrumbs?.first?.message == fixture.expected)
+            // Isolate each boundary: duplicating an 11-word excerpt across the event
+            // now intentionally constitutes a complete aggregate mnemonic run.
+            for boundary in ["message", "exception", "context", "breadcrumb"] {
+                let event = Event(level: .error)
+                switch boundary {
+                case "message": event.message = SentryMessage(formatted: fixture.input)
+                case "exception": event.exceptions = [Exception(value: fixture.input, type: "WalletError")]
+                case "context": event.context = ["nested": ["text": fixture.input]]
+                default:
+                    let crumb = Breadcrumb(level: .info, category: "diagnostics")
+                    crumb.message = fixture.input
+                    event.breadcrumbs = [crumb]
+                }
+                let clean = try #require(AppTelemetry.scrub(event), "\(boundary) \(fixture.name)")
+                let text: String?
+                switch boundary {
+                case "message": text = clean.message?.formatted
+                case "exception": text = clean.exceptions?.first?.value
+                case "context": text = clean.context?["nested"]?["text"] as? String
+                default: text = clean.breadcrumbs?.first?.message
+                }
+                #expect(text == fixture.expected, "\(boundary) \(fixture.name)")
+            }
             let unchecked = Event(level: .error)
             unchecked.transaction = fixture.input
             #expect((AppTelemetry.scrub(unchecked) == nil) == (fixture.input != fixture.expected), "final check \(fixture.name)")
@@ -34,11 +45,35 @@ struct AppTelemetryTests {
         let event = Event(level: .error)
         event.extra = ["nested": ["words": words, "access_token": "fake", "clientSecret": "fake"]]
         let clean = try #require(AppTelemetry.scrub(event))
-        let nested = try #require(clean.extra?["nested"] as? [String: Any])
-        #expect(nested.values.allSatisfy { $0 as? String == "[redacted]" })
+        #expect(clean.extra?["nested"] as? String == "[redacted]")
         let unchecked = Event(level: .error)
         unchecked.transaction = String(decoding: try JSONSerialization.data(withJSONObject: words), as: UTF8.self)
         #expect(AppTelemetry.scrub(unchecked) == nil)
+    }
+
+    @Test(arguments: ["extra", "context", "tags", "breadcrumb", "exceptions", "wholeEvent"])
+    func detectsMnemonicLeavesAcrossNestedContainers(boundary: String) throws {
+        let words = Array(repeating: "abandon", count: 11) + ["about"]
+        let nested: [Any] = words.enumerated().map {
+            ["position": $0.offset + 1, "word": ["value": $0.element]] as [String: Any]
+        }
+        let event = Event(level: .error)
+        switch boundary {
+        case "extra": event.extra = ["restore": nested]
+        case "context": event.context = ["restore": ["entries": nested]]
+        case "tags": event.tags = Dictionary(uniqueKeysWithValues: words.enumerated().map { ("part\($0.offset)", $0.element) })
+        case "breadcrumb":
+            let crumb = Breadcrumb(level: .info, category: "test")
+            crumb.setData(value: nested, key: "restore")
+            event.breadcrumbs = [crumb]
+        case "exceptions": event.exceptions = words.map { Exception(value: $0, type: "WalletError") }
+        default:
+            event.extra = ["partA": Array(nested.prefix(6))]
+            event.context = ["partB": ["entries": Array(nested.suffix(6))]]
+        }
+        guard let clean = AppTelemetry.scrub(event) else { return }
+        let json = try JSONSerialization.data(withJSONObject: clean.serialize())
+        #expect(!String(decoding: json, as: UTF8.self).contains("abandon"))
     }
 
     @Test func addressesAndNestedIdentityFieldsAreScrubbed() throws {
@@ -154,4 +189,28 @@ struct AppTelemetryTests {
         #expect(clean.transaction == "wallet.sync")
         #expect(clean.extra?["attempt"] as? Int == 3)
     }
+    final class UnexpectedValue: NSObject {
+        override var description: String { "preimage=synthetic-private-value" }
+    }
+
+    @Test func unexpectedObjectAndRequestHeadersFailClosed() {
+        let event = Event(level: .error)
+        event.extra = ["unexpected": UnexpectedValue()]
+        #expect(AppTelemetry.scrub(event) == nil)
+        let requestEvent = Event(level: .error)
+        requestEvent.request = SentryRequest()
+        requestEvent.request?.headers = ["Authorization": "synthetic-credential"]
+        #expect(AppTelemetry.scrub(requestEvent) == nil)
+    }
+
+    @Test func nestedWordObjectsMustNotReachTelemetry() throws {
+        let words = Array(repeating: "abandon", count: 11) + ["about"]
+        let event = Event(level: .error)
+        event.extra = ["restore": words.enumerated().map { ["position": $0.offset + 1, "word": $0.element] as [String: Any] }]
+        guard let clean = AppTelemetry.scrub(event) else { return }
+        let text = String(decoding: try JSONSerialization.data(withJSONObject: clean.serialize()), as: UTF8.self)
+        #expect(!text.contains("abandon"))
+    }
+
+
 }

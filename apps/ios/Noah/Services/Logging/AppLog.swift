@@ -240,6 +240,24 @@ final class LogFile: @unchecked Sendable {
         return runs
     }
 
+    /// Dictionary order is not defined. Count fragments too, so interleaved metadata
+    /// cannot turn a complete phrase into harmless-looking individual word fields.
+    static func containsMnemonic(in leaves: [String]) -> Bool {
+        let joined = leaves.joined(separator: " ")
+        guard joined.utf8.count <= maxMessageBytes else { return true }
+        if !mnemonicRanges(in: normalizeMnemonic(joined)).isEmpty { return true }
+        var count = 0
+        for leaf in leaves {
+            let normalized = normalizeMnemonic(leaf)
+            let words = wordPattern.matches(in: normalized, range: NSRange(normalized.startIndex..., in: normalized))
+            if !words.isEmpty, words.allSatisfy({ bip39.contains((normalized as NSString).substring(with: $0.range)) }) {
+                count += words.count
+                if count >= 12 { return true }
+            }
+        }
+        return false
+    }
+
     static func isSensitiveKey(_ field: String) -> Bool {
         let key = field.lowercased().filter(\.isLetter)
         return key == "key" || ["mnemonic", "seed", "privatekey", "privkey", "secret", "signature",
