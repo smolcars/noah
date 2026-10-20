@@ -21,102 +21,146 @@ enum AppTelemetry {
               !dsn.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
         let options = Options()
         options.dsn = dsn
-        options.environment = "production" // RN getDefaultEnvironment(), when !__DEV__.
+        options.environment = "production"
         options.releaseName = "\(info["CFBundleIdentifier"] as? String ?? "")@\(info["CFBundleShortVersionString"] as? String ?? "")+\(info["CFBundleVersion"] as? String ?? "")"
         options.dist = info["CFBundleVersion"] as? String
-        options.sendDefaultPii = true
+        options.sendDefaultPii = false
         options.enableMetricKit = true
         options.enableAppHangTracking = false
-        // RN leaves error sampling at 1 and tracing off. No logs or UI attachments.
         options.sampleRate = 1
         options.tracesSampleRate = nil
         options.enableLogs = false
         options.attachScreenshot = false
         options.attachViewHierarchy = false
         options.enableMetricKitRawPayload = false
+        options.maxAttachmentSize = 0
         options.beforeSend = scrub
+        // The hint's list is authoritative, including crash/scope attachments.
+        options.beforeSendWithHint = { event, hint in
+            hint.attachments = []
+            return scrub(event)
+        }
         options.beforeBreadcrumb = scrub
         return options
     }
 
     static func scrub(_ event: Event) -> Event? {
-        // Unknown objects/deep graphs cannot be inspected safely; never stringify them.
-        guard stringLeaves(event.serialize()) != nil else { return nil }
-        if let message = event.message {
-            let clean = SentryMessage(formatted: LogFile.redact(message.formatted))
-            clean.message = message.message.map(LogFile.redact)
-            clean.params = message.params?.map(LogFile.redact)
-            event.message = clean
+        // Construct a fresh event: new SDK fields and arbitrary payloads have no admission path.
+        let clean = Event(level: event.level)
+        clean.eventId = event.eventId
+        clean.timestamp = event.timestamp
+        clean.platform = event.platform
+        clean.releaseName = event.releaseName
+        clean.dist = event.dist
+        clean.environment = event.environment
+        clean.message = event.message.map { SentryMessage(formatted: LogFile.redact($0.formatted)) }
+        clean.sdk = event.sdk.map { sdk in
+            var result = scalars(sdk, keys: ["name", "version"])
+            for key in ["integrations", "features"] {
+                if let values = sdk[key] as? [String] { result[key] = values }
+            }
+            if let packages = sdk["packages"] as? [[String: Any]] {
+                result["packages"] = packages.map { scalars($0, keys: ["name", "version"]) }
+            }
+            return result
         }
-        if let user = event.user {
-            if user.email != nil { user.email = "[redacted]" }
-            user.username = user.username.map(LogFile.redact)
-            user.name = user.name.map(LogFile.redact)
-            user.data = user.data.map(scrubFields)
+        clean.context = event.context.map { contexts in
+            var result: [String: [String: Any]] = [:]
+            for (name, keys) in contextKeys {
+                if let fields = contexts[name] { result[name] = scalars(fields, keys: keys) }
+            }
+            return result
         }
-        event.extra = event.extra.map(scrubFields)
-        event.context = event.context?.mapValues(scrubFields)
-        event.tags = event.tags.map { scrubFields($0).compactMapValues { $0 as? String } }
-        event.breadcrumbs = event.breadcrumbs?.compactMap(scrub)
-        for exception in event.exceptions ?? [] {
-            exception.value = exception.value.map(LogFile.redact)
-            exception.type = exception.type.map(LogFile.redact)
+        clean.tags = event.tags?.filter { key, value in
+            key == "app.variant" && ["mainnet", "signet", "regtest"].contains(value)
         }
-        // Fail closed if a less common SDK field (request/user/stack frame/etc.)
-        // still contains a secret. Keep diagnostic stacks on ordinary events.
-        let serialized = event.serialize()
-        // The typed SDK severity (e.g. "error") is not a fragment of user content.
-        let content = serialized.filter { $0.key != "level" }
-        guard let leaves = stringLeaves(content), !LogFile.containsMnemonic(in: leaves) else { return nil }
-        guard NSDictionary(dictionary: serialized).isEqual(NSDictionary(dictionary: scrubFields(serialized))) else { return nil }
-        return event
+        clean.stacktrace = event.stacktrace.map(stacktrace)
+        clean.threads = event.threads?.map { thread in
+            let result = SentryThread(threadId: thread.threadId)
+            result.name = thread.name
+            result.crashed = thread.crashed
+            result.current = thread.current
+            result.isMain = thread.isMain
+            result.stacktrace = thread.stacktrace.map(stacktrace)
+            return result
+        }
+        clean.exceptions = event.exceptions?.map { exception in
+            let result = Exception(value: exception.value.map(LogFile.redact), type: exception.type)
+            result.module = exception.module
+            result.threadId = exception.threadId
+            result.stacktrace = exception.stacktrace.map(stacktrace)
+            if let mechanism = exception.mechanism {
+                let safe = Mechanism(type: mechanism.type)
+                safe.handled = mechanism.handled
+                safe.synthetic = mechanism.synthetic
+                result.mechanism = safe
+            }
+            return result
+        }
+        clean.breadcrumbs = event.breadcrumbs?.compactMap(scrub)
+        guard isSafePayload(clean.serialize()) else { return nil }
+        return clean
     }
 
     static func scrub(_ breadcrumb: Breadcrumb) -> Breadcrumb? {
-        guard stringLeaves(breadcrumb.serialize()) != nil else { return nil }
-        breadcrumb.message = breadcrumb.message.map(LogFile.redact)
-        breadcrumb.category = LogFile.redact(breadcrumb.category)
-        breadcrumb.type = breadcrumb.type.map(LogFile.redact)
-        breadcrumb.origin = breadcrumb.origin.map(LogFile.redact)
-        if let data = breadcrumb.data {
-            let clean = scrubFields(data)
-            for (key, value) in clean { breadcrumb.setData(value: value, key: key) }
-            for key in data.keys where clean[key] == nil { breadcrumb.setData(value: nil, key: key) }
-        }
-        guard let leaves = stringLeaves(breadcrumb.serialize()), !LogFile.containsMnemonic(in: leaves) else { return nil }
-        return breadcrumb
+        let clean = Breadcrumb(level: breadcrumb.level, category: breadcrumb.category)
+        clean.timestamp = breadcrumb.timestamp
+        clean.message = breadcrumb.message.map(LogFile.redact)
+        guard isSafePayload(clean.serialize()) else { return nil }
+        return clean
     }
 
-    private static func scrubValue(_ value: Any) -> Any {
-        if let string = value as? String { return LogFile.redact(string) }
-        if value is [Any] || value is [String: Any] {
-            guard let leaves = stringLeaves(value), !LogFile.containsMnemonic(in: leaves) else { return "[redacted]" }
-        }
-        if let array = value as? [Any] { return array.map(scrubValue) }
-        if let fields = value as? [String: Any] { return scrubFields(fields) }
-        return value
+    private static let contextKeys: [String: Set<String>] = [
+        "app": ["type", "app_identifier", "app_version", "app_build", "app_start_time",
+                "app_memory", "in_foreground", "build_type"],
+        "device": ["type", "family", "model", "model_id", "arch", "battery_level", "charging",
+                   "simulator", "memory_size", "free_memory", "usable_memory", "storage_size",
+                   "free_storage", "boot_time", "processor_count", "cpu_description",
+                   "screen_width_pixels", "screen_height_pixels", "screen_density", "screen_dpi",
+                   "orientation", "thermal_state", "low_memory"],
+        "os": ["type", "name", "version", "build", "kernel_version", "rooted"],
+    ]
+
+    private static func scalars(_ fields: [String: Any], keys: Set<String>) -> [String: Any] {
+        fields.filter { key, value in keys.contains(key) && (value is String || value is NSNumber) }
     }
 
-    private static func stringLeaves(_ value: Any, depth: Int = 0) -> [String]? {
+    private static func stacktrace(_ trace: SentryStacktrace) -> SentryStacktrace {
+        SentryStacktrace(frames: trace.frames.map { frame in
+            let clean = Frame()
+            clean.function = frame.function
+            clean.module = frame.module
+            clean.fileName = frame.fileName
+            clean.lineNumber = frame.lineNumber
+            return clean
+        }, registers: [:])
+    }
+
+    static func isSafePayload(_ payload: [String: Any]) -> Bool {
+        guard let leaves = stringLeaves(payload),
+              (leaves.keys + leaves.values).allSatisfy({ LogFile.redact($0) == $0 }) else { return false }
+        // Aggregate keys too, separately from values: fixed schema names must not
+        // complete an otherwise harmless 11-word excerpt. The severity is typed metadata.
+        guard let content = stringLeaves(payload.filter { $0.key != "level" }) else { return false }
+        return !LogFile.containsMnemonic(in: content.keys) && !LogFile.containsMnemonic(in: content.values)
+    }
+
+    private static func stringLeaves(_ value: Any, depth: Int = 0) -> (keys: [String], values: [String])? {
         guard depth < 32 else { return nil }
-        if let string = value as? String { return [string] }
-        if value is NSNumber || value is NSNull { return [] }
+        if let string = value as? String { return ([], [string]) }
+        if value is NSNumber || value is NSNull { return ([], []) }
         let children: [Any]
+        var result: (keys: [String], values: [String]) = ([], [])
         if let array = value as? [Any] { children = array }
         else if let fields = value as? [String: Any] {
-            children = fields.keys.sorted().compactMap { fields[$0] }
+            result.keys = fields.keys.sorted()
+            children = result.keys.map { fields[$0]! }
         } else { return nil }
-        var result: [String] = []
         for child in children {
             guard let leaves = stringLeaves(child, depth: depth + 1) else { return nil }
-            result.append(contentsOf: leaves)
+            result.keys.append(contentsOf: leaves.keys)
+            result.values.append(contentsOf: leaves.values)
         }
         return result
-    }
-
-    private static func scrubFields(_ fields: [String: Any]) -> [String: Any] {
-        fields.reduce(into: [String: Any]()) { result, field in
-            result[LogFile.redact(field.key)] = LogFile.isSensitiveKey(field.key) ? "[redacted]" : scrubValue(field.value)
-        }
     }
 }

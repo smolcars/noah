@@ -5,6 +5,57 @@ import Testing
 @testable import Noah
 
 struct AppTelemetryTests {
+    @Test func mnemonicDictionaryKeysMustNotReachTelemetry() throws {
+        let phrase = "ozone drill grab fiber curtain grace pudding thank cruise elder eight picnic"
+        #expect(try StoredSeed.normalized(phrase) == phrase)
+        let event = Event(level: .error)
+        event.extra = ["restore": phrase.split(separator: " ").enumerated().map { [String($0.element): $0.offset] }]
+        let clean = try #require(AppTelemetry.scrub(event))
+        #expect(clean.extra == nil)
+        let json = String(decoding: try JSONSerialization.data(withJSONObject: clean.serialize()), as: UTF8.self)
+        #expect(!json.contains("ozone"))
+    }
+
+    @Test func allowlistDropsUnapprovedFieldsAndNestedPayloads() throws {
+        let event = Event(level: .error)
+        event.extra = ["records": Array(repeating: "arbitrary payload", count: 100_000)]
+        event.context = ["wallet": ["state": "arbitrary payload"],
+                         "device": ["model": "iPhone", "name": "personal device", "arbitrary": "payload"],
+                         "app": ["app_version": "0.2.0", "device_app_hash": "personal identifier"],
+                         "os": ["name": "iOS", "version": "27.0", "arbitrary": "payload"]]
+        event.user = User(userId: "personal identifier")
+        event.request = SentryRequest()
+        event.request?.headers = ["Authorization": "fake-token"]
+        event.transaction = "arbitrary payload"
+        event.fingerprint = ["arbitrary payload"]
+        event.tags = ["app.variant": "signet", "arbitrary": "payload"]
+        let frame = Frame()
+        frame.function = "syncWallet"
+        frame.module = "Noah"
+        frame.fileName = "Sync.swift"
+        frame.lineNumber = 42
+        frame.vars = ["arbitrary": "payload"]
+        frame.contextLine = "arbitrary payload"
+        frame.preContext = ["arbitrary payload"]
+        frame.postContext = ["arbitrary payload"]
+        event.stacktrace = SentryStacktrace(frames: [frame], registers: ["arbitrary": "payload"])
+        let clean = try #require(AppTelemetry.scrub(event))
+        #expect(clean.extra == nil && clean.user == nil && clean.request == nil)
+        #expect(clean.transaction == nil && clean.fingerprint == nil)
+        #expect(clean.context?["wallet"] == nil)
+        #expect(clean.context?["device"]?["name"] == nil)
+        #expect(clean.context?["device"]?["model"] as? String == "iPhone")
+        #expect(clean.context?["app"]?["device_app_hash"] == nil)
+        #expect(clean.context?["os"]?["version"] as? String == "27.0")
+        #expect(clean.tags == ["app.variant": "signet"])
+        #expect(clean.stacktrace?.frames.first?.function == "syncWallet")
+        #expect(clean.stacktrace?.frames.first?.vars == nil)
+        #expect(clean.stacktrace?.frames.first?.contextLine == nil)
+        #expect(clean.stacktrace?.registers.isEmpty == true)
+        let json = String(decoding: try JSONSerialization.data(withJSONObject: clean.serialize()), as: UTF8.self)
+        #expect(!json.contains("payload") && !json.contains("personal"))
+    }
+
     private var info: [String: Any] {
         ["NoahSentryDSN": "https://public@example.invalid/1",
          "CFBundleIdentifier": "com.noahwallet.signet",
@@ -13,7 +64,7 @@ struct AppTelemetryTests {
 
     @Test func sharedSecretsAreScrubbedAtEveryTelemetryBoundary() throws {
         for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
-            where !fixture.name.hasPrefix("address-") {
+            {
             // Isolate each boundary: duplicating an 11-word excerpt across the event
             // now intentionally constitutes a complete aggregate mnemonic run.
             for boundary in ["message", "exception", "context", "breadcrumb"] {
@@ -35,19 +86,19 @@ struct AppTelemetryTests {
                 case "context": text = clean.context?["nested"]?["text"] as? String
                 default: text = clean.breadcrumbs?.first?.message
                 }
-                #expect(text == fixture.expected, "\(boundary) \(fixture.name)")
+                #expect(text == (boundary == "context" ? nil : fixture.expected), "\(boundary) \(fixture.name)")
             }
             let unchecked = Event(level: .error)
-            unchecked.transaction = fixture.input
+            unchecked.releaseName = fixture.input
             #expect((AppTelemetry.scrub(unchecked) == nil) == (fixture.input != fixture.expected), "final check \(fixture.name)")
         }
         let words = Array(repeating: "ABANDON", count: 11) + ["ABOUT"]
         let event = Event(level: .error)
         event.extra = ["nested": ["words": words, "access_token": "fake", "clientSecret": "fake"]]
         let clean = try #require(AppTelemetry.scrub(event))
-        #expect(clean.extra?["nested"] as? String == "[redacted]")
+        #expect(clean.extra == nil)
         let unchecked = Event(level: .error)
-        unchecked.transaction = String(decoding: try JSONSerialization.data(withJSONObject: words), as: UTF8.self)
+        unchecked.releaseName = String(decoding: try JSONSerialization.data(withJSONObject: words), as: UTF8.self)
         #expect(AppTelemetry.scrub(unchecked) == nil)
     }
 
@@ -93,10 +144,10 @@ struct AppTelemetryTests {
         let serialized = String(decoding: try JSONSerialization.data(withJSONObject: clean.serialize()), as: UTF8.self)
         #expect(!serialized.contains("alice@example.com"))
         #expect(!serialized.contains("fake"))
-        #expect(clean.user?.email == "[redacted]")
+        #expect(clean.user == nil)
         #expect(clean.message?.formatted == "Sending 1000 sat to lightning address [redacted]")
         let unchecked = Event(level: .error)
-        unchecked.transaction = text
+        unchecked.releaseName = text
         #expect(AppTelemetry.scrub(unchecked) == nil)
     }
 
@@ -130,7 +181,7 @@ struct AppTelemetryTests {
             #expect(options.dist == "100")
             #expect(options.sampleRate == 1)
             #expect(options.tracesSampleRate == nil)
-            #expect(options.sendDefaultPii)
+            #expect(!options.sendDefaultPii)
             #expect(options.enableMetricKit)
             #expect(!options.enableAppHangTracking)
             #expect(!options.enableLogs && !options.attachScreenshot && !options.attachViewHierarchy)
@@ -146,9 +197,7 @@ struct AppTelemetryTests {
         breadcrumb.setData(value: ["private_key": [1, 2, 3], "safe": "kept"], key: "nested")
         let crumb = try #require(options.beforeBreadcrumb?(breadcrumb))
         #expect(crumb.message == LogFile.redact(text))
-        let nested = try #require(crumb.data?["nested"] as? [String: Any])
-        #expect(nested["private_key"] as? String == "[redacted]")
-        #expect(nested["safe"] as? String == "kept")
+        #expect(crumb.data == nil)
 
         let event = Event(level: .error)
         let message = SentryMessage(formatted: text)
@@ -162,11 +211,11 @@ struct AppTelemetryTests {
         event.exceptions = [Exception(value: text, type: "WalletError")]
         let clean = try #require(options.beforeSend?(event))
         #expect(clean.message?.formatted == LogFile.redact(text))
-        #expect(clean.message?.params == ["[redacted]"])
-        #expect(clean.context?["wallet"]?["mnemonic"] as? String == "[redacted]")
-        #expect(clean.tags?["payment_preimage"] == "[redacted]")
+        #expect(clean.message?.params == nil && clean.message?.message == nil)
+        #expect(clean.context?["wallet"] == nil)
+        #expect(clean.tags?["payment_preimage"] == nil)
         #expect(clean.exceptions?.first?.value == "[redacted]")
-        #expect(clean.context?["wallet"]?["status"] as? String == "loaded")
+        #expect(clean.context?["wallet"]?["status"] == nil)
         let json = try JSONSerialization.data(withJSONObject: clean.serialize())
         #expect(!String(decoding: json, as: UTF8.self).contains("synthetic"))
     }
@@ -174,7 +223,7 @@ struct AppTelemetryTests {
     @Test func dropsEventsWithSecretsInUnhandledFields() throws {
         let options = try #require(AppTelemetry.options(variant: .mainnet, isDebug: false, info: info))
         let event = Event(level: .error)
-        event.transaction = "preimage=synthetic-sensitive-value"
+        event.releaseName = "preimage=synthetic-sensitive-value"
         #expect(options.beforeSend?(event) == nil)
     }
 
@@ -185,10 +234,33 @@ struct AppTelemetryTests {
         event.extra = ["attempt": 3]
         event.transaction = "wallet.sync"
         let clean = try #require(options.beforeSend?(event))
-        #expect(clean === event)
-        #expect(clean.transaction == "wallet.sync")
-        #expect(clean.extra?["attempt"] as? Int == 3)
+        #expect(clean.eventId == event.eventId && clean.timestamp == event.timestamp)
+        #expect(clean.message?.formatted == "Wallet sync failed")
+        #expect(clean.transaction == nil && clean.extra == nil)
     }
+    @Test func finalGuardIncludesKeysAndFailsClosed() {
+        let words = "ozone drill grab fiber curtain grace pudding thank cruise elder eight picnic".split(separator: " ")
+        let keys = words.enumerated().map { [String($0.element): $0.offset] }
+        #expect(!AppTelemetry.isSafePayload(["records": keys]))
+        #expect(!AppTelemetry.isSafePayload(["preimage=fake": 0]))
+        #expect(!AppTelemetry.isSafePayload(["opaque": UnexpectedValue()]))
+        #expect(AppTelemetry.isSafePayload(["status": "sync failed", "attempt": 3]))
+        var deep: [String: Any] = ["status": "sync failed"]
+        for _ in 0..<33 { deep = ["nested": deep] }
+        #expect(!AppTelemetry.isSafePayload(deep))
+    }
+
+    @Test func attachmentsAreRemovedByInstalledHook() throws {
+        let options = try #require(AppTelemetry.options(variant: .mainnet, isDebug: false, info: info))
+        let hint = Hint()
+        hint.attachments = [Attachment(data: Data("fake attachment".utf8), filename: "fake.txt")]
+        let event = Event(level: .error)
+        event.message = SentryMessage(formatted: "Wallet sync failed")
+        #expect(options.beforeSendWithHint?(event, hint) != nil)
+        #expect(hint.attachments.isEmpty)
+        #expect(options.maxAttachmentSize == 0)
+    }
+
     final class UnexpectedValue: NSObject {
         override var description: String { "preimage=synthetic-private-value" }
     }
@@ -196,11 +268,11 @@ struct AppTelemetryTests {
     @Test func unexpectedObjectAndRequestHeadersFailClosed() {
         let event = Event(level: .error)
         event.extra = ["unexpected": UnexpectedValue()]
-        #expect(AppTelemetry.scrub(event) == nil)
+        #expect(AppTelemetry.scrub(event)?.extra == nil)
         let requestEvent = Event(level: .error)
         requestEvent.request = SentryRequest()
         requestEvent.request?.headers = ["Authorization": "synthetic-credential"]
-        #expect(AppTelemetry.scrub(requestEvent) == nil)
+        #expect(AppTelemetry.scrub(requestEvent)?.request == nil)
     }
 
     @Test func nestedWordObjectsMustNotReachTelemetry() throws {
