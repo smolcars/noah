@@ -3,6 +3,19 @@
 Initial implementation base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
 Kotlin / Compose, API 24 minimum, bark-bolt-ffi **0.4.0**.
 
+## Android parity follow-ups (2026-10-20)
+
+Base: `feat/native-rewrite` local HEAD `51c24bc0` (iOS round 3).
+
+- New and edited end dates use RN's **23:59:00.000 local time**. Persisted
+  timestamps, including previously approved 23:59:59.999 boundaries, are read
+  unchanged. Regressions cover UTC, New York's spring/fall DST days, the inclusive
+  final millisecond and unchanged timestamps through reads/pause/reopen.
+  Shared calendar fixtures only calculate occurrence dates and all shared policy
+  fixtures have null end dates, so they require no changes.
+- End-date targeted run: **1,387 tests / 10 suites**, zero failures/errors/skips,
+  using Nix and `--max-workers=2 :app:testRegtestDebugUnitTest --tests "*Recurring*"`.
+
 ## Round-1 fixes (2026-10-20)
 
 Fix base: `feat/native-rewrite` local HEAD `bf8ac96f`. Android now matches iOS

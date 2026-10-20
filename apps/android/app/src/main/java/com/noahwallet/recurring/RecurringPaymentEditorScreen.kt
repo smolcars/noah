@@ -18,6 +18,11 @@ import java.util.Calendar
 import java.util.TimeZone
 import java.util.UUID
 
+internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault()): Long = Calendar.getInstance(zone).apply {
+    timeInMillis = value
+    set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+}.timeInMillis
+
 @Composable fun RecurringPaymentEditorScreen(executor: RecurringExecutor, original: RecurringPayment?, done: () -> Unit) {
     val scope = rememberCoroutineScope(); val focus = LocalFocusManager.current
     var label by remember { mutableStateOf(original?.label ?: "") }
@@ -37,7 +42,7 @@ import java.util.UUID
     val interval = RecurringInterval(unit, every.toIntOrNull() ?: 0)
     fun draft(): RecurringPayment {
         val now = System.currentTimeMillis()
-        val through = Calendar.getInstance().apply { timeInMillis = end; set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 59); set(Calendar.MILLISECOND, 999) }.timeInMillis
+        val through = recurringEndDate(end)
         return RecurringPayment(original?.id ?: UUID.randomUUID().toString(), label.trim().ifEmpty { (destination?.first ?: "").take(32) },
             destination?.first ?: "", destination?.second ?: "ark", amount.trim().takeIf { it.matches(Regex("[0-9]+")) }?.toLongOrNull() ?: 0,
             comment = if (destination?.second == "lnurl") comment.take(140).trim() else "", interval = interval, startAt = start,
