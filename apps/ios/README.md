@@ -95,3 +95,22 @@ by an older compatible server-listed backup.
 Restore now classifies newer envelope, manifest and SDK schema versions separately and asks the user to update Noah; wrong-phrase and damaged-backup copy is unchanged. `newerBackupsExplainUpdateRequired(_:)` runs normally alongside the pre-install safety tests (no opt-in flag).
 
 Verification: native export generation passed once; focused restore + four newer-version safety cases passed. The opt-in copy reproduction failed all three cases as expected. Final full NoahTests ran once after the last iOS code change: **694 total / 669 passed / 25 opt-in skipped / 0 failed**, **144 suites** (1,393 expanded passes in xcresult). XcodeGen regenerated the project; regtest, arm64, ONLY_ACTIVE_ARCH=YES, code signing enabled, DerivedData under `/private/tmp`. The owned iPhone 17 / iOS 27.0 simulator **Noah Backup Cross 5612** (`B8D12D73-AFA2-47D2-958F-8369D59D85AF`) was identity-checked, shut down and deleted. Owned DerivedData, result bundles and temporary exports/logs were removed. No protected simulator/device or Docker lifecycle was controlled.
+
+### Funded native compatibility (2026-10-20)
+
+Base `0b3b545d`: real Swift `BackupService` → Android `WalletRestorer` and
+Kotlin `BackupService` → iOS `WalletRestorer` **passed** with separate funded
+wallets (`ce392bd0` and `0bbe2205`). Each retained **37,724 Ark sats**, **10,000
+confirmed onchain sats**, movement IDs **1/2** (31,000/7,000 sats; fees 162/114),
+and its onchain transaction before and after sync. Each restored wallet then
+sent **1,000 Ark sats**, fee **0**, producing successful movement **3** and a
+verified Bark receive; remaining balances were **36,724 Ark / 10,000 onchain**.
+All 14 balance rows and projected history records matched. Real secure seed
+storage, archive/SDK validation, filesystem restore, reopen and sends ran;
+only backup listing/download transport was a local fixture.
+
+Rerun from the repository root: `nix develop --command python3 apps/BackupTests/run.py`.
+The runner owns and removes both devices (Android port 5618), DerivedData and
+results, and never operates container lifecycle. See the [runbook](../BackupTests/README.md)
+and [movement IDs, transactions, results and limits](../BackupTests/RESULTS.md).
+No backup/restore defect was found; production code is unchanged.

@@ -943,3 +943,24 @@ nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:t
 ```
 
 Result: **3,462 JVM tests / 122 suites / 0 failures / 0 errors / 0 skips**, regtest debug APK assembled, **BUILD SUCCESSFUL in 3m 5s**. All targeted Gradle calls also used `--max-workers=2`. The owned Android 15 Google APIs ARM64 AVD **NoahBackupCross5612** was explicitly mapped to **emulator-5612**, identity-checked, shut down and deleted. Temporary exports/logs were removed and no owned build process remains. No other emulator, physical device or Docker lifecycle was controlled.
+
+### Funded native compatibility (2026-10-20)
+
+Base `0b3b545d`: real Swift `BackupService` → Android `WalletRestorer` and
+Kotlin `BackupService` → iOS `WalletRestorer` **passed** with separate funded
+wallets (`ce392bd0` and `0bbe2205`). Each retained **37,724 Ark sats**, **10,000
+confirmed onchain sats**, movement IDs **1/2** (31,000/7,000 sats; fees 162/114),
+and its onchain transaction before and after sync. Each restored wallet then
+sent **1,000 Ark sats**, fee **0**, producing successful movement **3** and a
+verified Bark receive; remaining balances were **36,724 Ark / 10,000 onchain**.
+All 14 balance rows and projected history records matched. Android used a real
+atomic encrypted seed file and a unique Android Keystore alias. The generated
+Ktor clients' absolute metadata paths are routed to the local producer fixture;
+download, crypto, archive/SDK validation, restore, reopen and sends are real.
+
+Rerun from the repository root: `nix develop --command python3 apps/BackupTests/run.py`.
+The runner owns and removes both devices (Android port 5618), DerivedData and
+results, uses Gradle `--max-workers=2 --no-daemon`, and never operates container
+lifecycle. See the [runbook](../BackupTests/README.md) and
+[movement IDs, transactions, results and limits](../BackupTests/RESULTS.md).
+No backup/restore defect was found; production code is unchanged.
