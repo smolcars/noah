@@ -12,6 +12,41 @@ struct OnchainRecoveryTests {
         quote.ids = ids
         return quote
     }
+    private actor CachedReads {
+        var calls: [String] = []
+        func transactions() -> Set<String> { calls.append("transactions"); return ["exact-txid"] }
+        func vtxo(_ id: String) -> String { calls.append("vtxo:\(id)"); return "Locked" }
+        func exit(_ id: String) -> String? { calls.append("exit:\(id)"); return nil }
+    }
+    @Test func statusCheckUsesOnlyCachedReadsAndPreservesMissingOrLockedEvidence() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let journal = OnchainOperationJournal(file: file)
+        let cache = CachedReads()
+        let reads = WalletSession.OnchainAttemptReads(
+            walletID: "wallet", transactionIDs: { await cache.transactions() },
+            vtxoState: { await cache.vtxo($0) }, exitState: { await cache.exit($0) })
+        let board = quote(.board, [])
+        await #expect(throws: OnchainFailure.uncertain) {
+            try await journal.perform(board) { throw OnchainFailure.uncertain }
+        }
+        #expect(try await !WalletSession.checkOnchainAttempt(board.id, journal: journal, reads: reads))
+        try await journal.recordTransaction("exact-txid", for: board.id)
+        #expect(try await WalletSession.checkOnchainAttempt(board.id, journal: journal, reads: reads))
+        let refresh = quote(.refresh)
+        await #expect(throws: OnchainFailure.uncertain) {
+            try await journal.perform(refresh) { throw OnchainFailure.uncertain }
+        }
+        #expect(try await !WalletSession.checkOnchainAttempt(refresh.id, journal: journal, reads: reads))
+        #expect(await cache.calls == ["transactions", "transactions", "transactions", "vtxo:a", "exit:a"])
+        #expect(try await journal.loadAll().first(where: { $0.id == refresh.id })?.receipt == nil)
+        var wrong = reads
+        wrong.walletID = "other"
+        await #expect(throws: OnchainFailure.changed) {
+            try await WalletSession.checkOnchainAttempt(refresh.id, journal: journal, reads: wrong)
+        }
+        #expect(await cache.calls.count == 5)
+    }
     @Test func uncertaintyBlocksOnlyDuplicateOperationAndOverlappingItems() {
         for action in [OnchainAction.board, .refresh, .startExit, .progress, .claim, .cancel] {
             let attempt = OnchainOperationJournal.Attempt(quote: quote(action))

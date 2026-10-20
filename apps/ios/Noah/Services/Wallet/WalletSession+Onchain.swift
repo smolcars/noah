@@ -269,27 +269,45 @@ extension WalletSession {
         }
     }
 
-    /// Only BDK's onchain sync is used: wallet.sync can resume pending actions/broadcasts.
-    // https://gitlab.com/ark-bitcoin/bark/-/blob/bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c/bark/src/lib.rs
+    /// Cached evidence only: even BDK sync may rebroadcast already-authorized transactions.
+    // Bark's daemon keeps these reads fresh; an inconclusive check must remain unresolved.
     func checkOnchainAttempt(_ id: UUID, journal: OnchainOperationJournal = .shared) async throws -> Bool {
         try await withOpenWallet { handles in
-            guard let attempt = try await journal.loadAll().first(where: { $0.id == id }),
-                attempt.quote.walletID == handles.wallet.fingerprint() else { throw OnchainFailure.changed }
-            _ = try await handles.onchain.sync()
-            var evidence = OnchainOperationJournal.Evidence(walletID: handles.wallet.fingerprint())
-            evidence.transactionIDs = Set(try await handles.onchain.transactions().map(\.txid))
-            for id in attempt.quote.ids {
-                if attempt.quote.action == .refresh {
+            try await Self.checkOnchainAttempt(id, journal: journal, reads: .init(
+                walletID: handles.wallet.fingerprint(),
+                transactionIDs: { Set(try await handles.onchain.transactions().map(\.txid)) },
+                vtxoState: { id in
                     let vtxo = try await handles.wallet.getVtxoById(vtxoId: id)
-                    evidence.vtxoStates[id] = Self.vtxoModel(vtxo, tip: 0, expiring: []).state
-                }
-                if let status = try await handles.wallet.getExitStatus(
-                    vtxoId: id, includeHistory: true, includeTransactions: false) {
-                    evidence.exitStates[id] = Self.exitState(status.state).0
-                }
-            }
-            return try await journal.reconcile(id, evidence: evidence)
+                    return Self.vtxoModel(vtxo, tip: 0, expiring: []).state
+                },
+                exitState: { id in
+                    guard let status = try await handles.wallet.getExitStatus(
+                        vtxoId: id, includeHistory: true, includeTransactions: false) else { return nil }
+                    return Self.exitState(status.state).0
+                }))
         }
+    }
+
+    /// Narrow test seam deliberately provides no sync, progression or broadcast capability.
+    struct OnchainAttemptReads: Sendable {
+        var walletID: String
+        var transactionIDs: @Sendable () async throws -> Set<String>
+        var vtxoState: @Sendable (String) async throws -> String
+        var exitState: @Sendable (String) async throws -> String?
+    }
+
+    static func checkOnchainAttempt(
+        _ id: UUID, journal: OnchainOperationJournal, reads: OnchainAttemptReads
+    ) async throws -> Bool {
+        guard let attempt = try await journal.loadAll().first(where: { $0.id == id }),
+            attempt.quote.walletID == reads.walletID else { throw OnchainFailure.changed }
+        var evidence = OnchainOperationJournal.Evidence(walletID: reads.walletID)
+        evidence.transactionIDs = try await reads.transactionIDs()
+        for id in attempt.quote.ids {
+            if attempt.quote.action == .refresh { evidence.vtxoStates[id] = try await reads.vtxoState(id) }
+            evidence.exitStates[id] = try await reads.exitState(id)
+        }
+        return try await journal.reconcile(id, evidence: evidence)
     }
 
     private static func vtxoModel(_ value: Vtxo, tip: UInt32, expiring: Set<String>) -> VtxoModel {

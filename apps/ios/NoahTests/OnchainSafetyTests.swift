@@ -221,6 +221,7 @@ struct OnchainModelTests {
         #expect(model.quote == nil && model.error != nil)
         await model.checkStatus(board.id)
         #expect(model.attempts.count == 1)
+        #expect(model.message?.contains("Noah checks again automatically as your wallet syncs.") == true)
         #expect(await calls.mutations == 0)
         await calls.setReady(false)
         await model.checkStatus(board.id)

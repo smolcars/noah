@@ -39,8 +39,10 @@ Other deliberate differences from RN:
   submission. Attempts survive errors/relaunch and block only overlapping repeats
   of the same operation; uncertain board/refresh never blocks exits, claims or
   cancellations. Bark makes repeated active starts/already-canceled cancels harmless.
-  Read-only **Check status** syncs BDK (not broadcast-capable wallet/exit sync), then
-  reads exact txids and per-item VTXO/exit states. Only conclusive evidence resolves
+  Read-only **Check status** reads cached exact txids and per-item VTXO/exit
+  states only. It never syncs: even BDK sync may rebroadcast already-authorized
+  transactions. Bark’s daemon keeps the cache fresh. Inconclusive checks say
+  “Noah checks again automatically as your wallet syncs.” Only conclusive evidence resolves
   an attempt. Missing IDs, locked refresh inputs and unknown errors remain uncertain.
   **Clear unresolved attempt…** requires explicit destructive repeat-risk consent.
   There is no automatic retry or amount-only reconciliation. Receipts stay until

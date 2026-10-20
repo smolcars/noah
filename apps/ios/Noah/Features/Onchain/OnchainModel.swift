@@ -148,7 +148,7 @@ final class OnchainModel {
             guard await dependencies.ready() else { throw OnchainFailure.unavailable }
             let resolved = try await dependencies.check(id)
             await load()
-            message = resolved ? "Status resolved. Review the receipt." : "Status remains uncertain. No operation was repeated. You may use other recovery operations."
+            message = resolved ? "Status resolved. Review the receipt." : "Status remains uncertain. Noah checks again automatically as your wallet syncs."
         } catch {
             self.error = (error as? OnchainFailure)?.errorDescription ?? "Couldn't check status. The attempt is still saved."
         }
