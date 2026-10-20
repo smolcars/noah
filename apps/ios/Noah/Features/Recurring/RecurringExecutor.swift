@@ -240,7 +240,7 @@ import Observation
             if !retainReceipt { d.controller.acknowledge() }
             return
         }
-        let state = try d.store.load()
+        let state = try d.store.settlementState()
         guard state.binding == entry.binding else { return }
         // Claim application with consumption: an interruption stops advancement without repeating it.
         var resolved = entry; resolved.resolved = true; resolved.consumed = paid; resolved.policyApplied = true

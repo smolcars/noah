@@ -29,12 +29,12 @@ final class RecurringStore: @unchecked Sendable {
             if policyLedger == nil { policyLedger = RecurringPolicyLedger(file: file, sync: sync); policyBinding = binding; automation = RecurringAutomationAuthority(directory: file.deletingLastPathComponent(), sync: sync) }
         }
     }
-    private func protected(_ state: State) -> State {
+    private func protected(_ state: State, automationOverlay: Bool = true) -> State {
         guard let ledger = policyLedger else { return state }
         let stopped: Set<String>
         do { stopped = ledger.stopped(binding: try state.binding ?? policyBinding!(), schedules: state.schedules) }
         catch { AppLog("recurring").w(RecurringPolicyLedger.logMessage); stopped = Set(state.schedules.keys) }
-        let automationStopped = automation?.allowed() == false
+        let automationStopped = automationOverlay && automation?.allowed() == false
         var visible = state
         for id in state.schedules.keys where (stopped.contains(id) || automationStopped) && visible.schedules[id]?.unsupportedStorage == false {
             visible.schedules[id]?.status = "needs_attention"
@@ -109,6 +109,8 @@ final class RecurringStore: @unchecked Sendable {
         }
     }
     func load() throws -> State { try lock.withLock { protected(try rawState()) } }
+    /// Record submitted money against policy authority, without a temporary wallet display overlay.
+    func settlementState() throws -> State { try lock.withLock { protected(try rawState(), automationOverlay: false) } }
     private func change(policyID: String? = nil, reapproval: Bool = false, _ mutate: (inout [String: String]) throws -> Void) throws {
         try lock.withLock {
             let before = try rawState()
