@@ -175,7 +175,7 @@ enum SendReconciliation {
         do { receipt = chainEvidence(try await lookup(txid), receipt: receipt, source: source) }
         catch {
             // Preserve newer BDK evidence even when the independent chain source is unavailable.
-            receipt.chainStatusError = "Couldn't check network status. Showing the last known network status."
+            receipt.chainStatusError = ChainTransactionStatus.errorText
         }
         return .paid(receipt)
     }

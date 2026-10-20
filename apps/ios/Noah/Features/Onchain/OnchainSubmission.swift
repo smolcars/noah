@@ -10,7 +10,8 @@ enum OnchainSubmission {
         case .preparedInputsUnavailable: return .reservedInputs
         case .preparedBoardChanged, .preparedTransactionNotFound: return .changed
         case .unsupportedOperation: return .notSynced
-        case .insufficientFunds, .dust, .invalidAmount, .invalidFeeRate: return .constructionFailed
+        case .insufficientFunds: return .insufficientFunds
+        case .dust, .invalidAmount, .invalidFeeRate: return .constructionFailed
         default: return nil
         }
     }
@@ -31,7 +32,7 @@ enum OnchainSubmission {
             receipt.arkFee = quote.fee
             if case .failed = result.broadcast {
                 receipt.broadcastRetryPending = true
-                receipt.message = "Boarding submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again."
+                receipt.message = OnchainReceipt.broadcastFailedMessage
             }
             return receipt
         }

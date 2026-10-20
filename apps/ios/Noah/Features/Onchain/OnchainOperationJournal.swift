@@ -19,7 +19,8 @@ actor OnchainOperationJournal {
         var quote: OnchainQuote
         var receipt: OnchainReceipt?
         var txid: String?
-        var chainStatusError: String?
+        var chainStatusError: String? = nil
+        private enum CodingKeys: String, CodingKey { case quote, receipt, txid, overrideAudit }
         var overrideAudit: OverrideAudit?
         var id: UUID { quote.id }
 
@@ -80,13 +81,20 @@ actor OnchainOperationJournal {
     nonisolated let changes = HomeStatusUpdates<Void>()
     private let file: URL
     private var running = false
+    private var statusErrors: [UUID: String] = [:]
     init(file: URL) { self.file = file }
 
     func loadAll() throws -> [Attempt] {
         guard FileManager.default.fileExists(atPath: file.path) else { return [] }
         let data = try Data(contentsOf: file)
-        if let legacy = try? JSONDecoder().decode(Attempt.self, from: data) { return [legacy] }
-        return try JSONDecoder().decode([Attempt].self, from: data)
+        let saved: [Attempt]
+        if let legacy = try? JSONDecoder().decode(Attempt.self, from: data) { saved = [legacy] }
+        else { saved = try JSONDecoder().decode([Attempt].self, from: data) }
+        return saved.map { value in
+            var value = value
+            value.chainStatusError = statusErrors[value.id]
+            return value
+        }
     }
     func load() throws -> Attempt? { try loadAll().first }
     private func save(_ values: [Attempt]) throws {
@@ -115,16 +123,16 @@ actor OnchainOperationJournal {
 
     func recordStatusError(for id: UUID) throws {
         guard !running else { return }
-        var attempts = try loadAll()
-        guard let index = attempts.firstIndex(where: { $0.id == id }) else { return }
-        attempts[index].chainStatusError = "Couldn't check network status. Showing the last known network status."
-        try save(attempts)
+        guard statusErrors[id] != ChainTransactionStatus.errorText else { return }
+        statusErrors[id] = ChainTransactionStatus.errorText
+        changes.send(())
     }
 
     func observe(_ status: ChainTransactionStatus, for id: UUID) throws {
         guard !running else { return }
         var attempts = try loadAll()
         guard let index = attempts.firstIndex(where: { $0.id == id }) else { return }
+        statusErrors[id] = nil
         attempts[index].chainStatusError = nil
         if var receipt = attempts[index].receipt {
             receipt.chainStatus = status

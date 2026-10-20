@@ -94,7 +94,7 @@ struct WalletTabs: View {
                 NavigationStack { ReceiveView(isActive: selection == .receive) { selection = .home } }
             }
             SwiftUI.Tab("Send", systemImage: "arrow.up.right", value: .send) {
-                NavigationStack { SendView(model: send) }
+                NavigationStack { SendView(model: send, isActive: selection == .send) }
             }
             SwiftUI.Tab("History", systemImage: "clock.arrow.circlepath", value: .history) {
                 NavigationStack { TransactionsView(onRepeatPayment: repeatPayment) }

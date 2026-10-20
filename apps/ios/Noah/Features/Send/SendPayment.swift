@@ -37,6 +37,10 @@ struct SendQuote: Codable, Sendable, Equatable {
     static let feeEstimateExplanation = "The fee and total are estimates based on two inputs and two outputs. The final fee and total may be higher if more coins are needed."
 }
 struct SendReceipt: Codable, Equatable, Sendable {
+    static let broadcastPendingMessage = "Submitted, awaiting broadcast. Noah will keep retrying the broadcast. Do not send this payment again."
+    static let submittedMessage = "Submitted. Refresh to check network status. Do not send this payment again."
+    static let uncertainMessage = "Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."
+
     var amount: UInt64
     var txid: String?
     var paymentHash: String?
@@ -49,7 +53,12 @@ struct SendReceipt: Codable, Equatable, Sendable {
     var broadcastRetryPending: Bool?
     var confirmedConflictTxid: String?
     var chainStatus: ChainTransactionStatus?
-    var chainStatusError: String?
+    // Lookup failures are display state, never durable payment evidence.
+    var chainStatusError: String? = nil
+    private enum CodingKeys: String, CodingKey {
+        case amount, txid, paymentHash, movementID, amountIsEstimated, amountIsPending, status, fee, proof
+        case broadcastRetryPending, confirmedConflictTxid, chainStatus
+    }
     enum Proof: String, Codable, Sendable { case preparedTxid, submitReturnedTxid, actualMovement, submitReturnedArkSuccess }
     enum Status: String, Codable, Sendable { case submitted, confirmed, unlocated, conflicted }
     var isUnresolved: Bool { status == .unlocated || status == .conflicted }
@@ -387,9 +396,10 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
             guard attempt.receipt == nil else { return }
             attempt.candidates = candidates
             state = .uncertain
-        case .paid(let receipt):
-            attempt.receipt = receipt
+        case .paid(var receipt):
             message = receipt.chainStatusError
+            receipt.chainStatusError = nil
+            attempt.receipt = receipt
             state = receipt.isUnresolved ? .uncertain : .succeeded(receipt)
         case .alreadyPaid(let receipt):
             attempt.alreadyPaid = receipt

@@ -1,0 +1,41 @@
+{
+  "description": "Chosen common Send/Board wording. Lookup errors are recoverable display state, never journaled payment evidence.",
+  "copy": {
+    "notFound": "Not yet seen by the network. This chain source does not currently know the transaction. Do not submit it again.",
+    "inMempool": "In mempool. Waiting for confirmation.",
+    "confirmed": "Confirmed at block 123.",
+    "lookupError": "Couldn't check network status. Showing the last known network status. Try again.",
+    "insufficientFunds": "There are not enough confirmed onchain funds for this amount and its fees. Reduce the amount or wait for confirmation.",
+    "belowMinimum": "The amount Ark receives is below its minimum. Increase the boarding amount.",
+    "reservedInputs": "These coins are unavailable or reserved by another payment in review. Close that review, then try again.",
+    "tooManyInputs": "There are too many small coins for this board. Try a smaller amount.",
+    "notSynced": "Sync the wallet once before preparing a board.",
+    "boardNotAttempted": "Boarding was not submitted. Review again when the wallet is ready.",
+    "broadcastFailed": "Boarding submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again.",
+    "broadcastPending": "Submitted, awaiting broadcast. Noah will keep retrying the broadcast. Do not send this payment again.",
+    "submitted": "Submitted. Refresh to check network status. Do not send this payment again.",
+    "uncertain": "Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."
+  },
+  "receipts": [
+    {
+      "gross": 30000,
+      "arkFee": 100,
+      "chainFee": 1500,
+      "actualChainFee": null,
+      "expected": {
+        "arkReceives": 29900,
+        "totalLeaving": 31500
+      }
+    },
+    {
+      "gross": 30000,
+      "arkFee": 100,
+      "chainFee": 1500,
+      "actualChainFee": 1600,
+      "expected": {
+        "arkReceives": 29900,
+        "totalLeaving": 31600
+      }
+    }
+  ]
+}

@@ -46,6 +46,11 @@ struct OnchainStatusSection: View {
                 if let fee = attempt.receipt?.onchainFee {
                     OnchainAmountRow(title: "Actual onchain fee", sats: fee)
                 }
+                if attempt.quote.action == .board, let receipt = attempt.receipt {
+                    let amounts = receipt.boardAmounts(quote: attempt.quote)
+                    OnchainAmountRow(title: "Ark receives", sats: amounts.arkReceives)
+                    OnchainAmountRow(title: "Total leaving onchain wallet", sats: amounts.totalLeaving)
+                }
                 if let status = attempt.receipt?.chainStatus { Text(status.message) }
                 if let error = attempt.chainStatusError { Text(error).foregroundStyle(NoahColor.destructive) }
                 // An uncertain board still has its exact journaled funding txid (Android parity).

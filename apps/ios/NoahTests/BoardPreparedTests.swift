@@ -317,7 +317,7 @@ struct BoardPreparedTests {
     func probeAndReviewTypedFailuresUseExistingCopy(code: BarkErrorCode, stage: Int) async {
         let calls = AutoBoardCalls(failure: code, failAt: stage)
         let expected: OnchainFailure = switch code {
-        case .insufficientFunds: .constructionFailed
+        case .insufficientFunds: .insufficientFunds
         case .tooManyInputs: .tooManyInputs
         default: .belowMinimum
         }

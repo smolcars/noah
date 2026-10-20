@@ -11,6 +11,7 @@ enum ChainTransactionStatus: Codable, Equatable, Sendable {
         case .confirmed(let height): self = .confirmed(height)
         }
     }
+    static let errorText = "Couldn't check network status. Showing the last known network status. Try again."
     var message: String {
         switch self {
         case .notFound: "Not yet seen by the network. This chain source does not currently know the transaction. Do not submit it again."

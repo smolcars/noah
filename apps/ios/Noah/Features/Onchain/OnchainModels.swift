@@ -111,9 +111,11 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
 
 enum OnchainFailure: LocalizedError {
     case unavailable, changed, invalid, uncertain, busy, cancellationRefused, claimFeeChanged, constructionFailed
+    case insufficientFunds
     case belowMinimum, tooManyInputs, reservedInputs, notSynced, boardNotAttempted
     var errorDescription: String? {
         switch self {
+        case .insufficientFunds: "There are not enough confirmed onchain funds for this amount and its fees. Reduce the amount or wait for confirmation."
         case .belowMinimum: "The amount Ark receives is below its minimum. Increase the boarding amount."
         case .tooManyInputs: "There are too many small coins for this board. Try a smaller amount."
         case .reservedInputs: "These coins are unavailable or reserved by another payment in review. Close that review, then try again."
@@ -148,6 +150,14 @@ struct OnchainReceipt: Codable, Sendable, ExpressibleByStringLiteral {
         self.txid = txid
         self.onchainFee = onchainFee
     }
+    struct BoardAmounts: Decodable, Equatable {
+        let arkReceives: UInt64
+        let totalLeaving: UInt64
+    }
+    func boardAmounts(quote: OnchainQuote) -> BoardAmounts {
+        .init(arkReceives: quote.net, totalLeaving: quote.amount + (onchainFee ?? quote.chainFee))
+    }
+    static let broadcastFailedMessage = "Boarding submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again."
     static func boardingMessage(fee: UInt64?) -> String {
         "Boarding submitted. Funds become spendable after the board completes."
             + (fee.map { " Actual onchain fee: \($0) sats." } ?? " Actual onchain fee is not yet available.")

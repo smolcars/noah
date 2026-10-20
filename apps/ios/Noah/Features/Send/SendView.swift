@@ -5,7 +5,14 @@ struct SendView: View {
     @Environment(AppModel.self) private var app
     @State private var model: SendModel
 
-    init(model: SendModel = SendModel()) { _model = State(initialValue: model) }
+    let isActive: Bool
+    init(model: SendModel = SendModel(), isActive: Bool = true) {
+        _model = State(initialValue: model)
+        self.isActive = isActive
+    }
+    private var receiptRefreshID: String? {
+        isActive && scenePhase == .active && !app.isWalletSuspended ? model.controller.attempt?.receipt?.txid : nil
+    }
     @State private var scanner = false
     @FocusState private var focus: Field?
     private enum Field { case recipient, note }
@@ -31,6 +38,10 @@ struct SendView: View {
             {
                 model.btcPrice = response.rates.additionalProperties[app.preferredCurrency]
             }
+        }
+        .task(id: receiptRefreshID) {
+            guard receiptRefreshID != nil else { return }
+            await SendReceiptRefresh.observe(check: { await model.controller.checkStatus() })
         }
         .onChange(of: app.summary) { _, summary in
             model.arkBalance = summary?.balance.ark.spendable ?? 0
@@ -344,7 +355,7 @@ struct SendOutcomeView: View {
                     Image(systemName: "clock.badge.exclamationmark").font(.largeTitle)
                     Text("Payment may have been sent").font(NoahFont.title)
                     Text(
-                        "Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."
+                        SendReceipt.uncertainMessage
                     )
                     if let progress = controller.attempt?.existingLightning {
                         Text(progress.message)
@@ -381,9 +392,9 @@ struct SendOutcomeView: View {
                     Text(receipt.isSubmitted ? "Submitted" : receipt.status == .confirmed ? "Payment confirmed" : "Payment sent")
                         .font(NoahFont.title).accessibilityIdentifier("send-success")
                     if receipt.broadcastRetryPending == true {
-                        Text("Submitted, awaiting broadcast. Noah will keep retrying the broadcast. Do not send this payment again.")
+                        Text(SendReceipt.broadcastPendingMessage)
                     } else if receipt.isSubmitted {
-                        Text(receipt.chainStatus?.message ?? "Submitted. Refresh to check network status. Do not send this payment again.")
+                        Text(receipt.chainStatus?.message ?? SendReceipt.submittedMessage)
                     }
                     if receipt.status == .confirmed, let status = receipt.chainStatus { Text(status.message) }
                     if receipt.txid != nil {
