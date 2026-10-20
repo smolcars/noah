@@ -11,6 +11,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         BarkLog.install()
         AppTelemetry.start()
         SettingsStorage.bootstrap()
+        BackgroundScheduler.shared.register()
+        Task { await BackgroundScheduler.shared.schedule() }
         UNUserNotificationCenter.current().delegate = self
         // Before any push handler can start a backup: plaintext left by a
         // backup or export that died with the app.
@@ -18,6 +20,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         NotificationCenter.default.addObserver(self, selector: #selector(timeZoneChanged),
                                                name: .NSSystemTimeZoneDidChange, object: nil)
         return true
+    }
+
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        Task { await BackgroundScheduler.shared.schedule() }
+    }
+
+    func applicationWillEnterForeground(_ application: UIApplication) {
+        BackgroundExecution.foregroundWillEnter()
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
@@ -62,34 +72,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// Unstructured workers may settle native work after this callback has returned.
     /// A task group would wait for that work even after cancelling it.
     static func completeWithin(_ timeout: Duration, operation: @escaping @Sendable () async throws -> Void) async -> UIBackgroundFetchResult {
-        let deadline = ContinuousClock.now + timeout
-        return await withCheckedContinuation { continuation in
-            let completion = PushCompletion(continuation)
-            let work = Task {
-                await RecurringExecutionBudget.$deadline.withValue(deadline) {
-                    do { try await operation(); completion.finish(.newData) }
-                    catch { completion.finish(.failed) }
-                }
-            }
-            completion.timer = Task {
-                do { try await Task.sleep(until: deadline, clock: .continuous) }
-                catch { return }
-                work.cancel()
-                completion.finish(.failed)
-            }
+        await withCheckedContinuation { continuation in
+            _ = BackgroundExecution(timeout: timeout, completion: {
+                continuation.resume(returning: $0 ? .newData : .failed)
+            }, operation: operation)
         }
-    }
-}
-
-@MainActor private final class PushCompletion {
-    private var continuation: CheckedContinuation<UIBackgroundFetchResult, Never>?
-    var timer: Task<Void, Never>?
-    init(_ continuation: CheckedContinuation<UIBackgroundFetchResult, Never>) { self.continuation = continuation }
-    func finish(_ result: UIBackgroundFetchResult) {
-        guard let continuation else { return }
-        self.continuation = nil
-        timer?.cancel()
-        continuation.resume(returning: result)
     }
 }
 

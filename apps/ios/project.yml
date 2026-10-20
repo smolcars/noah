@@ -92,6 +92,43 @@ targets:
         showEnvVars: false
         inputFiles:
           - $(DWARF_DSYM_FOLDER_PATH)/$(DWARF_DSYM_FILE_NAME)
+    info:
+      path: Noah/Resources/Info.plist
+      properties:
+        NoahAppVariant: "$(NOAH_APP_VARIANT)"
+        NoahAppGroup: "$(NOAH_APP_GROUP)"
+        NoahSentryDSN: "$(NOAH_SENTRY_DSN)"
+        NoahRegtestHost: "$(NOAH_REGTEST_HOST)"
+        NoahRegtestServerURL: "$(NOAH_REGTEST_SERVER_URL)"
+        NSLocalNetworkUsageDescription: "$(NOAH_DISPLAY_NAME) uses your local network only to reach a development server on your computer."
+        CADisableMinimumFrameDurationOnPhone: true
+        CFBundleDevelopmentRegion: "$(DEVELOPMENT_LANGUAGE)"
+        CFBundleDisplayName: "$(NOAH_DISPLAY_NAME)"
+        CFBundleExecutable: "$(EXECUTABLE_NAME)"
+        CFBundleIdentifier: "$(PRODUCT_BUNDLE_IDENTIFIER)"
+        CFBundleInfoDictionaryVersion: "6.0"
+        CFBundleName: "$(PRODUCT_NAME)"
+        CFBundlePackageType: "$(PRODUCT_BUNDLE_PACKAGE_TYPE)"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleURLTypes: [{"CFBundleURLSchemes": ["$(NOAH_URL_SCHEME)"]}]
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSApplicationQueriesSchemes: ["whatsapp", "telegram", "signal"]
+        LSRequiresIPhoneOS: true
+        NSAppTransportSecurity: {"NSAllowsArbitraryLoads": false, "NSAllowsLocalNetworking": true}
+        NSCameraUsageDescription: "$(NOAH_DISPLAY_NAME) needs access to your Camera."
+        NSFaceIDUsageDescription: "Allow $(NOAH_DISPLAY_NAME) to use Face ID."
+        NSLocationWhenInUseUsageDescription: "Allow $(NOAH_DISPLAY_NAME) to use your location to find nearby places that accept bitcoin."
+        NSPhotoLibraryUsageDescription: "Allow $(NOAH_DISPLAY_NAME) to access your photos so that you can pick screenshots to share feedback."
+        UIAppFonts: ["Inter-Regular.ttf", "Inter-Medium.ttf", "Inter-SemiBold.ttf", "Inter-Bold.ttf"]
+        UIApplicationSceneManifest: {"UIApplicationSupportsMultipleScenes": false}
+        UILaunchScreen: {"UIColorName": "SplashScreenBackground", "UIImageName": "SplashScreenLogo"}
+        UIRequiredDeviceCapabilities: ["arm64"]
+        UISupportedInterfaceOrientations: ["UIInterfaceOrientationPortrait", "UIInterfaceOrientationPortraitUpsideDown", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"]
+        UISupportedInterfaceOrientations~ipad: ["UIInterfaceOrientationPortrait", "UIInterfaceOrientationPortraitUpsideDown", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"]
+        UIBackgroundModes: [remote-notification, fetch, processing]
+        BGTaskSchedulerPermittedIdentifiers:
+          - $(PRODUCT_BUNDLE_IDENTIFIER).refresh
+          - $(PRODUCT_BUNDLE_IDENTIFIER).maintenance
     dependencies:
       - target: NoahWidget
       - package: Sentry

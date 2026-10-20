@@ -17,7 +17,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] `apps/ios`: XcodeGen spec, SwiftPM deps, schemes `Noah` / `Noah-Signet` / `Noah-Regtest`, xcconfigs, bundle IDs `com.noahwallet.{mainnet,signet,regtest}`, entitlements (aps, app groups), URL schemes, Info.plist background modes
 - [x] iOS widget extension reused from `client/ios/SharedWidget` (one target, per-variant bundle ID + kind from xcconfig)
 - [ ] iOS App Intents ported from `client/ios/SharedAppIntents` onto `WalletService` (needs 0.3)
-- [ ] iOS `processing` background mode + `BGTaskSchedulerPermittedIdentifiers` (with 0.6 background tasks)
+- [x] iOS `processing`/`fetch` background modes + per-bundle `BGTaskSchedulerPermittedIdentifiers` in XcodeGen (0.6 background tasks)
 - [x] `apps/android`: Gradle KTS, version catalog, flavors `mainnet`/`signet`/`regtest`, same applicationIds, signing config, `google-services.json` per flavor, minSdk 24
 - [x] Android component names unchanged: launcher `com.noahwallet.MainActivity`, widget receivers `com.noahwallet.widgets.NoahWidget{Mainnet,Signet,Regtest}Provider` (+ same `@xml/noah_widget_*_info`)
 - [x] Android widgets reused from `client/android/app/src/main/java/com/noahwallet/widgets`
@@ -126,6 +126,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] FirebaseMessagingService + Expo token, onboarding/permission/server gates, expedited push work, maintenance/invoice/claim + status/heartbeat — Android (real Expo heartbeat + maintenance delivered; backup/recurring log-only pending their ports)
 - [x] UnifiedPush (Android, non-GMS) in pure Kotlin — Android (shared jobs, preserved endpoint/connector storage; live distributor test pending)
 - [ ] Background tasks: BGTaskScheduler / WorkManager (maintenance, recurring)
+  - [x] iOS: 15-minute opportunistic app refresh (sync/recurring/widget), 6-hour network processing (also maintenance/enabled backup), shared push deadline/submission budget, expiration/foreground revocation and session settlement; `apps/ios/PlatformTests/README.md`
 - [x] Widget data writer — iOS (`widgetBalance`, same keys, expiry from VTXOs and onchain tip)
 - [x] Widget data writer — Android (provider Long keys, expiry sentinel, explicit update broadcast; refreshed by real push)
 

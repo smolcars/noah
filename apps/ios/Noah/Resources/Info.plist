@@ -2,18 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NoahSentryDSN</key>
-	<string>$(NOAH_SENTRY_DSN)</string>
-	<key>NoahAppVariant</key>
-	<string>$(NOAH_APP_VARIANT)</string>
-	<key>NoahAppGroup</key>
-	<string>$(NOAH_APP_GROUP)</string>
-	<key>NoahRegtestHost</key>
-	<string>$(NOAH_REGTEST_HOST)</string>
-	<key>NoahRegtestServerURL</key>
-	<string>$(NOAH_REGTEST_SERVER_URL)</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>$(NOAH_DISPLAY_NAME) uses your local network only to reach a development server on your computer.</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).refresh</string>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).maintenance</string>
+	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
@@ -62,10 +55,22 @@
 	<string>$(NOAH_DISPLAY_NAME) needs access to your Camera.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Allow $(NOAH_DISPLAY_NAME) to use Face ID.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>$(NOAH_DISPLAY_NAME) uses your local network only to reach a development server on your computer.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Allow $(NOAH_DISPLAY_NAME) to use your location to find nearby places that accept bitcoin.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allow $(NOAH_DISPLAY_NAME) to access your photos so that you can pick screenshots to share feedback.</string>
+	<key>NoahAppGroup</key>
+	<string>$(NOAH_APP_GROUP)</string>
+	<key>NoahAppVariant</key>
+	<string>$(NOAH_APP_VARIANT)</string>
+	<key>NoahRegtestHost</key>
+	<string>$(NOAH_REGTEST_HOST)</string>
+	<key>NoahRegtestServerURL</key>
+	<string>$(NOAH_REGTEST_SERVER_URL)</string>
+	<key>NoahSentryDSN</key>
+	<string>$(NOAH_SENTRY_DSN)</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Inter-Regular.ttf</string>
@@ -82,6 +87,7 @@
 	<array>
 		<string>remote-notification</string>
 		<string>fetch</string>
+		<string>processing</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>
