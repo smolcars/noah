@@ -1,6 +1,8 @@
 import BarkBoltFFI
 import Foundation
 import Testing
+import SwiftUI
+import UIKit
 
 @testable import Noah
 
@@ -121,5 +123,91 @@ struct SendRoundTwoLiveTests {
             try #require(!controller.locked)
         }
         try await session.close()
+    }
+}
+
+/// Disposable simulator only; the host funds addresses once and drives the real confirmation view.
+@MainActor
+@Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_SEND_ROUND3_LIVE"] == "1"))
+struct SendRoundThreeLiveTests {
+    @Test func amountlessInvoiceReuseAndEnteredOnchainFee() async throws {
+        try #require(AppVariant.current == .regtest)
+        let environment = ProcessInfo.processInfo.environment
+        let invoice = try #require(environment["NOAH_SEND_INVOICE"])
+        let recipient = try #require(environment["NOAH_SEND_ONCHAIN_RECIPIENT"])
+        try #require(PaymentEncoding.invoice(invoice)?.sats == nil)
+        let session = WalletSession(variant: .regtest)
+        try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "send-round3-live")
+        let request = try await session.receiveRequest()
+        let documents = URL.documentsDirectory
+        try JSONEncoder().encode(["ark": request.arkAddress, "onchain": request.onchainAddress])
+            .write(to: documents.appending(path: "send-round3-funding.json"), options: .atomic)
+        let fundingDeadline = ContinuousClock.now.advanced(by: .seconds(180))
+        while ContinuousClock.now < fundingDeadline {
+            try await session.sync()
+            if let summary = try await session.summary(), summary.spendableSats >= 10000,
+               summary.balance.onchain.confirmed >= 30000 { break }
+            try await Task.sleep(for: .seconds(1))
+        }
+        let summary = try #require(try await session.summary())
+        try #require(summary.spendableSats >= 10000 && summary.balance.onchain.confirmed >= 30000)
+        let controller = SendPaymentController(dependencies: .live(session: session, variant: .regtest))
+        try #require(!controller.locked)
+        let payment = SendPayment(destination: invoice, method: "lightning", amount: 2000)
+        controller.submit(payment, quote: try await session.quoteSend(payment))
+        try await waitUntil { controller.state != .submitting }
+        guard case .succeeded(let first) = controller.state else {
+            Issue.record("First Lightning payment did not settle; do not retry")
+            try await session.close()
+            return
+        }
+        #expect(first.amount == 2000 && first.proof == .actualMovement)
+        controller.acknowledge()
+        let before = try await session.withOpenWallet { try await $0.wallet.history() }
+        let reviewed = SendPayment(destination: invoice, method: "lightning", amount: 1000)
+        controller.submit(reviewed, quote: try await session.quoteSend(reviewed))
+        try await waitUntil { controller.state != .submitting }
+        guard case .alreadyPaid(let existing) = controller.state else {
+            Issue.record("Reused invoice must show its actual existing payment")
+            try await session.close()
+            return
+        }
+        #expect(existing.amount == 2000 && existing.fee == first.fee)
+        let after = try await session.withOpenWallet { try await $0.wallet.history() }
+        #expect(Set(before.map(\.id)) == Set(after.map(\.id)))
+        controller.acknowledge()
+        let onchain = SendPayment(destination: recipient, method: "onchain", amount: 5000, source: .onchain)
+        let quote = try await session.quoteSend(onchain)
+        #expect(quote.approximate && quote.amount == 5000)
+        let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        let keyWindow = scene.windows.first { $0.isKeyWindow }
+        let window = try #require(keyWindow)
+        window.rootViewController = UIHostingController(rootView: SendConfirmation(
+            payment: onchain, quote: quote, controller: controller, cancel: {}, done: {}))
+        window.makeKeyAndVisible()
+        try Data().write(to: documents.appending(path: "send-round3-review-ready"))
+        try await waitUntil { controller.state != .ready && controller.state != .submitting }
+        guard case .succeeded(var receipt) = controller.state else {
+            Issue.record("Onchain send did not return a txid; inspect journal, never retry")
+            try await session.close()
+            return
+        }
+        if receipt.fee == nil {
+            await controller.checkStatus()
+            receipt = try #require(controller.attempt?.receipt)
+        }
+        #expect(receipt.amount == 5000 && receipt.proof == .submitReturnedTxid)
+        #expect(receipt.fee != nil)
+        struct Evidence: Encodable { let invoice: SendReceipt; let reused: SendReceipt; let quote: SendQuote; let onchain: SendReceipt }
+        try JSONEncoder().encode(Evidence(invoice: first, reused: existing, quote: quote, onchain: receipt))
+            .write(to: documents.appending(path: "send-round3-evidence.json"), options: .atomic)
+        let finish = documents.appending(path: "send-round3-finish")
+        try await waitUntil { FileManager.default.fileExists(atPath: finish.path) }
+        try await session.close()
+    }
+    func waitUntil(_ condition: @MainActor () -> Bool) async throws {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(180))
+        while !condition(), ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(100)) }
+        try #require(condition(), "Live check timed out; inspect journal before any further send")
     }
 }

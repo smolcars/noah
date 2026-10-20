@@ -34,6 +34,26 @@ wrong-destination-amount assertions; both pass after the fix.
 
 ## Round-3 payment safety (2026-10-19)
 
+Full `NoahTests` target: **264 tests, 253 passed, 11 opt-in tests skipped,
+0 failures**, across 61 suites, on the dedicated `Noah Send Round 3 Fix`
+iPhone 17 / iOS 27.0 simulator. Parameterized cases account for **292 passed
+individual runs**. XcodeGen was regenerated after adding the test files;
+build/test used `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, no target exclusions,
+and `/tmp/noah-send-r3-fix-derived`. Result: `/tmp/noah-send-r3-fix-full3.xcresult`.
+The checkpoint regressions exercise both equal and mismatched checkpoint
+amounts and assert **zero SDK payment calls**. Raw v1/v2 migration fixtures cover
+wrong-amount BDK receipts, fabricated Lightning receipts/already-paid states,
+missing provenance, and failed migration writes. Existing unreadable-journal,
+missing-BDK-history, disabled MAX, pre-recording error and reorg tests pass.
+
+- Journal safety v3 persists submit-returned-txid / actual-movement provenance.
+  All older receipts (including early-v2 fabricated Lightning and wrong-amount
+  BDK receipts) reopen uncertain; old txids survive as possible evidence only.
+  Current-version receipts missing proof also reopen. Migration is atomically
+  saved before exposing state; write errors and unreadable journals block Send.
+  The destructive override is available for uncertain attempts without a proven
+  receipt, including Lightning. It never runs from Done or ordinary Confirm.
+
 - Only a txid returned directly from submission, with its provenance persisted,
   binds an onchain transaction to the attempt. Snapshot differences (including a
   rediscovered old same-address/amount transaction) display “This transaction may
@@ -54,6 +74,45 @@ wrong-destination-amount assertions; both pass after the fix.
   checkpoint later settles. Pending/unknown movement evidence also blocks pay.
   Paid invoices use actual movement amounts/fees and never call pay again.
   See [SDK implementation](https://github.com/smolcars/bark-bolt-ffi/blob/v0.3.0/src/core/wallet.rs).
+
+Live round-3 acceptance: **1 test passed, 0 skipped, 0 failures**, result
+`/tmp/noah-send-r3-fix-live.xcresult`. A fresh disposable wallet received 10,000
+Ark sats and 30,000 onchain sats, with exactly one block mined to confirm the
+funding. It paid a fresh **amountless** CLN BOLT11 for 2,000 sats (83-sat fee,
+hash prefix `4bde856bb481`), then reviewed and confirmed the same invoice for
+1,000 sats. The result was **Invoice already paid**, showing the real 2,000 sats
+and 83-sat fee, with an unchanged movement-ID set (exactly one Lightning send).
+CLN independently reports `paid` and `amount_received_msat: 2000000`.
+
+The test then hosted the production `SendConfirmation` / `SendOutcomeView` in
+its app window. Device-panel accessibility snapshots verified **Estimated fee,
+208 sats**, **Estimated total, 5208 sats**, and the complete warning that more
+coins may raise the final fee and total. One UI confirm sent 5,000 sats from BDK.
+The receipt showed **Submitted**, **5,000 sats**, **Actual fee: 143 sats**, and
+txid prefix `ede68f662b8d`. Core independently reports a 5,000-sat receipt with
+zero confirmations. No extra block was mined for the outgoing send. The durable
+receipt has `proof: submitReturnedTxid`; Lightning has `proof: actualMovement`.
+Evidence JSON and accessibility snapshots are in `/tmp/noah-send-r3-live-evidence.json`,
+`/tmp/noah-send-r3-review-snapshot.txt`, and `/tmp/noah-send-r3-receipt-snapshot.txt`;
+screenshots are `/tmp/noah-send-r3-review.png` and `/tmp/noah-send-r3-receipt.png`.
+
+Repeat on a fresh dedicated simulator with `TEST_RUNNER_NOAH_SEND_ROUND3_LIVE=1`,
+`TEST_RUNNER_NOAH_SEND_INVOICE` (a fresh **amountless** regtest BOLT11), and
+`TEST_RUNNER_NOAH_SEND_ONCHAIN_RECIPIENT` (a fresh Core address). Select
+`-only-testing:NoahTests/SendRoundThreeLiveTests/amountlessInvoiceReuseAndEnteredOnchainFee()`.
+The test publishes both funding addresses in `Documents/send-round3-funding.json`;
+fund each once within 180 seconds, mine one confirming block, inspect the review
+and tap Confirm in the Device panel. After inspecting the receipt, create
+`Documents/send-round3-finish` to finish the test. This exercises real quote,
+journal, SDK submission, confirmation/receipt UI and reconciliation, with no
+faked payment services. It does not drive the composer or manufacture a stuck
+live checkpoint; mismatched checkpoint refusal uses SDK-value regression tests.
+
+The dedicated simulator `859E8322-DA9F-418B-879E-A8D53315B016` was shut down,
+its exact name and Shutdown state checked, and then deleted. No other device or
+Docker service was changed. No wallet data, seeds, invoices or destinations are
+committed. Fee ceilings, durable operation IDs and explicit broadcast outcomes
+remain FFI items 14–16.
 
 ## Round-2 payment safety (2026-10-19)
 
@@ -224,7 +283,8 @@ Reconciliation follows the rail and strength of identity:
 
 The journal also persists the reviewed quote (including MAX VTXO IDs), method,
 source, destination, amount, start time and BOLT11 hash. Pre-fix journals with weak terminal outcomes are reopened as
-uncertain; previously returned txids remain submitted. Recipient assignments
+uncertain; unproven legacy txids remain evidence only. New submit-returned txids
+retain their proof and remain tracked across restart. Recipient assignments
 invalidate parsing, routes, comment, choices, quote and payment synchronously;
 asynchronous results carry a revision guard, and a route records its originating
 LNURL recipient before any substitution is allowed.

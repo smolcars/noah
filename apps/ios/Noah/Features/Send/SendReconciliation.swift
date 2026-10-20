@@ -72,7 +72,9 @@ enum SendReconciliation {
     static func lightning(_ candidates: [Movement], hash: String, amount: UInt64, snapshot: SendSnapshot)
         -> SendPaymentController.Resolution
     {
-        guard candidates.count == 1, let movement = candidates.first else { return .uncertain }
+        guard candidates.count == 1, let movement = candidates.first,
+              movement.subsystemName == "bark.lightning_send", movement.subsystemKind == "send",
+              movement.paymentHash == hash else { return .uncertain }
         var actual: UInt64 = 0
         for destination in movement.sentToAddresses {
             let (sum, overflow) = actual.addingReportingOverflow(destination.amountSats)
@@ -81,7 +83,7 @@ enum SendReconciliation {
         }
         if movement.status == "successful", actual > 0 {
             let receipt = SendReceipt(amount: actual, paymentHash: hash, movementID: movement.id,
-                                      fee: movement.offchainFeeSats)
+                                      fee: movement.offchainFeeSats, proof: .actualMovement)
             if snapshot.movementIDs.contains(movement.id) { return .alreadyPaid(receipt) }
             guard actual == amount else { return .uncertain }
             return .paid(receipt)

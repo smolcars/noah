@@ -176,6 +176,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Round-3 Lightning checkpoint guard — read-only SDK state lookup before pay; existing sends never reach pay, real checkpoint amounts/fees remain locked across restart — iOS
 - [x] Round-3 entered-amount BDK sends retained; accessible fee/total estimate and possible higher multi-input fee copy; actual fee on receipts when known; FFI 14 fee ceiling marked user priority — iOS
 - [x] Round-3 BDK identity: only persisted submit-returned txids establish receipts; snapshot differences are possible matches and remain uncertain/locked with destructive override — iOS
+- [x] Round-3 journal safety v3: v1/early-v2 receipts reopen uncertain, recorded txids retained only as evidence, migration writes fail closed; new receipt provenance is persisted — iOS
+- [x] Round-3 verification: full NoahTests 264 total / 253 passed / 11 opt-in skipped / 0 failed; live amountless BOLT11 reuse without a second send and entered-amount BDK estimate/actual-fee UI — iOS; `apps/ios/SendTests/README.md`
 - [ ] Restore onchain MAX only with prepared sends / coin control (FFI 14); expose broadcast/chain status for offboards (FFI 15); replace weak history correlation with durable operation IDs (FFI 16)
 - [ ] External LNURL/BOLT12 provider acceptance and camera hardware verification — iOS
 

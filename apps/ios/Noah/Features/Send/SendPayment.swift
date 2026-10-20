@@ -41,6 +41,19 @@ struct SendReceipt: Codable, Equatable, Sendable {
     enum Proof: String, Codable, Sendable { case submitReturnedTxid, actualMovement }
     enum Status: String, Codable, Sendable { case submitted, confirmed, unlocated }
     var isSubmitted: Bool { txid != nil && status != .confirmed }
+    func isProven(for payment: SendPayment, knownHash: String? = nil, alreadyPaid: Bool = false) -> Bool {
+        switch proof {
+        case .submitReturnedTxid:
+            return payment.method == "onchain" && txid?.isEmpty == false && amount > 0
+                && (payment.max || amount == payment.amount)
+        case .actualMovement:
+            return ["lightning", "offer", "lnurl"].contains(payment.method)
+                && txid == nil && paymentHash?.isEmpty == false && movementID != nil && fee != nil
+                && amount > 0 && (alreadyPaid || amount == payment.amount)
+                && (payment.method != "lightning" || paymentHash == (knownHash ?? PaymentEncoding.invoice(payment.destination)?.hash))
+        case nil: return false
+        }
+    }
 }
 struct SendSnapshot: Codable, Sendable {
     var movementIDs: Set<UInt32>
@@ -83,7 +96,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         case failed, storageBlocked
     }
     struct Attempt: Codable, Sendable {
-        var safetyVersion: Int? = 2
+        var safetyVersion: Int? = 3
         var payment: SendPayment
         var snapshot: SendSnapshot
         var receipt: SendReceipt?
@@ -127,16 +140,23 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         do {
             attempt = try dependencies.read()
             if var saved = attempt {
-                // Pre-fix journals could have promoted a weak history match to a terminal outcome.
-                if saved.safetyVersion != 1, saved.safetyVersion != 2,
-                   !(saved.payment.method == "lightning" && PaymentEncoding.invoice(saved.payment.destination)?.hash != nil) {
+                let old = saved.safetyVersion != 3
+                let unsafeReceipt = saved.receipt.map { old || !$0.isProven(for: saved.payment, knownHash: saved.paymentHash) } ?? false
+                let unsafeAlreadyPaid = saved.alreadyPaid.map { old || !$0.isProven(for: saved.payment, knownHash: saved.paymentHash, alreadyPaid: true) } ?? false
+                if old || unsafeReceipt || unsafeAlreadyPaid {
+                    // v1 and early v2 could fabricate receipts. Their txids are evidence, never identity.
+                    let txids = [unsafeReceipt ? saved.receipt?.txid : nil,
+                                 unsafeAlreadyPaid ? saved.alreadyPaid?.txid : nil].compactMap { $0 }
+                    if !txids.isEmpty {
+                        saved.possibleTxids = Array(Set((saved.possibleTxids ?? []) + txids)).sorted()
+                    }
+                    if unsafeReceipt { saved.receipt = nil }
+                    if unsafeAlreadyPaid { saved.alreadyPaid = nil }
                     saved.failed = false
-                    if saved.receipt?.txid == nil { saved.receipt = nil }
-                }
-                // Round 1 could unlock an absent BDK tx or fabricate an invoice receipt amount.
-                if saved.safetyVersion != 2 {
-                    if saved.payment.source == .onchain { saved.failed = false }
-                    if saved.payment.method == "lightning" { saved.receipt = nil; saved.failed = false }
+                    saved.safetyVersion = 3
+                    saved.failureMessage = "This saved payment outcome could not be verified. It may have been sent. Check history before sending again."
+                    attempt = saved
+                    try dependencies.write(saved)
                 }
                 attempt = saved
                 state = saved.alreadyPaid.map(State.alreadyPaid)
@@ -193,7 +213,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     }
     private func finish(_ resolution: Resolution) {
         guard var attempt else { return }
-        attempt.safetyVersion = 2
+        attempt.safetyVersion = 3
         switch resolution {
         case .uncertain:
             if attempt.receipt?.txid != nil { attempt.receipt?.status = .unlocated }
@@ -226,7 +246,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     }
     var canOverride: Bool {
         guard state == .uncertain, !checking, let attempt, attempt.receipt == nil else { return false }
-        return attempt.payment.method != "lightning"
+        return true
     }
     func startNewPaymentAfterHistoryCheck(confirmed: Bool) {
         guard confirmed, canOverride else { return }

@@ -9,8 +9,9 @@ import Testing
         var calls = 0
         func pay() -> LightningSendStatus { calls += 1; return .unknown }
     }
+    struct Expected: Decodable {}
     func payment() throws -> SendPayment {
-        let fixtures = try Fixtures.load("send-utils", input: SendFixtureTests.ParseInput.self, expected: SendFixtureTests.JSON.self)
+        let fixtures = try Fixtures.load("send-utils", input: SendFixtureTests.ParseInput.self, expected: Expected.self)
         let invoice = try #require(fixtures.first { PaymentEncoding.invoice($0.input.destination) != nil })
         return .init(destination: invoice.input.destination, method: "lightning", amount: 1000)
     }

@@ -260,11 +260,11 @@ import Testing
             SendReconciliation.ark($0, movements: [unrelated, matched])
         }
         await subject.checkStatus()
-        #expect(!subject.canOverride)
+        #expect(subject.canOverride == (status == "pending"))
         if status == "successful" {
             #expect(
                 subject.state
-                    == .alreadyPaid(.init(amount: 1000, paymentHash: "invoice-hash", movementID: 1, fee: 0))
+                    == .alreadyPaid(.init(amount: 1000, paymentHash: "invoice-hash", movementID: 1, fee: 0, proof: .actualMovement))
             )
         } else if status == "pending" {
             #expect(subject.state == .uncertain)
@@ -283,7 +283,7 @@ import Testing
         storage.attempt = saved
         let subject = controller(storage) { SendReconciliation.ark($0, movements: [matched]) }
         await subject.checkStatus()
-        let receipt = SendReceipt(amount: 1000, paymentHash: "invoice-hash", movementID: 1, fee: 83)
+        let receipt = SendReceipt(amount: 1000, paymentHash: "invoice-hash", movementID: 1, fee: 83, proof: .actualMovement)
         #expect(subject.state == .alreadyPaid(receipt))
         #expect(subject.attempt?.receipt == nil)
         storage.attempt = try roundTrip(#require(storage.attempt))
@@ -305,7 +305,7 @@ import Testing
         var paid = movement("lightning", hash: "invoice-hash")
         paid.offchainFeeSats = 83
         #expect(SendReconciliation.ark(attempt("lightning"), movements: [paid])
-                == .paid(.init(amount: 1000, paymentHash: "invoice-hash", movementID: 2, fee: 83)))
+                == .paid(.init(amount: 1000, paymentHash: "invoice-hash", movementID: 2, fee: 83, proof: .actualMovement)))
     }
 
     @Test func confirmedReceiptRevalidatesThroughReorgAndMissingHistory() async throws {
@@ -462,7 +462,10 @@ import Testing
         #expect(controller(storage) { _ in .uncertain }.state == .uncertain)
         saved.receipt = .init(amount: 1000, txid: "recorded-before-upgrade")
         storage.attempt = try roundTrip(saved)
-        #expect(controller(storage) { _ in .uncertain }.state == .succeeded(saved.receipt!))
+        let migrated = controller(storage) { _ in .uncertain }
+        #expect(migrated.state == .uncertain && migrated.canOverride)
+        #expect(migrated.attempt?.possibleTxids == ["recorded-before-upgrade"])
+        #expect(migrated.attempt?.receipt == nil)
     }
 
     @Test(arguments: ["ark", "offer", "lnurl", "onchain"])
