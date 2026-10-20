@@ -226,7 +226,7 @@ struct WalletLifecycle: Sendable {
         try RestoreTransaction.fullSync(location.directory.deletingLastPathComponent())
         try dependencies.seed.deleteWalletSeed()
         dependencies.authToken.remove()
-        dependencies.settings.removeAll()
+        try dependencies.settings.removeAllDurably()
         if let appGroup = dependencies.appGroup, let defaults = UserDefaults(suiteName: appGroup) {
             defaults.removeObject(forKey: "widgetBalance")
             WidgetCenter.shared.reloadAllTimelines()

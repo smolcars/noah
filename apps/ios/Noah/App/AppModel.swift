@@ -124,6 +124,8 @@ final class AppModel {
         let state = readLaunchState()
         switch state {
         case .existingWallet:
+            do { try settings.requireCompatibleRNStores(walletDataExists: true) }
+            catch { phase = .blocked(.incompatibleStorage); return }
             resumeOnboarding = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized != true
             await openExistingWallet()
             if phase == .launching { phase = resumeOnboarding ? .onboarding : .wallet }

@@ -21,6 +21,7 @@ final class RecurringStore: @unchecked Sendable {
         self.write = write ?? { try settings.setDurably($0, forKey: Self.key) }
     }
     func checkAutomationAllowed() throws {
+        try settings.requireHealthy()
         try lock.withLock {
             guard !writeFailed, WalletLifecycle.automationAllowed(settings: settings) else {
                 throw RecurringError.message("Recurring payment storage failed. Restart Noah; sending is stopped.")
@@ -62,7 +63,8 @@ final class RecurringStore: @unchecked Sendable {
         return schedule
     }
     func load() throws -> State {
-        try lock.withLock {
+        try settings.requireHealthy()
+        return try lock.withLock {
             guard !writeFailed else { throw RecurringError.message("Recurring payment storage failed. Restart Noah; sending is stopped.") }
             let state = try RawObject(envelope().fields["state"]!)
             let rows = try RawObject(state.fields["schedules"]!)
