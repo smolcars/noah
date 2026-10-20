@@ -245,7 +245,7 @@ import Testing
         defer { try? FileManager.default.removeItem(at: h.directory) }
         h.afterPay = {
             #expect(h.executor.running && h.controller.state == .submitting)
-            h.executor.reload() // Opening the recurring screen during submission.
+            await h.executor.reload() // Opening the recurring screen during submission.
             let sending = try #require(h.executor.schedules.first { $0.id == schedule.id })
             #expect(sending.inFlight != nil && sending.status == "active")
             let journal = try Data(contentsOf: h.journal.file)

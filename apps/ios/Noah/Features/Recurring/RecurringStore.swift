@@ -36,8 +36,12 @@ final class RecurringStore: @unchecked Sendable {
         do {
             // Welcome has no wallet authority to bootstrap or mark failed.
             let owner = try policyBinding!()
+            guard FileManager.default.fileExists(atPath: ledger.file.deletingLastPathComponent().path),
+                  try policyBinding!() == owner else { throw RecurringExecutor.NoWallet() }
             stopped = ledger.stopped(binding: state.binding ?? owner, schedules: state.schedules)
             automationStopped = automationOverlay && automation?.allowed() == false
+        } catch is RecurringExecutor.NoWallet {
+            stopped = Set(state.schedules.keys); automationStopped = false
         } catch {
             AppLog("recurring").w(RecurringPolicyLedger.logMessage)
             stopped = Set(state.schedules.keys); automationStopped = false

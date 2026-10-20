@@ -16,7 +16,10 @@ extension RecurringExecutor.Dependencies {
                      journal: .init(file: location.directory.appending(path: "noah-recurring-journal.json")),
                      controller: controller,
                      ensureOpen: { try await services.ensureWalletOpen() },
-                     binding: { try RecurringStore.binding(location: location) },
+                     binding: {
+                         guard location.databaseExists else { throw RecurringExecutor.NoWallet() }
+                         return try RecurringStore.binding(location: location)
+                     },
                      allowed: {
                          guard location.databaseExists else { throw RecurringExecutor.NoWallet() }
                          guard !location.restorePending, !FileManager.default.fileExists(atPath: location.deletionMarker.path),

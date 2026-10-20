@@ -79,9 +79,9 @@ struct RecurringPaymentsView: View {
         .sheet(item: $review) { item in
             SendConfirmation(confirm: { Task { await executor.execute(manual: true, approval: item) } },
                              payment: item.payment, quote: item.quote, controller: executor.controller,
-                             cancel: { review = nil }, done: { review = nil; executor.reload() })
+                             cancel: { review = nil }, done: { review = nil; Task { await executor.reload() } })
         }
-        .task { executor.reload(); await executor.execute() }
+        .task { await executor.reload(); await executor.execute() }
         .alert("Cancel recurring payment?", isPresented: Binding(get: { cancelling != nil }, set: { if !$0 { cancelling = nil } })) {
             Button("Keep payment", role: .cancel) { cancelling = nil }
             Button("Cancel payment", role: .destructive) {
