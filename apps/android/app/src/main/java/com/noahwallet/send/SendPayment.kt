@@ -31,7 +31,8 @@ import kotlinx.serialization.json.*
 @Serializable data class SendReceipt(val amount: Long, val txid: String? = null, val paymentHash: String? = null,
     val movementID: UInt? = null, val amountIsPending: Boolean = false, val status: Status = Status.submitted,
     val fee: Long? = null, val proof: Proof? = null, val broadcastRetryPending: Boolean = false,
-    val confirmedConflictTxid: String? = null) {
+    val confirmedConflictTxid: String? = null,
+    val chainStatus: com.noahwallet.services.wallet.ChainStatus? = null, val statusError: String? = null) {
     @Serializable enum class Status { submitted, confirmed, unlocated, conflicted }
     val isUnresolved get() = status in listOf(Status.unlocated, Status.conflicted)
     val conflictDescription get() = confirmedConflictTxid?.let {

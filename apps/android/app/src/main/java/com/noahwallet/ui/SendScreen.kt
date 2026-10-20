@@ -27,6 +27,8 @@ import com.noahwallet.send.*
 import com.noahwallet.services.server.LightningIdentity
 import com.noahwallet.services.server.value
 import kotlinx.coroutines.*
+import androidx.lifecycle.repeatOnLifecycle
+import com.noahwallet.services.wallet.ChainStatus
 import kotlinx.serialization.json.JsonObject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +49,12 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
         app.summary?.let { model.arkBalance = it.balance.ark.spendable.toLong(); model.onchainBalance = it.balance.onchain.confirmed.toLong() }
         runCatching { app.session.pendingSendHashes() }.getOrNull()?.let { model.pendingLightningHashes = it }
         controller.checkStatus()
+    }
+    LaunchedEffect(controller.attempt?.receipt?.txid, app.isWalletSuspended) {
+        if (controller.attempt?.receipt?.txid == null || app.isWalletSuspended) return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (isActive) { controller.checkStatus(); delay(10_000) }
+        }
     }
     LaunchedEffect(app.preferredCurrency) {
         model.fiatCurrency = app.preferredCurrency
@@ -233,7 +241,8 @@ internal fun keypadInput(amount: String, key: String, decimal: Boolean): String 
             it.txid?.let { txid -> SelectionContainer { Text(txid, style = MaterialTheme.typography.bodySmall) } }
             it.conflictDescription?.let { description -> Text(description) }
             if (it.broadcastRetryPending) Text("Noah will keep retrying the broadcast. Do not send again.")
-            if (controller.attempt?.payment?.source == SendSource.offchain && it.txid != null) Text("Offboard submitted. Network confirmation is not yet available.")
+            it.chainStatus?.let { status -> Text(status.text) }
+            it.statusError?.let { error -> Text(error, color = MaterialTheme.colorScheme.error) }
         }
         controller.attempt?.existingLightning?.let { Text(it.message); ReviewRow("Existing fee", "${it.fee} sats") }
         controller.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }

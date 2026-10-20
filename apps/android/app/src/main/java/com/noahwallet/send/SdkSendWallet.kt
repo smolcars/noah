@@ -1,6 +1,7 @@
 package com.noahwallet.send
 
 import io.github.niteshbalusu11.bark.*
+import com.noahwallet.services.wallet.ChainStatus
 
 /** Called only inside WalletSession's counted, cancellation-shielded Send reservation. */
 internal class SdkSendWallet(private val wallet: Wallet, private val onchain: OnchainWallet,
@@ -158,6 +159,10 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
                 if (movement != null) { wallet.updateHistoryMetadata(movement.id, payment.repeatMetadata); receipt = receipt.copy(movementID = movement.id) }
             } catch (_: Exception) { warn("Payment succeeded; repeat metadata could not be saved") }
         }
+        receipt.txid?.let { txid ->
+            receipt = try { receipt.copy(chainStatus = ChainStatus.from(if (payment.source == SendSource.onchain) onchain.transactionStatus(txid) else wallet.transactionStatus(txid))) }
+                catch (_: Exception) { receipt.copy(statusError = ChainStatus.errorText) }
+        }
         return receipt
     }
     override suspend fun reconcile(attempt: SendAttempt): SendResolution {
@@ -173,7 +178,11 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         if (attempt.payment.method == "onchain" && (attempt.payment.source == SendSource.onchain || attempt.receipt?.txid != null)) {
             onchain.sync() // A failed sync must not promote cached evidence.
             val resolution = SendReconciliation.onchain(attempt, onchain.transactions())
-            return if (resolution is SendResolution.Paid && attempt.payment.source == SendSource.offchain) SendResolution.Paid(SendReconciliation.offboardReceipt(resolution.receipt, attempt.payment, wallet.history())) else resolution
+            val withAmounts = if (resolution is SendResolution.Paid && attempt.payment.source == SendSource.offchain)
+                SendResolution.Paid(SendReconciliation.offboardReceipt(resolution.receipt, attempt.payment, wallet.history())) else resolution
+            val txid = (withAmounts as? SendResolution.Paid)?.receipt?.txid ?: return withAmounts
+            val status = ChainStatus.from(if (attempt.payment.source == SendSource.onchain) onchain.transactionStatus(txid) else wallet.transactionStatus(txid))
+            return SendReconciliation.withChainStatus(withAmounts, attempt.payment.source, status)
         }
         if (attempt.payment.method in listOf("lightning", "lnurl") && attempt.paymentHash != null) {
             val state = wallet.lightningSendState(attempt.paymentHash)

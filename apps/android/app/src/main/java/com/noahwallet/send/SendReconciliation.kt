@@ -3,6 +3,7 @@ package com.noahwallet.send
 import io.github.niteshbalusu11.bark.*
 import kotlinx.serialization.json.*
 import com.noahwallet.history.HistoryRules
+import com.noahwallet.services.wallet.ChainStatus
 
 object SendReconciliation {
     fun isLightning(movement: Movement, hash: String) = movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" && movement.paymentHash == hash
@@ -51,6 +52,16 @@ object SendReconciliation {
         val amount = runCatching { SendTransaction.amount(payment.destination, Json.parseToJsonElement(movement.metadataJson).jsonObject.getValue("offboard_tx").jsonPrimitive.content) }.getOrNull() ?: return receipt
         if (amount <= 0 || !payment.max && amount != payment.amount) return receipt
         return receipt.copy(amount = amount, amountIsPending = false, fee = movement.offchainFeeSats.toLong(), movementID = movement.id)
+    }
+    fun withChainStatus(resolution: SendResolution, source: SendSource?, status: ChainStatus): SendResolution {
+        if (resolution !is SendResolution.Paid) return resolution
+        val receipt = resolution.receipt
+        // Offboards may never be in BDK's own graph. Preserve the existing competing-spend result.
+        val updated = if (source == SendSource.offchain && receipt.status != SendReceipt.Status.conflicted)
+            receipt.copy(status = if (status.kind == ChainStatus.Kind.confirmed) SendReceipt.Status.confirmed else SendReceipt.Status.submitted)
+        else receipt
+        // For BDK sends this is display evidence only: cached confirmation/conflict and retry locks still govern.
+        return SendResolution.Paid(updated.copy(chainStatus = status, statusError = null))
     }
     fun onchain(attempt: SendAttempt, transactions: List<WalletTransaction>): SendResolution {
         val receipt = attempt.receipt
