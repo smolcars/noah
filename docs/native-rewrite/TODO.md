@@ -127,6 +127,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 ## M1 — Shell, onboarding, Home
 - [ ] Launch gating: wallet check, onboarding vs main, push-permission gate, battery gate (Android), biometric lock overlay, beta warning
 - [x] Biometric lock overlay on launch and foreground (device-passcode fallback) — iOS
+- [x] Biometric app lock on launch and foreground, device-credential fallback; Settings seed re-auth and FLAG_SECURE — Android
 - [ ] Tab shell: Home, Receive, Send, History (Liquid Glass tab bar on iOS 26)
 - [x] OnboardingScreen create/restore — iOS (language picker waits for 0.8 translations)
 - [x] Create-or-resume logic (`WalletCreator`, RN `walletCreation` test cases ported) — iOS
@@ -203,6 +204,13 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] FeedbackScreen (screenshot ≤5 MiB, device info) — iOS
 - [x] NoahStoryScreen (bundled audio) — iOS
 - [x] DebugScreen — iOS
+
+- [x] Settings, Profile, Language/Currency/Bitcoin Unit with RN-compatible persistence — Android
+- [x] Suspend/resume, files-before-seed deletion under reservation, pending-restore refusal, typed confirmation, re-register and suspended Home — Android
+- [x] Backup settings, manual backup while disabled, server list/delete and remembered-upload invalidation — Android
+- [x] Ark info, encrypted database export/FileProvider cleanup, logs, bounded screenshot feedback, bundled story audio and version-tap Debug — Android
+- [x] Battery optimization settings screen — Android (onboarding gate remains M1)
+- [x] M5 regtest build, lifecycle/storage regression tests and isolated funded-emulator acceptance — Android (`apps/android/SettingsTests/README.md`)
 
 ## M6 — Onchain & exits
 - [ ] BoardArkScreen (+ auto-boarding service, 5,000-sat reserve)
