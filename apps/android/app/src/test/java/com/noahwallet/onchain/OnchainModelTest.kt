@@ -14,6 +14,7 @@ class OnchainModelTest {
         var entered: CompletableDeferred<Unit>? = null
         var attempts = emptyList<OnchainOperationJournal.Attempt>()
         var failPreparation = false
+        var failStatusRead = false
         var detailCalls = 0
         val discarded = mutableListOf<OnchainQuote>()
         val overview = OnchainOverview("wallet", emptyList(), emptyList(), 100_000, 100, 0, null)
@@ -21,7 +22,7 @@ class OnchainModelTest {
             { ready }, { overview }, { action, ids, amount, destination ->
                 entered?.complete(Unit); gate?.await(); if (failPreparation) fail(OnchainFailure.notSynced); OnchainQuote(action, "wallet", ids, destination, amount)
             }, { calls++; "submitted" }, { attempts }, { id -> attempts = attempts.filter { it.id != id } },
-            { checks++; false }, {}, { id -> detailCalls++; ExitModel(id, 1, "Canceled", ExitDetails(), listOf("Start", "Canceled"), emptyList()) }, { receiptRefreshes++ }, discard = { discarded.add(it) })
+            { checks++; if (failStatusRead) error("transport"); false }, {}, { id -> detailCalls++; ExitModel(id, 1, "Canceled", ExitDetails(), listOf("Start", "Canceled"), emptyList()) }, { receiptRefreshes++ }, discard = { discarded.add(it) })
     }
     @Test fun lateReviewCannotInstallAfterInputsOrReadinessChange() = runBlocking {
         val f = Fake().apply { gate = CompletableDeferred(); entered = CompletableDeferred() }
@@ -53,6 +54,16 @@ class OnchainModelTest {
         assertEquals(3, f.checks); assertEquals(3, f.receiptRefreshes); assertEquals(0, f.calls)
         m.checkStatus(f.attempts.single().id)
         assertTrue(m.message!!.contains("automatically as your wallet syncs")); assertEquals(0, f.calls)
+    }
+    @Test fun automaticStatusTransportErrorRemainsVisibleAlongsideLastKnownReceipt() = runBlocking {
+        val f = Fake().apply {
+            failStatusRead = true
+            attempts = listOf(OnchainOperationJournal.Attempt(OnchainQuote(OnchainAction.board, "wallet"),
+                OnchainReceipt("Submitted", "tx", chainStatus = com.noahwallet.services.wallet.ChainStatus(com.noahwallet.services.wallet.ChainStatus.Kind.inMempool))))
+        }
+        val m = OnchainModel(f.dependencies()); m.load()
+        assertEquals(com.noahwallet.services.wallet.ChainStatus.errorText, m.error)
+        assertEquals("In mempool", m.attempts.single().receipt!!.chainStatus!!.text)
     }
     @Test fun directTerminalDetailWorksWithEmptyOverviewAndAcknowledgementStaysHidden() = runBlocking {
         val f = Fake(); val m = OnchainModel(f.dependencies(), "terminal")

@@ -27,12 +27,14 @@ class OnchainOperationsTest {
         var exactFee = 1543L
         var submitOutcome: BroadcastOutcome = BroadcastOutcome.Accepted
         var submitError: Exception? = null
+        var prepareError: BarkError? = null
         var beforeSubmit: suspend () -> Unit = {}
         lateinit var attemptFile: File
         val preparations = mutableListOf<PreparedBoard>()
         val discarded = mutableListOf<String>()
         val bound = mutableMapOf<String, OnchainQuote>()
         override suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard {
+            prepareError?.let { throw it }
             val gross = if (all) balance - exactFee else amount
             return PreparedBoard("prepared-${preparations.size}", "board-tx", gross.toULong(), (gross - fee).toULong(), fee.toULong(), exactFee.toULong(), 199u, listOf(OutPoint("input", 0u))).also { preparations.add(it) }
         }
@@ -265,6 +267,25 @@ class OnchainOperationsTest {
             assertEquals(listOf(reviewed.preparedBoard!!.id), wallet.discarded)
         }
     }
+    @Test fun typedPreparationFailuresCreateNoAttemptAndNotAttemptedAllowsFreshReview() = runBlocking { fixture { wallet, ops, journal, _ ->
+        for (code in listOf(BarkErrorCode.BELOW_MINIMUM_BOARD_AMOUNT, BarkErrorCode.TOO_MANY_INPUTS,
+                BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE, BarkErrorCode.UNSUPPORTED_OPERATION)) {
+            wallet.prepareError = BarkError("never display native diagnostics", code)
+            val failure = runCatching { ops.quote(OnchainAction.board, amount = 30_000) }.exceptionOrNull() as OnchainException
+            assertEquals(boardFailure(wallet.prepareError!!), failure.reason)
+            assertTrue(journal.loadAll().isEmpty()); assertTrue(wallet.calls.isEmpty())
+        }
+        wallet.prepareError = null
+        val first = ops.quote(OnchainAction.board, amount = 30_000)
+        wallet.submitOutcome = BroadcastOutcome.NotAttempted("before initial broadcast")
+        assertTrue(runCatching { ops.execute(first) }.isFailure)
+        assertTrue(journal.loadAll().isEmpty())
+        wallet.submitOutcome = BroadcastOutcome.Accepted
+        val second = ops.quote(OnchainAction.board, amount = 30_000)
+        assertNotEquals(first.preparedBoard!!.id, second.preparedBoard!!.id)
+        ops.execute(second)
+        assertNotNull(journal.loadAll().single().receipt)
+    } }
     @Test fun typedPreparationCopyAndTwoMinuteExpiry() {
         val expected = mapOf(BarkErrorCode.BELOW_MINIMUM_BOARD_AMOUNT to OnchainFailure.belowMinimum,
             BarkErrorCode.TOO_MANY_INPUTS to OnchainFailure.tooManyInputs,

@@ -28,7 +28,6 @@ import com.noahwallet.services.server.LightningIdentity
 import com.noahwallet.services.server.value
 import kotlinx.coroutines.*
 import androidx.lifecycle.repeatOnLifecycle
-import com.noahwallet.services.wallet.ChainStatus
 import kotlinx.serialization.json.JsonObject
 
 @OptIn(ExperimentalMaterial3Api::class)

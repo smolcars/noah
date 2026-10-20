@@ -66,15 +66,16 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             val saved = dependencies.attempts()
             attempts = visible(saved)
             if (!dependencies.ready()) { unavailable(); fail(OnchainFailure.unavailable) }
+            var receiptError: String? = null
             for (attempt in saved.filter { it.receipt == null || it.receipt.txid != null }) {
-                try { dependencies.check(attempt.id) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { }
+                try { dependencies.check(attempt.id) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { receiptError = com.noahwallet.services.wallet.ChainStatus.errorText }
             }
             try { dependencies.refreshReceipts() } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { }
             attempts = visible(dependencies.attempts())
             val token = generation
             val detail = detailID?.let { dependencies.detail(it) }
             val latest = dependencies.overview()
-            if (generation == token && dependencies.ready()) { exit = detail; overview = latest; error = null }
+            if (generation == token && dependencies.ready()) { exit = detail; overview = latest; error = receiptError }
             else if (!dependencies.ready()) unavailable()
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't read wallet status. Pull to refresh." }
