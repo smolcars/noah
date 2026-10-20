@@ -1,5 +1,71 @@
 # Native Send verification
 
+## Round-7 unresolved receipts, offline refresh and discard ownership (2026-10-19)
+
+This section supersedes the historical override refusals below. Round-6 crash
+recovery still locks ordinary sending and Done for an unconfirmed prepared spend.
+Broadcast-pending, unlocated and conflicted receipts now offer the explicit
+destructive history-check override. Its confirmation says that forgetting the
+attempt **does not cancel Bark's stored transaction or future broadcast retries**
+and sending again may spend twice. Before unlocking, Noah atomically appends the
+timestamp, original txid, wallet identity, exact confirmation title/warning/button
+and current status error to `noah-send-overrides.json` (last 100 overrides, excluded
+from backup). An audit-write or attempt-removal failure keeps Send locked. The
+audit survives removal of the active attempt and subsequent payment journals.
+
+Prepared quotes now retain input outpoints. A confirmed different BDK transaction
+spending an original input establishes a conflict, including when the original
+has been evicted from history; older quotes can use the original's cached bytes.
+The receipt and confirmation name that confirmed competitor and explain that the
+original cannot confirm on the current chain. Missing, malformed or unconfirmed
+competing evidence never proves a conflict or grants permission to send.
+
+A thrown refresh leaves the last proven receipt and durable journal unchanged.
+The UI shows that the latest check failed (offline where known), rather than
+claiming the transaction disappeared. Confirmed/accepted and external-offboard
+receipts retain Done. Unresolved crash attempts cannot acquire a receipt from
+cached evidence after a failed sync; broadcast-pending receipts retain their lock.
+A completed lookup with missing evidence still marks the receipt unlocated.
+
+Preparation discard runs in a session-owned task, independent of review caller
+cancellation. The session retains the preparation and expiry ownership until
+discard succeeds, prevents claiming it once discard starts, coalesces concurrent
+cleanup, and tries at most three times per pass. Exhaustion retains the handle
+for another pass on the next counted wallet activity or close. Close refuses to
+release the session if cleanup still fails. Failed quote validation uses this
+same owned cleanup path. Failure/cancellation fakes retain their input reservation
+until discard actually succeeds; coverage includes bounded exhaustion, another
+wallet operation, and failed close followed by successful close.
+
+Regression coverage: `SendRoundSevenTests`, `SendDiscardTests`, and the updated
+round-6/reorg tests. These are controller/session/SDK-value tests; no funded live
+RBF, conflict, offline broadcast or Rust discard fault was injected. Android's
+parallel port must adopt all three behaviours; its M3 follow-up is in
+`docs/native-rewrite/TODO.md`.
+
+Targeted verification passed **41 tests / 83 individual runs**, **4 suites**,
+zero failures/skips. The initial build stopped on actor-isolated fake assertions;
+those assertions were corrected before the passing run. All runs used Nix,
+XcodeGen, normal simulator code signing, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`,
+`-jobs 2` and disabled parallel testing. Dedicated device: **Noah Send R7 Sol
+d6f6bf92**, iPhone 17 / iOS 27.0, UDID
+`4621F4BE-2003-454B-851D-0ABB0D6B58FA`. DerivedData:
+`/private/tmp/noah-send-r7-d6f6-dd`; results:
+`/private/tmp/noah-send-r7-d6f6-{targeted1,targeted2,full}.xcresult`.
+Summary JSON exports and logs use the same prefix.
+
+The full `NoahTests` suite ran **once** after the final code changes, without
+target or suite exclusions: **366 total, 350 passed, 16 opt-in skipped, 0 failed**,
+across **81 suites**; parameterized execution reports **451 passed / 16 skipped**
+individual runs. The implementation starts at `feat/native-rewrite` HEAD
+`4fa48411cd872907f49d2896e9f63dc726124624`, captured at task start.
+
+Cleanup completed after exporting summaries: verified the dedicated simulator's
+exact name/UDID and Shutdown state, deleted it, and confirmed its absence. Removed
+only the owned DerivedData directory and all three xcresult bundles. Logs and
+summary JSON remain under `/private/tmp`; no other device, emulator, physical
+hardware or Docker state was changed.
+
 ## Round-6 broadcast recovery and review lifetime (2026-10-19)
 
 Crash recovery from a prepared/broadcasting journal treats an exact but
