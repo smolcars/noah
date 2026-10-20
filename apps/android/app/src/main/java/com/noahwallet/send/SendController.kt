@@ -158,5 +158,6 @@ interface SendWallet {
     suspend fun pay(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot): SendReceipt
     suspend fun reconcile(attempt: SendAttempt): SendResolution
     suspend fun discard(quote: SendQuote, includingClaimed: Boolean = false)
+    suspend fun retryDiscards() {}
     suspend fun discardAll()
 }

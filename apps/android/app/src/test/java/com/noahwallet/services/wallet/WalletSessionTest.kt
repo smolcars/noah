@@ -14,8 +14,10 @@ class WalletSessionTest {
     private class Boom : Exception()
     private class Handles : WalletSession.Handles {
         override val send = com.noahwallet.send.FakeSendWallet()
+        var preparations: com.noahwallet.send.SendPreparations? = null
+        override suspend fun retrySendDiscards() { preparations?.retryDiscards() }
         var sendReviewsDiscarded = false
-        override suspend fun discardSendReviews() { sendReviewsDiscarded = true }
+        override suspend fun discardSendReviews() { preparations?.discardAll(); sendReviewsDiscarded = true }
         val subscribed = CompletableDeferred<Unit>()
         val waiting = CompletableDeferred<Unit>()
         val released = CompletableDeferred<Unit>()
@@ -100,6 +102,34 @@ class WalletSessionTest {
     private fun bark(location: WalletDataLocation) { location.directory.mkdirs(); location.database.writeText("fake") }
     private fun assertFailure(expected: WalletSession.OpenFailure, result: Result<Unit>) {
         assertEquals(expected, (result.exceptionOrNull() as? WalletSession.OpenError)?.reason)
+    }
+    @Test fun nextWalletActivityRetriesExhaustedSendCleanup() = runBlocking {
+        withLocation { location ->
+            val handles = Handles(); var calls = 0; var reserved = true
+            val held = com.noahwallet.send.SendPreparations({ calls++; if (calls <= 3) error("discard"); reserved = false }, {})
+            handles.preparations = held
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test")
+            held.retain("unvalidated")
+            held.discard("unvalidated")
+            assertTrue(reserved); assertEquals(3, calls)
+            session.peekPublicKey(0u)
+            assertFalse(reserved); assertEquals(4, calls)
+            session.close(); assertTrue(handles.closed)
+        }
+    }
+    @Test fun failedSendCleanupKeepsSessionOpenAndNativeHandlesUntilNextClose() = runBlocking {
+        withLocation { location ->
+            val handles = Handles(); var calls = 0
+            val held = com.noahwallet.send.SendPreparations({ calls++; if (calls <= 3) error("discard") }, {})
+            handles.preparations = held
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test"); held.retain("unvalidated")
+            assertTrue(runCatching { session.close() }.exceptionOrNull() is com.noahwallet.send.SendFailure)
+            assertTrue(session.isOpen); assertFalse(handles.closed); assertFalse(handles.sendReviewsDiscarded)
+            assertEquals(3, calls)
+            session.close(); assertFalse(session.isOpen); assertTrue(handles.closed); assertEquals(4, calls)
+        }
     }
     @Test fun canceledQuoteDiscardsTheSuccessfulNativeResult() = runBlocking {
         withLocation { location ->

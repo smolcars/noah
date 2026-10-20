@@ -1,19 +1,12 @@
 package com.noahwallet.send
 
 import io.github.niteshbalusu11.bark.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /** Called only inside WalletSession's counted, cancellation-shielded Send reservation. */
 internal class SdkSendWallet(private val wallet: Wallet, private val onchain: OnchainWallet,
     private val network: String, private val warn: (String) -> Unit) : SendWallet {
-    private data class Review(val payment: SendPayment, val quote: SendQuote, var timeout: Job? = null,
-        var claimed: Boolean = false, var broadcasting: Boolean = false)
-    private val reviews = mutableMapOf<String, Review>()
-    private val reviewLock = Any()
-    private val discardGate = Mutex()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val preparations = SendPreparations(onchain::discardPrepared, warn)
+    override suspend fun retryDiscards() = preparations.retryDiscards()
     fun recipientService() = SendRecipientService(network, warn, arkServerKey = { wallet.arkInfo()?.serverPubkey }, validateArk = { wallet.validateArkoorAddress(it) })
     suspend fun pendingHashes() = wallet.pendingLightningSends().map { it.paymentHash }.toSet()
     override suspend fun identity() = SendIdentity(wallet.fingerprint(), wallet.network().name)
@@ -23,13 +16,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         val invoice = if (payment.method == "lnurl") recipientService().invoice(payment) else null
         val resolved = if (invoice != null) payment.copy(destination = invoice, method = "lightning") else payment
         val quote = quoteResolved(resolved).copy(resolvedInvoice = invoice)
-        quote.prepared?.let { prepared ->
-            val review = Review(payment, quote)
-            synchronized(reviewLock) {
-                reviews[prepared.id] = review
-                review.timeout = scope.launch { delay(SendPrepared.lifetimeMillis); discard(quote) }
-            }
-        }
+        quote.prepared?.let { preparations.bind(it.id, payment, quote) }
         return quote
     }
     private suspend fun quoteResolved(payment: SendPayment): SendQuote {
@@ -57,6 +44,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
                 val rate = SendFlow.sdkFeeRate(onchain.feeRates().regularSatPerKwu)
                 val prepared = onchain.prepareSend(payment.destination, if (payment.max) OnchainSendAmount.DrainAll else OnchainSendAmount.Amount(payment.amount.toULong()), rate, true)
                 preparedID = prepared.id
+                preparations.retain(prepared.id)
                 SendQuote(prepared.amountSats.toLong(), prepared.feeSats.toLong(), Math.addExact(prepared.amountSats.toLong(), prepared.feeSats.toLong()), rate.toLong(),
                     prepared = SendPrepared(prepared.id, prepared.txid, prepared.vsize.toLong(), prepared.inputs.size))
             } else {
@@ -79,7 +67,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
             requireSend(result.amount > 0 && result.fee >= 0 && result.total >= result.amount && result.total.toULong() <= available, SendFailure.Reason.insufficient)
             return result.copy(walletIdentity = identity())
         } catch (failure: Exception) {
-            preparedID?.let { onchain.discardPrepared(it) }
+            preparedID?.let { preparations.discard(it, true) }
             throw failure
         }
     }
@@ -95,12 +83,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
             checkpoint = checkpoint ?: pending.firstOrNull()?.let(::SendCheckpoint) ?: (wallet.lightningSendState(hash) as? LightningSendStatus.InProgress)?.send?.let(::SendCheckpoint)
         }
         if (payment.method == "onchain" && payment.source == SendSource.onchain) {
-            synchronized(reviewLock) {
-                val prepared = quote.prepared ?: throw SendFailure(SendFailure.Reason.feeChanged)
-                val held = reviews[prepared.id]
-                requireSend(prepared.isCurrent() && held != null && !held.claimed && held.payment == payment && held.quote == quote, SendFailure.Reason.feeChanged)
-                held!!.claimed = true; held.timeout?.cancel(); held.timeout = null
-            }
+            preparations.claim(payment, quote)
             return SendSnapshot(walletIdentity = quote.walletIdentity)
         }
         if (checkpoint == null) {
@@ -132,11 +115,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
             "onchain" -> {
                 if (payment.source == SendSource.onchain) {
                     val prepared = quote.prepared ?: throw SendNotSubmitted(SendFailure.Reason.feeChanged)
-                    synchronized(reviewLock) {
-                        val held = reviews[prepared.id]
-                        if (held == null || !held.claimed || held.broadcasting || held.payment != payment || held.quote != quote) throw SendNotSubmitted(SendFailure.Reason.feeChanged)
-                        held.broadcasting = true
-                    }
+                    if (!preparations.consume(payment, quote)) throw SendNotSubmitted(SendFailure.Reason.feeChanged)
                     try { receipt = SendOnchainSubmission.receipt(onchain.broadcastPrepared(prepared.id), quote) }
                     catch (failure: Exception) { SendOnchainSubmission.notSubmitted(failure)?.let { throw SendNotSubmitted(it) }; throw failure }
                 } else {
@@ -196,19 +175,8 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         wallet.sync()
         return SendReconciliation.ark(attempt, wallet.history())
     }
-    override suspend fun discard(quote: SendQuote, includingClaimed: Boolean) = withContext(NonCancellable) { discardGate.withLock {
-        val id = quote.prepared?.id ?: return@withLock
-        val held = synchronized(reviewLock) {
-            val held = reviews[id] ?: return@withLock
-            if (held.claimed && !includingClaimed) return@withLock
-            reviews.remove(id)!!
-        }
-        held.timeout?.cancel()
-        try { onchain.discardPrepared(id) } catch (_: Exception) { warn("Prepared send handle could not be discarded") }
+    override suspend fun discard(quote: SendQuote, includingClaimed: Boolean) {
+        quote.prepared?.let { preparations.discard(it.id, includingClaimed) }
     }
-    }
-    override suspend fun discardAll() {
-        synchronized(reviewLock) { reviews.values.map { it.quote } }.forEach { discard(it, true) }
-        discardGate.withLock { } // Join an expiry that already removed its entry before native disposal.
-    }
+    override suspend fun discardAll() = preparations.discardAll()
 }

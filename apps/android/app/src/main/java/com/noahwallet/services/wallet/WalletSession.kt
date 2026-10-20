@@ -43,6 +43,7 @@ class WalletSession internal constructor(
 
     internal interface Handles {
         val send: SendWallet get() = throw UnsupportedOperationException()
+        suspend fun retrySendDiscards() {}
         suspend fun discardSendReviews() {}
         suspend fun arkInfo(): io.github.niteshbalusu11.bark.ArkInfo? = throw UnsupportedOperationException()
         fun mailboxAuthorization(expiry: Long): io.github.niteshbalusu11.bark.MailboxAuthorization = throw UnsupportedOperationException()
@@ -285,7 +286,7 @@ class WalletSession internal constructor(
             if (runningCalls++ == 0) drained = CompletableDeferred()
             handles
         }
-        try { return withContext(NonCancellable + Dispatchers.IO) { block(handles) } }
+        try { return withContext(NonCancellable + Dispatchers.IO) { handles.retrySendDiscards(); block(handles) } }
         finally { synchronized(lock) { if (--runningCalls == 0) drained.complete(Unit) } }
     }
 
@@ -431,6 +432,7 @@ class WalletSession internal constructor(
 
     private class SdkHandles(val wallet: Wallet, val onchain: OnchainWallet, variant: String, warn: (String) -> Unit) : Handles {
         override val send = SdkSendWallet(wallet, onchain, variant, warn)
+        override suspend fun retrySendDiscards() { send.retryDiscards() }
         override suspend fun discardSendReviews() { send.discardAll() }
         override suspend fun arkInfo() = wallet.arkInfo()
         override fun mailboxAuthorization(expiry: Long) = wallet.mailboxAuthorizationAt(expiry)
