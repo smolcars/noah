@@ -2,7 +2,6 @@ import SwiftUI
 
 /// Picks onboarding, the wallet tabs or a blocking message from `AppModel`.
 struct RootView: View {
-    var replaceModel: (AppModel) -> Void = { _ in }
     @Environment(AppModel.self) private var model
     @State private var lock = WalletLock()
     @State private var showingDelete = false
@@ -40,13 +39,6 @@ struct RootView: View {
             Task { await model.retrySecureStorage() }
         }
         .safeAreaInset(edge: .bottom) {
-            if model.phase == .blocked(.settingsRecovered) {
-                Button("Continue") {
-                    guard scenePhase == .active else { return }
-                    if let fresh = model.acknowledgeRecoveredSettings() { replaceModel(fresh) }
-                }
-                .padding()
-            }
             if model.phase == .blocked(.secureStorageUnavailable) {
                 Button("Retry") { Task { await model.retrySecureStorage() } }
                     .padding()
@@ -180,8 +172,6 @@ private struct LaunchMessageView: View {
         case .secureStorageUnavailable: "Waiting for secure storage"
         case .invalidSeed: "Wallet recovery needed"
         case .seedConflict: "Conflicting wallet data"
-        case .settingsRecovered: "Review recovered settings"
-        case .incompatibleStorage: "Wallet settings need recovery"
         case .existingWallet, .onboarding: ""
         }
     }
@@ -198,10 +188,6 @@ private struct LaunchMessageView: View {
             "Support code: SEED_INVALID. The stored recovery phrase could not be validated. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database."
         case .seedConflict:
             "Support code: WALLET_CONFLICT. Noah found wallet records that cannot be safely matched. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database."
-        case .settingsRecovered:
-            "Support code: SETTINGS_RECOVERED. Settings were recovered from an older state. Review biometrics, wallet suspension, balance hiding, and backup settings after continuing. Background work stays stopped until you choose Continue. Recurring payments remain subject to their independent safety checks. Keep Noah installed; contact github.com/smolcars/noah if you need help. Never share your recovery phrase, private keys, or wallet database."
-        case .incompatibleStorage:
-            "Support code: STORAGE_UNSUPPORTED. Noah couldn't safely read your saved settings. Keep this app installed and contact support at github.com/smolcars/noah. Never share your recovery phrase, private keys, or a wallet database."
         case .existingWallet, .onboarding:
             ""
         }

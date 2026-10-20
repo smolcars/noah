@@ -20,8 +20,6 @@ enum LaunchState: String, Equatable, Sendable {
     case secureStorageUnavailable
     case invalidSeed
     case seedConflict
-    case incompatibleStorage
-    case settingsRecovered
 
     enum SeedStatus: String, Sendable {
         case present, absent, unavailable, invalid, conflict

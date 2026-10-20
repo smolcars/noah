@@ -93,9 +93,6 @@ final class AppModel {
         defer { starting = false }
         await session.waitForBackgroundAccess()
         started = true
-        do { try settings.requireCompatibleRNStores() }
-        catch is SettingsStorage.RecoveryRequired { phase = .blocked(.settingsRecovered); return }
-        catch { phase = .blocked(.incompatibleStorage); return }
         let initialState = readLaunchState()
         if initialState == .invalidSeed || initialState == .seedConflict {
             phase = .blocked(initialState)
@@ -126,17 +123,12 @@ final class AppModel {
         let state = readLaunchState()
         switch state {
         case .existingWallet:
-            // Unreadable stores block; a missing wallet-storage (RN Delete Wallet unlinked
-            // the MMKV folder while open) resumes onboarding for the existing wallet.
-            do { try settings.requireCompatibleRNStores() }
-            catch is SettingsStorage.RecoveryRequired { phase = .blocked(.settingsRecovered); return }
-            catch { phase = .blocked(.incompatibleStorage); return }
-            resumeOnboarding = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized != true
+            resumeOnboarding = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == false
             await openExistingWallet()
             if phase == .launching { phase = resumeOnboarding ? .onboarding : .wallet }
         case .onboarding:
             phase = .onboarding
-        case .seedWithoutWalletData, .walletDataWithoutSeed, .secureStorageUnavailable, .invalidSeed, .seedConflict, .incompatibleStorage, .settingsRecovered:
+        case .seedWithoutWalletData, .walletDataWithoutSeed, .secureStorageUnavailable, .invalidSeed, .seedConflict:
             phase = .blocked(state)
         }
     }
@@ -337,7 +329,7 @@ final class AppModel {
     private var canCoordinateBackups: Bool {
         guard phase == .wallet, !pushPermission.blocksWallet(initialized: true), !isWalletSuspended, server.state.isBackupEnabled == true else { return false }
         let wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
-        return wallet?.isInitialized == true && wallet?.isWalletSuspended != true
+        return wallet?.isInitialized != false && wallet?.isWalletSuspended != true
     }
 
     /// Starts or stops automatic backups whenever eligibility may have
@@ -386,16 +378,6 @@ final class AppModel {
             }
         }
         backupTriggers = (id, task)
-    }
-
-    /// The root replaces this quarantined model and its entire view hierarchy before launch.
-    func acknowledgeRecoveredSettings() -> AppModel? {
-        guard phase == .blocked(.settingsRecovered), !starting,
-              UIApplication.shared.applicationState == .active else { return nil }
-        do {
-            try settings.acknowledgeRecovery()
-            return AppModel(settings: settings, readLaunchState: readLaunchState, settleRestore: settleRestore)
-        } catch { phase = .blocked(.incompatibleStorage); return nil }
     }
 
     /// Unavailable is retryable; it must never become an absent seed/default wallet.

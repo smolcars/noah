@@ -19,8 +19,8 @@ extension RecurringExecutor.Dependencies {
                      binding: { try RecurringStore.binding(location: location) },
                      allowed: {
                          guard !location.restorePending, !FileManager.default.fileExists(atPath: location.deletionMarker.path),
-                               let wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key),
-                               wallet.isInitialized == true, wallet.isWalletSuspended != true else { throw AppServices.WalletSuspended() }
+                               settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized != false,
+                               settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended != true else { throw AppServices.WalletSuspended() }
                      },
                      quote: { try await RecurringRecipient.quote($0, session: services.session) },
                      automationGeneration: { settings.string(forKey: WalletLifecycle.automationStopKey) },

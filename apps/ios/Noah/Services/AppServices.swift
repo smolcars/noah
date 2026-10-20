@@ -97,7 +97,7 @@ extension BackupCoordinator.Dependencies {
                 // automatic backups also need the user's backup setting.
                 guard await session.isOpen else { return false }
                 let wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
-                guard wallet?.isInitialized == true, wallet?.isWalletSuspended != true else { return false }
+                guard wallet?.isInitialized != false, wallet?.isWalletSuspended != true else { return false }
                 guard requireEnabled else { return true }
                 return settings.persistedState(PersistedServerState.self, key: PersistedServerState.key)?.isBackupEnabled == true
             },

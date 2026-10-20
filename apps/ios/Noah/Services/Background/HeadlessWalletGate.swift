@@ -13,7 +13,7 @@ enum HeadlessWalletGate {
         guard location.databaseExists else { throw WalletSession.OpenError.walletDatabaseMissing }
         guard !location.hasMultipleDatabases else { throw StoredSeed.Failure.conflict }
         let wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
-        guard wallet?.isInitialized == true, wallet?.isWalletSuspended != true else { throw AppServices.WalletSuspended() }
+        guard wallet?.isInitialized != false, wallet?.isWalletSuspended != true else { throw AppServices.WalletSuspended() }
         let seed = readSeed()
         try StoredSeed.requireUsable(seed)
         guard case .found(let mnemonic) = seed else { throw AppServices.SeedUnavailable() }
