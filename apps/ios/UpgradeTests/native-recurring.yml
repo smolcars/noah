@@ -12,7 +12,6 @@ appId: com.noahwallet.regtest
     direction: DOWN
 - tapOn: "Recurring Payments.*"
 - extendedWaitUntil:
-    visible: "Upgrade safety rule"
+    visible: "No recurring payments yet.*"
     timeout: 15000
-- assertVisible: "1,000 sats"
-- assertVisible: "Monthly.*0 paid.*"
+- assertNotVisible: "Upgrade safety rule"

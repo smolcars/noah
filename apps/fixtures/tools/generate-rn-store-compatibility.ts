@@ -103,5 +103,5 @@ Date.now = now;
 writeFileSync(new URL("../rn-store-compatibility.json", import.meta.url), JSON.stringify({
   description: "One deterministic RN Zustand generator; input.raw retains original numeric token spelling. Real RN writes, transaction migration and profile merge; explicitly labelled native envelope/type/version rejection probes. Unknown raw tokens must survive native writes.",
   cases: cases.map(({ expected: { state, ...expected }, ...item }) => ({ ...item,
-    expected: { ...expected, ...(state ? { stateRaw: JSON.stringify(state) } : {}) } })),
+    expected: { ...expected, ...(state ? { stateRaw: JSON.stringify(state) } : {}), imported: item.input.key !== "recurring-payment-storage" && expected.available } })),
 }, null, 2) + "\n");

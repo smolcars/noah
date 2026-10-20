@@ -7,7 +7,7 @@ import Testing
 @MainActor struct HeadlessWalletTests {
     private let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 
-    @Test(arguments: ["restore", "deletion", "suspended", "uninitialized", "quarantine", "missing", "noSeed", "locked", "invalid", "conflict"])
+    @Test(arguments: ["restore", "deletion", "suspended", "uninitialized", "missing", "noSeed", "locked", "invalid", "conflict"])
     func unsafeStateNeverChangesSeedOrFiles(state: String) throws {
         SettingsStorage.bootstrap()
         let directory = FileManager.default.temporaryDirectory.appending(path: "headless-\(UUID())")
@@ -22,11 +22,6 @@ import Testing
         if state == "suspended" { wallet.isWalletSuspended = true }
         if state == "uninitialized" { wallet.isInitialized = false }
         try settings.setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)
-        if state == "quarantine" {
-            let quarantine = MMKVQuarantine(root: directory.appending(path: "mmkv"), store: storageID)
-            quarantine.recordRecovery()
-            try quarantine.requireDurable()
-        }
         var marker: URL?
         if state == "restore" {
             try FileManager.default.createDirectory(at: location.restoreDirectory, withIntermediateDirectories: true)
@@ -42,7 +37,6 @@ import Testing
         }
         #expect(throws: (any Error).self) {
             _ = try HeadlessWalletGate.mnemonic(location: location, settings: settings, readSeed: {
-                #expect(state != "quarantine")
                 return seed
             })
         }

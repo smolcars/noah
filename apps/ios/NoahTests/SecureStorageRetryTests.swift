@@ -31,7 +31,7 @@ struct SecureStorageRetryTests {
 
     @Test func retryCannotBypassInvalidOrConflictingSeeds() async {
         SettingsStorage.bootstrap()
-        for state in [LaunchState.invalidSeed, .seedConflict, .incompatibleStorage] {
+        for state in [LaunchState.invalidSeed, .seedConflict] {
             var reads = 0
             let model = AppModel(readLaunchState: { reads += 1; return state }, settleRestore: { .nothingPending })
             await model.start()

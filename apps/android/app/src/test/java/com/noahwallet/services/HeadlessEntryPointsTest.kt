@@ -11,16 +11,16 @@ class HeadlessEntryPointsTest {
     private fun walletGate() {
         val app = source("services/AppServices")
         assertTrue(app.contains("if (!foreground) walletOpener.requireHeadlessAdmission()"))
-        assertTrue(app.indexOf("if (!foreground) walletOpener.requireHeadlessAdmission()") < app.indexOf("if (recoverRestore(walletMutationHeld)"))
+        assertTrue(app.indexOf("if (!foreground) walletOpener.requireHeadlessAdmission()") < app.indexOf("if (foreground && recoverRestore(walletMutationHeld)"))
         assertTrue(app.contains("else walletOpener.ensureOpen()"))
-        assertTrue(source("services/storage/StoredWalletOpener").contains("walletState()?.isInitialized != true"))
+        assertTrue(source("services/storage/StoredWalletOpener").contains("walletState()?.isInitialized == false"))
         assertTrue(source("services/push/PushRuntime").contains("ensureWalletOpen = services::ensureWalletOpen"))
     }
     @Test fun headlessDeletionRecoveryCannotDeleteASeed() {
         val code = source("services/AppServices")
-        val gate = "if (!foreground && WalletDataLocation(context.filesDir, variant).deletionMarker.exists()) throw RestoreNotSettled()"
+        val gate = "if (!foreground && (location.restorePending || location.deletionMarker.exists())) throw RestoreNotSettled()"
         assertTrue(code.contains(gate))
-        assertTrue(code.indexOf(gate) < code.indexOf("if (recoverRestore(walletMutationHeld)"))
+        assertTrue(code.indexOf(gate) < code.indexOf("if (foreground && recoverRestore(walletMutationHeld)"))
     }
     @Test fun firebaseServiceRoutesThroughTheGatedWorker() {
         assertTrue(source("services/push/NoahFirebaseMessagingService").contains("PushWork.enqueue")); walletGate()
@@ -48,7 +48,7 @@ class HeadlessEntryPointsTest {
     }
     @Test fun recurringReminderWorkerRequiresOnboardingAndDoesNotOpenWallets() {
         val code = source("recurring/RecurringNotifications")
-        assertTrue(code.contains("wallet?.isInitialized != true"))
+        assertTrue(code.contains("wallet?.isInitialized == false"))
         assertFalse(code.contains("ensureWalletOpen")); assertFalse(code.contains("ensureOpen"))
     }
     private fun cachedWidget(path: String? = null) {

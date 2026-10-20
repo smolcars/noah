@@ -15,6 +15,12 @@ class RNStoreMigrationTest {
             val expected = case.expected.jsonObject
             val key = input.getValue("key").jsonPrimitive.content
             val raw = input.getValue("raw").jsonPrimitive.content
+            val imported = SettingsStorage.importValues(mapOf(key to raw))
+            assertEquals(case.name, expected.getValue("imported").jsonPrimitive.boolean, key != "recurring-payment-storage" && imported.values[key] == raw)
+            if (key == "recurring-payment-storage") {
+                assertTrue(case.name, imported.values[key] == null || imported.values[key] == SettingsStorage.emptyRecurring)
+            } else if (expected.getValue("available").jsonPrimitive.boolean) assertEquals(case.name, raw, imported.values[key])
+            else { assertNull(case.name, imported.values[key]); assertTrue(imported.settingsNoticePending) }
             var stored = raw
             val recurring = com.noahwallet.recurring.RecurringStore({ stored }, { stored = it })
             if (!expected.getValue("available").jsonPrimitive.boolean) {

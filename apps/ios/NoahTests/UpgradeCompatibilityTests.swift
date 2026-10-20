@@ -108,19 +108,13 @@ struct UpgradeCompatibilityTests {
         #expect(server?.isBackupEnabled == oldServer?.isBackupEnabled)
     }
 
-    @Test func recurringPolicyIsIdenticalAndHasNotRun() throws {
+    @Test func recurringIsEmptyAndUpgradeNoticeIsRecordedInNativeStore() throws {
         guard try expected().funded else { return }
-        let old = try RecurringStore(settings: rnSettings()).load().schedules
-        let current = try RecurringStore().load().schedules
-        #expect(old.count == 1)
-        let identical = old == current
-        #expect(identical, "All RN recurring policy fields must survive unchanged")
-        let rule = try #require(current.values.first)
-        #expect(rule.label == "Upgrade safety rule")
-        #expect(rule.amountSat == 1000)
-        #expect(rule.status == "active")
-        #expect(rule.startAt > Date().timeIntervalSince1970 * 1000)
-        #expect(rule.occurrencesPaid == 0 && rule.runs.isEmpty && rule.inFlight == nil)
+        let old = try rnSettings()
+        #expect(try old.nativeFile.load().recurringNoticePending)
+        #expect(SettingsStorage.shared.nativeFile.exists)
+        #expect(try RecurringStore().load().schedules.isEmpty)
+        #expect(try SettingsStorage.shared.nativeFile.load().recurringNoticePending)
     }
 
     /// Simulators cannot acquire RN APNs/Expo registration. Missing expectations

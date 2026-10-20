@@ -10,7 +10,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}"
+        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}",
+        "imported": true
       }
     },
     {
@@ -28,7 +29,8 @@
           "state.futureUnderflow": "1e-400",
           "state.futureNegativeZero": "-0"
         },
-        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}"
+        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}",
+        "imported": true
       }
     },
     {
@@ -38,7 +40,8 @@
         "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":-0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -48,7 +51,8 @@
         "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":0e5}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -58,7 +62,8 @@
         "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":1e-400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -68,7 +73,8 @@
         "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":0.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -78,7 +84,8 @@
         "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":1.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -88,7 +95,8 @@
         "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":1e0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -98,7 +106,8 @@
         "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":-1}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -108,7 +117,8 @@
         "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":99}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -118,7 +128,8 @@
         "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":true}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -128,7 +139,8 @@
         "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -138,7 +150,8 @@
         "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":\"0\"}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -148,7 +161,8 @@
         "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":1e400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -160,7 +174,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}"
+        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}",
+        "imported": true
       }
     },
     {
@@ -172,7 +187,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}"
+        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}",
+        "imported": true
       }
     },
     {
@@ -184,7 +200,8 @@
       "expected": {
         "available": false,
         "version": 0,
-        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}"
+        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}",
+        "imported": false
       }
     },
     {
@@ -194,7 +211,8 @@
         "raw": "broken"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -204,7 +222,8 @@
         "raw": "null"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -214,7 +233,8 @@
         "raw": "{}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -224,7 +244,8 @@
         "raw": "{\"state\":[]}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -234,7 +255,8 @@
         "raw": "{\"state\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -246,7 +268,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}"
+        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}",
+        "imported": true
       }
     },
     {
@@ -264,7 +287,8 @@
           "state.futureUnderflow": "1e-400",
           "state.futureNegativeZero": "-0"
         },
-        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}"
+        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}",
+        "imported": true
       }
     },
     {
@@ -274,7 +298,8 @@
         "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":-0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -284,7 +309,8 @@
         "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":0e5}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -294,7 +320,8 @@
         "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":1e-400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -304,7 +331,8 @@
         "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":0.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -314,7 +342,8 @@
         "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":1.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -324,7 +353,8 @@
         "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":1e0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -334,7 +364,8 @@
         "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":-1}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -344,7 +375,8 @@
         "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":99}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -354,7 +386,8 @@
         "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":true}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -364,7 +397,8 @@
         "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -374,7 +408,8 @@
         "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":\"0\"}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -384,7 +419,8 @@
         "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":1e400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -396,7 +432,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}"
+        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}",
+        "imported": true
       }
     },
     {
@@ -408,7 +445,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}"
+        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}",
+        "imported": true
       }
     },
     {
@@ -420,7 +458,8 @@
       "expected": {
         "available": false,
         "version": 0,
-        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}"
+        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}",
+        "imported": false
       }
     },
     {
@@ -430,7 +469,8 @@
         "raw": "broken"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -440,7 +480,8 @@
         "raw": "null"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -450,7 +491,8 @@
         "raw": "{}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -460,7 +502,8 @@
         "raw": "{\"state\":[]}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -470,7 +513,8 @@
         "raw": "{\"state\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -482,7 +526,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"isHomeBalanceHidden\":true}"
+        "stateRaw": "{\"isHomeBalanceHidden\":true}",
+        "imported": true
       }
     },
     {
@@ -500,7 +545,8 @@
           "state.futureUnderflow": "1e-400",
           "state.futureNegativeZero": "-0"
         },
-        "stateRaw": "{\"isHomeBalanceHidden\":true}"
+        "stateRaw": "{\"isHomeBalanceHidden\":true}",
+        "imported": true
       }
     },
     {
@@ -510,7 +556,8 @@
         "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":-0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -520,7 +567,8 @@
         "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":0e5}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -530,7 +578,8 @@
         "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":1e-400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -540,7 +589,8 @@
         "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":0.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -550,7 +600,8 @@
         "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":1.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -560,7 +611,8 @@
         "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":1e0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -570,7 +622,8 @@
         "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":-1}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -580,7 +633,8 @@
         "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":99}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -590,7 +644,8 @@
         "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":true}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -600,7 +655,8 @@
         "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -610,7 +666,8 @@
         "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":\"0\"}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -620,7 +677,8 @@
         "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":1e400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -632,7 +690,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"isHomeBalanceHidden\":true}"
+        "stateRaw": "{\"isHomeBalanceHidden\":true}",
+        "imported": true
       }
     },
     {
@@ -644,7 +703,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"isHomeBalanceHidden\":true}"
+        "stateRaw": "{\"isHomeBalanceHidden\":true}",
+        "imported": true
       }
     },
     {
@@ -656,7 +716,8 @@
       "expected": {
         "available": false,
         "version": 0,
-        "stateRaw": "{\"isHomeBalanceHidden\":true}"
+        "stateRaw": "{\"isHomeBalanceHidden\":true}",
+        "imported": false
       }
     },
     {
@@ -666,7 +727,8 @@
         "raw": "broken"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -676,7 +738,8 @@
         "raw": "null"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -686,7 +749,8 @@
         "raw": "{}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -696,7 +760,8 @@
         "raw": "{\"state\":[]}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -706,7 +771,8 @@
         "raw": "{\"state\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -718,7 +784,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}"
+        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}",
+        "imported": true
       }
     },
     {
@@ -736,7 +803,8 @@
           "state.futureUnderflow": "1e-400",
           "state.futureNegativeZero": "-0"
         },
-        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}"
+        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}",
+        "imported": true
       }
     },
     {
@@ -746,7 +814,8 @@
         "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":-0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -756,7 +825,8 @@
         "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":0e5}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -766,7 +836,8 @@
         "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":1e-400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -776,7 +847,8 @@
         "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":0.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -786,7 +858,8 @@
         "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":1.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -796,7 +869,8 @@
         "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":1e0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -806,7 +880,8 @@
         "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":-1}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -816,7 +891,8 @@
         "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":99}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -826,7 +902,8 @@
         "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":true}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -836,7 +913,8 @@
         "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -846,7 +924,8 @@
         "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":\"0\"}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -856,7 +935,8 @@
         "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":1e400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -868,7 +948,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}"
+        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}",
+        "imported": true
       }
     },
     {
@@ -880,7 +961,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}"
+        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}",
+        "imported": true
       }
     },
     {
@@ -892,7 +974,8 @@
       "expected": {
         "available": false,
         "version": 0,
-        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}"
+        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}",
+        "imported": false
       }
     },
     {
@@ -902,7 +985,8 @@
         "raw": "broken"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -912,7 +996,8 @@
         "raw": "null"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -922,7 +1007,8 @@
         "raw": "{}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -932,7 +1018,8 @@
         "raw": "{\"state\":[]}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -942,7 +1029,8 @@
         "raw": "{\"state\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -954,7 +1042,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}"
+        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}",
+        "imported": false
       }
     },
     {
@@ -972,7 +1061,8 @@
           "state.futureUnderflow": "1e-400",
           "state.futureNegativeZero": "-0"
         },
-        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}"
+        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}",
+        "imported": false
       }
     },
     {
@@ -982,7 +1072,8 @@
         "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":-0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -992,7 +1083,8 @@
         "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":0e5}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1002,7 +1094,8 @@
         "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":1e-400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1012,7 +1105,8 @@
         "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":0.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1022,7 +1116,8 @@
         "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":1.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1032,7 +1127,8 @@
         "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":1e0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1042,7 +1138,8 @@
         "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":-1}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1052,7 +1149,8 @@
         "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":99}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1062,7 +1160,8 @@
         "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":true}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1072,7 +1171,8 @@
         "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1082,7 +1182,8 @@
         "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":\"0\"}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1092,7 +1193,8 @@
         "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":1e400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1104,7 +1206,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}"
+        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}",
+        "imported": false
       }
     },
     {
@@ -1116,7 +1219,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}"
+        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}",
+        "imported": false
       }
     },
     {
@@ -1128,7 +1232,8 @@
       "expected": {
         "available": false,
         "version": 0,
-        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}"
+        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}",
+        "imported": false
       }
     },
     {
@@ -1138,7 +1243,8 @@
         "raw": "broken"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1148,7 +1254,8 @@
         "raw": "null"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1158,7 +1265,8 @@
         "raw": "{}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1168,7 +1276,8 @@
         "raw": "{\"state\":[]}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1178,7 +1287,8 @@
         "raw": "{\"state\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1190,7 +1300,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}"
+        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}",
+        "imported": true
       }
     },
     {
@@ -1208,7 +1319,8 @@
           "state.futureUnderflow": "1e-400",
           "state.futureNegativeZero": "-0"
         },
-        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}"
+        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}",
+        "imported": true
       }
     },
     {
@@ -1218,7 +1330,8 @@
         "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":-0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1228,7 +1341,8 @@
         "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":0e5}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1238,7 +1352,8 @@
         "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":1e-400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1248,7 +1363,8 @@
         "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":0.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1258,7 +1374,8 @@
         "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":1.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1268,7 +1385,8 @@
         "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":1e0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1278,7 +1396,8 @@
         "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":-1}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1288,7 +1407,8 @@
         "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":99}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1298,7 +1418,8 @@
         "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":true}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1308,7 +1429,8 @@
         "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1318,7 +1440,8 @@
         "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":\"0\"}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1328,7 +1451,8 @@
         "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":1e400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1340,7 +1464,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}"
+        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}",
+        "imported": true
       }
     },
     {
@@ -1352,7 +1477,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}"
+        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}",
+        "imported": true
       }
     },
     {
@@ -1364,7 +1490,8 @@
       "expected": {
         "available": false,
         "version": 0,
-        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}"
+        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}",
+        "imported": false
       }
     },
     {
@@ -1374,7 +1501,8 @@
         "raw": "broken"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1384,7 +1512,8 @@
         "raw": "null"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1394,7 +1523,8 @@
         "raw": "{}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1404,7 +1534,8 @@
         "raw": "{\"state\":[]}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1414,7 +1545,8 @@
         "raw": "{\"state\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1426,7 +1558,8 @@
       "expected": {
         "available": true,
         "version": 1,
-        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}"
+        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}",
+        "imported": true
       }
     },
     {
@@ -1444,7 +1577,8 @@
           "state.futureUnderflow": "1e-400",
           "state.futureNegativeZero": "-0"
         },
-        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}"
+        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}",
+        "imported": true
       }
     },
     {
@@ -1454,7 +1588,8 @@
         "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":-0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1464,7 +1599,8 @@
         "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":0e5}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1474,7 +1610,8 @@
         "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":1e-400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1484,7 +1621,8 @@
         "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":0.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1494,7 +1632,8 @@
         "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":1.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1504,7 +1643,8 @@
         "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":1e0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1514,7 +1654,8 @@
         "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":-1}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1524,7 +1665,8 @@
         "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":99}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1534,7 +1676,8 @@
         "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":true}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1544,7 +1687,8 @@
         "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1554,7 +1698,8 @@
         "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":\"0\"}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1564,7 +1709,8 @@
         "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":1e400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1576,7 +1722,8 @@
       "expected": {
         "available": true,
         "version": 1,
-        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}"
+        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}",
+        "imported": true
       }
     },
     {
@@ -1588,7 +1735,8 @@
       "expected": {
         "available": true,
         "version": 1,
-        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}"
+        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}",
+        "imported": true
       }
     },
     {
@@ -1600,7 +1748,8 @@
       "expected": {
         "available": true,
         "version": 1,
-        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}"
+        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}",
+        "imported": true
       }
     },
     {
@@ -1610,7 +1759,8 @@
         "raw": "broken"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1620,7 +1770,8 @@
         "raw": "null"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1630,7 +1781,8 @@
         "raw": "{}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1640,7 +1792,8 @@
         "raw": "{\"state\":[]}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1650,7 +1803,8 @@
         "raw": "{\"state\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1662,7 +1816,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}"
+        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}",
+        "imported": true
       }
     },
     {
@@ -1680,7 +1835,8 @@
           "state.futureUnderflow": "1e-400",
           "state.futureNegativeZero": "-0"
         },
-        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}"
+        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}",
+        "imported": true
       }
     },
     {
@@ -1690,7 +1846,8 @@
         "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":-0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1700,7 +1857,8 @@
         "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":0e5}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1710,7 +1868,8 @@
         "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":1e-400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1720,7 +1879,8 @@
         "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":0.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1730,7 +1890,8 @@
         "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":1.0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1740,7 +1901,8 @@
         "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":1e0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1750,7 +1912,8 @@
         "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":-1}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1760,7 +1923,8 @@
         "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":99}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1770,7 +1934,8 @@
         "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":true}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1780,7 +1945,8 @@
         "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1790,7 +1956,8 @@
         "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":\"0\"}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1800,7 +1967,8 @@
         "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":1e400}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1812,7 +1980,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}"
+        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}",
+        "imported": true
       }
     },
     {
@@ -1824,7 +1993,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}"
+        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}",
+        "imported": true
       }
     },
     {
@@ -1836,7 +2006,8 @@
       "expected": {
         "available": false,
         "version": 0,
-        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}"
+        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}",
+        "imported": false
       }
     },
     {
@@ -1846,7 +2017,8 @@
         "raw": "broken"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1856,7 +2028,8 @@
         "raw": "null"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1866,7 +2039,8 @@
         "raw": "{}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1876,7 +2050,8 @@
         "raw": "{\"state\":[]}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1886,7 +2061,8 @@
         "raw": "{\"state\":null}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -1904,7 +2080,8 @@
           "state.futureUnderflow": "1e-400",
           "state.futureNegativeZero": "-0"
         },
-        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}"
+        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}",
+        "imported": true
       }
     },
     {
@@ -1920,7 +2097,8 @@
           "preferredCurrency": "USD",
           "bitcoinAmountUnit": "bip177"
         },
-        "stateRaw": "{\"displayName\":\"Future preferences\",\"preferredCurrency\":\"future-currency\",\"bitcoinAmountUnit\":\"future-unit\"}"
+        "stateRaw": "{\"displayName\":\"Future preferences\",\"preferredCurrency\":\"future-currency\",\"bitcoinAmountUnit\":\"future-unit\"}",
+        "imported": true
       }
     },
     {
@@ -1936,7 +2114,8 @@
           "preferredCurrency": "USD",
           "bitcoinAmountUnit": "bip177"
         },
-        "stateRaw": "{\"displayName\":null,\"preferredCurrency\":null,\"bitcoinAmountUnit\":null}"
+        "stateRaw": "{\"displayName\":null,\"preferredCurrency\":null,\"bitcoinAmountUnit\":null}",
+        "imported": true
       }
     },
     {
@@ -1948,7 +2127,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"staticVtxoPubkey\":null}"
+        "stateRaw": "{\"staticVtxoPubkey\":null}",
+        "imported": true
       }
     },
     {
@@ -1960,7 +2140,8 @@
       "expected": {
         "available": false,
         "version": 0,
-        "stateRaw": "{\"isInitialized\":null}"
+        "stateRaw": "{\"isInitialized\":null}",
+        "imported": false
       }
     },
     {
@@ -1972,7 +2153,8 @@
       "expected": {
         "available": false,
         "version": 0,
-        "stateRaw": "{\"isHomeBalanceHidden\":null}"
+        "stateRaw": "{\"isHomeBalanceHidden\":null}",
+        "imported": false
       }
     },
     {
@@ -1984,7 +2166,8 @@
       "expected": {
         "available": false,
         "version": 1,
-        "stateRaw": "{\"isAutoBoardingEnabled\":null}"
+        "stateRaw": "{\"isAutoBoardingEnabled\":null}",
+        "imported": false
       }
     },
     {
@@ -1996,7 +2179,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"emailAddress\":null}"
+        "stateRaw": "{\"emailAddress\":null}",
+        "imported": true
       }
     },
     {
@@ -2008,7 +2192,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"mailboxAuthorizationExpiry\":null}"
+        "stateRaw": "{\"mailboxAuthorizationExpiry\":null}",
+        "imported": true
       }
     },
     {
@@ -2020,7 +2205,8 @@
       "expected": {
         "available": false,
         "version": 0,
-        "stateRaw": "{\"isMailboxAuthorizationEnabled\":null}"
+        "stateRaw": "{\"isMailboxAuthorizationEnabled\":null}",
+        "imported": false
       }
     },
     {
@@ -2032,7 +2218,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"lastBackupAt\":null}"
+        "stateRaw": "{\"lastBackupAt\":null}",
+        "imported": true
       }
     },
     {
@@ -2044,7 +2231,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"lastBackupError\":null}"
+        "stateRaw": "{\"lastBackupError\":null}",
+        "imported": true
       }
     },
     {
@@ -2056,7 +2244,8 @@
       "expected": {
         "available": false,
         "version": 0,
-        "stateRaw": "{\"lastBackupStatus\":null}"
+        "stateRaw": "{\"lastBackupStatus\":null}",
+        "imported": false
       }
     },
     {
@@ -2068,7 +2257,8 @@
       "expected": {
         "available": false,
         "version": 0,
-        "stateRaw": "{\"backupPending\":null}"
+        "stateRaw": "{\"backupPending\":null}",
+        "imported": false
       }
     },
     {
@@ -2080,7 +2270,8 @@
       "expected": {
         "available": true,
         "version": 0,
-        "stateRaw": "{\"endpointOverride\":null}"
+        "stateRaw": "{\"endpointOverride\":null}",
+        "imported": true
       }
     },
     {
@@ -2090,7 +2281,8 @@
         "raw": "{\"state\":{\"preferredCurrency\":[]},\"version\":0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -2100,7 +2292,8 @@
         "raw": "{\"state\":{\"bitcoinAmountUnit\":[]},\"version\":0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -2110,7 +2303,8 @@
         "raw": "{\"state\":{\"isInitialized\":[]},\"version\":0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -2120,7 +2314,8 @@
         "raw": "{\"state\":{\"lastBackupAt\":[]},\"version\":0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     },
     {
@@ -2130,7 +2325,8 @@
         "raw": "{\"state\":{\"emailAddress\":[]},\"version\":0}"
       },
       "expected": {
-        "available": false
+        "available": false,
+        "imported": false
       }
     }
   ]

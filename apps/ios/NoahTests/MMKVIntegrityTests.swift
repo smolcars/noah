@@ -23,18 +23,15 @@ import Testing
         var future = meta; future[4] = 5
         #expect(!MMKVIntegrity.verifies(data: data, meta: future))
     }
-    @Test func freshInstallAndFailedMarkerPreserveFiles() throws {
-        struct SyncFailure: Error {}
+    @Test func freshInstallAndInvalidPairPreserveFiles() throws {
         let root = FileManager.default.temporaryDirectory.appending(path: "integrity-\(UUID())")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
         let id = SettingsStorage.instanceID
-        let marker = MMKVQuarantine(root: root.appending(path: "mmkv"), store: id, sync: { _ in throw SyncFailure() })
         #expect(MMKVIntegrity.verifies(root: root, store: id))
         let data = try Data(contentsOf: MMKVRecoveryTests.fixture.appending(path: id))
         try data.write(to: root.appending(path: id))
         #expect(!MMKVIntegrity.verifies(root: root, store: id))
-        #expect(throws: (any Error).self) { try MMKVIntegrity.quarantineBeforeOpen(root: root, store: id, quarantine: marker) }
         #expect(try Data(contentsOf: root.appending(path: id)) == data)
         #expect(!FileManager.default.fileExists(atPath: root.appending(path: id + ".crc").path))
     }

@@ -1,5 +1,5 @@
 {
-  "description": "Source-level launch decisions; only public BIP39 test vectors. notChecked never grants wallet access.",
+  "description": "Source-level launch decisions; only public BIP39 test vectors. notChecked never grants wallet access. Settings never determine wallet existence (2026-10-20); see mmkv-launch-state.json for admission after settings import.",
   "cases": [
     {
       "name": "existing wallet",

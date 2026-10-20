@@ -1,93 +1,85 @@
 {
-  "description": "Seed and DB already exist. Snapshot key loss restores once before retirement. Native recovery quarantines across retries until a validated foreground acknowledgement. Both native real-MMKV suites consume these vectors.",
+  "description": "Product policy 2026-10-20. Seed and DB exist; missing/damaged settings use defaults and Home. Only explicit false resumes onboarding. Snapshot-only, one-time import.",
   "cases": [
     {
       "name": "initialized upgrade",
-      "initialWallet": "initialized",
-      "expected": "existingWallet"
+      "input": {
+        "wallet": "initialized"
+      },
+      "expected": {
+        "outcome": "existingWallet",
+        "settingsNotice": false
+      }
     },
     {
-      "name": "RN never persisted wallet settings",
-      "initialWallet": "absent",
-      "expected": "onboarding"
+      "name": "RN has no MMKV files",
+      "input": {
+        "wallet": "absent"
+      },
+      "expected": {
+        "outcome": "existingWallet",
+        "settingsNotice": false
+      }
     },
     {
-      "name": "unfinished RN onboarding",
-      "initialWallet": "unfinished",
-      "expected": "onboarding"
+      "name": "empty RN MMKV",
+      "input": {
+        "wallet": "empty"
+      },
+      "expected": {
+        "outcome": "existingWallet",
+        "settingsNotice": true
+      }
     },
     {
-      "name": "present undecodable RN wallet value",
-      "initialWallet": "undecodable",
-      "expected": "incompatibleStorage"
+      "name": "cleared RN wallet settings",
+      "input": {
+        "wallet": "cleared"
+      },
+      "expected": {
+        "outcome": "existingWallet",
+        "settingsNotice": true
+      }
     },
     {
-      "name": "later native wallet key loss",
-      "initialWallet": "initialized",
-      "afterNativeWallet": "absent",
-      "expected": "incompatibleStorage"
+      "name": "damaged RN snapshot",
+      "input": {
+        "wallet": "damaged"
+      },
+      "expected": {
+        "outcome": "existingWallet",
+        "settingsNotice": true
+      }
     },
     {
-      "name": "later native undecodable value",
-      "initialWallet": "initialized",
-      "afterNativeWallet": "undecodable",
-      "expected": "incompatibleStorage"
+      "name": "unreadable wallet envelope",
+      "input": {
+        "wallet": "undecodable"
+      },
+      "expected": {
+        "outcome": "existingWallet",
+        "settingsNotice": true
+      }
     },
     {
-      "name": "foreground completes resumed onboarding",
-      "initialWallet": "absent",
-      "afterNativeWallet": "initialized",
-      "expected": "existingWallet"
+      "name": "explicit unfinished RN onboarding",
+      "input": {
+        "wallet": "unfinished"
+      },
+      "expected": {
+        "outcome": "onboarding",
+        "settingsNotice": false
+      }
     },
     {
-      "name": "explicit unfinished state remains readable",
-      "initialWallet": "initialized",
-      "afterNativeWallet": "unfinished",
-      "expected": "onboarding"
-    },
-    {
-      "name": "onboarding still has no wallet key",
-      "initialWallet": "absent",
-      "afterNativeWallet": "absent",
-      "expected": "onboarding"
-    },
-    {
-      "name": "first-open partial wallet key loss",
-      "initialWallet": "initialized",
-      "beforeNativeWallet": "absent",
-      "expected": "existingWallet"
-    },
-    {
-      "name": "first-open partial undecodable wallet value",
-      "initialWallet": "initialized",
-      "beforeNativeWallet": "undecodable",
-      "expected": "existingWallet"
-    },
-    {
-      "name": "snapshot itself never had wallet settings",
-      "initialWallet": "absent",
-      "beforeNativeWallet": "absent",
-      "expected": "onboarding"
-    },
-    {
-      "name": "native recovery requires acknowledgement",
-      "initialWallet": "initialized",
-      "recoverAfterNative": true,
-      "expected": "settingsRecovered"
-    },
-    {
-      "name": "native quarantine survives two retries",
-      "initialWallet": "initialized",
-      "recoverAfterNative": true,
-      "retries": 2,
-      "expected": "settingsRecovered"
-    },
-    {
-      "name": "foreground acknowledges native recovery",
-      "initialWallet": "initialized",
-      "recoverAfterNative": true,
-      "acknowledgeRecovery": true,
-      "expected": "existingWallet"
+      "name": "missing initialized field",
+      "input": {
+        "wallet": "missingFlag"
+      },
+      "expected": {
+        "outcome": "existingWallet",
+        "settingsNotice": false
+      }
     }
   ]
 }

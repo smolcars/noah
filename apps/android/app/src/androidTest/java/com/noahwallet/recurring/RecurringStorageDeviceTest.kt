@@ -14,7 +14,7 @@ import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class RecurringStorageDeviceTest {
-    @Test fun rnMMKVEnvelopeAndInFlightMarkerSurviveFreshReader() {
+    @Test fun nativeEnvelopeAndInFlightMarkerSurviveFreshReader() {
         assumeTrue(InstrumentationRegistry.getArguments().getString("noahRecurringStorage") == "disposable-emulator")
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val settings = SettingsStorage(context)
@@ -29,14 +29,11 @@ class RecurringStorageDeviceTest {
             store.upsert(marked)
             assertEquals(marked, RecurringStore(SettingsStorage(context)).load().schedules.getValue("rent"))
             val corrupt = "{invalid"
-            val rawStore = com.tencent.mmkv.MMKV.mmkvWithID(SettingsStorage.instanceID, com.tencent.mmkv.MMKV.SINGLE_PROCESS_MODE, null, File(context.filesDir, "mmkv").path)!!
-            rawStore.encode(RecurringStore.key, corrupt); rawStore.sync()
+            val generation = settings.nativeFile.load()
+            settings.nativeFile.save(generation.copy(values = generation.values + (RecurringStore.key to corrupt)))
             assertTrue(runCatching { RecurringStore(settings).load() }.isFailure)
             assertEquals(corrupt, settings.string(RecurringStore.key))
         } finally {
-            // Restore the admitted envelope before the validated deletion path.
-            val rawStore = com.tencent.mmkv.MMKV.mmkvWithID(SettingsStorage.instanceID, com.tencent.mmkv.MMKV.SINGLE_PROCESS_MODE, null, File(context.filesDir, "mmkv").path)!!
-            rawStore.encode(RecurringStore.key, previous ?: """{"state":{"schedules":{},"serverSyncPending":false},"version":0}""")
             settings.removeAll()
         }
     }

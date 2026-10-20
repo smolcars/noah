@@ -188,21 +188,14 @@ import Testing
         let h = try Harness(); _ = try h.add()
         defer { try? FileManager.default.removeItem(at: h.directory) }
         try h.store.bind(h.owner.withLock { $0 })
-        let lastConfirmed = try #require(h.settings.string(forKey: RecurringStore.key))
         await h.executor.execute()
         #expect(h.calls.withLock { $0 } == 1)
         h.stopped.withLock { $0 = true }
         await h.executor.execute()
         #expect(h.calls.withLock { $0 } == 1)
-        // Recover an older policy from an actual CRC-damaged MMKV file. Journal stays outside MMKV.
-        let root = h.directory.appending(path: "recovered/mmkv")
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        let id = SettingsStorage.instanceID
-        for name in [id, id + ".crc"] {
-            try FileManager.default.copyItem(at: MMKVRecoveryTests.fixture.appending(path: name), to: root.appending(path: name))
-        }
-        let raw = try #require(MMKV(mmapID: id, rootPath: root.path))
-        raw.set(lastConfirmed, forKey: RecurringStore.key); raw.sync(); raw.close()
+        // Damaged RN settings import defaults, and never admit the older RN policy.
+        let root = try MMKVRecoveryTests.copyFixture()
+        defer { MMKVRecoveryTests.clean(root) }
         try MMKVRecoveryTests.corrupt(root, mode: "crc")
         h.settings = try SettingsStorage(rootPath: root.path)
         try h.settings.requireCompatibleRNStores()
@@ -214,8 +207,7 @@ import Testing
         h.stopped.withLock { $0 = false }
         await h.executor.execute(); await h.executor.execute()
         #expect(h.calls.withLock { $0 } == 1)
-        #expect(try h.store.load().schedules.values.first?.status == "needs_attention")
-        MMKVRecoveryTests.close(root)
+        #expect(try h.store.load().schedules.isEmpty)
     }
 
     @Test func pushAndForegroundJoinAndMissedPaymentsNeverStack() async throws {

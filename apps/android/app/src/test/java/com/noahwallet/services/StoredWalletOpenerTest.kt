@@ -59,7 +59,7 @@ class StoredWalletOpenerTest {
     }
 
     @Test fun unfinishedOnboardingRejectsAllWalletPushJobsWithoutOpeningOrWritingSeeds() = runBlocking {
-        for (state in listOf(null, PersistedWalletState(), PersistedWalletState(isInitialized = false))) {
+        for (state in listOf(PersistedWalletState(isInitialized = false))) {
             val f = Fixture().apply { walletState = state }
             for (notification in listOf(NotificationDataMaintenance("k1"), NotificationDataLightningInvoiceRequest(1000, "tx"),
                 NotificationDataLightningClaimRequest(1, null, "hash"), NotificationDataBackupTrigger("k1"), NotificationDataRecurringPaymentDue(1))) {
@@ -72,6 +72,14 @@ class StoredWalletOpenerTest {
             f.walletState = PersistedWalletState(isInitialized = true)
             f.opener.ensureOpen()
             assertEquals(2, f.opens); assertEquals(1, f.writes)
+        }
+    }
+
+    @Test fun missingSettingsPermitReadOnlyBackgroundOpen() = runBlocking {
+        for (state in listOf(null, PersistedWalletState())) {
+            val f = Fixture().apply { walletState = state }
+            f.opener.ensureOpen()
+            assertEquals(1, f.opens); assertEquals(0, f.writes); assertNull(f.bytes)
         }
     }
 

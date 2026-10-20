@@ -23,15 +23,13 @@ class MMKVIntegrityTest {
         assertFalse(MMKVIntegrity.verifies(data, meta.copyOf(111)))
         assertFalse(MMKVIntegrity.verifies(data, meta.copyOf().apply { this[4] = 5 }))
     }
-    @Test fun freshInstallAndMarkerFailureNeverMapFiles() {
+    @Test fun freshInstallAndInvalidPairNeverMapFiles() {
         val root = Files.createTempDirectory("integrity").toFile()
         try {
-            val marker = MMKVQuarantine(root, id) { error("fsync") }
             assertTrue(MMKVIntegrity.verifies(root, id))
             File(root, id).writeBytes(fixture(id))
             assertFalse(MMKVIntegrity.verifies(root, id))
             val before = File(root, id).readBytes()
-            assertTrue(runCatching { MMKVIntegrity.quarantineBeforeOpen(root, id, marker) }.isFailure)
             assertArrayEquals(before, File(root, id).readBytes())
             assertFalse(File(root, "$id.crc").exists())
         } finally { root.deleteRecursively() }

@@ -31,6 +31,7 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
         { sendJournal.attempt }, sendJournal::write, recurringReservation = reservation, reservation = reservation), scope)
     var binding = RecurringStore.Binding(wallet.owner, UUID.randomUUID().toString())
     var allowed = true; var generation: String? = null; var now = 1000L; var zone = TimeZone.getTimeZone("UTC")
+    val sentEntries = mutableListOf<List<com.noahwallet.api.generated.models.RecurringPaymentScheduleEntry>>()
     var quotes = 0; var fee = 0L; var method = "ark"; var feeSchedule: RecurringFeeSchedule? = null
     var beforeQuote: suspend () -> Unit = {}; var sync: suspend () -> Unit = {}; var syncCalls = 0
     val notifications = mutableListOf<RecurringPayment>()
@@ -40,7 +41,7 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
         ensureOpen = {}, binding = { beforeBinding(); binding }, allowed = { check(allowed) },
         quote = { s -> quotes++; beforeQuote(); SendPayment(s.destination, method, s.amountSat) to SendQuote(s.amountSat, fee, s.amountSat + fee, walletIdentity = binding.wallet, lightningFeeSchedule = feeSchedule) },
         automationGeneration = { beforeGeneration(); generation }, now = { now }, zone = { zone },
-        sync = { syncCalls++; sync() }, notify = { _, result -> result?.let { notifications.add(it) } },
+        sync = { sentEntries.add(it); syncCalls++; sync() }, notify = { _, result -> result?.let { notifications.add(it) } },
         audit = { _, _, _, _ -> if (auditFails) error("audit"); audits++ }), scope)
     val schedule get() = store.load().schedules["rent"]
     fun add(start: Long = 1000): RecurringPayment {
@@ -60,6 +61,20 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
 }
 
 class RecurringExecutorTest {
+    @Test fun RNImportNeverPaysAndSyncsEmptyAfterAdmissionWithRetry() = runBlocking {
+        val w = RecurringWorld(this)
+        val imported = com.noahwallet.services.storage.SettingsStorage.importValues(mapOf(RecurringStore.key to
+            """{"state":{"schedules":{"old":{"id":"old"}}},"version":0}"""))
+        w.raw = imported.values.getValue(RecurringStore.key)
+        w.allowed = false; w.executor.execute(); assertEquals(0, w.syncCalls)
+        w.allowed = true; w.sync = { error("offline") }; w.executor.execute()
+        assertTrue(w.store.load().pending)
+        w.sync = {}; w.executor.execute()
+        assertFalse(w.store.load().pending)
+        assertTrue(w.sentEntries.isNotEmpty() && w.sentEntries.all { it.isEmpty() })
+        assertEquals(0, w.wallet.calls)
+    }
+
     @Test fun unpaidPauseRollbackCannotPay() = unpaidPolicyRollback("pause")
     @Test fun unpaidCancelRollbackCannotPay() = unpaidPolicyRollback("cancel")
     @Test fun unpaidEditRollbackCannotPayOldPolicy() = unpaidPolicyRollback("edit")

@@ -73,15 +73,9 @@ class UpgradeCompatibilityTest {
             assertEquals("EUR", SettingsPreferences.state(settings.string("profile-storage"))["preferredCurrency"]?.jsonPrimitive?.content)
             assertEquals(true, SettingsPreferences.state(settings.string("privacy-storage"))["isHomeBalanceHidden"]?.jsonPrimitive?.boolean)
             assertEquals(false, SettingsPreferences.transaction(settings.string("transaction-storage"))["isAutoBoardingEnabled"]?.jsonPrimitive?.boolean)
-            val rules = RecurringStore(settings).load().schedules.values
-            assertEquals("Exactly one RN rule required", 1, rules.size)
-            val rule = rules.single()
-            assertEquals("Android upgrade safety", rule.label)
-            assertEquals("upgrade@example.com", rule.destination)
-            assertEquals(1234L, rule.amountSat)
-            assertEquals("paused", rule.status)
-            assertEquals(0, rule.occurrencesPaid)
-            assertTrue("Upgrade must not run a recurring payment", rule.runs.isEmpty() && rule.inFlight == null)
+            assertTrue("RN schedules must never import", RecurringStore(settings).load().schedules.isEmpty())
+            assertTrue("Recurring upgrade notice must be recorded", settings.nativeFile.load().recurringNoticePending)
+            assertTrue("Native import marker missing", settings.nativeFile.exists)
         }
         val state = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
         assertEquals("RN initialized flag missing", true, state?.isInitialized)
@@ -117,7 +111,7 @@ class UpgradeCompatibilityTest {
             assertTrue("RN Ark send missing", history.any { it.direction == "outgoing" && it.amount == 5000L })
             assertTrue("Confirmed onchain movement missing", history.any { it.hasConfirmation == true && it.balanceChangeSat == expectedOnchain.toLong() })
             assertTrue("Settings changed while opening wallet", envelopesBefore == RNStoreCodec.versions.keys.associateWith(settings::string))
-            assertTrue("Every recurring field must survive", schedulesBefore == settings.string(RecurringStore.key)?.let {
+            assertTrue("Recurring schedule list must remain empty", schedulesBefore == settings.string(RecurringStore.key)?.let {
                 Json.parseToJsonElement(it).jsonObject.getValue("state").jsonObject["schedules"]
             })
         }
@@ -155,7 +149,7 @@ class UpgradeCompatibilityTest {
             assertEquals("Launch executed a wallet movement", movements, afterLaunch.movementCount)
             assertEquals(spendable, afterLaunch.spendableSats)
             assertEquals(args.getString("expectedOnchain")!!.toULong(), afterLaunch.balance.onchain.confirmed)
-            assertTrue("Native launch changed recurring rule fields", schedulesBefore == settings.string(RecurringStore.key)?.let {
+            assertTrue("Native launch must not recreate RN schedules", schedulesBefore == settings.string(RecurringStore.key)?.let {
                 Json.parseToJsonElement(it).jsonObject.getValue("state").jsonObject["schedules"]
             })
             for (key in listOf("profile-storage", "privacy-storage", "transaction-storage")) {

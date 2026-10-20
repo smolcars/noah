@@ -3,420 +3,176 @@ import MMKV
 import Testing
 @testable import Noah
 
+/// RN bytes are an immutable import source, never a native settings backend.
 @Suite(.serialized) @MainActor
 struct MMKVRecoveryTests {
     static let id = SettingsStorage.instanceID
     static let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         .deletingLastPathComponent().deletingLastPathComponent().appending(path: "fixtures/rn-mmkv")
-
     static func copyFixture() throws -> URL {
-        SettingsStorage.bootstrap()
-        let root = FileManager.default.temporaryDirectory.appending(path: "mmkv-recovery-\(UUID())/mmkv")
+        let root = FileManager.default.temporaryDirectory.appending(path: "native-import-\(UUID())/mmkv")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         for name in [id, id + ".crc"] {
             try FileManager.default.copyItem(at: fixture.appending(path: name), to: root.appending(path: name))
         }
         return root
     }
-    static func close(_ root: URL) { MMKV(mmapID: id, rootPath: root.path)?.close() }
+    static func close(_ root: URL) {} // SettingsStorage holds no MMKV handle.
     static func clean(_ root: URL) { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     static func corrupt(_ root: URL, mode: String) throws {
-        let file = root.appending(path: id), crc = root.appending(path: id + ".crc")
-        var data = try Data(contentsOf: file), meta = try Data(contentsOf: crc)
-        // Invalidate both the current checksum and last-confirmed checksum to exercise the handler.
-        meta[0] ^= 0xff
-        for offset in 32..<40 { meta[offset] = 0xff }
-        if mode == "length" { for offset in 0..<4 { data[offset] = 0xff; meta[28 + offset] = 0xff } }
-        if mode == "truncate" {
-            let size = (0..<4).reduce(0) { $0 | Int(meta[28 + $1]) << ($1 * 8) }
-            data = data.prefix(4 + size - 16)
-        }
-        if mode == "empty" { data = Data(repeating: 0, count: data.count) }
-        try data.write(to: file); try meta.write(to: crc)
+        let crc = root.appending(path: id + ".crc")
+        var data = try Data(contentsOf: crc)
+        if mode == "length" { for i in 28..<32 { data[i] = 255 } } else { data[0] ^= 255 }
+        try data.write(to: crc)
     }
-    static func rnKeys(_ store: SettingsStorage) -> [String] {
-        RNStoreCodec.schemas.keys.filter { store.string(forKey: $0) != nil }.sorted()
+    static func writeRN(_ root: URL, values: [String: String]) throws {
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        MMKV.initialize(rootDir: root.path, logLevel: .none)
+        let rn = try #require(MMKV(mmapID: id, rootPath: root.path))
+        rn.clearAll()
+        for (key, raw) in values { rn.set(raw, forKey: key) }
+        rn.sync(); rn.close()
     }
-
-    @Test func silentLastConfirmedRollbackRequiresContinue() throws {
-        for mode in ["crc", "length"] {
-            let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-            let store = try SettingsStorage(rootPath: root.path)
-            let crc = root.appending(path: Self.id + ".crc")
-            let before = try Data(contentsOf: crc)
-            var wallet = try #require(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key))
-            wallet.isWalletSuspended = true
-            try store.setPersistedState(wallet, key: PersistedWalletState.key, version: 0)
-            Self.close(root)
-            var meta = try Data(contentsOf: crc)
-            // A valid older prefix allows MMKV to roll back without any error callback.
-            meta.replaceSubrange(32..<36, with: before[28..<32])
-            meta.replaceSubrange(36..<40, with: before[0..<4])
-            if mode == "crc" { meta[0] ^= 0xff }
-            else { for offset in 28..<32 { meta[offset] = 0xff } }
-            try meta.write(to: crc)
-            #expect(throws: SettingsStorage.RecoveryRequired.self) { try SettingsStorage(rootPath: root.path) }
-            #expect(MMKVQuarantine(root: root, store: Self.id).exists)
-            let recovered = try SettingsStorage.acknowledgeRecovery(rootPath: root.path)
-            #expect(recovered.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == false)
-            #expect(!MMKVUpgradeBackup(root: root, instanceID: Self.id).restored)
-        }
+    private func bytes(_ root: URL) throws -> [Data] {
+        try [Self.id, Self.id + ".crc"].map { try Data(contentsOf: root.appending(path: $0)) }
     }
-
-    @Test func lazyReloadAfterCacheEvictionRetainsQuarantineTarget() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+    @Test func importsRealRNBytesAndThousandsOfWritesNeverTouchLiveFiles() throws {
+        let root = try Self.copyFixture(); defer { Self.clean(root) }
+        let before = try bytes(root)
         let store = try SettingsStorage(rootPath: root.path)
-        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
-        raw.clearMemoryCache()
-        try Self.corrupt(root, mode: "crc")
-        #expect(throws: (any Error).self) { try store.requireHealthy() }
-        #expect(MMKVQuarantine(root: root, store: Self.id).exists)
-        #expect(store.string(forKey: PersistedWalletState.key) == nil)
-    }
-
-    @Test func continueRebuildsModelWithBiometricsAndBalanceHidingBeforeLaunch() async throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        let store = try SettingsStorage(rootPath: root.path)
-        var wallet = try #require(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key))
-        wallet.isBiometricsEnabled = true
-        try store.setPersistedState(wallet, key: PersistedWalletState.key, version: 0)
-        try store.setPersistedState(PersistedPrivacyState(isHomeBalanceHidden: true), key: PersistedPrivacyState.key, version: 0)
-        #expect(MMKVQuarantine(root: root, store: Self.id).recordRecovery())
-        let blocked = AppModel(settings: store, readLaunchState: { .onboarding }, settleRestore: { .nothingPending })
-        let oldLock = WalletLock(settings: store)
-        #expect(!blocked.isBalanceHidden && !oldLock.policy.enabled)
-        await blocked.start()
-        #expect(blocked.phase == .blocked(.settingsRecovered))
-        let fresh = try #require(blocked.acknowledgeRecoveredSettings())
-        let freshLock = WalletLock(settings: store)
-        #expect(fresh !== blocked && fresh.phase == .launching && fresh.summary == nil)
-        #expect(fresh.isBalanceHidden && freshLock.policy.enabled && freshLock.policy.locked)
-    }
-
-    @Test(arguments: ["crc", "length", "truncate"])
-    func recoversCorruptRNFilesWithoutDiscarding(mode: String) throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        try Self.corrupt(root, mode: mode)
-        let original = try Data(contentsOf: root.appending(path: Self.id))
-        if mode == "truncate" {
-            // Recovery retains keys, but a partial JSON envelope must still block startup.
-            #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
-        } else {
-            let store = try SettingsStorage(rootPath: root.path)
-            #expect(!Self.rnKeys(store).isEmpty)
-            #expect(store.string(forKey: PersistedWalletState.key) != nil)
-        }
-        let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
-        let exact = try Data(contentsOf: backup.directory.appending(path: Self.id)) == original
-        #expect(exact)
-    }
-
-    @Test func restoresImmutableBackupOnceAndBlocksRepeatedLoss() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
-        try backup.prepare()
-        let original = try Data(contentsOf: root.appending(path: Self.id))
-        try Self.corrupt(root, mode: "empty")
-        let store = try SettingsStorage(rootPath: root.path)
-        #expect(!Self.rnKeys(store).isEmpty && backup.restored)
-        Self.close(root)
-        try Self.corrupt(root, mode: "empty")
-        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
-        let exact = try Data(contentsOf: backup.directory.appending(path: Self.id)) == original
-        #expect(exact)
-    }
-
-    @Test func unrecoverableBackupBlocksInsteadOfOnboarding() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        try Self.corrupt(root, mode: "empty")
-        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
-        let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
-        #expect(backup.restored)
-        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
-    }
-
-    @Test func missingPairPreventsMMKVOpenAndRetriesNextLaunch() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        let crc = root.appending(path: Self.id + ".crc"), bytes = try Data(contentsOf: crc)
-        try FileManager.default.removeItem(at: crc)
-        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
-        #expect(!FileManager.default.fileExists(atPath: crc.path))
-        try bytes.write(to: crc)
-        let store = try SettingsStorage(rootPath: root.path)
-        #expect(!Self.rnKeys(store).isEmpty)
-    }
-
-    @Test func interruptedRestoreFinishesBeforeMapping() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
-        try backup.prepare()
-        try Data([1]).write(to: backup.directory.appending(path: "restore-pending"))
-        try Self.corrupt(root, mode: "empty")
-        let store = try SettingsStorage(rootPath: root.path)
-        #expect(!Self.rnKeys(store).isEmpty && backup.restored)
-        #expect(!FileManager.default.fileExists(atPath: backup.directory.appending(path: "restore-pending").path))
-    }
-
-    @Test func nativeSuspensionIsNeverReplacedByTheOriginalSnapshot() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        let store = try SettingsStorage(rootPath: root.path)
-        var wallet = try #require(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key))
-        wallet.isWalletSuspended = true
-        try store.setPersistedState(wallet, key: PersistedWalletState.key, version: 0)
-        Self.close(root)
-        try Self.corrupt(root, mode: "empty")
-        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
-        #expect(!MMKVUpgradeBackup(root: root, instanceID: Self.id).restored)
-    }
-
-    @Test func rejectedOlderSuspensionStaysBlockedAcrossRetries() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        let store = try SettingsStorage(rootPath: root.path)
-        var wallet = try #require(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key))
-        wallet.isWalletSuspended = true
-        try store.setPersistedState(wallet, key: PersistedWalletState.key, version: 0)
-        Self.close(root)
-        let file = root.appending(path: Self.id)
-        var bytes = try Data(contentsOf: file)
-        let record = try #require(bytes.range(of: Data(PersistedWalletState.key.utf8), options: .backwards))
-        bytes[record.upperBound - 1] = Character("X").asciiValue!
-        try bytes.write(to: file); try Self.corrupt(root, mode: "crc")
-        for _ in 0..<2 {
-            #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path).requireCompatibleRNStores() }
-            Self.close(root)
-        }
-    }
-
-    @Test(arguments: ["undecodable", "missing"])
-    func recurringEnvelopeAndAdmittedKeyLossBlock(mode: String) throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        if mode == "missing" {
-            let store = try SettingsStorage(rootPath: root.path)
-            try store.setDurably(#"{"state":{"schedules":{},"serverSyncPending":false},"version":0}"#, forKey: RecurringStore.key)
-        }
-        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
-        if mode == "missing" { raw.removeValue(forKey: RecurringStore.key) }
-        else { raw.set(Data([0xff]), forKey: RecurringStore.key) }
-        raw.sync(); raw.close()
-        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path).requireCompatibleRNStores() }
-    }
-
-    @Test func unsupportedRecurringRowsRemainVisibleAndStopped() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
-        raw.set(#"{"state":{"schedules":{"future":{"label":"Saved rule","amountSat":1e99}},"serverSyncPending":false},"version":0}"#, forKey: RecurringStore.key)
-        raw.sync(); raw.close()
-        let store = try SettingsStorage(rootPath: root.path)
-        try store.requireCompatibleRNStores()
-        let row = try #require(RecurringStore(settings: store).load().schedules["future"])
-        #expect(row.unsupportedStorage && row.status == "needs_attention")
-    }
-
-    @Test func foregroundAcknowledgementIsDurableAndDoesNotRestoreRNState() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        let store = try SettingsStorage(rootPath: root.path)
-        try store.setPersistedState(PersistedWalletState(isInitialized: true, isWalletSuspended: true), key: PersistedWalletState.key, version: 0)
-        Self.close(root); try Self.corrupt(root, mode: "crc")
-        #expect(throws: SettingsStorage.RecoveryRequired.self) { try SettingsStorage(rootPath: root.path) }
-        let admitted = try SettingsStorage.acknowledgeRecovery(rootPath: root.path)
-        try admitted.requireCompatibleRNStores()
-        #expect(admitted.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == true)
-        Self.close(root)
-        try SettingsStorage(rootPath: root.path).requireCompatibleRNStores()
-        #expect(!MMKVQuarantine(root: root, store: Self.id).exists)
-        #expect(!MMKVUpgradeBackup(root: root, instanceID: Self.id).restored)
-    }
-
-    @Test func quarantineWriteFailureBlocksWithoutAcknowledgement() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        _ = try SettingsStorage(rootPath: root.path); Self.close(root)
-        let marker = MMKVQuarantine(root: root, store: Self.id)
-        try FileManager.default.createDirectory(at: marker.file, withIntermediateDirectories: false)
-        try Self.corrupt(root, mode: "crc")
-        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
-        #expect(throws: (any Error).self) { try SettingsStorage.acknowledgeRecovery(rootPath: root.path) }
-    }
-
-    @Test(arguments: ["missing", "undecodable"])
-    func partialFirstOpenLossRestoresSnapshot(mode: String) throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
-        try backup.prepare()
-        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
-        if mode == "missing" { raw.removeValue(forKey: PersistedWalletState.key) }
-        else { raw.set(Data([0xff]), forKey: PersistedWalletState.key) }
-        raw.sync(); raw.close()
-        let store = try SettingsStorage(rootPath: root.path)
-        try store.requireCompatibleRNStores()
         #expect(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true)
-        #expect(backup.restored)
-    }
-
-    @Test func laterCRCRecoveryBlocksEvenWhenRNKeysSurvive() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        _ = try SettingsStorage(rootPath: root.path)
-        Self.close(root); try Self.corrupt(root, mode: "crc")
-        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
-    }
-
-    @Test func laterMissingWalletKeyBlocksInsteadOfResumingOnboarding() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        _ = try SettingsStorage(rootPath: root.path)
-        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
-        raw.removeValue(forKey: PersistedWalletState.key); raw.sync(); raw.close()
-        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
-    }
-
-    @Test func presentButUndecodableWalletValueBlocksValidationAndWrites() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        let file = root.appending(path: Self.id)
-        var bytes = try Data(contentsOf: file)
-        let value = try #require(bytes.range(of: Data(#"{"state":{"isInitialized"#.utf8), options: .backwards))
-        bytes[value.lowerBound + 3] = 0xff
-        try bytes.write(to: file)
-        try Self.corrupt(root, mode: "crc")
-        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
-    }
-
-    @Test func backupDirectoriesAreExcludedFromSystemBackup() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        #expect(try RecurringStore(settings: store).load().schedules.isEmpty)
+        #expect(try !store.nativeFile.load().recurringNoticePending)
+        for i in 0..<2000 { try store.setDurably(String(i), forKey: "native-counter") }
+        #expect(try bytes(root) == before)
         let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
-        try backup.prepare()
-        #expect(try backup.directory.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
-        // A failed pair copy leaves staging in place; it must be excluded too.
-        try FileManager.default.removeItem(at: backup.directory)
-        try FileManager.default.removeItem(at: root.appending(path: Self.id + ".crc"))
-        #expect(throws: (any Error).self) { try backup.prepare() }
-        let staging = URL(fileURLWithPath: backup.directory.path + ".pending")
-        #expect(try staging.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+        #expect(try bytes(backup.directory) == before)
+        #expect(try SettingsStorage(rootPath: root.path).string(forKey: "native-counter") == "1999")
+    }
+    @Test func existingSnapshotWinsOverLaterLiveRNChanges() throws {
+        let root = try Self.copyFixture(); defer { Self.clean(root) }
+        try MMKVUpgradeBackup(root: root, instanceID: Self.id).prepare()
+        try Self.writeRN(root, values: [PersistedWalletState.key: #"{"state":{"isInitialized":false},"version":0}"#])
+        let live = try bytes(root)
+        let imported = try SettingsStorage(rootPath: root.path)
+        #expect(imported.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true)
+        #expect(try bytes(root) == live)
     }
 
-    @Test func sharedStorageLaunchDecisions() throws {
-        struct Case: Decodable {
-            let name: String; let initialWallet: String; let afterNativeWallet: String?; let expected: String
-            let beforeNativeWallet: String?; let recoverAfterNative: Bool?; let retries: Int?; let acknowledgeRecovery: Bool?
-        }
-        struct Fixture: Decodable { let cases: [Case] }
-        let url = Self.fixture.deletingLastPathComponent().appending(path: "mmkv-launch-state.json")
-        for vector in try JSONDecoder().decode(Fixture.self, from: Data(contentsOf: url)).cases {
-            let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-            let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
-            func apply(_ state: String) {
-                if state == "absent" { raw.removeValue(forKey: PersistedWalletState.key) }
-                else if state == "undecodable" { raw.set(Data([0xff]), forKey: PersistedWalletState.key) }
-                else { raw.set("{\"state\":{\"isInitialized\":\(state == "initialized")},\"version\":0}", forKey: PersistedWalletState.key) }
-                raw.sync()
-            }
-            apply(vector.initialWallet); raw.close()
-            if let before = vector.beforeNativeWallet {
-                try MMKVUpgradeBackup(root: root, instanceID: Self.id).prepare()
-                let live = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
-                if before == "absent" { live.removeValue(forKey: PersistedWalletState.key) }
-                else { live.set(Data([0xff]), forKey: PersistedWalletState.key) }
-                live.sync(); live.close()
-            }
-            let outcome: String
-            do {
-                var store: SettingsStorage
-                if vector.recoverAfterNative == true {
-                    _ = try SettingsStorage(rootPath: root.path)
-                    Self.close(root); try Self.corrupt(root, mode: "crc")
-                    for _ in 0..<(vector.retries ?? 0) {
-                        #expect(throws: SettingsStorage.RecoveryRequired.self) { try SettingsStorage(rootPath: root.path) }
-                        Self.close(root)
-                    }
-                    if vector.acknowledgeRecovery == true {
-                        #expect(throws: SettingsStorage.RecoveryRequired.self) { try SettingsStorage(rootPath: root.path) }
-                        store = try SettingsStorage.acknowledgeRecovery(rootPath: root.path)
-                    } else { store = try SettingsStorage(rootPath: root.path) }
-                } else { store = try SettingsStorage(rootPath: root.path) }
-                if let after = vector.afterNativeWallet {
-                    if after == "absent" || after == "undecodable" {
-                        let live = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
-                        if after == "absent" { live.removeValue(forKey: PersistedWalletState.key) }
-                        else { live.set(Data([0xff]), forKey: PersistedWalletState.key) }
-                        live.sync()
-                    } else {
-                        try store.setPersistedState(PersistedWalletState(isInitialized: after == "initialized"), key: PersistedWalletState.key, version: 0)
-                    }
-                }
-                try store.requireCompatibleRNStores()
-                outcome = store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true ? "existingWallet" : "onboarding"
-            } catch is SettingsStorage.RecoveryRequired { outcome = "settingsRecovered" }
-            catch { outcome = "incompatibleStorage" }
-            #expect(outcome == vector.expected, "\(vector.name)")
+    @Test func damagedSnapshotImportsNothingAndDoesNotRecover() throws {
+        for mode in ["crc", "length"] {
+            let root = try Self.copyFixture(); defer { Self.clean(root) }
+            try Self.corrupt(root, mode: mode)
+            let before = try bytes(root)
+            let store = try SettingsStorage(rootPath: root.path)
+            #expect(try store.nativeFile.load().values.isEmpty)
+            #expect(try store.takeUpgradeNotices() == [SettingsStorage.settingsNotice])
+            #expect(try bytes(root) == before)
         }
     }
-
-    @Test func unavailableRetirementMarkerStopsNativeMutationAndCanRetry() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+    @Test func freshInstallCreatesNoMMKVAndDeletionNeverReimports() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "native-fresh-\(UUID())/mmkv")
+        defer { Self.clean(root) }
         let store = try SettingsStorage(rootPath: root.path)
-        let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
-        let original = store.string(forKey: PersistedWalletState.key)
-        let marker = try Data(contentsOf: backup.retirementFile)
-        try FileManager.default.removeItem(at: backup.retirementFile)
-        try FileManager.default.createDirectory(at: backup.retirementFile, withIntermediateDirectories: false)
-        #expect(throws: (any Error).self) {
-            try store.setPersistedState(PersistedWalletState(isInitialized: false), key: PersistedWalletState.key, version: 0)
-        }
-        #expect(store.string(forKey: PersistedWalletState.key) == original)
-        try FileManager.default.removeItem(at: backup.retirementFile)
-        try marker.write(to: backup.retirementFile)
-        try store.setPersistedState(PersistedWalletState(isInitialized: false), key: PersistedWalletState.key, version: 0)
-        #expect(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == false)
-    }
-
-    @Test func deliberateDeletionDoesNotResurrectTheBackup() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        let store = try SettingsStorage(rootPath: root.path)
-        let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
-        let staging = URL(fileURLWithPath: backup.directory.path + ".pending")
-        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
-        try Data([1]).write(to: staging.appending(path: "old"))
-        try store.removeAllDurably(); Self.close(root)
-        #expect(!FileManager.default.fileExists(atPath: backup.directory.path))
-        #expect(!FileManager.default.fileExists(atPath: staging.path))
-        #expect(FileManager.default.fileExists(atPath: backup.retirementFile.path))
+        #expect(!FileManager.default.fileExists(atPath: root.path))
+        #expect(try store.takeUpgradeNotices().isEmpty)
+        try Self.writeRN(root, values: [PersistedWalletState.key: #"{"state":{"isInitialized":false},"version":0}"#])
+        #expect(try SettingsStorage(rootPath: root.path).string(forKey: PersistedWalletState.key) == nil)
+        try store.removeAllDurably()
+        #expect(!FileManager.default.fileExists(atPath: root.appending(path: Self.id).path))
+        #expect(!FileManager.default.fileExists(atPath: MMKVUpgradeBackup(root: root, instanceID: Self.id).directory.path))
+        try store.setPersistedState(PersistedWalletState(isInitialized: true), key: PersistedWalletState.key, version: 0)
         let reopened = try SettingsStorage(rootPath: root.path)
-        #expect(Self.rnKeys(reopened).isEmpty)
-        #expect(try !backup.hasContent)
-        try reopened.setPersistedState(PersistedWalletState(isInitialized: true), key: PersistedWalletState.key, version: 0)
-        Self.close(root)
-        let reonboarded = try SettingsStorage(rootPath: root.path)
-        #expect(reonboarded.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true)
-        #expect(!FileManager.default.fileExists(atPath: backup.directory.path))
+        #expect(reopened.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true)
+        #expect(reopened.nativeFile.exists)
     }
-
-    /// RN's Delete Wallet unlinked the MMKV folder while open, so a wallet re-created in
-    /// that session has no wallet-storage. Absence at first native open is compatible:
-    /// the existing wallet resumes onboarding (isInitialized is not true).
-    @Test func missingWalletSettingsResumeOnboardingInsteadOfBlocking() throws {
-        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
-        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
-        raw.removeValue(forKey: PersistedWalletState.key); raw.sync(); raw.close()
+    @Test func noticeIsShownOnceAndDamagedNativeFileUsesDefaultsWithoutReimport() throws {
+        let root = try Self.copyFixture(); defer { Self.clean(root) }
+        try Self.writeRN(root, values: [RecurringStore.key: #"{"state":{"schedules":{"old":{"id":"old"}}},"version":0}"#])
         let store = try SettingsStorage(rootPath: root.path)
-        try store.requireCompatibleRNStores()
-        #expect(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized != true)
-        try store.setPersistedState(PersistedWalletState(isInitialized: false), key: PersistedWalletState.key, version: 0)
-        try store.requireCompatibleRNStores()
-        #expect(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == false)
+        #expect(try store.takeUpgradeNotices().contains(SettingsStorage.recurringNotice))
+        #expect(try SettingsStorage(rootPath: root.path).takeUpgradeNotices().isEmpty)
+        try Data("damaged generation".utf8).write(to: store.nativeFile.file)
+        let reset = try SettingsStorage(rootPath: root.path)
+        #expect(reset.string(forKey: PersistedWalletState.key) == nil)
+        #expect(try reset.takeUpgradeNotices() == [SettingsStorage.settingsNotice])
+        #expect(try reset.takeUpgradeNotices().isEmpty)
     }
-}
+    @Test func sharedSettingsLaunchPolicyAndBackgroundImport() throws {
+        struct Input: Decodable { let wallet: String }
+        struct Expected: Decodable { let outcome: String; let settingsNotice: Bool }
+        let cases = try Fixtures.load("mmkv-launch-state", input: Input.self, expected: Expected.self)
+        #expect(cases.count == 8)
+        for item in cases {
+            let root = FileManager.default.temporaryDirectory.appending(path: "native-launch-\(UUID())/mmkv")
+            defer { Self.clean(root) }
+            let raw: String? = switch item.input.wallet {
+            case "initialized", "damaged": #"{"state":{"isInitialized":true},"version":0}"#
+            case "unfinished": #"{"state":{"isInitialized":false},"version":0}"#
+            case "undecodable": "broken"
+            case "missingFlag": #"{"state":{},"version":0}"#
+            default: nil
+            }
+            if item.input.wallet != "absent" {
+                try Self.writeRN(root, values: raw.map { [PersistedWalletState.key: $0] } ?? [:])
+                if item.input.wallet == "damaged" { try Self.corrupt(root, mode: "crc") }
+            }
+            // Same importer is used on a push launch; no foreground acknowledgement exists.
+            let settings = try SettingsStorage(rootPath: root.path)
+            let wallet = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
+            #expect((wallet?.isInitialized == false ? "onboarding" : "existingWallet") == item.expected.outcome, "\(item.name)")
+            #expect(try settings.nativeFile.load().settingsNoticePending == item.expected.settingsNotice, "\(item.name)")
+            let location = WalletDataLocation(variant: .regtest, documentsDirectory: root.deletingLastPathComponent())
+            try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
+            try Data("wallet DB unaffected".utf8).write(to: location.database)
+            let seed = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+            if item.expected.outcome == "existingWallet" {
+                #expect(try HeadlessWalletGate.mnemonic(location: location, settings: settings, readSeed: { .found(seed) }) == seed)
+            } else {
+                #expect(throws: AppServices.WalletSuspended.self) { try HeadlessWalletGate.mnemonic(location: location, settings: settings, readSeed: { .found(seed) }) }
+            }
+        }
+    }
+    @Test func recurringImportSyncsEmptyOnlyAfterAdmissionAndRetriesFailure() async throws {
+        let h = try RecurringExecutorTests.Harness()
+        defer { try? FileManager.default.removeItem(at: h.directory.deletingLastPathComponent()) }
+        let imported = SettingsStorage.importValues([RecurringStore.key: #"{"state":{"schedules":{"old":{"id":"old"}}},"version":0}"#])
+        try h.settings.setDurably(try #require(imported.values[RecurringStore.key]), forKey: RecurringStore.key)
+        h.stopped.withLock { $0 = true }
+        await h.executor.execute()
+        #expect(h.sentEntries.isEmpty)
+        h.stopped.withLock { $0 = false }
+        h.syncHook = { _ in throw SettingsStorage.OpenError() }
+        await h.executor.execute()
+        #expect(try h.store.load().pending)
+        h.syncHook = nil
+        await h.executor.execute()
+        #expect(!h.sentEntries.isEmpty && h.sentEntries.allSatisfy { $0.isEmpty })
+        #expect(try !h.store.load().pending)
+        #expect(h.calls.withLock { $0 } == 0)
+    }
 
-/// Run alone in a separate test process; never replaces the handler in the ordinary suite.
-@Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_MMKV_DISCARD_DEMO"] == "1")) @MainActor
-struct MMKVDiscardDemonstrationTests {
-    private final class Discard: NSObject, MMKVHandler {
-        func onMMKVCRCCheckFail(_ mmapID: String) -> MMKVRecoverStrategic { .onErrorDiscard }
-        func onMMKVFileLengthError(_ mmapID: String) -> MMKVRecoverStrategic { .onErrorDiscard }
-        func mmkvLog(with level: MMKVLogLevel, file: UnsafePointer<CChar>!, line: Int32,
-                     func funcname: UnsafePointer<CChar>!, message: String!) {}
+    @Test func concurrentBackgroundAndForegroundImportPublishOnce() async throws {
+        let root = try Self.copyFixture(); defer { Self.clean(root) }
+        try Self.writeRN(root, values: [RecurringStore.key: #"{"state":{"schedules":{"old":{"id":"old"}}},"version":0}"#])
+        let stores = try await withThrowingTaskGroup(of: SettingsStorage.self) { group in
+            for _ in 0..<8 { group.addTask { try SettingsStorage(rootPath: root.path) } }
+            var results: [SettingsStorage] = []
+            for try await store in group { results.append(store) }
+            return results
+        }
+        var notices = 0
+        for store in stores { if try !store.takeUpgradeNotices().isEmpty { notices += 1 } }
+        #expect(notices == 1)
     }
-    @Test func defaultStrategyDiscardsTheSameCorruptRNBytes() throws {
-        let root = try MMKVRecoveryTests.copyFixture(); defer { MMKVRecoveryTests.close(root); MMKVRecoveryTests.clean(root) }
-        try MMKVRecoveryTests.corrupt(root, mode: "crc")
-        MMKV.register(Discard())
-        let mmkv = try #require(MMKV(mmapID: SettingsStorage.instanceID, rootPath: root.path))
-        #expect(!RNStoreCodec.schemas.keys.contains { mmkv.contains(key: $0) })
+
+    @Test func importsEachValidKeyIndependentlyAndSkipsAllRNRecurring() throws {
+        let wallet = #"{"state":{"isInitialized":true},"version":0}"#
+        let state = SettingsStorage.importValues(["wallet-storage": wallet, "privacy-storage": "broken", "unknown-RN-key": "raw-string", RecurringStore.key: "broken"])
+        #expect(state.values["wallet-storage"] == wallet)
+        #expect(state.values["privacy-storage"] == nil)
+        #expect(state.values["unknown-RN-key"] == "raw-string")
+        #expect(state.values[RecurringStore.key] == SettingsStorage.emptyRecurring)
+        #expect(state.settingsNoticePending && state.recurringNoticePending)
     }
 }
