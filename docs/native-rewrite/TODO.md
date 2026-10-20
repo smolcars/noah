@@ -111,6 +111,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Server auth: `/v0/getk1` → sign (offline key `m/350/0`) → `/v0/auth/login` → JWT; refresh near expiry; retry once — iOS (live-tested on regtest)
 - [x] Server auth — Android (offline index-0 signing, shared login, RN token storage, retry once; live-tested on regtest)
 - [x] Server registration + last-login + device info (shared token provider/client) — iOS
+- [x] App-version check — iOS (existing server client, process-cached fail-open Home warning; M1)
 - [x] Server registration + last-login + device info, app-version check, email and Lightning identity services — Android
 - [x] Push iOS: permission, APNs token → Expo token (RN installation ID, provisioning aps-environment), `register_push_token`, silent-push handler with 25 s budget, jobs for maintenance / invoice / claim / backup / heartbeat with job-status reports, widget refresh
 - [x] Push iOS: register the push token after server registration once onboarding is done (RN `usePushNotifications` gating)
@@ -177,6 +178,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [ ] Banners: backup status, auto-boarding, pending round, email verification, update warning — Android
 - [x] App version check — iOS (`/v0/app_version`, current version once per process, no retry, failure allows use, Home warning + variant TestFlight link; no blocking update screen, as in RN)
 - [ ] App version check — Android
+- [x] iOS parity verification: 33 targeted passes; full NoahTests once, 537 total / 515 passed / 22 opt-in skipped / 0 failed (113 suites). Dedicated regtest simulator, 10 screenshots, no payments submitted; simulator/DerivedData/result bundles removed. Deliberate session-lifetime/scanner/presentation differences and device-only acceptance gaps: `apps/ios/ParityTests/README.md`.
 
 - [x] Launch gating (including unfinished onboarding), Navigation 3 tabs, create/beta/secure mnemonic, emergency email and Lightning identity — Android
 - [x] Derive key 0 before fresh-wallet registration and persist `staticVtxoPubkey` — Android

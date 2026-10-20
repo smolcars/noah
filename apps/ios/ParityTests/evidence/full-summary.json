@@ -1,0 +1,48 @@
+{
+  "devicesAndConfigurations": [
+    {
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "AF608E65-4B31-4D39-94B6-1961879F7935",
+        "deviceName": "Noah iOS Parity t3-307ba163",
+        "modelName": "iPhone 18 Pro",
+        "osBuildNumber": "24A434",
+        "osVersion": "27.0",
+        "platform": "iOS Simulator"
+      },
+      "expectedFailures": 0,
+      "failedTests": 0,
+      "passedTests": 760,
+      "skippedTests": 22,
+      "testPlanConfiguration": {
+        "configurationId": "1",
+        "configurationName": "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription": "Noah-Regtest \u00b7 Built with macOS 27.0.1",
+  "expectedFailures": 0,
+  "failedTests": 0,
+  "finishTime": 1792486288.586,
+  "passedTests": 515,
+  "result": "Passed",
+  "runtimeWarnings": [],
+  "skippedTests": 22,
+  "startTime": 1792486234.076,
+  "statistics": [
+    {
+      "subtitle": "323 test runs",
+      "title": "78 tests ran with dynamic parameters"
+    }
+  ],
+  "testFailures": [],
+  "title": "Test - Noah-Regtest",
+  "topInsights": [
+    {
+      "category": "Longest Test Runs",
+      "impact": "41% of duration",
+      "text": "12 longest test runs with outlier durations exceeding 0.62s (three standard deviations)"
+    }
+  ],
+  "totalTestCount": 537
+}

@@ -1,0 +1,19 @@
+{
+  "simulator": {
+    "name": "Noah iOS Parity t3-307ba163",
+    "udid": "AF608E65-4B31-4D39-94B6-1961879F7935",
+    "stateBeforeDeletion": "Shutdown",
+    "deleted": true
+  },
+  "removed": [
+    "/private/tmp/noah-ios-parity-t3-307ba163",
+    "/private/tmp/noah-parity-push.xcresult",
+    "/private/tmp/noah-parity-version.xcresult",
+    "/private/tmp/noah-parity-home.xcresult",
+    "/private/tmp/noah-parity-qr.xcresult",
+    "/private/tmp/noah-parity-extra.xcresult",
+    "/private/tmp/noah-parity-version-fixture.xcresult",
+    "/private/tmp/noah-parity-full.xcresult"
+  ],
+  "versionFixtureProxyStopped": true
+}

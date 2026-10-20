@@ -1,0 +1,49 @@
+{
+  "runs": [
+    {
+      "run": "push",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "total": 6
+    },
+    {
+      "run": "version",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "total": 3
+    },
+    {
+      "run": "home",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "total": 9
+    },
+    {
+      "run": "qr",
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0,
+      "total": 12
+    },
+    {
+      "run": "extra",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "total": 2
+    },
+    {
+      "run": "version-fixture",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "total": 1
+    }
+  ],
+  "passed": 33,
+  "failed": 0,
+  "skipped": 0
+}
