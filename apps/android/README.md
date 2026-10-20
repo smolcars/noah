@@ -6,7 +6,8 @@ onboarding at the recovery phrase. It never creates a wallet at launch or delete
 legacy secrets. Fresh creation derives key 0 before server registration.
 
 Onboarding includes the beta warning, secure recovery phrase, emergency email and
-Lightning identity. Restore UI remains a placeholder; the Android restore engine is implemented below.
+Lightning identity. Restore accepts a private 12-word recovery phrase or uses the
+securely stored phrase after wallet data loss; see [restore verification](RestoreTests/README.md).
 Home uses the full wallet balance and RN-compatible unit/privacy settings. Receive
 supports BIP-321 QR, amount/note editing, fiat, copy/share and Ark/Lightning completion.
 Notification permission and the existing push layer run after onboarding.
@@ -177,7 +178,8 @@ future background services must remain in the app process or add process locking
 
 Launch states match `apps/fixtures/launch-state.json`. The existing wallet shell
 requires both a readable nonempty seed and `filesDir/noah-data-<variant>/db.sqlite`.
-The other states show the same placeholders as iOS and never create/delete data.
+Seed-only launch offers restore from the securely stored phrase. Missing-seed and
+unavailable-storage states preserve data and offer recovery guidance.
 Secure-storage and wallet-open failures are retried when the activity resumes.
 The shell is displayed only after the existing wallet opens successfully.
 
@@ -549,9 +551,14 @@ reading wallet state; scratch sweeps also cover the busy/no-journal path.
 
 Backup/export/preflight scratch lives in cache and is tracked per operation;
 restore workspaces are excluded from cloud backup and device transfer in both XML
-rule files. The native seed remains in `noBackupFilesDir`. The optional restore
-screen is still a placeholder; `AppServices.restorer()` and `seedRestored` are ready
-for that UI to call. No restored phrase is persisted in UI state.
+rule files. The native seed remains in `noBackupFilesDir`. The restore screen calls
+`AppServices.restorer()`, then seeds backup state with
+`seedRestored`, invalidates server authentication and opens the restored wallet.
+Failures after the engine commits require restart and cannot start another restore.
+Phrase entry uses `FLAG_SECURE`, local BIP39 suggestions/checksum validation and
+whole-phrase paste; input is cleared on submit, background and exit and never saved
+in instance state. Installed/suspended wallets and pending restore/deletion markers
+are blocked from this onboarding flow.
 
 ### Backup verification (2026-10-19)
 
