@@ -3,6 +3,109 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Remaining read races and strict JSON regressions (2026-10-20)
+
+Base: `feat/native-rewrite` at `76c1e3ed`. Review evidence and temporary probe
+sources: `/private/tmp/noah-r5-review-b92f-evidence.json` and the sources listed
+there. Permanent tests use repository fixtures and have no `/private/tmp` dependency.
+
+Android periodic checks and reminder workers now delegate to executor storage
+admission. iOS reload is asynchronous and joins `WalletMutationGate`; its UI,
+status, marker recovery, settlement and server-sync storage transactions also use
+that gate. Admission resolves the current binding and stop generation, revalidates
+both before authority/ledger access, and rejects work from an older execution
+binding. Missing/replaced wallets skip without authority access or a new failure
+latch. Suspension display and terminal settlement remain available while suspended;
+actual corrupt/unavailable evidence and storage-health failures still stop sending.
+Android keeps `ensureWalletOpen(walletMutationHeld = true)` and all public runtime /
+executor signatures. Lock order remains lifecycle → RestoreRecovery → session
+reservation, with no reentrant gate acquisition.
+
+Read audit: Android executor storage operations were already gated; they now also
+revalidate admission. Its periodic and reminder reads were the remaining external
+protected readers. iOS direct executor reads/mutations (including the ledger reads
+inside policy commits) now run as synchronous gated transactions; notifications
+and network/native awaits run after releasing that gate. Post-quote policy and
+marker writes compare the current row so a queued write cannot undo pause/cancel.
+The final synchronous Send guards on both platforms remain under the exclusive
+session reservation, which excludes close/replacement/deletion. They compare the
+expected binding and stop generation before reading authority, without acquiring
+the lifecycle gate after the session reservation. Lifecycle stop/suspend/resume
+operations are authority **writers**, including the intentional stop before waiting
+for deletion's gate; that ordering is unchanged.
+
+Widgets consume cached balance/expiry snapshots and contain no authority/ledger
+reads. iOS notifications consume supplied policy snapshots. Android reminders use
+the gated executor. Server wake sync uses the executor's gated reads and pending
+writes. Legacy sealing constructs an unattached `RecurringStore`, so it has no
+authority or policy ledger to bootstrap/latch; Android's read-only RN codec does
+the same, and iOS's codec validates only the raw envelope. Settings storage,
+AppServices restore recovery/admission, AppLog/telemetry, server and RN client
+sources were not changed. RN schedules are still **never imported**.
+
+Both stores reject duplicate decoded property names at every object depth within
+a policy row before typed decoding. The shared
+`apps/fixtures/recurring-rn-duplicate-keys.json` has **10 cases**: fractional value
+first/last, identical duplicates, escaped key aliases, status, interval, in-flight,
+run history and unknown nested objects/arrays. Unsupported rows stay stopped,
+non-executable, non-editable/non-resumable, byte-preserved through unrelated and
+display-copy writes/reopen, and cancellable. Android passes original row slices
+into validation so kotlinx cannot erase duplicate evidence before classification.
+
+Android validates all **18** numeric fields against the RFC 8259 integer-literal
+grammar `-?(0|[1-9][0-9]*)` before exact `BigInteger` range conversion. The shared
+`apps/fixtures/recurring-rn-numeric-grammar.json` retains the review's **126 cases**
+unchanged and adds **108** plus-sign, negative-leading-zero, hex, NaN and positive /
+negative Infinity probes. Both platforms assert all **234** classifications;
+supported matrix rows need not be due/executable (some contain in-flight state).
+A separate Android regression proves `01000` cannot submit a payment. iOS needed
+no numeric-parser change.
+
+Permanent regressions: `RecurringProtectedReadRaceTest(s)`,
+`RecurringNumericGrammarTest(s)`, Android `RecurringLeadingZeroPaymentTest`, and
+the shared duplicate-key cases in `RecurringRNRequiredFieldsTest(s)`. Read tests
+cover deletion after binding resolution, same-path replacement, waiting behind
+the lifecycle gate and stop-generation changes; iOS also covers status, pause,
+cancel, resume, edit, clock and server-sync entry paths. They assert no submission,
+no replacement-authority write and a healthy replacement authority afterward.
+
+Before fixes: Android **289 tests / 30 failures** (two read races, nine duplicate
+rows, 18 leading-zero fields and the payment probe). The expanded numeric baseline
+was **235 tests / 28 failures** (234 token cases plus the payment probe; 18 positive
+and nine negative-leading-zero fields failed). iOS baseline was **3 definitions /
+287 expanded cases: 277 passes, 10 failures** (reload plus nine duplicate rows);
+all original 126 numeric cases already passed.
+
+iOS focused verification: duplicate-key preservation passed **160 expanded
+cases**. The final focused run passed **66 definitions / 361 expanded cases /
+8 suites**, zero failures/skips. An intermediate compile caught an associated-value
+case comparison; an intermediate executor run caught changed recovery-notification
+ordering. Both were corrected before the final focused and full runs.
+
+Full **NoahTests ran once after the last iOS code/test change**, without exclusions:
+**684 definitions / 140 suites: 662 passed, 22 opt-in skipped, zero failed**;
+**1,370 expanded passes / 22 skips**, **208.375 seconds** of test execution.
+All Xcode runs used Nix, `/opt/homebrew/bin/xcodegen generate`, normal signing,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, disabled parallel testing and
+`-collect-test-diagnostics never`. Each individual test selector included `()`.
+Commits: `a2fccfc5` (duplicates), `e6522e00` (gated reads), `d6c7128e` (numeric
+matrix). Android's complete JVM/APK result is recorded in its README.
+
+Owned iPhone 17 / iOS 27.0 simulator **Noah Recurring R6 Sol b25f**,
+UDID **7497FE0A-5056-46EC-A81A-4BF56AD5A81F**: exact name, UDID, runtime and
+**Shutdown** state confirmed immediately before deletion; absence verified.
+T3's Device panel returned `No device 7497FE0A-5056-46EC-A81A-4BF56AD5A81F on host local`
+twice, so Xcode used only the independently verified owned UDID. Removed owned
+`/private/tmp/noah-r6-b25f-dd` and all **five** xcresult bundles after exporting
+summaries/test trees. Cleanup receipt: `/private/tmp/noah-r6-cleanup.json`.
+Logs, exported JSON, baseline/final Android XML and evidence remain under
+`/private/tmp/noah-r6-*`. No active owned build/test process remains. Shared idle daemons were left alone.
+
+No funded payment, physical push, live UI acceptance or real power-loss/process-kill
+boundary was exercised. Deterministic lifecycle/money-path tests and platform
+builds are the evidence. No Docker service, shared simulator/emulator or physical
+device was accessed.
+
 ## Exact numeric ranges and lifecycle admission (2026-10-20)
 
 Base: `feat/native-rewrite` at `aea99fe4`, bark-bolt-ffi **0.5.0**.
