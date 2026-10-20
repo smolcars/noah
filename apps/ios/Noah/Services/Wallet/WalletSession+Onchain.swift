@@ -119,10 +119,75 @@ extension WalletSession {
         }
     }
 
+    /// Claim-only SDK seam; callers still hold the counted open-wallet session.
+    struct OnchainClaimAccess: Sendable {
+        var walletID: String
+        var network: String
+        var confirmed: @Sendable () async throws -> UInt64
+        var exits: @Sendable () async throws -> [ExitVtxo]
+        var isMine: @Sendable (String) async throws -> Bool
+        var estimate: @Sendable ([String], String) async throws -> EmergencyExitFeeEstimate
+        var drain: @Sendable ([String], String) async throws -> ExitClaimTransaction
+        var transaction: @Sendable (String) throws -> String = { try extractTxFromPsbt(psbtBase64: $0) }
+        var broadcast: @Sendable (String) async throws -> String
+    }
+
+    private static func claimAccess(_ handles: Handles) -> OnchainClaimAccess {
+        .init(
+            walletID: handles.wallet.fingerprint(), network: AppVariant.current.rawValue,
+            confirmed: { try await handles.onchain.balance().confirmedSats },
+            exits: { try await handles.wallet.getExitVtxos() },
+            isMine: { try await handles.onchain.isMine(address: $0) },
+            estimate: { try await handles.wallet.estimateEmergencyExitFee(
+                vtxoIds: $0, feeRateSatPerVb: nil, destination: $1) },
+            drain: { try await handles.wallet.drainExits(vtxoIds: $0, address: $1, feeRateSatPerVb: nil) },
+            broadcast: { try await handles.wallet.broadcastTx(txHex: $0) })
+    }
+
+    static func claimQuote(
+        ids: [String], destination: String?, automatic: Bool = false, access: OnchainClaimAccess
+    ) async throws -> OnchainQuote {
+        let balance = try await access.confirmed()
+        guard Set(ids).count == ids.count else { throw OnchainFailure.invalid }
+        let selected = try await access.exits().filter { $0.isClaimable && ids.contains($0.vtxoId) }
+        guard !ids.isEmpty, selected.count == ids.count else { throw OnchainFailure.changed }
+        guard let destination, !destination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw OnchainFailure.invalid
+        }
+        let mine = try await claimDestinationOwnership(destination, network: access.network, isMine: access.isMine)
+        let fee = try await access.estimate(ids, destination)
+        return OnchainQuote(
+            action: .claim, walletID: access.walletID, ids: ids.sorted(), destination: destination,
+            destinationIsMine: mine, amount: selected.reduce(0) { $0 + $1.amountSats },
+            fee: fee.claimFeeSats, chainFee: 0, confirmed: balance, automatic: automatic)
+    }
+
+    static func executeClaim(
+        _ quote: OnchainQuote, journal: OnchainOperationJournal, access: OnchainClaimAccess,
+        remember: @Sendable ([String], String) async throws -> Void
+    ) async throws -> String {
+        guard quote.action == .claim, ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
+        let fresh = try await claimQuote(ids: quote.ids, destination: quote.destination, automatic: quote.automatic, access: access)
+        guard quote.matches(fresh), ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
+        try await remember(quote.ids, quote.walletID)
+        return try await journal.perform(quote) {
+            let claim = try await access.drain(quote.ids, quote.destination!)
+            guard claim.feeSats == quote.fee else { throw OnchainFailure.claimFeeChanged }
+            let tx = try access.transaction(claim.psbtBase64)
+            let txid: String
+            do { txid = try await access.broadcast(tx) }
+            catch { throw OnchainFailure.uncertain }
+            return OnchainReceipt(message: "Claim submitted. Refresh to check confirmation.", txid: txid)
+        }
+    }
+
     private static func onchainQuote(
         _ handles: Handles, action: OnchainAction, ids: [String], amount requested: UInt64,
         destination: String?, automatic: Bool
     ) async throws -> OnchainQuote {
+        if action == .claim {
+            return try await claimQuote(ids: ids, destination: destination, automatic: automatic, access: claimAccess(handles))
+        }
         let balance = try await handles.onchain.balance().confirmedSats
         var quote = OnchainQuote(
             action: action, walletID: handles.wallet.fingerprint(), ids: ids.sorted(),
@@ -170,10 +235,9 @@ extension WalletSession {
                 quote.chainFee = fee.exitBroadcastFeeSats
                 quote.feeRate = fee.feeRateSatPerVb
             }
-        case .progress, .claim:
+        case .progress:
             let all = try await handles.wallet.getExitVtxos()
             let eligible = all.filter { exit in
-                if action == .claim { return exit.isClaimable }
                 let state = Self.exitState(exit.state).0
                 return !["Canceled", "Claimed", "VtxoAlreadySpent", "VtxoSwept"].contains(state)
             }
@@ -183,22 +247,14 @@ extension WalletSession {
             if action == .progress, Set(eligible.map(\.vtxoId)) != Set(ids) {
                 throw OnchainFailure.changed
             }
-            if action == .claim,
-                destination?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false
-            {
-                throw OnchainFailure.invalid
-            }
-            if action == .claim {
-                quote.destinationIsMine = try await Self.claimDestinationOwnership(
-                    destination!, network: AppVariant.current.rawValue
-                ) { try await handles.onchain.isMine(address: $0) }
-            }
             quote.amount = selected.reduce(0) { $0 + $1.amountSats }
             let fee = try await handles.wallet.estimateEmergencyExitFee(
                 vtxoIds: ids, feeRateSatPerVb: nil, destination: destination)
             quote.fee = fee.claimFeeSats
-            quote.chainFee = action == .claim ? 0 : fee.exitBroadcastFeeSats
-            quote.feeRate = action == .claim ? nil : fee.feeRateSatPerVb
+            quote.chainFee = fee.exitBroadcastFeeSats
+            quote.feeRate = fee.feeRateSatPerVb
+        case .claim:
+            throw OnchainFailure.invalid // Handled by the shared claim path above.
         case .cancel:
             guard ids.count == 1,
                 let exit = try await handles.wallet.getExitVtxos().first(where: { $0.vtxoId == ids[0] }),
@@ -219,6 +275,11 @@ extension WalletSession {
         async throws -> String
     {
         return try await withOpenWallet { handles in
+            if quote.action == .claim {
+                return try await Self.executeClaim(quote, journal: journal, access: Self.claimAccess(handles)) {
+                    try await ExitHistoryStore.shared.remember($0, walletID: $1)
+                }
+            }
             guard ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
             let fresh = try await Self.onchainQuote(
                 handles, action: quote.action, ids: quote.ids, amount: quote.boardAll == true ? 0 : quote.amount,
@@ -261,14 +322,7 @@ extension WalletSession {
                             ? "Exits progressed. Transactions may have been broadcast or fee-bumped."
                             : "Exit progression returned \(failures) errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.")
                 case .claim:
-                    let claim = try await handles.wallet.drainExits(
-                        vtxoIds: quote.ids, address: quote.destination!, feeRateSatPerVb: nil)
-                    guard claim.feeSats == quote.fee else { throw OnchainFailure.claimFeeChanged }
-                    let tx = try extractTxFromPsbt(psbtBase64: claim.psbtBase64)
-                    let txid: String
-                    do { txid = try await handles.wallet.broadcastTx(txHex: tx) }
-                    catch { throw OnchainFailure.uncertain }
-                    return OnchainReceipt(message: "Claim submitted. Refresh to check confirmation.", txid: txid)
+                    throw OnchainFailure.invalid // Handled by the shared claim path above.
                 case .cancel:
                     let result = try await handles.wallet.cancelExit(vtxoId: quote.ids[0])
                     guard result.canceled else { throw OnchainFailure.cancellationRefused }
