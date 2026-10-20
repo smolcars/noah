@@ -30,7 +30,7 @@ struct ArkInfoView: View {
                     LabeledContent("VTXO lifetime", value: L10n.text("{count} blocks", info.vtxoLifetime, locale: locale.identifier))
                     LabeledContent("HTLC send expiry delta", value: L10n.text("{count} blocks", info.htlcSendExpiryDelta, locale: locale.identifier))
                 }
-                Section("Lightning") { LabeledContent("Receive anti-DoS", value: info.lnReceiveAntiDosRequired ? "Yes" : "No") }
+                Section("Lightning") { LabeledContent("Receive anti-DoS") { Text(LocalizedStringKey(info.lnReceiveAntiDosRequired ? "Yes" : "No")) } }
             }
             Section("Wallet endpoints") {
                 CopySettingRow(title: "Ark server", value: configuration.arkServer)

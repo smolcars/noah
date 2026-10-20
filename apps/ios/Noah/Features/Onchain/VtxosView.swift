@@ -96,7 +96,7 @@ struct VtxoDetailView: View {
             if let vtxo = model.overview?.vtxos.first(where: { $0.id == id }) {
                 Section {
                     OnchainAmountRow(title: "Amount", sats: vtxo.amount)
-                    LabeledContent("State", value: vtxo.status)
+                    LabeledContent("State") { Text(LocalizedStringKey(vtxo.status)) }
                     LabeledContent("VTXO ID") { Text(vtxo.id).textSelection(.enabled) }
                     LabeledContent("Type", value: vtxo.kind)
                     LabeledContent("Expiry Height", value: "\(vtxo.expiry)")
@@ -107,7 +107,7 @@ struct VtxoDetailView: View {
                     LabeledContent("Server Public Key") { Text(vtxo.serverPubkey).textSelection(.enabled) }
                     LabeledContent("Exit depth", value: "\(vtxo.exitDepth)")
                     LabeledContent("Exit transaction weight", value: "\(vtxo.exitWeight) wu")
-                    LabeledContent("Registered with server", value: vtxo.registered ? "Yes" : "No")
+                    LabeledContent("Registered with server") { Text(LocalizedStringKey(vtxo.registered ? "Yes" : "No")) }
                 }
                 if vtxo.expired || vtxo.expiring { Text("Refresh this VTXO to keep it available.") }
                 Button("Refresh VTXO") { Task { await model.review(.refresh, ids: [id]) } }

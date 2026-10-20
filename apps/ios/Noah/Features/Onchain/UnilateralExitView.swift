@@ -139,7 +139,7 @@ struct ExitVtxoDetailView: View {
                 Section {
                     OnchainAmountRow(title: "Amount", sats: exit.amount)
                     LabeledContent("VTXO ID") { Text(id).textSelection(.enabled) }
-                    LabeledContent("State", value: ExitTimeline.labels[exit.state] ?? exit.state)
+                    LabeledContent("State") { Text(LocalizedStringKey(ExitTimeline.labels[exit.state] ?? exit.state)) }
                     if let height = exit.details.claimable_height {
                         LabeledContent("Claimable at", value: "Block \(height)")
                         LabeledContent(

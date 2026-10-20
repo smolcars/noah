@@ -34,9 +34,9 @@ struct HomeStatusBanners: View {
                     List {
                         ForEach(home.activeRounds) { round in
                             Section(L10n.text("Round #{_gt_value_2}", round.roundID, locale: locale.identifier)) {
-                                LabeledContent("Status", value: round.statusLabel)
-                                LabeledContent("Final", value: round.isFinal ? "Yes" : "No")
-                                LabeledContent("Successful", value: round.isSuccess ? "Yes" : "No")
+                                LabeledContent("Status") { Text(LocalizedStringKey(round.statusLabel)) }
+                                LabeledContent("Final") { Text(LocalizedStringKey(round.isFinal ? "Yes" : "No")) }
+                                LabeledContent("Successful") { Text(LocalizedStringKey(round.isSuccess ? "Yes" : "No")) }
                                 if let txid = round.fundingTxid { RoundTransactionRow(label: "Funding tx", txid: txid, copyable: true) }
                                 ForEach(Array(round.unsignedFundingTxids.enumerated()), id: \.offset) { index, txid in
                                     RoundTransactionRow(label: L10n.text("Unsigned tx {value1}", index + 1, locale: locale.identifier), txid: txid, copyable: false)
