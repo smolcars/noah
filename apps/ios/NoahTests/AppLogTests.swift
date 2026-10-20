@@ -10,24 +10,29 @@ struct AppLogTests {
     private static let performanceInputs = [
         ("punctuation", "!@#$%^&*()[]{}:;,?"), ("hyphen", "x-"), ("dot", "x."),
         ("digit", "1234567890"), ("mixed", "wallet sync completed xyzzy "),
-        ("escaped", #"\u0078\u002e"#),
+        ("escaped", #"\u0078\u002e"#), ("entities", "&#x78;&#46;"),
+        ("provider body", #"HttpResponse { status: 404, message: "fake" }"#),
     ]
 
     @Test func redactionPerformance() {
-        for (name, unit) in Self.performanceInputs { assertRedactionScales(name, unit) }
+        EndpointLogPrivacy.register("https://scaling-privacy.example/api/fakeScaleToken")
+        for (name, unit) in Self.performanceInputs {
+            assertRedactionScales(name, unit, redact: LogFile.redact)
+            assertRedactionScales("boundary " + name, unit, redact: EndpointLogPrivacy.redact)
+        }
     }
 
-    private func assertRedactionScales(_ name: String, _ unit: String) {
+    private func assertRedactionScales(_ name: String, _ unit: String, redact: (String) -> String = LogFile.redact) {
         LogFile.prepareRedaction()
         let inputs = [1024, 16384].map { size in
             String(String(repeating: unit, count: (size + unit.count - 1) / unit.count).prefix(size))
         }
-        for input in inputs { _ = LogFile.redact(input) }
+        for input in inputs { _ = redact(input) }
         var samples = [[Duration](), [Duration]()]
         for _ in 0..<5 {
             for (index, input) in inputs.enumerated() {
                 let started = ContinuousClock.now
-                _ = LogFile.redact(input)
+                _ = redact(input)
                 samples[index].append(ContinuousClock.now - started)
             }
         }
@@ -62,7 +67,7 @@ struct AppLogTests {
         #expect(!FileManager.default.fileExists(atPath: directory.path))
         queue.resume()
         let lines = await file.linesForExport()
-        #expect(lines.count == 14)
+        #expect(lines.count == 18)
         #expect(lines.last?.hasSuffix(" E [[redacted]] [redacted]") == true)
     }
 

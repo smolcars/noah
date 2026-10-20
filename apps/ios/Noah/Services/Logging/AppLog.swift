@@ -132,9 +132,9 @@ final class LogFile: @unchecked Sendable {
         var lines: [String] = []
         for url in ordered {
             guard let contents = try? String(contentsOf: url, encoding: .utf8) else { continue }
-            lines.append(contentsOf: contents.split(whereSeparator: \.isNewline).map(String.init))
+            lines.append(contentsOf: EndpointLogPrivacy.redactLogLines(contents.split(whereSeparator: \.isNewline).map(String.init)))
         }
-        return Array(lines.suffix(Self.maxLines)).map(EndpointLogPrivacy.redact)
+        return Array(lines.suffix(Self.maxLines))
     }
 
     /// Snapshot/export barriers also emit any outstanding overflow count.
@@ -231,8 +231,7 @@ final class LogFile: @unchecked Sendable {
     /// Nil means inspection was uncertain; telemetry must omit the message.
     static func redactForTelemetry(_ message: String) -> String? {
         guard message.utf8.count <= maxMessageBytes else { return nil }
-        let safe = EndpointLogPrivacy.redact(message)
-        guard let views = decodedViews(safe) else { return nil }
+        guard let safe = EndpointLogPrivacy.sanitize(message), let views = decodedViews(safe) else { return nil }
         for view in views.dropFirst() where redactPlain(view) != view { return "[redacted]" }
         return redactPlain(safe)
     }

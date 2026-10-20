@@ -24,11 +24,34 @@ enum EndpointLogPrivacy {
         url.path = ""; url.query = nil; url.fragment = nil; url.user = nil; url.password = nil
         return url.string
     }
-    static func redact(_ text: String) -> String {
+    static func redact(_ text: String) -> String { sanitize(text) ?? "[redacted]" }
+
+    private static let recordStart = try! NSRegularExpression(pattern: #"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [VDIWE] \["#)
+
+    /// Keep continuation lines with their endpoint/error context, including historical files.
+    static func redactLogLines(_ lines: [String]) -> [String] {
+        var result: [String] = [], record: [String] = []
+        func flush() {
+            guard !record.isEmpty else { return }
+            result.append(contentsOf: redact(record.joined(separator: "\n")).split(separator: "\n").map(String.init))
+            record.removeAll(keepingCapacity: true)
+        }
+        for line in lines {
+            if recordStart.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) != nil { flush() }
+            record.append(line)
+        }
+        flush()
+        return result
+    }
+
+    static func sanitize(_ text: String) -> String? {
         let (registered, sensitive) = lock.withLock { (origins, paths) }
         // Exported lines include a bounded tag and timestamp as well as the message.
         guard text.utf8.count <= 2 * LogFile.maxMessageBytes + 128 else { return "[oversized log message omitted]" }
-        guard let views = LogFile.decodedViews(text, percentEncoded: true) else { return "[redacted]" }
+        if let match = responseStatus.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) {
+            return "HttpResponse { status: " + (text as NSString).substring(with: match.range(at: 1)) + " }"
+        }
+        guard let views = LogFile.decodedViews(text, percentEncoded: true) else { return nil }
         for view in views {
             if let match = responseStatus.firstMatch(in: view, range: NSRange(view.startIndex..., in: view)) {
                 return "HttpResponse { status: " + (view as NSString).substring(with: match.range(at: 1)) + " }"
