@@ -8,7 +8,7 @@ import io.github.niteshbalusu11.bark.setLogger
 /** Rust/JNI calls synchronously on worker threads. Never call Bark from a callback. */
 class BarkLog(private val file: LogFile) : BarkLogger {
     override fun log(level: LogLevel, target: String, message: String) {
-        file.append(appLevel(level), "bark:$target", message, systemLog = true)
+        file.append(appLevel(level), "bark:$target", EndpointLogPrivacy.redact(message), systemLog = true)
     }
 
     companion object {

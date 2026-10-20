@@ -16,6 +16,22 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class BarkLogTest {
+    @Test fun customEndpointPathsAreRemovedAtSDKAppAndTelemetryBoundaries() {
+        val endpoint = "https://esplora-privacy.example/api/syntheticOpaqueToken"
+        com.noahwallet.services.logging.EndpointLogPrivacy.register(endpoint)
+        val message = "Using Esplora at $endpoint/block-height/0"
+        val expected = "Using Esplora at https://esplora-privacy.example"
+        assertEquals(expected, com.noahwallet.services.logging.EndpointLogPrivacy.redact(message))
+        assertEquals(expected, LogFile.redact(message))
+        assertEquals(expected, LogFile.redactForTelemetry(message))
+        val directory = Files.createTempDirectory("esplora-log").toFile()
+        val file = LogFile(directory, executor = Executor { it.run() })
+        try {
+            BarkLog(file).log(LogLevel.INFO, "wallet", message)
+            assertTrue(file.lines().last().endsWith(expected))
+        } finally { directory.deleteRecursively() }
+    }
+
     @Test fun matchesIOSAndRNDebugVerbosityAndLevels() {
         assertEquals(LogLevel.DEBUG, BarkLog.maxLevel)
         assertEquals(listOf(AppLog.Level.error, AppLog.Level.warn, AppLog.Level.info,

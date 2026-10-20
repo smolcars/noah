@@ -240,7 +240,7 @@ class LogFile(
             result = redactLabels(result, addresses = true)
             result = replaceEmails(result)
             result = redactLabels(result, addresses = false)
-            result = urlTokens.replace(result) { if ('?' in it.value) "[redacted]" else it.value }
+            result = EndpointLogPrivacy.redact(urlTokens.replace(result) { if ('?' in it.value) "[redacted]" else it.value })
             for ((index, pattern) in sensitivePatterns.withIndex()) {
                 result = pattern.replace(result, "[redacted]")
                 if (index == 1) {
