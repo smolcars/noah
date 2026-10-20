@@ -8,6 +8,10 @@ import org.junit.Test
 class WalletCreatorTest {
     private class Boom : Exception()
     private class Fake {
+        var initialized: Boolean? = null
+        var markerFails = false
+        var stopAt: String? = null
+        fun checkpoint(step: String) { if (stopAt == step) throw Boom() }
         var seed: SecretResult = SecretResult.NotFound
         var data = false
         var datadir = false
@@ -26,7 +30,7 @@ class WalletCreatorTest {
         val session = WalletSession("regtest", WalletDataLocation(java.io.File("unused-creator-test"), "regtest"))
         fun dependencies() = WalletCreator.Dependencies(
             readSeed = { seed },
-            saveSeed = { if (saveFails) throw Boom(); seed = SecretResult.Found(it) },
+            saveSeed = { if (saveFails) throw Boom(); seed = SecretResult.Found(it); checkpoint("seed") },
             deleteSeed = { if ((seed as? SecretResult.Found)?.value == it) seed = SecretResult.NotFound },
             walletDataExists = { if (filesystemFails) throw Boom(); data },
             datadirExists = { datadir },
@@ -44,11 +48,13 @@ class WalletCreatorTest {
                 entered.complete(Unit)
                 holdCreate?.await()
                 datadir = true; data = true
+                if (stopAt == "database") throw WalletSession.OpenError(WalletSession.OpenFailure.teardownFailed)
                 if (closeFails) throw WalletSession.OpenError(WalletSession.OpenFailure.teardownFailed)
                 if (createFailure) throw Boom()
                 created += value
                 session.release(reservation)
             },
+            beginOnboarding = { if (markerFails) throw Boom(); initialized = false; checkpoint("marker") },
         )
         fun seedIs(value: String) = (seed as? SecretResult.Found)?.value == value
     }
@@ -59,6 +65,31 @@ class WalletCreatorTest {
         }
     }
 
+    @Test fun interruptedCreationNeverAdmitsAnUnfinishedWalletToHome() = runBlocking {
+        for (step in listOf("marker", "seed", "database", "publicKey")) {
+            val fake = Fake().apply { stopAt = step }
+            runCatching { WalletCreator(fake.dependencies()).createOrResume() }
+            val launch = com.noahwallet.services.launch.LaunchState.resolve(
+                if (fake.seed is SecretResult.Found) com.noahwallet.services.launch.LaunchState.SeedStatus.present
+                else com.noahwallet.services.launch.LaunchState.SeedStatus.absent, fake.data)
+            assertFalse("Home after $step", launch == com.noahwallet.services.launch.LaunchState.existingWallet && fake.initialized != false)
+            assertEquals(false, fake.initialized)
+            if (step == "database" || step == "publicKey") {
+                assertEquals(com.noahwallet.services.launch.LaunchState.existingWallet, launch)
+                assertTrue(fake.data && fake.seed is SecretResult.Found)
+            }
+        }
+    }
+    @Test fun failedOnboardingMarkerCreatesNothingAndCanRetry() = runBlocking {
+        val fake = Fake().apply { markerFails = true }
+        val creator = WalletCreator(fake.dependencies())
+        fails<Boom> { creator.createOrResume() }
+        assertTrue(fake.generated.isEmpty() && fake.created.isEmpty())
+        assertEquals(SecretResult.NotFound, fake.seed); assertFalse(fake.data)
+        fake.markerFails = false
+        creator.createOrResume()
+        assertEquals(false, fake.initialized); assertTrue(fake.data)
+    }
     @Test fun acceptingAgainKeepsOriginalSeedAndCreatesOnce() = runBlocking {
         val fake = Fake(); val creator = WalletCreator(fake.dependencies())
         creator.createOrResume(); creator.createOrResume()

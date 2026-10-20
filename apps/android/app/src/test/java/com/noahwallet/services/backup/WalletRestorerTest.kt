@@ -41,6 +41,8 @@ class WalletRestorerTest {
         val location = WalletDataLocation(File(root, "device-b"), "regtest")
         val seed = FakeSeed("old seed")
         val handles = Handles()
+        var initialized: Boolean? = null
+        var markerFails = false
         var openerFails = false
         var validationFails = false
         var reportedSize: Long? = null
@@ -97,13 +99,36 @@ class WalletRestorerTest {
                     val file = if (url == "http://legacy") legacyFile else encrypted
                     if (file.length() > limit || url == "http://bad") throw WalletRestorer.Failure(WalletRestorer.Reason.downloadMismatch)
                     file.copyTo(destination)
-                })
+                }, beginOnboarding = { if (markerFails) throw Boom(); initialized = false })
         }
         fun previous() {
             assertEquals("old wallet", location.database.readText()); assertTrue("Previous seed differs", seed.value == "old seed")
             assertTrue(location.restoreDirectory.listFiles().orEmpty().isEmpty())
         }
     }
+    @Test fun failedOnboardingMarkerPreservesWalletAndAllowsRestoreRetry() = runBlocking { world {
+        markerFails = true
+        assertTrue(runCatching { restorer().restore(validSeed) }.isFailure)
+        previous(); assertNull(initialized)
+        markerFails = false
+        restorer().restore(validSeed)
+        assertEquals(false, initialized)
+        assertTrue(seed.value == validSeed); assertEquals("new wallet", location.database.readText())
+    } }
+    @Test fun restorePersistsUnfinishedOnboardingBeforeInstallingBackupOrPhrase() = runBlocking { world {
+        val restorer = restorer()
+        restorer.restore(validSeed, beforeInstall = {
+            assertEquals(false, initialized)
+            assertEquals("old wallet", location.database.readText())
+            assertTrue(seed.value == "old seed")
+        }, progress = { step ->
+            if (step == WalletRestorer.Step.loading || step == WalletRestorer.Step.finalizing) {
+                assertEquals(false, initialized)
+            }
+        })
+        // A process ending before RestoreCompletion sees an explicit unfinished marker.
+        assertEquals(false, initialized)
+    } }
     private suspend fun world(block: suspend World.() -> Unit) {
         val world = World()
         // Each restore runs PBKDF2 (600k iterations) to seal and open; 10 s timed out on a loaded machine.

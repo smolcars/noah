@@ -29,6 +29,7 @@ class WalletRestorer(
         try { BoundedDownload.fetch(Request.Builder().url(url).build(), file, limit) }
         catch (_: BoundedDownload.TooLarge) { throw Failure(Reason.downloadMismatch) }
     },
+    private val beginOnboarding: () -> Unit = {},
 ) {
     enum class Reason { wrongNetwork, identityMismatch, noUsableBackup, unsupportedFormat, downloadMismatch,
         secureStorageUnavailable, rollbackFailed, seedStateUnknown }
@@ -53,6 +54,7 @@ class WalletRestorer(
                     // Once installation starts, cancellation must not interrupt native verification or seed read-back.
                     withContext(NonCancellable) {
                         try {
+                            beginOnboarding()
                             beforeInstall(outcome)
                             transaction.begin(mnemonic)
                             progress(Step.loading)

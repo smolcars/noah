@@ -25,6 +25,7 @@ class WalletCreator(private val dependencies: Dependencies) {
         val reserve: () -> WalletSession.Reservation,
         val release: (WalletSession.Reservation) -> Unit,
         val createNew: suspend (WalletSession.Reservation, String) -> Unit,
+        val beginOnboarding: () -> Unit = {},
     )
 
     private val lock = Any()
@@ -63,6 +64,7 @@ class WalletCreator(private val dependencies: Dependencies) {
 
     private suspend fun createFresh(reservation: WalletSession.Reservation) {
         val datadirExisted = dependencies.datadirExists()
+        dependencies.beginOnboarding()
         val mnemonic = dependencies.generateMnemonic()
         dependencies.saveSeed(mnemonic)
         try {
@@ -75,7 +77,7 @@ class WalletCreator(private val dependencies: Dependencies) {
     }
 
     companion object {
-        fun live(context: Context, session: WalletSession = WalletSession.shared(context)): WalletCreator {
+        fun live(context: Context, session: WalletSession = WalletSession.shared(context), settings: SettingsStorage = SettingsStorage(context)): WalletCreator {
             val variant = BuildConfig.APP_VARIANT
             val storage = SeedStorage(context.applicationContext, variant)
             val location = WalletDataLocation(context.applicationContext.filesDir, variant)
@@ -111,6 +113,7 @@ class WalletCreator(private val dependencies: Dependencies) {
                 },
                 release = session::release,
                 createNew = { reservation, mnemonic -> session.createNew(reservation, mnemonic, true, BuildConfig.VERSION_NAME) },
+                beginOnboarding = settings::beginOnboarding,
             ))
         }
     }

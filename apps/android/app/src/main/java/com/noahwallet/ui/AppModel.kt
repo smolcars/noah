@@ -19,7 +19,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     val session = services.session
     val server = services.registration
     var walletLock by mutableStateOf(com.noahwallet.ui.settings.WalletLock(settings)); private set
-    private val creator = WalletCreator.live(application)
+    private val creator = WalletCreator.live(application, settings = settings)
     var launchState by mutableStateOf<LaunchState?>(null); private set
     var open by mutableStateOf(false); private set
     var onboarded by mutableStateOf(false); private set

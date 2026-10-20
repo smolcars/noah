@@ -101,7 +101,7 @@ class AppServices private constructor(private val context: Context) {
                 readToken = { temporaryToken }, saveToken = { temporaryToken = it }, clearToken = { temporaryToken = null },
                 readMnemonic = { phrase }, login = { ServerClient.login(publicClient, variant, it) })
             ServerClient.make(ServerEndpoint.baseURL(variant, BuildConfig.REGTEST_SERVER_URL), temporaryTokens)
-        })
+        }, beginOnboarding = settings::beginOnboarding)
     }
 
     @Volatile var recurringAutomationStorageFailed = false; private set
