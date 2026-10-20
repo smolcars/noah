@@ -119,7 +119,10 @@ class RecurringExecutor(private val d: Dependencies,
                 } catch (_: Exception) {
                     val entry = d.journal.load()[id]
                     if (entry != null && !entry.resolved && entry.plan == plan) markUncertain(id)
-                    else d.store.updateIf(schedule, schedule.failure(plan, "This payment could not be prepared. No payment was submitted.", true, d.now()))
+                    else {
+                        val result = schedule.failure(plan, "This payment could not be prepared. No payment was submitted.", true, d.now())
+                        if (d.store.updateIf(schedule, result) && result.status == "active" && (result.consecutiveFailures == 1 || manual)) d.notify(emptyList(), result)
+                    }
                 }
             }
             refreshDates(); syncServer(); d.refresh()
@@ -153,7 +156,7 @@ class RecurringExecutor(private val d: Dependencies,
                     else -> latest.failure(entry.plan, controller.message ?: "No payment was submitted.", true, d.now())
                 }
                 d.store.upsert(result); d.notify(emptyList(), result)
-            }
+            } else if (success) d.notify(emptyList(), original.copy(status = "active").success(entry.plan, d.now(), d.zone()))
         }
         if (!retainReceipt) controller.acknowledge()
     }

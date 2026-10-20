@@ -107,6 +107,54 @@ class RecurringExecutorTest {
         assertEquals(RecurringPayment.maximumAmount, w.schedule!!.amountSat)
         assertEquals("active", w.schedule!!.status)
     }
+    @Test fun preflightNotifiesFirstActiveFailureAndExplicitManualRetryOnly() = runBlocking {
+        val w = RecurringWorld(this); w.add()
+        w.beforeQuote = { error("offline") }
+        w.executor.execute()
+        assertEquals(1, w.notifications.size)
+        assertEquals("failed", w.notifications.single().runs.first().status)
+        assertEquals("active", w.notifications.single().status)
+        assertEquals(1, w.notifications.single().consecutiveFailures)
+        assertEquals(901_000L, w.schedule!!.retryNotBefore)
+        w.executor.execute()
+        assertEquals(1, w.quotes); assertEquals(1, w.notifications.size)
+        w.now = w.schedule!!.retryNotBefore!!
+        w.executor.execute()
+        assertEquals(2, w.schedule!!.consecutiveFailures); assertEquals(1, w.notifications.size)
+        w.executor.execute(manual = true)
+        assertEquals(3, w.schedule!!.consecutiveFailures); assertEquals(2, w.notifications.size)
+        assertEquals(0, w.wallet.calls); assertTrue(w.journal.load().isEmpty())
+    }
+    @Test fun preflightFailureAfterPauseOrCancelDoesNotNotifyOrOverwritePolicy() = runBlocking {
+        for (cancel in listOf(false, true)) {
+            val w = RecurringWorld(this); w.add()
+            w.beforeQuote = {
+                if (cancel) w.executor.cancel("rent") else w.executor.pause("rent")
+                error("offline")
+            }
+            w.executor.execute()
+            assertTrue(w.notifications.isEmpty())
+            if (cancel) assertNull(w.schedule) else {
+                assertEquals("paused", w.schedule!!.status)
+                assertEquals(0, w.schedule!!.consecutiveFailures)
+            }
+            assertEquals(0, w.wallet.calls); assertTrue(w.journal.load().isEmpty())
+        }
+    }
+    @Test fun cancelledPolicyWithFailedOrAmbiguousSettlementDoesNotNotifySuccess() = runBlocking {
+        for (provenFailure in listOf(false, true)) {
+            val w = RecurringWorld(this); w.add()
+            w.wallet.payBlock = {
+                w.executor.cancel("rent")
+                if (provenFailure) throw SendNotSubmitted(SendFailure.Reason.constructionFailed)
+                else error("connection lost")
+            }
+            w.executor.execute()
+            assertNull(w.schedule); assertTrue(w.notifications.isEmpty())
+            assertEquals(1, w.wallet.calls)
+            assertFalse(w.journal.consumed(w.binding, "rent", 1000))
+        }
+    }
     @Test fun pushForegroundAndRepeatedTriggersPayLatestDueOnlyOnce() = runBlocking {
         val w = RecurringWorld(this); w.add(1000 - 2 * 86_400_000)
         val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
@@ -330,8 +378,34 @@ class RecurringExecutorTest {
             }
             w.executor.execute(); assertEquals(1, w.wallet.calls)
             if (cancel) assertNull(w.schedule) else { assertEquals("paused", w.schedule!!.status); assertEquals(1, w.schedule!!.occurrencesPaid) }
-            assertTrue(w.journal.consumed(w.binding, "rent", 1000)); w.executor.execute(); assertEquals(1, w.wallet.calls)
+            assertTrue(w.journal.consumed(w.binding, "rent", 1000))
+            val notification = w.notifications.single()
+            assertEquals("success", notification.runs.first().status)
+            assertEquals(1, notification.occurrencesPaid)
+            assertEquals(1000L, notification.amountSat)
+            assertFalse(w.controller.locked)
+            w.executor.execute(); assertEquals(1, w.wallet.calls)
+            assertEquals(1, w.notifications.size)
+            if (cancel) assertNull(w.schedule)
         }
+    }
+    @Test fun cancelledAttendedPaymentNotifiesSuccessAndRetainsReceiptUntilDone() = runBlocking {
+        val w = RecurringWorld(this); w.add(); w.fee = 1
+        w.executor.execute()
+        val review = w.executor.review("rent")
+        w.notifications.clear()
+        w.wallet.payBlock = {
+            w.executor.cancel("rent")
+            SendReceipt(1000, proof = SendReceipt.Proof.submitReturnedArkSuccess)
+        }
+        w.executor.execute(manual = true, approval = review)
+        assertNull(w.schedule)
+        assertEquals("success", w.notifications.single().runs.first().status)
+        assertTrue(w.journal.consumed(w.binding, "rent", 1000))
+        assertTrue(w.controller.locked); assertEquals(SendController.State.succeeded, w.controller.state)
+        w.controller.acknowledge()
+        w.executor.execute(manual = true, approval = review)
+        assertNull(w.schedule); assertEquals(1, w.wallet.calls); assertEquals(1, w.notifications.size)
     }
     @Test fun finalGuardRejectsClockAndBackoffJumpsWithoutConsumptionOrUncertainty() = runBlocking {
         for (jump in listOf(-1L, 86_400_000L, -600L)) {

@@ -37,6 +37,21 @@ ones, then check cancellation, reopen, no audit and unchanged original JSON.
 Storage targeted run: **1,435 tests / 11 suites**, zero failures/errors/skips, using Nix,
 `--max-workers=2` and `--tests "*Recurring*"`.
 
+### Result notifications
+
+The first active retryable preflight failure now notifies after successfully
+saving its backoff. Further automatic retries stay silent; explicit manual
+retries notify, matching RN/iOS. A pause/cancel during preflight wins and produces
+no retry result notification. Confirmed successful settlement after cancellation
+notifies once without recreating policy; journal consumption and attended receipt
+retention still apply. Cancelled proven failures and ambiguous outcomes never
+produce a success notification. The notification-tap/screen-open execution path
+is unchanged.
+
+Notification targeted run: **1,439 tests / 11 suites**, zero
+failures/errors/skips. An initial test compile failed because an assertion edit
+also matched a different test; that edit was corrected before this passing run.
+
 ## Android parity follow-ups (2026-10-20)
 
 Base: `feat/native-rewrite` local HEAD `51c24bc0` (iOS round 3).
