@@ -3,6 +3,50 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Settlement while lifecycle admission waits (2026-10-20)
+
+Base: `feat/native-rewrite` at `9d5fc9ef`. Settlement captures the recurring
+attempt key, controller generation, terminal outcome and message before waiting
+for storage admission. Send advances its generation on each submission as well
+as wallet reload; settlement acknowledges only its captured generation. Done,
+a replacement attempt (even reusing the same occurrence key), or a controller
+reload cannot discard the original paid result or release another attempt.
+Binding/revision checks, consume-before-advance, idempotence, stop/failure latches,
+storage health and explicit reapproval remain in place.
+
+`RecurringSettlementAdmissionTests` permanently incorporates the settlement probe
+from `/private/tmp/noah-r6-review-8c878-ReviewProbeTests.swift` using repository
+fixtures only. Before the fix, the original test failed all three reported
+assertions (consumption, paid count and active status). The expanded baseline
+failed **2 definitions / 6 cases**; after the fix all six pass, including attended
+and unattended Done, different-key and same-key replacement, controller reload,
+and retention of the original proven-failure message. Focused verification:
+**76 definitions / 137 expanded passes / 13 suites**, zero failures/skips.
+
+Audit: UI actions capture IDs/drafts; normal marker recovery rechecks binding and
+row equality; status reconciliation uses this same settlement path; server sync
+compares its captured entries with current storage before clearing pending.
+No other completed controller/session outcome is reread after the new gate waits.
+Android still captures attempt/outcome/message before `storage`, and uses exact
+attempt acknowledgement. Its existing `RecurringSettlementTest` replacement-outcome
+regression covers that ownership; Android was inspected only and not changed.
+
+Full **NoahTests ran once after the last code/test change**, without exclusions:
+**690 definitions / 143 suites: 667 passed, 23 opt-in skipped, zero failed**;
+**1,388 expanded passes / 23 skips**, 181.457 seconds of test execution. All runs
+used Nix, XcodeGen, normal signing, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`,
+disabled parallel testing/diagnostic collection and owned `/private/tmp` DerivedData.
+
+Owned iPhone 17 / iOS 27.0 simulator **Noah Settlement Sol 90fb**,
+UDID **50B99919-7FCF-44AD-B238-5CE78A524990**, was shown in the Device panel.
+Its exact name/UDID/runtime and **Shutdown** state were confirmed before deletion;
+absence was verified. Removed owned DerivedData and all four xcresult bundles
+after exporting summaries/test trees. Logs, JSON and cleanup receipt remain at
+`/private/tmp/noah-settlement-90fb-*`; no owned build process remains. No funded
+payment, physical push or live UI-tap verification was run; the evidence is from
+deterministic executor/controller tests. Protected/shared devices, Docker,
+RestoreTransaction, RecurringAutomationAuthority, server and RN code were untouched.
+
 ## Remaining read races and strict JSON regressions (2026-10-20)
 
 Base: `feat/native-rewrite` at `76c1e3ed`. Review evidence and temporary probe

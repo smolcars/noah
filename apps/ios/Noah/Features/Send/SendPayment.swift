@@ -188,7 +188,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     private(set) var checking = false
     private var task: Task<Void, Never>?
     private var unboundJournal: Attempt?
-    private var generation = 0
+    private(set) var generation = 0
     var locked: Bool { state != .ready }
 
     init(dependencies: Dependencies) {
@@ -263,6 +263,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     }
     func submit(_ payment: SendPayment, quote: SendQuote, recurringKey: String? = nil, beforeSubmit: (@Sendable () throws -> Void)? = nil) {
         guard state == .ready else { return }
+        generation += 1
         state = .submitting
         message = nil
         // This task belongs to the controller, not a sheet's cancellable .task.
@@ -439,6 +440,10 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
             return
         }
         clearAttempt()
+    }
+    func acknowledge(ifGeneration expected: Int) {
+        guard generation == expected else { return }
+        acknowledge()
     }
     func acknowledge() {
         switch state {

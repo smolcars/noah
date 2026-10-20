@@ -288,27 +288,20 @@ import Observation
         if let stopped { await d.notifications([], stopped) }
     }
     private func settle(_ entry: RecurringJournal.Entry, original: RecurringPayment?, retainReceipt: Bool = false) async throws {
-        guard d.controller.attempt?.recurringOccurrenceKey == entry.key else { return }
-        switch d.controller.state {
-        case .succeeded(let receipt) where !receipt.isUnresolved && receipt.broadcastRetryPending != true: break
-        case .alreadyPaid, .failed: break
+        // Own this outcome before lifecycle admission can suspend and Done can release Send.
+        guard let attempt = d.controller.attempt, attempt.recurringOccurrenceKey == entry.key else { return }
+        let generation = d.controller.generation, outcome = d.controller.state, message = d.controller.message
+        let success: Bool, paid: Bool
+        switch outcome {
+        case .succeeded(let receipt) where !receipt.isUnresolved && receipt.broadcastRetryPending != true:
+            success = true; paid = true
+        case .alreadyPaid: success = false; paid = true
+        case .failed: success = false; paid = false
         case .submitting: return
-        default: try await markUncertain(entry, message: d.controller.message); return
+        default: try await markUncertain(entry, message: message); return
         }
         let notification = try await storage { [self] () throws -> RecurringPayment? in
-            guard let attempt = d.controller.attempt, attempt.recurringOccurrenceKey == entry.key else { return nil }
             guard try d.binding() == entry.binding else { return nil }
-            let outcome = d.controller.state
-            let success: Bool
-            let paid: Bool
-            switch outcome {
-            case .succeeded(let receipt) where !receipt.isUnresolved && receipt.broadcastRetryPending != true:
-                success = true; paid = true
-            case .alreadyPaid: success = false; paid = true
-            case .submitting: return nil
-            default: success = false; paid = false
-            }
-            guard paid || outcome == .failed else { return nil }
             guard let saved = try d.journal.load()[entry.scheduleID], saved.binding == entry.binding,
                   saved.plan == entry.plan, saved.policyRevision == entry.policyRevision, saved.markedAt == entry.markedAt else { return nil }
             if saved.policyApplied == true || saved.consumed == true {
@@ -316,7 +309,7 @@ import Observation
                 if saved.policyApplied != true {
                     var claimed = saved; claimed.policyApplied = true; try d.journal.save(claimed)
                 }
-                if !retainReceipt { d.controller.acknowledge() }
+                if !retainReceipt { d.controller.acknowledge(ifGeneration: generation) }
                 return nil
             }
             let state = try d.store.settlementState()
@@ -336,7 +329,7 @@ import Observation
                         latest.lastError = stopped.lastError; latest.retryNotBefore = stopped.retryNotBefore
                     }
                 } else {
-                    latest.failure(entry.plan, message: paid ? "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming." : d.controller.message ?? "No payment was submitted.", retryable: !paid, now: d.now())
+                    latest.failure(entry.plan, message: paid ? "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming." : message ?? "No payment was submitted.", retryable: !paid, now: d.now())
                 }
                 try d.store.upsert(latest)
                 if paid { notification = latest }
@@ -349,7 +342,7 @@ import Observation
                 // Proven consumption releases Send even when policy advancement cannot be saved.
                 self.error = RecurringPolicyLedger.message
             }
-            if !retainReceipt { d.controller.acknowledge() }
+            if !retainReceipt { d.controller.acknowledge(ifGeneration: generation) }
             return notification
         }
         if let notification { await d.notifications([], notification) }
