@@ -193,6 +193,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             var recovering = true
             try {
                 withContext(Dispatchers.IO) {
+                    com.noahwallet.services.background.PeriodicExecution.awaitIdle()
                     services.lifecycle.withWalletMutation {
                         val recovered = services.recoverRestore(walletMutationHeld = true)
                         if (recovered == com.noahwallet.services.backup.RestoreTransaction.Recovery.waitingForSecret) {

@@ -30,9 +30,9 @@ class PeriodicJobs(private val d: Dependencies) {
                 caller.checkWalletAdmission()
             }
             PeriodicExecution.run(budget) {
-                WalletBackgroundActivity.during {
+                WalletBackgroundActivity.exclusive {
                     checkStage()
-                    if (!d.eligible()) return@during
+                    if (!d.eligible()) return@exclusive
                     checkStage()
                     // Read protected policies before any wallet open or network request.
                     val recurringDue = d.recurringDue()

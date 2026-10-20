@@ -29,7 +29,7 @@ class PushJobs(private val dependencies: Dependencies) {
     suspend fun handle(notification: NotificationData) = withContext(
         currentCoroutineContext()[WalletExecutionBudget] ?: WalletExecutionBudget(com.noahwallet.recurring.RecurringBudget.push())
     ) {
-        com.noahwallet.services.wallet.WalletBackgroundActivity.during { handleNotification(notification) }
+        com.noahwallet.services.wallet.WalletBackgroundActivity.exclusive { handleNotification(notification) }
     }
 
     private suspend fun handleNotification(notification: NotificationData) {

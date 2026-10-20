@@ -60,7 +60,13 @@ class MainActivity : FragmentActivity() {
         if (intent.getBooleanExtra("recurring", false)) model?.recurringNotification = true
     }
 
+    override fun onStart() {
+        com.noahwallet.services.background.PeriodicExecution.foreground(true)
+        super.onStart()
+    }
+
     override fun onStop() {
+        com.noahwallet.services.background.PeriodicExecution.foreground(false)
         if (model == null && !isChangingConfigurations) invalidatedBeforeReady = true
         super.onStop()
     }
@@ -74,6 +80,7 @@ class MainActivity : FragmentActivity() {
         model?.walletLock?.resumed()
         super.onResume()
         model?.let { current -> lifecycleScope.launch(Dispatchers.IO) {
+            com.noahwallet.services.background.PeriodicExecution.awaitIdle()
             current.services.reconcileBackupTriggers(foreground = true)
             if (current.services.isOnboarded()) com.noahwallet.recurring.RecurringRuntime.shared(this@MainActivity).foreground()
         } }
