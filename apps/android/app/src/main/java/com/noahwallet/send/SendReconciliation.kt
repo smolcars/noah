@@ -58,7 +58,11 @@ object SendReconciliation {
         val receipt = resolution.receipt
         // Offboards may never be in BDK's own graph. Preserve the existing competing-spend result.
         val updated = if (source == SendSource.offchain && receipt.status != SendReceipt.Status.conflicted)
-            receipt.copy(status = if (status.kind == ChainStatus.Kind.confirmed) SendReceipt.Status.confirmed else SendReceipt.Status.submitted)
+            receipt.copy(status = when {
+                status.kind == ChainStatus.Kind.confirmed -> SendReceipt.Status.confirmed
+                receipt.status == SendReceipt.Status.confirmed -> SendReceipt.Status.submitted
+                else -> receipt.status
+            })
         else receipt
         // For BDK sends this is display evidence only: cached confirmation/conflict and retry locks still govern.
         return SendResolution.Paid(updated.copy(chainStatus = status, statusError = null))

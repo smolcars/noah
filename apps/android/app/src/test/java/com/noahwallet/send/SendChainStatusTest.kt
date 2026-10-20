@@ -38,7 +38,12 @@ class SendChainStatusTest {
         assertEquals(SendReceipt.Status.conflicted, conflict.status)
     }
     @Test fun notFoundCannotManufactureReceiptOrResolveUnknownAttempt() {
-        for (source in SendSource.entries) assertEquals(SendResolution.Uncertain,
-            SendReconciliation.withChainStatus(SendResolution.Uncertain, source, ChainStatus(ChainStatus.Kind.notFound)))
+        for (source in SendSource.entries) {
+            assertEquals(SendResolution.Uncertain, SendReconciliation.withChainStatus(SendResolution.Uncertain, source, ChainStatus(ChainStatus.Kind.notFound)))
+            for (kind in listOf(ChainStatus.Kind.notFound, ChainStatus.Kind.inMempool)) {
+                val unlocated = withStatus(source, ChainStatus(kind), receipt(source, SendReceipt.Status.unlocated))
+                assertEquals(SendReceipt.Status.unlocated, unlocated.status)
+            }
+        }
     }
 }
