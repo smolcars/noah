@@ -86,23 +86,39 @@ class RecurringStore(private val read: () -> String?, private val write: (String
             (decoded ?: RecurringPayment(id, (fields?.get("label") as? JsonPrimitive)?.contentOrNull ?: "Saved recurring payment",
                 (fields?.get("destination") as? JsonPrimitive)?.contentOrNull.orEmpty(),
                 (fields?.get("destinationType") as? JsonPrimitive)?.contentOrNull.orEmpty(),
-                (fields?.get("amountSat") as? JsonPrimitive)?.longOrNull ?: 0,
+                (fields?.get("amountSat") as? JsonPrimitive)?.content?.toLongOrNull() ?: 0,
                 interval = RecurringInterval("month", 1), startAt = 0, createdAt = 0, updatedAt = 0))
                 .copy(id = id, status = "needs_attention", lastError = RecurringPayment.unsupportedMessage, unsupportedStorage = true)
         }
     }
     private fun requireNumericTokens(row: JsonObject) {
-        fun number(value: JsonElement) {
-            require(value is JsonPrimitive && !value.isString && value.longOrNull != null)
+        fun number(value: JsonElement, minimum: Long, maximum: Long) {
+            require(value is JsonPrimitive && !value.isString)
+            // Parse the original integer token: kotlinx longOrNull can wrap overflowing literals.
+            val exact = value.content.toBigIntegerOrNull() ?: error("Expected an integer token")
+            require(exact >= minimum.toBigInteger() && exact <= maximum.toBigInteger())
         }
-        fun numbers(fields: JsonObject, vararg keys: String) { keys.forEach { number(fields.getValue(it)) } }
-        numbers(row, "amountSat", "startAt", "nextOccurrenceIndex", "occurrencesPaid", "consecutiveFailures", "createdAt", "updatedAt")
-        for (key in listOf("endAt", "maxOccurrences", "nextRunAt", "retryNotBefore")) {
-            row[key]?.takeUnless { it == JsonNull }?.let(::number)
+        fun numbers(fields: JsonObject, minimum: Long, maximum: Long, vararg keys: String) {
+            keys.forEach { key -> fields[key]?.takeUnless { it == JsonNull }?.let { number(it, minimum, maximum) } }
         }
-        numbers(row.getValue("interval").jsonObject, "every")
-        row["inFlight"]?.takeUnless { it == JsonNull }?.let { numbers(it.jsonObject, "occurrenceIndex", "startedAt") }
-        row.getValue("runs").jsonArray.forEach { numbers(it.jsonObject, "occurrenceIndex", "scheduledFor", "attemptedAt", "amountSat") }
+        val safeInteger = 9_007_199_254_740_991L
+        val timeLimit = 8_639_999_999_999_999L
+        numbers(row, 1, safeInteger, "amountSat")
+        numbers(row, 1, Long.MAX_VALUE, "maxOccurrences")
+        numbers(row, -timeLimit, timeLimit, "startAt", "endAt", "nextRunAt", "retryNotBefore", "createdAt", "updatedAt")
+        numbers(row, 0, Int.MAX_VALUE.toLong(), "nextOccurrenceIndex", "occurrencesPaid", "consecutiveFailures")
+        val interval = row.getValue("interval").jsonObject
+        number(interval.getValue("every"), 1, if (interval["unit"]?.jsonPrimitive?.content == "day") 365 else 12)
+        row["inFlight"]?.takeUnless { it == JsonNull }?.jsonObject?.let {
+            numbers(it, 0, Int.MAX_VALUE.toLong(), "occurrenceIndex")
+            numbers(it, -timeLimit, timeLimit, "startedAt")
+        }
+        row.getValue("runs").jsonArray.forEach { value ->
+            val run = value.jsonObject
+            numbers(run, 0, Int.MAX_VALUE.toLong(), "occurrenceIndex")
+            numbers(run, -timeLimit, timeLimit, "scheduledFor", "attemptedAt")
+            numbers(run, 1, safeInteger, "amountSat")
+        }
     }
     fun upsert(schedule: RecurringPayment, reapproval: Boolean = false) = change(if (schedule.unsupportedStorage) null else schedule.id, reapproval) { state ->
         val schedules = state.getValue("schedules").jsonObject.toMutableMap()

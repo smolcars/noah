@@ -1,0 +1,465 @@
+{
+  "source": "Exact native token/domain regression probes; RN recurring schedules are never imported",
+  "cases": [
+    {
+      "name": "overflow-amountSat",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 18446744073709552616,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-amountSat",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": -18446744073709552616,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-amountSat",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 9007199254740992,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-amountSat",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 0,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-amountSat",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000.00000000000000000001,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-startAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 18446744073709552616,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-startAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": -18446744073709552616,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-startAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 8640000000000000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-startAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": -8640000000000000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-startAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000.00000000000000000001,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-endAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": 18446744073709552616,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-endAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": -18446744073709552616,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-endAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": 8640000000000000,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-endAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": -8640000000000000,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-endAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": 1000.00000000000000000001,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-nextRunAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 18446744073709552616,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-nextRunAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": -18446744073709552616,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-nextRunAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 8640000000000000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-nextRunAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": -8640000000000000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-nextRunAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000.00000000000000000001,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-createdAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 18446744073709552616,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-createdAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": -18446744073709552616,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-createdAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 8640000000000000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-createdAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": -8640000000000000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-createdAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000.00000000000000000001,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-updatedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 18446744073709552616\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-updatedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": -18446744073709552616\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-updatedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 8640000000000000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-updatedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": -8640000000000000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-updatedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000.00000000000000000001\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-retryNotBefore",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000,\n  \"retryNotBefore\": 18446744073709552616\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-retryNotBefore",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000,\n  \"retryNotBefore\": -18446744073709552616\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-retryNotBefore",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000,\n  \"retryNotBefore\": 8640000000000000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-retryNotBefore",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000,\n  \"retryNotBefore\": -8640000000000000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-retryNotBefore",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000,\n  \"retryNotBefore\": 1000.00000000000000000001\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-maxOccurrences",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": 18446744073709552616,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-maxOccurrences",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": -18446744073709552616,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-maxOccurrences",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": 9223372036854775808,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-maxOccurrences",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": 0,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-maxOccurrences",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": 1000.00000000000000000001,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-nextOccurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 18446744073709552616,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-nextOccurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": -18446744073709552616,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-nextOccurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 2147483648,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-nextOccurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": -1,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-nextOccurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 1000.00000000000000000001,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-occurrencesPaid",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 18446744073709552616,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-occurrencesPaid",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": -18446744073709552616,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-occurrencesPaid",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 2147483648,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-occurrencesPaid",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": -1,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-occurrencesPaid",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 1000.00000000000000000001,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-consecutiveFailures",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 18446744073709552616,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-consecutiveFailures",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": -18446744073709552616,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-consecutiveFailures",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 2147483648,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-consecutiveFailures",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": -1,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-consecutiveFailures",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 1000.00000000000000000001,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-interval.every",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 18446744073709552616\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-interval.every",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": -18446744073709552616\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-interval.every",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 366\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-interval.every",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 0\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-interval.every",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1000.00000000000000000001\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-inFlight.occurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": {\n    \"occurrenceIndex\": 18446744073709552616,\n    \"startedAt\": 1000\n  },\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-inFlight.occurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": {\n    \"occurrenceIndex\": -18446744073709552616,\n    \"startedAt\": 1000\n  },\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-inFlight.occurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": {\n    \"occurrenceIndex\": 2147483648,\n    \"startedAt\": 1000\n  },\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-inFlight.occurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": {\n    \"occurrenceIndex\": -1,\n    \"startedAt\": 1000\n  },\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-inFlight.occurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": {\n    \"occurrenceIndex\": 1000.00000000000000000001,\n    \"startedAt\": 1000\n  },\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-inFlight.startedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": {\n    \"occurrenceIndex\": 0,\n    \"startedAt\": 18446744073709552616\n  },\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-inFlight.startedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": {\n    \"occurrenceIndex\": 0,\n    \"startedAt\": -18446744073709552616\n  },\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-inFlight.startedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": {\n    \"occurrenceIndex\": 0,\n    \"startedAt\": 8640000000000000\n  },\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-inFlight.startedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": {\n    \"occurrenceIndex\": 0,\n    \"startedAt\": -8640000000000000\n  },\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-inFlight.startedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": {\n    \"occurrenceIndex\": 0,\n    \"startedAt\": 1000.00000000000000000001\n  },\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-runs.occurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 18446744073709552616,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-runs.occurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": -18446744073709552616,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-runs.occurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 2147483648,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-runs.occurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": -1,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-runs.occurrenceIndex",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 1000.00000000000000000001,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-runs.scheduledFor",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": 18446744073709552616,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-runs.scheduledFor",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": -18446744073709552616,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-runs.scheduledFor",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": 8640000000000000,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-runs.scheduledFor",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": -8640000000000000,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-runs.scheduledFor",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": 1000.00000000000000000001,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-runs.attemptedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": 18446744073709552616,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-runs.attemptedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": -18446744073709552616,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-runs.attemptedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": 8640000000000000,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-runs.attemptedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": -8640000000000000,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-runs.attemptedAt",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": 1000.00000000000000000001,\n      \"status\": \"failed\",\n      \"amountSat\": 1000\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-runs.amountSat",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 18446744073709552616\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "underflow-runs.amountSat",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": -18446744073709552616\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "above-domain-runs.amountSat",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 9007199254740992\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "below-domain-runs.amountSat",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 0\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "rounded-fraction-runs.amountSat",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [\n    {\n      \"occurrenceIndex\": 0,\n      \"scheduledFor\": 1000,\n      \"attemptedAt\": 1000,\n      \"status\": \"failed\",\n      \"amountSat\": 1000.00000000000000000001\n    }\n  ],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "overflow-second-amountSat",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 184467440737095517160,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "stopped-unsupported"
+    },
+    {
+      "name": "integer-control",
+      "rowJSON": "{\n  \"id\": \"broken\",\n  \"label\": \"RN range\",\n  \"destination\": \"recipient@example.com\",\n  \"destinationType\": \"lnurl\",\n  \"amountSat\": 1000,\n  \"comment\": \"\",\n  \"interval\": {\n    \"unit\": \"day\",\n    \"every\": 1\n  },\n  \"startAt\": 1000,\n  \"endAt\": null,\n  \"maxOccurrences\": null,\n  \"status\": \"active\",\n  \"nextOccurrenceIndex\": 0,\n  \"nextRunAt\": 1000,\n  \"occurrencesPaid\": 0,\n  \"consecutiveFailures\": 0,\n  \"lastError\": null,\n  \"inFlight\": null,\n  \"runs\": [],\n  \"createdAt\": 1000,\n  \"updatedAt\": 1000\n}",
+      "classification": "active"
+    }
+  ]
+}

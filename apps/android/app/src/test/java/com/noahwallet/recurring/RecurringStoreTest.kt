@@ -37,7 +37,7 @@ class RecurringStoreTest {
             val schedule = store.load().schedules.getValue("rent")
             assertEquals(amount, schedule.amountSat)
             assertEquals("needs_attention", schedule.status)
-            assertEquals(RecurringPayment.amountLimitMessage, schedule.lastError)
+            assertEquals(if (amount > 9_007_199_254_740_991L) RecurringPayment.unsupportedMessage else RecurringPayment.amountLimitMessage, schedule.lastError)
             assertEquals(original, raw)
             store.setPending(false)
             val saved = Json.parseToJsonElement(raw).jsonObject
