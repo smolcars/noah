@@ -1,0 +1,1345 @@
+{
+  "cases": [
+    {
+      "name": "plan 0",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "active",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": null,
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1767276000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 1",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "active",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1767275999000
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1767276000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 2",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "active",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1767275399999
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1767276000000
+      },
+      "expected": {
+        "kind": "stale_in_flight"
+      }
+    },
+    {
+      "name": "plan 3",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "paused",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": null,
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1767276000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 4",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "paused",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1767275999000
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1767276000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 5",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "paused",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1767275399999
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1767276000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 6",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "needs_attention",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": null,
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1767276000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 7",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "needs_attention",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1767275999000
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1767276000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 8",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "needs_attention",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1767275399999
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1767276000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 9",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "completed",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": null,
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1767276000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 10",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "completed",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1767275999000
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1767276000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 11",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "completed",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1767275399999
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1767276000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 12",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "active",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": null,
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1769868000000
+      },
+      "expected": {
+        "kind": "pay",
+        "occurrenceIndex": 0,
+        "scheduledFor": 1769868000000,
+        "skippedIndices": []
+      }
+    },
+    {
+      "name": "plan 13",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "active",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1769867999000
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1769868000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 14",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "active",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1769867399999
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1769868000000
+      },
+      "expected": {
+        "kind": "stale_in_flight"
+      }
+    },
+    {
+      "name": "plan 15",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "paused",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": null,
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1769868000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 16",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "paused",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1769867999000
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1769868000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 17",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "paused",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1769867399999
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1769868000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 18",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "needs_attention",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": null,
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1769868000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 19",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "needs_attention",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1769867999000
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1769868000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 20",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "needs_attention",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1769867399999
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1769868000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 21",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "completed",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": null,
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1769868000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 22",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "completed",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1769867999000
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1769868000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 23",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "completed",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1769867399999
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1769868000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 24",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "active",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": null,
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1775394000000
+      },
+      "expected": {
+        "kind": "pay",
+        "occurrenceIndex": 2,
+        "scheduledFor": 1774962000000,
+        "skippedIndices": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "name": "plan 25",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "active",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1775393999000
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1775394000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 26",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "active",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1775393399999
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1775394000000
+      },
+      "expected": {
+        "kind": "stale_in_flight"
+      }
+    },
+    {
+      "name": "plan 27",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "paused",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": null,
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1775394000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 28",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "paused",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1775393999000
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1775394000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 29",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "paused",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1775393399999
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1775394000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 30",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "needs_attention",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": null,
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1775394000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 31",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "needs_attention",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1775393999000
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1775394000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 32",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "needs_attention",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1775393399999
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1775394000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 33",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "completed",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": null,
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1775394000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 34",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "completed",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1775393999000
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1775394000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    },
+    {
+      "name": "plan 35",
+      "input": {
+        "zone": "America/New_York",
+        "schedule": {
+          "id": "rent",
+          "label": "Rent",
+          "destination": "landlord@example.com",
+          "destinationType": "lnurl",
+          "amountSat": 50000,
+          "comment": "",
+          "interval": {
+            "unit": "month",
+            "every": 1
+          },
+          "startAt": 1769868000000,
+          "endAt": null,
+          "maxOccurrences": null,
+          "status": "completed",
+          "nextOccurrenceIndex": 0,
+          "nextRunAt": 1769868000000,
+          "occurrencesPaid": 0,
+          "consecutiveFailures": 0,
+          "lastError": null,
+          "inFlight": {
+            "occurrenceIndex": 0,
+            "startedAt": 1775393399999
+          },
+          "runs": [],
+          "createdAt": 1767276000000,
+          "updatedAt": 1767276000000
+        },
+        "now": 1775394000000
+      },
+      "expected": {
+        "kind": "idle"
+      }
+    }
+  ]
+}

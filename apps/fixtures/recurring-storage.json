@@ -1,0 +1,33 @@
+{
+  "state": {
+    "schedules": {
+      "rent": {
+        "id": "rent",
+        "label": "Rent",
+        "destination": "landlord@example.com",
+        "destinationType": "lnurl",
+        "amountSat": 50000,
+        "comment": "",
+        "interval": {
+          "unit": "month",
+          "every": 1
+        },
+        "startAt": 1769868000000,
+        "endAt": null,
+        "maxOccurrences": null,
+        "status": "active",
+        "nextOccurrenceIndex": 0,
+        "nextRunAt": 1769868000000,
+        "occurrencesPaid": 0,
+        "consecutiveFailures": 0,
+        "lastError": null,
+        "inFlight": null,
+        "runs": [],
+        "createdAt": 1767276000000,
+        "updatedAt": 1767276000000
+      }
+    },
+    "serverSyncPending": true
+  },
+  "version": 0
+}
