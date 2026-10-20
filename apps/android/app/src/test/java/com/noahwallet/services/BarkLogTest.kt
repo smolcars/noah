@@ -20,7 +20,7 @@ class BarkLogTest {
         val endpoint = "https://esplora-privacy.example/api/syntheticOpaqueToken"
         com.noahwallet.services.logging.EndpointLogPrivacy.register(endpoint)
         val message = "Using Esplora at $endpoint/block-height/0"
-        val expected = "Using Esplora at https://esplora-privacy.example"
+        val expected = "Using Esplora at [custom-esplora]"
         assertEquals(expected, com.noahwallet.services.logging.EndpointLogPrivacy.redact(message))
         assertEquals(expected, LogFile.redact(message))
         assertEquals(expected, LogFile.redactForTelemetry(message))

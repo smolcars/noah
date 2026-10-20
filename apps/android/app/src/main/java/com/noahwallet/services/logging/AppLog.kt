@@ -169,7 +169,7 @@ class LogFile(
 
         private val jsonEscapes = Regex("""(?:\\u[0-9a-fA-F]{4})++|\\["\\/bfnrt]""")
 
-        private val encodedEscapes = Regex(jsonEscapes.pattern + """|(?:%[0-9a-fA-F]{2})+""")
+        private val encodedEscapes = Regex(jsonEscapes.pattern + """|(?:%[0-9a-fA-F]{2})+|&(?:#[xX][0-9a-fA-F]+|#[0-9]+|amp|quot|apos|lt|gt|colon|sol);""")
 
         fun redact(message: String): String {
             if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return "[oversized log message omitted]"
@@ -194,6 +194,15 @@ class LogFile(
                     try {
                         if (match.value.startsWith("%")) java.net.URLDecoder.decode(match.value, Charsets.UTF_8).also {
                             if (it.contains('\uFFFD')) uncertain = true
+                        } else if (match.value.startsWith("&")) {
+                            val entity = match.value.drop(1).dropLast(1)
+                            val code = when {
+                                entity.startsWith("#x", true) -> entity.drop(2).toIntOrNull(16)
+                                entity.startsWith("#") -> entity.drop(1).toIntOrNull()
+                                else -> mapOf("amp" to 38, "quot" to 34, "apos" to 39, "lt" to 60, "gt" to 62, "colon" to 58, "sol" to 47)[entity]
+                            }
+                            require(code != null && Character.isValidCodePoint(code) && code !in 0xD800..0xDFFF)
+                            String(Character.toChars(code))
                         } else kotlinx.serialization.json.Json.decodeFromString<String>("\"${match.value}\"")
                     } catch (_: Exception) {
                         uncertain = true

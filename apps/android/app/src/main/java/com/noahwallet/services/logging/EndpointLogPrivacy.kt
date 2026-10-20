@@ -33,9 +33,10 @@ internal object EndpointLogPrivacy {
         val views = LogFile.decodedViews(text, percentEncoded = true) ?: return "[redacted]"
         var result = text
         for ((index, view) in views.withIndex()) {
-            val clean = urls.replace(view) { match -> origin(match.value)?.takeIf { it in origins } ?: match.value }
+            val clean = urls.replace(view) { match -> if (origin(match.value)?.let { it in origins } == true) "[custom-esplora]" else match.value }
             // Decoding loses offsets; omit the message when any relative path or segment matches.
-            if (paths.any { clean.contains(it) } || index > 0 && clean != view) return "[redacted]"
+            if (paths.any { clean.contains(it) }) return "[redacted]"
+            if (index > 0 && clean != view) return "[custom-esplora]"
             if (index == 0) result = clean
         }
         return result
