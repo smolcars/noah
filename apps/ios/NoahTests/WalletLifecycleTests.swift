@@ -26,7 +26,7 @@ struct WalletLifecycleTests {
     }
 
     private func lifecycle(
-        session: WalletSession, settings: SettingsStorage, seed: KeychainPassword, token: KeychainPassword,
+        session: WalletSession, settings: SettingsStorage, seed: any WalletDeletionSeed, token: KeychainPassword,
         scratch: ScratchSpace? = nil,
         mutation: WalletMutationGate = .shared,
         drainTimeout: Duration = .seconds(30),
@@ -207,7 +207,7 @@ struct WalletLifecycleTests {
         for stage in 0...5 {
             try writeBarkDatabase()
             try seed.save("seed words"); try token.save("jwt")
-            try location.writeDeletionIdentity()
+            try location.writeDeletionIdentity(seed: seed.read())
             if stage >= 1 { try FileManager.default.moveItem(at: location.directory, to: location.deletionDirectory) }
             if stage >= 2 { try FileManager.default.removeItem(at: location.deletionDirectory.appending(path: ".noah-wallet-instance")) }
             if stage >= 3 { try FileManager.default.removeItem(at: location.deletionDirectory) }
@@ -319,9 +319,9 @@ struct WalletLifecycleTests {
             #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
         }
         // Even a different marker with a real instance identity must be discarded.
-        try location.writeDeletionIdentity()
+        try location.writeDeletionIdentity(seed: seed.read())
         try Data(UUID().uuidString.utf8).write(to: location.deletionMarker)
-        #expect(try !location.deletionMatchesWallet())
+        #expect(try !location.deletionMatchesWallet(seed: seed.read()))
         let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
         try await lifecycle(session: session, settings: settings, seed: seed, token: token).recoverDeletion()
         #expect(location.databaseExists)
@@ -337,16 +337,37 @@ struct WalletLifecycleTests {
         #expect(seed.read() == .notFound)
     }
 
-    @Test func legacyMarkerCanFinishOnlyAfterWalletDirectoryIsGone() async throws {
+    private struct UnreadableSeed: WalletDeletionSeed {
+        func read() -> KeychainPassword.ReadResult { .unavailable(-25308) }
+        func deleteWalletSeed() throws { Issue.record("Unreadable seed must never be deleted") }
+    }
+
+    @Test(arguments: ["bound", "uuid", "one-byte", "invalid"], ["same", "different", "none", "unreadable"])
+    func absentDatadirRequiresSeedBoundEvidence(marker: String, current: String) async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let settings = try makeSettings()
+        settings.set("retained", forKey: "sentinel")
         let (seed, token) = items()
         defer { seed.remove(); token.remove() }
-        try seed.save("old wallet")
-        try Data([1]).write(to: location.deletionMarker)
+        try token.save("token")
+        switch marker {
+        case "bound": try location.writeDeletionIdentity(seed: .found("wallet A"))
+        case "uuid": try Data(UUID().uuidString.utf8).write(to: location.deletionMarker)
+        case "one-byte": try Data([1]).write(to: location.deletionMarker)
+        default: try Data("invalid".utf8).write(to: location.deletionMarker)
+        }
+        if current == "same" { try seed.save("wallet A") }
+        if current == "different" { try seed.save("wallet B") }
+        let item: any WalletDeletionSeed = current == "unreadable" ? UnreadableSeed() : seed
+        let before = item.read()
         let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
-        try await lifecycle(session: session, settings: settings, seed: seed, token: token).recoverDeletion()
-        #expect(seed.read() == .notFound)
+        try await lifecycle(session: session, settings: settings, seed: item, token: token).recoverDeletion()
+        let finishes = marker == "bound" && (current == "same" || current == "none")
+        #expect(item.read() == (finishes ? .notFound : before))
+        #expect(token.read() == (finishes ? .notFound : .found("token")))
+        #expect(settings.string(forKey: "sentinel") == (finishes ? nil : "retained"))
+        #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
+        #expect(!FileManager.default.fileExists(atPath: location.directory.path))
     }
 
     @Test func deleteGoesAheadWhenDeregistrationFails() async throws {

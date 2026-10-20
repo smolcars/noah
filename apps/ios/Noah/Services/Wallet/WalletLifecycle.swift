@@ -22,7 +22,7 @@ struct WalletLifecycle: Sendable {
     struct Dependencies: Sendable {
         var session: WalletSession
         var location: WalletDataLocation
-        var seed: KeychainPassword
+        var seed: any WalletDeletionSeed
         var authToken: KeychainPassword
         var settings: SettingsStorage
         var scratch: ScratchSpace
@@ -64,7 +64,7 @@ struct WalletLifecycle: Sendable {
     func recoverDeletionLocked() async throws {
         let location = dependencies.location
         guard FileManager.default.fileExists(atPath: location.deletionMarker.path) else { return }
-        guard try location.deletionMatchesWallet() else {
+        guard try location.deletionMatchesWallet(seed: dependencies.seed.read()) else {
             AppLog("walletLifecycle").w("Discarding deletion marker for a different or unidentifiable wallet")
             try FileManager.default.removeItem(at: location.deletionMarker)
             try RestoreTransaction.fullSync(location.directory.deletingLastPathComponent())
@@ -96,8 +96,8 @@ struct WalletLifecycle: Sendable {
                 do { try dependencies.scratch.sweepForWalletDeletion() }
                 catch { throw Failure.temporaryFiles }
                 let marker = dependencies.location.deletionMarker
-                if try !FileManager.default.fileExists(atPath: marker.path) || !dependencies.location.deletionMatchesWallet() {
-                    try dependencies.location.writeDeletionIdentity()
+                if try !FileManager.default.fileExists(atPath: marker.path) || !dependencies.location.deletionMatchesWallet(seed: dependencies.seed.read()) {
+                    try dependencies.location.writeDeletionIdentity(seed: dependencies.seed.read())
                     let handle = try FileHandle(forWritingTo: marker)
                     try handle.synchronize()
                     try handle.close()
@@ -169,3 +169,11 @@ extension WalletLifecycle.Dependencies {
             settleBackground: { try await services.backupCoordinator.settleForDeletion(timeout: $0) })
     }
 }
+
+/// Injectable secure-storage reads include locked/unreadable seed recovery.
+protocol WalletDeletionSeed: Sendable {
+    func read() -> KeychainPassword.ReadResult
+    func deleteWalletSeed() throws
+}
+
+extension KeychainPassword: WalletDeletionSeed {}
