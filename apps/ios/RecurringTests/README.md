@@ -3,7 +3,92 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## ArkInfo unattended fee policy (2026-10-20)
+
+Base: `feat/native-rewrite` at `1aa9a618`. Supersedes round 1's max(1%, 200 sats)
+limit and blanket Lightning approval.
+The quote captures `ArkInfo.feeSchedule.lightningSend` (`LightningSendFees` in
+BarkBoltFFI 0.4.0); unavailable/failed ArkInfo uses min 20, base 0, and tiers
+0→2000, 1008→4000, 2016→5000 ppm, with a debug log containing no payment data.
+For amount a, F(a) = max(min, base + ceil(a × maxPpm / 1,000,000)); the cap is
+min(2 × F(a), max(200, floor(a / 50))). Lightning pays unattended only if the
+quote and F(a) are both within the cap. Quote refusal takes precedence. Ark
+requires a zero quote fee. Full-width multiplication and saturating addition
+avoid overflow, including at UInt64.max. All 24 shared fixture cases are
+unchanged. The Pixel's supplied 1,000-sat BOLT11 observation (79-sat quote,
+83-sat worst case, 166-sat cap) is a fixture; this run does not access the Pixel.
+
+The executor rechecks the **same captured quote and schedule** immediately
+before submission, without fetching ArkInfo again. Refusals retain
+`needs_approval`, notify once and show the cap in the schedule's saved reason.
+The attended Send review remains uncapped.
+
+Source verification: the resolved SPM checkout is tag `v0.4.0`, pinning bark
+`bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c`. In `lib/src/fees.rs:236`,
+`LightningSendFees::calculate` adds the base to the tier-weighted fee and applies
+the minimum. `calc_ppm_expiry_fee` (:508) charges at most the payment amount
+across tiers and rounds once. In `bark/src/actions/lightning/pay.rs:348–385`,
+`start_lightning_send` selects inputs with the wallet's ArkInfo schedule and
+stores the fee. The cosign path (:469–509) constructs HTLC/change outputs from
+that amount and verifies the server's signatures on them. No additional
+server-selected fee is accepted. F(a) therefore bounds the fee under the checked
+schedule. The accepted residual risk is a schedule change between quote and
+submission; there is no SDK maximum-fee argument. Arkoor remains zero-fee.
+
+Verification: focused `RecurringFeePolicyTests` + `RecurringExecutorTests` passed
+**34 tests / 56 individual runs, zero failures/skips**, including all 24 shared
+fee cases, UInt64 saturation, automatic Lightning exactly once, quote/schedule
+refusals + notification, ArkInfo failure fallback, captured-schedule recheck,
+and uncapped attended approval with replay protection. The full `NoahTests`
+suite ran **once**, without exclusions: **433 total, 415 passed, 18 opt-in
+skipped, zero failed**, **93 suites**, 38.451 seconds of test execution.
+Parameterized execution reports **554 passed / 18 skipped** individual runs.
+Both passing runs used Nix, XcodeGen, normal signing,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2` and disabled parallel testing.
+The separate opt-in live run below failed only at its funding requirement.
+
+Live attempt (**one test failed at the funding requirement, zero skips**): a fresh wallet and reusable CLN BOLT12 offer were created on the
+owned **Noah Recurring ArkInfo Sol**, iPhone 17 / iOS 27.0, UDID
+`7E844FE8-97F2-418B-AC8A-B71021D7BF14`. The existing Noah backend at
+`127.0.0.1:3000` returned HTTP 200. The wallet published a 31,000-sat funding
+invoice. CLN recorded the sole funding attempt as **failed, 0 msat sent**,
+payment hash `0141968cc4f6d886d0570671622980300a56387e78dbf65f08ae5382f7b5833c`.
+CLN's sole channel reported `CHANNELD_NORMAL` but `connected: false`; its peer
+was also disconnected. No funding was retried, no peer reconnected, no Docker
+service changed, no fee reconfigured and no block mined. The live test stops at
+its 180-second funding requirement before creating a schedule or submitting a
+recurring payment. Read-only inspection confirmed no recurring journal or Send
+journal existed. **No successful native live automatic-payment claim is made.**
+Above-cap behavior is covered deterministically. The Pixel observation above
+is supplied evidence, not a new physical-device run.
+
+Reproduce on a fresh dedicated simulator with
+`TEST_RUNNER_NOAH_RECURRING_FEE_LIVE=1`,
+`TEST_RUNNER_NOAH_RECURRING_FEE_OFFER=<fresh reusable regtest CLN offer>` and
+`TEST_RUNNER_NOAH_REGTEST_SERVER_URL=http://127.0.0.1:3000`, selecting
+`NoahTests/RecurringFeeLiveTests`. Fund the published
+`Documents/recurring-fee-funding-address.txt` once with 30,000 Ark sats, **or**
+pay `Documents/recurring-fee-funding-invoice.txt` once (31,000 Lightning sats),
+within 180 seconds. Inspect any failed/timed-out funding before retrying.
+The test expects one unattended 20,000-sat BOLT12 payment across repeated
+triggers, a consumed occurrence, and exactly one successful sender movement;
+it then cancels the schedule and deletes its disposable wallet. Successful runs
+write non-secret `Documents/recurring-fee-evidence.json` with quote, worst-case
+fee and cap. Failed funding never reaches this payment path.
+
+Cleanup completed: reset only the unfunded owned simulator before the full
+suite; then confirmed its exact name/UDID above and **Shutdown** state, deleted
+it and verified its absence. Removed `/private/tmp/noah-arkinfo-sol-dd` and all
+**three** result bundles (focused, failed funding-only live, full). Disabled
+only the CLN offer created for this test. JSON test summaries, logs and
+non-secret blocked-live/cleanup evidence remain under
+`/private/tmp/noah-arkinfo-sol-`. Protected simulators, Android devices, the
+physical Pixel and Docker services were untouched.
+
 ## Round-1 unattended safety (2026-10-20)
+
+Historical evidence below uses the superseded fee policy; the ArkInfo policy
+above replaces only that fee behavior.
 
 Base: `feat/native-rewrite` HEAD `b46fc2e2`. Six focused fixes:
 
@@ -14,8 +99,8 @@ Base: `feat/native-rewrite` HEAD `b46fc2e2`. Six focused fixes:
   separately from the latest attempt, across every policy revision. Legacy
   dictionaries migrate durably before another attempt can replace their evidence.
   A revision-A → revision-B → MMKV rollback-to-A regression never pays A again.
-- The automatic fee limit is max(1% of the amount, 200 sats), rounded down to
-  whole sats. Excessive fees stop at `needs_approval`, without an occurrence or
+- The round-1 automatic fee limit was max(1% of the amount, 200 sats), rounded
+  down to whole sats; the ArkInfo policy above supersedes it. Excessive fees stop at `needs_approval`, without an occurrence or
   Send marker, consumption, uncertainty or automatic retry; a result notification
   asks the user to open the schedule. **Review and pay manually** opens the normal
   Send review with the exact quote; confirmation retains recurring identity,
