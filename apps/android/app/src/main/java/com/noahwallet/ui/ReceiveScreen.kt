@@ -52,6 +52,7 @@ private val requestSaver = Saver<ReceiveRequest?, String>(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
+    val locale = java.util.Locale.forLanguageTag(app.localeIdentifier)
     var request by rememberSaveable(stateSaver = requestSaver) { mutableStateOf<ReceiveRequest?>(null) }
     var received by rememberSaveable { mutableStateOf<Long?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -105,8 +106,8 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
         NoahForm("Funds received") {
             Image(painterResource(R.drawable.ic_received), null,
                 Modifier.size(100.dp).graphicsLayer { scaleX = scale; scaleY = scale })
-            Text(BitcoinAmount.format(received!!, app.amountUnit), style = MaterialTheme.typography.displaySmall)
-            price?.let { Text("≈ " + FiatCurrency.display(received!!, it, currency)) }
+            Text(BitcoinAmount.format(received!!, app.amountUnit, locale), style = MaterialTheme.typography.displaySmall)
+            price?.let { Text("≈ " + FiatCurrency.display(received!!, it, currency, locale)) }
             HorizontalDivider()
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Status"); Text("Settled", color = MaterialTheme.colorScheme.primary)
@@ -114,7 +115,7 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
             HorizontalDivider()
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Wallet balance")
-                Text(app.summary?.let { BitcoinAmount.format(it.balance.totalSats.toLong(), app.amountUnit) } ?: "…")
+                Text(app.summary?.let { BitcoinAmount.format(it.balance.totalSats.toLong(), app.amountUnit, locale) } ?: "…")
             }
             NoahButton("Done", onClick = onDone)
         }
@@ -128,8 +129,8 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
             val uri = current.uri()
             ReceiveQR(uri) { sheet = "copy" }
             current.amountSat?.let {
-                Text(BitcoinAmount.format(it, app.amountUnit), style = MaterialTheme.typography.headlineLarge)
-                price?.let { rate -> Text(FiatCurrency.display(it, rate, currency)) }
+                Text(BitcoinAmount.format(it, app.amountUnit, locale), style = MaterialTheme.typography.headlineLarge)
+                price?.let { rate -> Text(FiatCurrency.display(it, rate, currency, locale)) }
             }
             Text("Scan to receive bitcoin with Noah")
             if (current.amountSat == null) Text("Add an amount to receive over Lightning", style = MaterialTheme.typography.bodySmall)
@@ -152,7 +153,7 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
         if (sheet == "copy") ReceiveCopySheet(current)
-        else ReceiveAmountSheet(current, app.amountUnit, price, currency, saving,
+        else ReceiveAmountSheet(current, app.amountUnit, price, currency, locale, saving,
             onRemove = { request = ReceiveRequest(current.arkAddress, current.onchainAddress); sheet = null },
             onSave = { sats, note ->
                 if (!saving) {
@@ -213,13 +214,13 @@ private fun ReceiveCopySheet(request: ReceiveRequest) {
 }
 
 @Composable
-private fun ReceiveAmountSheet(request: ReceiveRequest, unit: BitcoinAmountUnit, price: Double?, currency: String,
+private fun ReceiveAmountSheet(request: ReceiveRequest, unit: BitcoinAmountUnit, price: Double?, currency: String, locale: java.util.Locale,
     saving: Boolean, onRemove: () -> Unit, onSave: (Long, String) -> Unit) {
     var amount by rememberSaveable { mutableStateOf(request.amountSat?.toString() ?: "") }
     var note by rememberSaveable { mutableStateOf(request.description) }
     var fiat by rememberSaveable { mutableStateOf(false) }
     val focus = LocalFocusManager.current
-    val normalized = amount.replace(DecimalFormatSymbols.getInstance().decimalSeparator, '.')
+    val normalized = amount.replace(DecimalFormatSymbols.getInstance(locale).decimalSeparator, '.')
     val sats = if (fiat && price != null) FiatCurrency.fiatToSats(normalized.toDoubleOrNull() ?: Double.NaN, price)
         else normalized.toLongOrNull() ?: 0
     val valid = runCatching { ReceiveRequest.validate(sats, note) }.isSuccess
@@ -232,8 +233,8 @@ private fun ReceiveAmountSheet(request: ReceiveRequest, unit: BitcoinAmountUnit,
             amount = if (fiat) sats.toString() else FiatCurrency.satsToFiat(sats, price!!, currency)
             fiat = !fiat
         }, enabled = price != null && !saving) {
-            Text(if (price == null) "$currency rate unavailable" else if (fiat) "Switch to sats · ${BitcoinAmount.format(sats, unit)}"
-                else "Switch to $currency · ${FiatCurrency.display(sats, price, currency)}")
+            Text(if (price == null) "$currency rate unavailable" else if (fiat) "Switch to sats · ${BitcoinAmount.format(sats, unit, locale)}"
+                else "Switch to $currency · ${FiatCurrency.display(sats, price, currency, locale)}")
         }
         OutlinedTextField(note, { note = it }, label = { Text("Description") }, minLines = 2,
             enabled = !saving, modifier = Modifier.fillMaxWidth())

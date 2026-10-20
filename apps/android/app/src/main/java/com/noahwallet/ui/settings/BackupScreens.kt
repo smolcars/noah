@@ -83,19 +83,21 @@ private fun ShareFileButton(model: AppModel, title: String, filename: String, mi
     val context = LocalContext.current
     var folder by remember { mutableStateOf<File?>(null) }
     var shareUri by remember { mutableStateOf<android.net.Uri?>(null) }
-    var launched by remember { mutableStateOf(false) }
+    var returned by remember { mutableStateOf(false) }
     val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     fun discard() {
         shareUri?.let { context.revokeUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
         folder?.let { model.services.scratch.discard(it) }
-        folder = null; shareUri = null; launched = false
+        folder = null; shareUri = null; returned = false
     }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { /* Chooser result can precede the receiver reading the file. */ }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        // A chooser result alone can precede the receiver reading; wait until Noah resumes.
+        returned = true
+        if (owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) discard()
+    }
     DisposableEffect(owner) {
-        var stopped = false
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && launched) stopped = true
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME && stopped) { discard(); stopped = false }
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME && returned) discard()
         }
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer); discard() }
@@ -112,7 +114,6 @@ private fun ShareFileButton(model: AppModel, title: String, filename: String, mi
                 shareUri = uri
                 val send = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri)
                     .apply { clipData = ClipData.newRawUri(filename, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-                launched = true
                 launcher.launch(Intent.createChooser(send, title))
             } catch (failure: Exception) { discard(); throw failure }
         }

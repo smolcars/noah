@@ -56,7 +56,7 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
                         .padding(horizontal = 10.dp, vertical = 4.dp), color = Color.Black,
                     style = MaterialTheme.typography.labelMedium)
                 Text(if (model.hidden) "••••••" else model.summary?.let {
-                    BitcoinAmount.format(it.balance.totalSats.toLong(), model.amountUnit)
+                    BitcoinAmount.format(it.balance.totalSats.toLong(), model.amountUnit, java.util.Locale.forLanguageTag(model.localeIdentifier))
                 } ?: "Loading…", style = MaterialTheme.typography.displaySmall)
                 TextButton(model::toggleBalance) { Text(if (model.hidden) "Show balance" else "Hide balance") }
                 if (!dismissed && model.server.state.isEmailVerified != true) Card {

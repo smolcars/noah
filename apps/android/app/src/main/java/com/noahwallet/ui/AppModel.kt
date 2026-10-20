@@ -66,9 +66,10 @@ class AppModel(application: Application) : AndroidViewModel(application) {
 
     suspend fun resumeWallet() {
         services.lifecycle.resume()
-        isWalletSuspended = false
-        withContext(Dispatchers.IO) { services.ensureWalletOpen() }
-        open = true; refresh(); services.startServerServices()
+        try { withContext(Dispatchers.IO) { services.ensureWalletOpen() } }
+        catch (failure: Exception) { services.lifecycle.suspend(); throw failure }
+        open = true; isWalletSuspended = false
+        refresh(); services.startServerServices()
     }
 
     suspend fun deleteWallet() {
