@@ -232,7 +232,11 @@ import Observation
         guard paid || outcome == .failed else { try await markUncertain(entry, message: d.controller.message); return }
         guard let saved = try d.journal.load()[entry.scheduleID], saved.binding == entry.binding,
               saved.plan == entry.plan, saved.policyRevision == entry.policyRevision, saved.markedAt == entry.markedAt else { return }
-        if saved.policyApplied == true {
+        if saved.policyApplied == true || saved.consumed == true {
+            // Older consumed receipts may already have advanced MMKV; never apply them twice.
+            if saved.policyApplied != true {
+                var claimed = saved; claimed.policyApplied = true; try d.journal.save(claimed)
+            }
             if !retainReceipt { d.controller.acknowledge() }
             return
         }
@@ -274,7 +278,7 @@ import Observation
         do {
             guard let entry = try d.journal.load()[id] else { return }
             let original = try? d.store.load().schedules[id]
-            guard entry.policyApplied == true || original?.unsupportedStorage == false else { return }
+            guard entry.policyApplied == true || entry.consumed == true || original?.unsupportedStorage == false else { return }
             await d.controller.checkStatus()
             try await settle(entry, original: original)
         } catch { self.error = error.localizedDescription }

@@ -4,7 +4,7 @@ import Testing
 @testable import Noah
 
 @MainActor struct RecurringSettlementRepeatTests {
-    @Test func repeatedStatusAfterAckFailureMustNotRecordSameOccurrenceTwice() async throws {
+    @Test(arguments: [false, true]) func repeatedStatusAfterAckFailureMustNotRecordSameOccurrenceTwice(legacy: Bool) async throws {
         let h = try RecurringExecutorTests.Harness(); let original = try h.add()
         defer { try? FileManager.default.removeItem(at: h.directory) }
         h.ambiguous = true
@@ -15,6 +15,10 @@ import Testing
         await h.executor.checkStatus(original.id)
         #expect(try h.store.load().schedules[original.id]?.occurrencesPaid == 1)
         #expect(h.controller.locked)
+        if legacy {
+            var entry = try #require(h.journal.load()[original.id]); entry.policyApplied = nil
+            try h.journal.save(entry)
+        }
         let applied = try h.store.load().schedules[original.id], notices = h.notified
         h.writeRemovalFails = false
         await h.executor.checkStatus(original.id)
