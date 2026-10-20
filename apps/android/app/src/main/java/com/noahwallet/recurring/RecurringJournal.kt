@@ -13,10 +13,10 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
     private val quarantine: (ByteArray) -> Unit = { durableRecurringWrite(File("${file.path}.quarantine"), it) }) {
     @Serializable data class Entry(val binding: RecurringStore.Binding, val scheduleID: String, val plan: RecurringPayment.Plan,
         val markedAt: Long, val policyRevision: String? = null, val resolved: Boolean = false, val consumed: Boolean = false, val policyApplied: Boolean = false,
-        val terminal: TerminalEvidence? = null, val historyApplied: Boolean = false, val released: Boolean = false) {
+        val terminal: TerminalEvidence? = null, val historyApplied: Boolean = false, val released: Boolean = false, val policy: RecurringPayment? = null) {
         val key get() = "$scheduleID:${plan.occurrenceIndex}"
     }
-    @Serializable data class TerminalEvidence(val attempt: SendAttempt, val generation: Int, val walletGeneration: Int,
+    @Serializable data class TerminalEvidence(val settlementID: String, val attempt: SendAttempt, val generation: Int, val walletGeneration: Int,
         val outcome: Outcome, val message: String?, val recordedAt: Long) {
         val paid get() = outcome == Outcome.succeeded || outcome == Outcome.alreadyPaid
     }
@@ -67,9 +67,10 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
                 return json.decodeFromJsonElement<State>(root).also(::validate)
             }
             2 -> {
+                require(root.keys.containsAll(listOf("attempts", "consumed", "consumedIndices", "legacyUncertainty")))
                 val old = json.decodeFromJsonElement<State>(root)
                 old.copy(version = 3, legacyUncertainty = (old.legacyUncertainty + old.attempts.values
-                    .filter { it.consumed || it.policyApplied }.map { Scope(it.binding, it.scheduleID) }).distinct())
+                    .filter { it.resolved || it.consumed || it.policyApplied }.map { Scope(it.binding, it.scheduleID) }).distinct())
             }
             1 -> {
                 val old = json.decodeFromJsonElement<V1>(root)
@@ -102,6 +103,7 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
             e.policyRevision?.let(::uuid)
             require(id == e.scheduleID && e.plan.kind == "pay" && e.plan.occurrenceIndex != null && e.plan.occurrenceIndex >= 0 && e.plan.scheduledFor != null && (!e.consumed || e.resolved) && (!e.policyApplied || e.resolved))
             e.terminal?.let { terminal ->
+                UUID.fromString(terminal.settlementID)
                 require(terminal.attempt.recurringOccurrenceKey == e.key && terminal.attempt.walletIdentity == e.binding.wallet && terminal.generation >= 0 && terminal.walletGeneration >= 0)
                 if (terminal.outcome == Outcome.succeeded) require(terminal.attempt.receipt?.let { !it.isUnresolved && !it.broadcastRetryPending && it.isProven(terminal.attempt.payment, terminal.attempt.paymentHash) } == true)
                 if (terminal.outcome == Outcome.alreadyPaid) require(terminal.attempt.alreadyPaid?.isProven(terminal.attempt.payment, terminal.attempt.paymentHash, true) == true)
@@ -123,11 +125,21 @@ class RecurringJournal(val file: File, private val read: () -> String? = { if (f
         state.legacyUncertainty.forEach { scope(it.binding, it.scheduleID) }
     }
     /** Runs inside Send's wallet reservation before its terminal outcome is published. */
-    @Synchronized fun record(attempt: SendAttempt, generation: Int, walletGeneration: Int, outcome: Outcome, message: String?, binding: RecurringStore.Binding) {
+    @Synchronized fun record(attempt: SendAttempt, generation: Int, walletGeneration: Int, state: SendController.State, message: String?, binding: RecurringStore.Binding, now: Long) {
+        val outcome = when (state) {
+            SendController.State.succeeded -> if (attempt.receipt?.broadcastRetryPending == false) Outcome.succeeded else Outcome.uncertain
+            SendController.State.alreadyPaid -> Outcome.alreadyPaid
+            SendController.State.failed -> Outcome.failed
+            else -> Outcome.uncertain
+        }
         val entry = state().attempts.values.firstOrNull { it.key == attempt.recurringOccurrenceKey && it.binding == binding }
         check(entry != null && attempt.walletIdentity == binding.wallet) { invalidMessage }
-        if (entry.terminal?.outcome != null && entry.terminal.outcome != Outcome.uncertain) return
-        save(entry.copy(terminal = TerminalEvidence(attempt, generation, walletGeneration, outcome, message, System.currentTimeMillis())))
+        check(!legacyUncertain(binding, entry.scheduleID)) { legacyMessage }
+        entry.terminal?.let {
+            check(it.attempt.recurringAttemptID == attempt.recurringAttemptID) { invalidMessage }
+            if (it.outcome != Outcome.uncertain) return
+        }
+        save(entry.copy(terminal = TerminalEvidence(entry.terminal?.settlementID ?: UUID.randomUUID().toString(), attempt, generation, walletGeneration, outcome, message, now)))
     }
     @Synchronized fun load() = state().attempts
     @Synchronized fun legacyUncertain(binding: RecurringStore.Binding, id: String) = state().legacyUncertainty.any { sameScope(it.binding, it.scheduleID, binding, id) }

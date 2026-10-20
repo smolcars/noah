@@ -54,7 +54,7 @@ import kotlinx.serialization.json.*
 }
 @Serializable data class SendSnapshot(val movementIDs: Set<UInt> = emptySet(), val bdkTxids: Set<String>? = null,
     val resolvedInvoice: String? = null, val walletIdentity: SendIdentity? = null, val checkpoint: SendCheckpoint? = null)
-@Serializable data class SendAttempt(val walletIdentity: SendIdentity? = null, val inspectionPending: Boolean = false,
+@Serializable data class SendAttempt(val recurringAttemptID: String? = null, val walletIdentity: SendIdentity? = null, val inspectionPending: Boolean = false,
     val recurringOccurrenceKey: String? = null,
     val safetyVersion: Int = 2, val broadcastingTxid: String? = null, val payment: SendPayment,
     val snapshot: SendSnapshot = SendSnapshot(), val receipt: SendReceipt? = null, val alreadyPaid: SendReceipt? = null,

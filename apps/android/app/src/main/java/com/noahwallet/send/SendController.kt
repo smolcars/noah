@@ -8,11 +8,13 @@ class SendController(private val dependencies: Dependencies,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)) {
     enum class State { ready, submitting, uncertain, succeeded, alreadyPaid, failed, storageBlocked }
     data class TerminalResult(val generation: Int, val walletGeneration: Int, val attempt: SendAttempt, val outcome: State, val message: String?)
-    private val recurringResults = java.util.concurrent.ConcurrentHashMap<Int, TerminalResult>()
+    internal var persistRecurringEvidence: ((SendAttempt, Int, Int, State, String?) -> Unit)? = dependencies.recurringEvidence
+    private var recurringEvidenceDurable = false
     class Dependencies(val read: suspend () -> SendAttempt?, val write: (SendAttempt?) -> Unit,
         val quarantineUnreadable: () -> Unit = { error("Journal quarantine unavailable") },
         val auditOverride: (SendOverrideAudit) -> Unit = { error("Override audit storage unavailable") },
         val recurringReservation: (suspend (suspend (SendWallet) -> Unit) -> Unit)? = null,
+        val recurringEvidence: ((SendAttempt, Int, Int, State, String?) -> Unit)? = null,
         val reservation: suspend (suspend (SendWallet) -> Unit) -> Unit)
     var state by mutableStateOf(State.ready); private set
     var attempt by mutableStateOf<SendAttempt?>(null); private set
@@ -28,12 +30,14 @@ class SendController(private val dependencies: Dependencies,
         attempt != null && (state in listOf(State.uncertain, State.storageBlocked) || state == State.succeeded && attempt?.receipt?.broadcastRetryPending == true))
 
     fun invalidateForWalletChange() {
+        recurringEvidenceDurable = false
         generation++; walletGeneration++; journalIdentity = null; checking = false; attempt = null; message = null; unboundJournal = null; unreadableJournal = false; state = State.storageBlocked
     }
     suspend fun reloadForWalletChange() {
         loadAttempt(null)
     }
     private suspend fun loadAttempt(retained: SendAttempt?) {
+        recurringEvidenceDurable = false
         generation++; walletGeneration++; val current = generation; checking = true; attempt = retained; state = State.storageBlocked; message = null; unboundJournal = null; unreadableJournal = false
         var loadedAttempt = retained
         var loadedUnbound: SendAttempt? = null
@@ -76,6 +80,10 @@ class SendController(private val dependencies: Dependencies,
                     else -> State.uncertain
                 }
                 loadedMessage = saved.failureMessage
+                if (saved.recurringOccurrenceKey != null) {
+                    checkNotNull(persistRecurringEvidence)(saved, current, walletGeneration, loadedState, loadedMessage)
+                    recurringEvidenceDurable = true
+                }
             }
         } catch (_: Exception) { loadedMessage = "Unable to load saved payment status. Check your history and recipient before forgetting this attempt."; loadedState = State.storageBlocked }
         finally {
@@ -91,6 +99,8 @@ class SendController(private val dependencies: Dependencies,
         if (locked) return null
         state = State.submitting; message = null
         val current = ++generation
+        val recurringAttemptID = if (recurringKey != null) java.util.UUID.randomUUID().toString() else null
+        recurringEvidenceDurable = false
         return scope.async {
             try {
                 val reservation = if (recurringKey != null) dependencies.recurringReservation ?: dependencies.reservation else dependencies.reservation
@@ -102,19 +112,19 @@ class SendController(private val dependencies: Dependencies,
                         requireSend(identity == quote.walletIdentity, SendFailure.Reason.unresolved)
                         beforeSubmit?.invoke()
                         if (payment.method in listOf("lightning", "lnurl")) {
-                            val marker = SendAttempt(walletIdentity = identity, inspectionPending = true, recurringOccurrenceKey = recurringKey, payment = payment, quote = quote)
+                            val marker = SendAttempt(recurringAttemptID = recurringAttemptID, walletIdentity = identity, inspectionPending = true, recurringOccurrenceKey = recurringKey, payment = payment, quote = quote)
                             dependencies.write(marker); attempt = marker
                         }
                         val snapshot = wallet.prepare(payment, quote)
                         if (current != generation) { wallet.discard(quote, includingClaimed = true); return@reserve }
                         if (recurringKey != null && snapshot.checkpoint != null) throw SendFailure(SendFailure.Reason.lightningInProgress)
-                        val pending = SendAttempt(walletIdentity = identity, recurringOccurrenceKey = recurringKey, broadcastingTxid = quote.prepared?.txid, payment = payment,
+                        val pending = SendAttempt(recurringAttemptID = recurringAttemptID, walletIdentity = identity, recurringOccurrenceKey = recurringKey, broadcastingTxid = quote.prepared?.txid, payment = payment,
                             snapshot = snapshot, paymentHash = PaymentEncoding.invoice(snapshot.resolvedInvoice ?: if (payment.method == "lightning") payment.destination else "")?.hash, quote = quote)
                         dependencies.write(pending); attempt = pending
                     } catch (failure: Exception) {
                         if (current != generation) return@reserve
                         if (failure is SendNotSubmitted && recurringKey != null && attempt == null) {
-                            val stopped = SendAttempt(walletIdentity = quote.walletIdentity, recurringOccurrenceKey = recurringKey,
+                            val stopped = SendAttempt(recurringAttemptID = recurringAttemptID, walletIdentity = quote.walletIdentity, recurringOccurrenceKey = recurringKey,
                                 payment = payment, quote = quote, failed = true, failureMessage = failure.reason.message)
                             attempt = stopped; message = failure.reason.message; finish(SendResolution.Failed)
                             return@reserve
@@ -150,18 +160,15 @@ class SendController(private val dependencies: Dependencies,
             } catch (_: Exception) {
                 if (current == generation) { state = if (attempt == null) State.ready else State.uncertain; message = "Unable to reserve the wallet. Check payment status before sending again." }
             }
-            recurringResults[current] ?: if (current == generation && recurringKey != null) resultForSettlement(recurringKey) else null
+            if (current == generation && recurringKey != null) resultForSettlement(recurringKey) else null
         }
     }
     fun resultForSettlement(key: String): TerminalResult? {
-        recurringResults[generation]?.takeIf { it.attempt.recurringOccurrenceKey == key }?.let { return it }
         val current = attempt
-        if (current?.recurringOccurrenceKey == key) return TerminalResult(generation, walletGeneration, current, state, message)
-        return recurringResults.values.filter { it.attempt.recurringOccurrenceKey == key && it.walletGeneration == walletGeneration }.maxByOrNull { it.generation }
+        return if (current?.recurringOccurrenceKey == key) TerminalResult(generation, walletGeneration, current, state, message) else null
     }
-    suspend fun settlementConsumed(result: TerminalResult, retainReceipt: Boolean) {
-        if (generation == result.generation && (!retainReceipt || attempt == null)) clear(settled = true)
-        recurringResults.remove(result.generation)
+    internal suspend fun releaseRecurring(attemptID: String?, expectedGeneration: Int, expectedWalletGeneration: Int, retainReceipt: Boolean) {
+        if (generation == expectedGeneration && walletGeneration == expectedWalletGeneration && attemptID != null && attempt?.recurringAttemptID == attemptID && !retainReceipt) clear()
     }
     suspend fun checkStatus() {
         if (checking) return
@@ -205,7 +212,18 @@ class SendController(private val dependencies: Dependencies,
             false
         }
         // Done may hide this receipt before the reservation returns to recurring settlement.
-        if (saved.recurringOccurrenceKey != null) recurringResults[generation] = TerminalResult(generation, walletGeneration, saved, outcome, message)
+        if (saved.recurringOccurrenceKey != null) {
+            try {
+                val persist = persistRecurringEvidence ?: error("Recurring evidence storage unavailable")
+                persist(saved, generation, walletGeneration, outcome, message)
+                recurringEvidenceDurable = true
+            } catch (_: Exception) {
+                recurringEvidenceDurable = false
+                message = "Payment status could not be saved. Check status again after restarting Noah."
+                state = State.storageBlocked
+                return false
+            }
+        }
         state = outcome
         return durable
     }
@@ -229,11 +247,10 @@ class SendController(private val dependencies: Dependencies,
                 originalEvidence = evidence, warning = warning, confirmation = confirmation, status = status, statusMessage = statusMessage))
         }
     }
-    private suspend fun clear(settled: Boolean = false, beforeRemove: (() -> Unit)? = null) {
+    private suspend fun clear( beforeRemove: (() -> Unit)? = null) {
         if (checking) return
         val current = generation
-        val pending = recurringResults[current]
-        val identity = journalIdentity ?: attempt?.walletIdentity ?: pending?.attempt?.walletIdentity
+        val identity = journalIdentity ?: attempt?.walletIdentity
         checking = true
         var removed = false
         var audited = beforeRemove == null
@@ -246,12 +263,18 @@ class SendController(private val dependencies: Dependencies,
                     // The counted reservation prevents replacement until audit and removal are durable.
                     beforeRemove?.invoke()
                     audited = true
-                    if (settled || pending == null || beforeRemove != null) dependencies.write(null)
+                    if (attempt?.recurringOccurrenceKey != null && !recurringEvidenceDurable && beforeRemove == null) {
+                        val saved = attempt!!
+                        val persist = persistRecurringEvidence ?: error("Recurring evidence storage unavailable")
+                        persist(saved, generation, walletGeneration, state, message)
+                        recurringEvidenceDurable = true
+                    }
+                    dependencies.write(null)
                     removed = true
                 }
             }
             if (removed && current == generation) {
-                if (settled || beforeRemove != null) recurringResults.remove(current)
+                recurringEvidenceDurable = false
                 attempt = null; unboundJournal = null; unreadableJournal = false; state = State.ready; message = null
             }
         } catch (_: Exception) {
