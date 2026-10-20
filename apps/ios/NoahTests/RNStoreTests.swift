@@ -56,6 +56,18 @@ struct RNStoreTests {
         }
     }
 
+    @Test func onlyExactVersionTokensAreAccepted() throws {
+        for key in RNStoreCodec.schemas.keys {
+            for token in ["-0", "0e5", "1e-400", "0.0", "1.0", "1e0", "-1", "99", "true", "null", "\"0\""] {
+                #expect(throws: (any Error).self) { try RNStoreCodec.decode("{\"state\":{},\"version\":\(token)}", key: key) }
+            }
+            _ = try RNStoreCodec.decode(#"{"state":{}}"#, key: key)
+            _ = try RNStoreCodec.decode(#"{"state":{},"version": 0 }"#, key: key)
+            if key == "transaction-storage" { _ = try RNStoreCodec.decode(#"{"state":{},"version":1}"#, key: key) }
+            else { #expect(throws: (any Error).self) { try RNStoreCodec.decode(#"{"state":{},"version":1}"#, key: key) } }
+        }
+    }
+
     @Test func transactionV0MigratesExactlyLikeRNWithoutWriting() throws {
         SettingsStorage.bootstrap()
         let root = FileManager.default.temporaryDirectory.appending(path: "rn-store-v0-\(UUID().uuidString)")

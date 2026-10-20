@@ -32,8 +32,9 @@ enum RNStoreCodec {
         var envelope = try RawObject(raw)
         let version: Int
         if let token = envelope.fields["version"] {
-            guard let number = try? JSONDecoder().decode(Int.self, from: Data(token.utf8)), number >= 0 else { throw Failure.invalid }
-            version = number
+            let exact = token.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard exact == "0" || (schema.version == 1 && exact == "1") else { throw Failure.unsupportedVersion }
+            version = exact == "1" ? 1 : 0
         } else { version = 0 }
         guard version <= schema.version else { throw Failure.unsupportedVersion }
         guard let rawState = envelope.fields["state"] else { throw Failure.invalid }
