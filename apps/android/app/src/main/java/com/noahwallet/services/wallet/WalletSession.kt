@@ -52,6 +52,7 @@ class WalletSession internal constructor(
         suspend fun debug(action: DebugAction, input: String): String = throw UnsupportedOperationException()
         fun stateChanges(): Changes = throw UnsupportedOperationException()
         fun notifications(): Notifications
+        suspend fun pendingRounds(): List<PendingRoundStatus> = throw UnsupportedOperationException()
         suspend fun history(): List<Movement>
         suspend fun transactions(): List<WalletTransaction> = throw UnsupportedOperationException()
         suspend fun receiveRequest(): ReceiveRequest
@@ -345,6 +346,7 @@ class WalletSession internal constructor(
     suspend fun checkOnchainAttempt(id: String): Boolean = withM6 { onchainOperations(it).check(id) }
     suspend fun refreshOnchainReceiptFees() = withM6 { onchainOperations(it).refreshReceiptFees() }
 
+    suspend fun pendingRounds() = withOpen { it.pendingRounds() }
     suspend fun arkInfo() = withOpen { it.arkInfo() }
     suspend fun mailboxAuthorization(expiry: Long) = withOpen { it.mailboxAuthorization(expiry) }
     suspend fun debug(action: DebugAction, input: String) = withOpen { it.debug(action, input.trim()) }
@@ -525,6 +527,7 @@ class WalletSession internal constructor(
                 override fun close() = holder.close()
             }
         }
+        override suspend fun pendingRounds() = wallet.syncPendingRounds()
         override suspend fun history() = wallet.history()
         override suspend fun transactions() = onchain.transactions()
         override suspend fun receiveRequest() = ReceiveRequest(wallet.newAddress(), onchain.newAddress())

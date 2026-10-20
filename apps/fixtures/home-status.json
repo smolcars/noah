@@ -1,0 +1,497 @@
+{
+  "description": "RN Home status predicates, five-second expiry, facts and hidden-balance currency symbols.",
+  "facts": [
+    "There can only ever be 21 million bitcoin.",
+    "Fix the money, fix the world.",
+    "Money for everyone, by everyone.",
+    "Send money to anyone, anywhere, anytime.",
+    "No one can freeze your funds.",
+    "A 'satoshi' is its smallest unit.",
+    "It's freedom in your pocket.",
+    "Hope for a fairer financial system.",
+    "Taxation is theft.",
+    "Power back to the people.",
+    "Be your own bank.",
+    "A powerful tool for savers.",
+    "The future of money is here.",
+    "Not your keys, not your coins.",
+    "Stay humble, stack sats.",
+    "In code we trust.",
+    "Governments can print money, but not Bitcoin.",
+    "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks.",
+    "Vires in numeris. (Strength in numbers)",
+    "\"If you don't believe it or don't get it, I don't have time to try to convince you, sorry.\" - Satoshi Nakamoto",
+    "There is no second best.",
+    "When in doubt, zoom out.",
+    "Separate money and state.",
+    "Tick tock next block."
+  ],
+  "symbols": {
+    "USD": "$",
+    "EUR": "€",
+    "GBP": "£",
+    "CAD": "CA$",
+    "CHF": "CHF",
+    "AUD": "A$",
+    "JPY": "¥",
+    "BRL": "R$",
+    "KRW": "₩",
+    "INR": "₹",
+    "MXN": "MX$",
+    "SGD": "S$"
+  },
+  "cases": [
+    {
+      "name": "idle, pending=false, elapsed=0",
+      "input": {
+        "operation": "backup",
+        "status": "idle",
+        "pending": false,
+        "at": 10000,
+        "now": 10000
+      },
+      "expected": null
+    },
+    {
+      "name": "idle, pending=false, elapsed=4999",
+      "input": {
+        "operation": "backup",
+        "status": "idle",
+        "pending": false,
+        "at": 10000,
+        "now": 14999
+      },
+      "expected": null
+    },
+    {
+      "name": "idle, pending=false, elapsed=5000",
+      "input": {
+        "operation": "backup",
+        "status": "idle",
+        "pending": false,
+        "at": 10000,
+        "now": 15000
+      },
+      "expected": null
+    },
+    {
+      "name": "idle, pending=false, elapsed=5001",
+      "input": {
+        "operation": "backup",
+        "status": "idle",
+        "pending": false,
+        "at": 10000,
+        "now": 15001
+      },
+      "expected": null
+    },
+    {
+      "name": "idle, pending=true, elapsed=0",
+      "input": {
+        "operation": "backup",
+        "status": "idle",
+        "pending": true,
+        "at": 10000,
+        "now": 10000
+      },
+      "expected": null
+    },
+    {
+      "name": "idle, pending=true, elapsed=4999",
+      "input": {
+        "operation": "backup",
+        "status": "idle",
+        "pending": true,
+        "at": 10000,
+        "now": 14999
+      },
+      "expected": null
+    },
+    {
+      "name": "idle, pending=true, elapsed=5000",
+      "input": {
+        "operation": "backup",
+        "status": "idle",
+        "pending": true,
+        "at": 10000,
+        "now": 15000
+      },
+      "expected": null
+    },
+    {
+      "name": "idle, pending=true, elapsed=5001",
+      "input": {
+        "operation": "backup",
+        "status": "idle",
+        "pending": true,
+        "at": 10000,
+        "now": 15001
+      },
+      "expected": null
+    },
+    {
+      "name": "in_progress, pending=false, elapsed=0",
+      "input": {
+        "operation": "backup",
+        "status": "in_progress",
+        "pending": false,
+        "at": 10000,
+        "now": 10000
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "in_progress, pending=false, elapsed=4999",
+      "input": {
+        "operation": "backup",
+        "status": "in_progress",
+        "pending": false,
+        "at": 10000,
+        "now": 14999
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "in_progress, pending=false, elapsed=5000",
+      "input": {
+        "operation": "backup",
+        "status": "in_progress",
+        "pending": false,
+        "at": 10000,
+        "now": 15000
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "in_progress, pending=false, elapsed=5001",
+      "input": {
+        "operation": "backup",
+        "status": "in_progress",
+        "pending": false,
+        "at": 10000,
+        "now": 15001
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "in_progress, pending=true, elapsed=0",
+      "input": {
+        "operation": "backup",
+        "status": "in_progress",
+        "pending": true,
+        "at": 10000,
+        "now": 10000
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "in_progress, pending=true, elapsed=4999",
+      "input": {
+        "operation": "backup",
+        "status": "in_progress",
+        "pending": true,
+        "at": 10000,
+        "now": 14999
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "in_progress, pending=true, elapsed=5000",
+      "input": {
+        "operation": "backup",
+        "status": "in_progress",
+        "pending": true,
+        "at": 10000,
+        "now": 15000
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "in_progress, pending=true, elapsed=5001",
+      "input": {
+        "operation": "backup",
+        "status": "in_progress",
+        "pending": true,
+        "at": 10000,
+        "now": 15001
+      },
+      "expected": "Backing up wallet"
+    },
+    {
+      "name": "failed, pending=false, elapsed=0",
+      "input": {
+        "operation": "backup",
+        "status": "failed",
+        "pending": false,
+        "at": 10000,
+        "now": 10000
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "failed, pending=false, elapsed=4999",
+      "input": {
+        "operation": "backup",
+        "status": "failed",
+        "pending": false,
+        "at": 10000,
+        "now": 14999
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "failed, pending=false, elapsed=5000",
+      "input": {
+        "operation": "backup",
+        "status": "failed",
+        "pending": false,
+        "at": 10000,
+        "now": 15000
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "failed, pending=false, elapsed=5001",
+      "input": {
+        "operation": "backup",
+        "status": "failed",
+        "pending": false,
+        "at": 10000,
+        "now": 15001
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "failed, pending=true, elapsed=0",
+      "input": {
+        "operation": "backup",
+        "status": "failed",
+        "pending": true,
+        "at": 10000,
+        "now": 10000
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "failed, pending=true, elapsed=4999",
+      "input": {
+        "operation": "backup",
+        "status": "failed",
+        "pending": true,
+        "at": 10000,
+        "now": 14999
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "failed, pending=true, elapsed=5000",
+      "input": {
+        "operation": "backup",
+        "status": "failed",
+        "pending": true,
+        "at": 10000,
+        "now": 15000
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "failed, pending=true, elapsed=5001",
+      "input": {
+        "operation": "backup",
+        "status": "failed",
+        "pending": true,
+        "at": 10000,
+        "now": 15001
+      },
+      "expected": "Backup failed"
+    },
+    {
+      "name": "success, pending=false, elapsed=0",
+      "input": {
+        "operation": "backup",
+        "status": "success",
+        "pending": false,
+        "at": 10000,
+        "now": 10000
+      },
+      "expected": "Backup completed"
+    },
+    {
+      "name": "success, pending=false, elapsed=4999",
+      "input": {
+        "operation": "backup",
+        "status": "success",
+        "pending": false,
+        "at": 10000,
+        "now": 14999
+      },
+      "expected": "Backup completed"
+    },
+    {
+      "name": "success, pending=false, elapsed=5000",
+      "input": {
+        "operation": "backup",
+        "status": "success",
+        "pending": false,
+        "at": 10000,
+        "now": 15000
+      },
+      "expected": null
+    },
+    {
+      "name": "success, pending=false, elapsed=5001",
+      "input": {
+        "operation": "backup",
+        "status": "success",
+        "pending": false,
+        "at": 10000,
+        "now": 15001
+      },
+      "expected": null
+    },
+    {
+      "name": "success, pending=true, elapsed=0",
+      "input": {
+        "operation": "backup",
+        "status": "success",
+        "pending": true,
+        "at": 10000,
+        "now": 10000
+      },
+      "expected": null
+    },
+    {
+      "name": "success, pending=true, elapsed=4999",
+      "input": {
+        "operation": "backup",
+        "status": "success",
+        "pending": true,
+        "at": 10000,
+        "now": 14999
+      },
+      "expected": null
+    },
+    {
+      "name": "success, pending=true, elapsed=5000",
+      "input": {
+        "operation": "backup",
+        "status": "success",
+        "pending": true,
+        "at": 10000,
+        "now": 15000
+      },
+      "expected": null
+    },
+    {
+      "name": "success, pending=true, elapsed=5001",
+      "input": {
+        "operation": "backup",
+        "status": "success",
+        "pending": true,
+        "at": 10000,
+        "now": 15001
+      },
+      "expected": null
+    },
+    {
+      "name": "success without a timestamp",
+      "input": {
+        "operation": "backup",
+        "status": "success",
+        "pending": false,
+        "now": 10000
+      },
+      "expected": null
+    },
+    {
+      "name": "pending, final=true",
+      "input": {
+        "operation": "round",
+        "status": "pending",
+        "final": true
+      },
+      "expected": true
+    },
+    {
+      "name": "pending, final=false",
+      "input": {
+        "operation": "round",
+        "status": "pending",
+        "final": false
+      },
+      "expected": true
+    },
+    {
+      "name": "unconfirmed, final=true",
+      "input": {
+        "operation": "round",
+        "status": "unconfirmed",
+        "final": true
+      },
+      "expected": true
+    },
+    {
+      "name": "unconfirmed, final=false",
+      "input": {
+        "operation": "round",
+        "status": "unconfirmed",
+        "final": false
+      },
+      "expected": true
+    },
+    {
+      "name": "confirmed, final=true",
+      "input": {
+        "operation": "round",
+        "status": "confirmed",
+        "final": true
+      },
+      "expected": false
+    },
+    {
+      "name": "confirmed, final=false",
+      "input": {
+        "operation": "round",
+        "status": "confirmed",
+        "final": false
+      },
+      "expected": true
+    },
+    {
+      "name": "failed, final=true",
+      "input": {
+        "operation": "round",
+        "status": "failed",
+        "final": true
+      },
+      "expected": false
+    },
+    {
+      "name": "failed, final=false",
+      "input": {
+        "operation": "round",
+        "status": "failed",
+        "final": false
+      },
+      "expected": true
+    },
+    {
+      "name": "canceled, final=true",
+      "input": {
+        "operation": "round",
+        "status": "canceled",
+        "final": true
+      },
+      "expected": false
+    },
+    {
+      "name": "canceled, final=false",
+      "input": {
+        "operation": "round",
+        "status": "canceled",
+        "final": false
+      },
+      "expected": true
+    }
+  ]
+}

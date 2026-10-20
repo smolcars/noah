@@ -183,6 +183,10 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Launch gating (including unfinished onboarding), Navigation 3 tabs, create/beta/secure mnemonic, emergency email and Lightning identity — Android
 - [x] Derive key 0 before fresh-wallet registration and persist `staticVtxoPubkey` — Android
 - [x] Home first pass: full balance, persisted unit/privacy, pull-to-sync, variant and email banner; Inter/light/dark theme — Android
+- [x] Home fiat and hidden-currency symbols (48 shared fiat cases), RN facts picked on mount/refresh, existing Settings/Map shortcuts — Android
+- [x] Home backup progress/failure+retry/5 s success, automatic-board 5 s success from existing receipts, active pending rounds with 30 s polling and detail sheet — Android (read-only observation; boarding/Send internals unchanged)
+- [x] App-version UI: RN’s nonblocking Update Available banner, current/latest versions and variant Play Store link; service failure continues without a banner — Android
+- [x] Shared RN Home predicates/facts/symbols (`home-status.json`, RN-source generator); launch push-before-battery truth table (`platform-gates.json`) — Android
 - [x] Notification permission and existing push registration after onboarding — Android
 - [x] PushNotificationsRequiredScreen: physical-device DENIED gate, request/recheck/settings, foreground recheck; seed recovery takes precedence and biometric overlay remains above all gates — Android
 - [x] BatteryOptimizationScreen: after email (or UnifiedPush), one-time initialized-wallet fallback, per-app exemption/list/app-settings fallback, foreground auto-continue and persisted Skip — Android

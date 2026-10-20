@@ -1,0 +1,158 @@
+package com.noahwallet.ui.home
+
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import com.noahwallet.BuildConfig
+import com.noahwallet.api.generated.models.AppVersionInfo
+import com.noahwallet.services.backup.BackupCoordinator
+import com.noahwallet.services.storage.PersistedBackupState
+import com.noahwallet.ui.AppModel
+import io.github.niteshbalusu11.bark.PendingRoundStatus
+import kotlinx.coroutines.*
+import java.text.NumberFormat
+import java.util.Locale
+
+@Composable
+fun HomeBanners(app: AppModel, refresh: Int) {
+    var backup by remember { mutableStateOf(PersistedBackupState()) }
+    var version by remember { mutableStateOf<AppVersionInfo?>(app.server.versionInfo) }
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var retrying by remember { mutableStateOf(false) }
+    var rounds by remember { mutableStateOf<List<PendingRoundStatus>>(emptyList()) }
+    var showRounds by remember { mutableStateOf(false) }
+    var boarding by remember { mutableStateOf<Pair<Long, Long>?>(null) }
+    val locale = Locale.forLanguageTag(app.localeIdentifier)
+    val scope = rememberCoroutineScope()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(app, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            // Existing automatic receipts are history; RN's success banner is transient and not persisted.
+            val seen = try { withContext(Dispatchers.IO) { app.session.onchainJournal.loadAll().filter { it.receipt != null }.map { it.id }.toMutableSet() } }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { mutableSetOf<String>() }
+            while (isActive) {
+                now = System.currentTimeMillis()
+                backup = PersistedBackupState.decode(app.settings.string(PersistedBackupState.key))
+                version = app.server.versionInfo
+                try {
+                    val completed = withContext(Dispatchers.IO) { app.session.onchainJournal.loadAll() }
+                        .filter { it.quote.automatic && it.receipt != null && !it.receipt.broadcastRetryPending }
+                    completed.forEach { attempt -> if (seen.add(attempt.id)) boarding = attempt.quote.net to now }
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { /* A status banner must never interfere with boarding recovery. */ }
+                delay(1000)
+            }
+        }
+    }
+    LaunchedEffect(app, refresh, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            // RN polls at 30 s only while an active round exists; refresh and wallet changes re-query.
+            do {
+                try { rounds = app.session.pendingRounds() }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { }
+                if (rounds.none { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) }) break
+                delay(30_000)
+            } while (isActive)
+        }
+    }
+    LaunchedEffect(app.session, refresh, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+        app.session.walletChanges.collect {
+            try { rounds = app.session.pendingRounds() }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { }
+        }
+    }
+    }
+    version?.takeIf { it.updateRequired }?.let { UpdateWarningBanner(it, BuildConfig.VERSION_NAME, BuildConfig.APP_VARIANT) }
+    HomeRules.backup(backup, now, locale)?.let { banner -> StatusBanner(banner, retrying) {
+        scope.launch {
+            retrying = true
+            try { app.services.backupCoordinator.flush(BackupCoordinator.Reason.manual, requireEnabled = false) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { /* Coordinator persists a safe error for this banner. */ }
+            finally { retrying = false }
+        }
+    } }
+    boarding?.takeIf { now - it.second < HomeRules.successMillis }?.let { (amount, _) ->
+        StatusBanner(HomeRules.Banner("Boarding completed", "${NumberFormat.getIntegerInstance(locale).format(amount)} sats available in Ark"))
+    }
+    val active = rounds.filter { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) }
+    if (active.isNotEmpty()) Card(onClick = { showRounds = true }, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text(if (active.size == 1) "Round in progress" else "Rounds in progress", style = MaterialTheme.typography.titleMedium)
+            Text(if (active.size == 1) "Round #${active[0].roundId} ${active[0].status.name.lowercase().replaceFirstChar(Char::uppercase)}" else "${active.size} rounds pending")
+            TextButton({ showRounds = true }) { Text("View") }
+        }
+    }
+    if (showRounds && active.isNotEmpty()) PendingRoundsSheet(active) { showRounds = false }
+}
+
+@Composable
+internal fun StatusBanner(banner: HomeRules.Banner, retrying: Boolean = false, retry: () -> Unit = {}) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(banner.title, style = MaterialTheme.typography.titleMedium, color = if (banner.failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+            Text(banner.message)
+            if (banner.retry) TextButton(retry, enabled = !retrying) { Text(if (retrying) "Working" else "Retry") }
+        }
+    }
+}
+
+@Composable
+internal fun UpdateWarningBanner(info: AppVersionInfo, currentVersion: String, variant: String) {
+    val uri = LocalUriHandler.current
+    Card(onClick = { uri.openUri(HomeRules.updateURL(variant)) }, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Update Available", style = MaterialTheme.typography.titleMedium)
+            Text("Please update to the latest version of the app for bug fixes and improvements.")
+            Text("Current Version: $currentVersion")
+            Text("Latest Version: ${info.minimumRequiredVersion}")
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PendingRoundsSheet(rounds: List<PendingRoundStatus>, close: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        com.noahwallet.ui.settings.SettingsColumn {
+            TextButton(close) { Text("Close") }
+            Text("Pending Rounds", style = MaterialTheme.typography.headlineMedium)
+            rounds.forEach { round ->
+                Text("Round #${round.roundId}", style = MaterialTheme.typography.titleLarge)
+                Text("Status: ${round.status.name.lowercase().replaceFirstChar(Char::uppercase)}")
+                Text("Final: ${if (round.isFinal) "Yes" else "No"}")
+                Text("Successful: ${if (round.isSuccess) "Yes" else "No"}")
+                round.fundingTxid?.let { RoundTransaction("Funding tx", it, copyable = true) }
+                round.unsignedFundingTxids.forEachIndexed { index, txid -> RoundTransaction("Unsigned tx ${index + 1}", txid) }
+                round.error?.let { Text("Error: $it") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RoundTransaction(label: String, txid: String, copyable: Boolean = false) {
+    val context = LocalContext.current
+    val uri = LocalUriHandler.current
+    Text("$label: $txid")
+    if (copyable) TextButton({
+        (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label, txid))
+    }) { Text("Copy $label") }
+    if (BuildConfig.APP_VARIANT != "regtest") TextButton({
+        uri.openUri("https://mempool.space/${if (BuildConfig.APP_VARIANT == "mainnet") "" else "signet/"}tx/$txid")
+    }) { Text("Open $label in browser") }
+}

@@ -17,17 +17,38 @@ import androidx.compose.ui.unit.dp
 import com.noahwallet.BuildConfig
 import com.noahwallet.formatting.BitcoinAmount
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
+import com.noahwallet.services.server.value
+import androidx.lifecycle.repeatOnLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatPayment) -> Unit, settings: () -> Unit) {
     var selectedID by rememberSaveable { mutableStateOf<String?>(null) }
     var map by rememberSaveable { mutableStateOf(false) }
+    var fact by remember { mutableStateOf(com.noahwallet.ui.home.bitcoinFacts.random()) }
+    var price by remember { mutableStateOf<Double?>(null) }
+    var refreshRevision by remember { mutableIntStateOf(0) }
     var email by remember { mutableStateOf(false) }
     var dismissed by remember { mutableStateOf(model.server.state.isEmailPromptDismissed == true) }
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val currency = model.preferredCurrency.takeIf { it in com.noahwallet.formatting.FiatCurrency.supported } ?: "USD"
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(Unit) { model.refresh() }
+    LaunchedEffect(currency, model.isWalletSuspended, lifecycle) {
+        price = null
+        if (model.isWalletSuspended) return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+        while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+            try { price = com.noahwallet.api.generated.client.V0PricesClient(model.services.client)
+                .fiatPrices(kotlinx.serialization.json.JsonObject(emptyMap())).value().rates[currency]?.takeIf { it.isFinite() && it > 0 } }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { }
+            kotlinx.coroutines.delay(300_000)
+        }
+        }
+    }
     if (map) {
         com.noahwallet.btcmap.BtcMapScreen { map = false }
         return
@@ -39,14 +60,16 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
     }
     HistoryDetailsHost(model, selectedID, { selectedID = null }, onRepeatPayment) {
         PullToRefreshBox(refreshing, onRefresh = {
-            scope.launch { refreshing = true; try { model.refresh(true); model.history.refresh(model.preferredCurrency) } finally { refreshing = false } }
+            scope.launch { refreshing = true; try { model.refresh(true); model.history.refresh(model.preferredCurrency); fact = com.noahwallet.ui.home.bitcoinFacts.random(); refreshRevision++ } finally { refreshing = false } }
         }) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(28.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Text("Noah", Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
-                    TextButton({ map = true }) { Text("Bitcoin Map") }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(settings) { Text("Settings") }
+                    TextButton({ map = true }) { Text("Bitcoin Map") }
                 }
                 // Like RN, a suspended wallet shows only the suspended card.
                 if (model.isWalletSuspended) {
@@ -61,7 +84,12 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
                     Modifier.background(if (BuildConfig.APP_VARIANT == "regtest") Color(0xFFFFCC00) else Color(0xFFFF9500), CircleShape)
                         .padding(horizontal = 10.dp, vertical = 4.dp), color = Color.Black,
                     style = MaterialTheme.typography.labelMedium)
-                Text(if (model.hidden) "••••••" else model.summary?.let {
+                com.noahwallet.ui.home.HomeBanners(model, refreshRevision)
+                val locale = java.util.Locale.forLanguageTag(model.localeIdentifier)
+                val fiat = com.noahwallet.ui.home.HomeRules.fiat(model.summary?.balance?.totalSats?.toLong() ?: 0, price, currency, locale, model.hidden)
+                if (fiat != null) Text(fiat, style = MaterialTheme.typography.headlineMedium)
+                else CircularProgressIndicator(Modifier.size(24.dp))
+                Text(if (model.hidden) "••••" else model.summary?.let {
                     BitcoinAmount.format(it.balance.totalSats.toLong(), model.amountUnit, java.util.Locale.forLanguageTag(model.localeIdentifier))
                 } ?: "Loading…", style = MaterialTheme.typography.displaySmall)
                 TextButton(model::toggleBalance) { Text(if (model.hidden) "Show balance" else "Hide balance") }
@@ -84,7 +112,7 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
                         TextButton(onViewAll, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text("View all") }
                     }
                 }
-                Text("In code we trust.", style = MaterialTheme.typography.bodySmall)
+                Text(fact, style = MaterialTheme.typography.bodySmall)
             }
         }
     }
