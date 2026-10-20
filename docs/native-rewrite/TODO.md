@@ -241,6 +241,10 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 - [x] M5 round-2 A2/A3 — iOS: await backup passes/exports, check scratch and retained-share cleanup before database removal, preserve/reopen the wallet on cleanup failure, and finish durable marked deletion at UI/headless launch; ordering/relaunch/gate regressions
 
+- [x] M5 round-2 A2/A3 — Android: drain backup/export operations; check scratch, preflight copies, Settings and History exports (with exact URI revocation) before database removal; preserve/reopen on cleanup failure; durable deletion marker recovered before UI/headless wallet opens; ordering/relaunch and real-grant device regressions
+
+- [x] M5 round-2 verification: 526 Android JVM tests (36 suites, no failures/skips), regtest APK and instrumentation compilation; four API 28 device privacy/deletion-grant cases; full iOS NoahTests 293 total / 281 passed / 12 opt-in skipped / 0 failed (66 suites), both full suites run once; disposable devices mapped/shut down/deleted — `apps/android/SettingsTests/README.md`
+
 ## M6 — Onchain & exits
 - [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt with txid-only read refresh/relaunch reconciliation for missing fees (prepared boarding awaits FFI 18, same priority as 14)
 - [x] VTXOsScreen + VTXODetailScreen + delegated refresh review dialog — iOS

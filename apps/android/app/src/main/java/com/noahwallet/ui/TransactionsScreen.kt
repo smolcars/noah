@@ -52,21 +52,23 @@ fun TransactionsScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit) 
                             var export: File? = null
                             var launched = false
                             try {
-                                val file = withContext(Dispatchers.IO) {
-                                    app.historyExports.create(csv).also { export = it }
+                                app.services.scratch.withOperation {
+                                    val file = withContext(Dispatchers.IO) {
+                                        app.historyExports.create(csv).also { export = it }
+                                    }
+                                    androidx.work.WorkManager.getInstance(context).enqueue(
+                                        androidx.work.OneTimeWorkRequestBuilder<HistoryExportCleanup>()
+                                            .setInitialDelay(HistoryExportFiles.retentionMillis, java.util.concurrent.TimeUnit.MILLISECONDS).build())
+                                    val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+                                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/csv"
+                                        putExtra(Intent.EXTRA_STREAM, uri)
+                                        putExtra(Intent.EXTRA_SUBJECT, "Noah Wallet Transaction Export")
+                                        clipData = ClipData.newUri(context.contentResolver, "Transactions", uri)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }, "Export transactions"))
+                                    launched = true
                                 }
-                                androidx.work.WorkManager.getInstance(context).enqueue(
-                                    androidx.work.OneTimeWorkRequestBuilder<HistoryExportCleanup>()
-                                        .setInitialDelay(HistoryExportFiles.retentionMillis, java.util.concurrent.TimeUnit.MILLISECONDS).build())
-                                val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
-                                context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/csv"
-                                    putExtra(Intent.EXTRA_STREAM, uri)
-                                    putExtra(Intent.EXTRA_SUBJECT, "Noah Wallet Transaction Export")
-                                    clipData = ClipData.newUri(context.contentResolver, "Transactions", uri)
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }, "Export transactions"))
-                                launched = true
                             } catch (cancelled: CancellationException) { throw cancelled }
                             catch (_: Exception) { shareError = "Couldn't export transactions. Please try again." }
                             finally {

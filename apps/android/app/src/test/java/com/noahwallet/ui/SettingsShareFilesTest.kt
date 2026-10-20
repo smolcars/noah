@@ -6,6 +6,25 @@ import org.junit.Test
 import java.io.File
 
 class SettingsShareFilesTest {
+    @Test fun walletDeletionRemovesFreshExportsAndRevokesOnlyTheirExactGrants() {
+        val root = kotlin.io.path.createTempDirectory().toFile()
+        try {
+            val settingsRoot = File(root, "settings")
+            val historyRoot = File(root, "history")
+            val revoked = mutableListOf<File>()
+            val settings = SettingsShareFiles(settingsRoot, revoked::add)
+            val backup = settings.retain(File(root, "wallet.noahbackup").apply { writeText("encrypted") })
+            val log = settings.retain(File(root, "wallet.log").apply { writeText("redacted") })
+            val history = com.noahwallet.history.HistoryExportFiles(historyRoot, revoked::add)
+            val csv = history.create("history")
+            SettingsShareFiles(settingsRoot, revoked::add).deleteAll()
+            com.noahwallet.history.HistoryExportFiles(historyRoot, revoked::add).deleteAll()
+            assertEquals(setOf(backup, log, csv), revoked.toSet())
+            assertFalse(backup.exists()); assertFalse(log.exists()); assertFalse(csv.exists())
+            assertTrue(File(root, "wallet.noahbackup").exists())
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun sharesSurviveOwnerRecreationAndExpireWithTheirExactGrant() {
         val root = kotlin.io.path.createTempDirectory().toFile()
         try {

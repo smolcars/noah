@@ -40,7 +40,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
 
     val settingsShares = com.noahwallet.services.sharing.SettingsShareFiles.live(application)
         .also { it.sweep() }
-    val historyExports = com.noahwallet.history.HistoryExportFiles(java.io.File(application.cacheDir, "history-exports"))
+    val historyExports = com.noahwallet.history.HistoryExportFiles.live(application)
         .also { it.sweep() }
     val history = com.noahwallet.history.HistoryModel(com.noahwallet.history.HistoryModel.Dependencies.live(
         session, services.client, BuildConfig.APP_VARIANT,
@@ -80,7 +80,10 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         catch (failure: Exception) {
             isWalletSuspended = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
             open = session.isOpen
-            if (!open) { summary = null; history.clear() }
+            if (!open) {
+                summary = null; history.clear()
+                if (!isWalletSuspended) runCatching { withContext(Dispatchers.IO) { services.ensureWalletOpen() }; open = true; refresh() }
+            }
             throw failure
         }
         history.clear(); repeatPayment = null
@@ -116,6 +119,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
                 recovering = false
+                isWalletSuspended = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
                 launchState = withContext(Dispatchers.IO) { LaunchState.current(getApplication()) }
                 if (launchState == LaunchState.existingWallet) {
                     onboarded = services.isOnboarded()
@@ -127,9 +131,9 @@ class AppModel(application: Application) : AndroidViewModel(application) {
                     refresh()
                     services.startServerServices()
                 }
-            } catch (_: Exception) {
+            } catch (failure: Exception) {
                 if (recovering) launchState = LaunchState.restoreIncomplete
-                error = if (recovering) "Couldn't finish wallet recovery. Your wallet files have been kept. Please try again."
+                error = if (failure is WalletLifecycle.TemporaryFiles) failure.message else if (recovering) "Couldn't finish wallet recovery. Your wallet files have been kept. Please try again."
                     else "Couldn't open your wallet. Please try again."
             }
             finally { starting = false }
@@ -142,7 +146,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try { block() }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { error = fallback }
+            catch (failure: Exception) { error = if (failure is WalletLifecycle.TemporaryFiles) failure.message else fallback }
             finally { busy = false }
         }
     }

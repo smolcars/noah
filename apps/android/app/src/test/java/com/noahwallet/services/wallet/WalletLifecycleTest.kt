@@ -19,6 +19,8 @@ class WalletLifecycleTest {
         var deregisterFails = false
         var seedFails = false
         var syncFails = false
+        var settleBackground: suspend () -> Unit = {}
+        var finishBackground: () -> Unit = {}
         var sweepScratch: () -> Unit = { events.add("scratch") }
         val events = mutableListOf<String>()
         val session = WalletSession("regtest", location, inspect = { WalletDatabase.Properties("regtest", "abcd") },
@@ -35,7 +37,10 @@ class WalletLifecycleTest {
             }, clearToken = { assertFalse(seed); token = false; events.add("token") },
             clearSettings = { assertFalse(token); settings = false; events.add("settings") },
             clearWidget = { assertFalse(settings); widget = false; events.add("widget") },
-            sweepScratch = { sweepScratch() },
+            sweepScratch = { assertTrue(location.database.exists() || location.deletionMarker.exists()); sweepScratch() },
+            isSuspended = { suspended },
+            settleBackground = { settleBackground() },
+            finishBackground = { finishBackground() },
             syncFiles = { if (syncFails) error("Directory sync failed"); events.add("sync") })
         fun files() { location.directory.mkdirs(); location.database.writeText("fake"); location.restoreDirectory.mkdirs() }
         fun clean() { root.deleteRecursively() }
@@ -74,7 +79,7 @@ class WalletLifecycleTest {
         try {
             world.files(); world.deregisterFails = true
             world.lifecycle().delete()
-            assertEquals(listOf("flag:true", "deregister", "scratch", "sync", "seed", "token", "settings", "widget"), world.events)
+            assertEquals(listOf("flag:true", "scratch", "sync", "deregister", "sync", "seed", "token", "settings", "widget", "sync"), world.events)
             assertFalse(world.seed); assertFalse(world.token); assertFalse(world.settings); assertFalse(world.widget)
             val hold = world.session.reserve(); world.session.release(hold)
         } finally { world.clean() }
@@ -97,7 +102,11 @@ class WalletLifecycleTest {
             world.files(); world.syncFails = true
             assertTrue(runCatching { world.lifecycle().delete() }.isFailure)
             assertTrue(world.seed); assertTrue(world.token); assertTrue(world.settings)
-            assertFalse(world.location.directory.exists())
+            assertTrue(world.location.database.exists())
+            assertTrue(world.location.deletionMarker.exists())
+            world.syncFails = false
+            world.lifecycle().recoverDeletion()
+            assertFalse(world.seed); assertFalse(world.location.deletionMarker.exists())
             val hold = world.session.reserve(); world.session.release(hold)
         } finally { world.clean() }
     }
@@ -114,6 +123,8 @@ class WalletLifecycleTest {
             check(folder.setWritable(false, false))
             assertTrue(runCatching { world.lifecycle().delete() }.isFailure)
             assertTrue(snapshot.exists()); assertTrue(world.seed); assertTrue(world.token); assertTrue(world.settings)
+            assertTrue(world.location.database.exists()); assertFalse(world.suspended)
+            assertFalse(world.location.deletionMarker.exists())
             assertTrue(synced.isEmpty())
             check(folder.setWritable(true, true))
             world.lifecycle().delete()
@@ -128,8 +139,64 @@ class WalletLifecycleTest {
             world.files(); world.seedFails = true
             assertTrue(runCatching { world.lifecycle().delete() }.isFailure)
             assertTrue(world.seed); assertTrue(world.token); assertTrue(world.settings)
+            assertTrue(world.location.deletionMarker.exists())
+            world.seedFails = false
+            world.lifecycle().recoverDeletion()
+            assertFalse(world.seed); assertFalse(world.token); assertFalse(world.settings)
+            assertFalse(world.location.deletionMarker.exists())
             val hold = world.session.reserve(); world.session.release(hold)
         } finally { world.clean() }
+    }
+
+    @Test fun deletionDrainsExportBeforeScratchAndDatabaseAndRemovesRetainedShare() = runBlocking {
+        val world = World()
+        val scratch = com.noahwallet.services.backup.ScratchSpace(File(world.root, "scratch")) {}
+        val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
+        try {
+            world.files()
+            val retained = scratch.makeFolder("share-backup")
+            File(retained, "wallet.noahbackup").writeText("encrypted")
+            val export = async {
+                scratch.withFolder("export") { folder ->
+                    File(folder, "snapshot.sqlite").writeText("plaintext")
+                    entered.complete(Unit); release.await()
+                    assertTrue(world.location.database.exists())
+                    assertTrue(world.seed)
+                }
+            }
+            entered.await()
+            world.settleBackground = { scratch.drainForWalletDeletion() }
+            world.finishBackground = scratch::finishWalletDeletion
+            world.sweepScratch = scratch::sweepForWalletDeletion
+            val deleting = async { world.lifecycle().delete() }
+            withTimeout(2000) { while (!world.suspended) yield() }
+            assertFalse(deleting.isCompleted); assertTrue(world.location.database.exists())
+            assertFalse(world.location.deletionMarker.exists())
+            withTimeout(2000) {
+                while (runCatching { scratch.makeFolder("late-export").also(scratch::discard) }.isSuccess) yield()
+            }
+            release.complete(Unit); export.await(); deleting.await()
+            assertFalse(retained.exists()); assertFalse(world.seed)
+        } finally { release.complete(Unit); world.clean() }
+    }
+
+    @Test fun relaunchFinishesEveryDestructiveBoundary() = runBlocking {
+        for (stage in 0..3) {
+            val world = World()
+            try {
+                world.files()
+                world.location.deletionMarker.writeText("deleting")
+                if (stage >= 1) world.location.directory.deleteRecursively()
+                if (stage >= 2) world.seed = false
+                if (stage >= 3) { world.token = false; world.settings = false }
+                world.lifecycle().recoverDeletion()
+                assertFalse(world.seed); assertFalse(world.token); assertFalse(world.settings)
+                assertFalse(world.location.directory.exists()); assertFalse(world.location.deletionMarker.exists())
+                val events = world.events.toList()
+                world.lifecycle().recoverDeletion()
+                assertEquals(events, world.events)
+            } finally { world.clean() }
+        }
     }
 
     @Test fun suspendedSessionRejectsDelayedOpen() = runBlocking {

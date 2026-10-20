@@ -24,6 +24,12 @@ class SettingsShareFiles(private val root: File, private val revoke: (File) -> U
         root.listFiles()?.filter { now - it.lastModified() >= retentionMillis }?.forEach(::discard)
     }
 
+    fun deleteAll() {
+        if (!root.exists()) return
+        val files = root.listFiles() ?: error("Cannot inspect settings exports")
+        files.forEach { file -> revoke(file); check(file.delete()) { "Cannot delete settings export" } }
+    }
+
     companion object {
         const val retentionMillis = 86_400_000L
         fun live(context: Context) = SettingsShareFiles(File(context.cacheDir, "settings-exports")) { file ->

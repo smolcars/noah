@@ -88,9 +88,11 @@ private fun ShareFileButton(model: AppModel, title: String, mime: String, produc
     NoahButton(title, !model.busy && !model.isWalletSuspended) {
         model.action("Couldn't prepare the file for sharing. Please try again.") {
             val file = withContext(Dispatchers.IO) {
-                val staged = produce()
-                try { model.settingsShares.retain(staged.file) }
-                finally { staged.discard() }
+                model.services.scratch.withOperation {
+                    val staged = produce()
+                    try { model.settingsShares.retain(staged.file) }
+                    finally { staged.discard() }
+                }
             }
             try {
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)

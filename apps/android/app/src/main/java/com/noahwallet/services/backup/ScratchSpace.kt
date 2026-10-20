@@ -2,6 +2,7 @@ package com.noahwallet.services.backup
 
 import java.io.File
 import java.util.UUID
+import kotlinx.coroutines.flow.first
 
 /** Per-operation plaintext; launch sweeps abandoned folders without touching live operations. */
 class ScratchSpace(val root: File, private val syncDirectory: (File) -> Unit = { directory ->
@@ -9,9 +10,25 @@ class ScratchSpace(val root: File, private val syncDirectory: (File) -> Unit = {
     try { android.system.Os.fsync(descriptor) } finally { android.system.Os.close(descriptor) }
 }) {
     private val inUse = mutableSetOf<String>()
-    suspend fun <T> withFolder(purpose: String, body: suspend (File) -> T): T {
+    private var deleting = false
+    private val operations = kotlinx.coroutines.flow.MutableStateFlow(0)
+
+    suspend fun <T> withOperation(body: suspend () -> T): T {
+        synchronized(inUse) { check(!deleting); operations.value++ }
+        try { return body() }
+        finally { synchronized(inUse) { operations.value-- } }
+    }
+
+    suspend fun drainForWalletDeletion() {
+        synchronized(inUse) { deleting = true }
+        operations.first { it == 0 }
+    }
+
+    fun finishWalletDeletion() = synchronized(inUse) { deleting = false }
+
+    suspend fun <T> withFolder(purpose: String, body: suspend (File) -> T): T = withOperation {
         val folder = makeFolder(purpose)
-        try { return body(folder) }
+        try { body(folder) }
         finally { discard(folder) }
     }
     fun <T> withFolderBlocking(purpose: String, body: (File) -> T): T {
@@ -21,6 +38,7 @@ class ScratchSpace(val root: File, private val syncDirectory: (File) -> Unit = {
     }
     /** For share-sheet lifetimes; the caller must discard after dismissal. */
     fun makeFolder(purpose: String): File = synchronized(inUse) {
+        check(!deleting) { "Wallet deletion is in progress" }
         File(root, "$purpose-${UUID.randomUUID()}").also {
             check(it.mkdirs()) { "Cannot create scratch folder" }
             inUse.add(it.name)
@@ -31,10 +49,11 @@ class ScratchSpace(val root: File, private val syncDirectory: (File) -> Unit = {
     }
     /** Deletion must fail before erasing the seed if any plaintext survives or is still in use. */
     fun sweepForWalletDeletion() = synchronized(inUse) {
-        check(inUse.isEmpty()) { "Scratch operations are still active" }
+        check(operations.value == 0 && (deleting || inUse.isEmpty())) { "Scratch operations are still active" }
         if (root.exists()) {
             val folders = root.listFiles() ?: error("Cannot inspect scratch files")
             folders.forEach { check(it.deleteRecursively()) { "Cannot delete scratch files" } }
+            inUse.clear()
             syncDirectory(root)
         }
         root.parentFile?.takeIf { it.exists() }?.let(syncDirectory)

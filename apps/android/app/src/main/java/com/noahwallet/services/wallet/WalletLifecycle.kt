@@ -19,11 +19,19 @@ class WalletLifecycle(
     private val clearWidget: () -> Unit,
     private val sweepScratch: () -> Unit,
     private val settleBackground: suspend () -> Unit = {},
+    private val drainExports: suspend () -> Unit = {},
+    private val finishBackground: () -> Unit = {},
+    private val isSuspended: () -> Boolean = { false },
     private val syncFiles: () -> Unit = {},
     private val warn: (String) -> Unit = {},
 ) {
     class RestorePending : Exception("Restart Noah to settle the pending restore before deleting")
+    class TemporaryFiles : Exception("Noah couldn't remove temporary wallet files. Restart Noah and try again.")
     private val mutation = Mutex()
+
+    suspend fun recoverDeletion() = withContext(NonCancellable + Dispatchers.IO) {
+        mutation.withLock { if (location.deletionMarker.exists()) deleteLocked() }
+    }
 
     suspend fun suspend() = withContext(NonCancellable + Dispatchers.IO) {
         mutation.withLock {
@@ -36,24 +44,39 @@ class WalletLifecycle(
     suspend fun resume() = mutation.withLock { setSuspended(false) }
 
     suspend fun delete() = withContext(NonCancellable + Dispatchers.IO) {
-        mutation.withLock {
-            // Also gates delayed foreground/push opens and drains backup state writes before MMKV is cleared.
-            setSuspended(true)
+        mutation.withLock { deleteLocked() }
+    }
+
+    private suspend fun deleteLocked() {
+        val wasSuspended = isSuspended()
+        setSuspended(true)
+        try {
             settleBackground()
-            try { deregister() } catch (_: Exception) { warn("Deregistration failed while deleting wallet") }
+            drainExports()
             session.closeSettled()
             val reservation = session.reserve()
             try {
                 if (location.restorePending) throw RestorePending()
+                try { sweepScratch() } catch (_: Exception) { throw TemporaryFiles() }
+                // The durable marker commits the deletion; every later launch finishes it.
+                if (!location.deletionMarker.exists()) {
+                    java.io.FileOutputStream(location.deletionMarker).use { it.write(1); it.fd.sync() }
+                    syncFiles()
+                }
+                try { deregister() } catch (_: Exception) { warn("Deregistration failed while deleting wallet") }
                 check(!location.directory.exists() || location.directory.deleteRecursively()) { "Cannot delete wallet files" }
                 check(!location.restoreDirectory.exists() || location.restoreDirectory.deleteRecursively()) { "Cannot delete restore files" }
-                sweepScratch()
                 syncFiles()
                 deleteSeed()
                 clearToken()
                 clearSettings()
                 clearWidget()
+                check(location.deletionMarker.delete())
+                syncFiles()
             } finally { session.release(reservation) }
-        }
+        } catch (failure: Exception) {
+            if (!location.deletionMarker.exists()) setSuspended(wasSuspended)
+            throw failure
+        } finally { finishBackground() }
     }
 }

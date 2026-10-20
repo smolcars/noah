@@ -80,7 +80,10 @@ class AppServices private constructor(private val context: Context) {
     private val restoreRecovery = RestoreRecovery {
         WalletRestorer.recoverInterruptedRestore(session, WalletDataLocation(context.filesDir, variant), SeedItem(seed))
     }
-    suspend fun recoverRestore(): RestoreTransaction.Recovery = restoreRecovery.settle()
+    suspend fun recoverRestore(): RestoreTransaction.Recovery {
+        lifecycle.recoverDeletion()
+        return restoreRecovery.settle()
+    }
 
     fun restorer() = WalletRestorer(variant, session, WalletDataLocation(context.filesDir, variant), SeedItem(seed),
         makeClient = { phrase ->
@@ -108,6 +111,8 @@ class AppServices private constructor(private val context: Context) {
         clearWidget = { com.noahwallet.services.push.WidgetDataWriter.clear(context, variant) },
         sweepScratch = {
             scratch.sweepForWalletDeletion()
+            com.noahwallet.services.sharing.SettingsShareFiles.live(context).deleteAll()
+            com.noahwallet.history.HistoryExportFiles.live(context).deleteAll()
             com.noahwallet.services.wallet.WalletDatabase.sweepForWalletDeletion()
         },
         settleBackground = {
@@ -115,6 +120,9 @@ class AppServices private constructor(private val context: Context) {
             backupCoordinator.settle()
             startup.withLock { started = false }
         },
+        drainExports = scratch::drainForWalletDeletion,
+        finishBackground = scratch::finishWalletDeletion,
+        isSuspended = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true },
         syncFiles = {
             val fd = android.system.Os.open(context.filesDir.path, android.system.OsConstants.O_RDONLY, 0)
             try { android.system.Os.fsync(fd) } finally { android.system.Os.close(fd) }
