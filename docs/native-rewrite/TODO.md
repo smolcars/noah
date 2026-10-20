@@ -263,6 +263,12 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 - [x] M5 round-3 verification: 532 Android JVM tests (36 suites, zero failures/errors/skips), regtest APK and instrumentation Kotlin compilation; iOS NoahTests 321 total / 308 passed / 13 opt-in skipped / 0 failed (73 suites). Each full suite ran once; own simulator verified, shut down and deleted — `apps/android/SettingsTests/README.md`
 
+- [x] M5 round-4 deletion ownership — both platforms: durable salted seed HMAC and local instance ID in the external marker; absent datadir never bypasses seed ownership; mismatched/unreadable seed and legacy markers discarded without changing the wallet; seed A/B/none/unreadable matrix
+
+- [x] M5 round-4 mixed restore/deletion recovery — both platforms: shared launch/push/WorkManager recovery settles restore before deletion; impossible marker+journal coexistence invalidates and syncs stale marker before journal removal, including unlink-sync retry; matching-marker rollback/completion, unlock retry, concurrent recovery and post-rollback interruption regressions
+
+- [x] M5 round-4 verification: Android 557 JVM tests (40 suites, zero failures/errors/skips) and regtest APK assembly; signed arm64 iOS NoahTests 351 total / 335 passed / 16 opt-in skipped / 0 failed (79 suites), each full suite once. Verified own simulator identity/shutdown before deletion; removed DerivedData and all result bundles — `apps/android/SettingsTests/README.md`
+
 ## M6 — Onchain & exits
 - [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt with txid-only read refresh/relaunch reconciliation for missing fees (prepared boarding awaits FFI 18, same priority as 14)
 - [x] VTXOsScreen + VTXODetailScreen + delegated refresh review dialog — iOS

@@ -264,3 +264,68 @@ the requested instrumentation sources were compiled. The new incomplete-wallet
 confirmation UI was compiled, with its deletion/retry behavior covered through
 lifecycle tests, but not manually driven. Protected devices and infrastructure
 were untouched.
+
+
+## Round-4 deletion recovery follow-up (2026-10-19)
+
+This supersedes round 3's UUID-only / one-byte legacy-marker recovery policy.
+Both platforms now persist the local instance ID plus a random salt and
+HMAC-SHA256 mnemonic tag in the deletion marker outside the removed datadir.
+Recovery requires the current seed to match that tag even when the datadir has
+already gone. A different or unreadable seed discards the stale marker, with a
+fixed message containing no secrets, and preserves wallet/local state. A missing
+seed permits the remaining non-seed cleanup for a valid marker. Legacy UUID-only,
+one-byte and malformed markers cannot establish seed ownership and are discarded;
+an incomplete wallet remains explicitly deletable with fresh confirmation.
+
+Launch and push/WorkManager use the same serialized recovery path: restore settles
+before deletion recovery and wallet opening. A committed deletion cannot coexist
+with a restore journal because each mutation refuses the other's marker. Such a
+marker is therefore stale even if its instance and seed match. Its removal is
+synced before restore can remove its journal, preventing a crash immediately after
+rollback from reauthorizing stale deletion on the next launch. A failed marker
+unlink sync is retried before journal settlement, including when the marker is
+already absent. Locked secure storage leaves the restore pending until retry;
+no wallet data or seed is deleted by the stale marker.
+
+Regression coverage on both platforms includes the 16 absent-datadir combinations
+of bound/UUID-only/one-byte/malformed marker with seed A/B/none/unreadable; populated
+and partial legacy datadirs; all prior destructive boundaries; matching-marker
+plus installing/committing journals; rollback and completed restore; concurrent
+UI/headless recovery; secure-storage unlock retry; and interruption immediately
+after rollback removes the journal. The existing iOS shared gate and Send wallet
+change hook, 30-second bounded drains and Android export-directory syncs remain.
+
+Only disposable iOS 27.0 simulator `Noah Deletion R4 Sol 78ed`
+(`E68A57C5-4ADC-4AAF-BC0E-B1B0CBC96313`) was used. Signing remained enabled.
+DerivedData and all result bundles were isolated under `/private/tmp`.
+No Android emulator, protected simulator, physical device or Docker was used.
+
+Final full-suite commands (one run of each after targeted checks):
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+nix develop --command sh -c 'cd apps/ios && /opt/homebrew/bin/xcodegen generate && xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest -destination "platform=iOS Simulator,id=E68A57C5-4ADC-4AAF-BC0E-B1B0CBC96313" -derivedDataPath /private/tmp/noah-deletion-r4-78ed-ios -resultBundlePath /private/tmp/noah-deletion-r4-78ed-full.xcresult -jobs 2 ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -parallel-testing-enabled NO test'
+```
+
+Final results: **557 Android JVM tests**, **40 suites**, **0 failures / 0 errors /
+0 skips**; regtest APK assembly passed. Full iOS `NoahTests`: **351 tests**,
+**79 suites**, **335 passed / 16 opt-in skipped / 0 failed**, from xcresult's
+summary. Each full suite ran once. Targeted iteration passed Android's 15 lifecycle
+tests, 35 lifecycle/restorer tests, then the final 18 lifecycle tests; iOS's 12
+lifecycle tests (including the 16-case seed/marker matrix), 30 lifecycle/restorer
+tests, then the final 15 lifecycle tests (including that matrix and three journal
+phases). The initial targeted iOS compile caught a test helper whose return type
+was widened accidentally; it was corrected before successful targeted runs.
+Nix evaluation-cache contention delayed some starts; no full rerun was needed.
+
+Logs: `/private/tmp/noah-r4-android-full.log`, `/private/tmp/noah-r4-ios-full.log`.
+The iOS summary is retained in `/private/tmp/noah-r4-ios-full-summary.json`.
+After testing, the simulator's exact UUID/name and `Shutdown` state were verified,
+then only that simulator was deleted. Its DerivedData and all five targeted/full
+`.xcresult` bundles were removed and their absence checked. No protected device
+or infrastructure was changed.
+
+No funded-wallet acceptance, Android instrumentation or physical-device biometric
+checks were rerun in this round. The requested JVM/build and signed iOS suites
+passed; restore UI, Send/Onchain/BTC Map, server and `client/` files were untouched.
