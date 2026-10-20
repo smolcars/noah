@@ -107,6 +107,8 @@ class AppServices private constructor(private val context: Context) {
     fun stopRecurringAutomation() {
         val generation = java.util.UUID.randomUUID().toString()
         try {
+            val directory = WalletDataLocation(context.filesDir, variant).directory
+            if (directory.isDirectory) com.noahwallet.recurring.RecurringAutomationAuthority(directory).stop()
             settings.set(generation, com.noahwallet.services.wallet.WalletLifecycle.automationStopKey); settings.sync()
             check(settings.string(com.noahwallet.services.wallet.WalletLifecycle.automationStopKey) == generation)
         } catch (failure: Exception) { recurringAutomationStorageFailed = true; throw failure }
