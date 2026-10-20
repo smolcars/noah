@@ -63,6 +63,17 @@ struct MMKVRecoveryTests {
         }
     }
 
+    @Test func lazyReloadAfterCacheEvictionRetainsQuarantineTarget() throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        let store = try SettingsStorage(rootPath: root.path)
+        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
+        raw.clearMemoryCache()
+        try Self.corrupt(root, mode: "crc")
+        #expect(throws: (any Error).self) { try store.requireHealthy() }
+        #expect(MMKVQuarantine(root: root, store: Self.id).exists)
+        #expect(store.string(forKey: PersistedWalletState.key) == nil)
+    }
+
     @Test(arguments: ["crc", "length", "truncate"])
     func recoversCorruptRNFilesWithoutDiscarding(mode: String) throws {
         let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
@@ -245,10 +256,6 @@ struct MMKVRecoveryTests {
         bytes[value.lowerBound + 3] = 0xff
         try bytes.write(to: file)
         try Self.corrupt(root, mode: "crc")
-        let raw = try #require(MMKV(mmapID: Self.id, rootPath: root.path))
-        #expect(raw.contains(key: PersistedWalletState.key))
-        #expect(raw.string(forKey: PersistedWalletState.key) == nil)
-        raw.close()
         #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
     }
 

@@ -73,8 +73,7 @@ final class SettingsStorage: @unchecked Sendable {
         try MMKVIntegrity.quarantineBeforeOpen(root: URL(fileURLWithPath: rootPath), store: instanceID, quarantine: quarantine)
         try backup.prepare()
         try MMKVIntegrity.quarantineBeforeOpen(root: URL(fileURLWithPath: rootPath), store: instanceID, quarantine: quarantine)
-        Self.handler.begin(quarantine)
-        defer { Self.handler.end() }
+        Self.handler.begin(quarantine, store: instanceID)
         let retiredKeys = try backup.retiredKeys
         let snapshot = retiredKeys == nil ? try Self.snapshotInventory(backup, instanceID: instanceID, quarantine: quarantine) : nil
         let generation = Self.handler.generation
@@ -168,7 +167,10 @@ final class SettingsStorage: @unchecked Sendable {
     }
 
     func string(forKey key: String) -> String? {
-        quarantine.exists ? nil : mmkv?.string(forKey: key)
+        Self.access.lock(); defer { Self.access.unlock() }
+        guard !quarantine.exists, !quarantine.writeFailed else { return nil }
+        let value = mmkv?.string(forKey: key)
+        return quarantine.exists || quarantine.writeFailed ? nil : value
     }
 
     func set(_ value: String, forKey key: String) {
@@ -235,18 +237,27 @@ final class SettingsStorage: @unchecked Sendable {
 
 private final class RecoveryHandler: NSObject, MMKVHandler, @unchecked Sendable {
     private let lock = NSLock()
-    private var active: MMKVQuarantine?
+    private var stores: [String: MMKVQuarantine] = [:]
     private var recoveries: UInt64 = 0
     var generation: UInt64 { lock.withLock { recoveries } }
-    func begin(_ quarantine: MMKVQuarantine) { lock.withLock { active = quarantine } }
-    func end() { lock.withLock { active = nil } }
+    // Retain the target after initialization: MMKV can reload after memory-warning cache eviction.
+    func begin(_ quarantine: MMKVQuarantine, store: String) { lock.withLock { stores[store] = quarantine } }
+    private func protectRecovery(_ mmapID: String) {
+        lock.withLock {
+            // MMKV 2.4.3 has only recover/discard; both rewrite files. Do not return on failed durability.
+            guard let marker = stores[mmapID], marker.recordRecovery() else {
+                fatalError("Cannot safely recover settings")
+            }
+            recoveries &+= 1
+        }
+    }
     func onMMKVCRCCheckFail(_ mmapID: String) -> MMKVRecoverStrategic {
-        lock.withLock { active?.recordRecovery(); recoveries &+= 1 }
+        protectRecovery(mmapID)
         AppLog("mmkv").w("CRC check failed; recovering settings")
         return .onErrorRecover
     }
     func onMMKVFileLengthError(_ mmapID: String) -> MMKVRecoverStrategic {
-        lock.withLock { active?.recordRecovery(); recoveries &+= 1 }
+        protectRecovery(mmapID)
         AppLog("mmkv").w("File length check failed; recovering settings")
         return .onErrorRecover
     }
