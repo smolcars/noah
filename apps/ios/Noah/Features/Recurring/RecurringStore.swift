@@ -79,6 +79,7 @@ final class RecurringStore: @unchecked Sendable {
     }
     private static func payment(id: String, raw: String) -> RecurringPayment {
         let decoded = try? { () throws -> RecurringPayment in
+            try RawObject.requireUniqueProperties(raw)
             try Self.requireNumericTokens(raw)
             return try JSONDecoder().decode(RecurringPayment.self, from: Data(raw.utf8))
         }()
@@ -283,6 +284,35 @@ struct RawObject {
             }
             fields[key] = String(decoding: bytes[valueStart..<index], as: UTF8.self)
             if bytes[index] == 44 { index += 1; whitespace() }
+        }
+    }
+    /// Inspect original keys before Foundation/JSONDecoder choose different duplicate values.
+    static func requireUniqueProperties(_ raw: String) throws {
+        let bytes = Array(raw.utf8)
+        var objects: [Set<String>?] = []
+        var index = 0
+        while index < bytes.count {
+            switch bytes[index] {
+            case 123: objects.append([])
+            case 91: objects.append(nil)
+            case 125, 93: objects.removeLast()
+            case 34:
+                let start = index
+                index += 1
+                while bytes[index] != 34 { if bytes[index] == 92 { index += 1 }; index += 1 }
+                index += 1
+                let end = index
+                while index < bytes.count, [9, 10, 13, 32].contains(bytes[index]) { index += 1 }
+                if index < bytes.count, bytes[index] == 58 {
+                    let key = try JSONDecoder().decode(String.self, from: Data(bytes[start..<end]))
+                    guard objects[objects.count - 1]!.insert(key).inserted else {
+                        throw RecurringError.message(RecurringPayment.unsupportedMessage)
+                    }
+                }
+                continue
+            default: break
+            }
+            index += 1
         }
     }
     static func arrayObjects(_ raw: String) throws -> [RawObject] {
