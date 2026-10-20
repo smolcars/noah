@@ -85,6 +85,9 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Server auth token reader/writer (RN_KEYCHAIN, existing GCM/CBC alias; excluded from backup) — Android
 - [x] MMKV: open `noah-wallet-storage` + zustand envelope codec, `wallet-storage` decoded — iOS
 - [x] MMKV — Android
+- [x] MMKV interrupted-update safety — both platforms: recover CRC/length errors; fixed redacted diagnostics; immutable fsynced pre-open RN file-pair backup outside MMKV; one closed-file restore with restart journal; unavailable/support gate on loss; existing DB/seed + missing wallet-storage never enters onboarding
+- [x] MMKV safety regression coverage — shared real RN mmap fixture; discard baseline vs CRC/length/truncation recovery; backup/sync/retry/restore/deletion gates; recurring journal rejects a recovered older policy without duplicate payment
+- [x] Upgrade runners cover install while RN is running/writing (`INSTALL_WHILE_RUNNING=1`, default); stopped baseline mode retained (`=0`). Run both for acceptance; live results are recorded in each platform's upgrade docs.
 - [ ] Remaining RN store shapes (decode as their screens land)
   - [x] Review round 1: exact raw version tokens; recoverable profile fallback without stored-value repair; one deterministic RN Zustand generator/196-case raw fixture consumed by both native suites — `apps/fixtures/README.md`
   - [x] iOS: inventory all 8 stores; validate consumed envelopes/versions, preserve unknown JSON tokens, apply transaction v0 migration; RN-generated fixtures; Esplora decoder remains inactive until its native screen lands — `apps/ios/UpgradeTests/README.md`
