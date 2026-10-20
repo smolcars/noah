@@ -1,0 +1,80 @@
+import Foundation
+
+/// A single durable native-settings value is the write-ahead record. Until commit,
+/// launch uses active (the previous working selection), never the pending candidate.
+struct EsploraSettings: Sendable {
+    static let key = "native-esplora-selection"
+    struct Selection: Codable, Equatable, Sendable {
+        var endpoint: String?
+        var variant: String
+        var input: String? = nil
+        var attention: String? = nil
+    }
+    struct Record: Codable, Equatable, Sendable {
+        var active: Selection
+        var pending: Selection? = nil
+    }
+    let read: @Sendable (String) -> String?
+    let write: @Sendable (String, String) throws -> Void
+    init(storage: SettingsStorage = .shared) {
+        read = { storage.string(forKey: $0) }
+        write = { try storage.setDurably($1, forKey: $0) }
+    }
+    init(read: @escaping @Sendable (String) -> String?, write: @escaping @Sendable (String, String) throws -> Void) {
+        self.read = read; self.write = write
+    }
+    func record() throws -> Record? {
+        try read(Self.key).map { try JSONDecoder().decode(Record.self, from: Data($0.utf8)) }
+    }
+    func save(_ record: Record) throws {
+        try write(Self.key, String(decoding: JSONEncoder().encode(record), as: UTF8.self))
+    }
+    var importedInput: String? {
+        struct State: Decodable { var endpointOverride: String? }
+        return read("esplora-storage").flatMap {
+            try? JSONDecoder().decode(PersistedEnvelope<State>.self, from: Data($0.utf8)).state.endpointOverride
+        }
+    }
+    func selection(for variant: AppVariant) -> Selection {
+        guard let record = try? record(), record.active.variant == variant.rawValue else {
+            return Selection(variant: variant.rawValue, input: importedInput,
+                attention: importedInput == nil ? nil : "This imported endpoint needs attention. Test and save it before use.")
+        }
+        return record.active
+    }
+    func resolve(for variant: AppVariant, fetch: EsploraEndpoint.Fetch = EsploraEndpoint.fetch) async throws -> String? {
+        if let record = try record() {
+            if record.pending != nil { try save(Record(active: record.active)) }
+            return record.active.variant == variant.rawValue && variant != .regtest
+                ? record.active.endpoint.flatMap { try? EsploraEndpoint.normalize($0) } : nil
+        }
+        var selection = Selection(variant: variant.rawValue)
+        if let input = importedInput {
+            selection.input = input
+            do { selection.endpoint = try await EsploraEndpoint.validate(input, variant: variant, fetch: fetch) }
+            catch { selection.attention = "This imported endpoint needs attention. Test and save it before use." }
+        }
+        try save(Record(active: selection))
+        return selection.endpoint
+    }
+    /// Called under the lifecycle gate and a closed-session reservation.
+    func change(to candidate: Selection,
+                reopen: @Sendable (Selection, @escaping @Sendable () throws -> Void) async throws -> Void) async throws {
+        let previous = selection(for: AppVariant(rawValue: candidate.variant)!)
+        try save(Record(active: previous, pending: candidate))
+        do {
+            try await reopen(candidate) { try save(Record(active: candidate)) }
+        } catch {
+            // Keep pending if rollback storage fails: cold launch still selects active.
+            try save(Record(active: previous))
+            do { try await reopen(previous, {}) }
+            catch { throw EsploraEndpoint.Failure(message: "Endpoint not changed. Restart Noah to reopen the previous endpoint.") }
+            throw EsploraEndpoint.Failure(message: "Endpoint not changed. The wallet is using the previous endpoint.")
+        }
+    }
+}
+
+/// Only the reservation holder may open a pending candidate; ordinary opens use active.
+enum EsploraOpening {
+    @TaskLocal static var selection: EsploraSettings.Selection?
+}

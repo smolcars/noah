@@ -1,0 +1,62 @@
+import Foundation
+
+/// RN's normalizeEsploraEndpoint and genesis validation, shared with Android via esplora.json.
+enum EsploraEndpoint {
+    struct Failure: LocalizedError, Equatable {
+        let message: String
+        var errorDescription: String? { message }
+    }
+    static func normalize(_ value: String) throws -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw Failure(message: "Enter an Esplora API endpoint.") }
+        let input = trimmed.range(of: "^https?://", options: [.regularExpression, .caseInsensitive]) == nil ? "https://" + trimmed : trimmed
+        guard var url = URLComponents(string: input), let host = url.host, !host.isEmpty,
+              !host.contains(where: { $0.isWhitespace }), url.url != nil else {
+            throw Failure(message: "Enter a valid Esplora API URL.")
+        }
+        guard url.user == nil, url.password == nil else { throw Failure(message: "The Esplora endpoint cannot include credentials.") }
+        guard url.query == nil, url.fragment == nil else { throw Failure(message: "The Esplora endpoint cannot include a query string or fragment.") }
+        url.scheme = url.scheme?.lowercased(); url.host = host.lowercased()
+        if url.port == (url.scheme == "http" ? 80 : 443) { url.port = nil }
+        var path = url.percentEncodedPath.replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
+        for suffix in ["/blocks/tip/height", "/blocks/tip/hash", "/block-height/0"] where path.hasSuffix(suffix) {
+            path.removeLast(suffix.count); break
+        }
+        url.percentEncodedPath = path
+        guard let result = url.string else { throw Failure(message: "Enter a valid Esplora API URL.") }
+        return result.replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
+    }
+    static func validateGenesis(_ value: String, variant: AppVariant) throws {
+        guard variant != .regtest else { throw Failure(message: "Regtest wallets use Bitcoin Core instead of Esplora.") }
+        let hash = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard hash.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil else {
+            throw Failure(message: "The endpoint returned an invalid block hash.")
+        }
+        let expected = variant == .mainnet ? "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f" : "00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6"
+        guard hash == expected else { throw Failure(message: "The Esplora endpoint is for a different Bitcoin network.") }
+    }
+    static func validateTip(_ value: String) throws {
+        let height = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard height.range(of: "^[0-9]+$", options: .regularExpression) != nil, UInt32(height) != nil else {
+            throw Failure(message: "The endpoint returned an invalid block height.")
+        }
+    }
+    typealias Fetch = @Sendable (String) async throws -> String
+    static func validate(_ value: String, variant: AppVariant, fetch: Fetch = fetch) async throws -> String {
+        let endpoint = try normalize(value)
+        guard variant != .regtest else { throw Failure(message: "Regtest wallets use Bitcoin Core instead of Esplora.") }
+        try validateGenesis(try await fetch(endpoint + "/block-height/0"), variant: variant)
+        try validateTip(try await fetch(endpoint + "/blocks/tip/height"))
+        return endpoint
+    }
+    static func fetch(_ value: String) async throws -> String {
+        guard let url = URL(string: value) else { throw Failure(message: "Enter a valid Esplora API URL.") }
+        var request = URLRequest(url: url); request.timeoutInterval = 5
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard (response as? HTTPURLResponse)?.statusCode == 200, data.count < 1024,
+                  let text = String(data: data, encoding: .utf8) else { throw URLError(.badServerResponse) }
+            return text
+        } catch { throw Failure(message: "Unable to reach the Esplora endpoint. Check the URL and try again.") }
+    }
+}

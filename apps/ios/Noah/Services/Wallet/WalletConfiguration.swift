@@ -69,6 +69,14 @@ struct WalletConfiguration: Equatable, Sendable {
         }
     }
 
+    static func effective(for variant: AppVariant, endpoint: String?) -> WalletConfiguration {
+        var config = base(for: variant)
+        if variant != .regtest, let endpoint, let normalized = try? EsploraEndpoint.normalize(endpoint) {
+            config.esplora = normalized
+        }
+        return config
+    }
+
     /// Same format as the RN app: `noah-<variant>-<platform>/<version>`.
     static func userAgent(variant: AppVariant, version: String) -> String {
         "noah-\(variant.rawValue)-ios/\(version)"

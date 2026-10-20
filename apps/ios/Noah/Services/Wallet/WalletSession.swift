@@ -597,7 +597,10 @@ actor WalletSession {
             guard !location.hasMultipleDatabases else { throw StoredSeed.Failure.conflict }
             // Direct/background callers must not bypass the launch seed gate.
             try StoredSeed.requireUsable(KeychainPassword.mnemonic(for: variant).read())
-            let configuration = WalletConfiguration.base(for: variant)
+            let endpoint: String?
+            if let selection = EsploraOpening.selection { endpoint = selection.endpoint }
+            else { endpoint = try await EsploraSettings().resolve(for: variant) }
+            let configuration = WalletConfiguration.effective(for: variant, endpoint: endpoint)
             let config = configuration.sdkConfig(
                 userAgent: WalletConfiguration.userAgent(variant: variant, version: appVersion))
             // Existing wallets go through the SDK's read-only identity check
