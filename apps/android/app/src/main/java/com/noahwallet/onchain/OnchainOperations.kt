@@ -2,6 +2,7 @@ package com.noahwallet.onchain
 
 import com.noahwallet.services.wallet.ChainStatus
 import io.github.niteshbalusu11.bark.*
+import kotlinx.coroutines.*
 
 internal class OnchainOperations(
     private val wallet: OnchainWalletAccess, private val journal: OnchainOperationJournal,
@@ -29,21 +30,24 @@ internal class OnchainOperations(
         if (!ready()) fail(OnchainFailure.unavailable)
         val minimum = wallet.minimum() ?: fail(OnchainFailure.unavailable)
         val balance = wallet.confirmed()
-        // This candidate is never displayed: review always uses the signed transaction's exact values.
-        val candidate = balance - BoardingRules.reserve - BoardingRules.onchainFee(wallet.regularSatPerKwu())
-        if (candidate < BoardingRules.threshold(minimum)) return null
-        var prepared = quote(OnchainAction.board, amount = candidate, automatic = true)
-        if (prepared.reserveLeft < BoardingRules.reserve) {
-            wallet.discardBoard(checkNotNull(prepared.preparedBoard).id)
-            val reduced = prepared.amount - (BoardingRules.reserve - prepared.reserveLeft)
-            if (reduced <= 0) return null
-            prepared = quote(OnchainAction.board, amount = reduced, automatic = true)
+        if (balance <= BoardingRules.reserve + BoardingRules.threshold(minimum)) return null
+        val probe = quote(OnchainAction.board, automatic = true)
+        val candidate = try {
+            // Fixed-amount boarding adds a 43-vB Taproot change output to the confirmed-input drain.
+            probe.amount - BoardingRules.reserve - 43 * checkNotNull(probe.feeRate)
+        } finally { withContext(NonCancellable) { wallet.discardBoard(checkNotNull(probe.preparedBoard).id) } }
+        currentCoroutineContext().ensureActive()
+        if (candidate < BoardingRules.threshold(minimum) || !ready()) return null
+        val prepared = quote(OnchainAction.board, amount = candidate, automatic = true)
+        var reviewed = false
+        try {
+            currentCoroutineContext().ensureActive()
+            if (prepared.reserveLeft < BoardingRules.reserve || prepared.net < BoardingRules.threshold(minimum) || !ready()) return null
+            reviewed = true
+            return prepared
+        } finally {
+            if (!reviewed) withContext(NonCancellable) { wallet.discardBoard(checkNotNull(prepared.preparedBoard).id) }
         }
-        if (prepared.reserveLeft < BoardingRules.reserve || prepared.net < BoardingRules.threshold(minimum) || !ready()) {
-            wallet.discardBoard(checkNotNull(prepared.preparedBoard).id)
-            return null
-        }
-        return prepared
     }
     suspend fun quote(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0,
         destination: String? = null, automatic: Boolean = false): OnchainQuote {
@@ -58,6 +62,7 @@ internal class OnchainOperations(
                 val prepared = try { wallet.prepareBoard(amount, amount == 0L, rate) }
                     catch (error: BarkError) { throw OnchainException(boardFailure(error)) }
                 try {
+                    currentCoroutineContext().ensureActive()
                     if (!ready() || prepared.grossSats > Long.MAX_VALUE.toULong() ||
                         prepared.netSats + prepared.arkFeeSats != prepared.grossSats) fail(OnchainFailure.changed)
                     quote = quote.copy(amount = prepared.grossSats.toLong(), fee = prepared.arkFeeSats.toLong(),
@@ -65,7 +70,7 @@ internal class OnchainOperations(
                         preparedBoard = BoardPrepared(prepared.id, prepared.txid, prepared.vsize.toLong(), prepared.inputs.map { BoardInput(it.txid, it.vout) }))
                     wallet.bindBoard(quote)
                 } catch (error: Exception) {
-                    wallet.discardBoard(prepared.id)
+                    withContext(NonCancellable) { wallet.discardBoard(prepared.id) }
                     throw error
                 }
             }

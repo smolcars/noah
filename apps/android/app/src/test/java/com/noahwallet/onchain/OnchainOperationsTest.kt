@@ -25,6 +25,10 @@ class OnchainOperationsTest {
         var fee = 330L
         var chainRate = 250L
         var exactFee = 1543L
+        var extraFixedFee = 0L
+        var inputCount = 1
+        var afterPrepare: suspend (PreparedBoard) -> Unit = {}
+        var afterBind: () -> Unit = {}
         var submitOutcome: BroadcastOutcome = BroadcastOutcome.Accepted
         var submitError: Exception? = null
         var prepareError: BarkError? = null
@@ -35,10 +39,13 @@ class OnchainOperationsTest {
         val bound = mutableMapOf<String, OnchainQuote>()
         override suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard {
             prepareError?.let { throw it }
-            val gross = if (all) balance - exactFee else amount
-            return PreparedBoard("prepared-${preparations.size}", "board-tx", gross.toULong(), (gross - fee).toULong(), fee.toULong(), exactFee.toULong(), 199u, listOf(OutPoint("input", 0u))).also { preparations.add(it) }
+            val chainFee = exactFee + if (all) 0 else 43 * rate.toLong() + extraFixedFee
+            val gross = if (all) balance - chainFee else amount
+            if (gross < fee || gross + chainFee > balance) throw BarkError("insufficient balance", BarkErrorCode.INSUFFICIENT_FUNDS)
+            return PreparedBoard("prepared-${preparations.size}", "board-tx", gross.toULong(), (gross - fee).toULong(), fee.toULong(), chainFee.toULong(), 199u,
+                List(inputCount) { OutPoint("input-$it", 0u) }).also { preparations.add(it); afterPrepare(it) }
         }
-        override fun bindBoard(quote: OnchainQuote) { bound[quote.preparedBoard!!.id] = quote }
+        override fun bindBoard(quote: OnchainQuote) { bound[quote.preparedBoard!!.id] = quote; afterBind() }
         override fun claimBoard(quote: OnchainQuote) { if (bound[quote.preparedBoard!!.id] != quote) fail(OnchainFailure.changed) }
         override suspend fun discardBoard(id: String, includingClaimed: Boolean) { discarded.add(id); bound.remove(id) }
         override suspend fun allExits() = states.keys.mapNotNull { status(it) }
@@ -116,17 +123,93 @@ class OnchainOperationsTest {
     } }
     @Test fun automaticQuoteRepreparesOnceAndShowsExactReserve() = runBlocking { fixture { wallet, ops, _, _ ->
         val quote = checkNotNull(ops.autoBoardQuote())
-        assertEquals(93_457L, quote.amount)
+        assertEquals(93_414L, quote.amount)
         assertEquals(5000L, quote.reserveLeft)
         assertTrue(quote.automatic)
         assertFalse(quote.boardAll)
         assertEquals(2, wallet.preparations.size)
         assertEquals(listOf("prepared-0"), wallet.discarded)
         assertTrue(wallet.calls.isEmpty())
+        wallet.discardBoard(quote.preparedBoard!!.id)
         wallet.balance = 25_537
         assertNull(ops.autoBoardQuote())
+        assertTrue(wallet.bound.isEmpty())
         assertTrue(wallet.calls.isEmpty())
     } }
+    @Test fun automaticSizingStartsFundableWithManyInputsAndHighFees() = runBlocking { fixture { wallet, ops, _, _ ->
+        wallet.chainRate = 2500; wallet.exactFee = 8570; wallet.inputCount = 15
+        assertTrue(runCatching { ops.quote(OnchainAction.board, amount = 92_920) }.isFailure)
+        assertTrue(wallet.preparations.isEmpty())
+        val quote = checkNotNull(ops.autoBoardQuote())
+        assertEquals(86_000L, quote.amount); assertEquals(9000L, quote.chainFee)
+        assertEquals(5000L, quote.reserveLeft); assertEquals(15, quote.preparedBoard!!.inputs.size)
+        assertEquals(2, wallet.preparations.size); assertEquals(listOf("prepared-0"), wallet.discarded)
+        assertEquals(setOf(quote.preparedBoard.id), wallet.bound.keys)
+        wallet.discardBoard(quote.preparedBoard.id)
+        assertTrue(wallet.bound.isEmpty()); assertTrue(wallet.calls.isEmpty())
+    } }
+    @Test fun automaticSizingInsufficientBalanceNeverLeavesAPreparation() = runBlocking { fixture { wallet, ops, _, _ ->
+        wallet.balance = 25_000
+        assertNull(ops.autoBoardQuote()); assertTrue(wallet.preparations.isEmpty())
+        wallet.balance = 30_000; wallet.exactFee = 30_000
+        assertTrue(runCatching { ops.autoBoardQuote() }.isFailure)
+        assertTrue(wallet.preparations.isEmpty()); assertTrue(wallet.bound.isEmpty())
+        wallet.balance = 26_000; wallet.exactFee = 1543
+        assertNull(ops.autoBoardQuote())
+        assertEquals(listOf("prepared-0"), wallet.discarded); assertTrue(wallet.bound.isEmpty())
+    } }
+    @Test fun automaticSizingChecksExactNetAndReserveEdges() = runBlocking {
+        for (excess in listOf(0L, 1L)) fixture { wallet, ops, _, _ ->
+            wallet.extraFixedFee = excess
+            val quote = ops.autoBoardQuote()
+            if (excess == 0L) {
+                assertEquals(5000L, quote!!.reserveLeft)
+                wallet.discardBoard(quote.preparedBoard!!.id)
+            } else assertNull(quote)
+            assertEquals(listOf("prepared-0", "prepared-1"), wallet.discarded)
+            assertTrue(wallet.bound.isEmpty()); assertTrue(wallet.calls.isEmpty())
+        }
+        for (balance in listOf(26_915L, 26_916L)) fixture { wallet, ops, _, _ ->
+            wallet.balance = balance
+            val quote = ops.autoBoardQuote()
+            if (balance == 26_916L) {
+                assertEquals(20_000L, quote!!.net); assertEquals(5000L, quote.reserveLeft)
+                wallet.discardBoard(quote.preparedBoard!!.id)
+            } else assertNull(quote)
+            assertTrue(wallet.bound.isEmpty())
+        }
+    }
+    @Test fun automaticSizingDiscardsProbeBeforeReducedPreparationFailure() = runBlocking { fixture { wallet, ops, _, _ ->
+        wallet.extraFixedFee = 6000
+        assertTrue(runCatching { ops.autoBoardQuote() }.isFailure)
+        assertEquals(1, wallet.preparations.size)
+        assertEquals(listOf("prepared-0"), wallet.discarded)
+        assertTrue(wallet.bound.isEmpty()); assertTrue(wallet.calls.isEmpty())
+    } }
+    @Test fun automaticSizingDiscardsOnErrorCancellationAndLostReadiness() = runBlocking {
+        for (stage in listOf(1, 2)) for (outcome in listOf("error", "cancel", "not-ready")) fixture { wallet, _, journal, history ->
+            var ready = true
+            val ops = OnchainOperations(wallet, journal, history, ready = { ready })
+            wallet.afterBind = {
+                if (wallet.preparations.size == stage) when (outcome) {
+                    "error" -> error("bind failed")
+                    "cancel" -> throw CancellationException("interrupted")
+                    else -> ready = false
+                }
+            }
+            val result = runCatching { ops.autoBoardQuote() }
+            if (outcome == "not-ready") assertNull(result.getOrThrow()) else assertTrue(result.isFailure)
+            assertEquals(wallet.preparations.map { it.id }, wallet.discarded)
+            assertTrue(wallet.bound.isEmpty()); assertTrue(wallet.calls.isEmpty()); assertTrue(journal.loadAll().isEmpty())
+        }
+        for (stage in listOf(1, 2)) fixture { wallet, ops, _, _ ->
+            val owner = Job()
+            wallet.afterPrepare = { if (wallet.preparations.size == stage) owner.cancel() }
+            assertTrue(runCatching { withContext(owner) { ops.autoBoardQuote() } }.exceptionOrNull() is CancellationException)
+            assertEquals(wallet.preparations.map { it.id }, wallet.discarded)
+            assertTrue(wallet.bound.isEmpty())
+        }
+    }
     @Test fun staleChangedFeesBalanceIdentityAndInputsPreventAllMutations() = runBlocking { fixture { wallet, ops, journal, _ ->
         val quote = ops.quote(OnchainAction.board, amount = 30_000)
         val invalid = listOf(quote.copy(createdAt = System.currentTimeMillis() - 120_000), quote.copy(walletID = "other"),
@@ -240,7 +323,7 @@ class OnchainOperationsTest {
     @Test fun explicitGrossIsNeverRebuiltAndReturnedFeesAreExact() = runBlocking { fixture { wallet, ops, journal, _ ->
         val reviewed = ops.quote(OnchainAction.board, amount = 30_000)
         assertEquals(30_000L, reviewed.amount); assertEquals(29_670L, reviewed.net)
-        assertEquals(31_543L, reviewed.totalLeaving)
+        assertEquals(31_586L, reviewed.totalLeaving)
         assertFalse(reviewExplanation(reviewed).contains("estimate"))
         wallet.chainRate = 2500 // The already signed draft remains the approved transaction.
         ops.execute(reviewed)

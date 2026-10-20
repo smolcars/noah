@@ -251,7 +251,7 @@ Manual amount boarding now prepares `Amount(gross)`; MAX prepares confirmed-only
 shows gross, net Ark receives, both fee legs, total leaving the onchain wallet,
 signed vsize and input count. Auto-Board remains a persisted, one-shot confirmation
 prompt with a 5,000-sat reserve. Its exact reserve is confirmed minus prepared gross
-minus signed chain fee; an inadequate reserve discards and reduces gross once.
+minus signed chain fee. The round-1 fix below replaces estimate-based sizing.
 No hidden or expired review retains its preparation. The two-minute lifetime,
 pause/back/disposal, wallet-change cleanup and late-result generations follow Send.
 
@@ -333,3 +333,20 @@ The fingerprint-scoped live harness passed **6 stage executions**, zero failures
 Cleanup completed: verified `adb -s emulator-5592 emu avd name` was **NoahFfi050Android4978**, shut down that Device-panel device, confirmed its serial absent and ports closed, then deleted its AVD. Both AVD directory and ini are absent. Removed the task-owned SDK download/extraction and scratch files outside this worktree; shared Gradle/Android caches and all other devices/containers remain intact. [Cleanup evidence](ffi050/device-cleanup.txt).
 
 Final chain-status guard verification: **3 targeted SendChainStatusTest cases passed**, including absent/mempool evidence preserving unresolved locks; APK rebuilt successfully in 6 seconds. The full suite was not repeated. [Build log](../SendTests/ffi050/gradle-chain-guard.log).
+
+## 0.5.0 review fixes, round 1 — fundable Auto-Board sizing
+
+Auto-Board first prepares confirmed-only DrainAll to learn the fee for the entire
+confirmed input set. It always discards that probe before preparing one reduced
+fixed gross, subtracting the 5,000-sat reserve and 43 vB at the probe's fee rate
+for Taproot change. Only a final signed draft with net ≥ the boarding threshold
+and exact reserve ≥ 5,000 sats may reach review. Errors, cancellation, lost
+readiness and rejected drafts release their preparations; existing review
+lifecycle/expiry cleanup remains in force.
+
+The fake now rejects gross + chain fee above its balance and includes the change
+output fee. Regressions cover initially insufficient funds, 100,000 sats with
+15 inputs / 9,000-sat fixed fee at 10 sat/vB, exact-reserve and net-threshold
+edges, construction failures, cancellation at both preparations and readiness
+loss. Targeted OnchainOperationsTest, BoardPreparationsTest and OnchainModelTest:
+**40 tests passed, zero failures/errors/skips**. No live device was used.
