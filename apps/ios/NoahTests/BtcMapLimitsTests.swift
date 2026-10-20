@@ -110,6 +110,48 @@ struct BtcMapLimitsTests {
         #expect(try await BtcMapRepository.collect(exact, limit: 16).count == 16)
     }
 
+    @Test func encodedSizeMatchesFullEncodingIncludingUTF8EscapesAndMetadata() throws {
+        let raw = Data(#"{"schemaVersion":1,"generatedAt":"é\n","source":"é\\\"","places":[{"id":1,"lat":1,"lon":2,"icon":"cafe","name":"é🚀\"\n","updated_at":"today"}]}"#.utf8)
+        var snapshot = try BtcMapSnapshot.parse(raw)
+        let place = try #require(snapshot.places.first)
+        for count in [0, 1, 3] {
+            snapshot.places = Array(repeating: place, count: count)
+            #expect(try BtcMapLimits.encodedSize(snapshot) == JSONEncoder().encode(snapshot).count)
+        }
+    }
+
+    @Test func mergedByteLimitIsCheckedBeforeWritingOrAdvancingCursor() async throws {
+        let place = #"{"id":1,"lat":1,"lon":2,"icon":"cafe","name":"Cafe","updated_at":"today"}"#
+            .replacingOccurrences(of: "Cafe", with: String(repeating: "x", count: BtcMapLimits.stringBytes))
+        func entries(_ range: ClosedRange<Int>) -> String {
+            range.map { place.replacingOccurrences(of: #""id":1"#, with: #""id":\#($0)"#) }.joined(separator: ",")
+        }
+        let original = Data((#"{"schemaVersion":1,"generatedAt":"today","source":"btcmap.org","places":["# + entries(1...2000) + "]}").utf8)
+        let patches = Data(("[" + entries(2001...2100) + "]").utf8)
+        actor Requests {
+            var cursors: [String?] = []
+            func fetch(_ url: URL, patches: Data) -> Data {
+                cursors.append(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "updated_since" }?.value)
+                return patches
+            }
+        }
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let cache = folder.appending(path: "places")
+        try original.write(to: cache)
+        let requests = Requests()
+        let repository = BtcMapRepository(cacheURL: cache, fetch: { await requests.fetch($0, patches: patches) })
+        let initial = try await repository.load()
+        await #expect(throws: BtcMapError.resourceLimit) { try await repository.sync(now: Date(timeIntervalSince1970: 1000)) }
+        #expect(await requests.cursors == [initial.generatedAt])
+        #expect(try await repository.load().places == initial.places)
+        #expect(try await repository.load().generatedAt == initial.generatedAt)
+        #expect(try Data(contentsOf: cache) == original)
+        await #expect(throws: BtcMapError.resourceLimit) { try await repository.sync(now: Date(timeIntervalSince1970: 1300)) }
+        #expect(await requests.cursors == [initial.generatedAt, initial.generatedAt])
+    }
+
     @Test func oversizedSyncDoesNotRetryOrReplaceCacheAndHasCooldown() async throws {
         actor Requests {
             var count = 0

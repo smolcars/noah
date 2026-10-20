@@ -64,8 +64,8 @@ actor BtcMapRepository {
                 let patches = try BtcMapLimits.decodeRecords(BtcMapPatch.self, from: data)
                 let merged = current.merging(patches, at: Self.timestamp(now))
                 guard merged.places.count <= BtcMapLimits.records else { throw BtcMapError.resourceLimit }
+                _ = try BtcMapLimits.encodedSize(merged)
                 let encoded = try JSONEncoder().encode(merged)
-                try BtcMapLimits.check(encoded)
                 try encoded.write(to: cacheURL, options: .atomic)
                 return merged
             }

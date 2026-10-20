@@ -55,8 +55,8 @@ class BtcMapRepository(
                 val patches = BtcMapPatch.parse(fetch(syncURL(current.generatedAt)))
                 val merged = current.merging(patches, btcMapTimestamp(now))
                 BtcMapLimits.checkRecords(merged.places.size)
+                BtcMapLimits.encodedSize(merged)
                 val encoded = mapJson.encodeToString(merged)
-                BtcMapLimits.checkBytes(encoded)
                 currentCoroutineContext().ensureActive()
                 write(cache, encoded)
                 merged

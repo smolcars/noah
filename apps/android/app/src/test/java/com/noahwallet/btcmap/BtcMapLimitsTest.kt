@@ -148,6 +148,15 @@ class BtcMapLimitsTest {
         assertEquals(1, requests); assertEquals(initial, repository.load()); assertEquals(original, cache.readText())
     }
 
+    @Test fun encodedSizeMatchesFullEncodingIncludingUTF8EscapesAndMetadata() {
+        val original = BtcMapSnapshot.parse(snapshot(place.replace("Cafe", "é🚀\\\"\\n")))
+            .copy(source = "é\\\"\n", generatedAt = "é\n")
+        for (count in listOf(0, 1, 3)) {
+            val value = original.copy(places = List(count) { original.places.single() })
+            assertEquals(mapJson.encodeToString(value).toByteArray(Charsets.UTF_8).size, BtcMapLimits.encodedSize(value))
+        }
+    }
+
     @Test fun mergedByteLimitIsCheckedBeforeWritingOrAdvancingCursor() = runBlocking {
         val large = place.replace("Cafe", "x".repeat(BtcMapLimits.stringBytes))
         fun entries(range: IntRange) = range.joinToString(",") { large.replace("\"id\":1", "\"id\":$it") }

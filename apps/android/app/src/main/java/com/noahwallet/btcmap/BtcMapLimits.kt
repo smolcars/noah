@@ -47,6 +47,17 @@ internal object BtcMapLimits {
         if (text.length > stringBytes || text.toByteArray(Charsets.UTF_8).size > stringBytes) throw BtcMapResourceLimit()
     }
 
+    /** Count metadata, per-record encodings and commas before allocating the full cache JSON. */
+    fun encodedSize(snapshot: BtcMapSnapshot): Int {
+        var size = mapJson.encodeToString(snapshot.copy(places = emptyList())).toByteArray(Charsets.UTF_8).size
+        for ((index, place) in snapshot.places.withIndex()) {
+            size += mapJson.encodeToString(place).toByteArray(Charsets.UTF_8).size + if (index == 0) 0 else 1
+            if (size > bytes) throw BtcMapResourceLimit()
+        }
+        if (size > bytes) throw BtcMapResourceLimit()
+        return size
+    }
+
     fun checkRecords(count: Int) {
         if (count > records) throw BtcMapResourceLimit()
     }

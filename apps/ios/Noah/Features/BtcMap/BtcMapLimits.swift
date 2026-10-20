@@ -37,6 +37,20 @@ enum BtcMapLimits {
     static func check(_ string: String) throws {
         guard string.utf8.count <= stringBytes else { throw BtcMapError.resourceLimit }
     }
+    /// Count metadata, per-record encodings and commas before allocating the full cache JSON.
+    static func encodedSize(_ snapshot: BtcMapSnapshot) throws -> Int {
+        let encoder = JSONEncoder()
+        var metadata = snapshot
+        metadata.places = []
+        var size = try encoder.encode(metadata).count
+        for (index, place) in snapshot.places.enumerated() {
+            size += try encoder.encode(place).count + (index == 0 ? 0 : 1)
+            guard size <= bytes else { throw BtcMapError.resourceLimit }
+        }
+        guard size <= bytes else { throw BtcMapError.resourceLimit }
+        return size
+    }
+
     static func read(_ url: URL) throws -> Data {
         let file = try FileHandle(forReadingFrom: url)
         defer { try? file.close() }

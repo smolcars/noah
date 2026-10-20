@@ -16,12 +16,13 @@ nix develop --command sh -c 'cd apps/android && ./gradlew :app:testRegtestDebugU
 
 The test resource directories directly reference `apps/fixtures`,
 `client/assets/btcmap`, and `client/assets/geonames`. No fixture is forked.
-`BtcMapFixtureTest` runs **93 shared cases** as individual JUnit tests: 61
-RN-generated `btc-map` / `city-search` cases plus 32 `btc-map-review` cases
-(including all five dateline bounds cases and seven added phone vectors).
+`BtcMapFixtureTest` runs **108 shared cases** as individual JUnit tests: 61
+RN-generated `btc-map` / `city-search` cases, 32 `btc-map-review` cases
+(including all five dateline bounds cases and seven added phone vectors), and 15
+`btc-map-limits` cases.
 They cover UTC cursors, categories, distances, snapshot validation, sorted patch
 insertion / replacement / deletion, viewport validation, Unicode normalization,
-city ranking, web/phone validation and both bundled datasets. Another 26 tests
+city ranking, web/phone validation and both bundled datasets. Another 28 tests
 cover resource limits, cooldown/cache preservation, delayed retry, cancellation,
 concurrent requests and freshness, optional comments, safe links, city-selection
 filtering, viewport persistence, deleted selection and every visible merchant.
@@ -201,3 +202,28 @@ offline street-tile archive, or duplicate snapshot was added.
   evidence above predates these review fixes. iOS source was unchanged and the
   NoahTests target was not rerun. The APK size/hash above describes the earlier
   acceptance build, not this follow-up build.
+
+## Parsing hardening — 2026-10-19
+
+- Both native platforms reject JSON beyond **64 nested containers** before any
+  tree/typed decoder runs, including unknown fields. Root containers count as one.
+  `apps/fixtures/btc-map-limits.json` is the shared source for 15 regression cases:
+  snapshots, patches, details and comments at depths 64, 65 and 10,003, object
+  nesting, and escaped structural characters inside strings. Deep JSON stays in
+  raw strings so loading the fixture itself never builds the hostile tree.
+- Injected-clock tests cover backward jumps during sync and per-merchant oversize
+  cooldowns, expiry of successful caches after rollback, and forward recovery after
+  a successful retry. Negative elapsed time expires the entry; successful requests
+  clear the previous oversize timestamp so its cooldown cannot reappear.
+- Merged-cache size is summed from encoded metadata, each merchant and separators
+  before the full JSON string is allocated. UTF-8, escaping and empty/single/multiple
+  record counts match full encoding. The existing 32 MiB overflow regression keeps
+  its request-count, original-cache and unchanged-snapshot assertions.
+- The required Nix/Gradle command passed: **515 tests, 0 failures/errors/skips**,
+  including **136 map tests** (108 shared cases + 28 other map tests), and regtest
+  debug APK assembly passed. The merged-byte regression also passed with a temporary
+  Gradle init script setting the worker heap to **512 MiB** (1 test, 0 failures);
+  the committed **2g** worker setting was left unchanged.
+- Matching iOS code and shared regressions passed in the full NoahTests run
+  (**284 reported, 272 passed, 12 skipped, 0 failures**). Android used no device,
+  emulator or Docker service. iOS used only its newly created disposable simulator.

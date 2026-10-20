@@ -26,7 +26,7 @@ xcodegen generate
 xcodebuild -scheme Noah-Regtest \
   -destination 'platform=iOS Simulator,id=<your-own-simulator>' \
   -derivedDataPath DerivedData -packageAuthorizationProvider netrc \
-  -parallel-testing-enabled NO test \
+  -parallel-testing-enabled NO ARCHS=arm64 ONLY_ACTIVE_ARCH=YES test \
   -skip-testing:NoahTests/UpgradeCompatibilityTests
 ```
 
@@ -118,3 +118,38 @@ merchants without a permission prompt. The accessibility tree exposed Places
 in view, merchant rows and the matching detail sheet after selection. Full
 spoken VoiceOver navigation and physical-device phone calls were not exercised.
 The dedicated simulator was deleted after verification.
+
+## Parsing hardening — 2026-10-19
+
+- The same **64-container depth limit** as Android is checked iteratively before
+  JSONDecoder or JSONSerialization runs, including unknown fields. Root containers
+  count as one. Both platforms consume the 15 cases in
+  `apps/fixtures/btc-map-limits.json`: snapshot/patch/detail/comment boundaries,
+  roughly 20 KB hostile nesting, object nesting, and escaped string delimiters.
+- A direct Foundation probe on **iOS 27.0** accepted depths 64 and 65 and safely
+  rejected depth 10,003 with both JSONDecoder and JSONSerialization. Foundation was
+  already crash-safe for this input on that runtime, but accepted nesting beyond
+  our shared limit and returned its own error for extreme depth; map parsers now
+  consistently report `BtcMapError.resourceLimit` above 64. **iOS 18 runtime behavior
+  remains unverified**: only iOS 27.0/27.1 are installed, and Xcode reported both
+  iOS 18.0 and 18.5 unavailable for download. Building for deployment target 18.0
+  does not substitute for running Foundation on iOS 18.
+- Injected-clock regressions cover sync and per-merchant oversize cooldown rollback,
+  successful-cache freshness rollback, and forward recovery without reviving an
+  old failure. Negative elapsed time expires cooldown/freshness entries, matching
+  Android; successful requests clear their previous oversize timestamps.
+- Merged-cache byte counts sum encoded metadata, individual merchants and commas
+  before allocating the complete Data. Tests compare exact counts with JSONEncoder
+  for UTF-8/escaped strings and empty/single/multiple records, then verify a merged
+  overflow preserves the disk cache, in-memory places and sync cursor without retry.
+- XcodeGen generation and the full **NoahTests** target passed with
+  `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, an independent derived-data path
+  (`/tmp/noah-btcmap-hardening-dd`), and an owned iPhone 17 / iOS 27.0 simulator:
+  **284 reported tests, 272 passed, 12 opt-in tests skipped, 0 failures**. All eight
+  BtcMapLimitsTests passed, including all 15 shared depth cases. No tests were
+  explicitly excluded. The simulator was shut down and deleted after verification.
+- Android's required Nix/Gradle test and regtest debug assembly command also passed:
+  **515 tests, 0 failures/errors/skips**, including **136 map tests**. Its existing
+  merged-byte regression additionally passed in a **512 MiB** worker; the committed
+  2g Gradle setting remains unchanged. No other simulator, emulator, physical device
+  or Docker service was touched.
