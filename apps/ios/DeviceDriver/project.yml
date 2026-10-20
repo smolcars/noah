@@ -1,0 +1,41 @@
+# Physical-device UI driver for upgrade acceptance runs (RN regtest → native).
+# A separate host app so `xcodebuild test` never reinstalls com.noahwallet.regtest;
+# the UI tests drive whichever regtest app is installed. Regtest only.
+name: NoahDeviceDriver
+options:
+  bundleIdPrefix: com.noahwallet
+  deploymentTarget:
+    iOS: "18.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: AT26Z24V2Q
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    GENERATE_INFOPLIST_FILE: YES
+targets:
+  NoahDeviceDriverHost:
+    type: application
+    platform: iOS
+    sources: [Host]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.noahwallet.devicedriver
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+  NoahDeviceDriverUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: NoahDeviceDriverHost
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.noahwallet.devicedriver.uitests
+        TEST_TARGET_NAME: NoahDeviceDriverHost
+schemes:
+  NoahDeviceDriver:
+    build:
+      targets:
+        NoahDeviceDriverHost: all
+        NoahDeviceDriverUITests: [test]
+    test:
+      targets: [NoahDeviceDriverUITests]

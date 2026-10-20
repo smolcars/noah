@@ -154,12 +154,19 @@ verify a delivered push separately. This remains a release gate.
   token proves reuse. Native's actual registration returned RN's exact token, and an
   installation ID was present. **1 test passed.** The token was never printed, and the
   result bundle was deleted.
-- **Finding, fixed separately:** RN was still running when native was installed. On
-  native's first launch RN's MMKV contents were gone; meta sequence=1 shows MMKV
-  discarded them on open, almost certainly an integrity failure after the install
-  killed RN mid-write. Native then resumed onboarding ("Your Recovery Phrase"). The
-  simulator runs above terminate RN before installing native, so they missed this.
-  See the MMKV recovery/backup fix.
+- **Finding (root cause confirmed on the device with the UI driver):** before onboarding, the
+  user had deleted the stale RN wallet in RN Settings. RN's `deleteWallet`
+  (client/src/lib/walletApi.ts) unlinks everything in Documents, including the
+  `mmkv` folder, while RN's MMKV instance stays open. Every later RN write (the
+  new onboarding, `isInitialized`, settings) goes to the deleted file and never
+  reaches disk. On first launch native found no store, created a fresh one and
+  resumed onboarding ("Your Recovery Phrase").
+  - Reproduced on 2026-10-20: RN onboarding → Delete Wallet → onboarding again → install
+    native → native resumed onboarding, with `Documents/mmkv` created at native's launch.
+  - Four control rounds that installed native while RN wrote MMKV continuously, with
+    no prior delete, kept every RN store and landed on Home, so a kill mid-write is
+    not the cause.
+  - RN itself also loses those settings on its next restart.
 
 `ExpoInstallationIDTests` verifies real Expo-shaped keychain-item and legacy
 UserDefaults reuse with isolated fake bundle IDs; those tests prove the storage
