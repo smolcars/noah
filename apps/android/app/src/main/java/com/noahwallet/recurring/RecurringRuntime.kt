@@ -22,7 +22,7 @@ class RecurringRuntime private constructor(context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     val executor = RecurringExecutor(RecurringExecutor.Dependencies(store,
         RecurringJournal(File(location.directory, "noah-recurring-journal.json")), SendRuntime.shared(context).controller,
-        ensureOpen = { services.ensureWalletOpen() }, binding = { RecurringStore.binding(location) },
+        ensureOpen = { services.ensureWalletOpen(walletMutationHeld = true) }, binding = { RecurringStore.binding(location) },
         allowed = {
             requireAdmission(location, settings.persistedState<PersistedWalletState>(PersistedWalletState.key), services.recurringAutomationStorageFailed)
         }, quote = { RecurringRecipient.quote(it, services.session) },
@@ -39,7 +39,7 @@ class RecurringRuntime private constructor(context: Context) {
             runCatching { services.session.summary() }.getOrNull()?.let {
                 com.noahwallet.services.push.WidgetDataWriter.write(context, it.balance, null, BuildConfig.APP_VARIANT)
             }
-        }), scope)
+        }, withWalletMutation = { services.lifecycle.withWalletMutation(it) }), scope)
     internal val foregroundRunner = RecurringForegroundRunner(scope, isOnboarded = services::isOnboarded) { budget ->
         executor.execute(budget = budget)
     }

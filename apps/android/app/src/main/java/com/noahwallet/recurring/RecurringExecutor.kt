@@ -18,7 +18,8 @@ class RecurringExecutor(private val d: Dependencies,
         val sync: suspend (List<RecurringPaymentScheduleEntry>) -> Unit = {},
         val notify: (List<RecurringPayment>, RecurringPayment?) -> Unit = { _, _ -> },
         val audit: (RecurringPayment, RecurringJournal.Entry?, String, String) -> Unit = { _, _, _, _ -> error("Audit unavailable") },
-        val refresh: suspend () -> Unit = {})
+        val refresh: suspend () -> Unit = {},
+        val withWalletMutation: suspend (suspend () -> Unit) -> Unit = { it() })
     init { d.store.protectPolicies(java.io.File("${d.journal.file.path}.policies"), binding = d.binding) }
     data class Review(val schedule: RecurringPayment, val plan: RecurringPayment.Plan, val payment: SendPayment, val quote: SendQuote)
     var schedules by mutableStateOf<List<RecurringPayment>>(emptyList()); private set
@@ -28,7 +29,14 @@ class RecurringExecutor(private val d: Dependencies,
     val controller get() = d.controller
     private var task: Deferred<Unit>? = null
     private var syncTask: Deferred<Unit>? = null
-    private suspend fun <T> storage(block: () -> T): T = withContext(Dispatchers.IO) { block() }
+    private var executionBinding: RecurringStore.Binding? = null
+    private suspend fun <T> walletMutation(block: suspend () -> T): T {
+        var result: Result<T>? = null
+        d.withWalletMutation { result = runCatching { block() } }
+        return checkNotNull(result).getOrThrow()
+    }
+    private suspend fun <T> storage(block: () -> T): T = walletMutation { withContext(Dispatchers.IO) { block() } }
+    private suspend fun ensureOpen() = walletMutation { d.ensureOpen() }
     suspend fun reload() {
         try { val state = storage { d.store.load() }; schedules = state.schedules.values.sortedBy { it.nextRunAt ?: Long.MAX_VALUE }; syncPending = state.pending }
         catch (_: Exception) { error = "Recurring payment data couldn't be read. Your saved schedules have been preserved. Sending is stopped." }
@@ -44,8 +52,9 @@ class RecurringExecutor(private val d: Dependencies,
     private suspend fun boundState(): RecurringStore.State = storage { boundStateNow() }
     private fun boundStateNow(): RecurringStore.State {
         d.allowed()
-        d.store.automationGeneration()
         val owner = d.binding()
+        if (executionBinding != null && owner != executionBinding) throw NoWallet()
+        d.store.automationGeneration()
         var state = d.store.load()
         if (state.binding == null || state.binding != owner && state.schedules.isEmpty()) { d.store.bind(owner); state = d.store.load() }
         check(state.binding == owner) { "These recurring payments belong to a previous wallet. They are preserved but cannot run. Cancel them and create new schedules for this wallet." }
@@ -76,13 +85,28 @@ class RecurringExecutor(private val d: Dependencies,
     }
     private suspend fun run(manual: Boolean, approval: Review?, budget: RecurringBudget, caller: Job?) {
         running = true; error = null
+        var noWallet = false
         try {
             requireStage(budget, caller)
-            storage { d.allowed() }
-            val generation = storage { d.automationGeneration() }
-            val durableGeneration = storage { d.store.automationGeneration() }
-            requireStage(budget, caller)
-            d.ensureOpen()
+            val (generation, durableGeneration) = walletMutation {
+                val admission = withContext(Dispatchers.IO) {
+                    d.allowed()
+                    val owner = d.binding()
+                    val generation = d.automationGeneration()
+                    // Revalidate the binding before authority, including after waiting for mutation.
+                    d.allowed()
+                    if (d.binding() != owner) throw NoWallet()
+                    executionBinding = owner
+                    generation to d.store.automationGeneration()
+                }
+                requireStage(budget, caller)
+                d.ensureOpen()
+                withContext(Dispatchers.IO) {
+                    d.allowed()
+                    if (d.binding() != executionBinding) throw NoWallet()
+                }
+                admission
+            }
             requireStage(budget, caller)
             refreshDates()
             val initial = boundState(); recoverMarkers(initial)
@@ -132,7 +156,8 @@ class RecurringExecutor(private val d: Dependencies,
                     if (job == null) { markUncertain(entry); continue }
                     job.join()
                     settle(entry, marked, retainReceipt = approval != null)
-                } catch (_: Exception) {
+                } catch (stale: NoWallet) { throw stale }
+                catch (_: Exception) {
                     val entry = storage { d.journal.load()[id] }
                     if (entry != null && !entry.resolved && entry.plan == plan && entry.binding == initial.binding && entry.policyRevision == schedule.nativeRevision) markUncertain(entry)
                     else {
@@ -147,16 +172,16 @@ class RecurringExecutor(private val d: Dependencies,
             syncServer { requireStage(budget, caller) }
             requireStage(budget, caller)
             d.refresh()
-        } catch (_: NoWallet) { /* Welcome has no automation authority yet. */ }
+        } catch (_: NoWallet) { noWallet = true }
         catch (failure: Exception) { error = failure.message ?: "Recurring sending is stopped." }
         finally { try {
-            reload()
-            if (budget.available && caller?.isActive != false && currentCoroutineContext().isActive) {
+            if (!noWallet) reload()
+            if (!noWallet && budget.available && caller?.isActive != false && currentCoroutineContext().isActive) {
                 val visible = storage { runCatching { d.store.load().schedules.values.toList() }.getOrDefault(emptyList()) }
                 requireStage(budget, caller)
                 d.notify(visible, null)
             }
-        } finally { running = false } }
+        } finally { executionBinding = null; running = false } }
     }
     private suspend fun markUncertain(entry: RecurringJournal.Entry, message: String? = controller.message) = storage {
         synchronized(RecurringStore.lock) {
@@ -228,7 +253,7 @@ class RecurringExecutor(private val d: Dependencies,
     }
     suspend fun review(id: String): Review {
         check(!running && !controller.locked) { "Check the current payment before making another payment." }
-        d.ensureOpen()
+        ensureOpen()
         val schedule = boundState().schedules.getValue(id)
         check(schedule.status == "needs_approval")
         val plan = schedule.copy(status = "active").plan(d.now(), d.zone(), true)

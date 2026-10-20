@@ -39,7 +39,9 @@ class HeadlessEntryPointsTest {
         assertTrue(source("services/push/PushRegistration").contains("if (!onboarded()"))
     }
     @Test fun recurringRuntimeUsesTheSharedGate() {
-        assertTrue(source("recurring/RecurringRuntime").contains("ensureOpen = { services.ensureWalletOpen() }")); walletGate()
+        val code = source("recurring/RecurringRuntime")
+        assertTrue(code.contains("ensureOpen = { services.ensureWalletOpen(walletMutationHeld = true) }"))
+        assertTrue(code.contains("withWalletMutation = { services.lifecycle.withWalletMutation(it) }")); walletGate()
     }
     @Test fun timeReceiverRoutesThroughTheRecurringRuntime() {
         assertTrue(source("recurring/RecurringTimeReceiver").contains("RecurringRuntime.shared(context).timeChanged()")); walletGate()
