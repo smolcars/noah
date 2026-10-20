@@ -25,9 +25,9 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     internal fun protectPolicies(file: File, sync: (File) -> Unit = ::syncDirectory, syncFile: (java.io.FileDescriptor) -> Unit = { it.sync() }, binding: () -> Binding) = synchronized(lock) {
         if (policyLedger == null) { policyLedger = RecurringPolicyLedger(file, policyWarning, sync, syncFile); policyBinding = binding; automation = RecurringAutomationAuthority(file.parentFile!!) { target, bytes -> durableRecurringWrite(target, bytes, sync, syncFile) } }
     }
-    private fun protected(state: State): State {
+    private fun protected(state: State, automationOverlay: Boolean = true): State {
         val ledger = policyLedger ?: return state
-        val automationStopped = automation?.allowed() == false
+        val automationStopped = automationOverlay && automation?.allowed() == false
         val stopped = runCatching { ledger.stopped(state.binding ?: policyBinding!!(), state.schedules) }.getOrElse { policyWarning(); state.schedules.keys }
         return state.copy(schedules = state.schedules.mapValues { (id, schedule) ->
             if ((id in stopped || automationStopped) && !schedule.unsupportedStorage) schedule.copy(status = "needs_attention", lastError = if (id in stopped) RecurringPolicyLedger.message else RecurringAutomationAuthority.message) else schedule
@@ -44,6 +44,8 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         }
     }
     fun load(): State = synchronized(lock) { protected(decode(envelope())) }
+    /** Settlement records submitted money against policy authority, without a temporary wallet overlay. */
+    internal fun settlementState(): State = synchronized(lock) { protected(decode(envelope()), automationOverlay = false) }
     private fun decode(envelope: JsonObject): State {
         val state = envelope.getValue("state").jsonObject
         val schedules = state.getValue("schedules").jsonObject.mapValues { (id, raw) -> payment(id, raw) }
