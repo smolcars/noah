@@ -57,11 +57,20 @@ class RecurringStoreTest {
         }
     }
     @Test fun rnWriterCountsUseLongAndUnsupportedRowsRetainTheirOriginalJson() {
-        var raw = javaClass.getResource("/recurring-rn-range.json")!!.readText()
+        val fixture = com.noahwallet.fixtures.SharedFixtures.document("recurring-rn-range").jsonObject
+        var raw = fixture.toString()
         val original = raw
         val store = RecurringStore({ raw }, { raw = it })
         val schedules = store.load().schedules
         assertEquals(11, schedules.size)
+        val expectations = fixture.getValue("expectedClassifications").jsonObject
+        assertEquals(schedules.keys, expectations.keys)
+        for ((id, expected) in expectations) {
+            val row = schedules.getValue(id)
+            val classification = if (row.unsupportedStorage) "stopped-unsupported" else row.status
+            assertEquals("$id: ${expected.jsonObject.getValue("reason").jsonPrimitive.content}",
+                expected.jsonObject.getValue("classification").jsonPrimitive.content, classification)
+        }
         for ((id, count) in listOf("count-0" to 1L, "count-1" to 3_000_000_000L,
             "count-2" to 9_007_199_254_740_991L, "count-3" to 9_223_372_036_854_775_000L)) {
             val schedule = schedules.getValue(id)

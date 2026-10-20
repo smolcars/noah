@@ -19,6 +19,25 @@ binding, upsert, pending, removal and reopen. Before the fix, the targeted
 `--tests "*Recurring*"` run reported **1,444 tests / 1 failure**, reproducing
 acceptance of `1e-400` before any mutation in that test.
 
+## Storage strictness — timestamp parity (2026-10-20)
+
+Android's existing `Long` timestamp decoding already isolates fractional times as
+unsupported rows; no scheduling code change is needed. Both platforms now assert
+every `expectedClassifications` entry in the shared `recurring-rn-range.json`:
+**four active count rows / seven stopped-unsupported rows**, with a reason per row.
+The shared resource is selected by Gradle over the historical local copy (the test
+requires its expectations map). RN's normal UI/runner emits whole milliseconds;
+its factory accepts the synthetic start/end fractions in this fixture.
+
+`RecurringTimestampTest` separately tests start, end, next-run, created, updated,
+retry, in-flight start, run scheduled-for and run attempted-at fractions. Each row
+remains visible as Needs attention and cancellable, retains its original JSON
+values across unrelated healthy execution, pause, pending writes and reopen, and
+cannot execute, resume, override or edit. A healthy row pays exactly once.
+Targeted `--tests "*Recurring*"`: **1,453 tests / 14 suites**, zero failures,
+errors or skips. An earlier new-test compile failed on a parenthesis in fixture
+construction; it ran zero tests and was corrected before this passing run.
+
 ## Round-3 final cross-platform fixes (2026-10-20)
 
 Base: `feat/native-rewrite` local HEAD `95cd6af0`.

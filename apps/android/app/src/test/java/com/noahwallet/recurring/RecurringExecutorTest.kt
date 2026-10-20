@@ -75,7 +75,7 @@ class RecurringExecutorTest {
     }
     @Test fun rnWideCountsPayAndUnsupportedRowsStayStoppedAndCancellable() = runBlocking {
         val w = RecurringWorld(this)
-        w.raw = javaClass.getResource("/recurring-rn-range.json")!!.readText()
+        w.raw = com.noahwallet.fixtures.SharedFixtures.document("recurring-rn-range").toString()
         w.store.bind(w.binding)
         w.executor.execute(); w.executor.execute()
         assertEquals(4, w.wallet.calls)
