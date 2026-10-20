@@ -139,13 +139,6 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         case alreadyPaid(SendReceipt)
         case failed, storageBlocked
     }
-    struct TerminalResult: Equatable, Sendable {
-        let recurringKey: String
-        let generation: Int
-        let walletGeneration: Int
-        let outcome: State
-        let message: String?
-    }
     struct Attempt: Codable, Sendable {
         var recurringAttemptID: UUID?
         var recurringOccurrenceKey: String?
@@ -195,7 +188,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     private(set) var attempt: Attempt?
     private(set) var message: String?
     private(set) var checking = false
-    private var task: Task<TerminalResult?, Never>?
+    private var task: Task<Void, Never>?
     var persistRecurringEvidence: ((Attempt, Int, Int, State, String?) throws -> Void)?
     private var recurringEvidenceDurable = false
     private var unboundJournal: Attempt?
@@ -302,22 +295,15 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                     message = "Unable to reserve the wallet. No payment was submitted."
                 }
             }
-            guard generation == self.generation, let recurringKey else { return nil }
-            return resultForSettlement(recurringKey)
         }
     }
     /// Automation awaits the controller-owned task; cancelling a push cannot abandon a send.
-    @discardableResult
     func submitAndWait(_ payment: SendPayment, quote: SendQuote, recurringKey: String,
-                       beforeSubmit: @escaping @Sendable () throws -> Void) async -> TerminalResult? {
-        guard state == .ready else { return nil }
+                       beforeSubmit: @escaping @Sendable () throws -> Void) async {
+        guard state == .ready else { return }
         submit(payment, quote: quote, recurringKey: recurringKey, beforeSubmit: beforeSubmit)
         let submission = task
-        return await submission?.value
-    }
-    func resultForSettlement(_ key: String) -> TerminalResult? {
-        guard attempt?.recurringOccurrenceKey == key else { return nil }
-        return .init(recurringKey: key, generation: generation, walletGeneration: walletGeneration, outcome: state, message: message)
+        await submission?.value
     }
     func releaseRecurring(attemptID: UUID?, expectedGeneration: Int, expectedWalletGeneration: Int, retainReceipt: Bool) {
         if generation == expectedGeneration, walletGeneration == expectedWalletGeneration, let attemptID, attempt?.recurringAttemptID == attemptID, !retainReceipt { acknowledge() }

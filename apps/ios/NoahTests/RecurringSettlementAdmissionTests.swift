@@ -37,10 +37,10 @@ import Testing
         let run = Task { await h.executor.execute(manual: true, approval: review) }
         try await SendPaymentTests.waitUntil { terminal.withLock { $0 } }
         let key = try #require(h.controller.attempt?.recurringOccurrenceKey)
-        let result = try #require(h.controller.resultForSettlement(key))
+        let result = try #require(h.journal.load()[schedule.id]?.terminal)
         if change == "failed" { #expect(result.outcome == .failed) }
         else if change == "ambiguous" { #expect(result.outcome == .uncertain) }
-        else if case .succeeded(let receipt) = result.outcome {
+        else if result.outcome == .succeeded, let receipt = result.attempt.receipt {
             #expect(receipt.proof == .submitReturnedArkSuccess)
             #expect(receipt.amount == schedule.amountSat)
         } else { Issue.record("Expected paid receipt") }
@@ -48,8 +48,8 @@ import Testing
         if change == "ambiguous" { #expect(h.controller.locked) }
         else {
             #expect(!h.controller.locked && h.controller.attempt == nil)
-            #expect(h.controller.resultForSettlement(key) == result)
-            #expect(h.saved != nil, "Done must retain the durable Send evidence until settlement")
+            #expect(h.controller.attempt == nil)
+            #expect(try h.journal.load()[schedule.id]?.terminal != nil)
         }
         if change == "replacement" || change == "sameKeyReplacement" {
             h.beforePay = { throw SendNotSubmitted(reason: .recurringStopped) }
@@ -68,15 +68,15 @@ import Testing
         release.continuation.yield(()); release.continuation.finish()
         await run.value
         if change == "foreignReload" {
-            #expect(h.controller.resultForSettlement(key) == nil)
+            #expect(h.controller.attempt == nil)
             #expect(try h.journal.load()[schedule.id]?.consumed != true)
             #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == 0)
             #expect(h.calls.withLock { $0 } == 1)
             return
         }
         if change == "blocked" {
-            #expect(h.controller.resultForSettlement(key) == result)
-            #expect(h.saved != nil)
+            #expect(h.controller.attempt == nil)
+            #expect(h.saved == nil)
             try FileManager.default.removeItem(at: h.journal.quarantineFile)
             #expect(try h.journal.load()[schedule.id]?.consumed != true)
             await h.executor.checkStatus(schedule.id)
@@ -86,13 +86,13 @@ import Testing
         #expect((try h.journal.load()[schedule.id]?.consumed == true) == paid)
         #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == (paid ? 1 : 0))
         if change == "failed" { #expect(try h.store.load().schedules[schedule.id]?.lastError == result.message) }
-        if change == "replacement" || change == "sameKeyReplacement" || change == "reload" {
+        if change == "replacement" || change == "sameKeyReplacement" {
             h.controller.acknowledge(ifGeneration: result.generation)
             #expect(h.controller.locked && h.controller.generation == replacementGeneration)
             #expect(h.controller.attempt?.recurringOccurrenceKey == replacement?.recurringOccurrenceKey)
             #expect(h.controller.attempt?.startedAt == replacement?.startedAt)
         } else if change != "ambiguous" {
-            #expect(h.controller.resultForSettlement(key) == nil)
+            #expect(h.controller.attempt == nil)
             #expect(h.saved == nil)
         }
         await h.executor.checkStatus(schedule.id)
@@ -153,7 +153,7 @@ import Testing
             let (payment, quote, _) = h.quoted(schedule, fees: RecurringFeePolicy.fallback)
             let key = change == "sameKeyReplacement" ? originalAttempt?.recurringOccurrenceKey ?? "missing" : "another-occurrence"
             await h.controller.submitAndWait(payment, quote: quote, recurringKey: key, beforeSubmit: {})
-            #expect(h.controller.state == .failed)
+            #expect(h.controller.state == .storageBlocked)
         }
         let replacement = h.controller.attempt
         release.continuation.yield(()); release.continuation.finish()

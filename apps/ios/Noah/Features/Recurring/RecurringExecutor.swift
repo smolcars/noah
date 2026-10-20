@@ -237,7 +237,7 @@ import Observation
                     let marked = schedule
                     let unattended = approval == nil
                     let store = d.store, binding = d.binding, allowed = d.allowed, generation = d.automationGeneration, now = d.now, zone = d.zone
-                    _ = await d.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key) {
+                    await d.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key) {
                         do {
                             try allowed()
                             guard try binding() == entry.binding, generation() == automationGeneration else { throw NoWallet() }
