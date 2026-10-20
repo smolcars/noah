@@ -28,7 +28,7 @@ struct ReceiveView: View {
             }
         }
         .background(NoahColor.background.ignoresSafeArea())
-        .task(id: isActive) {
+        .task(id: "\(isActive):\(app.walletSessionRevision)") {
             if isActive {
                 async let rate: Void = loadRate()
                 await model.start()
