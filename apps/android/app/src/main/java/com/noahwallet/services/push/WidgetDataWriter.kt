@@ -6,6 +6,9 @@ import android.content.Intent
 import com.noahwallet.services.wallet.WalletBalance
 import com.noahwallet.services.wallet.WalletConfiguration
 import com.noahwallet.widgets.NoahWidgetProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 object WidgetDataWriter {
     /** The reused providers read Long values, directly from the per-variant preferences. */
@@ -18,7 +21,7 @@ object WidgetDataWriter {
         "expiryThreshold" to WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toLong(),
     )
 
-    fun clear(context: Context, variant: String) {
+    suspend fun clear(context: Context, variant: String): Unit = withContext(NonCancellable + Dispatchers.IO) {
         check(context.getSharedPreferences("com.noahwallet.$variant", Context.MODE_PRIVATE).edit().clear().commit())
         broadcast(context, variant)
     }
@@ -29,7 +32,7 @@ object WidgetDataWriter {
             ComponentName(context.packageName, "com.noahwallet.widgets.NoahWidget${name}Provider")))
     }
 
-    fun write(context: Context, balance: WalletBalance, closestExpiryBlocks: Long?, variant: String) {
+    suspend fun write(context: Context, balance: WalletBalance, closestExpiryBlocks: Long?, variant: String): Unit = withContext(NonCancellable + Dispatchers.IO) {
         val editor = context.getSharedPreferences("com.noahwallet.$variant", Context.MODE_PRIVATE).edit()
         values(balance, closestExpiryBlocks, variant).forEach { (key, value) -> editor.putLong(key, value) }
         check(editor.commit()) { "Widget preferences could not be saved" }

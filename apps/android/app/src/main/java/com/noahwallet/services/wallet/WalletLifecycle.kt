@@ -21,7 +21,7 @@ class WalletLifecycle(
     private val deleteSeed: suspend () -> Unit,
     private val clearToken: suspend () -> Unit,
     private val clearSettings: () -> Unit,
-    private val clearWidget: () -> Unit,
+    private val clearWidget: suspend () -> Unit,
     private val sweepScratch: () -> Unit,
     private val settleBackground: suspend () -> Unit = {},
     private val drainExports: suspend () -> Unit = {},

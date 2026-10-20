@@ -10,12 +10,17 @@ import com.noahwallet.MainActivity
 import com.noahwallet.R
 import java.text.NumberFormat
 import java.util.Locale
+import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 open class NoahWidgetProvider : AppWidgetProvider() {
 
     companion object {
         const val ACTION_WIDGET_DATA_CHANGED = "com.noahwallet.action.WIDGET_DATA_CHANGED"
 
+        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        private val updates = Mutex()
         private val numberFormatter: NumberFormat by lazy {
             NumberFormat.getNumberInstance(Locale.US).apply {
                 maximumFractionDigits = 0
@@ -49,8 +54,13 @@ open class NoahWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        for (appWidgetId in appWidgetIds) {
-            updateWidget(context, appWidgetManager, appWidgetId)
+        val pending = goAsync()
+        scope.launch {
+            try {
+                updates.withLock {
+                    for (appWidgetId in appWidgetIds) updateWidget(context, appWidgetManager, appWidgetId)
+                }
+            } finally { pending.finish() }
         }
     }
 

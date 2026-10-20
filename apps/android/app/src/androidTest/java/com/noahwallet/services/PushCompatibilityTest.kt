@@ -68,7 +68,7 @@ class PushCompatibilityTest {
         assertEquals("https://example.test/rotated", prefs.getString("endpoint", null))
     }
 
-    @Test fun channelSettingsSurviveAndWidgetPreferencesMatchProviderReads() {
+    @Test fun channelSettingsSurviveAndWidgetPreferencesMatchProviderReads() = kotlinx.coroutines.runBlocking {
         val manager = context.getSystemService(NotificationManager::class.java)
         if (manager.getNotificationChannel("default") == null) {
             manager.createNotificationChannel(NotificationChannel("default", "User channel", NotificationManager.IMPORTANCE_LOW))
