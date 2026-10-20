@@ -35,31 +35,40 @@ struct PushJobs: Sendable {
     }
 
     private func handleAction(_ notification: NotificationData) async throws {
+        try BackgroundExecution.checkActive()
         let d = dependencies
         log.i("Handling \(Self.name(notification)) push")
         defer { log.i("Finished \(Self.name(notification)) push") }
         switch notification {
         case .maintenance(let payload):
-            let result = await outcome { try await d.ensureWalletOpen(); try await d.maintenance() }
+            let result = await outcome { try await d.ensureWalletOpen(); try BackgroundExecution.checkActive(); try await d.maintenance() }
+            try BackgroundExecution.checkActive()
             await d.reportJob(.maintenance, result, payload.notificationK1)
             if let result { throw result }
+            try BackgroundExecution.checkActive()
             await d.refreshWidget()
 
         case .lightningInvoiceRequest(let payload):
             try await d.ensureWalletOpen()
+            try BackgroundExecution.checkActive()
             // msat → sat, truncating like the RN app's Nitro call.
             let sats = UInt64(max(payload.amount, 0)) / 1000
             let invoice = try await d.createInvoice(sats)
+            try BackgroundExecution.checkActive()
             try await d.submitInvoice(payload.transactionId, invoice)
 
         case .lightningClaimRequest(let payload):
             try await d.ensureWalletOpen()
+            try BackgroundExecution.checkActive()
             try await d.claimLightning()
+            try BackgroundExecution.checkActive()
             await d.announceReceived(payload.amountSat, payload.amountUsd)
+            try BackgroundExecution.checkActive()
             await d.refreshWidget()
 
         case .backupTrigger(let payload):
-            let result = await outcome { try await d.ensureWalletOpen(); try await d.backup() }
+            let result = await outcome { try await d.ensureWalletOpen(); try BackgroundExecution.checkActive(); try await d.backup() }
+            try BackgroundExecution.checkActive()
             await d.reportJob(.backup, result, payload.notificationK1)
             if let result { throw result }
 
@@ -72,7 +81,9 @@ struct PushJobs: Sendable {
 
         case .recurringPaymentDue:
             try await d.ensureWalletOpen()
+            try BackgroundExecution.checkActive()
             try await d.recurring()
+            try BackgroundExecution.checkActive()
             await d.refreshWidget()
         }
     }
@@ -135,7 +146,9 @@ extension PushJobs.Dependencies {
             },
             refreshWidget: {
                 guard let summary = try? await session.summary() else { return }
+                guard (try? BackgroundExecution.checkActive()) != nil else { return }
                 let expiry = try? await session.closestExpiryBlocks()
+                guard (try? BackgroundExecution.checkActive()) != nil else { return }
                 WidgetDataWriter.write(balance: summary.balance, closestExpiryBlocks: expiry ?? nil, variant: services.variant)
             },
             recurring: { await RecurringExecutor.shared.execute() },

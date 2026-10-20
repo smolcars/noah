@@ -115,7 +115,7 @@ actor WalletSession {
         _ operation: @escaping @Sendable () async throws -> T,
         settle: @escaping @Sendable () async -> Void = {}
     ) async throws -> T {
-        try Task.checkCancellation()
+        try BackgroundExecution.checkActive()
         guard backgroundOwner == nil, runningCalls == 0, !sendReserved,
               sendPreparations.isEmpty, boardPreparations.isEmpty else { throw OpenError.busy }
         switch state {
@@ -342,6 +342,7 @@ actor WalletSession {
     /// it, and it finishes even if the caller is cancelled. Long-lived
     /// observers must not use this, or `close` would wait for them forever.
     func withOpenWallet<T: Sendable>(_ body: @escaping @Sendable (Handles) async throws -> T) async throws -> T {
+        try BackgroundExecution.checkActive()
         try checkAccess()
         guard case .open(let handles) = state else { throw SessionError.notOpen }
         guard !exclusiveSend || Self.sendWork else { throw OpenError.busy }
@@ -349,6 +350,7 @@ actor WalletSession {
         defer { callFinished() }
         await retrySendDiscards()
         await retryBoardDiscards()
+        try BackgroundExecution.checkActive()
         return try await Task { try await body(handles) }.value
     }
 

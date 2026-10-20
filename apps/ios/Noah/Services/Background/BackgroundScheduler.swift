@@ -69,7 +69,7 @@ import UIKit
     func start(_ kind: Kind, completion: @escaping (Bool) -> Void) -> BackgroundExecution {
         BackgroundExecution(completion: completion) { [d] in
             guard await MainActor.run(body: { !d.isForeground() && d.eligible() }) else { return }
-            try Task.checkCancellation()
+            try BackgroundExecution.checkActive()
             try await d.perform(kind)
         }
     }
@@ -88,25 +88,27 @@ extension BackgroundScheduler.Dependencies {
              perform: { kind in
                  try await services.withBackgroundWallet {
                      try await services.ensureWalletOpen()
-                     try Task.checkCancellation()
+                     try BackgroundExecution.checkActive()
                      try await services.session.sync()
-                     try Task.checkCancellation()
+                     try BackgroundExecution.checkActive()
                      if kind == .maintenance {
                          try await services.session.maintenanceDelegated()
-                         try Task.checkCancellation()
+                         try BackgroundExecution.checkActive()
                      }
                      // Exactly the push/foreground executor: durable occurrence journal,
                      // stop generation, ArkInfo fee cap and inherited submission budget.
                      await RecurringExecutor.shared.execute()
-                     try Task.checkCancellation()
+                     try BackgroundExecution.checkActive()
                      if kind == .maintenance {
                          let enabled = SettingsStorage.shared.persistedState(
                              PersistedServerState.self, key: PersistedServerState.key)?.isBackupEnabled == true
                          if enabled { try await services.backupCoordinator.flush(.startup) }
                      }
-                     try Task.checkCancellation()
+                     try BackgroundExecution.checkActive()
                      if let summary = try await services.session.summary() {
+                         try BackgroundExecution.checkActive()
                          let expiry = try? await services.session.closestExpiryBlocks()
+                         try BackgroundExecution.checkActive()
                          WidgetDataWriter.write(balance: summary.balance, closestExpiryBlocks: expiry ?? nil, variant: services.variant)
                      }
                  }

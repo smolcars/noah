@@ -35,6 +35,32 @@ struct PushJobsTests {
         try JSONDecoder().decode(PushPayload.NotificationData.self, from: Data(json.utf8))
     }
 
+    @MainActor @Test func expiryDuringShieldedMaintenanceStopsReportingAndWidget() async throws {
+        let recorder = Recorder()
+        let gate = RecurringReservationTests.Gate()
+        var dependencies = jobs(recorder).dependencies
+        dependencies.maintenance = {
+            recorder.add("maintenance")
+            await Task { await gate.wait() }.value
+        }
+        let dispatcher = PushJobs(dependencies: dependencies)
+        let notification = try decode(#"{"notification_type":"maintenance","notification_k1":"fake"}"#)
+        var completed: [Bool] = []
+        let execution = BackgroundExecution(completion: { completed.append($0) }) {
+            defer { recorder.add("settled") }
+            try await dispatcher.handle(notification)
+        }
+        let limit = ContinuousClock.now + .seconds(3)
+        while !(await gate.entered), ContinuousClock.now < limit { await Task.yield() }
+        try #require(await gate.entered)
+        recorder.add("expire")
+        execution.systemExpired()
+        await gate.release()
+        while !recorder.all.contains("settled"), ContinuousClock.now < limit { await Task.yield() }
+        #expect(recorder.all == ["open", "maintenance", "expire", "settled"])
+        #expect(completed == [false])
+    }
+
     @Test func recurringWakeOpensWalletThenRunsLocalPolicy() async throws {
         let recorder = Recorder()
         try await jobs(recorder).handle(decode(#"{"notification_type":"recurring_payment_due","due_count":4294967295}"#))

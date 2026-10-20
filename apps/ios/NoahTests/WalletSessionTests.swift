@@ -153,6 +153,35 @@ struct WalletSessionTests {
         }
     }
 
+    @Test func cancelledOrExpiredTasksCannotAdmitWalletCalls() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let session = offlineSession()
+        try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
+        let gate = Gate()
+        let cancelled = Task {
+            await gate.enter()
+            return try await session.withOpenWallet { _ in true }
+        }
+        while await gate.calls == 0 { await Task.yield() }
+        cancelled.cancel()
+        await gate.release()
+        await #expect(throws: CancellationError.self) { try await cancelled.value }
+        let budget = RecurringSubmissionBudget()
+        budget.revoke()
+        try await RecurringSubmissionBudget.$current.withValue(budget) {
+            // Independent tasks inherit expiry, but not caller cancellation.
+            await #expect(throws: CancellationError.self) {
+                try await Task { try await session.withOpenWallet { _ in true } }.value
+            }
+        }
+        await RecurringExecutionBudget.$deadline.withValue(ContinuousClock.now - .seconds(1)) {
+            await #expect(throws: CancellationError.self) {
+                try await session.withOpenWallet { _ in true }
+            }
+        }
+        try await session.close()
+    }
+
     @Test func closeWaitsForWalletCallsStillRunning() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()

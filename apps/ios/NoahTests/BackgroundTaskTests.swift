@@ -83,6 +83,30 @@ import Testing
         #expect(complete == [false])
     }
 
+    @Test func systemExpiryStopsShieldedBackgroundStagesBeforeCancellationArrives() async throws {
+        let gate = RecurringReservationTests.Gate()
+        let recorder = PushJobsTests.Recorder()
+        var completed: [Bool] = []
+        let execution = BackgroundExecution(completion: { completed.append($0) }) {
+            await Task {
+                await gate.wait()
+                do {
+                    try BackgroundExecution.checkActive()
+                    recorder.add("later")
+                } catch {}
+            }.value
+            recorder.add("settled")
+        }
+        let limit = ContinuousClock.now + .seconds(3)
+        while !(await gate.entered), ContinuousClock.now < limit { await Task.yield() }
+        try #require(await gate.entered)
+        execution.systemExpired()
+        await gate.release()
+        while !recorder.all.contains("settled"), ContinuousClock.now < limit { await Task.yield() }
+        #expect(recorder.all == ["settled"])
+        #expect(completed == [false])
+    }
+
     @Test func deadlineRevokesSubmission() async throws {
         do {
             let gate = RecurringReservationTests.Gate()

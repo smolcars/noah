@@ -19,7 +19,7 @@ import Foundation
         work = Task {
             let success = await RecurringExecutionBudget.$deadline.withValue(deadline) {
                 await RecurringSubmissionBudget.$current.withValue(budget) {
-                    do { try Task.checkCancellation(); try await operation(); try Task.checkCancellation(); return true }
+                    do { try Self.checkActive(); try await operation(); try Self.checkActive(); return true }
                     catch { return false }
                 }
             }
@@ -31,6 +31,12 @@ import Foundation
             catch { return }
             expire()
         }
+    }
+
+    /// Shielded tasks inherit the deadline and revocation even before Swift cancellation arrives.
+    nonisolated static func checkActive() throws {
+        try Task.checkCancellation()
+        guard RecurringSubmissionBudget.available, RecurringExecutionBudget.available else { throw CancellationError() }
     }
 
     nonisolated func systemExpired() {
