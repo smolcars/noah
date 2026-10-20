@@ -29,3 +29,15 @@ for (const at of [now,schedule.startAt,new Date(2026,3,5,9).getTime()]) {
 }
 writeFileSync(new URL("../recurring-policy.json", import.meta.url), JSON.stringify({cases:policy},null,2)+"\n");
 writeFileSync(new URL("../recurring-storage.json", import.meta.url), JSON.stringify({state:{schedules:{rent:schedule},serverSyncPending:true},version:0},null,2)+"\n");
+
+// Keep the instant fixed while JS reinterprets the original calendar fields in a new zone.
+const changes: unknown[] = [];
+for (const [fromZone, toZone] of [["America/New_York", "UTC"], ["UTC", "America/New_York"], ["Australia/Lord_Howe", "UTC"]]) {
+ process.env.TZ = fromZone;
+ const startAt = new Date(2026, 1, 28, 23).getTime();
+ const interval = {unit:"month",every:1} as const;
+ const cached = rn.occurrenceAt(startAt, interval, 1);
+ process.env.TZ = toZone;
+ changes.push({name:`monthly ${fromZone} -> ${toZone}`,input:{fromZone,toZone,startAt,interval,index:1,cached},expected:rn.occurrenceAt(startAt,interval,1)});
+}
+writeFileSync(new URL("../recurring-zone-change.json", import.meta.url), JSON.stringify({cases:changes},null,2)+"\n");

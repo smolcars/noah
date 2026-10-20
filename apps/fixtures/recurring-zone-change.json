@@ -1,0 +1,49 @@
+{
+  "cases": [
+    {
+      "name": "monthly America/New_York -> UTC",
+      "input": {
+        "fromZone": "America/New_York",
+        "toZone": "UTC",
+        "startAt": 1772337600000,
+        "interval": {
+          "unit": "month",
+          "every": 1
+        },
+        "index": 1,
+        "cached": 1774753200000
+      },
+      "expected": 1775016000000
+    },
+    {
+      "name": "monthly UTC -> America/New_York",
+      "input": {
+        "fromZone": "UTC",
+        "toZone": "America/New_York",
+        "startAt": 1772319600000,
+        "interval": {
+          "unit": "month",
+          "every": 1
+        },
+        "index": 1,
+        "cached": 1774738800000
+      },
+      "expected": 1774735200000
+    },
+    {
+      "name": "monthly Australia/Lord_Howe -> UTC",
+      "input": {
+        "fromZone": "Australia/Lord_Howe",
+        "toZone": "UTC",
+        "startAt": 1772280000000,
+        "interval": {
+          "unit": "month",
+          "every": 1
+        },
+        "index": 1,
+        "cached": 1774699200000
+      },
+      "expected": 1774699200000
+    }
+  ]
+}

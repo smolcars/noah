@@ -11,6 +11,7 @@ import Observation
         var allowed: @Sendable () throws -> Void
         var quote: @Sendable (RecurringPayment) async throws -> (SendPayment, SendQuote)
         var automationGeneration: @Sendable () -> String? = { nil }
+        var zone: @Sendable () -> TimeZone = { .current }
         var now: @Sendable () -> Double = { RecurringPayment.now }
         var sync: @Sendable ([Components.Schemas.RecurringPaymentScheduleEntry]) async throws -> Void = { _ in }
         var notifications: @Sendable ([RecurringPayment], RecurringPayment?) async -> Void = { _, _ in }
@@ -69,7 +70,7 @@ import Observation
             let pendingMarker = entry.map { !$0.resolved && $0.binding == state.binding } == true
             var planning = schedule
             if planning.status == "needs_approval" { planning.status = "active" }
-            let plan = planning.plan(now: d.now(), ignoreBackoff: true)
+            let plan = planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: true)
             let consumed = try plan.scheduledFor.map { at in
                 try d.journal.consumed(binding: state.binding!, scheduleID: schedule.id, at: at)
             } ?? false
@@ -89,6 +90,7 @@ import Observation
         do {
             let automationGeneration = d.automationGeneration()
             try await d.ensureOpen()
+            try refreshDates()
             let initial = try boundState()
             try await recoverMarkers(initial)
             for id in initial.schedules.keys.sorted() {
@@ -100,7 +102,7 @@ import Observation
                     guard schedule == approval.schedule, schedule.status == "needs_approval" else { continue }
                     planning.status = "active"
                 }
-                let plan = planning.plan(now: d.now(), ignoreBackoff: manual)
+                let plan = planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual)
                 if plan.kind == "too_many_missed" {
                     schedule.status = "needs_attention"
                     schedule.lastError = "This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment."
@@ -121,7 +123,7 @@ import Observation
                     } else { (payment, quote) = try await d.quote(schedule) }
                     let state = try boundState()
                     guard let latest = state.schedules[id], latest == schedule,
-                          planning.plan(now: d.now(), ignoreBackoff: manual) == plan,
+                          planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual) == plan,
                           quote.walletIdentity == state.binding?.wallet else { continue }
                     if approval == nil, let reason = RecurringFeePolicy.approvalReason(payment: payment, quote: quote) {
                         schedule.status = "needs_approval"
@@ -141,7 +143,7 @@ import Observation
                     try d.store.upsert(schedule)
                     let marked = schedule
                     let unattended = approval == nil
-                    let store = d.store, binding = d.binding, allowed = d.allowed, generation = d.automationGeneration, now = d.now
+                    let store = d.store, binding = d.binding, allowed = d.allowed, generation = d.automationGeneration, now = d.now, zone = d.zone
                     await d.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key) {
                         do { try allowed() } catch { throw SendNotSubmitted(reason: .recurringStopped) }
                         let state = try store.load()
@@ -149,7 +151,7 @@ import Observation
                         var currentPlan = marked
                         currentPlan.inFlight = nil
                         if !unattended { currentPlan.status = "active" }
-                        guard currentPlan.plan(now: now(), ignoreBackoff: manual) == entry.plan,
+                        guard currentPlan.plan(now: now(), zone: zone(), ignoreBackoff: manual) == entry.plan,
                               generation() == automationGeneration,
                               state.binding == (try binding()), state.binding == entry.binding,
                               state.schedules[id] == marked,
@@ -175,6 +177,7 @@ import Observation
                     }
                 }
             }
+            try refreshDates()
             await syncServer()
             await d.refresh()
         } catch { self.error = error.localizedDescription }
@@ -201,7 +204,7 @@ import Observation
         case .succeeded(let receipt) where !receipt.isUnresolved && receipt.broadcastRetryPending != true:
             var result = original
             if result.status == "needs_approval" { result.status = "active" }
-            result.success(entry.plan, now: d.now())
+            result.success(entry.plan, now: d.now(), zone: d.zone())
             if latest.status != "active", latest.status != "needs_approval", result.status == "active" { result.status = latest.status }
             // Editing an in-flight policy is prohibited; a concurrent cancel is never recreated.
             try d.store.upsert(result)
@@ -243,7 +246,7 @@ import Observation
         try await d.ensureOpen()
         guard let schedule = try boundState().schedules[id], schedule.status == "needs_approval" else { throw SendFailure.invalid }
         var planning = schedule; planning.status = "active"
-        let plan = planning.plan(now: d.now(), ignoreBackoff: true)
+        let plan = planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: true)
         guard plan.kind == "pay" else { throw RecurringError.message("This payment is no longer due.") }
         let (payment, quote) = try await d.quote(schedule)
         guard try boundState().schedules[id] == schedule else { throw SendFailure.invalid }
@@ -274,7 +277,7 @@ import Observation
         _ = try boundState()
         guard var schedule = try d.store.load().schedules[id], schedule.status != "completed" else { return }
         guard schedule.inFlight == nil, schedule.status != "needs_attention" else { throw RecurringError.message("Check your transaction history, then confirm the destructive override before resuming.") }
-        schedule.resume(now: d.now())
+        schedule.resume(now: d.now(), zone: d.zone())
         try d.store.upsert(schedule)
         await changed()
     }
@@ -294,7 +297,7 @@ import Observation
         // Includes RN in-flight markers that predate Send. Audit before releasing the occurrence.
         try auditLegacyOverride(schedule)
         if var entry = try d.journal.load()[id] { entry.resolved = true; entry.consumed = true; try d.journal.save(entry) }
-        schedule.resume(now: d.now())
+        schedule.resume(now: d.now(), zone: d.zone())
         try d.store.upsert(schedule)
         await changed()
     }
@@ -307,6 +310,19 @@ import Observation
         try SendOverrideAudit.append(audit, to: file)
         try RestoreTransaction.fullSync(file)
         try RestoreTransaction.fullSync(file.deletingLastPathComponent())
+    }
+    private func refreshDates() throws {
+        for var schedule in try boundState().schedules.values where schedule.status != "completed" {
+            let next = schedule.next(schedule.nextOccurrenceIndex, zone: d.zone())
+            if next != schedule.nextRunAt {
+                schedule.nextRunAt = next
+                try d.store.upsert(schedule)
+            }
+        }
+    }
+    func timeChanged() async {
+        do { try refreshDates(); await changed() }
+        catch { self.error = error.localizedDescription }
     }
     private func changed() async {
         reload(); await syncServer(); await d.notifications(schedules, nil)
@@ -323,10 +339,12 @@ import Observation
     private func performSync() async {
         do {
             for _ in 0..<20 {
+                try refreshDates()
                 let state = try boundState()
                 let entries = Self.entries(state.schedules.values.map { $0 })
                 try d.store.setPending(true)
                 try await d.sync(entries)
+                try refreshDates()
                 let latest = try boundState()
                 if Self.entries(latest.schedules.values.map { $0 }) == entries {
                     try d.store.setPending(false); syncPending = false; return

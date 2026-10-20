@@ -32,6 +32,8 @@ import Testing
         var controller: SendPaymentController!
         var executor: RecurringExecutor!
         let now = 1_800_000_000_000.0
+        let zone = Locked(TimeZone.current)
+        var reminders: [RecurringPayment] = []
         let clock = Locked(1_800_000_000_000.0)
         init() throws {
             SettingsStorage.bootstrap()
@@ -73,14 +75,16 @@ import Testing
                 }, quote: { [self] schedule in
                     try await beforeQuote()
                     return await quoted(schedule)
-                }, automationGeneration: { [settings] in settings.string(forKey: WalletLifecycle.automationStopKey) }, now: { [clock] in clock.withLock { $0 } }, sync: { [self] entries in try await sync(entries) },
-                notifications: { [self] _, result in await notification(result) }))
+                }, automationGeneration: { [settings] in settings.string(forKey: WalletLifecycle.automationStopKey) }, zone: { [zone] in zone.withLock { $0 } }, now: { [clock] in clock.withLock { $0 } }, sync: { [self] entries in try await sync(entries) },
+                notifications: { [self] schedules, result in await notification(schedules, result) }))
         }
         func quoted(_ schedule: RecurringPayment) -> (SendPayment, SendQuote) {
             (SendPayment(destination: schedule.destination, method: method, amount: schedule.amountSat),
              .init(amount: schedule.amountSat, fee: fee, total: schedule.amountSat + fee, walletIdentity: owner.withLock { $0.wallet }))
         }
-        func notification(_ result: RecurringPayment?) { if let result { notified.append(result) } }
+        func notification(_ schedules: [RecurringPayment], _ result: RecurringPayment?) {
+            if let result { notified.append(result) } else { reminders = schedules }
+        }
         func reserve(_ work: @escaping @MainActor @Sendable () async -> Void) async throws {
             if let reservation { try await reservation(work) } else { await work() }
         }
@@ -365,6 +369,29 @@ import Testing
         #expect(!h.controller.locked)
     }
 
+    struct ZoneChange: Decodable {
+        var fromZone: String; var toZone: String; var startAt: Double
+        var interval: RecurringInterval; var index: Int; var cached: Double
+    }
+    @Test(arguments: [false, true]) func idlePassAndTimeZoneEventRefreshDurableWakeAndReminders(event: Bool) async throws {
+        for fixture in try Fixtures.load("recurring-zone-change", input: ZoneChange.self, expected: Double.self) {
+            let h = try Harness()
+            var schedule = RecurringScheduleTests.schedule(start: fixture.input.startAt)
+            schedule.destinationType = "ark"; schedule.destination = "ark-test"
+            schedule.interval = fixture.input.interval; schedule.nextOccurrenceIndex = fixture.input.index
+            schedule.nextRunAt = fixture.input.cached
+            try h.store.upsert(schedule)
+            h.clock.withLock { $0 = fixture.input.startAt + 1000 }
+            h.zone.withLock { $0 = TimeZone(identifier: fixture.input.toZone)! }
+            if event { await h.executor.timeChanged() } else { await h.executor.execute() }
+            #expect(try h.store.load().schedules[schedule.id]?.nextRunAt == fixture.expected)
+            #expect(h.sentEntries.last?.first?.nextRunAt == Int64(floor(fixture.expected / 1000)))
+            #expect(h.reminders.first?.nextRunAt == fixture.expected)
+            #expect(h.calls.withLock { $0 } == 0)
+            #expect(try h.store.load().pending == false)
+        }
+    }
+
     @Test func clockJumpBehindBackoffStopsEvenWhenSameOccurrenceIsDue() async throws {
         let h = try Harness(); var schedule = try h.add()
         schedule.startAt -= 5000; schedule.retryNotBefore = h.now - 1000
@@ -375,5 +402,6 @@ import Testing
         #expect(try h.journal.load()[schedule.id]?.consumed != true)
         #expect(!h.controller.locked)
     }
+
 
 }

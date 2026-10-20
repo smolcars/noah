@@ -12,7 +12,17 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // Before any push handler can start a backup: plaintext left by a
         // backup or export that died with the app.
         ScratchSpace.shared.sweepAbandoned()
+        NotificationCenter.default.addObserver(self, selector: #selector(timeZoneChanged),
+                                               name: .NSSystemTimeZoneDidChange, object: nil)
         return true
+    }
+
+    func applicationSignificantTimeChange(_ application: UIApplication) {
+        Task { await RecurringExecutor.shared.timeChanged() }
+    }
+
+    @objc private func timeZoneChanged() {
+        Task { await RecurringExecutor.shared.timeChanged() }
     }
 
     /// Restore words stay visible for RN parity. System VoiceOver can read visible content;
