@@ -79,7 +79,12 @@ class ParityUIDeviceTest {
             }
             assertEquals("satoshi@example.test", decoded)
             shot("qr-my-code")
-            click("satoshi@\u200bexample.\u200btest")
+            var qr = text("Copy Lightning address")
+            assertNotNull("QR announces its copy action", qr)
+            while (qr != null && !qr.isClickable) qr = qr.parent
+            assertNotNull("QR copy action is clickable", qr)
+            assertEquals("android.widget.Button", qr!!.className.toString())
+            click("Copy Lightning address")
             waitFor("Copy feedback appears") { text("Copied") != null }
             var copied: String? = null
             instrumentation.runOnMainSync { copied = (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.getItemAt(0)?.text?.toString() }

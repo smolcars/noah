@@ -55,7 +55,7 @@ fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Un
             }, Modifier.weight(1f)) { Text("Scan") }
         }
         if (address != null) {
-            ReceiveQR(address) {
+            ReceiveQR(address, actionLabel = "Copy Lightning address") {
                 clipboard.setPrimaryClip(ClipData.newPlainText("Lightning address", address)); copied = true
             }
             if (displayName.trim().isNotEmpty()) Text(displayName, style = MaterialTheme.typography.titleLarge)

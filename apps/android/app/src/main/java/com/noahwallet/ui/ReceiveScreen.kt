@@ -7,6 +7,11 @@ import android.content.Intent
 import android.graphics.Bitmap
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -173,7 +178,7 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
 }
 
 @Composable
-internal fun ReceiveQR(uri: String, onClick: () -> Unit) {
+internal fun ReceiveQR(uri: String, actionLabel: String = "Show payment details", onClick: () -> Unit) {
     val bitmap = remember(uri) {
         runCatching {
             val matrix = QRCodeWriter().encode(uri, BarcodeFormat.QR_CODE, 840, 840,
@@ -186,9 +191,13 @@ internal fun ReceiveQR(uri: String, onClick: () -> Unit) {
             }.asImageBitmap()
         }.getOrNull()
     }
-    Box(Modifier.sizeIn(maxWidth = 302.dp).aspectRatio(1f).clip(RoundedCornerShape(28.dp)).background(Color.White).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+    Box(Modifier.sizeIn(maxWidth = 302.dp).aspectRatio(1f).clip(RoundedCornerShape(28.dp)).background(Color.White).clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = actionLabel, onClick = onClick).clearAndSetSemantics {
+        contentDescription = actionLabel
+        role = Role.Button
+        this.onClick(label = actionLabel) { onClick(); true }
+    }, contentAlignment = Alignment.Center) {
         if (bitmap != null) {
-            Image(bitmap, "Show payment details", Modifier.fillMaxSize())
+            Image(bitmap, null, Modifier.fillMaxSize())
             Image(painterResource(R.drawable.receive_logo), null, Modifier.size(44.dp).background(Color.White).padding(4.dp))
         } else Text("QR unavailable. Tap to copy payment details.", color = Color.Black)
     }
