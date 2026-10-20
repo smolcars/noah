@@ -71,12 +71,7 @@ open class NoahWidgetProvider : AppWidgetProvider() {
     ) {
         val prefs = context.getSharedPreferences(appGroup, Context.MODE_PRIVATE)
 
-        val totalBalance = prefs.getLong("totalBalance", 0L)
-        val onchainBalance = prefs.getLong("onchainBalance", 0L)
-        val offchainBalance = prefs.getLong("offchainBalance", 0L)
-        val pendingBalance = prefs.getLong("pendingBalance", 0L)
-        val closestExpiryBlocks = prefs.getLong("closestExpiryBlocks", 999999L)
-        val expiryThreshold = prefs.getLong("expiryThreshold", 288L)
+        val (totalBalance, onchainBalance, offchainBalance, pendingBalance, closestExpiryBlocks, expiryThreshold) = WidgetSnapshot.read(prefs)
 
         try {
             val views = RemoteViews(context.packageName, layoutResId)
