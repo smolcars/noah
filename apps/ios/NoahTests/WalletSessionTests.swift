@@ -183,11 +183,13 @@ struct WalletSessionTests {
         let completions = try await session.receiveCompletions(for: request)
         let reader = Task {
             var received: [ReceiveCompletion] = []
-            for try await completion in completions { received.append(completion) }
+            do {
+                for try await completion in completions { received.append(completion) }
+            } catch is CancellationError {
+                // Closing cancels the native observer; both normal finish and cancellation are valid.
+            }
             return received
         }
-        for _ in 0..<50 { await Task.yield() }
-
         try await session.close()
         // The observer ended with the session: no completion, stream finished.
         #expect(try await reader.value.isEmpty)

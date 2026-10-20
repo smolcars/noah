@@ -21,8 +21,9 @@ import Testing
     final class Storage {
         var attempt: SendPaymentController.Attempt?
         var failWrite = false
+        var failReceiptWrite = false
         func write(_ value: SendPaymentController.Attempt?) throws {
-            if failWrite { throw CocoaError(.fileWriteNoPermission) }
+            if failWrite || (failReceiptWrite && value?.receipt != nil) { throw CocoaError(.fileWriteNoPermission) }
             attempt = value
         }
     }
@@ -35,13 +36,20 @@ import Testing
                 pay: { _, _, _ in try await backend.pay() }, reconcile: { _ in await backend.reconcile() },
                 read: { storage.attempt }, write: { try storage.write($0) }))
     }
+    static func waitUntil(_ condition: @MainActor () -> Bool) async throws {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(15))
+        while !condition(), ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try #require(condition(), "Timed out waiting for the asynchronous state transition")
+    }
     @Test func duplicateTapsTimeoutAndRestartNeverResubmit() async throws {
         let backend = Backend()
         let storage = Storage()
         let subject = make(backend, storage)
         subject.submit(payment, quote: quote)
         subject.submit(payment, quote: quote)
-        try await Task.sleep(for: .milliseconds(100))
+        try await Self.waitUntil { subject.state != .submitting }
         #expect(await backend.calls == 1)
         #expect(subject.state == .uncertain)
         subject.submit(payment, quote: quote)
@@ -67,7 +75,7 @@ import Testing
         let caller = Task { subject.submit(payment, quote: quote) }
         await caller.value
         caller.cancel()
-        try await Task.sleep(for: .milliseconds(100))
+        try await Self.waitUntil { subject.state != .submitting }
         #expect(subject.state == .succeeded(SendReceipt(amount: 1000)))
         #expect(await backend.calls == 1)
     }
@@ -77,7 +85,7 @@ import Testing
         storage.failWrite = true
         let subject = make(backend, storage)
         subject.submit(payment, quote: quote)
-        try await Task.sleep(for: .milliseconds(50))
+        try await Self.waitUntil { subject.state != .submitting }
         #expect(await backend.calls == 0)
         #expect(subject.state == .ready)
     }
@@ -118,11 +126,11 @@ import Testing
         let storage = Storage()
         await backend.succeed()
         let subject = make(backend, storage)
+        storage.failReceiptWrite = true
         subject.submit(payment, quote: quote)
-        while storage.attempt == nil { await Task.yield() }
-        storage.failWrite = true
-        try await Task.sleep(for: .milliseconds(100))
+        try await Self.waitUntil { subject.state != .submitting }
         #expect(subject.state == .succeeded(SendReceipt(amount: 1000)))
+        storage.failWrite = true
         subject.acknowledge()
         subject.submit(payment, quote: quote)
         #expect(await backend.calls == 1)
@@ -133,7 +141,7 @@ import Testing
         let storage = Storage()
         let controller = make(backend, storage)
         controller.submit(payment, quote: quote)
-        try await Task.sleep(for: .milliseconds(100))
+        try await Self.waitUntil { controller.state != .submitting }
         await backend.setResolution(.failed)
         await controller.checkStatus()
         #expect(controller.state == .failed)
