@@ -31,7 +31,8 @@ fun BackupSettingsScreen(model: AppModel) {
     var backups by remember { mutableStateOf<List<BackupObjectInfo>?>(null) }
     var deleting by remember { mutableStateOf<BackupObjectInfo?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
-    suspend fun list() { backups = V0BackupV2ListClient(model.services.client).listBackupObjects().value() }
+    var listError by remember { mutableStateOf(false) }
+    suspend fun list() { backups = V0BackupV2ListClient(model.services.client).listBackupObjects().value(); listError = false }
     LaunchedEffect(Unit) {
         while (isActive) { state = PersistedBackupState.decode(model.settings.string(PersistedBackupState.key)); delay(1000) }
     }
@@ -51,14 +52,17 @@ fun BackupSettingsScreen(model: AppModel) {
         if (state.backupPending) Text(tr("Backup pending"))
         NoahButton("Backup Now", !model.busy && !model.isWalletSuspended) {
             model.action("Couldn't back up your wallet. Please try again.") {
-                model.services.backupCoordinator.flush(BackupCoordinator.Reason.manual, requireEnabled = false)
+                val refreshed = backUpAndRefresh(backup = {
+                    model.services.backupCoordinator.flush(BackupCoordinator.Reason.manual, requireEnabled = false)
+                }, refresh = { if (backups != null) list() })
                 message = "Your wallet has been backed up successfully."
-                if (backups != null) list()
+                listError = !refreshed
             }
         }
         NoahButton("List Backups", !model.busy, secondary = true) { model.action("Couldn't list backups.") { list() } }
         if (model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         message?.let { Text(tr(it)) }
+        if (listError) Text(tr("Couldn't list backups."))
         backups?.let { records ->
             SectionTitle("Available Backups")
             if (records.isEmpty()) Text(tr("No backups found"))
@@ -76,6 +80,14 @@ fun BackupSettingsScreen(model: AppModel) {
             model.services.backupCoordinator.forgetUploadedBackup(backup.backupId)
             deleting = null; list()
         } }, enabled = !model.busy) { Text(tr("Delete Backup")) } }) }
+}
+
+/** A list refresh cannot change a completed upload into a failed backup. */
+internal suspend fun backUpAndRefresh(backup: suspend () -> Unit, refresh: suspend () -> Unit): Boolean {
+    backup()
+    return try { refresh(); true }
+    catch (cancelled: CancellationException) { throw cancelled }
+    catch (_: Exception) { false }
 }
 
 /** A produced file and how to remove its temporary staging folder. */

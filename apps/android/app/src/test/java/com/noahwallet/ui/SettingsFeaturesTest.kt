@@ -8,6 +8,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SettingsFeaturesTest {
+    @Test fun successfulManualBackupSurvivesFailedListRefresh() = kotlinx.coroutines.runBlocking {
+        var uploaded = false
+        assertFalse(backUpAndRefresh(backup = { uploaded = true }, refresh = { error("list unavailable") }))
+        assertTrue(uploaded)
+        var listed = false
+        assertTrue(runCatching { backUpAndRefresh(backup = { error("upload failed") }, refresh = { listed = true }) }.isFailure)
+        assertFalse(listed)
+        assertTrue(backUpAndRefresh(backup = {}, refresh = {}))
+    }
+
     @Test fun launchBackgroundAndStaleAuthentication() {
         val policy = BiometricLockPolicy(true)
         assertTrue(policy.locked)
