@@ -2,6 +2,8 @@ package com.noahwallet.services.wallet
 
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.backup.*
+import com.noahwallet.ui.RestoreCompletion
+import com.noahwallet.ui.RestoreCompletionJournal
 import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -317,7 +319,7 @@ class WalletLifecycleTest {
         }
     }
 
-    @Test fun restoreJournalSettlesBeforeMatchingStaleDeletionMarker() = runBlocking {
+    @Test fun startupSettlesJournalBeforeMatchingMarkerThenReplaysAndOpensUnderOneGate() = runBlocking {
         for (phase in listOf("installing", "rollback", "committed")) {
             val world = World()
             try {
@@ -335,12 +337,38 @@ class WalletLifecycleTest {
                 // Matching both live instance and current seed used to enter deletion and throw
                 // RestorePending forever, before the journal got a chance to settle.
                 world.location.writeDeletionIdentity(secret.read()) {}
+                val journal = RestoreCompletionJournal(world.location, sync = {})
+                journal.write(WalletRestorer.Outcome("backup", "hash"))
+                var initialized = false
                 val lifecycle = world.lifecycle()
-                val recovery = RestoreRecovery { lifecycle.recoverRestoreAndDeletion {
+                val recovery = RestoreRecovery {
                     WalletRestorer.recoverInterruptedRestore(world.session, world.location, secret, tx)
-                } }
-                val first = async { recovery.settle() }
-                val headless = async { recovery.settle() }
+                }
+                // UI startup holds the gate through recovery, completion replay and opening;
+                // headless recovery acquires the gate before RestoreRecovery too.
+                val completionEntered = CompletableDeferred<Unit>(); val releaseCompletion = CompletableDeferred<Unit>()
+                val first = async {
+                    lifecycle.withWalletMutation {
+                        val result = lifecycle.recoverRestoreAndDeletion(walletMutationHeld = true) { recovery.settle() }
+                        RestoreCompletion(
+                            loadState = { PersistedWalletState() },
+                            saveState = { initialized = it.isInitialized == true },
+                            seedRestored = { _, _ -> },
+                            recover = { lifecycle.recoverRestoreAndDeletion(walletMutationHeld = true) { recovery.settle() } },
+                            openWallet = {}, journal = journal,
+                        ).replay(result, world.location.databaseExists)
+                        assertFalse(journal.pending)
+                        assertEquals(phase == "committed", initialized)
+                        completionEntered.complete(Unit); releaseCompletion.await()
+                        assertTrue(world.location.databaseExists)
+                        world.session.release(world.session.reserve()) // Opening may reserve only after recovery.
+                        result
+                    }
+                }
+                completionEntered.await()
+                val headless = async { lifecycle.recoverRestoreAndDeletion { recovery.settle() } }
+                yield(); assertFalse(headless.isCompleted)
+                releaseCompletion.complete(Unit)
                 assertEquals(if (phase == "committed") RestoreTransaction.Recovery.completed else RestoreTransaction.Recovery.rolledBack, first.await())
                 assertEquals(RestoreTransaction.Recovery.nothingPending, headless.await())
                 assertEquals(if (phase == "committed") "wallet B data" else "wallet A data", world.location.database.readText())
@@ -368,14 +396,15 @@ class WalletLifecycleTest {
                 override suspend fun save(value: String) = error("Recovery must not write a seed")
             }
             val lifecycle = world.lifecycle()
-            val recovery = RestoreRecovery { lifecycle.recoverRestoreAndDeletion {
+            val recovery = RestoreRecovery {
                 WalletRestorer.recoverInterruptedRestore(world.session, world.location, secret, tx)
-            } }
-            assertEquals(RestoreTransaction.Recovery.waitingForSecret, recovery.settle())
+            }
+            suspend fun recover() = lifecycle.recoverRestoreAndDeletion { recovery.settle() }
+            assertEquals(RestoreTransaction.Recovery.waitingForSecret, recover())
             assertTrue(world.location.restorePending); assertFalse(world.location.deletionMarker.exists())
             assertTrue(world.seed); assertEquals(listOf("sync"), world.events)
             locked = false; world.seedValue = "wallet B"
-            assertEquals(RestoreTransaction.Recovery.completed, recovery.settle())
+            assertEquals(RestoreTransaction.Recovery.completed, recover())
             assertFalse(world.location.restorePending); assertFalse(world.location.deletionMarker.exists())
             assertEquals("wallet B data", world.location.database.readText()); assertTrue(world.seed)
         } finally { world.clean() }
@@ -401,10 +430,11 @@ class WalletLifecycleTest {
                     WalletRestorer.recoverInterruptedRestore(world.session, world.location, secret, tx))
                 error("Interrupted after journal removal")
             } }.isFailure)
-            val recovery = RestoreRecovery { lifecycle.recoverRestoreAndDeletion {
+            val recovery = RestoreRecovery {
                 WalletRestorer.recoverInterruptedRestore(world.session, world.location, secret, tx)
-            } }
-            assertEquals(RestoreTransaction.Recovery.nothingPending, recovery.settle())
+            }
+            suspend fun recover() = lifecycle.recoverRestoreAndDeletion { recovery.settle() }
+            assertEquals(RestoreTransaction.Recovery.nothingPending, recover())
             assertTrue(world.seed); assertTrue(world.location.database.exists()); assertTrue(world.settings)
             assertFalse(world.location.deletionMarker.exists())
         } finally { world.clean() }

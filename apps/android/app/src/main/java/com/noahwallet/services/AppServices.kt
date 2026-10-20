@@ -83,13 +83,10 @@ class AppServices private constructor(private val context: Context) {
     /**
      * Settles an interrupted restore, then any committed deletion. Lock order is always lifecycle
      * gate → RestoreRecovery → session reservation; the gate isn't reentrant, so a caller already
-     * holding it (the restore flow) passes [walletMutationHeld] and has checked there's no marker.
+     * holding it (startup or the restore flow) passes [walletMutationHeld].
      */
     suspend fun recoverRestore(walletMutationHeld: Boolean = false): RestoreTransaction.Recovery =
-        if (walletMutationHeld) {
-            check(!WalletDataLocation(context.filesDir, variant).deletionMarker.exists())
-            restoreRecovery.settle()
-        } else lifecycle.recoverRestoreAndDeletion { restoreRecovery.settle() }
+        lifecycle.recoverRestoreAndDeletion(walletMutationHeld) { restoreRecovery.settle() }
 
     fun restorer() = WalletRestorer(variant, session, WalletDataLocation(context.filesDir, variant), SeedItem(seed),
         makeClient = { phrase ->

@@ -41,23 +41,30 @@ class WalletLifecycle(
     suspend fun <T> withWalletMutation(block: suspend () -> T): T = mutation.withLock { block() }
 
     /** Called by launch and headless recovery; keeps deletion out until restore has settled. */
-    suspend fun recoverRestoreAndDeletion(recoverRestore: suspend () -> RestoreTransaction.Recovery) =
-        withContext(NonCancellable + Dispatchers.IO) {
-            mutation.withLock {
-                // Deletion refuses a restore journal, and restore refuses a deletion marker.
-                // Coexistence proves the marker is stale, even if its seed tag matches.
-                // Drop it durably before restore removes its journal: a crash after rollback
-                // must not reauthorize deletion of the previous wallet on the next launch.
-                if (location.restorePending) {
-                    if (location.deletionMarker.exists()) discardDeletionMarker()
-                    else syncFiles() // Retry a prior marker unlink whose directory sync failed.
-                }
-                val result = recoverRestore()
-                if (result == RestoreTransaction.Recovery.waitingForSecret) return@withLock result
-                recoverDeletionLocked()
-                result
-            }
+    suspend fun recoverRestoreAndDeletion(
+        walletMutationHeld: Boolean = false,
+        recoverRestore: suspend () -> RestoreTransaction.Recovery,
+    ): RestoreTransaction.Recovery = withContext(NonCancellable + Dispatchers.IO) {
+        if (walletMutationHeld) recoverRestoreAndDeletionLocked(recoverRestore)
+        else mutation.withLock { recoverRestoreAndDeletionLocked(recoverRestore) }
+    }
+
+    private suspend fun recoverRestoreAndDeletionLocked(
+        recoverRestore: suspend () -> RestoreTransaction.Recovery,
+    ): RestoreTransaction.Recovery {
+        // Deletion refuses a restore journal, and restore refuses a deletion marker.
+        // Coexistence proves the marker is stale, even if its seed tag matches.
+        // Drop it durably before restore removes its journal: a crash after rollback
+        // must not reauthorize deletion of the previous wallet on the next launch.
+        if (location.restorePending) {
+            if (location.deletionMarker.exists()) discardDeletionMarker()
+            else syncFiles() // Retry a prior marker unlink whose directory sync failed.
         }
+        val result = recoverRestore()
+        if (result == RestoreTransaction.Recovery.waitingForSecret) return result
+        recoverDeletionLocked()
+        return result
+    }
 
     suspend fun recoverDeletion() = withContext(NonCancellable + Dispatchers.IO) {
         mutation.withLock { recoverDeletionLocked() }

@@ -182,7 +182,6 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             var recovering = true
             try {
-                services.lifecycle.recoverDeletion()
                 services.lifecycle.withWalletMutation {
                     val recovered = services.recoverRestore(walletMutationHeld = true)
                     if (recovered == com.noahwallet.services.backup.RestoreTransaction.Recovery.waitingForSecret) {
