@@ -24,6 +24,17 @@ class AppLogTest {
             assertTrue("persistence ${case.name}", file.lines().last().endsWith(expected))
         }
     }
+    @Test fun prefixedHexSecretsFromRustAreRedacted() {
+        assertRedactionCases("r2-label-")
+        assertRedactionCases("r2-separator-")
+    }
+
+    private fun assertRedactionCases(prefix: String) {
+        for (case in SharedFixtures.load("log-redaction").filter { it.name.startsWith(prefix) }) {
+            assertEquals(case.name, case.expected.jsonPrimitive.content, LogFile.redact(case.input.jsonPrimitive.content))
+        }
+    }
+
     @Test fun sharedAddressRedactionVectors() = withFile { _, file ->
         for (case in SharedFixtures.load("log-redaction").filter { it.name.startsWith("address-") }) {
             val expected = case.expected.jsonPrimitive.content

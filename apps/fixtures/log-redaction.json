@@ -335,6 +335,96 @@
       "name": "negative-version",
       "input": "version 1.2.3",
       "expected": "version 1.2.3"
+    },
+    {
+      "name": "r2-label-payment_preimage",
+      "input": "SDK failure: payment_preimage: abababababababababababababababababababababababababababababababab; caused by invalid length",
+      "expected": "SDK failure: [redacted]"
+    },
+    {
+      "name": "r2-label-wallet_private_key",
+      "input": "SDK failure: wallet_private_key: abababababababababababababababababababababababababababababababab; caused by invalid length",
+      "expected": "SDK failure: [redacted]"
+    },
+    {
+      "name": "r2-label-priv_key",
+      "input": "SDK failure: priv_key: abababababababababababababababababababababababababababababababab; caused by invalid length",
+      "expected": "SDK failure: [redacted]"
+    },
+    {
+      "name": "r2-label-walletPreimageHex",
+      "input": "SDK failure: walletPreimageHex: abababababababababababababababababababababababababababababababab; caused by invalid length",
+      "expected": "SDK failure: [redacted]"
+    },
+    {
+      "name": "r2-label-backup-mnemonic-value",
+      "input": "SDK failure: backup-mnemonic-value: abababababababababababababababababababababababababababababababab; caused by invalid length",
+      "expected": "SDK failure: [redacted]"
+    },
+    {
+      "name": "r2-label-walletSeedBytes",
+      "input": "SDK failure: walletSeedBytes: abababababababababababababababababababababababababababababababab; caused by invalid length",
+      "expected": "SDK failure: [redacted]"
+    },
+    {
+      "name": "r2-label-walletPrivKeyValue",
+      "input": "SDK failure: walletPrivKeyValue: abababababababababababababababababababababababababababababababab; caused by invalid length",
+      "expected": "SDK failure: [redacted]"
+    },
+    {
+      "name": "r2-label-secret-key",
+      "input": "SDK failure: secret key: abababababababababababababababababababababababababababababababab; caused by invalid length",
+      "expected": "SDK failure: [redacted]"
+    },
+    {
+      "name": "r2-label-wallet-sig-raw",
+      "input": "SDK failure: wallet-sig-raw: abababababababababababababababababababababababababababababababab; caused by invalid length",
+      "expected": "SDK failure: [redacted]"
+    },
+    {
+      "name": "r2-label-rawSigValue",
+      "input": "SDK failure: rawSigValue: abababababababababababababababababababababababababababababababab; caused by invalid length",
+      "expected": "SDK failure: [redacted]"
+    },
+    {
+      "name": "r2-separator-77",
+      "input": "wallet_private_key=YWJjZGVmZ2hpamtsbW5vcA==",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r2-separator-78",
+      "input": "payment_preimage YWJjZGVmZ2hpamtsbW5vcA==",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r2-separator-79",
+      "input": "priv_key \"YWJjZGVmZ2hpamtsbW5vcA==",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r2-separator-80",
+      "input": "rawSig' 'YWJjZGVmZ2hpamtsbW5vcA==",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r2-separator-81",
+      "input": "wallet-secret-key\nYWJjZGVmZ2hpamtsbW5vcA==",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r2-json-prefixed-key",
+      "input": "{\"wallet_private_key\":\"abababababababababababababababababababababababababababababababab\"}",
+      "expected": "{\"[redacted]"
+    },
+    {
+      "name": "r2-base58-private",
+      "input": "wallet_priv_key AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "[redacted]"
+    },
+    {
+      "name": "r2-label-seed-phrase",
+      "input": "SDK failure: wallet_seed phrase: abababababababababababababababababababababababababababababababab",
+      "expected": "SDK failure: [redacted]"
     }
   ]
 }

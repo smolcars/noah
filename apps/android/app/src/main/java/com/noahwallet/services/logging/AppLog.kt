@@ -82,7 +82,7 @@ class LogFile(private val directory: File) {
         private val sensitivePatterns = listOf(
             """(?is)\b[\w.-]*(?:email|lightning[_ -]?address)[\w.-]*["']?\s*[:=].*""",
             """(?i)\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,63}\b""",
-            """(?is)\b(?:[\w.-]*(?:token|secret|signature|authorization|password)[\w.-]*|mnemonic|seed(?:[_ -]?phrase)?|private[_ -]?key|privkey|preimage|authorization|password|key|x-amz-[\w-]+)["']?\s*[:=({\[].*""",
+            """(?is)\b(?:[\w.-]*(?:mnemonic|seed(?:[_ -]?phrase)?|priv(?:ate)?[_ -]?key|secret(?:[_ -]?key)?|preimage|sig(?:nature)?|token|authorization|password)[\w.-]*|key|x-amz-[\w-]+)["']?(?:\s*[:=({\[].*|(?:\s+|["']\s*)["']?[A-Za-z0-9+/_=-]{16,}.*)""",
             """(?i)\bhttps?://[^\s<>"']*\?[^\s<>"']*""",
             """(?i)\bhttps?%3a%2f%2f[^\s<>"']*""",
             """(?i)\bBearer\s+[A-Za-z0-9._~+/-]+=*|\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}""",
