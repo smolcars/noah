@@ -17,8 +17,9 @@ import kotlinx.serialization.json.*
         }.toString()
     }
 }
+@Serializable data class SendInput(val txid: String, val vout: UInt)
 @Serializable data class SendPrepared(val id: String, val txid: String, val vsize: Long, val inputCount: Int,
-    val createdAt: Long = System.currentTimeMillis()) {
+    val createdAt: Long = System.currentTimeMillis(), val inputs: List<SendInput>? = null) {
     fun isCurrent(now: Long = System.currentTimeMillis()) = now >= createdAt && now - createdAt < lifetimeMillis
     companion object { const val lifetimeMillis = 120_000L }
 }
@@ -28,8 +29,13 @@ import kotlinx.serialization.json.*
     val resolvedInvoice: String? = null, val prepared: SendPrepared? = null)
 @Serializable data class SendReceipt(val amount: Long, val txid: String? = null, val paymentHash: String? = null,
     val movementID: UInt? = null, val amountIsPending: Boolean = false, val status: Status = Status.submitted,
-    val fee: Long? = null, val proof: Proof? = null, val broadcastRetryPending: Boolean = false) {
-    @Serializable enum class Status { submitted, confirmed, unlocated }
+    val fee: Long? = null, val proof: Proof? = null, val broadcastRetryPending: Boolean = false,
+    val confirmedConflictTxid: String? = null) {
+    @Serializable enum class Status { submitted, confirmed, unlocated, conflicted }
+    val isUnresolved get() = status in listOf(Status.unlocated, Status.conflicted)
+    val conflictDescription get() = confirmedConflictTxid?.let {
+        "This transaction cannot confirm on the current chain: a confirmed different transaction ($it) spends one of its inputs."
+    }
     @Serializable enum class Proof { preparedTxid, submitReturnedTxid, actualMovement, submitReturnedArkSuccess }
     fun isProven(payment: SendPayment, knownHash: String? = null, alreadyPaid: Boolean = false): Boolean = when (proof) {
         Proof.submitReturnedArkSuccess -> payment.method == "ark" && amount > 0 && amount == payment.amount && txid == null && paymentHash == null && !amountIsPending
@@ -42,7 +48,7 @@ import kotlinx.serialization.json.*
 @Serializable data class SendSnapshot(val movementIDs: Set<UInt> = emptySet(), val bdkTxids: Set<String>? = null,
     val resolvedInvoice: String? = null, val walletIdentity: SendIdentity? = null, val checkpoint: SendCheckpoint? = null)
 @Serializable data class SendAttempt(val walletIdentity: SendIdentity? = null, val inspectionPending: Boolean = false,
-    val safetyVersion: Int = 1, val broadcastingTxid: String? = null, val payment: SendPayment,
+    val safetyVersion: Int = 2, val broadcastingTxid: String? = null, val payment: SendPayment,
     val snapshot: SendSnapshot = SendSnapshot(), val receipt: SendReceipt? = null, val alreadyPaid: SendReceipt? = null,
     val failed: Boolean = false, val startedAt: Long = System.currentTimeMillis(), val paymentHash: String? = null,
     val quote: SendQuote? = null, val failureMessage: String? = null, val existingLightning: SendLightningProgress? = null,

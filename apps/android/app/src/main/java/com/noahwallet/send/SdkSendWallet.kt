@@ -46,7 +46,8 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
                 preparedID = prepared.id
                 preparations.retain(prepared.id)
                 SendQuote(prepared.amountSats.toLong(), prepared.feeSats.toLong(), Math.addExact(prepared.amountSats.toLong(), prepared.feeSats.toLong()), rate.toLong(),
-                    prepared = SendPrepared(prepared.id, prepared.txid, prepared.vsize.toLong(), prepared.inputs.size))
+                    prepared = SendPrepared(prepared.id, prepared.txid, prepared.vsize.toLong(), prepared.inputs.size,
+                        inputs = prepared.inputs.map { SendInput(it.txid, it.vout) }))
             } else {
                 var ids: List<String>? = null
                 val estimate = when (payment.method) {

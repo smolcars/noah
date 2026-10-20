@@ -222,9 +222,10 @@ internal fun keypadInput(amount: String, key: String, decimal: Boolean): String 
         if (controller.state == SendController.State.submitting) CircularProgressIndicator()
         receipt?.let {
             Text(if (it.amountIsPending) "Recipient amount pending" else "${it.amount} sats", style = MaterialTheme.typography.displaySmall)
-            ReviewRow("Status", if (it.status == SendReceipt.Status.confirmed) "Confirmed" else if (it.status == SendReceipt.Status.unlocated) "Unable to locate" else "Submitted")
+            ReviewRow("Status", when (it.status) { SendReceipt.Status.confirmed -> "Confirmed"; SendReceipt.Status.unlocated -> "Unable to locate"; SendReceipt.Status.conflicted -> "Conflicted"; SendReceipt.Status.submitted -> "Submitted" })
             it.fee?.let { fee -> ReviewRow("Actual fee", "$fee sats") }
             it.txid?.let { txid -> SelectionContainer { Text(txid, style = MaterialTheme.typography.bodySmall) } }
+            it.conflictDescription?.let { description -> Text(description) }
             if (it.broadcastRetryPending) Text("Noah will keep retrying the broadcast. Do not send again.")
             if (controller.attempt?.payment?.source == SendSource.offchain && it.txid != null) Text("Offboard submitted. Network confirmation is not yet available.")
         }

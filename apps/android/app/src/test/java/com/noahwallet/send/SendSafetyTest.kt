@@ -27,7 +27,7 @@ internal open class FakeSendWallet : SendWallet {
 internal class TestJournal {
     val audits = mutableListOf<SendOverrideAudit>()
     var attempt: SendAttempt? = null; var fail = false; var failReceipt = false
-    fun write(value: SendAttempt?) { if (fail || failReceipt && value?.receipt != null) error("disk"); attempt = value?.let { Json.decodeFromString<SendAttempt>(Json.encodeToString(it)) } }
+    fun write(value: SendAttempt?) { if (fail || failReceipt && value?.receipt != null) error("disk"); attempt = value?.let { Json.decodeFromString<SendAttempt>(Json { encodeDefaults = true }.encodeToString(it)) } }
 }
 internal fun controller(wallet: FakeSendWallet, journal: TestJournal, scope: CoroutineScope) = SendController(SendController.Dependencies({ journal.attempt }, journal::write, auditOverride = { journal.audits.add(it) }) { body -> withContext(NonCancellable) { body(wallet) } }, scope)
 internal val arkPayment = SendPayment("ark-address", "ark", 1000)

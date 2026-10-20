@@ -19,7 +19,7 @@ class SendJournalDeviceTest {
             val file = File(directory, "attempt.json"); val journal = SendJournal(file)
             val attempt = SendAttempt(walletIdentity = SendIdentity("test", "REGTEST"), payment = SendPayment("destination", "onchain", 1000, SendSource.onchain), broadcastingTxid = "exact")
             journal.write(attempt)
-            assertEquals(1, Json.parseToJsonElement(file.readText()).jsonObject.getValue("safetyVersion").jsonPrimitive.int)
+            assertEquals(SendController.journalVersion, Json.parseToJsonElement(file.readText()).jsonObject.getValue("safetyVersion").jsonPrimitive.int)
             assertEquals(attempt, SendJournal(file).read())
             assertTrue(file.renameTo(File(file.path + ".bak")))
             assertEquals(attempt, SendJournal(file).read())

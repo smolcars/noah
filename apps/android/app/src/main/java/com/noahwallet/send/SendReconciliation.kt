@@ -54,17 +54,34 @@ object SendReconciliation {
     }
     fun onchain(attempt: SendAttempt, transactions: List<WalletTransaction>): SendResolution {
         val receipt = attempt.receipt
+        val originalTxid = receipt?.txid ?: attempt.broadcastingTxid
+        val original = transactions.firstOrNull { it.txid == originalTxid }
+        val preparedInputs = attempt.quote?.prepared?.takeIf { it.txid == originalTxid }?.inputs
+        val inputs = if (preparedInputs != null) preparedInputs.takeIf { points ->
+            points.isNotEmpty() && points.all { Regex("[0-9a-f]{64}").matches(it.txid) }
+        } else original?.let { runCatching { SendTransaction.parse(it.txHex).inputs }.getOrNull() }
+        val conflict = inputs?.toSet()?.let { points -> transactions.firstOrNull { tx ->
+            tx.txid != originalTxid && tx.confirmation != null &&
+                runCatching { SendTransaction.parse(tx.txHex).inputs.any { it in points } }.getOrDefault(false)
+        }?.txid }
         if (receipt != null && receipt.proof in listOf(SendReceipt.Proof.submitReturnedTxid, SendReceipt.Proof.preparedTxid) && receipt.txid != null) {
-            val tx = transactions.firstOrNull { it.txid == receipt.txid }
-            return SendResolution.Paid(if (tx != null) receipt.copy(status = if (tx.confirmation == null) SendReceipt.Status.submitted else SendReceipt.Status.confirmed,
-                fee = tx.onchainFeeSats?.toLong() ?: receipt.fee, broadcastRetryPending = tx.confirmation == null && receipt.broadcastRetryPending)
-            else receipt.copy(status = if (attempt.payment.source == SendSource.offchain) SendReceipt.Status.submitted else SendReceipt.Status.unlocated))
+            val status = when {
+                conflict != null -> SendReceipt.Status.conflicted
+                original != null -> if (original.confirmation == null) SendReceipt.Status.submitted else SendReceipt.Status.confirmed
+                attempt.payment.source == SendSource.offchain -> SendReceipt.Status.submitted
+                else -> SendReceipt.Status.unlocated
+            }
+            return SendResolution.Paid(receipt.copy(status = status, confirmedConflictTxid = conflict,
+                fee = original?.onchainFeeSats?.toLong() ?: receipt.fee,
+                broadcastRetryPending = original?.confirmation == null && receipt.broadcastRetryPending))
         }
         val txid = attempt.broadcastingTxid; val quote = attempt.quote
         if (txid != null && quote?.prepared?.txid == txid && attempt.payment.method == "onchain" && attempt.payment.source == SendSource.onchain) {
-            val tx = transactions.firstOrNull { it.txid == txid } ?: return SendResolution.Uncertain
-            return SendResolution.Paid(SendReceipt(quote.amount, txid = txid, status = if (tx.confirmation == null) SendReceipt.Status.submitted else SendReceipt.Status.confirmed,
-                fee = quote.fee, proof = SendReceipt.Proof.preparedTxid, broadcastRetryPending = tx.confirmation == null))
+            if (original == null && conflict == null) return SendResolution.Uncertain
+            return SendResolution.Paid(SendReceipt(quote.amount, txid = txid,
+                status = if (conflict != null) SendReceipt.Status.conflicted else if (original?.confirmation == null) SendReceipt.Status.submitted else SendReceipt.Status.confirmed,
+                fee = quote.fee, proof = SendReceipt.Proof.preparedTxid, broadcastRetryPending = original?.confirmation == null,
+                confirmedConflictTxid = conflict))
         }
         if (attempt.payment.method != "onchain" || attempt.payment.source != SendSource.onchain || attempt.payment.max || attempt.snapshot.bdkTxids == null) return SendResolution.Uncertain
         val candidates = transactions.filter { it.txid !in attempt.snapshot.bdkTxids && it.balanceChangeSats < 0 && SendTransaction.amount(attempt.payment.destination, it.txHex) == attempt.payment.amount }.map { it.txid }
@@ -74,8 +91,16 @@ object SendReconciliation {
 
 /** Strict consensus-output reader; malformed evidence never authorizes another payment. */
 object SendTransaction {
+    data class Output(val amount: ULong, val script: ByteArray)
+    data class Parsed(val inputs: List<SendInput>, val outputs: List<Output>)
     fun amount(address: String, hex: String): Long {
         val script = PaymentEncoding.bitcoinScript(address) ?: throw SendFailure(SendFailure.Reason.unresolved)
+        return parse(hex).outputs.filter { it.script.contentEquals(script) }.fold(0L) { amount, output ->
+            require(output.amount <= Long.MAX_VALUE.toULong())
+            Math.addExact(amount, output.amount.toLong())
+        }
+    }
+    fun parse(hex: String): Parsed {
         require(hex.length % 2 == 0)
         val bytes = hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray(); var cursor = 0
         fun take(count: Int): ByteArray { require(count >= 0 && count <= bytes.size - cursor); return bytes.copyOfRange(cursor, cursor + count).also { cursor += count } }
@@ -85,11 +110,15 @@ object SendTransaction {
         val witness = bytes.size > cursor + 1 && bytes[cursor] == 0.toByte() && bytes[cursor + 1] == 1.toByte()
         if (witness) take(2)
         val inputs = size(); require(inputs > 0)
-        repeat(inputs) { take(36); take(size()); take(4) }
-        var amount = 0L
-        repeat(size()) { val value = integer(8); val outputScript = take(size()); if (outputScript.contentEquals(script)) { require(value <= Long.MAX_VALUE.toULong()); amount = Math.addExact(amount, value.toLong()) } }
+        val outpoints = List(inputs) {
+            val txid = PaymentEncoding.hex(take(32).reversedArray())
+            val vout = integer(4).toUInt()
+            take(size()); take(4)
+            SendInput(txid, vout)
+        }
+        val outputs = List(size()) { val value = integer(8); Output(value, take(size())) }
         if (witness) repeat(inputs) { repeat(size()) { take(size()) } }
         take(4); require(cursor == bytes.size)
-        return amount
+        return Parsed(outpoints, outputs)
     }
 }

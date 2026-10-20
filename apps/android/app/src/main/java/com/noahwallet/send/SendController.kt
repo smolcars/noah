@@ -37,16 +37,20 @@ class SendController(private val dependencies: Dependencies,
                     return@reservation
                 }
                 if (saved.walletIdentity != wallet.identity()) { dependencies.write(null); state = State.ready; return@reservation }
-                if (saved.safetyVersion != journalVersion || saved.receipt?.isProven(saved.payment, saved.paymentHash) == false || saved.alreadyPaid?.isProven(saved.payment, saved.paymentHash, true) == false) {
+                if (saved.safetyVersion !in 1..journalVersion || saved.receipt?.isProven(saved.payment, saved.paymentHash) == false || saved.alreadyPaid?.isProven(saved.payment, saved.paymentHash, true) == false) {
                     saved = saved.copy(safetyVersion = journalVersion, receipt = null, alreadyPaid = null, failed = false,
                         possibleTxids = (saved.possibleTxids + listOfNotNull(saved.receipt?.txid, saved.alreadyPaid?.txid)).distinct(),
                         failureMessage = "This saved payment outcome could not be verified. It may have been sent. Check history before sending again.")
+                    dependencies.write(saved)
+                } else if (saved.safetyVersion != journalVersion) {
+                    // v1 lacked input outpoints but already required receipt provenance.
+                    saved = saved.copy(safetyVersion = journalVersion)
                     dependencies.write(saved)
                 }
                 attempt = saved
                 state = when {
                     saved.alreadyPaid != null -> State.alreadyPaid
-                    saved.receipt != null -> if (saved.receipt.status == SendReceipt.Status.unlocated) State.uncertain else State.succeeded
+                    saved.receipt != null -> if (saved.receipt.isUnresolved) State.uncertain else State.succeeded
                     saved.failed -> State.failed
                     else -> State.uncertain
                 }
@@ -123,7 +127,7 @@ class SendController(private val dependencies: Dependencies,
         var saved = attempt ?: return
         when (resolution) {
             SendResolution.Uncertain -> { saved = saved.copy(receipt = saved.receipt?.let { if (it.txid != null) it.copy(status = SendReceipt.Status.unlocated) else it }); state = State.uncertain }
-            is SendResolution.Paid -> { saved = saved.copy(receipt = resolution.receipt); state = if (resolution.receipt.status == SendReceipt.Status.unlocated) State.uncertain else State.succeeded }
+            is SendResolution.Paid -> { saved = saved.copy(receipt = resolution.receipt); state = if (resolution.receipt.isUnresolved) State.uncertain else State.succeeded }
             is SendResolution.AlreadyPaid -> { saved = saved.copy(alreadyPaid = resolution.receipt); state = State.alreadyPaid }
             is SendResolution.InProgress -> { saved = saved.copy(existingLightning = resolution.progress); state = State.uncertain }
             is SendResolution.Candidates -> { saved = saved.copy(candidates = resolution.ids); state = State.uncertain }
@@ -139,7 +143,7 @@ class SendController(private val dependencies: Dependencies,
         if (state !in listOf(State.succeeded, State.alreadyPaid, State.failed) || attempt?.receipt?.broadcastRetryPending == true) return
         clear()
     }
-    val overrideWarning get() = SendOverrideAudit.warningText
+    val overrideWarning get() = listOfNotNull(attempt?.receipt?.conflictDescription, SendOverrideAudit.warningText).joinToString("\n\n")
     fun startNewPaymentAfterHistoryCheck(confirmed: Boolean) {
         if (!confirmed || !canOverride) return
         val evidence = attempt ?: unboundJournal
@@ -157,7 +161,7 @@ class SendController(private val dependencies: Dependencies,
         try { dependencies.write(null); attempt = null; unboundJournal = null; unreadableJournal = false; state = State.ready; message = null }
         catch (_: Exception) { message = "Unable to save payment status." }
     }
-    companion object { const val journalVersion = 1 }
+    companion object { const val journalVersion = 2 }
 }
 
 /** A reservation supplies one open wallet for the entire journal/inspection/payment interval. */
