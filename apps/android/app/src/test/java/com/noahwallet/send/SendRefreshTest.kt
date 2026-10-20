@@ -5,6 +5,51 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SendRefreshTest {
+    @Test fun interruptedStatusLookupRecoversPersistedSubmissionByExactTxid() = runBlocking {
+        for (source in SendSource.entries) for (max in listOf(false, true)) {
+            val journal = TestJournal()
+            val entered = CompletableDeferred<Unit>()
+            val owner = CoroutineScope(Job() + Dispatchers.Unconfined)
+            val receipt = SendReceipt(1000, txid = "returned-exact", proof = if (source == SendSource.onchain)
+                SendReceipt.Proof.preparedTxid else SendReceipt.Proof.submitReturnedTxid)
+            val wallet = object : FakeSendWallet() {
+                override suspend fun refreshReceipt(payment: SendPayment, receipt: SendReceipt): SendReceipt {
+                    assertEquals(receipt, journal.attempt!!.receipt)
+                    entered.complete(Unit)
+                    awaitCancellation()
+                }
+            }.apply { payBlock = { receipt } }
+            val payment = chainPayment.copy(source = source, max = max)
+            val subject = SendController(SendController.Dependencies({ journal.attempt }, journal::write) { it(wallet) }, owner)
+            subject.submit(payment, FakeSendWallet.quote)
+            entered.await()
+            owner.cancel(); owner.coroutineContext.job.join()
+            assertEquals(receipt, journal.attempt!!.receipt)
+            wallet.reconciliation = { saved ->
+                assertEquals("returned-exact", saved.receipt!!.txid)
+                SendReconciliation.withChainStatus(SendReconciliation.onchain(saved, emptyList()), source,
+                    com.noahwallet.services.wallet.ChainStatus(com.noahwallet.services.wallet.ChainStatus.Kind.inMempool))
+            }
+            val restarted = controller(wallet, journal, this)
+            restarted.reloadForWalletChange(); restarted.checkStatus()
+            assertEquals("returned-exact", journal.attempt!!.receipt!!.txid)
+            assertEquals(receipt.proof, journal.attempt!!.receipt!!.proof)
+            assertEquals("In mempool", journal.attempt!!.receipt!!.chainStatus!!.text)
+            assertEquals(1, wallet.calls)
+        }
+    }
+    @Test fun receiptWriteFailureSkipsOptionalStatusLookup() = runBlocking {
+        val journal = TestJournal().apply { failReceipt = true }
+        val wallet = object : FakeSendWallet() {
+            override suspend fun refreshReceipt(payment: SendPayment, receipt: SendReceipt): SendReceipt = error("Must persist first")
+        }.apply { payBlock = { SendReceipt(1000, txid = "exact", proof = SendReceipt.Proof.submitReturnedTxid) } }
+        val subject = controller(wallet, journal, this)
+        subject.submit(chainPayment.copy(source = SendSource.offchain), FakeSendWallet.quote)!!.join()
+        assertTrue(subject.message!!.startsWith("Payment status could not be saved"))
+        assertNull(journal.attempt!!.receipt)
+        assertEquals("exact", subject.attempt!!.receipt!!.txid)
+        assertEquals(1, wallet.calls)
+    }
     @Test fun failedRefreshPreservesReceiptOutcomeAndJournalAndSuccessfulCheckClearsWarning() = runBlocking {
         for (source in SendSource.entries) for (status in listOf(SendReceipt.Status.submitted, SendReceipt.Status.confirmed)) {
             val wallet = FakeSendWallet(); val journal = TestJournal()

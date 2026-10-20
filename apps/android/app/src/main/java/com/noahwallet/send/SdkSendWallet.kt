@@ -159,11 +159,11 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
                 if (movement != null) { wallet.updateHistoryMetadata(movement.id, payment.repeatMetadata); receipt = receipt.copy(movementID = movement.id) }
             } catch (_: Exception) { warn("Payment succeeded; repeat metadata could not be saved") }
         }
-        receipt.txid?.let { txid ->
-            receipt = try { receipt.copy(chainStatus = ChainStatus.from(if (payment.source == SendSource.onchain) onchain.transactionStatus(txid) else wallet.transactionStatus(txid))) }
-                catch (_: Exception) { receipt.copy(statusError = ChainStatus.errorText) }
-        }
         return receipt
+    }
+    override suspend fun refreshReceipt(payment: SendPayment, receipt: SendReceipt): SendReceipt {
+        val txid = receipt.txid ?: return receipt
+        return receipt.copy(chainStatus = ChainStatus.from(if (payment.source == SendSource.onchain) onchain.transactionStatus(txid) else wallet.transactionStatus(txid)), statusError = null)
     }
     override suspend fun reconcile(attempt: SendAttempt): SendResolution {
         requireSend(attempt.walletIdentity == identity(), SendFailure.Reason.unresolved)

@@ -431,3 +431,13 @@ The fingerprint-scoped live harness passed **6 stage executions**, zero failures
 Cleanup completed: verified `adb -s emulator-5592 emu avd name` was **NoahFfi050Android4978**, shut down that Device-panel device, confirmed its serial absent and ports closed, then deleted its AVD. Both AVD directory and ini are absent. Removed the task-owned SDK download/extraction and scratch files outside this worktree; shared Gradle/Android caches and all other devices/containers remain intact. [Cleanup evidence](../ExitTests/ffi050/device-cleanup.txt).
 
 Final chain-status guard verification: **3 targeted SendChainStatusTest cases passed**, including absent/mempool evidence preserving unresolved locks; APK rebuilt successfully in 6 seconds. The full suite was not repeated. [Build log](ffi050/gradle-chain-guard.log).
+
+## 0.5.0 review fixes, round 1 — durable receipt before status
+
+Submission now returns its exact txid/proof without a network-status lookup.
+SendController saves that receipt before the optional lookup and persists the
+returned status separately; a failed receipt write skips the lookup. A blocked
+lookup can be interrupted without losing the exact identity used after restart.
+Deterministic regression covers Amount/MAX offboards and BDK sends, plus receipt
+write failure. Targeted SendRefreshTest, SendSafetyTest and SendChainStatusTest:
+**17 tests passed, zero failures/errors/skips**. No live process kill was induced.

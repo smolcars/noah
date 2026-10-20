@@ -101,8 +101,12 @@ class SendController(private val dependencies: Dependencies,
                         return@reserve
                     }
                     try {
-                        finish(SendResolution.Paid(if (beforeSubmit == null) wallet.pay(payment, quote, attempt!!.snapshot)
-                            else wallet.payGuarded(payment, quote, attempt!!.snapshot, beforeSubmit)))
+                        val receipt = if (beforeSubmit == null) wallet.pay(payment, quote, attempt!!.snapshot)
+                            else wallet.payGuarded(payment, quote, attempt!!.snapshot, beforeSubmit)
+                        if (finish(SendResolution.Paid(receipt)) && receipt.txid != null) {
+                            try { finish(SendResolution.Paid(wallet.refreshReceipt(payment, receipt))) }
+                            catch (_: Exception) { showRefreshFailure() }
+                        }
                     } catch (failure: SendAlreadyPaid) { finish(SendResolution.AlreadyPaid(failure.receipt))
                     } catch (failure: SendExistingLightning) { finish(SendResolution.InProgress(failure.progress))
                     } catch (failure: SendNotSubmitted) {
@@ -142,8 +146,8 @@ class SendController(private val dependencies: Dependencies,
         message = "Couldn't check the latest status; showing the last known status." +
             if (attempt?.receipt == null || attempt?.receipt?.broadcastRetryPending == true) " This payment may still complete. Do not pay again." else ""
     }
-    private fun finish(resolution: SendResolution) {
-        var saved = attempt ?: return
+    private fun finish(resolution: SendResolution): Boolean {
+        var saved = attempt ?: return false
         when (resolution) {
             SendResolution.Uncertain -> { saved = saved.copy(receipt = saved.receipt?.let { if (it.txid != null) it.copy(status = SendReceipt.Status.unlocated) else it }); state = State.uncertain }
             is SendResolution.Paid -> { saved = saved.copy(receipt = resolution.receipt); state = if (resolution.receipt.isUnresolved) State.uncertain else State.succeeded }
@@ -151,11 +155,12 @@ class SendController(private val dependencies: Dependencies,
             is SendResolution.InProgress -> { saved = saved.copy(existingLightning = resolution.progress); state = State.uncertain }
             is SendResolution.Candidates -> { saved = saved.copy(candidates = resolution.ids); state = State.uncertain }
             is SendResolution.PossibleTransactions -> { saved = saved.copy(possibleTxids = (saved.possibleTxids + resolution.ids).distinct()); state = State.uncertain }
-            SendResolution.Failed -> { if (saved.receipt != null) return; saved = saved.copy(failed = true); state = State.failed }
+            SendResolution.Failed -> { if (saved.receipt != null) return false; saved = saved.copy(failed = true); state = State.failed }
         }
         attempt = saved
-        try { dependencies.write(saved) } catch (_: Exception) {
+        try { dependencies.write(saved); return true } catch (_: Exception) {
             message = "Payment status could not be saved. Check status again after restarting Noah."
+            return false
         }
     }
     fun acknowledge() {
@@ -189,6 +194,7 @@ interface SendWallet {
     suspend fun quote(payment: SendPayment): SendQuote
     suspend fun prepare(payment: SendPayment, quote: SendQuote): SendSnapshot
     suspend fun pay(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot): SendReceipt
+    suspend fun refreshReceipt(payment: SendPayment, receipt: SendReceipt): SendReceipt = receipt
     suspend fun payGuarded(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot, beforeSubmit: () -> Unit): SendReceipt {
         beforeSubmit(); return pay(payment, quote, snapshot)
     }
