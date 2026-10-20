@@ -59,7 +59,9 @@ struct HomeStatusBanners: View {
                 }
             }
         }
-        if home.backgroundRunning { ProgressView("Background task in progress...") }
+        if let message = home.backgroundMessage {
+            NoahCard { ProgressView(message).font(NoahFont.footnote).frame(maxWidth: .infinity) }
+        }
     }
 }
 

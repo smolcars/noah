@@ -318,6 +318,15 @@ struct HomeParityTests {
         #expect(model.nextBannerExpiry == Date(timeIntervalSince1970: 15))
     }
 
+    @Test func backgroundStripFollowsActivityUntilCompletion() async {
+        let model = HomeModel(dependencies: dependencies())
+        #expect(model.backgroundMessage == nil)
+        await model.backgroundChanged(.init(isRunning: true, completionRevision: 0))
+        #expect(model.backgroundMessage == "Background task in progress...")
+        await model.backgroundChanged(.init(isRunning: false, completionRevision: 1))
+        #expect(model.backgroundMessage == nil)
+    }
+
     private func dependencies() -> HomeModel.Dependencies {
         .init(price: { _ in nil }, rounds: { [] }, backup: { .init() }, retryBackup: {},
               autoBoards: { [] }, backgroundSnapshot: { .init(isRunning: false, completionRevision: 0) })

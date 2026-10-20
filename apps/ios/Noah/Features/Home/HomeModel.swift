@@ -105,6 +105,7 @@ final class HomeModel {
     private(set) var backup = PersistedBackupState()
     private(set) var isRetryingBackup = false
     private(set) var backgroundRunning = false
+    var backgroundMessage: String? { backgroundRunning ? "Background task in progress..." : nil }
     private(set) var fact = HomeFacts.values.randomElement() ?? ""
     private(set) var autoBoard: (netSats: UInt64, createdAt: Date)?
     private let dependencies: Dependencies
