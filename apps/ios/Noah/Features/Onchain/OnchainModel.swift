@@ -238,6 +238,27 @@ actor WalletBackgroundActivity {
     static let shared = WalletBackgroundActivity()
     private var count = 0
     var isRunning: Bool { count > 0 }
-    func begin() { count += 1 }
-    func end() { count -= 1 }
+    struct Snapshot: Equatable, Sendable {
+        var isRunning: Bool
+        var completionRevision: UInt64
+        var revision: UInt64 = 0
+    }
+    private var completionRevision: UInt64 = 0
+    private var revision: UInt64 = 0
+    private var observers: [UUID: AsyncStream<Snapshot>.Continuation] = [:]
+    var snapshot: Snapshot { .init(isRunning: isRunning, completionRevision: completionRevision, revision: revision) }
+
+    func changes() -> AsyncStream<Snapshot> {
+        let id = UUID()
+        let (stream, continuation) = AsyncStream<Snapshot>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        observers[id] = continuation
+        continuation.yield(snapshot)
+        continuation.onTermination = { _ in Task { await self.removeObserver(id) } }
+        return stream
+    }
+    private func removeObserver(_ id: UUID) { observers[id] = nil }
+    private func publish() { for observer in observers.values { observer.yield(snapshot) } }
+
+    func begin() { count += 1; revision += 1; publish() }
+    func end() { count -= 1; completionRevision += 1; revision += 1; publish() }
 }

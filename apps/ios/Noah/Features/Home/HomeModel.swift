@@ -58,7 +58,9 @@ final class HomeModel {
         var backup: () -> PersistedBackupState
         var retryBackup: () async throws -> Void
         var autoBoards: () async throws -> [AutoBoardCompletion]
-        var backgroundRunning: () async -> Bool
+        var backgroundSnapshot: () async -> WalletBackgroundActivity.Snapshot
+        var backgroundChanges: () async -> AsyncStream<WalletBackgroundActivity.Snapshot> = { AsyncStream { $0.finish() } }
+        var walletChanges: () async throws -> AsyncThrowingStream<String, Error> = { AsyncThrowingStream { $0.finish() } }
         var now: () -> Date = { Date() }
 
         static var live: Self {
@@ -76,7 +78,20 @@ final class HomeModel {
                         return AutoBoardCompletion(id: attempt.id, netSats: attempt.quote.net)
                     }
                 },
-                backgroundRunning: { await WalletBackgroundActivity.shared.isRunning })
+                backgroundSnapshot: { await WalletBackgroundActivity.shared.snapshot },
+                backgroundChanges: { await WalletBackgroundActivity.shared.changes() },
+                walletChanges: {
+                    let events = try await WalletSession.shared.stateChanges()
+                    return AsyncThrowingStream { continuation in
+                        let task = Task {
+                            do {
+                                for try await event in events { continuation.yield(event.reason) }
+                                continuation.finish()
+                            } catch { continuation.finish(throwing: error) }
+                        }
+                        continuation.onTermination = { _ in task.cancel() }
+                    }
+                })
         }
     }
 
@@ -91,6 +106,9 @@ final class HomeModel {
     private var quotes: [String: (price: Double, at: Date)] = [:]
     private var priceGeneration = 0
     private var loadingRounds = false
+    private var roundsRefreshPending = false
+    private var completionRevision: UInt64?
+    private var backgroundRevision: UInt64?
     private var nextRoundCheck: Date?
     private var seenAutoBoards: Set<UUID>?
 
@@ -111,24 +129,55 @@ final class HomeModel {
     }
 
     func refreshRounds(force: Bool = false) async {
+        if force { roundsRefreshPending = true }
         guard !loadingRounds, !backgroundRunning else { return }
         let now = dependencies.now()
-        if !force {
-            guard let nextRoundCheck, now >= nextRoundCheck else { return }
-        }
+        guard roundsRefreshPending || nextRoundCheck.map({ now >= $0 }) == true else { return }
         loadingRounds = true
         defer { loadingRounds = false }
+        repeat {
+            roundsRefreshPending = false
+            do {
+                activeRounds = try await dependencies.rounds().filter(\.active)
+            } catch { AppLog("home").w("Pending round status unavailable") }
+            nextRoundCheck = activeRounds.isEmpty ? nil : dependencies.now().addingTimeInterval(30)
+        } while roundsRefreshPending && !backgroundRunning && !Task.isCancelled
+    }
+
+    func backgroundChanged(_ snapshot: WalletBackgroundActivity.Snapshot) async {
+        guard backgroundRevision.map({ snapshot.revision >= $0 }) ?? true else { return }
+        backgroundRevision = snapshot.revision
+        let completed = completionRevision.map { $0 != snapshot.completionRevision } ?? false
+        completionRevision = snapshot.completionRevision
+        backgroundRunning = snapshot.isRunning
+        await refreshRounds(force: completed)
+    }
+
+    func observeBackground() async {
+        for await snapshot in await dependencies.backgroundChanges() {
+            guard !Task.isCancelled else { return }
+            await backgroundChanged(snapshot)
+        }
+    }
+
+    func observeWallet() async {
         do {
-            activeRounds = try await dependencies.rounds().filter(\.active)
-        } catch { AppLog("home").w("Pending round status unavailable") }
-        nextRoundCheck = activeRounds.isEmpty ? nil : now.addingTimeInterval(30)
+            var resubscribe = true
+            while resubscribe && !Task.isCancelled {
+                resubscribe = false
+                for try await reason in try await dependencies.walletChanges() {
+                    guard !Task.isCancelled else { return }
+                    await refreshRounds(force: true)
+                    if reason == "resyncRequired" { resubscribe = true; break }
+                }
+            }
+        } catch { AppLog("home").w("Wallet status observation unavailable") }
     }
 
     /// Poll only presentation state; round progression stays at RN's 30 s cadence.
     func tick() async {
         backup = dependencies.backup()
-        let wasBackgroundRunning = backgroundRunning
-        backgroundRunning = await dependencies.backgroundRunning()
+        await backgroundChanged(await dependencies.backgroundSnapshot())
         if let completed = try? await dependencies.autoBoards() {
             let ids = Set(completed.map(\.id))
             if let seenAutoBoards, let latest = completed.last(where: { !seenAutoBoards.contains($0.id) }) {
@@ -137,7 +186,7 @@ final class HomeModel {
             seenAutoBoards = ids
         }
         if let autoBoard, dependencies.now().timeIntervalSince(autoBoard.createdAt) >= 5 { self.autoBoard = nil }
-        await refreshRounds(force: wasBackgroundRunning && !backgroundRunning)
+        await refreshRounds()
     }
 
     func refresh(currency: String) async {

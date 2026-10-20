@@ -123,6 +123,14 @@ struct HomeView: View {
                     if scenePhase == .active { await home.tick() }
                 }
             }
+            .task(id: model.summary?.fingerprint) {
+                guard model.summary != nil, !model.isWalletSuspended else { return }
+                await home.observeBackground()
+            }
+            .task(id: model.summary?.fingerprint) {
+                guard model.summary != nil, !model.isWalletSuspended else { return }
+                await home.observeWallet()
+            }
             .task(id: model.preferredCurrency) { await home.loadPrice(currency: model.preferredCurrency) }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active && !model.isWalletSuspended {

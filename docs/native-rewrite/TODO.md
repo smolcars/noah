@@ -176,7 +176,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [ ] HomeScreen: fiat, recent 3 transactions, shortcuts, banners, facts — Android
 - [x] HomeScreen: recent 3 transactions, View all, transaction detail — iOS
 - [x] Banners: backup status/retry + 5-second success, automatic boarding success + 5-second expiry, pending rounds + detail/copy/explorer + 30-second active-only polling, persisted email dismissal/verification, update warning — iOS
-  - iOS deliberately observes successful automatic boarding receipts from the existing journal (no boarding changes); historical receipts do not replay. Backup/boarding presentation reads once a second; background jobs pause round progression. Existing native boarding review/receipt messages remain.
+  - iOS deliberately observes successful automatic boarding receipts from the existing journal (no boarding changes); historical receipts do not replay. Backup/boarding presentation reads once a second; background jobs pause round progression; completion revisions and wallet-change events resume queries even for jobs completed between UI updates. Existing native boarding review/receipt messages remain.
 - [ ] Banners: backup status, auto-boarding, pending round, email verification, update warning — Android
 - [x] App version check — iOS (`/v0/app_version`, current version once per process, no retry, failure allows use, Home warning + variant TestFlight link; no blocking update screen, as in RN)
 - [ ] App version check — Android
