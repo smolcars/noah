@@ -26,6 +26,15 @@ struct EndpointPrivacyTests {
         }
     }
 
+    @Test func unknownHTMLEntitiesAndUnterminatedNumericEntitiesCannotExposeHosts() {
+        EndpointLogPrivacy.register("https://fakeentitycredential91.example.com/api")
+        let unknown = "https://fakeentitycredential91&period;example&period;com/api"
+        #expect(LogFile.redact(unknown) == "[redacted]")
+        #expect(LogFile.redactForTelemetry(unknown) == nil)
+        let numeric = "https:&#47&#47fakeentitycredential91.example.com/api"
+        #expect(LogFile.redact(numeric) == "[custom-esplora]")
+    }
+
     @Test func providerBodiesAreRemovedAtEveryBoundaryAndHistoricalExport() throws {
         let input = #"HttpResponse { status: 404, message: "Account: &#x66;akeBodyCredential83" }"#
         let expected = "HttpResponse { status: 404 }"

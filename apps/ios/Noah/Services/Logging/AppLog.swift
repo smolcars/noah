@@ -265,7 +265,7 @@ final class LogFile: @unchecked Sendable {
     }
 
     private static func decodeEntity(_ token: String) -> String? {
-        let entity = String(token.dropFirst().dropLast())
+        let entity = String(token.dropFirst().dropLast(token.hasSuffix(";") ? 1 : 0))
         let code: UInt32?
         if entity.lowercased().hasPrefix("#x") { code = UInt32(entity.dropFirst(2), radix: 16) }
         else if entity.hasPrefix("#") { code = UInt32(entity.dropFirst()) }
@@ -386,7 +386,7 @@ final class LogFile: @unchecked Sendable {
         return Set(text.split(whereSeparator: \.isWhitespace).map(String.init))
     }()
     private static let jsonEscapes = try! NSRegularExpression(pattern: #"(?:\\u[0-9a-fA-F]{4})++|\\["\\/bfnrt]"#)
-    private static let encodedEscapes = try! NSRegularExpression(pattern: jsonEscapes.pattern + #"|(?:%[0-9a-fA-F]{2})+|&(?:#[xX][0-9a-fA-F]+|#[0-9]+|amp|quot|apos|lt|gt|colon|sol);"#)
+    private static let encodedEscapes = try! NSRegularExpression(pattern: jsonEscapes.pattern + #"|(?:%[0-9a-fA-F]{2})+|&(?:#[xX][0-9a-fA-F]+;?|#[0-9]+;?|[A-Za-z][A-Za-z0-9]*;)"#)
     private static let wordPattern = try! NSRegularExpression(pattern: #"[\p{L}\p{M}]+"#)
     // Search once per maximal token, never again at every internal dot/hyphen boundary.
     private static func replaceTokens(in text: String, tokens: NSRegularExpression,
