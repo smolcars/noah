@@ -9,7 +9,7 @@ import java.security.MessageDigest
 /** Write-ahead authority for policies; MMKV is never allowed to repair newer evidence. */
 internal class RecurringPolicyLedger(val file: File, private val warn: () -> Unit = {}, private val sync: (File) -> Unit = ::syncDirectory, private val syncFile: (java.io.FileDescriptor) -> Unit = { it.sync() }) {
     @Serializable private data class Marker(val version: Int, val binding: RecurringStore.Binding)
-    @Serializable private data class Entry(val binding: RecurringStore.Binding, val scheduleID: String, val generation: Long, val revision: String?, val status: String, val digest: String?)
+    @Serializable private data class Entry(val binding: RecurringStore.Binding, val scheduleID: String, val generation: Long, val revision: String?, val status: String, val digest: String?, val settlementKey: String? = null, val pending: RecurringPayment? = null, val predecessor: String? = null)
     @Serializable private data class State(val version: Int, val binding: RecurringStore.Binding, val generation: Long, val entries: Map<String, Entry>)
     val marker get() = File("${file.path}.initialized")
     private val json = RecurringStore.json
@@ -49,7 +49,7 @@ internal class RecurringPolicyLedger(val file: File, private val warn: () -> Uni
         schedules.filter { (id, schedule) -> !matches(state.entries[key(binding, id)], binding, schedule) }.keys.also { if (it.isNotEmpty()) warn() }
     } catch (_: Exception) { schedules.keys }
 
-    fun commit(binding: RecurringStore.Binding, before: Map<String, RecurringPayment>, after: Map<String, RecurringPayment>, policyID: String? = null, reapproval: Boolean = false) {
+    fun commit(binding: RecurringStore.Binding, before: Map<String, RecurringPayment>, after: Map<String, RecurringPayment>, policyID: String? = null, reapproval: Boolean = false, settlementKey: String? = null) {
         val state = state(binding, before)
         val changed = (before.keys + after.keys + listOfNotNull(policyID)).filter { it == policyID || before[it] != after[it] }
         if (changed.isEmpty()) return
@@ -62,11 +62,33 @@ internal class RecurringPolicyLedger(val file: File, private val warn: () -> Uni
             else {
                 // A user approval creates a new revision under this generation; evidence stays intact.
                 check((reapproval && schedule.nativeRevision != null && schedule.nativeRevision != entries[key]?.revision && schedule.nativeRevision != before[id]?.nativeRevision && schedule.inFlight == null && schedule.status == "active") || if (before[id] == null) entries[key] == null else matches(entries[key], binding, before.getValue(id))) { message }
-                entries[key] = entry(binding, schedule, generation)
+                entries[key] = entry(binding, schedule, generation).copy(settlementKey = settlementKey ?: entries[key]?.settlementKey,
+                    pending = if (settlementKey != null) schedule else null, predecessor = if (settlementKey != null) entries[key]?.digest else null)
             }
         }
         try { persist(state.copy(generation = generation, entries = entries)) }
         catch (failure: Exception) { failed = true; warn(); throw failure }
+    }
+    val hasPending get() = runCatching { json.decodeFromString<State>(file.readText()).entries.values.any { it.pending != null } }.getOrDefault(false)
+    fun applied(binding: RecurringStore.Binding, schedules: Map<String, RecurringPayment>, id: String, token: String): Boolean =
+        state(binding, schedules).entries[key(binding, id)]?.settlementKey == token
+
+    /** Only an unfinished, exact predecessor may be repaired; completed snapshots still fail closed. */
+    fun pending(binding: RecurringStore.Binding, schedules: Map<String, RecurringPayment>): List<RecurringPayment> {
+        val state = state(binding, schedules)
+        return state.entries.values.filter { it.binding == binding && it.pending != null }.map { e ->
+            val row = schedules[e.scheduleID] ?: error(message)
+            check(e.settlementKey != null && e.pending!!.id == e.scheduleID && e.pending.nativeRevision == e.revision && digest(e.pending) == e.digest &&
+                (digest(row) == e.predecessor || matches(e, binding, row))) { message }
+            e.pending
+        }
+    }
+    fun finish(binding: RecurringStore.Binding, schedules: Map<String, RecurringPayment>) {
+        val state = state(binding, schedules)
+        val pending = state.entries.filterValues { it.binding == binding && it.pending != null }
+        if (pending.isEmpty()) return
+        check(pending.values.all { e -> schedules[e.scheduleID]?.let { matches(e, binding, it) } == true }) { message }
+        persist(state.copy(entries = state.entries.mapValues { (id, e) -> if (id in pending) e.copy(pending = null, predecessor = null) else e }))
     }
     companion object {
         const val message = "Recurring policy evidence needs attention. Saved schedules are preserved; edit or resume them to approve a new revision. Sending remains stopped."
