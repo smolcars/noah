@@ -76,7 +76,7 @@ class BarkLogTest {
         try {
             BarkLog(file).log(LogLevel.WARN, "bark::onchain",
                 """fee estimation failed: HttpResponse { status: 404, message: "No route: /unknown/fakeUnregisteredCredential; \"nested\"" }; caused by: upstream unavailable""")
-            val expected = """fee estimation failed: HttpResponse { status: 404, message: "[provider response omitted]" }; caused by: upstream unavailable"""
+            val expected = "HttpResponse { status: 404 }"
             assertEquals(listOf(expected), received)
             assertTrue(file.lines().single().endsWith(expected))
         } finally { directory.deleteRecursively() }

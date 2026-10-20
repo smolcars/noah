@@ -10,8 +10,8 @@ internal object EndpointLogPrivacy {
         "scripthash", "utxo", "chain", "mempool", "block", "blocks", "block-height", "tip", "height", "hash",
         "header", "txids", "txid", "merkle-proof", "merkleblock-proof", "fee-estimates", "recent")
     private val urls = Regex("""(?i)\bhttps?://[^\s<>"']*""")
-    // esplora-client 0.12.3 Display uses Rust Debug: retain the error variant and HTTP status.
-    private val responseBodies = Regex("""(HttpResponse \{ status: [0-9]+, message: )"(?:\\.|[^"\\]++)*+"""")
+    // Admit only the SDK error type/status, never provider-controlled response text.
+    private val responseStatus = Regex("""HttpResponse(?:\s*\{\s*status:\s*|\()([0-9]{3})\b""")
     private fun origin(value: String): String? = value.toHttpUrlOrNull()?.newBuilder()
         ?.encodedPath("/")?.query(null)?.fragment(null)?.username("")?.password("")?.build()?.toString()?.removeSuffix("/")
     fun register(endpoint: String?) {
@@ -22,15 +22,14 @@ internal object EndpointLogPrivacy {
         }
         origin(endpoint)?.let(origins::add)
     }
-    fun sdkMessage(text: String): String {
-        if (text.toByteArray(Charsets.UTF_8).size > 16 * 1024) return "[oversized log message omitted]"
-        return redact(responseBodies.replace(text, "$1\"[provider response omitted]\""))
-    }
     fun redact(text: String): String {
-        if (origins.isEmpty()) return text
         // Exported lines include a bounded tag and timestamp as well as the message.
         if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[oversized log message omitted]"
         val views = LogFile.decodedViews(text, percentEncoded = true) ?: return "[redacted]"
+        for (view in views) {
+            responseStatus.find(view)?.let { return "HttpResponse { status: ${it.groupValues[1]} }" }
+        }
+        if (origins.isEmpty()) return text
         var result = text
         for ((index, view) in views.withIndex()) {
             val clean = urls.replace(view) { match -> if (origin(match.value)?.let { it in origins } == true) "[custom-esplora]" else match.value }

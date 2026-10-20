@@ -42,7 +42,7 @@ fun EsploraSettingsScreen(model: AppModel) {
                 model.services.startServerServices()
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: com.noahwallet.services.wallet.EsploraOpenWait.Timeout) { error = "The server isn't responding; switching back…" }
-            catch (failure: Exception) { error = failure.message ?: "Endpoint not changed" }
+            catch (failure: Exception) { error = com.noahwallet.services.logging.LogFile.redact(failure.message ?: "Endpoint not changed") }
             finally {
                 selection = store.selection(BuildConfig.APP_VARIANT)
                 model.services.reconcileBackupTriggers()

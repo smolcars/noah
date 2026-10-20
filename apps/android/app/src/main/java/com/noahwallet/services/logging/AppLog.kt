@@ -179,9 +179,10 @@ class LogFile(
         /** Uncertain decoding and oversized messages have no telemetry admission path. */
         internal fun redactForTelemetry(message: String): String? {
             if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return null
-            val views = decodedViews(message) ?: return null
+            val safe = EndpointLogPrivacy.redact(message)
+            val views = decodedViews(safe) ?: return null
             if (views.drop(1).any { redactPlain(it) != it }) return "[redacted]"
-            return redactPlain(message)
+            return redactPlain(safe)
         }
 
         internal fun decodedViews(message: String, percentEncoded: Boolean = false): List<String>? {
@@ -254,7 +255,7 @@ class LogFile(
             result = redactLabels(result, addresses = true)
             result = replaceEmails(result)
             result = redactLabels(result, addresses = false)
-            result = EndpointLogPrivacy.redact(urlTokens.replace(result) { if ('?' in it.value) "[redacted]" else it.value })
+            result = urlTokens.replace(result) { if ('?' in it.value) "[redacted]" else it.value }
             for ((index, pattern) in sensitivePatterns.withIndex()) {
                 result = pattern.replace(result, "[redacted]")
                 if (index == 1) {
