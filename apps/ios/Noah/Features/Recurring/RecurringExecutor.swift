@@ -239,6 +239,7 @@ import Observation
         var resolved = entry; resolved.resolved = true; resolved.consumed = paid; resolved.policyApplied = true
         try d.journal.save(resolved)
         var notification: RecurringPayment?
+        do {
         if var latest = state.schedules[entry.scheduleID], latest.nativeRevision == entry.policyRevision {
             if success {
                 let stopped = latest
@@ -257,6 +258,10 @@ import Observation
             var result = original; result.status = "active"
             result.success(entry.plan, now: d.now(), zone: d.zone())
             notification = result
+        }
+        } catch {
+            // Proven consumption releases Send even when policy advancement cannot be saved.
+            self.error = RecurringPolicyLedger.message
         }
         if !retainReceipt { d.controller.acknowledge() }
         if let notification { await d.notifications([], notification) }
