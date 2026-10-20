@@ -221,6 +221,9 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Bundled snapshot + BTC Map v4 sync, GeoNames city search — iOS (RN-generated shared fixtures, persisted viewport)
 - [x] Merchant detail sheet / pane, location — iOS
 
+- [x] BTC Map resource limits — iOS: streamed 32 MiB maximum, 100k records, 16 KiB strings, no immediate oversize retry and five-minute cooldown (measured payloads in `apps/ios/MapTests/README.md`)
+- [ ] Android M8: mirror transfer/record/string limits and oversize cooldown/cache preservation
+
 ## Cutover
 - [ ] Adaptive layouts (iPad / landscape / foldables) parity
 - [ ] Parity audit against RN, screen by screen

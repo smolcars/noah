@@ -95,9 +95,11 @@ struct BtcMapPlace: Codable, Identifiable, Equatable, Sendable {
         guard lat.isFinite, lon.isFinite, !icon.isEmpty, !name.isEmpty, !updated_at.isEmpty else {
             throw BtcMapError.invalidData
         }
+        try [icon, name, updated_at].forEach(BtcMapLimits.check)
         comments = (try? c.decode(Int.self, forKey: .comments)).flatMap { $0 >= 0 ? $0 : nil }
         boosted_until = (try? c.decode(String.self, forKey: .boosted_until)).flatMap { $0.isEmpty ? nil : $0 }
         verified_at = (try? c.decode(String.self, forKey: .verified_at)).flatMap { $0.isEmpty ? nil : $0 }
+        try [boosted_until, verified_at].compactMap { $0 }.forEach(BtcMapLimits.check)
     }
 }
 
@@ -108,6 +110,7 @@ struct BtcMapSnapshot: Codable, Sendable {
     var places: [BtcMapPlace]
 
     static func parse(_ data: Data) throws -> Self {
+        try BtcMapLimits.check(data)
         let value = try JSONDecoder().decode(Self.self, from: data)
         guard value.schemaVersion == 1, !value.generatedAt.isEmpty, !value.source.isEmpty else { throw BtcMapError.invalidData }
         return value
@@ -130,6 +133,7 @@ struct BtcMapPatch: Decodable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(Int.self, forKey: .id)
         let deleted = (try? c.decode(String.self, forKey: .deleted_at)) ?? ""
+        try BtcMapLimits.check(deleted)
         place = deleted.isEmpty ? try BtcMapPlace(from: decoder) : nil
     }
 }
@@ -146,13 +150,28 @@ struct BtcMapDetail: Sendable {
     }
 
     static func parse(place data: Data, comments: Data) throws -> Self {
+        try BtcMapLimits.check(data)
         let place = try JSONDecoder().decode(BtcMapPlace.self, from: data)
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw BtcMapError.invalidData }
         let fields = object.compactMapValues { ($0 as? String).flatMap { $0.isEmpty ? nil : $0 } }
-        let comments = try JSONDecoder().decode([Comment].self, from: comments)
+        try fields.values.forEach(BtcMapLimits.check)
+        let comments = try BtcMapLimits.decodeRecords(Comment.self, from: comments)
+        for comment in comments { try BtcMapLimits.check(comment.text); try BtcMapLimits.check(comment.created_at) }
         guard comments.allSatisfy({ !$0.text.isEmpty && !$0.created_at.isEmpty }) else { throw BtcMapError.invalidData }
         return Self(place: place, fields: fields, comments: comments)
     }
 }
 
-enum BtcMapError: Error { case invalidData, http(Int) }
+enum BtcMapError: Error { case invalidData, resourceLimit, http(Int) }
+
+extension BtcMapSnapshot {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try c.decode(Int.self, forKey: .schemaVersion)
+        generatedAt = try c.decode(String.self, forKey: .generatedAt)
+        source = try c.decode(String.self, forKey: .source)
+        try BtcMapLimits.check(generatedAt)
+        try BtcMapLimits.check(source)
+        places = try c.decode(BtcMapLimits.Records<BtcMapPlace>.self, forKey: .places).values
+    }
+}

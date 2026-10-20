@@ -19,6 +19,8 @@ actor BtcMapRepository {
     private var cities: [CitySearchEntry]?
     private var syncTask: Task<BtcMapSnapshot, Error>?
     private var lastSync: Date?
+    private var oversizedSync: Date?
+    private var oversizedDetails: [Int: Date] = [:]
     private var details: [Int: (Date, BtcMapDetail)] = [:]
     private var detailTasks: [Int: Task<BtcMapDetail, Error>] = [:]
 
@@ -34,18 +36,19 @@ actor BtcMapRepository {
 
     func load() throws -> BtcMapSnapshot {
         if let snapshot { return snapshot }
-        if let data = try? Data(contentsOf: cacheURL), let cached = try? BtcMapSnapshot.parse(data) {
+        if let data = try? BtcMapLimits.read(cacheURL), let cached = try? BtcMapSnapshot.parse(data) {
             snapshot = cached
             return cached
         }
         guard let bundleURL else { throw BtcMapError.invalidData }
-        let bundled = try BtcMapSnapshot.parse(Data(contentsOf: bundleURL))
+        let bundled = try BtcMapSnapshot.parse(BtcMapLimits.read(bundleURL))
         snapshot = bundled
         return bundled
     }
 
     func sync(now: Date = .now) async throws -> BtcMapSnapshot {
         if let syncTask { return try await syncTask.value }
+        if let oversizedSync, now.timeIntervalSince(oversizedSync) < 300 { throw BtcMapError.resourceLimit }
         let current = try load()
         if let lastSync, now.timeIntervalSince(lastSync) < 300 { return current }
         let url = Self.syncURL(since: current.generatedAt)
@@ -54,15 +57,20 @@ actor BtcMapRepository {
         let task = Task {
             try await Self.retry {
                 let data = try await fetch(url)
-                let patches = try JSONDecoder().decode([BtcMapPatch].self, from: data)
+                let patches = try BtcMapLimits.decodeRecords(BtcMapPatch.self, from: data)
                 let merged = current.merging(patches, at: Self.timestamp(now))
-                try JSONEncoder().encode(merged).write(to: cacheURL, options: .atomic)
+                guard merged.places.count <= BtcMapLimits.records else { throw BtcMapError.resourceLimit }
+                let encoded = try JSONEncoder().encode(merged)
+                try BtcMapLimits.check(encoded)
+                try encoded.write(to: cacheURL, options: .atomic)
                 return merged
             }
         }
         syncTask = task
         defer { syncTask = nil }
-        let result = try await task.value
+        let result: BtcMapSnapshot
+        do { result = try await task.value }
+        catch BtcMapError.resourceLimit { oversizedSync = now; throw BtcMapError.resourceLimit }
         snapshot = result
         lastSync = now
         return result
@@ -77,6 +85,7 @@ actor BtcMapRepository {
     }
 
     func detail(for place: BtcMapPlace, now: Date = .now) async throws -> BtcMapDetail {
+        if let failed = oversizedDetails[place.id], now.timeIntervalSince(failed) < 300 { throw BtcMapError.resourceLimit }
         if let cached = details[place.id], now.timeIntervalSince(cached.0) < 900 { return cached.1 }
         if let task = detailTasks[place.id] { return try await task.value }
         let fetch = fetch
@@ -90,7 +99,9 @@ actor BtcMapRepository {
         }
         detailTasks[place.id] = task
         defer { detailTasks[place.id] = nil }
-        let result = try await task.value
+        let result: BtcMapDetail
+        do { result = try await task.value }
+        catch BtcMapError.resourceLimit { oversizedDetails[place.id] = now; throw BtcMapError.resourceLimit }
         details[place.id] = (now, result)
         return result
     }
@@ -117,6 +128,7 @@ actor BtcMapRepository {
 
     private static func retry<T: Sendable>(_ operation: @Sendable () async throws -> T) async throws -> T {
         do { return try await operation() }
+        catch BtcMapError.resourceLimit { throw BtcMapError.resourceLimit }
         catch {
             try Task.checkCancellation()
             try await Task.sleep(for: .seconds(1))
@@ -126,9 +138,20 @@ actor BtcMapRepository {
 
     static func download(_ url: URL) async throws -> Data {
         let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 30)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        defer { bytes.task.cancel() }
         guard let response = response as? HTTPURLResponse else { throw BtcMapError.invalidData }
         guard (200..<300).contains(response.statusCode) else { throw BtcMapError.http(response.statusCode) }
+        guard response.expectedContentLength <= BtcMapLimits.bytes else { throw BtcMapError.resourceLimit }
+        return try await collect(bytes)
+    }
+
+    static func collect<S: AsyncSequence>(_ bytes: S, limit: Int = BtcMapLimits.bytes) async throws -> Data where S.Element == UInt8 {
+        var data = Data()
+        for try await byte in bytes {
+            guard data.count < limit else { throw BtcMapError.resourceLimit }
+            data.append(byte)
+        }
         return data
     }
 }

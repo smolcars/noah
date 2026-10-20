@@ -82,3 +82,17 @@ installed payload accounting, not an App Store compressed-download estimate.
 - Fixture regeneration is deterministic. Required pre-commit checks run normally.
 - Physical-device location/phone behavior, iOS 18 runtime and full VoiceOver
   navigation remain unverified. No screenshots are committed.
+
+## Review hardening (2026-10-19)
+
+Public BTC Map transfers stream with a **32 MiB** hard limit on received bytes,
+including responses without Content-Length. Cache reads have the same limit.
+Typed lists stop at **100,000 records** and decoded strings are limited to
+**16 KiB UTF-8**. The full v4 list with the requested map fields and deletions
+measured **7,487,631 bytes / 43,178 records** on 2026-10-19; the largest list string
+was 192 bytes. The bundled snapshot remains 4,871,499 bytes / 29,705 merchants.
+The limits leave room for growth while bounding transfer and decoding work.
+Oversize responses are canceled, never immediately retried, and put that sync
+or merchant detail request on a five-minute cooldown. Usable cached data and
+its sync cursor are preserved. Tests cover streamed overflow, exact byte
+boundaries, record/string limits, and cooldown/cache preservation.
