@@ -73,6 +73,7 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     var walletID: String
     var ids: [String]
     var destination: String?
+    var destinationIsMine: Bool?
     var amount: UInt64
     var fee: UInt64
     var chainFee: UInt64
@@ -82,6 +83,10 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     var automatic = false
     // Optional so journals written before MAX used boardAll remain readable.
     var boardAll: Bool?
+    var externalDestinationWarning: String? {
+        action == .claim && destinationIsMine == false
+            ? "This address isn't in your Noah wallet. The claimed funds will be sent there." : nil
+    }
     var net: UInt64 { ExitRules.received(amount: amount, claimFee: fee) }
     var totalFee: UInt64 { fee + chainFee }
     var fundable: Bool { confirmed >= chainFee }
@@ -94,7 +99,7 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     func matches(_ other: Self) -> Bool {
         inputs.matches(other.inputs) && fee == other.fee
             && chainFee == other.chainFee && confirmed == other.confirmed && feeRate == other.feeRate
-            && automatic == other.automatic && boardAll == other.boardAll
+            && destinationIsMine == other.destinationIsMine && automatic == other.automatic && boardAll == other.boardAll
     }
 }
 

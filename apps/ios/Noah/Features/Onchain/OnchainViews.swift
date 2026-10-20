@@ -104,6 +104,9 @@ struct OnchainReviewSheet: View {
                     if let destination = quote.destination {
                         LabeledContent("Destination") { Text(destination).textSelection(.enabled) }
                     }
+                    if let warning = quote.externalDestinationWarning {
+                        Text(warning).foregroundStyle(NoahColor.destructive)
+                    }
                     if quote.automatic {
                         OnchainAmountRow(
                             title: "Estimated onchain reserve",

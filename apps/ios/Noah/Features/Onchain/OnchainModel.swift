@@ -15,6 +15,8 @@ final class OnchainModel {
         var discard: @Sendable (UUID) async throws -> Void = { _ in }
         var detail: @Sendable (String) async throws -> ExitModel? = { _ in nil }
         var refreshReceipts: @Sendable () async throws -> Void = {}
+        var claimAddress: @Sendable () async throws -> String = { throw OnchainFailure.unavailable }
+        var claimOwnership: @Sendable (String) async throws -> Bool = { _ in throw OnchainFailure.unavailable }
         static func live(session: WalletSession = .shared) -> Self {
             Self(
                 ready: {
@@ -32,12 +34,48 @@ final class OnchainModel {
                 check: { try await session.checkOnchainAttempt($0) },
                 discard: { try await OnchainOperationJournal.shared.discardUncertain($0) },
                 detail: { try await session.exitDetail($0) },
-                refreshReceipts: { try await session.refreshOnchainReceiptFees() })
+                refreshReceipts: { try await session.refreshOnchainReceiptFees() },
+                claimAddress: { try await session.exitDepositAddress() },
+                claimOwnership: { try await session.exitClaimDestinationIsMine($0) })
         }
     }
     private let dependencies: Dependencies
     private let detailID: String?
     private(set) var exit: ExitModel?
+    private(set) var claimDestination = ""
+    private(set) var claimDestinationIsMine: Bool?
+    private(set) var claimDestinationError: String?
+    func editClaimDestination(_ value: String) {
+        claimDestination = value
+        claimDestinationIsMine = nil
+        claimDestinationError = nil
+        invalidate()
+    }
+    func useWalletClaimAddress() async {
+        let previous = claimDestination
+        do {
+            guard await dependencies.ready() else { throw OnchainFailure.unavailable }
+            let address = try await dependencies.claimAddress()
+            if await dependencies.ready(), previous == claimDestination { editClaimDestination(address) }
+        } catch {
+            claimDestinationError = "Couldn't load a Noah wallet address. Try again when the wallet is ready."
+        }
+    }
+    func checkClaimDestination() async {
+        let address = claimDestination
+        claimDestinationIsMine = nil
+        claimDestinationError = nil
+        guard !address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        do {
+            guard await dependencies.ready() else { throw OnchainFailure.unavailable }
+            let mine = try await dependencies.claimOwnership(address.trimmingCharacters(in: .whitespacesAndNewlines))
+            if await dependencies.ready(), address == claimDestination { claimDestinationIsMine = mine }
+        } catch {
+            if address == claimDestination {
+                claimDestinationError = "Enter a valid Bitcoin address for this network when the wallet is ready."
+            }
+        }
+    }
     private var generation = UUID()
     private(set) var overview: OnchainOverview?
     private(set) var quote: OnchainQuote?

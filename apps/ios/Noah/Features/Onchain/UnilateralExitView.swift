@@ -1,9 +1,10 @@
 import SwiftUI
 
 struct UnilateralExitView: View {
+    @Environment(AppModel.self) private var app
     @State private var model = OnchainModel()
     @State private var selected = Set<String>()
-    @State private var destination = ""
+    private var destination: String { model.claimDestination }
     @State private var showDeposit = false
     @State private var depositFee: UInt64 = 0
     @State private var filter = "All"
@@ -66,8 +67,16 @@ struct UnilateralExitView: View {
             }
             if exits.contains(where: \.claimable) {
                 Section("Claim recovered funds") {
-                    TextField("Bitcoin destination address", text: $destination)
+                    TextField("Bitcoin destination address", text: Binding(get: { destination }, set: model.editClaimDestination))
                         .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    if let error = model.claimDestinationError {
+                        Text(error).foregroundStyle(NoahColor.destructive)
+                    } else if model.claimDestinationIsMine == false {
+                        Text("This address isn't in your Noah wallet. The claimed funds will be sent there.")
+                            .foregroundStyle(NoahColor.destructive)
+                    }
+                    Button("Use my Noah wallet address") { Task { await model.useWalletClaimAddress() } }
+                        .disabled(model.locked)
                     Button("Review claim") {
                         Task {
                             await model.review(
@@ -104,7 +113,12 @@ struct UnilateralExitView: View {
         .scrollDismissesKeyboard(.interactively)
         .modifier(OnchainScreen(model: model))
         .onChange(of: selected) { _, _ in model.invalidate() }
-        .onChange(of: destination) { _, _ in model.invalidate() }
+        .task(id: model.overview?.walletID) {
+            if model.overview != nil, destination.isEmpty { await model.useWalletClaimAddress() }
+        }
+        .task(id: destination + (model.overview?.walletID ?? "") + String(app.isWalletSuspended)) {
+            await model.checkClaimDestination()
+        }
         .onChange(of: model.quote) { _, quote in if let quote { depositFee = quote.chainFee } }
         .sheet(isPresented: $showDeposit) { ExitDepositSheet(broadcastFee: depositFee) }
     }

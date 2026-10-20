@@ -59,6 +59,24 @@ extension WalletSession {
         try await withOpenWallet { try await $0.onchain.newAddress() }
     }
 
+    func exitClaimDestinationIsMine(_ address: String) async throws -> Bool {
+        try await withOpenWallet { handles in
+            try await Self.claimDestinationOwnership(address, network: AppVariant.current.rawValue) {
+                try await handles.onchain.isMine(address: $0)
+            }
+        }
+    }
+
+    static func claimDestinationOwnership(
+        _ address: String, network: String, isMine: (String) async throws -> Bool
+    ) async throws -> Bool {
+        guard let actual = PaymentEncoding.bitcoinNetwork(address),
+            actual == network || actual == "testnet"
+                && (network == "signet" || network == "regtest" && !address.lowercased().hasPrefix("tb1"))
+        else { throw OnchainFailure.invalid }
+        return try await isMine(address)
+    }
+
     func boardingMinimum() async throws -> UInt64? {
         try await withOpenWallet { try await $0.wallet.arkInfo()?.minBoardAmountSats }
     }
@@ -169,6 +187,11 @@ extension WalletSession {
                 destination?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false
             {
                 throw OnchainFailure.invalid
+            }
+            if action == .claim {
+                quote.destinationIsMine = try await Self.claimDestinationOwnership(
+                    destination!, network: AppVariant.current.rawValue
+                ) { try await handles.onchain.isMine(address: $0) }
             }
             quote.amount = selected.reduce(0) { $0 + $1.amountSats }
             let fee = try await handles.wallet.estimateEmergencyExitFee(
