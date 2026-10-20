@@ -505,3 +505,65 @@ No funded/running-RN replacement or physical push delivery was repeated.
 
 Cleanup: owned simulator **NoahMMKVRound2-639fae47** (`FFB51B88-7853-45E3-B0F9-75DD652CC1D9`) was confirmed by exact name/UDID, shut down through T3, confirmed **Shutdown**, deleted and verified absent. Its `/private/tmp/noah-mmkv-r2-639fae47-dd` DerivedData and every owned result bundle were removed. No protected simulator, Android device, physical device,
 Docker, client or server implementation was changed.
+
+## MMKV migration safety, review round 3 (2026-10-20; base `32e1b6ef`)
+
+Recovery is gated **before mapping** the live data/CRC pair, restored pair and
+snapshot inspection copy. The checker reads the MMKV 2.4.3 format directly;
+`../../fixtures/rn-mmkv/README.md` records the pinned source/AAR, exact 112-byte
+metadata layout and real RN MMKVCore 2.4.0 fixture values. Version 3/4 uses the
+metadata size rather than the stale legacy header. The last-confirmed pair is
+never accepted as proof that the current pair is healthy. Missing data is a
+never-created store and opens normally. Bad CRC/length, missing/short metadata,
+or an unsupported version must write and fsync the external marker and its
+parent directory before any MMKV mapping. Marker failure leaves both files
+unchanged and blocks this launch.
+
+MMKV's callbacks remain a secondary signal, including after cache eviction.
+They return recover only after durable quarantine. MMKV 2.4.3 offers only
+recover and discard; **discard also rewrites the files**. There is no callback
+option that both refuses recovery and preserves bytes. A secondary callback
+whose marker cannot be made durable therefore terminates the process before
+returning to MMKV (Swift `fatalError`; Android process kill plus `Runtime.halt`).
+The next launch reaches the ordinary pre-open gate. This deliberately favors
+preserving settings over continuing a launch with unacknowledged recovery.
+
+The foreground Continue action durably acknowledges first, then reapplies
+recovered protection before publishing wallet data. Every headless path still
+requires healthy storage and cannot acknowledge the marker. Retirement,
+first-launch single restoration, admitted-key validation, recurring codecs and
+the independent recurring policy ledger retain their existing behavior.
+
+iOS retains the callback's store target for its full lifetime. Continue creates
+a fresh `AppModel`, including server/settings state, and replaces `RootView` by
+identity so its biometric policy is initialized from recovered settings. Locked
+wallet content is excluded from the view hierarchy until authentication. No
+AppDelegate change was necessary.
+
+Negative control: restoring callback-only admission, clearing the callback
+target at the end of initialization and keeping the pre-Continue model failed
+**all 3 probes / 8 assertions**. The fixed targeted run passed **37 tests /
+4 suites / zero failures or skips**, including real-MMKV CRC/length silent
+rollback, lazy reload, immediate biometric lock + hidden balance, 15 shared
+launch vectors, durability failures and headless refusal.
+
+Final NoahTests ran once after the last code change and XcodeGen generation:
+**656 total / 125 suites / 633 passed / 23 opt-in skipped / zero failures**.
+The run used `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, automatic code signing,
+`-jobs 2`, no parallel test runners, owned DerivedData under `/private/tmp`,
+and only NoahTests. Android's final JVM/APK/instrumentation-compilation command
+also passed (2,965 JVM tests / 95 suites).
+
+Cleanup: task-owned simulator **NoahMMKVRound3-10769**
+(`AFDA86B8-7986-4D4A-89B8-AADE9D2703C0`) was confirmed by exact identity,
+shut down through T3, confirmed **Shutdown**, deleted and verified absent.
+`/private/tmp/noah-mmkv-r3-10769-dd`, every owned result bundle, transient log,
+negative-control backup and layout probe were deleted. All protected simulators,
+physical devices and Docker remained untouched. No AppDelegate, WalletSession,
+recurring implementation, push-job, background-execution, client or server
+implementation was changed.
+
+Limits: no funded/running-RN replacement, live push delivery or physical
+biometric prompt was repeated. Tests exercise immediate lock/hiding policy and
+actual MMKV recovery; the secondary callback's process-termination fallback is
+source-verified, with injected durability failures covered before mapping.

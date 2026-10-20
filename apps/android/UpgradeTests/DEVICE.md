@@ -581,3 +581,72 @@ this task prohibits touching any Android emulator or physical device. Equivalent
 real-MMKV iOS probes and all shared vectors passed. No Android device, protected
 simulator, Docker, client or server implementation was changed; funded/live
 upgrade and real FCM/UnifiedPush delivery were not repeated.
+
+## MMKV migration safety, review round 3 (2026-10-20; base `32e1b6ef`)
+
+Recovery is gated **before mapping** the live data/CRC pair, restored pair and
+snapshot inspection copy. The checker reads the MMKV 2.4.3 format directly;
+`../../fixtures/rn-mmkv/README.md` records the pinned source/AAR, exact 112-byte
+metadata layout and real RN MMKVCore 2.4.0 fixture values. Version 3/4 uses the
+metadata size rather than the stale legacy header. The last-confirmed pair is
+never accepted as proof that the current pair is healthy. Missing data is a
+never-created store and opens normally. Bad CRC/length, missing/short metadata,
+or an unsupported version must write and fsync the external marker and its
+parent directory before any MMKV mapping. Marker failure leaves both files
+unchanged and blocks this launch.
+
+MMKV's callbacks remain a secondary signal, including after cache eviction.
+They return recover only after durable quarantine. MMKV 2.4.3 offers only
+recover and discard; **discard also rewrites the files**. There is no callback
+option that both refuses recovery and preserves bytes. A secondary callback
+whose marker cannot be made durable therefore terminates the process before
+returning to MMKV (Swift `fatalError`; Android process kill plus `Runtime.halt`).
+The next launch reaches the ordinary pre-open gate. This deliberately favors
+preserving settings over continuing a launch with unacknowledged recovery.
+
+The foreground Continue action durably acknowledges first, then reapplies
+recovered protection before publishing wallet data. Every headless path still
+requires healthy storage and cannot acknowledge the marker. Retirement,
+first-launch single restoration, admitted-key validation, recurring codecs and
+the independent recurring policy ledger retain their existing behavior.
+
+Android Continue reloads the cached profile, currency/unit, privacy, suspension,
+locale and backup state, replaces the biometric lock policy and reruns launch.
+Server state is already read dynamically from SettingsStorage. Locked wallet
+content is excluded from composition until authentication.
+`RecurringStorageDeviceTest` now injects malformed bytes using MMKV with an
+explicit storage root; its validated writer correctly refuses such writes.
+
+Negative control: removing pre-open checks, allowing callback return after
+marker failure and omitting the Continue reload failed **all 3 device probes**.
+The marker probe detected rewritten bytes; the other probes detected silent
+suspension rollback and cached disabled biometrics/visible balance.
+The corrected final real-JNI run passed **22 tests**: **20 MMKVRecoveryTest +
+2 RecurringStorageDeviceTest**, zero failures or skips. It includes CRC and
+length fallback, cache eviction, marker-write failure preserving both files,
+and the actual Continue method enforcing lock + hiding before launch.
+
+Device command (only the task-owned emulator, no Docker or physical devices):
+
+```sh
+ANDROID_SERIAL=emulator-5592 adb shell am instrument -w -r \
+  -e class com.noahwallet.services.MMKVRecoveryTest,com.noahwallet.recurring.RecurringStorageDeviceTest \
+  -e noahRecurringStorage disposable-emulator \
+  com.noahwallet.regtest.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+Final required Nix command ran once after the last code change:
+`:app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin`,
+with `--max-workers=2`: **2,965 JVM tests / 95 suites / zero failures, errors or
+skips**; APK assembly and instrumentation compilation succeeded. The focused
+integrity/quarantine JVM run passed 6 tests. iOS's final suite passed 633 of
+656 tests (23 opt-in skipped, zero failures).
+
+Cleanup: emulator **emulator-5592** reported the exact owned AVD name
+**NoahMMKVRound3_10769**. It was shut down through T3, verified absent from adb,
+then the exact named AVD was listed, deleted with avdmanager and verified absent.
+The iOS simulator, owned DerivedData, all result bundles, logs and temporary
+probes were also removed. No other emulator, protected simulator, physical
+device or Docker was used. No funded/live RN upgrade, real push delivery or
+physical biometric prompt was repeated. The late-callback process-termination
+fallback is source-verified; pre-open durability failures are fault-injected.

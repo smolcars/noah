@@ -114,3 +114,17 @@ settings after acknowledging. The independent recurring policy ledger remains
 in force. See `DEVICE.md` and all **15** shared storage launch vectors.
 Final Android verification: **2,961 JVM tests / 94 suites / zero failures or
 skips**, APK assembled and all 17 JNI probes compiled; no Android device run.
+
+
+Review round 3 (2026-10-20, base `32e1b6ef`): raw-file integrity is now the primary
+admission signal, before MMKV can silently fall back to last-confirmed state
+without a callback. See `../../fixtures/rn-mmkv/README.md` for the verified
+112-byte metadata layout and fixture pinning. A durable marker precedes every
+recovery mapping; failure blocks with unchanged bytes. Secondary callbacks stay
+associated for lazy reloads and terminate before returning if marker durability
+fails, because MMKV's discard option also rewrites data. Continue rebuilds the
+biometric policy and reloads every cached settings consumer before launch;
+locked wallet content is not composed. Both real-JNI storage suites ran on an
+owned emulator: **22 passed / zero failures or skips**. No store key, RN envelope,
+seed format, recurring implementation, client or server code changed. Full check
+counts and device cleanup are recorded in `DEVICE.md`.
