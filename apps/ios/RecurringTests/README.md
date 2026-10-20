@@ -3,6 +3,90 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Journal revision settlement (2026-10-20)
+
+Base: `feat/native-rewrite` at `172446b6`. Fix: `85b8e45e`.
+
+The Android finding is also present on iOS: the former settlement branches did
+not check a policy revision at all, and Check payment status supplied its freshly
+loaded policy as the original. `RecurringExecutor.swift:233` now permits policy
+advancement only when the stored revision equals `entry.policyRevision` (including
+legacy null). Current wallet identity/instance and stored binding must both match
+(`:217`). Terminal journal resolution/consumption happens before policy writes
+(`:230`) and acknowledgement (`:252`), independently of policy revision matching.
+An obsolete receipt never pays the edited policy's amount, recipient or count.
+
+The run model lacks recipient/revision ownership and the journal lacks a policy
+snapshot, so obsolete outcomes only resolve the journal; they add no history or
+counters to the edited row. A fallback success notice requires the original paid
+revision (`:247`); a status check holding only an edited snapshot stays silent.
+A retained actual paid snapshot still produces the original recipient/amount's
+notice after edit/cancel. Same-revision settlement preserves pause and safety
+failure state while recording money already submitted.
+
+Audit fixes in the same executor: uncertainty now shares `markUncertain` (`:205`),
+which checks current/stored binding and the journal revision before changing a
+fresh row. The submission catch verifies the exact plan, binding and revision
+(`:189`) rather than just an occurrence index. Marker recovery reloads and
+compares binding plus the entire row (`:81`) after earlier notification awaits;
+a cancellation/edit cannot be overwritten by an old recovery snapshot.
+
+Permanent regressions in `NoahTests/RecurringExecutorTests.swift`:
+
+- `oldSuccessfulReceiptCannotSettleAnEditedPolicyRevision()` mirrors Android's
+  review probe: pay 1,000 sats, fail Send receipt removal, edit another recipient
+  to 2,000 sats with a one-payment limit, recover and check status twice. It pins
+  the entire edited row, truthful notifications, consumption/acknowledgement and
+  one submission. Before the fix: **1 test / 1 failure / 0 skips**, reproducing
+  false completion of the edited policy.
+- `statusCheckOutcomesCannotMutateAnotherPolicyRevision` covers success,
+  already-paid, proven failure and continued ambiguity, unchanged edited history,
+  Send lock ownership and no automatic retry.
+- `changesAfterSubmissionKeepSettlementOwnership` covers edit, wallet replacement,
+  instance replacement, persisted binding replacement, failure latch and suspend;
+  a post-edit notice describes the actually paid original policy.
+- `recoveryNotificationSuspensionCannotRecreateCancelledPolicy()` cancels another
+  marked schedule while recovery awaits its first result notification.
+
+The last three definitions were also run against the old executor: **3 failed
+definitions / 10 expanded runs (7 failed, 3 passed) / 0 skips**, exposing stale
+outcome writes, a cleared failure latch and recreation after cancellation. The
+persisted-binding replacement parameter was added afterward and passes in both
+final runs. The first probe selector includes its trailing `()`; the final focused
+run selects whole suites, with nonzero execution.
+
+Both settlement callers (submission `:185`, status check `:260`) and uncertainty
+callers (`:191`, `:228`) were audited. Launch marker recovery, post-open/post-quote
+reads, final guarded Send submission, manual review and server-wake synchronization
+retain their policy/binding/generation checks across suspensions. AppModel startup,
+activation and the foreground timer, push jobs, background scheduler and screen
+entry all share this executor; none independently settles a freshly loaded policy.
+Submission budgets, storage health/failure latches, lifecycle stops, wallet/instance
+binding, fee policy, legacy uncertainty and independent rollback/replay evidence
+remain in force. Android's corresponding audit and final command are in its notes.
+
+Verification: the focused executor/store/journal/write-failure/background/
+foreground/reservation run passed **60 definitions / 120 expanded runs / 7 suites**,
+zero failures/skips. Full **NoahTests ran once**, without suite exclusions:
+**606 total / 583 passed / 23 opt-in skipped / 0 failed**, **122 suites**;
+expanded runs were **848 passed / 23 skipped**. All Xcode runs used Nix,
+`/opt/homebrew/bin/xcodegen generate`, normal code signing, `ARCHS=arm64
+ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, disabled parallel testing and automatic diagnostic
+collection, and DerivedData under `/private/tmp`.
+
+Owned simulator: **Noah Recurring Revision Sol 41f7ba6f**, iPhone 17 / iOS 27.0,
+UDID **C9301570-C7F4-46EB-BEAE-A7EA9C72BBB4**. Its exact name/UDID and **Shutdown**
+state were confirmed immediately before deletion, then absence verified. Removed
+only owned `/private/tmp/noah-recurring-revision-41f7ba6f-dd` and all **four** owned
+`.xcresult` bundles after exporting every summary/test tree. Logs, summaries and
+`cleanup.json` remain under `/private/tmp/noah-recurring-revision-41f7ba6f-*`.
+The Device panel rejected the exact owned UDID twice as unavailable; Xcode used
+that simctl-verified simulator successfully.
+
+No funded/live payment, UI-tap verification or physical notification delivery was
+run. Protected/shared simulators, Android emulators, physical devices and Docker
+were untouched. No MMKV opening, logging, server or RN code changed.
+
 ## Storage strictness — envelope version (2026-10-20)
 
 Base: `feat/native-rewrite` at `c6283d16`. Compare the original version token,

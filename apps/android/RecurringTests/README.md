@@ -3,6 +3,67 @@
 Initial implementation base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
 Kotlin / Compose, API 24 minimum, bark-bolt-ffi **0.4.0**.
 
+## Journal revision settlement (2026-10-20)
+
+Base: `feat/native-rewrite` at `172446b6`. Fix: `6c4c8faa`.
+
+`RecurringExecutor.kt:161` compares the stored policy revision with
+`entry.policyRevision`, including the legacy null revision. A snapshot loaded by
+Check payment status cannot authorize an older attempt to advance the edited
+policy. Settlement uses the matching current row, preserving pause and safety
+failure state. Journal resolution/consumption precedes policy advancement and
+exact-attempt acknowledgement independently of the revision match.
+
+The run model has no recipient or policy-revision field, and the journal does
+not retain the approved recipient/amount. A stale outcome therefore only resolves
+its journal evidence; it adds no run or counters to the edited policy. The fallback
+success notice (`:173`) requires an original snapshot with the journal revision;
+a status check that only has the edited snapshot emits no misleading success.
+An execution retaining the actual paid snapshot can still notify about that
+original payment after an edit/cancel.
+
+`RecurringSettlementTest.oldSuccessfulReceiptCannotSettleAnEditedPolicyRevision`
+is the permanent adaptation of `/tmp/noah-review-probes/ReviewRound2ProbeTest.kt`.
+It pays 1,000 sats, fails Send receipt removal, edits to another recipient for
+2,000 sats with a one-payment limit, recovers to Needs attention, then checks
+status twice. Before the fix: **1 test / 1 failure**, with the edited policy
+incorrectly Completed and a successful 2,000-sat run. Afterward: the entire edited
+row and result notifications remain unchanged, A is consumed/acknowledged, and
+another execution sends nothing. A second regression covers successful,
+already-paid, proven-failed and still-ambiguous status checks against an edited
+revision, including unchanged history, the Send lock and no automatic retry.
+
+Audit: both settlement callers (submission `:120`, status check `:183`) and all
+uncertainty callers (`:118`, `:123`, `:154`) were checked. `markUncertain` already
+checks current binding, stored binding and journal revision. Startup marker
+recovery uses `updateIf`; quote/review, marker writes and the final Send guard
+retain exact policy comparisons after IO suspensions. The final guard retains
+binding/instance, stop generation, runtime/storage failure latches, lifecycle
+markers, budgets, fee policy and journal consumption checks. Foreground startup,
+timer, screen-open, time-change, push and WorkManager routes in
+`RecurringRuntime`, `RecurringForegroundRunner`, `PushJobs`, `PushRuntime` and
+`PushWork` share this executor. Reminder workers do not submit payments. Server
+wake synchronization still compares replacement payloads after requests.
+
+Verification: targeted `--tests "*Recurring*"` passed **1,463 tests / 16 suites**,
+zero failures/errors/skips. The required full command ran **once** after the final
+Android code/test changes:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**2,913 tests / 89 suites passed**, zero failures/errors/skips, including **1,461
+recurring-package cases**. Regtest APK assembly passed in the same **5m 1s** run.
+Every Gradle invocation used `--max-workers=2`; `NIX_CONFIG='eval-cache = false'`
+avoided the shared Nix evaluation cache lock. Logs and count summaries remain at
+`/private/tmp/noah-recurring-revision-41f7ba6f-*`.
+
+No funded/live payment, device UI or physical notification delivery was tested.
+No Android emulator, physical device or Docker was accessed. MMKV opening,
+logging, server and RN code are unchanged. iOS parity and owned-simulator cleanup
+are recorded in its RecurringTests README.
+
 ## Storage strictness — envelope version (2026-10-20)
 
 Base: `feat/native-rewrite` at `c6283d16`. Check the raw JSON primitive's token,
