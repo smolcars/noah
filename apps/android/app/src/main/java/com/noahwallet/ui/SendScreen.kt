@@ -235,8 +235,8 @@ internal fun keypadInput(amount: String, key: String, decimal: Boolean): String 
         if (controller.state in listOf(SendController.State.succeeded, SendController.State.alreadyPaid, SendController.State.failed)) NoahButton("Done", receipt?.broadcastRetryPending != true, onClick = onDone)
         if (controller.canOverride) TextButton(onClick = { overrideStep = 1 }) { Text("Start a new payment after checking history", color = MaterialTheme.colorScheme.error) }
     }
-    if (overrideStep > 0) AlertDialog(onDismissRequest = { overrideStep = 0 }, title = { Text(if (overrideStep == 1) "Have you checked?" else "You could pay twice") },
-        text = { Text(if (overrideStep == 1) "Check your history and confirm with the recipient. This payment may already have been sent." else "Discarding this attempt does not cancel the original payment. A new payment could pay the recipient twice.") },
-        confirmButton = { TextButton(onClick = { if (overrideStep == 1) overrideStep = 2 else { controller.startNewPaymentAfterHistoryCheck(true); overrideStep = 0 } }) { Text(if (overrideStep == 1) "I checked history" else "Discard attempt and allow another payment") } },
+    if (overrideStep > 0) AlertDialog(onDismissRequest = { overrideStep = 0 }, title = { Text(if (overrideStep == 1) "Have you checked?" else SendOverrideAudit.titleText) },
+        text = { Text(if (overrideStep == 1) "Check your history and confirm with the recipient. This payment may already have been sent." else controller.overrideWarning) },
+        confirmButton = { TextButton(onClick = { if (overrideStep == 1) overrideStep = 2 else { controller.startNewPaymentAfterHistoryCheck(true); overrideStep = 0 } }) { Text(if (overrideStep == 1) "I checked history" else SendOverrideAudit.confirmationText) } },
         dismissButton = { TextButton(onClick = { overrideStep = 0 }) { Text("Keep checking") } })
 }

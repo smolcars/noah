@@ -8,26 +8,27 @@ class SendController(private val dependencies: Dependencies,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)) {
     enum class State { ready, submitting, uncertain, succeeded, alreadyPaid, failed, storageBlocked }
     class Dependencies(val read: () -> SendAttempt?, val write: (SendAttempt?) -> Unit,
+        val auditOverride: (SendOverrideAudit) -> Unit = { error("Override audit storage unavailable") },
         val reservation: suspend (suspend (SendWallet) -> Unit) -> Unit)
     var state by mutableStateOf(State.ready); private set
     var attempt by mutableStateOf<SendAttempt?>(null); private set
     var message by mutableStateOf<String?>(null); private set
     var checking by mutableStateOf(false); private set
     private var generation = 0
-    private var unboundJournal = false
+    private var unboundJournal: SendAttempt? = null
     val locked get() = state != State.ready
-    val canOverride get() = !checking && (unboundJournal || state == State.uncertain && attempt?.receipt == null)
+    val canOverride get() = !checking && (unboundJournal != null || state == State.uncertain && attempt?.receipt == null)
 
     fun invalidateForWalletChange() {
-        generation++; checking = false; attempt = null; message = null; unboundJournal = false; state = State.storageBlocked
+        generation++; checking = false; attempt = null; message = null; unboundJournal = null; state = State.storageBlocked
     }
     suspend fun reloadForWalletChange() {
-        generation++; checking = false; attempt = null; state = State.storageBlocked; message = null; unboundJournal = false
+        generation++; checking = false; attempt = null; state = State.storageBlocked; message = null; unboundJournal = null
         try {
             dependencies.reservation { wallet ->
                 var saved = dependencies.read() ?: run { state = State.ready; return@reservation }
                 if (saved.walletIdentity == null) {
-                    unboundJournal = true; state = State.uncertain
+                    unboundJournal = saved; state = State.uncertain
                     message = "This legacy payment has no wallet identity. Check your history and recipient before discarding it."
                     return@reservation
                 }
@@ -124,10 +125,21 @@ class SendController(private val dependencies: Dependencies,
         if (state !in listOf(State.succeeded, State.alreadyPaid, State.failed) || attempt?.receipt?.broadcastRetryPending == true) return
         clear()
     }
-    fun startNewPaymentAfterHistoryCheck(confirmed: Boolean) { if (confirmed && canOverride) clear() }
+    val overrideWarning get() = SendOverrideAudit.warningText
+    fun startNewPaymentAfterHistoryCheck(confirmed: Boolean) {
+        if (!confirmed || !canOverride) return
+        val evidence = attempt ?: unboundJournal
+        try {
+            dependencies.auditOverride(SendOverrideAudit(txid = evidence?.receipt?.txid ?: evidence?.alreadyPaid?.txid ?: evidence?.broadcastingTxid,
+                walletIdentity = evidence?.walletIdentity, ownershipUnverified = evidence?.walletIdentity == null,
+                candidates = evidence?.candidates.orEmpty(), possibleTxids = evidence?.possibleTxids.orEmpty(),
+                originalEvidence = evidence, warning = overrideWarning, status = state.name, statusMessage = message))
+        } catch (_: Exception) { message = "Unable to save the override confirmation. Sending remains locked."; return }
+        clear()
+    }
     private fun clear() {
         if (checking) return
-        try { dependencies.write(null); attempt = null; unboundJournal = false; state = State.ready; message = null }
+        try { dependencies.write(null); attempt = null; unboundJournal = null; state = State.ready; message = null }
         catch (_: Exception) { message = "Unable to save payment status." }
     }
     companion object { const val journalVersion = 1 }
