@@ -170,11 +170,17 @@ class RecurringExecutor(private val d: Dependencies,
                         }
                     }
                     check(quote.checkpoint == null) { "Another Lightning payment is still in progress. Try again once it completes." }
-                    storage { check(!d.journal.consumed(state.binding, id, plan.scheduledFor!!, schedule.nativeRevision, plan.occurrenceIndex)) }
                     val entry = RecurringJournal.Entry(state.binding, id, plan, d.now(), schedule.nativeRevision, policy = schedule)
-                    storage { d.journal.save(entry) }
                     val marked = schedule.copy(inFlight = RecurringPayment.InFlight(plan.occurrenceIndex!!, d.now()), updatedAt = d.now())
-                    if (!storage { d.store.updateIf(schedule, marked) }) { storage { d.journal.save(entry.copy(resolved = true)) }; continue }
+                    val admitted = storage { synchronized(RecurringStore.lock) { synchronized(d.journal) {
+                        if (boundStateNow().schedules[id] != schedule) false else {
+                            check(!d.journal.consumed(state.binding, id, plan.scheduledFor!!, schedule.nativeRevision, plan.occurrenceIndex))
+                            d.journal.save(entry)
+                            d.store.upsert(marked)
+                            true
+                        }
+                    } } }
+                    if (!admitted) continue
                     val job = controller.submit(payment, quote, entry.key) {
                         try {
                             d.allowed()
@@ -234,45 +240,46 @@ class RecurringExecutor(private val d: Dependencies,
         val evidence = storage { d.journal.load()[entry.scheduleID]?.takeIf { it.binding == entry.binding && it.plan == entry.plan && it.markedAt == entry.markedAt && it.policyRevision == entry.policyRevision }?.terminal } ?: return
         if (evidence.outcome == RecurringJournal.Outcome.uncertain) { markUncertain(entry, evidence.message); return }
         if (storage { d.binding() == entry.binding }) controller.releaseRecurring(evidence.attempt.recurringAttemptID, evidence.generation, evidence.walletGeneration, retainReceipt)
-        var notification: RecurringPayment? = null
-        storage {
-            synchronized(RecurringStore.lock) {
-                if (d.binding() != entry.binding) return@storage false
-                var saved = d.journal.load()[entry.scheduleID] ?: return@storage false
-                if (saved.terminal?.settlementID != evidence.settlementID) return@storage false
-                if (saved.released) return@storage true
-                val state = if (!saved.historyApplied) d.store.settlementState() else null
-                if (state != null && state.binding != entry.binding) return@storage false
-                if (!saved.resolved) {
-                    saved = saved.copy(resolved = true, consumed = evidence.paid)
-                    d.journal.save(saved)
-                }
-                if (!saved.historyApplied) {
-                    val latest = checkNotNull(state).schedules[entry.scheduleID]
-                    if (!d.store.settlementApplied(entry.scheduleID, evidence.settlementID) && latest != null && latest.nativeRevision == entry.policyRevision) {
-                        val updated = when (evidence.outcome) {
-                            RecurringJournal.Outcome.succeeded -> {
-                                val advanced = latest.copy(status = "active").success(entry.plan, evidence.recordedAt, d.zone())
-                                if (latest.status !in listOf("active", "needs_approval") && advanced.status == "active")
-                                    advanced.copy(status = latest.status, consecutiveFailures = latest.consecutiveFailures,
-                                        lastError = latest.lastError, issue = latest.issue, retryNotBefore = latest.retryNotBefore) else advanced
-                            }
-                            RecurringJournal.Outcome.alreadyPaid -> latest.failure(entry.plan, "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.", false, evidence.recordedAt, RecurringIssue(RecurringIssue.Code.alreadyPaid))
-                            else -> latest.failure(entry.plan, evidence.message ?: "No payment was submitted.", true, evidence.recordedAt)
-                        }
-                        d.store.upsert(updated, settlementKey = evidence.settlementID)
-                        notification = updated
-                    } else if (notifyOriginal && evidence.outcome == RecurringJournal.Outcome.succeeded && entry.policy?.nativeRevision == entry.policyRevision) {
-                        notification = entry.policy?.copy(status = "active")?.success(entry.plan, evidence.recordedAt, d.zone())
-                    }
-                    saved = saved.copy(historyApplied = true, policyApplied = true)
-                    d.journal.save(saved)
-                }
-                d.journal.save(saved.copy(released = true))
-                true
-            }
-        }
+        val notification = storage { applySettlement(entry, evidence, notifyOriginal) }
         notification?.let { d.notify(emptyList(), it) }
+    }
+    private fun applySettlement(entry: RecurringJournal.Entry, evidence: RecurringJournal.TerminalEvidence, notifyOriginal: Boolean = false): RecurringPayment? {
+        synchronized(RecurringStore.lock) { synchronized(d.journal) {
+            var notification: RecurringPayment? = null
+            if (d.binding() != entry.binding) return null
+            var saved = d.journal.load()[entry.scheduleID] ?: return null
+            if (saved.terminal?.settlementID != evidence.settlementID) return null
+            if (saved.released) return null
+            val state = if (!saved.historyApplied) d.store.settlementState() else null
+            if (state != null && state.binding != entry.binding) return null
+            if (!saved.resolved) {
+                saved = saved.copy(resolved = true, consumed = evidence.paid)
+                d.journal.save(saved)
+            }
+            if (!saved.historyApplied) {
+                val latest = checkNotNull(state).schedules[entry.scheduleID]
+                if (!d.store.settlementApplied(entry.scheduleID, evidence.settlementID) && latest != null && latest.nativeRevision == entry.policyRevision) {
+                    val updated = when (evidence.outcome) {
+                        RecurringJournal.Outcome.succeeded -> {
+                            val advanced = latest.copy(status = "active").success(entry.plan, evidence.recordedAt, d.zone())
+                            if (latest.status !in listOf("active", "needs_approval") && advanced.status == "active")
+                                advanced.copy(status = latest.status, consecutiveFailures = latest.consecutiveFailures,
+                                    lastError = latest.lastError, issue = latest.issue, retryNotBefore = latest.retryNotBefore) else advanced
+                        }
+                        RecurringJournal.Outcome.alreadyPaid -> latest.failure(entry.plan, "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.", false, evidence.recordedAt, RecurringIssue(RecurringIssue.Code.alreadyPaid))
+                        else -> latest.failure(entry.plan, evidence.message ?: "No payment was submitted.", true, evidence.recordedAt)
+                    }
+                    d.store.upsert(updated, settlementKey = evidence.settlementID)
+                    notification = updated
+                } else if (notifyOriginal && evidence.outcome == RecurringJournal.Outcome.succeeded && entry.policy?.nativeRevision == entry.policyRevision) {
+                    notification = entry.policy?.copy(status = "active")?.success(entry.plan, evidence.recordedAt, d.zone())
+                }
+                saved = saved.copy(historyApplied = true, policyApplied = true)
+                d.journal.save(saved)
+            }
+            d.journal.save(saved.copy(released = true))
+            return notification
+        } }
     }
     suspend fun checkStatus(id: String) {
         if (running) return
@@ -355,10 +362,25 @@ class RecurringExecutor(private val d: Dependencies,
             controller.startNewPaymentAfterHistoryCheck(true, overrideWarning, overrideConfirmation)
             check(!controller.locked) { "Unable to save the override confirmation. Sending remains locked." }
         }
-        storage {
-            if (entry != null) d.journal.save(entry.copy(resolved = true, consumed = true, historyApplied = entry.terminal != null, released = entry.terminal != null))
-            check(d.store.updateIf(schedule, schedule.resume(d.now(), d.zone())))
-        }
+        val notification = storage { synchronized(RecurringStore.lock) { synchronized(d.journal) {
+            check(boundStateNow().schedules[id] == schedule)
+            // Clearing Send can repair its failed handoff. Settle that proof before any skip.
+            val current = d.journal.load()[id]
+            check(current?.binding == entry?.binding && current?.plan == entry?.plan &&
+                current?.markedAt == entry?.markedAt && current?.policyRevision == entry?.policyRevision)
+            check(current == null || current.binding == d.binding())
+            val evidence = current?.terminal
+            val notification = if (current != null && evidence != null && evidence.outcome != RecurringJournal.Outcome.uncertain) {
+                applySettlement(current, evidence).also { check(d.journal.load()[id]?.released == true) }
+            } else {
+                if (current != null) d.journal.save(current.copy(resolved = true, consumed = true, historyApplied = evidence != null, released = evidence != null))
+                null
+            }
+            val latest = d.store.load().schedules.getValue(id)
+            check(d.store.updateIf(latest, latest.resume(d.now(), d.zone())))
+            notification
+        } } }
+        notification?.let { d.notify(emptyList(), it) }
         changed()
     }
     private suspend fun rejectLegacyUncertainty(id: String) = storage {

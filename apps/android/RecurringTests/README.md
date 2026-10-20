@@ -3,6 +3,32 @@
 Initial implementation base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
 Kotlin / Compose, API 24 minimum, bark-bolt-ffi **0.4.0**.
 
+## Audited resume settles repaired proof (2026-10-20)
+
+Base `88abe06f`. Send cleanup may repair an initially failed recurring handoff.
+Audited resume now reloads the occurrence under the journal monitor and applies
+normal consumption → ledger/history → historyApplied → released settlement for
+success, proven-already-paid and failed outcomes before resuming the latest policy.
+Only a still-ambiguous outcome may be skipped. Settlement holds that same monitor;
+marker admission and its in-flight policy update share one storage transaction,
+removing the old stale-marker rollback write. Recovery/status reuse settlement;
+reapproval and cancellation write policy only, and deletion retains lifecycle drain.
+Normal Send, explicit reapproval, wallet/stop/failure/storage gates are unchanged.
+
+The permanent `RecurringOverrideSettlementTest` includes the supplied probe:
+**1 test failed before** (`terminal=null`, paid/history zero, Send receipt removed)
+and passes after. Its **3 tests / 10 scenarios** cover repaired success, already-paid
+and failure, plus interruption after terminal handoff, Send removal, consumption,
+policy persistence, historyApplied, release and resume. Fresh stores/controllers/
+journals repeatedly recover one paid row and one success run with one submission.
+Targeted executor/settlement checks passed **74 tests / 7 suites**, zero failures,
+errors or skips. Faults are deterministic persistence failures, not live power cuts.
+The required full `:app:testRegtestDebugUnitTest :app:assembleRegtestDebug` command
+ran once after the last Android code/test change with `--max-workers=2` under Nix:
+**3,544 tests / 129 suites passed**, zero failures/errors/skips; APK assembly passed
+in the same **3m 53s** run. Translation generation/check is clean, with no UI string
+changes. Logs and summaries: `/private/tmp/noah-override-f17b-android-*`.
+
 ## Durable occurrence settlement (2026-10-20)
 
 Base: `feat/native-rewrite` at `7e88fdd8`. This supersedes the earlier retained
