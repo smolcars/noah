@@ -1420,7 +1420,6 @@
   <string name="gt_f3522523c9bce611">"Couldn\'t play the story. Please try again."</string>
   <string name="gt_8db2737c91fcc605">"Couldn\'t prepare the file for sharing. Please try again."</string>
   <string name="gt_1c37497466d54115">"Couldn\'t prepare the review. Nothing was submitted. Try again when the wallet is ready."</string>
-  <string name="gt_fed90ded1d062d06">"Couldn\'t read logs."</string>
   <string name="gt_c3cdb5dbb6be37f2">"Couldn\'t read the screenshot. Please try again."</string>
   <string name="gt_89f8973b092ae069">"Couldn\'t read wallet status. Pull to refresh."</string>
   <string name="gt_b8e043dbc53a4a4c">"Couldn\'t refresh your profile. Please try again."</string>
@@ -1439,6 +1438,7 @@
   <string name="gt_853bc38c249ac693">"Create an encrypted .noahbackup file"</string>
   <string name="gt_7bef2fbf3b783bfe">"Creating invoice…"</string>
   <string name="gt_e4bca5667d4fa25e">"Creation failed. Please try again."</string>
+  <string name="gt_f9039698f684e234">"Crop Screenshot"</string>
   <string name="gt_b7ac226f0f0cc024">"Current Version: %1$s"</string>
   <string name="gt_030cfc390829811a">"Delete Backup"</string>
   <string name="gt_eb1bbaf775e6c7ab">"Delete encrypted backup?"</string>
@@ -1654,9 +1654,9 @@
   <string name="gt_5a99f6fa7e98657a">"Scan QR"</string>
   <string name="gt_e5c7478bbce26eb7">"Scan QR code"</string>
   <string name="gt_2d8df6118a59f471">"Screenshot (optional)"</string>
-  <string name="gt_38d988e56278e764">"Screenshot selected · %1$s KiB"</string>
   <string name="gt_023441a6788206f5">"Select a transaction"</string>
   <string name="gt_ba6afbdcb15d6321">"Select all eligible VTXOs"</string>
+  <string name="gt_3b18955703b2ebc3">"Selected screenshot"</string>
   <string name="gt_0191f24cb9f6ec6b">"Share Bitcoin address"</string>
   <string name="gt_d85115a66447b600">"Share payment request"</string>
   <string name="gt_483ffbdd70c9c49f">"Share place"</string>
@@ -1755,6 +1755,7 @@
   <string name="gt_823fb9a0f3d2c3a9">"Unified request"</string>
   <string name="gt_7ae925241d0d67f0">"UnifiedPush endpoint"</string>
   <string name="gt_cf92288ec69afe62">"UnifiedPush server registration failed; queued for retry"</string>
+  <string name="gt_d544a53f79d29cf2">"Unknown app variant"</string>
   <string name="gt_5acdc8f986a4f293">"Unknown required parameter: %1$s"</string>
   <string name="gt_99e8588dce6a534a">"Unlock Noah"</string>
   <string name="gt_fae022f4a65e9a7d">"Unreadable image"</string>

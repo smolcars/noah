@@ -685,18 +685,6 @@
         }
       }
     },
-    "Action failed. Check your input and connection before trying again.": {
-      "comment": "Native-only copy; no RN translation. Intentionally English.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Action failed. Check your input and connection before trying again."
-          }
-        }
-      }
-    },
     "Active": {
       "comment": "GT 370aa80e162adbf6; arguments: none",
       "extractionState": "manual",
