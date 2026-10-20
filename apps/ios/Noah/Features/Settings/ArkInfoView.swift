@@ -39,9 +39,10 @@ struct ArkInfoView: View {
                 NavigationLink("Esplora Settings") { EsploraSettingsScreen() }
             }
             Section("Explorer APIs") {
+                let prices = ServerEndpoint.priceURLs(base: ServerEndpoint.baseURL(for: .current))
                 CopySettingRow(title: "Mempool explorer", value: "https://mempool.space" + (AppVariant.current == .mainnet ? "" : "/signet"))
-                CopySettingRow(title: "Price API", value: "https://mempool.space/api/v1/prices")
-                CopySettingRow(title: "Historical price API", value: "https://mempool.space/api/v1/historical-price")
+                CopySettingRow(title: "Price API", value: prices.current.absoluteString)
+                CopySettingRow(title: "Historical price API", value: prices.historical.absoluteString)
             }
         }.settingsStyle("Ark Info").onAppear { selection = EsploraSettings().selection(for: .current) }.task { await load() }.refreshable { await load() }
     }

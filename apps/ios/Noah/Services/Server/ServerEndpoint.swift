@@ -2,6 +2,10 @@ import Foundation
 
 /// Noah server per variant (`getServerEndpoint` in `client/src/constants.ts`).
 enum ServerEndpoint {
+    static func priceURLs(base: URL) -> (current: URL, historical: URL) {
+        (base.appending(path: "v0/prices"), base.appending(path: "v0/historical-price"))
+    }
+
     static func baseURL(
         for variant: AppVariant, environment: [String: String] = ProcessInfo.processInfo.environment,
         info: [String: Any]? = Bundle.main.infoDictionary
