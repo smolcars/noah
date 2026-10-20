@@ -254,7 +254,7 @@ class LogFile(
         }
 
         // Decoded views cannot preserve source offsets; their hits omit the whole message.
-        private fun redactPlain(message: String): String {
+        internal fun redactPlain(message: String): String {
             var result = replaceTokens(message, schemeTokens, urlUserinfo, schemeStart) { "${it.group(1)}[redacted]@" }
             result = redactLabels(result, addresses = true)
             result = replaceEmails(result)

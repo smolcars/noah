@@ -117,5 +117,16 @@ class EndpointPrivacyTest {
                 assertEquals("[custom-esplora]", EndpointLogPrivacy.sanitize(endpoint, setOf(origin)))
             }
         }
+        val hosts = setOf("abandon", "mnemonic", "preimage", "password")
+        val registered = hosts.map { "https://$it" }.toSet()
+        for (test in com.noahwallet.fixtures.SharedFixtures.load("log-redaction").filter {
+            it.name in setOf("mnemonic-lower", "label-mnemonic", "label-preimage", "label-password")
+        }) {
+            val input = test.input.jsonPrimitive.content
+            val expected = test.expected.jsonPrimitive.content
+            assertEquals(expected, EndpointLogPrivacy.sanitize(input, registered, hosts = hosts))
+            assertEquals("TransportError HTTP 503: $expected", EndpointLogPrivacy.sanitize("TransportError HTTP 503: $input", registered, hosts = hosts))
+        }
+
     }
 }

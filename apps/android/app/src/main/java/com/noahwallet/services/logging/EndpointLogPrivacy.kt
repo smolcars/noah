@@ -126,14 +126,21 @@ internal object EndpointLogPrivacy {
         if (registered.isEmpty()) return text
         var result = text
         for ((index, view) in views.withIndex()) {
-            var clean = urls.replace(view) { match -> if (!allowed(match.value, registered, hosts)) "[custom-esplora]" else match.value }
-            // Inspect relative references separately: another origin never inherits our paths.
-            val relative = urls.replace(clean, "")
-            if (sensitive.any { relative.contains(it) }) return "[custom-esplora]"
-            clean = redactHosts(clean, hosts)
-            if (index > 0 && clean != view) return "[custom-esplora]"
-            if (index == 0) result = clean
+            val endpointOnly = redactEndpoints(view, registered, sensitive, hosts)
+            if (endpointOnly == "[custom-esplora]" || index > 0 && endpointOnly != view) return "[custom-esplora]"
+            // Host replacement must not hide credential labels or break mnemonic runs.
+            val plain = LogFile.redactPlain(view)
+            if (index > 0 && plain != view) return "[redacted]"
+            if (index == 0) result = if (plain == view) endpointOnly else redactEndpoints(plain, registered, sensitive, hosts)
         }
         return result
+    }
+
+    private fun redactEndpoints(text: String, registered: Set<String>, sensitive: Set<String>, hosts: Set<String>): String {
+        val clean = urls.replace(text) { match -> if (!allowed(match.value, registered, hosts)) "[custom-esplora]" else match.value }
+        // Inspect relative references separately: another origin never inherits our paths.
+        val relative = urls.replace(clean, "")
+        if (sensitive.any { relative.contains(it) }) return "[custom-esplora]"
+        return redactHosts(clean, hosts)
     }
 }
