@@ -3,7 +3,7 @@ import SwiftUI
 /// Picks onboarding, the wallet tabs or a blocking message from `AppModel`.
 struct RootView: View {
     @Environment(AppModel.self) private var model
-    @State private var lock = WalletLock()
+    private var lock: WalletLock { model.walletLock }
     @State private var showingDelete = false
     @Environment(\.scenePhase) private var scenePhase
 

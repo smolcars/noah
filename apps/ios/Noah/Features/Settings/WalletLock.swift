@@ -91,6 +91,13 @@ final class WalletLock {
         context?.invalidate()
     }
 
+    func reset() {
+        context?.invalidate()
+        policy.background() // Invalidate any authentication started for the deleted wallet.
+        policy.setEnabled(false)
+        error = nil
+    }
+
     func setEnabled(_ enabled: Bool) async throws {
         let generation = policy.generation
         guard await authenticate(enabled ? L10n.text("Authenticate to enable biometrics")

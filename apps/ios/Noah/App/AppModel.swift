@@ -69,6 +69,7 @@ final class AppModel {
     let session = WalletSession.shared
     let versionCheck = AppVersionCheck()
     let pushPermission = PushPermissionModel()
+    let walletLock: WalletLock
     let server: ServerRegistration
     private let log = AppLog("app")
     private let settings: SettingsStorage
@@ -85,6 +86,7 @@ final class AppModel {
     init(settings: SettingsStorage = .shared, readLaunchState: @escaping () -> LaunchState = { .current() },
          settleRestore: @escaping @MainActor () async throws -> RestoreTransaction.Recovery = { try await AppServices.shared.restoreRecovery.settle() }) {
         self.settings = settings
+        walletLock = WalletLock(settings: settings)
         self.readLaunchState = readLaunchState
         self.settleRestore = settleRestore
         server = ServerRegistration(variant: .current, settings: settings, client: AppServices.shared.client)
@@ -351,6 +353,7 @@ final class AppModel {
             if !isWalletSuspended { await openExistingWallet() }
             throw error
         }
+        walletLock.reset()
         summary = nil
         walletError = nil
         isWalletSuspended = false

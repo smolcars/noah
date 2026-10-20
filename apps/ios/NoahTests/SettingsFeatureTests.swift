@@ -74,6 +74,24 @@ struct FeedbackPayloadTests {
 
 @MainActor
 struct SettingsFeatureTests {
+    @Test func liveLockResetDoesNotCarryPolicyIntoTheNextWallet() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "lock-reset-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let settings = try SettingsStorage(rootPath: root.path)
+        try settings.setPersistedState(PersistedWalletState(isBiometricsEnabled: true), key: PersistedWalletState.key, version: 0)
+        let model = AppModel(settings: settings)
+        let liveLock = model.walletLock
+        #expect(liveLock.policy.locked)
+        let oldGeneration = liveLock.policy.generation
+        liveLock.reset()
+        #expect(model.walletLock === liveLock)
+        #expect(!liveLock.policy.enabled && !liveLock.policy.locked)
+        liveLock.policy.background()
+        liveLock.policy.authenticated(generation: oldGeneration)
+        #expect(!liveLock.policy.enabled && !liveLock.policy.locked)
+        #expect(liveLock.policy.generation != oldGeneration)
+    }
+
     @Test func successfulManualBackupSurvivesFailedListRefresh() async throws {
         var uploaded = false
         let refreshed = try await BackupSettingsView.backUpAndRefresh(backup: { uploaded = true },
