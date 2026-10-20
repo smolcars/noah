@@ -150,9 +150,11 @@ fun ArkInfoScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
         config.bitcoind?.let { CopyRow("Bitcoind RPC", it) }
         SettingRow("Esplora Settings") { navigate(SettingsDestination.Esplora) }
         SectionTitle("Explorer APIs")
+        val prices = com.noahwallet.services.server.ServerEndpoint.priceURLs(
+            com.noahwallet.services.server.ServerEndpoint.baseURL(BuildConfig.APP_VARIANT, BuildConfig.REGTEST_SERVER_URL))
         CopyRow("Mempool explorer", "https://mempool.space" + if (BuildConfig.APP_VARIANT == "mainnet") "" else "/signet")
-        CopyRow("Price API", "https://mempool.space/api/v1/prices")
-        CopyRow("Historical price API", "https://mempool.space/api/v1/historical-price")
+        CopyRow("Price API", prices.first)
+        CopyRow("Historical price API", prices.second)
     }
 }
 

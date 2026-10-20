@@ -28,6 +28,10 @@ class ServerFailure(message: String, val status: Int? = null, val code: String? 
 }
 
 object ServerEndpoint {
+    fun priceURLs(base: String): Pair<String, String> = base.trimEnd('/').let {
+        "$it/v0/prices" to "$it/v0/historical-price"
+    }
+
     fun baseURL(variant: String, regtestOverride: String? = null): String = when (variant) {
         "mainnet" -> "https://noahwallet.io"
         "signet" -> "https://signet.noahwallet.io"
