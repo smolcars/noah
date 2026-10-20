@@ -202,6 +202,31 @@ class WalletLifecycleTest {
         }
     }
 
+    @Test fun exportDirectorySyncFailuresKeepDatabaseAndSeedUntilRetry() = runBlocking {
+        for (history in listOf(false, true)) {
+            val world = World()
+            try {
+                world.files()
+                val exports = File(world.root, "exports").apply { mkdirs() }
+                File(exports, "export").writeText("wallet data")
+                var failSync = true
+                val sync: (File) -> Unit = {
+                    assertTrue(it.listFiles()!!.isEmpty())
+                    if (failSync) error("Directory sync failed")
+                }
+                val settings = com.noahwallet.services.sharing.SettingsShareFiles(exports, {}, sync)
+                val transactions = com.noahwallet.history.HistoryExportFiles(exports, {}, sync)
+                world.sweepScratch = { if (history) transactions.deleteAll() else settings.deleteAll() }
+                assertTrue(runCatching { world.lifecycle().delete() }.exceptionOrNull() is WalletLifecycle.TemporaryFiles)
+                assertTrue(world.location.database.exists()); assertTrue(world.seed); assertTrue(world.settings)
+                assertFalse(world.suspended); assertFalse(world.location.deletionMarker.exists())
+                failSync = false
+                world.lifecycle().delete()
+                assertFalse(world.seed)
+            } finally { world.clean() }
+        }
+    }
+
     @Test fun differentAndLegacyMarkersNeverDeleteCurrentWallet() = runBlocking {
         val world = World()
         try {
