@@ -136,6 +136,52 @@ import Testing
             }
         }
     }
+    @Test(arguments: ["pause", "cancel", "edit"])
+    func unpaidPolicyRollbackCannotResurrectPauseCancelOrEdit(action: String) async throws {
+        let h = try Harness(); var original = try h.add()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        original.startAt = h.now; original.nextRunAt = h.now
+        try h.store.upsert(original)
+        await h.executor.timeChanged() // First native load, without submitting money.
+        let active = try #require(h.settings.string(forKey: RecurringStore.key))
+        switch action {
+        case "pause": try await h.executor.pause(original.id)
+        case "cancel": try await h.executor.cancel(original.id)
+        default:
+            original.amountSat = 500; original.destination = "new-recipient"
+            try await h.executor.save(original, editing: true)
+        }
+        try h.settings.setDurably(active, forKey: RecurringStore.key)
+        h.rebuild() // New executor, same independent durable evidence.
+        await h.executor.execute(); await h.executor.execute(manual: true)
+        #expect(h.calls.withLock { $0 } == 0)
+        #expect(try h.store.load().schedules[original.id]?.status == "needs_attention")
+        #expect(try h.journal.load().isEmpty)
+    }
+
+    @Test func rollbackDuringFinalPreparationCannotBypassDurablePause() async throws {
+        let h = try Harness(); let policy = try h.add()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        h.beforePay = {
+            let markedActive = try #require(h.settings.string(forKey: RecurringStore.key))
+            try await h.executor.pause(policy.id)
+            try h.settings.setDurably(markedActive, forKey: RecurringStore.key)
+        }
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 0)
+        #expect(try h.store.load().schedules[policy.id]?.status == "needs_attention")
+    }
+    @Test func resumeSkipSurvivesRollbackToOriginalActivePolicy() async throws {
+        let h = try Harness(); let policy = try h.add()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        let active = try #require(h.settings.string(forKey: RecurringStore.key))
+        try await h.executor.pause(policy.id); try await h.executor.resume(policy.id)
+        try h.settings.setDurably(active, forKey: RecurringStore.key)
+        await h.executor.execute(manual: true)
+        #expect(h.calls.withLock { $0 } == 0)
+        #expect(try h.store.load().schedules[policy.id]?.status == "needs_attention")
+    }
+
     @Test func recoveredMMKVRollbackWaitsForHealthyStorageAndCannotPayTwice() async throws {
         let h = try Harness(); _ = try h.add()
         defer { try? FileManager.default.removeItem(at: h.directory) }

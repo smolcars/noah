@@ -134,6 +134,34 @@ struct WalletLifecycleTests {
         await session.release(next)
     }
 
+    @Test func deletionClearsRecurringLedgerAndMarkerBeforeWalletRecreation() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try writeBarkDatabase()
+        let settings = try makeSettings()
+        let (seed, token) = items()
+        defer { seed.remove(); token.remove() }
+        try seed.save("seed words")
+        let binding = try RecurringStore.binding(location: location)
+        let file = location.directory.appending(path: "noah-recurring-journal.json.policies")
+        let store = RecurringStore(settings: settings)
+        store.protectPolicies(file: file, binding: { binding })
+        _ = try store.load()
+        #expect(FileManager.default.fileExists(atPath: file.path))
+        #expect(FileManager.default.fileExists(atPath: file.appendingPathExtension("initialized").path))
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        try await lifecycle(session: session, settings: settings, seed: seed, token: token).delete()
+        #expect(!FileManager.default.fileExists(atPath: file.path))
+        #expect(!FileManager.default.fileExists(atPath: file.appendingPathExtension("initialized").path))
+        try writeBarkDatabase()
+        let replacement = try RecurringStore.binding(location: location)
+        #expect(replacement.instance != binding.instance)
+        let fresh = RecurringStore(settings: settings)
+        fresh.protectPolicies(file: file, binding: { replacement })
+        #expect(try fresh.load().schedules.isEmpty)
+        #expect(try String(contentsOf: file, encoding: .utf8).contains(replacement.instance.uuidString))
+        #expect(try !String(contentsOf: file, encoding: .utf8).contains(binding.instance.uuidString))
+    }
+
     @Test func undeletableScratchPreservesSecretsAndLocalState() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try writeBarkDatabase()

@@ -36,7 +36,10 @@ import Observation
     private(set) var syncPending = false
     var controller: SendPaymentController { d.controller }
 
-    init(dependencies: Dependencies) { d = dependencies }
+    init(dependencies: Dependencies) {
+        d = dependencies
+        d.store.protectPolicies(file: d.journal.file.appendingPathExtension("policies"), binding: d.binding)
+    }
     func reload() {
         do {
             let state = try d.store.load()
@@ -70,14 +73,14 @@ import Observation
         do { entries = try d.journal.load() }
         catch {
             // A corrupt journal cannot identify which policies are safe in this wallet.
-            for var schedule in state.schedules.values {
+            for var schedule in state.schedules.values where schedule.lastError != RecurringPolicyLedger.message {
                 schedule.status = "needs_attention"
                 schedule.lastError = error.localizedDescription
                 try d.store.upsert(schedule)
             }
             throw error
         }
-        for var schedule in state.schedules.values where !schedule.unsupportedStorage {
+        for var schedule in state.schedules.values where !schedule.unsupportedStorage && schedule.lastError != RecurringPolicyLedger.message {
             let current = try boundState()
             guard current.binding == state.binding, current.schedules[schedule.id] == schedule else { continue }
             let entry = entries[schedule.id]
@@ -344,7 +347,7 @@ import Observation
         try RestoreTransaction.fullSync(file.deletingLastPathComponent())
     }
     private func refreshDates() throws {
-        for var schedule in try boundState().schedules.values where !schedule.unsupportedStorage && schedule.status != "completed" {
+        for var schedule in try boundState().schedules.values where !schedule.unsupportedStorage && schedule.status != "completed" && schedule.lastError != RecurringPolicyLedger.message {
             let next = schedule.next(schedule.nextOccurrenceIndex, zone: d.zone())
             if next != schedule.nextRunAt {
                 schedule.nextRunAt = next

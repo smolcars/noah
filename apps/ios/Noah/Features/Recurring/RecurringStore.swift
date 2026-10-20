@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 /// Keeps RN's version-0 envelope and unknown fields. Corruption is never treated as an empty store.
@@ -16,6 +17,25 @@ final class RecurringStore: @unchecked Sendable {
     private let write: @Sendable (String) throws -> Void
     private let lock = NSRecursiveLock()
     private var writeFailed = false
+    private var policyLedger: RecurringPolicyLedger?
+    private var policyBinding: (@Sendable () throws -> Binding)?
+    func protectPolicies(file: URL, binding: @escaping @Sendable () throws -> Binding) {
+        lock.withLock {
+            if policyLedger == nil { policyLedger = RecurringPolicyLedger(file: file); policyBinding = binding }
+        }
+    }
+    private func protected(_ state: State) -> State {
+        guard let ledger = policyLedger else { return state }
+        let stopped: Set<String>
+        do { stopped = ledger.stopped(binding: try state.binding ?? policyBinding!(), schedules: state.schedules) }
+        catch { AppLog("recurring").w(RecurringPolicyLedger.logMessage); stopped = Set(state.schedules.keys) }
+        var visible = state
+        for id in stopped where visible.schedules[id]?.unsupportedStorage == false {
+            visible.schedules[id]?.status = "needs_attention"
+            visible.schedules[id]?.lastError = RecurringPolicyLedger.message
+        }
+        return visible
+    }
     init(settings: SettingsStorage = .shared, write: (@Sendable (String) throws -> Void)? = nil) {
         self.settings = settings
         self.write = write ?? { try settings.setDurably($0, forKey: Self.key) }
@@ -62,7 +82,7 @@ final class RecurringStore: @unchecked Sendable {
         }
         return schedule
     }
-    func load() throws -> State {
+    private func rawState() throws -> State {
         try settings.requireHealthy()
         return try lock.withLock {
             guard !writeFailed else { throw RecurringError.message("Recurring payment storage failed. Restart Noah; sending is stopped.") }
@@ -76,14 +96,19 @@ final class RecurringStore: @unchecked Sendable {
             return State(schedules: schedules, pending: pending, binding: binding)
         }
     }
-    private func change(_ mutate: (inout [String: String]) throws -> Void) throws {
+    func load() throws -> State { try lock.withLock { protected(try rawState()) } }
+    private func change(policyID: String? = nil, _ mutate: (inout [String: String]) throws -> Void) throws {
         try lock.withLock {
-            _ = try load()
+            let before = try rawState()
             var envelope = try envelope()
             var state = try RawObject(envelope.fields["state"]!)
             try mutate(&state.fields)
             envelope.fields["state"] = try state.json()
-            do { try write(envelope.json()) }
+            let raw = try envelope.json()
+            let fields = try RawObject(state.fields["schedules"]!)
+            let after = Dictionary(uniqueKeysWithValues: fields.fields.map { (id, raw) in (id, Self.payment(id: id, raw: raw)) })
+            try policyLedger?.commit(binding: before.binding ?? policyBinding!(), before: before.schedules, after: after, policyID: policyID)
+            do { try write(raw) }
             catch { writeFailed = true; throw error }
         }
     }
@@ -94,7 +119,7 @@ final class RecurringStore: @unchecked Sendable {
         }
     }
     func upsert(_ schedule: RecurringPayment) throws {
-        try change { state in
+        try change(policyID: schedule.unsupportedStorage ? nil : schedule.id) { state in
             var schedules = try RawObject(state["schedules"]!)
             let previous = schedules.fields[schedule.id]
             if schedule.unsupportedStorage || previous.map({ Self.payment(id: schedule.id, raw: $0).unsupportedStorage }) == true {
@@ -112,7 +137,7 @@ final class RecurringStore: @unchecked Sendable {
         }
     }
     func remove(_ id: String) throws {
-        try change { state in
+        try change(policyID: id) { state in
             var schedules = try RawObject(state["schedules"]!)
             schedules.fields.removeValue(forKey: id)
             state["schedules"] = try schedules.json(); state["serverSyncPending"] = "true"
@@ -146,11 +171,14 @@ final class RecurringStore: @unchecked Sendable {
         return .init(wallet: .init(fingerprint: properties.fingerprint, network: properties.network), instance: id)
     }
     static func durableWrite(_ data: Data, to file: URL) throws {
-        try data.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-        var excluded = file
+        let temporary = file.deletingLastPathComponent().appending(path: ".recurring-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        try data.write(to: temporary, options: .completeFileProtectionUntilFirstUserAuthentication)
+        var excluded = temporary
         var values = URLResourceValues(); values.isExcludedFromBackup = true
         try excluded.setResourceValues(values)
-        try RestoreTransaction.fullSync(file)
+        try RestoreTransaction.fullSync(temporary)
+        guard Darwin.rename(temporary.path, file.path) == 0 else { throw RestoreTransaction.Failure.syncFailed(errno) }
         try RestoreTransaction.fullSync(file.deletingLastPathComponent())
     }
 }
