@@ -1,6 +1,6 @@
 package com.noahwallet.services.wallet
 
-import com.noahwallet.services.storage.WalletDataLocation
+import com.noahwallet.services.storage.*
 import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -13,6 +13,8 @@ class WalletLifecycleTest {
         val location = WalletDataLocation(root, "regtest")
         var suspended = false
         var seed = true
+        var seedValue = "wallet A"
+        var seedUnreadable = false
         var token = true
         var settings = true
         var widget = true
@@ -28,6 +30,7 @@ class WalletLifecycleTest {
         fun lifecycle(session: WalletSession = this.session, drainTimeoutMillis: Long = 30_000) = WalletLifecycle(session, location,
             setSuspended = { suspended = it; events.add("flag:$it") },
             deregister = { events.add("deregister"); if (deregisterFails) error("Offline") },
+            readSeed = { if (seedUnreadable) SecretResult.Unavailable(SecretFailure.storageUnreadable) else if (seed) SecretResult.Found(seedValue) else SecretResult.NotFound },
             deleteSeed = {
                 assertFalse(location.directory.exists()); assertFalse(location.restoreDirectory.exists())
                 assertTrue(runCatching { session.reserve() }.isFailure)
@@ -186,7 +189,7 @@ class WalletLifecycleTest {
             val world = World()
             try {
                 world.files()
-                world.location.writeDeletionIdentity {}
+                world.location.writeDeletionIdentity(SecretResult.Found(world.seedValue)) {}
                 if (stage >= 1) check(world.location.directory.renameTo(world.location.deletionDirectory))
                 if (stage >= 2) check(File(world.location.deletionDirectory, ".noah-wallet-instance").delete())
                 if (stage >= 3) check(world.location.deletionDirectory.deleteRecursively())
@@ -274,7 +277,7 @@ class WalletLifecycleTest {
                 assertFalse(world.location.deletionMarker.exists())
                 assertFalse(world.events.contains("flag:true"))
             }
-            world.location.writeDeletionIdentity {}
+            world.location.writeDeletionIdentity(SecretResult.Found(world.seedValue)) {}
             world.location.deletionMarker.writeText(java.util.UUID.randomUUID().toString())
             world.lifecycle().recoverDeletion()
             assertTrue(world.location.database.exists()); assertTrue(world.seed)
@@ -287,13 +290,30 @@ class WalletLifecycleTest {
         } finally { world.clean() }
     }
 
-    @Test fun legacyMarkerFinishesOnlyWithNoWalletDirectory() = runBlocking {
-        val world = World()
-        try {
-            world.location.deletionMarker.writeBytes(byteArrayOf(1))
-            world.lifecycle().recoverDeletion()
-            assertFalse(world.seed); assertFalse(world.location.deletionMarker.exists())
-        } finally { world.clean() }
+    @Test fun absentDatadirRequiresSeedBoundEvidence() = runBlocking {
+        for (marker in listOf("bound", "uuid", "one-byte", "invalid")) {
+            for (current in listOf("same", "different", "none", "unreadable")) {
+                val world = World()
+                try {
+                    when (marker) {
+                        "bound" -> world.location.writeDeletionIdentity(SecretResult.Found("wallet A")) {}
+                        "uuid" -> world.location.deletionMarker.writeText(java.util.UUID.randomUUID().toString())
+                        "one-byte" -> world.location.deletionMarker.writeBytes(byteArrayOf(1))
+                        else -> world.location.deletionMarker.writeText("invalid")
+                    }
+                    world.seed = current != "none"
+                    world.seedValue = if (current == "different") "wallet B" else "wallet A"
+                    world.seedUnreadable = current == "unreadable"
+                    val before = world.seed
+                    world.lifecycle().recoverDeletion()
+                    val finishes = marker == "bound" && (current == "same" || current == "none")
+                    assertEquals(if (finishes) false else before, world.seed)
+                    assertEquals(!finishes, world.token); assertEquals(!finishes, world.settings)
+                    assertFalse(world.location.directory.exists()); assertFalse(world.location.deletionMarker.exists())
+                    if (!finishes) assertFalse(world.events.contains("flag:true"))
+                } finally { world.clean() }
+            }
+        }
     }
 
     @Test fun suspendedSessionRejectsDelayedOpen() = runBlocking {

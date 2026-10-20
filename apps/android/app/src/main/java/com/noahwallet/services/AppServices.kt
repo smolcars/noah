@@ -102,6 +102,7 @@ class AppServices private constructor(private val context: Context) {
             settings.sync()
         },
         deregister = { com.noahwallet.api.generated.client.V0DeregisterClient(client).deregister().value() },
+        readSeed = seed::read,
         deleteSeed = seed::deleteWalletSeed,
         clearToken = tokens::clear,
         clearSettings = {

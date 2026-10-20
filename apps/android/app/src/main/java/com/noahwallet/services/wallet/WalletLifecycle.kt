@@ -16,6 +16,7 @@ class WalletLifecycle(
     private val location: WalletDataLocation,
     private val setSuspended: (Boolean) -> Unit,
     private val deregister: suspend () -> Unit,
+    private val readSeed: suspend () -> com.noahwallet.services.storage.SecretResult,
     private val deleteSeed: suspend () -> Unit,
     private val clearToken: suspend () -> Unit,
     private val clearSettings: () -> Unit,
@@ -38,7 +39,7 @@ class WalletLifecycle(
     suspend fun recoverDeletion() = withContext(NonCancellable + Dispatchers.IO) {
         mutation.withLock {
             if (!location.deletionMarker.exists()) return@withLock
-            if (!location.deletionMatchesWallet()) {
+            if (!location.deletionMatchesWallet(readSeed())) {
                 warn("Discarding deletion marker for a different or unidentifiable wallet")
                 check(location.deletionMarker.delete())
                 syncFiles()
@@ -75,8 +76,8 @@ class WalletLifecycle(
                 if (location.restorePending) throw RestorePending()
                 try { sweepScratch() } catch (_: Exception) { throw TemporaryFiles() }
                 // The durable marker commits the deletion; every later launch finishes it.
-                if (!location.deletionMarker.exists() || !location.deletionMatchesWallet()) {
-                    location.writeDeletionIdentity(syncIdentityDirectory)
+                if (!location.deletionMarker.exists() || !location.deletionMatchesWallet(readSeed())) {
+                    location.writeDeletionIdentity(readSeed(), syncIdentityDirectory)
                     syncFiles()
                 }
                 try { deregister() } catch (_: Exception) { warn("Deregistration failed while deleting wallet") }
