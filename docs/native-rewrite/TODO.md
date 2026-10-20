@@ -293,6 +293,10 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 
 ## M6 — Onchain & exits
+- [x] Claim destination safety — both platforms preserve external/cold-storage sweeps; fresh Noah-address prefill/restore action, native ownership warning in field/review, address/network/ownership revalidation at execution and regression tests
+- [x] Android VTXO monetary selections — one toggleable checkbox node per row, spoken shortened ID/amount/status/checked state, disabled/checked semantics tests
+- [x] Android Auto-Board review — estimated onchain reserve = confirmed − boarding amount − chain fee, matching iOS
+- [x] M6 small-fix verification — Android full suite once: 1,334 passed / 0 failed/skipped + APK; final targeted 11 passed + APK. iOS full NoahTests once: 410 total / 393 passed / 17 gated skips / 0 failures (520 expanded passes); owned simulator and temporary build artifacts deleted. Details/evidence in both ExitTests READMEs
 - [x] BoardArkScreen + confirmation-only auto-boarding service, persisted toggle/one-shot prompt, estimated 5,000-sat reserve — iOS; RN `boardAll` MAX, estimated fees/amounts, actual onchain fee on receipt with txid-only read refresh/relaunch reconciliation for missing fees (prepared boarding awaits FFI 18, same priority as 14)
 - [x] VTXOsScreen + VTXODetailScreen + delegated refresh review dialog — iOS
 - [x] Emergency-exit read-only overview/estimates, quote < 30 s, 330-sat eligibility, deposit sheet, claim/cancel reviews — iOS

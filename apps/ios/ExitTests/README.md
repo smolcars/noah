@@ -492,3 +492,44 @@ deletion, `simctl list devices --json` was checked for its exact name
 inventories are `/tmp/noah-m6-round2-1a9053-before-delete.json` and
 `/tmp/noah-m6-round2-1a9053-after-delete.json`. No other simulator, Android emulator,
 physical device, or Docker lifecycle was changed.
+
+## M6 claim destination fix (2026-10-20)
+
+Based on `b46fc2e2`. Claims retain RN's ability to sweep directly to cold storage
+or another valid Bitcoin address on this wallet's network. Emergency Exit
+prefills a fresh Noah wallet address and offers **Use my Noah wallet address**.
+Native onchain `isMine` checks ownership. External destinations show **This address
+isn't in your Noah wallet. The claimed funds will be sent there.** beside the
+field and in the explicit claim review. The persisted quote includes ownership;
+execution rebuilds the quote and rechecks address, network and ownership before
+submission. An ownership change requires another review. Existing quote journals
+without the optional ownership flag remain readable.
+
+New tests cover owned/external destinations, invalid addresses, payment-URI and
+wrong-network rejection, regtest witness/legacy and signet address handling,
+quote ownership correspondence/persistence, fresh prefill/restoration, late
+ownership results and unavailable-wallet gates. No funded live broadcast or
+external network/hardware test was repeated for this small fix.
+
+Targeted verification passed **9 tests in 3 suites**, zero failures/skips:
+`ExitClaimDestinationTests`, `ExitClaimDestinationModelTests`, `OnchainJournalTests`.
+XcodeGen was regenerated in `apps/ios`. The full `NoahTests` target was run
+**once** with signing enabled (`CODE_SIGN_IDENTITY=-`), `ARCHS=arm64`,
+`ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, disabled parallel testing and isolated
+DerivedData `/private/tmp/noah-m6-fix-8771-dd`.
+
+**410 tests total: 393 passed, 17 explicitly gated skips, zero failures**, across
+**91 suites**. Parameterized device execution: **520 passed, 17 skipped**.
+`xcresulttool get test-results summary` confirms the counts. Evidence:
+[targeted summary](evidence/m6-fix-targeted-summary.json),
+[full summary](evidence/m6-fix-full-summary.json).
+
+Owned simulator **Noah M6 Fix Sol 8771**, iPhone 17 Pro, iOS 27.0,
+UDID `4A201247-BD68-457C-974E-51C243FABEB5`. T3's Device service rejected this
+newly-created UDID twice as unknown, so Xcode targeted it directly after simctl
+confirmed its identity. After testing, its exact name/type/UDID were checked,
+it was shut down, **Shutdown** was rechecked, and only that UDID was deleted;
+absence was verified. [Cleanup evidence](evidence/m6-fix-device-cleanup.json).
+Task-owned DerivedData, result bundles and build/log scratch outside the worktree
+were deleted after retaining these summaries. No other device or Docker command
+was used.

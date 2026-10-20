@@ -1,0 +1,8 @@
+{
+  "name": "Noah M6 Fix Sol 8771",
+  "udid": "4A201247-BD68-457C-974E-51C243FABEB5",
+  "stateBeforeShutdown": "Booted",
+  "verifiedBeforeDeletion": "Shutdown",
+  "absentAfterDeletion": true,
+  "androidEmulatorCreated": false
+}

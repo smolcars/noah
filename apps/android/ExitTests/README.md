@@ -193,3 +193,46 @@ forced live. Pending-fund inclusion in MAX follows `boardAll` and was not separa
 funded live. Physical hardware, external networks and a complete device/UI test
 suite were not exercised. Only the JVM full suite and the opt-in live stages above
 were run; Android instrumentation sources were compiled.
+
+## M6 destination, accessibility and reserve fixes (2026-10-20)
+
+Based on `b46fc2e2`. Claims retain RN's ability to sweep to any valid Bitcoin
+address on the wallet's network, including cold storage. Emergency Exit prefills
+a fresh Noah wallet address and provides **Use my Noah wallet address**. The field
+checks native onchain `isMine`; external destinations show **This address isn't
+in your Noah wallet. The claimed funds will be sent there.** both beside the field
+and in the explicit claim review. The quote persists the ownership flag and
+execution revalidates the address, network and ownership alongside the existing
+wallet/items/fee checks before recording or broadcasting. Invalid addresses and
+changed ownership require another review. Legacy journals still decode.
+
+VTXO selection and exit-start selection now use one toggleable checkbox row.
+Its merged semantics include shortened VTXO ID, formatted amount, status and
+checked state; disabled rows retain their disabled semantics. Auto-Board review
+shows **Estimated onchain reserve** as confirmed balance minus boarding amount
+minus estimated chain fee, matching iOS. The reserve remains an estimate.
+
+Targeted verification: **20 tests in 3 suites passed**, zero failures/errors/skips.
+The additional regtest address-format assertions passed **10 operation tests**.
+The full JVM suite was run **once** with the requested command:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**1,334 tests passed in 61 suites, zero failures/errors/skips**; the five M6 suites
+contain **220 tests**, including the unchanged 187 RN fixtures. APK assembly
+passed; Gradle took **3m 59s**. After replacing the row's nested Material ListItem
+with plain text children so it cannot introduce another merged semantics node,
+the final targeted operation/semantics run passed **11 tests in 2 suites**, zero
+failures/errors/skips, and APK assembly passed again. No second full-suite run
+was made. The semantics test inspects role, action, checked/disabled state and
+merged spoken label for both checked states and both enabled states.
+
+Evidence: [full JUnit totals](evidence/m6-fix-junit-summary.json),
+[full Gradle result](evidence/m6-fix-gradle-result.txt),
+[final targeted totals](evidence/m6-fix-final-targeted-summary.json).
+No emulator or physical device was used; no Docker command or funded live
+broadcast was run. Task-owned temporary logs/build scratch outside the worktree
+were deleted. TalkBack/device UI and external destinations were not exercised
+with live funds; ownership/execution use production seams with fake-wallet tests.
