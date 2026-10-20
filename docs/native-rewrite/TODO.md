@@ -39,7 +39,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] `WalletService` protocol/interface with a fake for UI work — superseded by `WalletSession` plus feature-specific dependency seams: iOS `ReceiveModel.swift:7` / `HistoryModel.swift:7`; Android `WalletSession.Handles` (`WalletSession.kt:46`) / `SendWallet` (`SendController.kt:243`); injected fakes in `ReceiveModelTests` / `SendSafetyTest` (`cfe15cf1`, `91095f90`)
 - [x] Config mapping per variant with **fee units: sat/kvB → sat/kwu** — iOS
 - [x] Config mapping — Android (sat/kwu; regtest via `10.0.2.2`)
-- [ ] Activate the decoded `esplora-storage` override on both platforms after endpoint/network validation and coordinated reload; both SDK openers still use `WalletConfiguration.base`. Codecs exist (`RNStoreCodec.swift:28,83`, `RNStoreCodec.kt:16`); consumer/editor remains M5
+- [x] Activate the imported `esplora-storage` override on both platforms after URL, genesis/network and tip-height validation. SDK openers and history use the effective configuration; regtest always ignores overrides. Invalid imports remain visible for correction. Native settings hold a write-ahead selection; interrupted reloads roll back to the previous endpoint (`EsploraSettings.swift`, `EsploraSettings.kt`; shared 24-case `apps/fixtures/esplora.json`).
 - [x] `WalletCoordinator` — superseded by process-wide `WalletSession` + `WalletLifecycle` mutation gates: iOS actor/shared owner (`WalletSession.swift:14,71`), Android owner/reservations/drained close (`WalletSession.kt:22,215,465`); UI/push/backup/restore and iOS App Intents share it; `WalletSessionTests`, `WalletSessionTest`, `WalletLifecycleTests` / `WalletLifecycleTest` (`3d530294`, `e5f08b66`, `5e000c52`)
   - [x] iOS: `WalletSession` holds headless admission across push/task/intent awaits and backup/native settlement; foreground entry waits; restore/deletion reservations exclude jobs
 - [x] Open existing wallet: preflight `db.sqlite`, `createIfNotExists=false`, original network — iOS (`WalletSession`)
@@ -101,8 +101,8 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Upgrade runners cover install while RN is running/writing (`INSTALL_WHILE_RUNNING=1`, default); stopped baseline mode retained (`=0`). Run both for acceptance; live results are recorded in each platform's upgrade docs.
 - [x] Remaining RN store shapes — all eight envelopes have codecs, unknown-field retention and transaction-v0 migration; both `RNStoreTests` / `RNStoreMigrationTest.unifiedRNFixturesValidateMigrateAndPreserveOriginalBytes` consume 196 RN-generated cases (`RNStoreCodec.swift:14`, `RNStoreCodec.kt:10`; `f29a23a4`, `b84ce5dd`, `17e7b76f`). Esplora activation remains separately tracked in 0.3/M5
   - [x] Review round 1: exact raw version tokens; recoverable profile fallback without stored-value repair; one deterministic RN Zustand generator/196-case raw fixture consumed by both native suites — `apps/fixtures/README.md`
-  - [x] iOS: inventory all 8 stores; validate consumed envelopes/versions, preserve unknown JSON tokens, apply transaction v0 migration; RN-generated fixtures; Esplora decoder remains inactive until its native screen lands — `apps/ios/UpgradeTests/README.md`
-  - [x] Android: all 8 RN envelopes inventoried/validated; unknown fields retained on writes, transaction v0 migration matched; Esplora has a decoder but no native consumer — `apps/android/UpgradeTests/STORES.md`.
+  - [x] iOS: inventory all 8 stores; validate consumed envelopes/versions, preserve unknown JSON tokens, apply transaction v0 migration; RN-generated fixtures; Esplora is decoded here and activated by the M5 validated native settings flow — `apps/ios/UpgradeTests/README.md`
+  - [x] Android: all 8 RN envelopes inventoried/validated; unknown fields retained on writes, transaction v0 migration matched; Esplora is decoded here and activated by the M5 validated native settings flow — `apps/android/UpgradeTests/STORES.md`.
 - [x] Verify against a real RN-written MMKV file (in the upgrade test) — iOS
 - [x] GT locale reader (`generaltranslation.locale`) — iOS
 - [x] GT locale reader (`gt_store`) — Android
@@ -306,7 +306,9 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Settings danger-zone rows wired to suspend/resume, delete wallet (type "delete" to confirm, as RN), re-register — iOS
 - [x] ProfileScreen — iOS
 - [x] LanguageSettingsScreen, CurrencySettingsScreen, BitcoinUnitSettingsScreen — iOS (language persists; translated copy awaits 0.9 catalogs)
-- [ ] Implement EsploraSettingsScreen on both platforms: edit/reset, URL normalization, genesis/network test, persist override and coordinated wallet reload matching RN `EsploraSettingsScreen.tsx`; native Ark Info still shows a disabled "Coming soon" row (`ArkInfoView.swift:36`, `AccountScreens.kt:131`)
+- [x] Implement EsploraSettingsScreen on both platforms: RN wording, edit/reset, URL normalization, genesis/network and tip-height connection test, effective Ark Info endpoint and native persistence. Reload holds background access → lifecycle gate → restore recovery → session reservation, refuses counted sends/boards/exits/recurring submissions, commits settings before publishing handles, reopens the previous selection on failure, and restarts wallet observers. Shared fixtures and reload/storage-failure/process-death/import regressions run offline (`EsploraTests.swift`, `EsploraTest.kt`, both WalletSession test suites).
+
+- [x] Esplora verification (2026-10-20): shared 24-case fixture; targeted Android 46 tests and iOS 18 tests passed. Final Android: 3,500 JVM tests / 124 suites, zero failures/errors/skips, regtest APK assembled. Final signed arm64 iOS: 716 tests / 145 suites, 692 passed, 24 opt-in skipped, zero failures (1,442 expanded passes). Both full checks ran once after the last source change; owned simulator identity/shutdown confirmed before deletion; DerivedData and all result bundles removed. No public Esplora calls in feature tests.
 - [x] BackupSettingsScreen — iOS
 - [x] ArkInfoScreen — iOS
 - [x] ExportDatabaseScreen (encrypted `.noahbackup`) — iOS
