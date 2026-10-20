@@ -1,0 +1,69 @@
+name: Native Android CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/**"
+      - "client/android/app/debug.keystore"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/native-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NIX_CONFIG: |
+    post-build-hook =
+    extra-substituters =
+    substituters = https://cache.nixos.org/
+
+jobs:
+  build-and-test:
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Restore Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-android-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-android-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
+        with:
+          cache-read-only: false
+
+      - name: Locate Android SDK
+        id: sdk
+        run: echo "root=$ANDROID_HOME" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Android build SDK
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          key: native-android-sdk-${{ runner.os }}-${{ runner.arch }}-37.0-37.0.0
+          path: |
+            ${{ steps.sdk.outputs.root }}/platforms/android-37.0
+            ${{ steps.sdk.outputs.root }}/build-tools/37.0.0
+
+      - name: Install Android build SDK
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;37.0.0"'
+
+      - name: Assemble all flavors and run unit tests
+        run: |
+          nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --max-workers=2 --dependency-verification=strict :app:assembleMainnetDebug :app:assembleSignetDebug :app:assembleRegtestDebug :app:testRegtestDebugUnitTest'
+
+      - name: Upload JUnit results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-android-junit
+          path: apps/android/app/build/test-results/testRegtestDebugUnitTest/*.xml
+          if-no-files-found: error
+          retention-days: 7
