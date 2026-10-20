@@ -3,6 +3,105 @@ import Testing
 @testable import Noah
 
 @MainActor struct RecurringSettlementAdmissionTests {
+    @Test func doneBeforeReservationReturnStillRecordsPaidOccurrence() async throws {
+        try await reservationRace(change: "done")
+    }
+
+    @Test(arguments: ["replacement", "sameKeyReplacement", "reload", "failed", "ambiguous", "blocked", "foreignReload"])
+    func terminalResultSurvivesReservationReturn(change: String) async throws {
+        try await reservationRace(change: change)
+    }
+
+    private func reservationRace(change: String) async throws {
+        let h = try RecurringExecutorTests.Harness()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        var schedule = try h.add()
+        schedule.status = "needs_approval"; try h.store.upsert(schedule)
+        let terminal = RecurringExecutorTests.Locked(false)
+        let release = AsyncStream<Void>.makeStream()
+        defer { release.continuation.finish() }
+        var holdReturn = true
+        h.reservation = { work in
+            await work()
+            // Send's terminal state is visible while the reservation returns across actors.
+            if holdReturn {
+                holdReturn = false
+                terminal.withLock { $0 = true }
+                var iterator = release.stream.makeAsyncIterator()
+                _ = await iterator.next()
+            }
+        }
+        if change == "failed" { h.afterPay = { throw SendNotSubmitted(reason: .fundsChanged) } }
+        if change == "ambiguous" { h.ambiguous = true }
+        let review = try await h.executor.review(schedule.id)
+        let run = Task { await h.executor.execute(manual: true, approval: review) }
+        try await SendPaymentTests.waitUntil { terminal.withLock { $0 } }
+        let key = try #require(h.controller.attempt?.recurringOccurrenceKey)
+        let result = try #require(h.controller.resultForSettlement(key))
+        if change == "failed" { #expect(result.outcome == .failed) }
+        else if change == "ambiguous" { #expect(result.outcome == .uncertain) }
+        else if case .succeeded(let receipt) = result.outcome {
+            #expect(receipt.proof == .submitReturnedArkSuccess)
+            #expect(receipt.amount == schedule.amountSat)
+        } else { Issue.record("Expected paid receipt") }
+        h.controller.acknowledge()
+        if change == "ambiguous" { #expect(h.controller.locked) }
+        else {
+            #expect(!h.controller.locked && h.controller.attempt == nil)
+            #expect(h.controller.resultForSettlement(key) == result)
+            #expect(h.saved != nil, "Done must retain the durable Send evidence until settlement")
+        }
+        if change == "replacement" || change == "sameKeyReplacement" {
+            h.beforePay = { throw SendNotSubmitted(reason: .recurringStopped) }
+            let (payment, quote, _) = h.quoted(schedule, fees: RecurringFeePolicy.fallback)
+            await h.controller.submitAndWait(payment, quote: quote,
+                recurringKey: change == "sameKeyReplacement" ? key : "another-occurrence", beforeSubmit: {})
+        } else if change == "reload" { h.controller.reloadForWalletChange() }
+        else if change == "foreignReload" {
+            h.owner.withLock { $0.instance = UUID() }
+            h.saved = nil
+            h.controller.reloadForWalletChange()
+        } else if change == "blocked" {
+            try Data("Storage admission blocked by test".utf8).write(to: h.journal.quarantineFile)
+        }
+        let replacement = h.controller.attempt, replacementGeneration = h.controller.generation
+        release.continuation.yield(()); release.continuation.finish()
+        await run.value
+        if change == "foreignReload" {
+            #expect(h.controller.resultForSettlement(key) == nil)
+            #expect(try h.journal.load()[schedule.id]?.consumed != true)
+            #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == 0)
+            #expect(h.calls.withLock { $0 } == 1)
+            return
+        }
+        if change == "blocked" {
+            #expect(h.controller.resultForSettlement(key) == result)
+            #expect(h.saved != nil)
+            try FileManager.default.removeItem(at: h.journal.quarantineFile)
+            #expect(try h.journal.load()[schedule.id]?.consumed != true)
+            await h.executor.checkStatus(schedule.id)
+        }
+        let paid = change != "failed" && change != "ambiguous"
+        #expect(h.calls.withLock { $0 } == 1)
+        #expect((try h.journal.load()[schedule.id]?.consumed == true) == paid)
+        #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == (paid ? 1 : 0))
+        if change == "failed" { #expect(try h.store.load().schedules[schedule.id]?.lastError == result.message) }
+        if change == "replacement" || change == "sameKeyReplacement" || change == "reload" {
+            h.controller.acknowledge(ifGeneration: result.generation)
+            #expect(h.controller.locked && h.controller.generation == replacementGeneration)
+            #expect(h.controller.attempt?.recurringOccurrenceKey == replacement?.recurringOccurrenceKey)
+            #expect(h.controller.attempt?.startedAt == replacement?.startedAt)
+        } else if change != "ambiguous" {
+            #expect(h.controller.resultForSettlement(key) == nil)
+            #expect(h.saved == nil)
+        }
+        await h.executor.checkStatus(schedule.id)
+        await h.executor.execute()
+        #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == (paid ? 1 : 0))
+        #expect(h.calls.withLock { $0 } == 1)
+        if change == "ambiguous" { #expect(try h.store.load().schedules[schedule.id]?.status == "needs_attention") }
+    }
+
     @Test func acknowledgedReceiptWhileSettlementWaitsStillConsumesOccurrence() async throws {
         try await settlementRace(attended: true, change: "done")
     }

@@ -3,6 +3,38 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Done before submission returns (2026-10-20)
+
+Base `a184db6b`. Send freezes an immutable occurrence key, submission/wallet-load
+generations, outcome with receipt/proof and message before publishing success.
+The controller-owned submission returns that result directly to settlement.
+Early Done hides the receipt and retains its journal/result until settlement is
+durable; consumption releases only the matching generation. Retained status lookup
+cannot use a prior wallet load. Normal Send locks and UI copy are unchanged.
+
+`RecurringSettlementAdmissionTests` permanently incorporates the early-Done probe
+from `/private/tmp/noah-review-87dcd-Review87dcdProbeTests.swift`. The original
+baseline failed **1 test with 2 issues**: unconsumed occurrence and zero paid count.
+Its expanded **8 cases pass**, covering early Done, different/same-key replacement,
+reload, original failure message, ambiguity, blocked settlement and a replacement
+wallet. Final focused verification passed **113 definitions / 211 expanded cases /
+12 suites**, zero failures/skips. Android reproduced and fixed the same window;
+its verification is recorded in `apps/android/RecurringTests/README.md`.
+
+Full **NoahTests ran once after the last source/test change**, with no exclusions:
+**699 definitions / 144 suites: 674 passed, 25 opt-in skipped, zero failed**;
+**1,427 expanded passes / 25 skips**, 195.026 seconds. All runs used Nix,
+XcodeGen, normal signing, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, two jobs and
+no parallel testing. The baseline method selector included its trailing `()`.
+
+Owned iPhone 17 / iOS 27.0 simulator **Noah Recurring Done Sol bc1177**,
+`6FFF9598-24BB-4F6D-94B6-ED5ED14212D3`: T3 twice rejected the new UDID as
+unknown, so Xcode targeted it directly. Confirmed exact identity and **Shutdown**
+before deletion, then confirmed absence. Removed owned DerivedData and all **four**
+result bundles; exported JSON, logs and cleanup receipt remain under
+`/private/tmp/noah-done-bc1177-*`. No active owned build/test process remains.
+No funded/live UI test, protected device, physical phone or Docker service was used.
+
 ## Settlement while lifecycle admission waits (2026-10-20)
 
 Base: `feat/native-rewrite` at `9d5fc9ef`. Settlement captures the recurring

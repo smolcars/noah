@@ -225,7 +225,7 @@ import Observation
                     let marked = schedule
                     let unattended = approval == nil
                     let store = d.store, binding = d.binding, allowed = d.allowed, generation = d.automationGeneration, now = d.now, zone = d.zone
-                    await d.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key) {
+                    let result = await d.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key) {
                         do {
                             try allowed()
                             guard try binding() == entry.binding, generation() == automationGeneration else { throw NoWallet() }
@@ -248,7 +248,7 @@ import Observation
                             throw SendNotSubmitted(reason: .recurringStopped)
                         }
                     }
-                    try await settle(entry, original: marked, retainReceipt: approval != nil)
+                    try await settle(entry, original: marked, result: result, retainReceipt: approval != nil)
                 } catch is NoWallet { throw NoWallet() }
                 catch {
                     // Only a failure before the independent marker exists is automatically retryable.
@@ -287,10 +287,9 @@ import Observation
         }
         if let stopped { await d.notifications([], stopped) }
     }
-    private func settle(_ entry: RecurringJournal.Entry, original: RecurringPayment?, retainReceipt: Bool = false) async throws {
-        // Own this outcome before lifecycle admission can suspend and Done can release Send.
-        guard let attempt = d.controller.attempt, attempt.recurringOccurrenceKey == entry.key else { return }
-        let generation = d.controller.generation, outcome = d.controller.state, message = d.controller.message
+    private func settle(_ entry: RecurringJournal.Entry, original: RecurringPayment?, result: SendPaymentController.TerminalResult?, retainReceipt: Bool = false) async throws {
+        guard let result, result.recurringKey == entry.key else { return }
+        let outcome = result.outcome, message = result.message
         let success: Bool, paid: Bool
         switch outcome {
         case .succeeded(let receipt) where !receipt.isUnresolved && receipt.broadcastRetryPending != true:
@@ -309,7 +308,7 @@ import Observation
                 if saved.policyApplied != true {
                     var claimed = saved; claimed.policyApplied = true; try d.journal.save(claimed)
                 }
-                if !retainReceipt { d.controller.acknowledge(ifGeneration: generation) }
+                d.controller.settlementConsumed(result, retainReceipt: retainReceipt)
                 return nil
             }
             let state = try d.store.settlementState()
@@ -342,7 +341,7 @@ import Observation
                 // Proven consumption releases Send even when policy advancement cannot be saved.
                 self.error = RecurringPolicyLedger.message
             }
-            if !retainReceipt { d.controller.acknowledge(ifGeneration: generation) }
+            d.controller.settlementConsumed(result, retainReceipt: retainReceipt)
             return notification
         }
         if let notification { await d.notifications([], notification) }
@@ -354,7 +353,7 @@ import Observation
             let original = try? await storage { [self] in try d.store.load().schedules[id] }
             guard entry.policyApplied == true || entry.consumed == true || original?.unsupportedStorage == false else { return }
             await d.controller.checkStatus()
-            try await settle(entry, original: original)
+            try await settle(entry, original: original, result: d.controller.resultForSettlement(entry.key))
         } catch is NoWallet { return }
         catch { self.error = error.localizedDescription }
         await reload()

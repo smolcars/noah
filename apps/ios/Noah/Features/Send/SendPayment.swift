@@ -133,11 +133,18 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
 
 /// Stored before funds can move. Weak history matches never authorize another attempt.
 @MainActor @Observable final class SendPaymentController {
-    enum State: Equatable {
+    enum State: Equatable, Sendable {
         case ready, submitting, uncertain
         case succeeded(SendReceipt)
         case alreadyPaid(SendReceipt)
         case failed, storageBlocked
+    }
+    struct TerminalResult: Equatable, Sendable {
+        let recurringKey: String
+        let generation: Int
+        let walletGeneration: Int
+        let outcome: State
+        let message: String?
     }
     struct Attempt: Codable, Sendable {
         var recurringOccurrenceKey: String?
@@ -186,9 +193,11 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     private(set) var attempt: Attempt?
     private(set) var message: String?
     private(set) var checking = false
-    private var task: Task<Void, Never>?
+    private var task: Task<TerminalResult?, Never>?
+    private var recurringResults: [Int: TerminalResult] = [:]
     private var unboundJournal: Attempt?
     private(set) var generation = 0
+    private var walletGeneration = 0
     var locked: Bool { state != .ready }
 
     init(dependencies: Dependencies) {
@@ -200,6 +209,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     }
     private func loadAttempt(_ retained: Attempt?) {
         generation += 1
+        walletGeneration += 1
         checking = false
         attempt = retained
         state = .ready
@@ -275,19 +285,38 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                 await self.performSubmit(payment, quote: quote, generation: generation, recurringKey: recurringKey, beforeSubmit: beforeSubmit)
             } }
             catch {
-                guard generation == self.generation else { return }
-                await dependencies.discard(quote)
-                state = .ready
-                message = "Unable to reserve the wallet. No payment was submitted."
+                if generation == self.generation {
+                    await dependencies.discard(quote)
+                    state = .ready
+                    message = "Unable to reserve the wallet. No payment was submitted."
+                }
             }
+            if let result = recurringResults[generation] { return result }
+            guard generation == self.generation, let recurringKey else { return nil }
+            return resultForSettlement(recurringKey)
         }
     }
     /// Automation awaits the controller-owned task; cancelling a push cannot abandon a send.
+    @discardableResult
     func submitAndWait(_ payment: SendPayment, quote: SendQuote, recurringKey: String,
-                       beforeSubmit: @escaping @Sendable () throws -> Void) async {
-        guard state == .ready else { return }
+                       beforeSubmit: @escaping @Sendable () throws -> Void) async -> TerminalResult? {
+        guard state == .ready else { return nil }
         submit(payment, quote: quote, recurringKey: recurringKey, beforeSubmit: beforeSubmit)
-        await task?.value
+        let submission = task
+        return await submission?.value
+    }
+    func resultForSettlement(_ key: String) -> TerminalResult? {
+        if let result = recurringResults[generation], result.recurringKey == key { return result }
+        if attempt?.recurringOccurrenceKey == key {
+            return .init(recurringKey: key, generation: generation, walletGeneration: walletGeneration, outcome: state, message: message)
+        }
+        return recurringResults.values.filter { $0.recurringKey == key && $0.walletGeneration == walletGeneration }.max { $0.generation < $1.generation }
+    }
+    func settlementConsumed(_ result: TerminalResult, retainReceipt: Bool) {
+        recurringResults.removeValue(forKey: result.generation)
+        guard generation == result.generation else { return }
+        if attempt == nil { clearAttempt() }
+        else if !retainReceipt { acknowledge(ifGeneration: result.generation) }
     }
     private func performSubmit(_ payment: SendPayment, quote: SendQuote, generation: Int,
                                recurringKey: String?, beforeSubmit: (@Sendable () throws -> Void)?) async {
@@ -383,37 +412,43 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     private func finish(_ resolution: Resolution) {
         guard var attempt else { return }
         attempt.safetyVersion = 3
+        var outcome = state
         switch resolution {
         case .uncertain:
             if attempt.receipt?.txid != nil { attempt.receipt?.status = .unlocated }
-            state = .uncertain
+            outcome = .uncertain
         case .possibleTransactions(let txids):
             attempt.possibleTxids = Array(Set((attempt.possibleTxids ?? []) + txids)).sorted()
-            state = .uncertain
+            outcome = .uncertain
         case .inProgress(let progress):
             attempt.existingLightning = progress
-            state = .uncertain
+            outcome = .uncertain
         case .candidates(let candidates):
             guard attempt.receipt == nil else { return }
             attempt.candidates = candidates
-            state = .uncertain
+            outcome = .uncertain
         case .paid(var receipt):
             message = receipt.chainStatusError
             receipt.chainStatusError = nil
             attempt.receipt = receipt
-            state = receipt.isUnresolved ? .uncertain : .succeeded(receipt)
+            outcome = receipt.isUnresolved ? .uncertain : .succeeded(receipt)
         case .alreadyPaid(let receipt):
             attempt.alreadyPaid = receipt
-            state = .alreadyPaid(receipt)
+            outcome = .alreadyPaid(receipt)
         case .failed:
             guard attempt.receipt == nil else { return }
             attempt.failed = true
-            state = .failed
+            outcome = .failed
         }
         self.attempt = attempt
         do { try dependencies.write(attempt) } catch {
             message = "Payment status could not be saved. Check status again after restarting Noah."
         }
+        // Done may hide this receipt before the reservation returns to recurring settlement.
+        if let key = attempt.recurringOccurrenceKey {
+            recurringResults[generation] = .init(recurringKey: key, generation: generation, walletGeneration: walletGeneration, outcome: outcome, message: message)
+        }
+        state = outcome
     }
     var canOverride: Bool {
         if unboundJournal != nil { return !checking }
@@ -452,12 +487,15 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         case .alreadyPaid, .failed: break
         default: return
         }
-        clearAttempt()
+        clearAttempt(retainingRecurringResult: recurringResults[generation] != nil)
     }
-    private func clearAttempt() {
+    private func clearAttempt(retainingRecurringResult: Bool = false) {
         guard !checking else { return }
         do {
-            try dependencies.write(nil)
+            if !retainingRecurringResult {
+                try dependencies.write(nil)
+                recurringResults.removeValue(forKey: generation)
+            }
             attempt = nil
             unboundJournal = nil
             state = .ready
