@@ -172,7 +172,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         history.clear(); repeatPayment = null; scannedDestination = null; autoBoardSuccessBanner = null
         walletLock.reset(); restore.reset()
         open = false; onboarded = false; isWalletSuspended = false; summary = null
-        hidden = false; amountUnit = BitcoinAmountUnit.bip177; preferredCurrency = "USD"; localeIdentifier = "en"
+        hidden = false; amountUnit = BitcoinAmountUnit.bip177; preferredCurrency = "USD"; refreshLocale()
         step = "welcome"; launchState = LaunchState.onboarding
         withContext(Dispatchers.IO) { refreshRecoveryFiles() }
     }

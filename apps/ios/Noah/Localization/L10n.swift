@@ -6,7 +6,8 @@ enum L10n {
     private final class BundleMarker {}
 
     static func text(_ source: String, _ arguments: Any..., locale: String = LegacyLocale.resolved()) -> String {
-        let localized = localizedBundle(locale).localizedString(forKey: source, value: source, table: nil)
+        let english = localizedBundle("en").localizedString(forKey: source, value: source, table: nil)
+        let localized = localizedBundle(locale).localizedString(forKey: source, value: english, table: nil)
         // Avoid treating a native-only string containing a percent sign as a format string.
         guard !arguments.isEmpty else { return localized }
         return String(format: localized, locale: Locale(identifier: locale), arguments: arguments.map { String(describing: $0) })

@@ -75,6 +75,7 @@ struct TranslationsTests {
         defaults.set("ja", forKey: LegacyLocale.key)
         #expect(L10n.text("Cancel", locale: LegacyLocale.resolved(from: defaults)) == "キャンセル")
         #expect(L10n.text("Native-only 100% copy", locale: "es") == "Native-only 100% copy")
+        #expect(L10n.text("Automatic payment to {recipient} was skipped. Open the schedule to review its fee and pay manually.", "Alice", locale: "es") == "Automatic payment to Alice was skipped. Open the schedule to review its fee and pay manually.")
     }
 
     @Test func backgroundCopyRereadsPersistedLanguageWithoutAnAppModel() throws {
