@@ -125,9 +125,9 @@ final class HistoryModel {
             guard self.generation == generation, !Task.isCancelled else { return }
             if error is WalletSession.SessionError {
                 transactions = []
-                self.error = String(localized: "Your wallet isn't ready. Please try again.")
+                self.error = L10n.text("Your wallet isn't ready. Please try again.")
             } else {
-                self.error = String(localized: "Couldn't load transactions. Please try again.")
+                self.error = L10n.text("Couldn't load transactions. Please try again.")
                 // Native errors can contain destinations or full transaction IDs.
                 log.w("History read failed")
             }

@@ -2,6 +2,8 @@ import BarkBoltFFI
 import SwiftUI
 
 struct ArkInfoView: View {
+    @Environment(\.locale) private var locale
+
     @State private var info: ArkInfo?
     @State private var loading = false
     @State private var error: String?
@@ -10,7 +12,7 @@ struct ArkInfoView: View {
     var body: some View {
         List {
             if loading { ProgressView() }
-            if let error { Text(error).foregroundStyle(NoahColor.destructive) }
+            if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
             if let info {
                 Section("Keys") {
                     CopySettingRow(title: "Server pubkey", value: info.serverPubkey)
@@ -19,14 +21,14 @@ struct ArkInfoView: View {
                 Section("Boarding limits") {
                     LabeledContent("Minimum board amount", value: "\(info.minBoardAmountSats) sats")
                     LabeledContent("Maximum VTXO amount", value: info.maxVtxoAmountSats.map { "\($0) sats" } ?? "Unlimited")
-                    LabeledContent("Required board confirmations", value: "\(info.requiredBoardConfirmations) blocks")
+                    LabeledContent("Required board confirmations", value: L10n.text("{count} blocks", info.requiredBoardConfirmations, locale: locale.identifier))
                 }
                 Section("Rounds & Expiry") {
                     LabeledContent("Round interval", value: "\(info.roundIntervalSecs) seconds")
                     LabeledContent("Round nonces", value: String(info.nbRoundNonces))
-                    LabeledContent("VTXO exit delta", value: "\(info.vtxoExitDelta) blocks")
-                    LabeledContent("VTXO lifetime", value: "\(info.vtxoLifetime) blocks")
-                    LabeledContent("HTLC send expiry delta", value: "\(info.htlcSendExpiryDelta) blocks")
+                    LabeledContent("VTXO exit delta", value: L10n.text("{count} blocks", info.vtxoExitDelta, locale: locale.identifier))
+                    LabeledContent("VTXO lifetime", value: L10n.text("{count} blocks", info.vtxoLifetime, locale: locale.identifier))
+                    LabeledContent("HTLC send expiry delta", value: L10n.text("{count} blocks", info.htlcSendExpiryDelta, locale: locale.identifier))
                 }
                 Section("Lightning") { LabeledContent("Receive anti-DoS", value: info.lnReceiveAntiDosRequired ? "Yes" : "No") }
             }

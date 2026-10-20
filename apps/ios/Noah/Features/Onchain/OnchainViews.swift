@@ -24,10 +24,10 @@ struct OnchainStatusSection: View {
                 attempt.overrideAudit != nil ? "Overridden attempt"
                     : attempt.receipt == nil ? "Check operation status" : "Submitted"
             ) {
-                Text(attempt.quote.action.title).font(NoahFont.headline)
+                Text(LocalizedStringKey(attempt.quote.action.title)).font(NoahFont.headline)
                 OnchainAmountRow(title: "Reviewed amount", sats: attempt.quote.amount)
                 Text(attempt.quote.createdAt, style: .date).font(NoahFont.footnote)
-                Text(attempt.receipt?.message ?? OnchainFailure.uncertain.errorDescription!).textSelection(.enabled)
+                Text(LocalizedStringKey(attempt.receipt?.message ?? OnchainFailure.uncertain.errorDescription!)).textSelection(.enabled)
                 if attempt.receipt?.broadcastRetryPending == true {
                     Text("Submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again.")
                 }
@@ -36,10 +36,10 @@ struct OnchainStatusSection: View {
                         Text(audit.overriddenAt, format: .dateTime)
                     }
                     DisclosureGroup("Override confirmation") {
-                        Text(audit.statusMessage)
-                        Text(audit.title)
-                        Text(audit.warning)
-                        Text(audit.confirmation)
+                        Text(LocalizedStringKey(audit.statusMessage))
+                        Text(LocalizedStringKey(audit.title))
+                        Text(LocalizedStringKey(audit.warning))
+                        Text(LocalizedStringKey(audit.confirmation))
                     }
                 }
                 if let fee = attempt.receipt?.arkFee { OnchainAmountRow(title: "Ark fee", sats: fee) }
@@ -51,8 +51,8 @@ struct OnchainStatusSection: View {
                     OnchainAmountRow(title: "Ark receives", sats: amounts.arkReceives)
                     OnchainAmountRow(title: "Total leaving onchain wallet", sats: amounts.totalLeaving)
                 }
-                if let status = attempt.receipt?.chainStatus { Text(status.message) }
-                if let error = attempt.chainStatusError { Text(error).foregroundStyle(NoahColor.destructive) }
+                if let status = attempt.receipt?.chainStatus { Text(LocalizedStringKey(status.message)) }
+                if let error = attempt.chainStatusError { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
                 // An uncertain board still has its exact journaled funding txid (Android parity).
                 if let txid = attempt.receipt?.txid ?? attempt.txid {
                     ExitTransactionRow(title: "Transaction ID", txid: txid)
@@ -82,11 +82,11 @@ struct OnchainStatusSection: View {
                     Task { await model.discardUncertain(attempt.id) }
                 }
             } message: {
-                Text(OnchainOperationJournal.OverrideAudit.warningText)
+                Text(LocalizedStringKey(OnchainOperationJournal.OverrideAudit.warningText))
             }
         }
-        if let error = model.error { Section { Text(error).foregroundStyle(NoahColor.destructive) } }
-        if let message = model.message { Section { Text(message) } }
+        if let error = model.error { Section { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) } }
+        if let message = model.message { Section { Text(LocalizedStringKey(message)) } }
     }
 }
 
@@ -127,7 +127,7 @@ struct OnchainReviewSheet: View {
                         LabeledContent("Destination") { Text(destination).textSelection(.enabled) }
                     }
                     if let warning = quote.externalDestinationWarning {
-                        Text(warning).foregroundStyle(NoahColor.destructive)
+                        Text(LocalizedStringKey(warning)).foregroundStyle(NoahColor.destructive)
                     }
                     if quote.automatic {
                         OnchainAmountRow(
@@ -136,13 +136,13 @@ struct OnchainReviewSheet: View {
                     }
                 }
                 Section {
-                    Text(explanation)
+                    Text(LocalizedStringKey(explanation))
                     if quote.action == .startExit || quote.action == .progress || quote.action == .claim {
                         if let warning = ExitRules.warning(
                             amount: quote.amount, claimFee: quote.fee, totalFee: quote.totalFee,
                             claimOnly: quote.action == .claim)
                         {
-                            Text(warning).foregroundStyle(NoahColor.destructive)
+                            Text(LocalizedStringKey(warning)).foregroundStyle(NoahColor.destructive)
                         }
                         if !quote.fundable {
                             Text(
@@ -156,7 +156,7 @@ struct OnchainReviewSheet: View {
                     ) {
                         confirm()
                     } label: {
-                        Text(quote.action.title)
+                        Text(LocalizedStringKey(quote.action.title))
                     }
                     .accessibilityIdentifier("onchain-confirm")
                 }

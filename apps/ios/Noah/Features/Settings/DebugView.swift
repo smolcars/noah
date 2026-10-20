@@ -20,7 +20,7 @@ struct DebugView: View {
     var body: some View {
         Form {
             Section("Select Action") {
-                Picker("Action", selection: $action) { ForEach(Action.allCases, id: \.self) { Text($0.rawValue).tag($0) } }.disabled(busy)
+                Picker("Action", selection: $action) { ForEach(Action.allCases, id: \.self) { Text(LocalizedStringKey($0.rawValue)).tag($0) } }.disabled(busy)
                 if action.needsInput {
                     TextField(action == .offboard ? "Enter Bitcoin address" : "Enter VTXO hex or ID", text: $input, axis: .vertical)
                         .textInputAutocapitalization(.never).autocorrectionDisabled().focused($focus, equals: .input).disabled(busy)

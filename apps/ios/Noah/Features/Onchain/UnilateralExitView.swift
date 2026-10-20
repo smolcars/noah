@@ -30,7 +30,7 @@ struct UnilateralExitView: View {
                         LabeledContent("All claimable at", value: "Block \(height)")
                     }
                 }
-                Button("Deposit onchain funds") { showDeposit = true }
+                Button("Deposit Onchain Funds") { showDeposit = true }
             }
             Section("Start an exit") {
                 Text("VTXOs below 330 sats cannot exit onchain.").font(NoahFont.footnote)
@@ -70,14 +70,14 @@ struct UnilateralExitView: View {
                     TextField("Bitcoin destination address", text: Binding(get: { destination }, set: model.editClaimDestination))
                         .textInputAutocapitalization(.never).autocorrectionDisabled()
                     if let error = model.claimDestinationError {
-                        Text(error).foregroundStyle(NoahColor.destructive)
+                        Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive)
                     } else if model.claimDestinationIsMine == false {
                         Text("This address isn't in your Noah wallet. The claimed funds will be sent there.")
                             .foregroundStyle(NoahColor.destructive)
                     }
                     Button("Use my Noah wallet address") { Task { await model.useWalletClaimAddress() } }
                         .disabled(model.locked)
-                    Button("Review claim") {
+                    Button("Review Claim") {
                         Task {
                             await model.review(
                                 .claim, ids: exits.filter(\.claimable).map(\.id),
@@ -91,7 +91,7 @@ struct UnilateralExitView: View {
                 Picker("Status", selection: $filter) {
                     Text("All").tag("All")
                     ForEach(ExitTimeline.labels.keys.sorted(), id: \.self) {
-                        Text(ExitTimeline.labels[$0]!).tag($0)
+                        Text(LocalizedStringKey(ExitTimeline.labels[$0]!)).tag($0)
                     }
                 }
                 if exits.isEmpty { Text("No exits have been started.") }
@@ -125,6 +125,8 @@ struct UnilateralExitView: View {
 }
 
 struct ExitVtxoDetailView: View {
+    @Environment(\.locale) private var locale
+
     let id: String
     @State private var model: OnchainModel
     init(id: String) {
@@ -142,17 +144,17 @@ struct ExitVtxoDetailView: View {
                         LabeledContent("Claimable at", value: "Block \(height)")
                         LabeledContent(
                             "Remaining",
-                            value: "\(max(0, Int64(height) - Int64(model.overview?.tip ?? 0))) blocks")
+                            value: L10n.text("{count} blocks", max(0, Int64(height) - Int64(model.overview?.tip ?? 0)), locale: locale.identifier))
                     }
                     if exit.cancelable {
-                        Button("Cancel exit", role: .destructive) {
+                        Button("Cancel Exit", role: .destructive) {
                             Task { await model.review(.cancel, ids: [id]) }
                         }.disabled(model.locked)
                     }
                 }
                 ForEach(Array(exit.timeline.enumerated()), id: \.offset) { _, item in
                     Section(item.label + (item.isCurrent ? " · Current" : "")) {
-                        Text(item.description)
+                        Text(LocalizedStringKey(item.description))
                         if item.count > 1 { LabeledContent("Updates", value: "\(item.count)") }
                         if let height = item.startHeight { LabeledContent("First height", value: "\(height)") }
                         if let height = item.endHeight { LabeledContent("Latest height", value: "\(height)") }
@@ -187,7 +189,7 @@ private struct ExitDetailsRows: View {
         }
         ForEach(Array((details.transactions ?? []).enumerated()), id: \.offset) { index, tx in
             ExitTransactionRow(title: "Exit transaction \(index + 1)", txid: tx.txid)
-            Text(tx.status.kind.replacingOccurrences(of: "-", with: " ").capitalized)
+            Text(LocalizedStringKey(tx.status.kind.replacingOccurrences(of: "-", with: " ").capitalized))
             if let child = tx.status.child_txid {
                 ExitTransactionRow(title: "Child transaction", txid: child)
             }
@@ -233,7 +235,7 @@ struct ExitDepositSheet: View {
                     Button("Copy Bitcoin address") { UIPasteboard.general.string = address }
                     ShareLink(item: address)
                 } else if let error {
-                    Text(error)
+                    Text(LocalizedStringKey(error))
                 } else {
                     ProgressView()
                 }

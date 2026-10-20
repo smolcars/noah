@@ -9,8 +9,8 @@ struct HomeStatusBanners: View {
         if let banner = HomeBanner.backup(home.backup, now: home.bannerNow.timeIntervalSince1970 * 1000, locale: locale) {
             NoahCard {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(banner.title).font(NoahFont.headline)
-                    Text(banner.message).font(NoahFont.footnote)
+                    Text(LocalizedStringKey(banner.title)).font(NoahFont.headline)
+                    Text(LocalizedStringKey(banner.message)).font(NoahFont.footnote)
                     if banner.retry {
                         Button("Retry") { Task { await home.retryBackup() } }
                             .disabled(home.isRetryingBackup)
@@ -22,8 +22,8 @@ struct HomeStatusBanners: View {
             Button { showRounds = true } label: {
                 NoahCard {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(home.activeRounds.count == 1 ? "Round in progress" : "Rounds in progress").font(NoahFont.headline)
-                        Text(home.activeRounds.count == 1 ? "Round #\(round.roundID) \(round.statusLabel)" : "\(home.activeRounds.count) rounds pending")
+                        Text(LocalizedStringKey(home.activeRounds.count == 1 ? "Round in progress" : "Rounds in progress")).font(NoahFont.headline)
+                        Text(home.activeRounds.count == 1 ? L10n.text("Round #{id} {status}", round.roundID, round.statusLabel, locale: locale.identifier) : L10n.text("{count} rounds pending", home.activeRounds.count, locale: locale.identifier))
                         Text("View").foregroundStyle(NoahColor.brand)
                     }
                 }
@@ -33,13 +33,13 @@ struct HomeStatusBanners: View {
                 NavigationStack {
                     List {
                         ForEach(home.activeRounds) { round in
-                            Section("Round #\(round.roundID)") {
+                            Section(L10n.text("Round #{_gt_value_2}", round.roundID, locale: locale.identifier)) {
                                 LabeledContent("Status", value: round.statusLabel)
                                 LabeledContent("Final", value: round.isFinal ? "Yes" : "No")
                                 LabeledContent("Successful", value: round.isSuccess ? "Yes" : "No")
                                 if let txid = round.fundingTxid { RoundTransactionRow(label: "Funding tx", txid: txid, copyable: true) }
                                 ForEach(Array(round.unsignedFundingTxids.enumerated()), id: \.offset) { index, txid in
-                                    RoundTransactionRow(label: "Unsigned tx \(index + 1)", txid: txid, copyable: false)
+                                    RoundTransactionRow(label: L10n.text("Unsigned tx {value1}", index + 1, locale: locale.identifier), txid: txid, copyable: false)
                                 }
                                 if let error = round.error { LabeledContent("Error", value: error) }
                             }
@@ -54,7 +54,7 @@ struct HomeStatusBanners: View {
             NoahCard {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Boarding completed").font(NoahFont.headline)
-                    Text("\(BitcoinAmount.format(sats: Int64(clamping: completion.netSats), unit: .sats, locale: locale)) available in Ark")
+                    Text(L10n.text("{amount} available in Ark", BitcoinAmount.format(sats: Int64(clamping: completion.netSats), unit: .sats, locale: locale)))
                         .font(NoahFont.footnote)
                 }
             }
@@ -66,6 +66,8 @@ struct HomeStatusBanners: View {
 }
 
 private struct RoundTransactionRow: View {
+    @Environment(\.locale) private var locale
+
     @Environment(AppModel.self) private var app
     let label: String
     let txid: String
@@ -90,7 +92,7 @@ private struct RoundTransactionRow: View {
                 }
                 if let url = URL(string: app.variant == .mainnet ? "https://mempool.space/tx/" : "https://mempool.space/signet/tx/")?.appendingPathComponent(txid) {
                     Link(destination: url) { Image(systemName: "arrow.up.right.square") }
-                        .accessibilityLabel("Open \(label) in browser")
+                        .accessibilityLabel(L10n.text("Open {value1} in browser", label, locale: locale.identifier))
                 }
             }
         }

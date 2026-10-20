@@ -7,7 +7,7 @@ struct HistoryCSV: Transferable, Sendable {
 
     init(transactions: [HistoryTransaction], currency: String) {
         let header = ["Payment ID", "Date", "Type", "Status", "Direction", "Amount (sats)",
-                      "BTC Price (\(currency))", "Transaction ID", "Destination"]
+                      L10n.text("BTC Price ({currency})", currency), "Transaction ID", "Destination"]
         let rows = transactions.map { transaction in
             [transaction.id, transaction.confirmationLabel ?? String(transaction.date.prefix(10)),
              transaction.displayLabel, transaction.statusLabel ?? "", transaction.accounting.direction,

@@ -114,7 +114,7 @@ struct SendView: View {
                     }
                 }
                 if let error = model.error {
-                    Text(error).foregroundStyle(NoahColor.destructive).accessibilityIdentifier("send-error")
+                    Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive).accessibilityIdentifier("send-error")
                 }
             }.padding(24)
         }
@@ -158,7 +158,7 @@ struct SendView: View {
             Text("\(model.arkBalance) sats available in Ark").foregroundStyle(NoahColor.mutedForeground)
             if let balance = app.summary?.balance,
                let message = balance.pendingRoundMessage(amount: "\(balance.ark.pendingInRound) sats") {
-                Text(message).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+                Text(LocalizedStringKey(message)).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
             }
             if !model.parsed.isAmountEditable { Text("Amount set by payment request") }
             if focus == nil {
@@ -304,14 +304,14 @@ struct SendConfirmation: View {
                                 Text("This signed transaction expires after two minutes. Review again for a fresh fee rate.").font(NoahFont.callout)
                             }
                             if quote.recipientIsEstimated {
-                                Text(SendQuote.recipientEstimateExplanation).font(NoahFont.callout)
+                                Text(LocalizedStringKey(SendQuote.recipientEstimateExplanation)).font(NoahFont.callout)
                             }
                             if quote.approximate {
-                                Text(SendQuote.feeEstimateExplanation)
+                                Text(LocalizedStringKey(SendQuote.feeEstimateExplanation))
                                     .font(NoahFont.callout)
                             }
                             if !payment.comment.isEmpty { Text(payment.comment) }
-                            if let message = controller.message { Text(message).foregroundStyle(NoahColor.destructive) }
+                            if let message = controller.message { Text(LocalizedStringKey(message)).foregroundStyle(NoahColor.destructive) }
                         }.padding(24)
                     }.safeAreaInset(edge: .bottom) {
                         NoahButton(title: "Confirm send") {
@@ -358,15 +358,15 @@ struct SendOutcomeView: View {
                         SendReceipt.uncertainMessage
                     )
                     if let progress = controller.attempt?.existingLightning {
-                        Text(progress.message)
+                        Text(LocalizedStringKey(progress.message))
                         Text("Fee for the existing payment: \(progress.fee.formatted()) sats")
                         if let reviewed = controller.attempt?.payment.amount, reviewed != progress.amount {
                             Text("This differs from the \(reviewed.formatted()) sats you reviewed.")
                         }
                     }
                     if let receipt = controller.attempt?.receipt {
-                        Text(receipt.conflictDescription ?? "Noah can’t find this transaction right now. Its confirmation may no longer be trackable in-app. Check a block explorer.")
-                        if let status = receipt.chainStatus { Text(status.message) }
+                        Text(LocalizedStringKey(receipt.conflictDescription ?? "Noah can’t find this transaction right now. Its confirmation may no longer be trackable in-app. Check a block explorer."))
+                        if let status = receipt.chainStatus { Text(LocalizedStringKey(status.message)) }
                         transactionDetails(receipt)
                     }
                     NoahButton(title: "Check payment status", isLoading: controller.checking) {
@@ -389,14 +389,14 @@ struct SendOutcomeView: View {
                     }
                 case .succeeded(let receipt):
                     Image(systemName: "checkmark.circle.fill").font(.system(size: 64)).foregroundStyle(NoahColor.success)
-                    Text(receipt.isSubmitted ? "Submitted" : receipt.status == .confirmed ? "Payment confirmed" : "Payment sent")
+                    Text(LocalizedStringKey(receipt.isSubmitted ? "Submitted" : receipt.status == .confirmed ? "Payment confirmed" : "Payment sent"))
                         .font(NoahFont.title).accessibilityIdentifier("send-success")
                     if receipt.broadcastRetryPending == true {
-                        Text(SendReceipt.broadcastPendingMessage)
+                        Text(LocalizedStringKey(SendReceipt.broadcastPendingMessage))
                     } else if receipt.isSubmitted {
-                        Text(receipt.chainStatus?.message ?? SendReceipt.submittedMessage)
+                        Text(LocalizedStringKey(receipt.chainStatus?.message ?? SendReceipt.submittedMessage))
                     }
-                    if receipt.status == .confirmed, let status = receipt.chainStatus { Text(status.message) }
+                    if receipt.status == .confirmed, let status = receipt.chainStatus { Text(LocalizedStringKey(status.message)) }
                     if receipt.txid != nil {
                         NoahButton(title: "Refresh payment status", isLoading: controller.checking) {
                             Task { await controller.checkStatus() }
@@ -451,7 +451,7 @@ struct SendOutcomeView: View {
                     Button("I've checked my history, start a new payment", role: .destructive) { confirmOverride = true }
                         .accessibilityIdentifier("send-override")
                 }
-                if let message = controller.message { Text(message).font(NoahFont.callout) }
+                if let message = controller.message { Text(LocalizedStringKey(message)).font(NoahFont.callout) }
             }.padding(24).multilineTextAlignment(.center).frame(maxWidth: .infinity)
         }
         .alert(SendOverrideAudit.titleText, isPresented: $confirmOverride) {
@@ -461,7 +461,7 @@ struct SendOutcomeView: View {
                 if !controller.locked { done() }
             }
         } message: {
-            Text(controller.overrideWarning)
+            Text(LocalizedStringKey(controller.overrideWarning))
         }
     }
     @ViewBuilder private func transactionDetails(_ receipt: SendReceipt) -> some View {

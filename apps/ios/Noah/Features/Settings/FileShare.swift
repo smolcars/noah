@@ -28,7 +28,7 @@ struct ExportDatabaseView: View {
                 Text("Create an encrypted backup file containing your wallet database.")
                 Text("You will need your seed phrase to restore this backup. Keep it safe and never share it.")
                     .foregroundStyle(NoahColor.mutedForeground)
-                if let error { Text(error).foregroundStyle(NoahColor.destructive) }
+                if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
                 NoahButton(title: "Export Database", isLoading: busy) {
                     busy = true; error = nil
                     Task {
@@ -64,7 +64,7 @@ struct LogView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 8) {
                 if lines.isEmpty { Text("No logs found") }
-                if let error { Text(error).foregroundStyle(NoahColor.destructive) }
+                if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
                 ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                     Text(verbatim: line).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
                 }

@@ -50,14 +50,14 @@ final class WalletLock {
         do {
             return try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)
         } catch {
-            self.error = String(localized: "Authentication failed. Please try again.")
+            self.error = L10n.text("Authentication failed. Please try again.")
             return false
         }
     }
 
     func unlock() async {
         let generation = policy.generation
-        if await authenticate(String(localized: "Authenticate to unlock Noah")) {
+        if await authenticate(L10n.text("Authenticate to unlock Noah")) {
             policy.authenticated(generation: generation)
         }
     }
@@ -70,8 +70,8 @@ final class WalletLock {
 
     func setEnabled(_ enabled: Bool) async throws {
         let generation = policy.generation
-        guard await authenticate(enabled ? String(localized: "Authenticate to enable biometrics")
-                                 : String(localized: "Authenticate to disable biometrics")) else { return }
+        guard await authenticate(enabled ? L10n.text("Authenticate to enable biometrics")
+                                 : L10n.text("Authenticate to disable biometrics")) else { return }
         guard generation == policy.generation else { return }
         var wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
         wallet.isBiometricsEnabled = enabled
@@ -87,7 +87,7 @@ struct WalletLockView: View {
             Image(systemName: "lock.fill").font(.largeTitle)
             Text("Noah is Locked").font(NoahFont.title)
             Text("Authenticate to access your wallet").foregroundStyle(NoahColor.mutedForeground)
-            if let error = lock.error { Text(error).foregroundStyle(NoahColor.destructive) }
+            if let error = lock.error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
             NoahButton(title: "Unlock", isLoading: lock.authenticating) { Task { await lock.unlock() } }
         }
         .padding(32)

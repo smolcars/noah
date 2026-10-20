@@ -27,7 +27,7 @@ struct PreferenceView: View {
                     }.frame(minHeight: 44)
                 }.accessibilityIdentifier("preference-\(option)")
             }
-            if let error { Text(error).foregroundStyle(NoahColor.destructive) }
+            if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
         }.settingsStyle(title)
     }
     private func name(_ code: String) -> String {
@@ -69,19 +69,19 @@ struct ProfileView: View {
                 TextField("Name", text: $name).focused($focus, equals: .name).submitLabel(.done)
                     .onSubmit { save() }.accessibilityIdentifier("profile-name-input")
                 Button(busy ? "Saving..." : "Save", action: save).disabled(busy)
-                if let message { Text(message).font(NoahFont.footnote) }
+                if let message { Text(LocalizedStringKey(message)).font(NoahFont.footnote) }
             }
             Section("Lightning Address") {
                 if let address = model.server.state.lightningAddress { CopySettingRow(title: "Lightning Address", value: address) }
                 Button("Edit Lightning Address") { showIdentity = true }
             }
             Section("Emergency Email") {
-                Text(model.server.state.emailAddress ?? "No emergency email")
-                Text(model.server.state.isEmailVerified == true ? "Verified" : "Not verified").font(NoahFont.footnote)
+                Text(LocalizedStringKey(model.server.state.emailAddress ?? "No emergency email"))
+                Text(LocalizedStringKey(model.server.state.isEmailVerified == true ? "Verified" : "Not verified")).font(NoahFont.footnote)
                 Button("Edit Emergency Email") { showEmail = true }
             }
             Section("Public Keys") {
-                if !key.isEmpty { CopySettingRow(title: "Wallet Public Key", value: key) }
+                if !key.isEmpty { CopySettingRow(title: "Wallet public key", value: key) }
                 if !Nostr.npub(from: model.server.state.nostrPubkey).isEmpty {
                     CopySettingRow(title: "Nostr Public Key", value: Nostr.npub(from: model.server.state.nostrPubkey))
                 }

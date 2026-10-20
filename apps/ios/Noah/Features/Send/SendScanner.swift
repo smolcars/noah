@@ -12,11 +12,11 @@ struct SendScanner: View {
                 if authorized {
                     ScannerCamera(scanned: scanned, failed: { message = $0 })
                 } else {
-                    Text(message ?? "Requesting camera access…").padding()
+                    Text(LocalizedStringKey(message ?? "Requesting camera access…")).padding()
                 }
             }
             .overlay(alignment: .bottom) {
-                if authorized, let message { Text(message).padding().background(.regularMaterial) }
+                if authorized, let message { Text(LocalizedStringKey(message)).padding().background(.regularMaterial) }
             }
             .navigationTitle("Scan payment QR")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }

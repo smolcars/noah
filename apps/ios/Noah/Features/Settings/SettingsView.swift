@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(\.locale) private var locale
+
     @Environment(AppModel.self) private var model
     @Environment(WalletLock.self) private var lock
     @State private var wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
@@ -91,13 +93,13 @@ struct SettingsView: View {
                         taps = 0
                     }
                 } label: {
-                    Text("v\(AppServices.shared.appVersion)" + (taps > 0 ? " (\(5 - taps) taps to unlock debug)" : ""))
+                    Text("v\(AppServices.shared.appVersion)" + (taps > 0 ? L10n.text(" ({count} taps to unlock debug)", 5 - taps, locale: locale.identifier) : ""))
                 }
                 Text("Made with ❤️ from Noah team").font(NoahFont.footnote)
                 Link("Open Telegram support chat", destination: URL(string: "https://t.me/blixtwallet/605026")!)
                 Link("Open Noah GitHub repository", destination: URL(string: "https://github.com/smolcars/noah")!)
             }
-            if let error { Text(error).foregroundStyle(NoahColor.destructive) }
+            if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
         }
         .settingsStyle("Settings")
         .alert("Reset Server Registration", isPresented: $confirmingReset) {
@@ -167,7 +169,7 @@ struct DeleteWalletSheet: View {
                     .autocorrectionDisabled()
                     .textFieldStyle(.roundedBorder)
                 if let failure {
-                    Text(failure).font(NoahFont.footnote).foregroundStyle(NoahColor.destructive)
+                    Text(LocalizedStringKey(failure)).font(NoahFont.footnote).foregroundStyle(NoahColor.destructive)
                 }
                 Button(role: .destructive) {
                     deleting = true

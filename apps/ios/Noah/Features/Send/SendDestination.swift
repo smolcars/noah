@@ -52,7 +52,7 @@ struct SendDestination: Equatable, Sendable, Codable {
         return Self()
     }
     private static func mismatch(_ actual: String, _ expected: String) -> Self {
-        Self(error: "Network mismatch: expected \(expected), got \(actual)")
+        Self(error: L10n.text("Network mismatch: expected {expected}, got {actual}", expected, actual))
     }
     /// Match the bounded Android decimal domain before Foundation's permissive prefix parser.
     private static func uriAmount(_ value: String) -> Decimal? {

@@ -26,9 +26,9 @@ struct LightningAddressView: View {
                     Text("Choose your Lightning Address").font(NoahFont.title)
                     if success {
                         Label("Success!", systemImage: "checkmark.circle").foregroundStyle(NoahColor.success)
-                        Text(normalizedKey.isEmpty
+                        Text(LocalizedStringKey(normalizedKey.isEmpty
                              ? "Your Lightning address has been updated without NIP-05."
-                             : "Your Lightning address and NIP-05 identity have been updated.")
+                             : "Your Lightning address and NIP-05 identity have been updated."))
                     }
                     Text("Choose a Lightning username. You can optionally link a Nostr public key so the same address also works as a NIP-05 identifier.")
                         .foregroundStyle(NoahColor.mutedForeground)
@@ -59,7 +59,7 @@ struct LightningAddressView: View {
                                 }
                             }
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(normalizedKey.isEmpty ? "Your Lightning address will be" : "Your Lightning address and NIP-05 identifier will be")
+                                Text(LocalizedStringKey(normalizedKey.isEmpty ? "Your Lightning address will be" : "Your Lightning address and NIP-05 identifier will be"))
                                     .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
                                 Text(address).font(NoahFont.callout).textSelection(.enabled)
                             }
@@ -124,7 +124,7 @@ struct LightningAddressView: View {
             }
             .alert("Error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
                 Button("OK", role: .cancel) {}
-            } message: { Text(errorMessage ?? "") }
+            } message: { Text(LocalizedStringKey(errorMessage ?? "")) }
         }
     }
 

@@ -32,7 +32,7 @@ struct NoahStoryView: View {
                 }.disabled(player == nil)
                 NoahButton(title: "Stop", kind: .secondary) { player?.stop(); player?.currentTime = 0; position = 0; playing = false }
                     .disabled(player == nil)
-                if let error { Text(error).foregroundStyle(NoahColor.destructive) }
+                if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
             }.padding(28).frame(maxWidth: 560).frame(maxWidth: .infinity)
         }.settingsStyle("Noah's Ark Story")
         .task {

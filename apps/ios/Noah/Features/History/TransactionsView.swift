@@ -30,7 +30,7 @@ struct TransactionsView: View {
                             } else if let error = history.error {
                                 ContentUnavailableView {
                                     Label("Couldn't load transactions", systemImage: "exclamationmark.triangle")
-                                } description: { Text(error) } actions: {
+                                } description: { Text(LocalizedStringKey(error)) } actions: {
                                     Button("Retry") { Task { await history.refresh(currency: app.preferredCurrency) } }
                                 }
                             } else if filtered.isEmpty {

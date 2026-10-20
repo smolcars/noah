@@ -98,7 +98,7 @@ enum HistoryMapping {
             id: "onchain-wallet-\(chain.txid)", type: "Onchain", amount: abs(chain.balanceChangeSats),
             date: HistoryRules.isoDate(blockTime ?? Date(timeIntervalSince1970: 0)),
             direction: chain.balanceChangeSats < 0 ? "outgoing" : "incoming",
-            dateLabel: blockTime == nil ? (chain.confirmation.map { "Confirmed at block \($0.height)" } ?? "Unconfirmed") : nil,
+            dateLabel: blockTime == nil ? (chain.confirmation.map { L10n.text("Confirmed at block {height}", $0.height) } ?? "Unconfirmed") : nil,
             sortTimestamp: blockTime.map { $0.timeIntervalSince1970 * 1000 }, sortHeight: chain.confirmation?.height,
             source: "onchain-wallet", txid: chain.txid, txHex: chain.txHex,
             onchainFeeSat: chain.onchainFeeSats.map(Int64.init), balanceChangeSat: chain.balanceChangeSats,

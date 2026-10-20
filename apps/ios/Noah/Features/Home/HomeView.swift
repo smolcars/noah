@@ -30,7 +30,7 @@ struct HomeView: View {
                         if upgradeNotices.isEmpty { upgradeNotices = (try? SettingsStorage.shared.takeUpgradeNotices()) ?? [] }
                     }
                     ForEach(upgradeNotices, id: \.self) { message in
-                        NoahCard { Text(message).font(NoahFont.callout) }
+                        NoahCard { Text(LocalizedStringKey(message)).font(NoahFont.callout) }
                     }
                     if !model.isWalletSuspended { UpdateWarningView() }
                     if let error = model.walletError {
@@ -95,7 +95,7 @@ struct HomeView: View {
                                 if history.isLoading {
                                     ProgressView("Loading transactions")
                                 } else if let error = history.error {
-                                    Text(error).font(NoahFont.footnote)
+                                    Text(LocalizedStringKey(error)).font(NoahFont.footnote)
                                     Button("Retry") { Task { await history.refresh(currency: model.preferredCurrency) } }
                                 } else if history.transactions.isEmpty {
                                     VStack(alignment: .leading, spacing: 6) {
@@ -117,7 +117,7 @@ struct HomeView: View {
                     }
 
                     if !model.isWalletSuspended {
-                        Text(home.fact)
+                        Text(LocalizedStringKey(home.fact))
                         .font(NoahFont.footnote)
                         .foregroundStyle(NoahColor.mutedForeground)
                         .padding(.top, 24)
@@ -228,7 +228,7 @@ private struct BalanceHeader: View {
                 if isHidden {
                     Text(verbatim: "••••")
                 } else if let sats {
-                    Text(BitcoinAmount.format(sats: sats, unit: unit))
+                    Text(BitcoinAmount.format(sats: sats, unit: unit, locale: locale))
                         .contentTransition(.numericText())
                 } else {
                     ProgressView()
@@ -256,11 +256,11 @@ private struct BalanceHeader: View {
         }
             if let balance {
                 if balance.pendingSats > 0 {
-                    Text("Pending balance: \(WalletBalance.display(balance.pendingSats, hidden: isHidden, unit: unit, locale: locale))")
+                    Text(L10n.text("Pending balance: {_gt_value_2}", WalletBalance.display(balance.pendingSats, hidden: isHidden, unit: unit, locale: locale)))
                         .font(NoahFont.footnote)
                 }
                 if let message = balance.pendingRoundMessage(amount: WalletBalance.display(balance.ark.pendingInRound, hidden: isHidden, unit: unit, locale: locale)) {
-                    Text(message).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+                    Text(LocalizedStringKey(message)).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
                 }
                 if expanded {
                     NoahCard {

@@ -39,7 +39,7 @@ struct HomeBanner: Equatable {
             let formatter = DateFormatter()
             formatter.locale = locale
             formatter.setLocalizedDateFormatFromTemplate("jm")
-            return Self(title: "Backup completed", message: "Last backup \(formatter.string(from: Date(timeIntervalSince1970: time / 1000)))")
+            return Self(title: "Backup completed", message: L10n.text("Last backup {time}", formatter.string(from: Date(timeIntervalSince1970: time / 1000))))
         default: return nil
         }
     }

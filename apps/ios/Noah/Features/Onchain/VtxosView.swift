@@ -12,7 +12,7 @@ struct VtxosView: View {
     var body: some View {
         List {
             Section {
-                Picker("Filter", selection: $filter) { ForEach(filters, id: \.self) { Text($0).tag($0) } }
+                Picker("Filter", selection: $filter) { ForEach(filters, id: \.self) { Text(LocalizedStringKey($0)).tag($0) } }
                 if let overview = model.overview {
                     OnchainAmountRow(title: "Total", sats: overview.vtxos.reduce(0) { $0 + $1.amount })
                     LabeledContent("VTXOs", value: "\(overview.vtxos.count)")
@@ -75,12 +75,14 @@ struct VtxosView: View {
 }
 
 private struct VtxoRow: View {
+    @Environment(\.locale) private var locale
+
     let vtxo: VtxoModel
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             OnchainAmountRow(title: vtxo.status, sats: vtxo.amount)
             Text(vtxo.id).lineLimit(1).truncationMode(.middle).font(NoahFont.footnote)
-            Text("Expiry: Block \(vtxo.expiry)").font(NoahFont.footnote).foregroundStyle(
+            Text(L10n.text("Expiry: Block {_gt_value_2}", vtxo.expiry, locale: locale.identifier)).font(NoahFont.footnote).foregroundStyle(
                 NoahColor.mutedForeground)
         }.padding(.vertical, 4)
     }
@@ -97,12 +99,12 @@ struct VtxoDetailView: View {
                     LabeledContent("State", value: vtxo.status)
                     LabeledContent("VTXO ID") { Text(vtxo.id).textSelection(.enabled) }
                     LabeledContent("Type", value: vtxo.kind)
-                    LabeledContent("Expiry height", value: "\(vtxo.expiry)")
-                    LabeledContent("Blocks until expiry", value: "\(Int64(vtxo.expiry) - Int64(vtxo.tip))")
-                    LabeledContent("Exit delta", value: "\(vtxo.exitDelta)")
+                    LabeledContent("Expiry Height", value: "\(vtxo.expiry)")
+                    LabeledContent("Blocks Until Expiry", value: "\(Int64(vtxo.expiry) - Int64(vtxo.tip))")
+                    LabeledContent("Exit Delta", value: "\(vtxo.exitDelta)")
                     LabeledContent("Point") { Text(vtxo.point).textSelection(.enabled) }
-                    LabeledContent("Anchor point") { Text(vtxo.anchorPoint).textSelection(.enabled) }
-                    LabeledContent("Server public key") { Text(vtxo.serverPubkey).textSelection(.enabled) }
+                    LabeledContent("Anchor Point") { Text(vtxo.anchorPoint).textSelection(.enabled) }
+                    LabeledContent("Server Public Key") { Text(vtxo.serverPubkey).textSelection(.enabled) }
                     LabeledContent("Exit depth", value: "\(vtxo.exitDepth)")
                     LabeledContent("Exit transaction weight", value: "\(vtxo.exitWeight) wu")
                     LabeledContent("Registered with server", value: vtxo.registered ? "Yes" : "No")

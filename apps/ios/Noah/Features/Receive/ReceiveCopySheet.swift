@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ReceiveCopySheet: View {
+    @Environment(\.locale) private var locale
+
     @Environment(\.dismiss) private var dismiss
     let request: ReceiveRequest
     @State private var copied: String?
@@ -25,7 +27,7 @@ struct ReceiveCopySheet: View {
             UIPasteboard.general.string = value
             copied = id
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-            UIAccessibility.post(notification: .announcement, argument: String(localized: "Copied"))
+            UIAccessibility.post(notification: .announcement, argument: L10n.text("Copied", locale: locale.identifier))
         } label: {
             HStack(spacing: 14) {
                 Image(systemName: icon).frame(width: 24).foregroundStyle(NoahColor.brand)
@@ -35,7 +37,7 @@ struct ReceiveCopySheet: View {
                         .foregroundStyle(NoahColor.mutedForeground)
                 }
                 Spacer(minLength: 0)
-                Text(copied == id ? "Copied" : "Copy").font(NoahFont.footnote)
+                Text(LocalizedStringKey(copied == id ? "Copied" : "Copy")).font(NoahFont.footnote)
                     .foregroundStyle(copied == id ? NoahColor.success : NoahColor.brand)
             }
             .foregroundStyle(NoahColor.foreground).padding(.vertical, 4)

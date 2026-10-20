@@ -132,7 +132,7 @@ struct EmergencyEmailView: View {
                     if registrationFailed { dismiss() }
                     else if completeAfterAlert { onContinue() }
                 }
-            } message: { Text(errorMessage ?? "") }
+            } message: { Text(LocalizedStringKey(errorMessage ?? "")) }
         }
     }
 

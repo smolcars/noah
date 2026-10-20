@@ -65,6 +65,8 @@ private struct WelcomeView: View {
 }
 
 private struct BetaWarningView: View {
+    @Environment(\.locale) private var locale
+
     let onCreated: () -> Void
     let onDecline: () -> Void
 
@@ -90,7 +92,7 @@ private struct BetaWarningView: View {
                     .multilineTextAlignment(.center)
             }
             if let errorMessage {
-                Text(errorMessage)
+                Text(LocalizedStringKey(errorMessage))
                     .font(NoahFont.footnote)
                     .foregroundStyle(NoahColor.destructive)
                     .multilineTextAlignment(.center)
@@ -119,15 +121,17 @@ private struct BetaWarningView: View {
                 try await model.createWallet()
                 onCreated()
             } catch WalletCreator.Failure.incompleteExistingData {
-                errorMessage = String(localized: "Existing wallet data is incomplete. Restore your wallet to continue.")
+                errorMessage = L10n.text("Existing wallet data is incomplete. Restore your wallet to continue.", locale: locale.identifier)
             } catch {
-                errorMessage = String(localized: "Creation Failed. Please try again.")
+                errorMessage = L10n.text("Creation Failed. Please try again.", locale: locale.identifier)
             }
         }
     }
 }
 
 struct MnemonicView: View {
+    @Environment(\.locale) private var locale
+
     var onContinue: (() -> Void)? = nil
     @Environment(WalletLock.self) private var lock
     @Environment(\.scenePhase) private var scenePhase
@@ -164,7 +168,7 @@ struct MnemonicView: View {
                 VStack(spacing: 12) {
                     if onContinue == nil && !authenticated {
                         NoahButton(title: "Authenticate to view seed phrase") { Task { await reveal() } }
-                        if let error = lock.error { Text(error).foregroundStyle(NoahColor.destructive) }
+                        if let error = lock.error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
                     }
                     NoahButton(title: copied ? "Copied" : "Copy Seed Phrase", kind: .secondary, action: copy)
                         .disabled(words.isEmpty)
@@ -190,7 +194,7 @@ struct MnemonicView: View {
     }
 
     private func reveal() async {
-        let allowed = onContinue != nil ? true : await lock.authenticate(String(localized: "Authenticate to view seed phrase"))
+        let allowed = onContinue != nil ? true : await lock.authenticate(L10n.text("Authenticate to view seed phrase", locale: locale.identifier))
         if allowed {
             guard scenePhase != .background else { return }
             authenticated = true

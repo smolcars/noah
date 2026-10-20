@@ -21,7 +21,7 @@ final class ReceiveModel {
     private(set) var isSaving = false
     private(set) var receivedSats: Int64?
     private(set) var baseError: String?
-    private(set) var baseErrorTitle = String(localized: "Couldn’t create a request")
+    private(set) var baseErrorTitle = L10n.text("Couldn’t create a request")
     var invoiceError: String?
     private let dependencies: Dependencies
     private var generation = UUID()
@@ -35,7 +35,7 @@ final class ReceiveModel {
         stop()
         receivedSats = nil
         baseError = nil
-        baseErrorTitle = String(localized: "Couldn’t create a request")
+        baseErrorTitle = L10n.text("Couldn’t create a request")
         isGenerating = true
         let generation = generation
         defer { if self.generation == generation { isGenerating = false } }
@@ -48,8 +48,8 @@ final class ReceiveModel {
             guard self.generation == generation, !Task.isCancelled else { return }
             recordFailure(error)
             baseError = error is WalletSession.SessionError
-                ? String(localized: "Your wallet isn't ready. Please try again.")
-                : String(localized: "Could not generate a receive request. Please try again.")
+                ? L10n.text("Your wallet isn't ready. Please try again.")
+                : L10n.text("Could not generate a receive request. Please try again.")
         }
     }
 
@@ -82,7 +82,7 @@ final class ReceiveModel {
         } catch {
             guard self.generation == generation, self.invoiceGeneration == invoiceGeneration else { return false }
             recordFailure(error)
-            invoiceError = String(localized: "Could not generate a Lightning invoice. Please try again.")
+            invoiceError = L10n.text("Could not generate a Lightning invoice. Please try again.")
             return false
         }
     }
@@ -109,8 +109,8 @@ final class ReceiveModel {
                         switch event {
                         case .received(let sats): self.receivedSats = sats
                         case .lightningFailed(let canceled):
-                            self.baseErrorTitle = canceled ? String(localized: "Lightning Receive Canceled") : String(localized: "Lightning Receive Failed")
-                            self.baseError = String(localized: "The Lightning payment could not be received. Generate a new payment request and try again.")
+                            self.baseErrorTitle = canceled ? L10n.text("Lightning Receive Canceled") : L10n.text("Lightning Receive Failed")
+                            self.baseError = L10n.text("The Lightning payment could not be received. Generate a new payment request and try again.")
                         }
                         return
                     }
@@ -120,7 +120,7 @@ final class ReceiveModel {
                     if error is WalletSession.SessionError {
                         guard let self, self.generation == generation else { return }
                         self.stop()
-                        self.baseError = String(localized: "Your wallet isn't ready. Please try again.")
+                        self.baseError = L10n.text("Your wallet isn't ready. Please try again.")
                         return
                     }
                 }

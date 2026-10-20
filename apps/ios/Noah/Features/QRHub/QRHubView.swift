@@ -30,7 +30,7 @@ struct QRHubView: View {
                             UIPasteboard.general.string = address
                             hub.copied = true
                         } label: {
-                            Text(hub.copied ? "Copied" : QRHubModel.displayAddress(address))
+                            Text(LocalizedStringKey(hub.copied ? "Copied" : QRHubModel.displayAddress(address)))
                                 .multilineTextAlignment(.center).font(NoahFont.headline)
                         }
                         .accessibilityIdentifier("qr-copy-address")

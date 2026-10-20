@@ -15,11 +15,11 @@ struct RestoreWalletScreen: View {
         ScrollViewReader { scroll in
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    Text(useStoredSeed ? "Recovery phrase found" : "Your recovery phrase")
+                    Text(LocalizedStringKey(useStoredSeed ? "Recovery phrase found" : "Your Recovery Phrase"))
                         .font(NoahFont.title)
-                    Text(useStoredSeed
+                    Text(LocalizedStringKey(useStoredSeed
                          ? "Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."
-                         : "Enter your 12 words in order, or paste the whole phrase into any word field.")
+                         : "Enter your 12 words in order, or paste the whole phrase into any word field."))
                         .foregroundStyle(NoahColor.mutedForeground)
                     if !useStoredSeed {
                         phraseFields
@@ -28,7 +28,7 @@ struct RestoreWalletScreen: View {
                             .disabled(model.isRestoring || model.restoreIssue?.requiresRestart == true)
                     }
                     if input.wrongWordCount || invalidPhrase {
-                        Text(input.wrongWordCount ? "Paste exactly 12 words. Your entries haven't been replaced." : RestoreIssue.invalidPhrase.message)
+                        Text(LocalizedStringKey(input.wrongWordCount ? "Paste exactly 12 words. Your entries haven't been replaced." : RestoreIssue.invalidPhrase.message))
                             .foregroundStyle(NoahColor.destructive)
                             .accessibilityIdentifier("restore-phrase-error")
                     }
@@ -37,7 +37,7 @@ struct RestoreWalletScreen: View {
                             .accessibilityIdentifier("restore-progress")
                     }
                     if let issue = model.restoreIssue {
-                        Text(issue.message)
+                        Text(LocalizedStringKey(issue.message))
                             .foregroundStyle(NoahColor.destructive)
                             .accessibilityIdentifier("restore-error")
                     }

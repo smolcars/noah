@@ -51,7 +51,7 @@ struct AutoBoardingService: View {
     var body: some View {
         VStack(spacing: 0) {
             if let message {
-                NoahCard { Text(message).font(NoahFont.callout) }
+                NoahCard { Text(LocalizedStringKey(message)).font(NoahFont.callout) }
             }
         }
         .task(id: app.summary?.balance.onchain.confirmed) { await check() }

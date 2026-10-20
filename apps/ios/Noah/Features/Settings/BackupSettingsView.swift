@@ -24,7 +24,7 @@ struct BackupSettingsView: View {
                 if let at = state.lastBackupAt {
                     Text(Date(timeIntervalSince1970: at / 1000), format: .dateTime)
                 } else { Text("No backups yet") }
-                Text(status)
+                Text(LocalizedStringKey(status))
                 if state.backupPending { Text("Backup pending").font(NoahFont.footnote) }
                 Button("Backup Now") {
                     run {
@@ -35,7 +35,7 @@ struct BackupSettingsView: View {
                 }.disabled(busy)
                 Button("List Backups") { run { try await list() } }.disabled(busy)
                 if busy { ProgressView() }
-                if let message { Text(message).font(NoahFont.footnote) }
+                if let message { Text(LocalizedStringKey(message)).font(NoahFont.footnote) }
             }
             if let backups {
                 Section("Available Backups") {

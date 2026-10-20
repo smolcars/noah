@@ -59,7 +59,7 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
             default: label = type
             }
         }
-        return isCanceled ? "Canceled \(label)" : label
+        return isCanceled ? L10n.text("Canceled {value1}", label) : label
     }
 
     struct Accounting: Codable, Equatable {
@@ -88,7 +88,7 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
 
     var confirmationLabel: String? {
         guard dateLabel != nil else { return nil }
-        return hasConfirmation == true ? "Confirmed at block \(confirmationHeight ?? 0)" : "Unconfirmed"
+        return hasConfirmation == true ? L10n.text("Confirmed at block {height}", confirmationHeight ?? 0) : "Unconfirmed"
     }
     var timestamp: Date? { HistoryRules.parseDate(date) }
     var statusLabel: String? { movementStatus?.capitalized }

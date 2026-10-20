@@ -49,14 +49,14 @@ struct ReceiveAmountSheet: View {
                             } else if let btcPrice {
                                 Text(FiatCurrency.display(sats: sats, btcPrice: btcPrice, currency: app.preferredCurrency, locale: locale))
                             } else {
-                                Text("\(app.preferredCurrency) rate unavailable")
+                                Text(L10n.text("{currency} rate unavailable", app.preferredCurrency, locale: locale.identifier))
                             }
                             Image(systemName: "arrow.up.arrow.down")
                         }
                     }
                     .foregroundStyle(btcPrice == nil ? NoahColor.mutedForeground : NoahColor.success)
                     .disabled(btcPrice == nil || model.isSaving)
-                    .accessibilityLabel(useFiat ? "Switch to sats" : "Switch to \(app.preferredCurrency)")
+                    .accessibilityLabel(useFiat ? "Switch to sats" : L10n.text("Switch to {value1}", app.preferredCurrency, locale: locale.identifier))
                     .accessibilityIdentifier("receive-currency-toggle")
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Add a note").font(NoahFont.headline)
@@ -69,7 +69,7 @@ struct ReceiveAmountSheet: View {
                         }
                     }
                     if let error = model.invoiceError {
-                        Text(error).foregroundStyle(NoahColor.destructive).accessibilityIdentifier("receive-invoice-error")
+                        Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive).accessibilityIdentifier("receive-invoice-error")
                     }
                 }
                 .padding(24)

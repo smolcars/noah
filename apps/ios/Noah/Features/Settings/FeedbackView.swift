@@ -22,7 +22,7 @@ struct FeedbackView: View {
                 Section {
                     Text("Report a bug or share what would make Noah better.")
                     TextField("Name", text: $draft.name).focused($focus, equals: .name)
-                    TextField("Email (optional)", text: $draft.email).keyboardType(.emailAddress)
+                    TextField("Email (Optional)", text: $draft.email).keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never).autocorrectionDisabled().focused($focus, equals: .email)
                     TextField("Subject", text: $draft.subject).focused($focus, equals: .subject)
                     TextField("Message", text: $draft.body, axis: .vertical).lineLimit(5...12).focused($focus, equals: .body)
@@ -37,7 +37,7 @@ struct FeedbackView: View {
                     }
                     Text("JPEG or PNG, 5 MB or smaller").font(NoahFont.footnote)
                 }
-                if let error { Section { Text(error).foregroundStyle(NoahColor.destructive) } }
+                if let error { Section { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) } }
                 Section {
                     Button(busy ? "Sending..." : "Send Feedback", action: submit)
                         .disabled(busy || loadingPhoto || draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || draft.subject.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || draft.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
