@@ -56,14 +56,13 @@ enum EndpointLogPrivacy {
         if let match = responseStatus.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) {
             return "HttpResponse { status: " + (text as NSString).substring(with: match.range(at: 1)) + " }"
         }
-        if text.contains("HttpResponse") { return "HttpResponse" }
-        guard let views = LogFile.decodedViews(text, percentEncoded: true) else { return nil }
+        guard let views = LogFile.decodedViews(text, percentEncoded: true) else { return text.contains("HttpResponse") ? "HttpResponse" : nil }
         for view in views {
             if let match = responseStatus.firstMatch(in: view, range: NSRange(view.startIndex..., in: view)) {
                 return "HttpResponse { status: " + (view as NSString).substring(with: match.range(at: 1)) + " }"
             }
-            if view.contains("HttpResponse") { return "HttpResponse" }
         }
+        if views.contains(where: { $0.contains("HttpResponse") }) { return "HttpResponse" }
         guard !registered.isEmpty else { return text }
         var result = text
         for (index, view) in views.enumerated() {
