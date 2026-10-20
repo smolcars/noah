@@ -6,6 +6,7 @@ struct EmergencyEmailView: View {
 
     private enum Field: Hashable { case email, code }
     @Environment(AppModel.self) private var model
+    @Environment(\.locale) private var locale
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focus: Field?
     @State private var email = ""
@@ -65,7 +66,8 @@ struct EmergencyEmailView: View {
                         .frame(maxWidth: .infinity)
                         .disabled(busy)
                     } else {
-                        Text("Email is optional. Noah uses it only for urgent wallet safety messages, such as when your VTXOs are close to expiring and you need to come online to refresh them.")
+                        Text(Self.explanation(fromOnboarding: fromOnboarding, verified: model.server.state.isEmailVerified == true,
+                                              email: model.server.state.emailAddress, locale: locale.identifier))
                             .foregroundStyle(NoahColor.mutedForeground)
                         NoahCard {
                             VStack(alignment: .leading, spacing: 12) {
@@ -134,6 +136,16 @@ struct EmergencyEmailView: View {
                 }
             } message: { Text(LocalizedStringKey(errorMessage ?? "")) }
         }
+    }
+
+    static func explanation(fromOnboarding: Bool, verified: Bool, email: String?, locale: String) -> String {
+        if !fromOnboarding && verified {
+            if let email, !email.isEmpty {
+                return L10n.text("Your current email, {email}, will stay active until the new email is verified.", email, locale: locale)
+            }
+            return L10n.text("Your current email will stay active until the new email is verified.", locale: locale)
+        }
+        return L10n.text("Email is optional. Noah uses it only for urgent wallet safety messages, such as when your VTXOs are close to expiring and you need to come online to refresh them.", locale: locale)
     }
 
     private func completed(alreadyVerified: Bool) {
