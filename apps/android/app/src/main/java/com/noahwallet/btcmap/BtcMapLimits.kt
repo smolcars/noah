@@ -17,10 +17,30 @@ internal object BtcMapLimits {
     const val bytes = 32 * 1024 * 1024
     const val records = 100_000
     const val stringBytes = 16 * 1024
+    const val nestingDepth = 64
     const val cooldown = 300_000L
 
     fun checkBytes(text: String) {
         if (text.length > bytes || text.toByteArray(Charsets.UTF_8).size > bytes) throw BtcMapResourceLimit()
+    }
+
+    /** Scan before tree decoding, including unknown fields, without using the call stack. */
+    fun checkJson(text: String) {
+        checkBytes(text)
+        var depth = 0
+        var quoted = false
+        var escaped = false
+        for (char in text) {
+            if (quoted) {
+                if (escaped) escaped = false
+                else if (char == '\\') escaped = true
+                else if (char == '"') quoted = false
+            } else when (char) {
+                '"' -> quoted = true
+                '[', '{' -> { depth++; if (depth > nestingDepth) throw BtcMapResourceLimit() }
+                ']', '}' -> depth--
+            }
+        }
     }
 
     fun checkString(text: String) {

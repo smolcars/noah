@@ -5,10 +5,35 @@ enum BtcMapLimits {
     static let bytes = 32 * 1024 * 1024
     static let records = 100_000
     static let stringBytes = 16 * 1024
+    static let nestingDepth = 64
 
     static func check(_ data: Data) throws {
         guard data.count <= bytes else { throw BtcMapError.resourceLimit }
     }
+    /// Scan before Foundation decoding, including unknown fields, without using the call stack.
+    static func checkJSON(_ data: Data) throws {
+        try check(data)
+        var depth = 0
+        var quoted = false
+        var escaped = false
+        for byte in data {
+            if quoted {
+                if escaped { escaped = false }
+                else if byte == 0x5c { escaped = true }
+                else if byte == 0x22 { quoted = false }
+            } else {
+                switch byte {
+                case 0x22: quoted = true
+                case 0x5b, 0x7b:
+                    depth += 1
+                    guard depth <= nestingDepth else { throw BtcMapError.resourceLimit }
+                case 0x5d, 0x7d: depth -= 1
+                default: break
+                }
+            }
+        }
+    }
+
     static func check(_ string: String) throws {
         guard string.utf8.count <= stringBytes else { throw BtcMapError.resourceLimit }
     }
@@ -21,7 +46,7 @@ enum BtcMapLimits {
     }
 
     static func decodeRecords<T: Decodable>(_ type: T.Type, from data: Data) throws -> [T] {
-        try check(data)
+        try checkJSON(data)
         return try JSONDecoder().decode(Records<T>.self, from: data).values
     }
 

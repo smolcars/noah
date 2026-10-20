@@ -11,7 +11,7 @@ import java.util.Locale
 @RunWith(Parameterized::class)
 class BtcMapFixtureTest(private val name: String, private val domain: String, private val input: JsonObject, private val expected: JsonElement) {
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{0}") fun cases() = listOf("btc-map", "city-search", "btc-map-review").flatMap { domain ->
+        @JvmStatic @Parameterized.Parameters(name = "{0}") fun cases() = listOf("btc-map", "city-search", "btc-map-review", "btc-map-limits").flatMap { domain ->
             SharedFixtures.load(domain).map { arrayOf(it.name, domain, it.input.jsonObject, it.expected) }
         }
         fun asset(name: String) = requireNotNull(BtcMapFixtureTest::class.java.getResourceAsStream("/$name"))
@@ -22,7 +22,20 @@ class BtcMapFixtureTest(private val name: String, private val domain: String, pr
     private inline fun <reified T> value(v: T): JsonElement = mapJson.encodeToJsonElement(v)
     private inline fun <reified T> read(key: String): T = mapJson.decodeFromJsonElement(input.getValue(key))
     @Test fun matchesSharedReactNativeFixture() {
-        val actual: JsonElement = when (read<String>("operation")) {
+        val actual: JsonElement = if (domain == "btc-map-limits") {
+            val text = read<String>("text")
+            val result = try {
+                when (read<String>("operation")) {
+                    "snapshot" -> BtcMapSnapshot.parse(text)
+                    "patch" -> BtcMapPatch.parse(text)
+                    "detail" -> BtcMapDetail.parse(text, "[]")
+                    "comments" -> BtcMapDetail.parse("""{"id":1,"lat":1,"lon":2,"icon":"cafe","name":"Cafe","updated_at":"today"}""", text)
+                    else -> error("Unknown limits operation")
+                }
+                "accepted"
+            } catch (_: BtcMapResourceLimit) { "resourceLimit" }
+            value(result)
+        } else when (read<String>("operation")) {
             "web" -> value(BtcMapLinks.web(read("text")))
             "phone" -> value(BtcMapLinks.phone(read("text")))
             "bounds" -> value(read<BtcMapBounds>("bounds").contains(read("lon"), read("lat")))

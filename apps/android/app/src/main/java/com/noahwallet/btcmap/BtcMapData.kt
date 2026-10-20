@@ -84,7 +84,7 @@ private data class BtcMapSnapshotInput(
 )
 
 internal fun parseMapRecords(text: String): List<JsonObject> {
-    BtcMapLimits.checkBytes(text)
+    BtcMapLimits.checkJson(text)
     return mapJson.decodeFromString(BtcMapRecordsSerializer, text)
 }
 
@@ -97,7 +97,7 @@ data class BtcMapSnapshot(val schemaVersion: Int, val generatedAt: String, val s
     }
     companion object {
         fun parse(text: String): BtcMapSnapshot {
-            BtcMapLimits.checkBytes(text)
+            BtcMapLimits.checkJson(text)
             val raw = mapJson.decodeFromString<BtcMapSnapshotInput>(text)
             require(raw.schemaVersion == 1 && raw.generatedAt.isNotEmpty() && raw.source.isNotEmpty())
             BtcMapLimits.checkString(raw.generatedAt)
@@ -119,7 +119,7 @@ data class BtcMapComment(val id: Long, val text: String, val createdAt: String)
 data class BtcMapDetail(val place: BtcMapPlace, val fields: Map<String, String>, val comments: List<BtcMapComment>) {
     companion object {
         fun parse(place: String, comments: String): BtcMapDetail {
-            BtcMapLimits.checkBytes(place)
+            BtcMapLimits.checkJson(place)
             val raw = mapJson.parseToJsonElement(place).jsonObject
             return BtcMapDetail(BtcMapPlace.parse(raw), raw.keys.mapNotNull { key -> raw.string(key)?.let { key to it } }.toMap(),
                 parseMapRecords(comments).map { c ->

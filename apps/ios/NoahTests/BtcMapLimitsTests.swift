@@ -3,6 +3,40 @@ import Testing
 @testable import Noah
 
 struct BtcMapLimitsTests {
+    struct Input: Decodable { let operation: String; let text: String }
+
+    @Test func sharedDepthContract() throws {
+        let place = Data(#"{"id":1,"lat":1,"lon":2,"icon":"cafe","name":"Cafe","updated_at":"today"}"#.utf8)
+        for fixture in try Fixtures.load("btc-map-limits", input: Input.self, expected: String.self) {
+            let data = Data(fixture.input.text.utf8)
+            let result: String
+            do {
+                switch fixture.input.operation {
+                case "snapshot": _ = try BtcMapSnapshot.parse(data)
+                case "patch": _ = try BtcMapLimits.decodeRecords(BtcMapPatch.self, from: data)
+                case "detail": _ = try BtcMapDetail.parse(place: data, comments: Data("[]".utf8))
+                case "comments": _ = try BtcMapDetail.parse(place: place, comments: data)
+                default: Issue.record("Unknown limits operation"); continue
+                }
+                result = "accepted"
+            } catch BtcMapError.resourceLimit { result = "resourceLimit" }
+            #expect(result == fixture.expected, "\(fixture.name)")
+        }
+    }
+
+    @Test func foundationDepthBehavior() throws {
+        for depth in [64, 65, 10_003] {
+            let raw = #"{"id":1,"lat":1,"lon":2,"icon":"cafe","name":"Cafe","updated_at":"today","unknown":"#
+                + String(repeating: "[", count: depth - 1) + "0" + String(repeating: "]", count: depth - 1) + "}"
+            let data = Data(raw.utf8)
+            let decoded = (try? JSONDecoder().decode(BtcMapPlace.self, from: data)) != nil
+            let serialized = (try? JSONSerialization.jsonObject(with: data)) != nil
+            print("BTC Map Foundation depth \(depth): JSONDecoder=\(decoded), JSONSerialization=\(serialized)")
+            #expect(decoded == (depth <= 65))
+            #expect(serialized == (depth <= 65))
+        }
+    }
+
     @Test func limitsRejectBytesRecordsAndStrings() throws {
         #expect(throws: (any Error).self) { try BtcMapLimits.check(Data(count: BtcMapLimits.bytes + 1)) }
         try BtcMapLimits.check(String(repeating: "x", count: BtcMapLimits.stringBytes))

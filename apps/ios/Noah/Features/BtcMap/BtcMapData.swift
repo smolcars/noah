@@ -110,7 +110,7 @@ struct BtcMapSnapshot: Codable, Sendable {
     var places: [BtcMapPlace]
 
     static func parse(_ data: Data) throws -> Self {
-        try BtcMapLimits.check(data)
+        try BtcMapLimits.checkJSON(data)
         let value = try JSONDecoder().decode(Self.self, from: data)
         guard value.schemaVersion == 1, !value.generatedAt.isEmpty, !value.source.isEmpty else { throw BtcMapError.invalidData }
         return value
@@ -150,7 +150,7 @@ struct BtcMapDetail: Sendable {
     }
 
     static func parse(place data: Data, comments: Data) throws -> Self {
-        try BtcMapLimits.check(data)
+        try BtcMapLimits.checkJSON(data)
         let place = try JSONDecoder().decode(BtcMapPlace.self, from: data)
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw BtcMapError.invalidData }
         let fields = object.compactMapValues { ($0 as? String).flatMap { $0.isEmpty ? nil : $0 } }
