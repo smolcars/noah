@@ -115,7 +115,7 @@ class LogFile(
                 lines.addLast(it)
             } }
         }
-        return lines.toList()
+        return lines.map(EndpointLogPrivacy::redact)
     }
 
     private fun barrier(): CompletableFuture<Void> = synchronized(admission) {
@@ -169,6 +169,8 @@ class LogFile(
 
         private val jsonEscapes = Regex("""(?:\\u[0-9a-fA-F]{4})++|\\["\\/bfnrt]""")
 
+        private val encodedEscapes = Regex(jsonEscapes.pattern + """|(?:%[0-9a-fA-F]{2})+""")
+
         fun redact(message: String): String {
             if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return "[oversized log message omitted]"
             return redactForTelemetry(message) ?: "[redacted]"
@@ -182,14 +184,17 @@ class LogFile(
             return redactPlain(message)
         }
 
-        private fun decodedViews(message: String): List<String>? {
+        internal fun decodedViews(message: String, percentEncoded: Boolean = false): List<String>? {
+            val escapes = if (percentEncoded) encodedEscapes else jsonEscapes
             val views = mutableListOf(message)
             repeat(4) {
                 val view = views.last()
                 var uncertain = false
-                val decoded = jsonEscapes.replace(view) { match ->
+                val decoded = escapes.replace(view) { match ->
                     try {
-                        kotlinx.serialization.json.Json.decodeFromString<String>("\"${match.value}\"")
+                        if (match.value.startsWith("%")) java.net.URLDecoder.decode(match.value, Charsets.UTF_8).also {
+                            if (it.contains('\uFFFD')) uncertain = true
+                        } else kotlinx.serialization.json.Json.decodeFromString<String>("\"${match.value}\"")
                     } catch (_: Exception) {
                         uncertain = true
                         ""
@@ -199,7 +204,7 @@ class LogFile(
                 if (decoded == view) return views
                 views += decoded
             }
-            if (jsonEscapes.containsMatchIn(views.last())) return null
+            if (escapes.containsMatchIn(views.last())) return null
             return views
         }
 

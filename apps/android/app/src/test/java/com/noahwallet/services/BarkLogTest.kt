@@ -32,6 +32,66 @@ class BarkLogTest {
         } finally { directory.deleteRecursively() }
     }
 
+    @Test fun relativeAndEscapedProviderErrorsCannotLeakEndpointCredentials() {
+        val token = "fakeOpaqueCredential59df"
+        com.noahwallet.services.logging.EndpointLogPrivacy.register("https://relative-privacy.example/api/$token")
+        val inputs = listOf(
+            "No route: /api/$token/fee-estimates",
+            "fee estimation failed: HttpResponse(404): No route: /api/$token/fee-estimates\nCaused by: $token",
+            """No route: \/api\/fakeOpaqueCredential59df\/fee-estimates""",
+            """No route: \u002fapi\u002ffakeOpaqueCredential59df\u002ffee-estimates""",
+            "No route: %2fapi%2ffakeOpaqueCredential59df%2ffee-estimates",
+            "No route: /api/%66akeOpaqueCredential59df/fee-estimates",
+            """No route: /api/\u0066akeOpaqueCredential59df/fee-estimates""",
+            "No route: %252Fapi%252FfakeOpaqueCredential59df%252Ffee-estimates",
+            """No route: \\/api\\/fakeOpaqueCredential59df\\/fee-estimates""",
+        )
+        val directory = Files.createTempDirectory("esplora-relative-log").toFile()
+        val received = mutableListOf<String>()
+        val file = LogFile(directory, executor = Executor { it.run() }, systemSink = { _, tag, text -> received += "$tag $text" })
+        try {
+            directory.resolve("noah.log.1").writeText(inputs.joinToString("\n"))
+            for (input in inputs) {
+                assertNotEquals(input, com.noahwallet.services.logging.EndpointLogPrivacy.redact(input))
+                assertNotEquals(input, LogFile.redact(input))
+                assertNotEquals(input, LogFile.redactForTelemetry(input))
+                BarkLog(file).log(LogLevel.WARN, "bark::onchain", input)
+                AppLog("wallet", file).e(input)
+                val event = io.sentry.SentryEvent().apply { message = io.sentry.protocol.Message().apply { formatted = input } }
+                val clean = requireNotNull(com.noahwallet.services.logging.AppTelemetry.scrub(event))
+                assertFalse(clean.message!!.formatted!!.contains(token))
+                event.release = input
+                assertNull("Sentry final guard", com.noahwallet.services.logging.AppTelemetry.scrub(event))
+            }
+            assertFalse(received.joinToString().contains(token))
+            assertFalse(file.lines().joinToString().contains(token))
+            assertEquals("HTTP 404: fee-estimates failed", com.noahwallet.services.logging.EndpointLogPrivacy.redact("HTTP 404: fee-estimates failed"))
+        } finally { directory.deleteRecursively() }
+    }
+
+    @Test fun sdkSuppressesProviderResponseBodiesButKeepsErrorTypeAndStatus() {
+        val directory = Files.createTempDirectory("esplora-body-log").toFile()
+        val received = mutableListOf<String>()
+        val file = LogFile(directory, executor = Executor { it.run() }, systemSink = { _, _, text -> received += text })
+        try {
+            BarkLog(file).log(LogLevel.WARN, "bark::onchain",
+                """fee estimation failed: HttpResponse { status: 404, message: "No route: /unknown/fakeUnregisteredCredential; \"nested\"" }; caused by: upstream unavailable""")
+            val expected = """fee estimation failed: HttpResponse { status: 404, message: "[provider response omitted]" }; caused by: upstream unavailable"""
+            assertEquals(listOf(expected), received)
+            assertTrue(file.lines().single().endsWith(expected))
+        } finally { directory.deleteRecursively() }
+    }
+
+    @Test fun exportRetainsMaximumSizedDiagnostics() {
+        val directory = Files.createTempDirectory("esplora-export-size").toFile()
+        val file = LogFile(directory, executor = Executor { it.run() }, systemSink = { _, _, _ -> })
+        try {
+            val input = "x.".repeat(8192)
+            AppLog("sdk", file).e(input)
+            assertTrue(file.lines().single().endsWith(input))
+        } finally { directory.deleteRecursively() }
+    }
+
     @Test fun matchesIOSAndRNDebugVerbosityAndLevels() {
         assertEquals(LogLevel.DEBUG, BarkLog.maxLevel)
         assertEquals(listOf(AppLog.Level.error, AppLog.Level.warn, AppLog.Level.info,
