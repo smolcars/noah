@@ -111,7 +111,7 @@ class WalletLifecycle(
     suspend fun resume() = withContext(NonCancellable + Dispatchers.IO) {
         mutation.withLock {
             authority()?.resume()
-            setSuspended(false)
+            try { setSuspended(false) } catch (failure: Exception) { authority()?.stop(); throw failure }
         }
     }
     private fun authority() = if (location.directory.isDirectory) com.noahwallet.recurring.RecurringAutomationAuthority(location.directory) { file, bytes -> com.noahwallet.recurring.durableRecurringWrite(file, bytes, syncIdentityDirectory) } else null
@@ -161,6 +161,7 @@ class WalletLifecycle(
                 check(!location.deletionDirectory.exists() || location.deletionDirectory.deleteRecursively()) { "Cannot delete wallet files" }
                 check(!location.restoreDirectory.exists() || location.restoreDirectory.deleteRecursively()) { "Cannot delete restore files" }
                 syncFiles()
+                com.noahwallet.recurring.RecurringAutomationAuthority.deleted(location.directory)
                 deleteSeed()
                 clearToken()
                 clearSettings()

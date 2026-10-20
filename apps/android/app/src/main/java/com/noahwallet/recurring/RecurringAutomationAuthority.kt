@@ -1,6 +1,7 @@
 package com.noahwallet.recurring
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.jsonObject
 import java.io.File
 import java.util.UUID
 
@@ -21,7 +22,9 @@ internal class RecurringAutomationAuthority(directory: File,
                 write(file, RecurringStore.json.encodeToString(State(instance = instance, generation = UUID.randomUUID().toString())).toByteArray())
             }
             val marker = RecurringStore.json.decodeFromString<Marker>(marker.readText())
-            return RecurringStore.json.decodeFromString<State>(file.readText()).also {
+            val raw = file.readText()
+            require(RecurringStore.json.parseToJsonElement(raw).jsonObject.keys.containsAll(listOf("version", "instance", "generation", "suspended", "stopped")))
+            return RecurringStore.json.decodeFromString<State>(raw).also {
                 require(marker.version == 1 && it.version == 1 && marker.instance == it.instance)
                 UUID.fromString(it.instance); UUID.fromString(it.generation)
             }
@@ -41,6 +44,7 @@ internal class RecurringAutomationAuthority(directory: File,
         catch (failure: Exception) { failed.add(file.path); throw failure }
     }
     companion object {
+        fun deleted(directory: File) = synchronized(lock) { failed.remove(File(directory, ".noah-recurring-automation.json").path) }
         private val lock = Any()
         private val failed = mutableSetOf<String>()
         const val message = "Wallet automation is durably stopped. Resume the wallet explicitly before sending recurring payments."

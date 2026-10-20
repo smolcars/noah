@@ -26,4 +26,18 @@ class RecurringMoneyPathTest {
         assertEquals("wallet suspension must survive MMKV rollback", 0, w.wallet.calls)
     }
 
+    @Test fun durableGenerationRejectsAlreadyAdmittedWorkEvenAfterResumeAndMMKVRollback() = runBlocking {
+        for (resume in listOf(false, true)) {
+            val w = RecurringWorld(this); w.add()
+            w.wallet.prepareBlock = {
+                val authority = RecurringAutomationAuthority(w.policyDirectory) { file, bytes -> durableRecurringWrite(file, bytes) {} }
+                authority.stop()
+                if (resume) authority.resume()
+                w.generation = null; w.allowed = true
+                w.wallet.snapshot
+            }
+            w.executor.execute()
+            assertEquals(0, w.wallet.calls)
+        }
+    }
 }

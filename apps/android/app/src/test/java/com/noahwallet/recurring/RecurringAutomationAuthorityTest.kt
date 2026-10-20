@@ -49,4 +49,21 @@ class RecurringAutomationAuthorityTest {
             } finally { directory.deleteRecursively() }
         }
     }
+    @Test fun missingOrCorruptAuthorityNeverBootstrapsAgain() {
+        for (damage in listOf("missing", "marker-missing", "corrupt", "missing-stop-field")) {
+            val directory = Files.createTempDirectory("automation-damage-").toFile()
+            try {
+                fun authority() = RecurringAutomationAuthority(directory) { file, bytes -> durableRecurringWrite(file, bytes) {} }
+                authority().generation()
+                when (damage) {
+                    "missing" -> authority().file.delete()
+                    "marker-missing" -> authority().marker.delete()
+                    "corrupt" -> authority().file.writeText("{")
+                    else -> authority().file.writeText(authority().file.readText().replace("\"stopped\":false", "\"other\":false"))
+                }
+                assertFalse(damage, authority().allowed())
+                assertTrue(runCatching { authority().resume() }.isFailure)
+            } finally { directory.deleteRecursively() }
+        }
+    }
 }
