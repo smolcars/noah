@@ -42,7 +42,7 @@ enum EsploraEndpoint {
         guard let result = url.string else { throw Failure(message: "Enter a valid Esplora API URL.") }
         return result.replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
     }
-    private static func canonicalHost(_ host: String) throws -> String {
+    static func canonicalHost(_ host: String) throws -> String {
         guard host.hasPrefix("["), host.hasSuffix("]") else { return try ipv4Host(host) }
         var address = in6_addr()
         guard String(host.dropFirst().dropLast()).withCString({ inet_pton(AF_INET6, $0, &address) }) == 1 else {

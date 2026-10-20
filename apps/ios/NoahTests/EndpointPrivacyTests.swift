@@ -6,6 +6,36 @@ import Testing
 @testable import Noah
 
 struct EndpointPrivacyTests {
+    @Test func equivalentAuthoritiesUseSharedFixturesAtEveryBoundary() throws {
+        struct Case: Decodable { let endpoint: String; let input: String; let redacted: Bool }
+        let cases = try Fixtures.decode("esplora-log-authorities", as: [Case].self)
+        cases.forEach { EndpointLogPrivacy.register($0.endpoint) }
+        let directory = FileManager.default.temporaryDirectory.appending(path: "authority-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = LogFile(directory: directory)
+        for test in cases {
+            let input = test.input
+            let safe = LogFile.redact(input)
+            #expect(test.redacted ? safe.contains("[custom-esplora]") : safe == input, "\(input)")
+            #expect(SafeErrorDescription.of(BarkError(message: input)) == safe)
+            let event = Event(level: .error); event.message = SentryMessage(formatted: input)
+            event.exceptions = [Exception(value: input, type: "FakeEndpointError")]
+            let clean = try #require(AppTelemetry.scrub(event))
+            #expect(clean.message?.formatted == safe)
+            #expect(clean.exceptions?.first?.value == safe)
+            #expect(clean.exceptions?.first?.type == "FakeEndpointError")
+            let crumb = Breadcrumb(level: .info, category: "esplora"); crumb.message = input
+            #expect(try #require(AppTelemetry.scrub(crumb)).message == safe)
+            AppLog("authority", file: file).e(input)
+        }
+        let lines = file.lines()
+        #expect(lines.count == cases.count)
+        for (line, test) in zip(lines, cases) { #expect(line.hasSuffix(LogFile.redact(test.input).trimmingCharacters(in: .whitespacesAndNewlines))) }
+        try cases.filter(\.redacted).map(\.input).joined(separator: "\n").write(to: directory.appending(path: "noah.log.1"), atomically: true, encoding: .utf8)
+        #expect(!file.lines().joined().contains("bücher.example)"))
+        #expect(!file.lines().joined().contains("[0:0::1]"))
+    }
+
     @Test func hostCredentialsAndEncodedIdentitiesNeverReachSinks() throws {
         let origin = "https://fakehostcredential73.example.com:8443"
         EndpointLogPrivacy.register(origin + "/api")

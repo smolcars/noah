@@ -19,30 +19,24 @@ enum EndpointLogPrivacy {
             let trimmed = path.replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
             if !trimmed.isEmpty { sensitive.insert(trimmed) }
         }
-        var spellings: Set<String> = [origin]
-        if let url = URLComponents(string: origin), url.port == nil {
-            spellings.insert(origin + (url.scheme == "http" ? ":80" : ":443"))
-        }
-        lock.withLock { paths.formUnion(sensitive); origins.formUnion(spellings) }
+        lock.withLock { paths.formUnion(sensitive); origins.insert(origin) }
     }
+    // Extract before parsing: log punctuation is not part of a URL authority.
+    private static let authority = try! NSRegularExpression(
+        pattern: #"(?i)^https?://(?:\[[^\]\s]+\](?::[^/\\?#\s<>"'()\[\],;{}!$&*+=^`|]*)?|[^/\\?#\s<>"'()\[\],;{}!$&*+=^`|]+)"#)
     private static func origin(_ value: String) -> String? {
-        guard var url = URLComponents(string: value), url.host != nil else { return nil }
-        url.scheme = url.scheme?.lowercased(); url.host = url.host?.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
-        if url.port == (url.scheme == "http" ? 80 : 443) { url.port = nil }
-        url.path = ""; url.query = nil; url.fragment = nil; url.user = nil; url.password = nil
-        return url.string
+        guard let match = authority.firstMatch(in: value, range: NSRange(value.startIndex..., in: value)),
+              let range = Range(match.range, in: value),
+              let url = URLComponents(string: String(value[range]).trimmingCharacters(in: CharacterSet(charactersIn: "."))),
+              let scheme = url.scheme?.lowercased(), let parsedHost = url.host,
+              // URL.host supplies IDNA ASCII; URLComponents.host supplies bracketed IPv6.
+              let ascii = parsedHost.hasPrefix("[") ? parsedHost : url.url?.host,
+              let host = try? EsploraEndpoint.canonicalHost(ascii.lowercased().replacingOccurrences(of: #"\.+$"#, with: "", options: .regularExpression)) else { return nil }
+        let port = url.port.flatMap { $0 == (scheme == "http" ? 80 : 443) ? nil : $0 }
+        return scheme + "://" + host + (port.map { ":" + String($0) } ?? "")
     }
     private static func matches(_ value: String, registered: Set<String>) -> Bool {
-        if let origin = origin(value), registered.contains(origin) { return true }
-        // A log delimiter can make the complete URL token unparsable. Match the known
-        // authority at its boundary, never a prefix of another host or port.
-        let lower = value.lowercased()
-        return registered.contains { origin in
-            guard lower.hasPrefix(origin) else { return false }
-            let suffix = lower.dropFirst(origin.count).drop(while: { $0 == "." })
-            guard let next = suffix.first else { return true }
-            return !next.isLetter && !next.isNumber && !"-_%:@".contains(next)
-        }
+        origin(value).map(registered.contains) ?? false
     }
     static func redact(_ text: String) -> String { sanitize(text) ?? "[redacted]" }
 
