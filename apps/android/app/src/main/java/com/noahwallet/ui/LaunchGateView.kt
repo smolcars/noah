@@ -1,6 +1,9 @@
 package com.noahwallet.ui
 
 import com.noahwallet.localization.tr
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.safeDrawing
 import android.Manifest
@@ -62,6 +65,7 @@ fun LaunchGateView(model: AppModel) {
     var requesting by remember { mutableStateOf(false) }
     var permissionStatus by remember { mutableStateOf(PlatformGateRules.Permission.checking) }
     var gateRevision by remember { mutableStateOf(0) }
+    var hasResolvedPlatformGate by remember { mutableStateOf(false) }
     var platformGate by remember { mutableStateOf<PlatformGateRules.Gate?>(null) }
     var resolvedGateInputs by remember { mutableStateOf<Triple<Boolean, PlatformGateRules.Permission, Int>?>(null) }
     val gateInputs = Triple(model.onboarded, permissionStatus, gateRevision)
@@ -110,6 +114,7 @@ fun LaunchGateView(model: AppModel) {
                 PlatformAccess.batteryEnabled(context), model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.hasSeenBatteryOptimizationPrompt == true)
         }
         resolvedGateInputs = gateInputs
+        hasResolvedPlatformGate = true
     }
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -117,17 +122,24 @@ fun LaunchGateView(model: AppModel) {
             if (model.open) model.services.startServerServices()
         }
     }
+    val checking = !gatesReady && PlatformGateRules.launchResolved(state) && !model.customServerUnresponsive
+    val covered = model.walletLock.locked || checking
+    val focus = LocalFocusManager.current
+    LaunchedEffect(covered) { if (covered) focus.clearFocus(force = true) }
+    androidx.compose.runtime.CompositionLocalProvider(LocalWalletPrivacy provides WalletPrivacy(covered,
+        unlock = if (model.walletLock.locked) ({ scope.launch { model.walletLock.unlock(activity) }; Unit }) else null)) {
     androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.background) {
-        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().then(Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing))) {
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()
+            .walletContentProtection(covered)
+            .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing)) {
             when {
-                model.walletLock.locked -> Unit // Keep wallet content out of the composition until authentication.
                 model.customServerUnresponsive -> NoahForm("The custom server isn't responding.") {
                     if (model.switchingToDefaultServer) Text(tr("The server isn't responding; switching back…"))
                     NoahButton("Use default server", !model.switchingToDefaultServer) { model.useDefaultEsploraServer() }
                 }
                 state == LaunchState.seedWithoutWalletData -> RestoreWalletScreen(model, useStoredSeed = true)
                 !PlatformGateRules.launchResolved(state) -> LaunchMessage(state, model.error != null, model::start, model)
-                !gatesReady -> LaunchMessage(null, false, model::start, model)
+                !gatesReady && !hasResolvedPlatformGate -> LaunchMessage(null, false, model::start, model)
                 (model.open || model.isWalletSuspended) && model.onboarded -> when (platformGate) {
                     PlatformGateRules.Gate.push -> PushNotificationsRequiredScreen(requesting, ::requestPermission, ::refreshPermission)
                     PlatformGateRules.Gate.battery -> BatteryOptimizationScreen(model) { gateRevision++ }
@@ -138,17 +150,20 @@ fun LaunchGateView(model: AppModel) {
             }
         }
     }
-    if (!model.walletLock.locked) model.error?.let { message ->
+    }
+    if (!covered) model.error?.let { message ->
         androidx.compose.material3.AlertDialog(onDismissRequest = { model.error = null },
             title = { Text(tr("Please try again")) }, text = { Text(tr(message)) },
             confirmButton = { androidx.compose.material3.TextButton({ model.error = null }) { Text(tr("OK")) } })
     }
-    if (model.walletLock.locked) androidx.compose.ui.window.Dialog(onDismissRequest = {}, properties = androidx.compose.ui.window.DialogProperties(
+    if (covered) androidx.compose.ui.window.Dialog(onDismissRequest = {}, properties = androidx.compose.ui.window.DialogProperties(
         dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false,
-        securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn,
+        securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn, decorFitsSystemWindows = false,
     )) {
         androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            NoahForm("Noah is Locked") {
+            if (checking && !model.walletLock.locked) {
+                LaunchMessage(null, false, model::start, model)
+            } else NoahForm("Noah is Locked") {
                 Text(tr("Authenticate to access your wallet"))
                 model.walletLock.error?.let { Text(tr(it)) }
                 NoahButton("Unlock", !model.walletLock.authenticating) { scope.launch { model.walletLock.unlock(activity) } }
@@ -157,6 +172,10 @@ fun LaunchGateView(model: AppModel) {
     }
 
 }
+
+/** Modifier-only shielding preserves remember/NavDisplay state in the covered subtree. */
+internal fun Modifier.walletContentProtection(covered: Boolean): Modifier =
+    alpha(if (covered) 0f else 1f).then(if (covered) Modifier.clearAndSetSemantics {} else Modifier)
 
 @Composable
 private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () -> Unit, model: AppModel) {

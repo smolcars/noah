@@ -1,5 +1,8 @@
 package com.noahwallet.ui
 
+import com.noahwallet.ui.WalletAlertDialog
+import com.noahwallet.ui.WalletModalBottomSheet
+
 import com.noahwallet.localization.tr
 import android.content.ClipboardManager
 import android.content.Context
@@ -99,7 +102,7 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
     }
     if (controller.locked) {
         if (controller.state == SendController.State.succeeded && outcomeSheet) {
-            ModalBottomSheet(onDismissRequest = { outcomeSheet = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+            WalletModalBottomSheet(onDismissRequest = { outcomeSheet = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
                 SendOutcome(controller, ::done)
             }
         } else SendOutcome(controller, ::done)
@@ -174,7 +177,7 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
                 if (!controller.locked && model.quote == quote) { leaveReview(); model.error = "This review expired. Review the payment again." }
             }
         }
-        ModalBottomSheet(onDismissRequest = { if (!controller.locked) leaveReview() }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        WalletModalBottomSheet(onDismissRequest = { if (!controller.locked) leaveReview() }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             SendConfirmation(payment, quote, controller,
                 confirm = { focus.clearFocus(); controller.submit(payment, quote); model.showReview = false }, cancel = ::leaveReview)
         }
@@ -265,7 +268,7 @@ internal fun keypadInput(amount: String, key: String?, decimal: Boolean): String
         if (controller.state in listOf(SendController.State.succeeded, SendController.State.alreadyPaid, SendController.State.failed)) NoahButton("Done", receipt?.broadcastRetryPending != true, onClick = onDone)
         if (controller.canOverride) TextButton(onClick = { overrideStep = 1 }) { Text(tr("Start a new payment after checking history"), color = MaterialTheme.colorScheme.error) }
     }
-    if (overrideStep > 0) AlertDialog(onDismissRequest = { overrideStep = 0 }, title = { Text(tr(if (overrideStep == 1) "Have you checked?" else SendOverrideAudit.titleText)) },
+    if (overrideStep > 0) WalletAlertDialog(onDismissRequest = { overrideStep = 0 }, title = { Text(tr(if (overrideStep == 1) "Have you checked?" else SendOverrideAudit.titleText)) },
         text = { Text(tr(if (overrideStep == 1) "Check your history and confirm with the recipient. This payment may already have been sent." else controller.overrideWarning)) },
         confirmButton = { TextButton(onClick = { if (overrideStep == 1) overrideStep = 2 else { scope.launch { controller.startNewPaymentAfterHistoryCheck(true); overrideStep = 0 } } }) { Text(tr(if (overrideStep == 1) "I checked history" else SendOverrideAudit.confirmationText)) } },
         dismissButton = { TextButton(onClick = { overrideStep = 0 }) { Text(tr("Keep checking")) } })

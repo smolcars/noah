@@ -1,5 +1,7 @@
 package com.noahwallet.ui
 
+import com.noahwallet.ui.WalletAlertDialog
+
 import com.noahwallet.localization.tr
 import android.Manifest
 import android.content.ClipData
@@ -71,7 +73,7 @@ fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Un
             }
         }
     }
-    if (permissionDenied) AlertDialog(onDismissRequest = { permissionDenied = false }, title = { Text(tr("Permission required")) },
+    if (permissionDenied) WalletAlertDialog(onDismissRequest = { permissionDenied = false }, title = { Text(tr("Permission required")) },
         text = { Text(tr("Camera permission is required to scan QR codes.")) },
         confirmButton = { TextButton({ permissionDenied = false }) { Text(tr("OK")) } })
 }

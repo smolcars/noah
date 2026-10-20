@@ -1,5 +1,7 @@
 package com.noahwallet.ui
 
+import com.noahwallet.ui.WalletModalBottomSheet
+
 import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -155,7 +157,7 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
         } else CircularProgressIndicator()
     }
     val current = request
-    if (sheet != null && current != null) ModalBottomSheet(
+    if (sheet != null && current != null) WalletModalBottomSheet(
         onDismissRequest = { if (!saving) sheet = null },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {

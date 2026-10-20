@@ -1,5 +1,7 @@
 package com.noahwallet.ui
 
+import com.noahwallet.ui.WalletAlertDialog
+
 import com.noahwallet.localization.tr
 import android.app.Activity
 import android.content.ClipData
@@ -100,7 +102,7 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
         }
     }
     LaunchedEffect(model) { if (fromSettings) reveal() }
-    if (warningGeneration != null) AlertDialog(
+    if (warningGeneration != null) WalletAlertDialog(
         onDismissRequest = { warningGeneration = null },
         title = { Text(tr("No screen lock")) },
         text = { Text(tr("This device has no screen lock. Anyone with access to it can view your recovery phrase. Set a screen lock in device settings to protect your wallet.")) },

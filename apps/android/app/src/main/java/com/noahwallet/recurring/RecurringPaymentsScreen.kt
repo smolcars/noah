@@ -1,5 +1,8 @@
 package com.noahwallet.recurring
 
+import com.noahwallet.ui.WalletAlertDialog
+import com.noahwallet.ui.WalletModalBottomSheet
+
 import com.noahwallet.localization.tr
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
@@ -67,16 +70,16 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
         if (executor.syncPending) Text(tr("Wake-up schedule hasn't synced yet. Noah will retry when opened."), style = MaterialTheme.typography.bodySmall)
         (actionError ?: executor.error)?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
     }
-    cancelling?.let { s -> AlertDialog(onDismissRequest = { cancelling = null }, title = { Text(tr("Cancel recurring payment?")) },
+    cancelling?.let { s -> WalletAlertDialog(onDismissRequest = { cancelling = null }, title = { Text(tr("Cancel recurring payment?")) },
         text = { Text(tr("No more payments will be sent. Payments already sent can't be undone. An in-progress payment may still complete.")) },
         confirmButton = { TextButton({ cancelling = null; act { executor.cancel(s.id) } }) { Text(tr("Cancel payment"), color = MaterialTheme.colorScheme.error) } },
         dismissButton = { TextButton({ cancelling = null }) { Text(tr("Keep payment")) } }) }
-    overriding?.let { s -> AlertDialog(onDismissRequest = { overriding = null }, title = { Text(tr(if (overrideStep == 1) "Have you checked?" else "You could pay twice")) },
+    overriding?.let { s -> WalletAlertDialog(onDismissRequest = { overriding = null }, title = { Text(tr(if (overrideStep == 1) "Have you checked?" else "You could pay twice")) },
         text = { Text(tr(if (overrideStep == 1) "Check your history and confirm with the recipient. This payment may already have been sent." else RecurringExecutor.overrideWarning)) },
         confirmButton = { TextButton({ if (overrideStep == 1) overrideStep = 2 else { overriding = null; act { executor.overrideAndResume(s.id, true) } } }) { Text(tr(if (overrideStep == 1) "I checked history" else RecurringExecutor.overrideConfirmation)) } },
         dismissButton = { TextButton({ overriding = null }) { Text(tr("Keep stopped")) } }) }
     review?.let { item ->
-        ModalBottomSheet(onDismissRequest = { if (!executor.controller.locked) review = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        WalletModalBottomSheet(onDismissRequest = { if (!executor.controller.locked) review = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             if (executor.controller.locked) SendOutcome(executor.controller) { act {
                 executor.controller.acknowledge()
                 if (!executor.controller.locked) { review = null; executor.reload() }

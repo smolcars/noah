@@ -1,5 +1,7 @@
 package com.noahwallet.ui.settings
 
+import com.noahwallet.ui.WalletAlertDialog
+
 import com.noahwallet.localization.tr
 import android.media.MediaPlayer
 import android.util.Base64
@@ -144,7 +146,7 @@ fun DebugScreen(model: AppModel) {
         if (model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         result?.let { CopyRow("Result", it) }
     }
-    if (confirming) AlertDialog(onDismissRequest = { confirming = false }, title = { Text(tr(action.title)) },
+    if (confirming) WalletAlertDialog(onDismissRequest = { confirming = false }, title = { Text(tr(action.title)) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(tr("This action changes your wallet and may cause loss of funds. Type delete to confirm."))
             OutlinedTextField(confirmation, { confirmation = it }, label = { Text(tr("delete")) })

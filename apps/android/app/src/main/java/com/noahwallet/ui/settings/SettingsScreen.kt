@@ -1,5 +1,7 @@
 package com.noahwallet.ui.settings
 
+import com.noahwallet.ui.WalletAlertDialog
+
 import com.noahwallet.localization.tr
 import android.os.SystemClock
 import androidx.compose.foundation.clickable
@@ -171,7 +173,7 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
         if (model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     }
     confirmation?.let { action ->
-        AlertDialog(onDismissRequest = { if (!model.busy) confirmation = null },
+        WalletAlertDialog(onDismissRequest = { if (!model.busy) confirmation = null },
             title = { Text(tr(if (action == "delete") "Delete Wallet" else "Reset Server Registration")) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(tr(if (action == "delete") "This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm."

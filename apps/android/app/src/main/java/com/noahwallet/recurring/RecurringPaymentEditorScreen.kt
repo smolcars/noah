@@ -94,12 +94,25 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
 }
 @Composable private fun RecurringDatePicker(label: String, value: Long, time: Boolean, enabled: Boolean, change: (Long) -> Unit) {
     val context = LocalContext.current
+    val covered = com.noahwallet.ui.LocalWalletPrivacy.current.covered
+    var picker by remember { mutableStateOf<android.app.Dialog?>(null) }
+    DisposableEffect(covered, picker) {
+        if (covered) picker?.hide() else picker?.show()
+        onDispose { }
+    }
+    DisposableEffect(Unit) { onDispose { picker?.dismiss() } }
     OutlinedButton({
         val calendar = Calendar.getInstance().apply { timeInMillis = value }
-        DatePickerDialog(context, { _, year, month, day ->
+        picker = DatePickerDialog(context, { _, year, month, day ->
             calendar.set(year, month, day)
-            if (time) TimePickerDialog(context, { _, hour, minute -> calendar.set(Calendar.HOUR_OF_DAY, hour); calendar.set(Calendar.MINUTE, minute); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0); change(calendar.timeInMillis) }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), android.text.format.DateFormat.is24HourFormat(context)).show()
+            if (time) { picker = TimePickerDialog(context, { _, hour, minute -> calendar.set(Calendar.HOUR_OF_DAY, hour); calendar.set(Calendar.MINUTE, minute); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0); change(calendar.timeInMillis) }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), android.text.format.DateFormat.is24HourFormat(context)).also { dialog ->
+                dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                dialog.setOnDismissListener { if (picker === dialog) picker = null }; dialog.show()
+            } }
             else change(calendar.timeInMillis)
-        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).also { dialog ->
+                dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                dialog.setOnDismissListener { if (picker === dialog) picker = null }; dialog.show()
+            }
     }, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(tr("$label: ${if (time) recurringDate(value) else recurringDay(value)}")) }
 }

@@ -1,5 +1,8 @@
 package com.noahwallet.btcmap
 
+import com.noahwallet.ui.WalletAlertDialog
+import com.noahwallet.ui.WalletModalBottomSheet
+
 import com.noahwallet.localization.trPlural
 import com.noahwallet.localization.tr
 import android.Manifest
@@ -167,7 +170,7 @@ fun BtcMapScreen(onClose: () -> Unit) {
                     BtcMapDetailView(model, selected, Modifier.width(340.dp).fillMaxHeight())
                 }
             }
-            if (!wide && selected != null) ModalBottomSheet(onDismissRequest = model::closeDetail,
+            if (!wide && selected != null) WalletModalBottomSheet(onDismissRequest = model::closeDetail,
                 dragHandle = null,
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
                 Column(Modifier.onGloballyPositioned { sheetTop = it.positionOnScreen().y }) {
@@ -177,7 +180,7 @@ fun BtcMapScreen(onClose: () -> Unit) {
             }
         }
         model.alert?.let { message ->
-            AlertDialog(onDismissRequest = { model.alert = null }, title = { Text(tr("Bitcoin Map")) }, text = { Text(tr(message)) },
+            WalletAlertDialog(onDismissRequest = { model.alert = null }, title = { Text(tr("Bitcoin Map")) }, text = { Text(tr(message)) },
                 confirmButton = { TextButton({ model.alert = null }) { Text(tr("OK")) } })
         }
     }

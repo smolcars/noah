@@ -1,5 +1,7 @@
 package com.noahwallet.onchain
 
+import com.noahwallet.ui.WalletModalBottomSheet
+
 import com.noahwallet.localization.tr
 import android.content.Intent
 import androidx.activity.compose.BackHandler
@@ -136,7 +138,7 @@ private fun ExitDepositSheet(app: AppModel, fee: Long, dismiss: () -> Unit) {
         try { if (!onchainReady(app)) fail(OnchainFailure.unavailable); address = app.session.exitDepositAddress() }
         catch (_: Exception) { error = "Couldn't load a deposit address. Close and try again when the wallet is ready." }
     }
-    ModalBottomSheet(onDismissRequest = dismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    WalletModalBottomSheet(onDismissRequest = dismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(tr("Deposit Onchain Funds"), style = MaterialTheme.typography.headlineSmall)
             if (fee > 0) AmountRow(app, "Suggested deposit", fee)

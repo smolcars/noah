@@ -1,5 +1,7 @@
 package com.noahwallet.ui
 
+import com.noahwallet.ui.WalletModalBottomSheet
+
 import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -45,7 +47,7 @@ fun HistoryDetailsHost(app: AppModel, selectedID: String?, onClose: () -> Unit,
                 }
             }
         }
-        if (!expanded && selected != null) ModalBottomSheet(onDismissRequest = onClose,
+        if (!expanded && selected != null) WalletModalBottomSheet(onDismissRequest = onClose,
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             TransactionDetail(app, selected, repeat, onClose)
         }

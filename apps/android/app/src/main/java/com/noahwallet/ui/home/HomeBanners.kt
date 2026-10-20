@@ -1,5 +1,7 @@
 package com.noahwallet.ui.home
 
+import com.noahwallet.ui.WalletModalBottomSheet
+
 import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -109,7 +111,7 @@ internal fun UpdateWarningBanner(info: AppVersionInfo, currentVersion: String, v
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PendingRoundsSheet(rounds: List<PendingRoundStatus>, close: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    WalletModalBottomSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         com.noahwallet.ui.settings.SettingsColumn {
             TextButton(close) { Text(tr("Close")) }
             Text(tr("Pending Rounds"), style = MaterialTheme.typography.headlineMedium)

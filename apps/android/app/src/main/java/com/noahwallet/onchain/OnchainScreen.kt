@@ -1,5 +1,8 @@
 package com.noahwallet.onchain
 
+import com.noahwallet.ui.WalletAlertDialog
+import com.noahwallet.ui.WalletModalBottomSheet
+
 import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -153,7 +156,7 @@ private fun OnchainStatus(app: AppModel, model: OnchainModel) {
             if (attempt.receipt == null && attempt.overrideAudit == null) TextButton({ overrideID = attempt.id }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Override repeat protection…"), color = MaterialTheme.colorScheme.error) }
         }
     }
-    overrideID?.let { id -> AlertDialog(onDismissRequest = { overrideID = null },
+    overrideID?.let { id -> WalletAlertDialog(onDismissRequest = { overrideID = null },
         title = { Text(tr(OnchainOperationJournal.overrideTitle)) }, text = { Text(tr(OnchainOperationJournal.overrideWarning)) },
         dismissButton = { TextButton({ overrideID = null }) { Text(tr("Keep attempt")) } },
         confirmButton = { TextButton({ overrideID = null; scope.launch { model.overrideUncertain(id) } }) { Text(tr(OnchainOperationJournal.overrideConfirmation)) } }) }
@@ -167,7 +170,7 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
     cancelTitle: String = "Cancel", cancel: () -> Unit = onDismiss) {
     var current by remember(quote) { mutableStateOf(quote.current()) }
     LaunchedEffect(quote) { while (isActive && current) { delay(250); current = quote.current() } }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    WalletModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(tr(quote.action.title), style = MaterialTheme.typography.headlineSmall)
             AmountRow(app, if (quote.action == OnchainAction.board) "Amount boarded" else "Amount selected", quote.amount)

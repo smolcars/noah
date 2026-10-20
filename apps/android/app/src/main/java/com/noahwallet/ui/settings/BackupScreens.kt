@@ -1,5 +1,7 @@
 package com.noahwallet.ui.settings
 
+import com.noahwallet.ui.WalletAlertDialog
+
 import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.Intent
@@ -73,7 +75,7 @@ fun BackupSettingsScreen(model: AppModel) {
             }
         }
     }
-    deleting?.let { backup -> AlertDialog(onDismissRequest = { if (!model.busy) deleting = null }, title = { Text(tr("Delete encrypted backup?")) },
+    deleting?.let { backup -> WalletAlertDialog(onDismissRequest = { if (!model.busy) deleting = null }, title = { Text(tr("Delete encrypted backup?")) },
         dismissButton = { TextButton({ deleting = null }, enabled = !model.busy) { Text(tr("Cancel")) } },
         confirmButton = { TextButton({ model.action("Couldn't delete backup.") {
             V0BackupV2DeleteClient(model.services.client).deleteBackupObject(DeleteBackupObjectPayload(backup.backupId)).value()

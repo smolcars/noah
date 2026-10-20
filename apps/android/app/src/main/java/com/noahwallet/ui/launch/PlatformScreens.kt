@@ -1,5 +1,7 @@
 package com.noahwallet.ui.launch
 
+import com.noahwallet.ui.WalletAlertDialog
+
 import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -72,7 +74,7 @@ fun BatteryOptimizationScreen(model: AppModel, onContinue: () -> Unit) {
         NoahButton("Open battery settings") { failed = !PlatformAccess.openBattery(context) }
         NoahButton("Skip", secondary = true) { proceed() }
     }
-    if (failed) AlertDialog(onDismissRequest = { failed = false }, title = { Text(tr("Couldn't open battery settings")) },
+    if (failed) WalletAlertDialog(onDismissRequest = { failed = false }, title = { Text(tr("Couldn't open battery settings")) },
         text = { Text(tr("Please open your device settings and allow Noah to run in the background, then continue.")) },
         confirmButton = { TextButton({ failed = false }) { Text(tr("OK")) } })
 }
