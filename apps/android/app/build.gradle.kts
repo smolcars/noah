@@ -39,6 +39,8 @@ gradle.taskGraph.whenReady {
 }
 
 android {
+    // Map limit tests build caches near the 32 MiB cap; Gradle's default 512 MiB worker can run out.
+    testOptions { unitTests.all { it.maxHeapSize = "2g" } }
     namespace = "com.noahwallet"
     compileSdk = 37
 
