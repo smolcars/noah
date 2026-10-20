@@ -1,5 +1,6 @@
 import BarkBoltFFI
 import Foundation
+import Observation
 import UserNotifications
 
 extension RecurringExecutor {
@@ -53,17 +54,13 @@ enum RecurringRecipient {
         }
     }
     static func quote(_ schedule: RecurringPayment, session: WalletSession) async throws -> (SendPayment, SendQuote, LightningSendFees?) {
-        guard schedule.validPolicy else { throw SendFailure.invalid }
+        guard schedule.validPolicy, schedule.amountSat <= RecurringPayment.maximumAmount else { throw SendFailure.invalid }
         let recipient = try resolve(schedule.destination)
         guard recipient.type == schedule.destinationType else { throw SendFailure.invalid }
         var payment = SendPayment(destination: recipient.destination, method: recipient.type, amount: schedule.amountSat, comment: schedule.comment)
         if recipient.type == "lnurl" {
             let route = try await SendRecipientService.resolve(recipient.destination, session: session)
-            let (msat, overflow) = payment.amount.multipliedReportingOverflow(by: 1000)
-            guard !overflow, msat >= route.minMsat, msat <= route.maxMsat else {
-                throw RecurringError.message("The recipient no longer accepts this amount. Update or cancel the recurring payment.")
-            }
-            if let ark = route.arkAddress { payment.destination = ark; payment.method = "ark" }
+            payment = try lnurlPayment(payment, route: route)
         }
         payment.repeatMetadata = try SendPayment.metadata(destination: schedule.destination, comment: schedule.comment, amount: String(schedule.amountSat), fiatCurrency: nil)
         let quote = try await session.quoteSend(payment)
@@ -71,6 +68,16 @@ enum RecurringRecipient {
             try await session.withOpenWallet { try await $0.wallet.arkInfo()?.feeSchedule.lightningSend }
         }
         return (payment, quote, fees)
+    }
+    static func lnurlPayment(_ input: SendPayment, route: SendRecipientRoute) throws -> SendPayment {
+        var payment = input
+        let (msat, overflow) = payment.amount.multipliedReportingOverflow(by: 1000)
+        guard !overflow, msat >= route.minMsat, msat <= route.maxMsat else {
+            throw RecurringError.message("The recipient no longer accepts this amount. Update or cancel the recurring payment.")
+        }
+        // RN uses Lightning when a note is present so it reaches the recipient.
+        if payment.comment.isEmpty, let ark = route.arkAddress { payment.destination = ark; payment.method = "ark" }
+        return payment
     }
     static func lightningFees(_ fetch: () async throws -> LightningSendFees?) async -> LightningSendFees {
         do {
@@ -94,7 +101,7 @@ enum RecurringNotifications {
                 content.body = "Automatic payment to \(result.label) was skipped. Open the schedule to review its fee and pay manually."
             } else if result.status == "needs_attention" {
                 content.title = "Recurring payment needs your attention"
-                content.body = "A payment to \(result.label) was interrupted. Check your history, then resume it."
+                content.body = result.lastError ?? "A payment to \(result.label) needs your attention. Open the schedule to check its status."
             } else if result.runs.first?.status == "failed" {
                 content.title = "Recurring payment will retry"
                 content.body = "\(result.amountSat) sats to \(result.label) could not be sent yet: \(result.lastError ?? "unknown error")"
@@ -103,6 +110,7 @@ enum RecurringNotifications {
                 content.body = "\(result.amountSat) sats sent to \(result.label)."
             }
             content.sound = .default
+            content.userInfo = ["notification_type": "recurring_payment_result"]
             center.add(.init(identifier: UUID().uuidString, content: content, trigger: nil), withCompletionHandler: nil)
             return
         }
@@ -187,5 +195,26 @@ enum RecurringFeePolicy {
     private static func add(_ a: UInt64, _ b: UInt64) -> UInt64 {
         let (value, overflow) = a.addingReportingOverflow(b)
         return overflow ? .max : value
+    }
+}
+
+/// Keeps a cold-launch tap pending until the wallet's navigation is available.
+@MainActor @Observable final class RecurringNotificationRoute {
+    static let shared = RecurringNotificationRoute()
+    var presented = false
+
+    func receive(_ userInfo: [AnyHashable: Any]) {
+        if Self.opensSchedules(userInfo) { presented = true }
+    }
+    nonisolated static func opensSchedules(_ info: [AnyHashable: Any]) -> Bool {
+        if let type = info["notification_type"] as? String,
+           ["recurring_payment_reminder", "recurring_payment_result", "recurring_payment_due"].contains(type) { return true }
+        for key in ["body", "dataString", "data", "UIApplicationLaunchOptionsRemoteNotificationKey"] {
+            if let record = info[key] as? [AnyHashable: Any], opensSchedules(record) { return true }
+            if let text = info[key] as? String,
+               let record = (try? JSONSerialization.jsonObject(with: Data(text.utf8))) as? [AnyHashable: Any],
+               opensSchedules(record) { return true }
+        }
+        return false
     }
 }

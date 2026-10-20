@@ -68,6 +68,7 @@ struct WalletTabs: View {
         session: .shared, client: AppServices.shared.client, variant: .current))
     @State private var pendingRepeatPayment: RepeatPayment?
     @State private var selection: Tab = .home
+    @State private var recurringRoute = RecurringNotificationRoute.shared
 
     var body: some View {
         TabView(selection: $selection) {
@@ -87,6 +88,12 @@ struct WalletTabs: View {
             }
         }
         .environment(history)
+        .sheet(isPresented: $recurringRoute.presented) {
+            NavigationStack {
+                RecurringPaymentsView()
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { recurringRoute.presented = false } } }
+            }
+        }
         .task(id: app.summary == nil ? nil : app.preferredCurrency) {
             guard app.summary != nil else { return }
             await history.observe(currency: app.preferredCurrency)

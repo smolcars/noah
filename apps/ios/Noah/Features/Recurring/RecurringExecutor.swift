@@ -174,6 +174,7 @@ import Observation
                               generation() == automationGeneration,
                               state.binding == (try binding()), state.binding == entry.binding,
                               state.schedules[id] == marked,
+                              marked.amountSat <= RecurringPayment.maximumAmount,
                               marked.status == (unattended ? "active" : "needs_approval"),
                               !unattended || RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees).autoPay else {
                             throw SendNotSubmitted(reason: .recurringStopped)
@@ -297,6 +298,7 @@ import Observation
         _ = try boundState()
         try rejectLegacyUncertainty(id)
         guard var schedule = try d.store.load().schedules[id], schedule.status != "completed" else { return }
+        guard schedule.amountSat <= RecurringPayment.maximumAmount else { throw RecurringError.message(RecurringPayment.amountLimitMessage) }
         guard schedule.inFlight == nil, schedule.status != "needs_attention" else { throw RecurringError.message("Check your transaction history, then confirm the destructive override before resuming.") }
         schedule.resume(now: d.now(), zone: d.zone())
         try d.store.upsert(schedule)
@@ -312,6 +314,7 @@ import Observation
         _ = try boundState()
         guard var schedule = try d.store.load().schedules[id] else { return }
         try rejectLegacyUncertainty(id)
+        guard schedule.amountSat <= RecurringPayment.maximumAmount else { throw RecurringError.message(RecurringPayment.amountLimitMessage) }
         if let entry = try d.journal.load()[id], d.controller.attempt?.recurringOccurrenceKey == entry.key {
             d.controller.startNewPaymentAfterHistoryCheck(confirmed: true, confirmationText: Self.overrideConfirmation, warningText: Self.overrideWarning)
             guard !d.controller.locked else { throw RecurringError.message("Unable to save the override confirmation. Sending remains locked.") }

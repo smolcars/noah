@@ -101,10 +101,13 @@ struct RecurringPaymentEditorView: View {
         return (0..<3).compactMap { schedule.next($0) }
     }
     private func draft(destination: String, type: String) -> RecurringPayment {
-        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = .current
-        let end = calendar.date(bySettingHour: 23, minute: 59, second: 0, of: endDate)!
         let now = RecurringPayment.now
-        return .init(id: original?.id ?? UUID().uuidString, label: label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? String(destination.prefix(32)) : label.trimmingCharacters(in: .whitespacesAndNewlines), destination: destination, destinationType: type, amountSat: amount.trimmingCharacters(in: .whitespacesAndNewlines).range(of: "^[0-9]+$", options: .regularExpression) != nil ? (UInt64(amount.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0) : 0, comment: type == "lnurl" ? String(comment.prefix(140)).trimmingCharacters(in: .whitespacesAndNewlines) : "", interval: interval, startAt: start.timeIntervalSince1970 * 1000, endAt: endMode == "date" ? end.timeIntervalSince1970 * 1000 : nil, maxOccurrences: endMode == "count" ? (Int(count) ?? 0) : nil, nextRunAt: start.timeIntervalSince1970 * 1000, createdAt: original?.createdAt ?? now, updatedAt: now)
+        return .init(id: original?.id ?? UUID().uuidString, label: label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? String(destination.prefix(32)) : label.trimmingCharacters(in: .whitespacesAndNewlines), destination: destination, destinationType: type, amountSat: amount.trimmingCharacters(in: .whitespacesAndNewlines).range(of: "^[0-9]+$", options: .regularExpression) != nil ? (UInt64(amount.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0) : 0, comment: type == "lnurl" ? String(comment.prefix(140)).trimmingCharacters(in: .whitespacesAndNewlines) : "", interval: interval, startAt: start.timeIntervalSince1970 * 1000, endAt: endMode == "date" ? Self.endDateTimestamp(endDate) : nil, maxOccurrences: endMode == "count" ? (Int(count) ?? 0) : nil, nextRunAt: start.timeIntervalSince1970 * 1000, createdAt: original?.createdAt ?? now, updatedAt: now)
+    }
+    static func endDateTimestamp(_ date: Date, zone: TimeZone = .current) -> Double {
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
+        // RN parses the chosen end date with "23:59", seconds and milliseconds both zero.
+        return calendar.date(bySettingHour: 23, minute: 59, second: 0, of: date)!.timeIntervalSince1970 * 1000
     }
     private func save() {
         error = nil; saving = true

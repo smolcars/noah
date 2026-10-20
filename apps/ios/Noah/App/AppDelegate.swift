@@ -3,18 +3,24 @@ import UserNotifications
 
 /// Hosts the UIKit callbacks SwiftUI does not expose (APNs registration,
 /// background remote notifications). Push handling lands in Phase 0.6.
-final class AppDelegate: NSObject, UIApplicationDelegate {
+final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         SettingsStorage.bootstrap()
+        UNUserNotificationCenter.current().delegate = self
         // Before any push handler can start a backup: plaintext left by a
         // backup or export that died with the app.
         ScratchSpace.shared.sweepAbandoned()
         NotificationCenter.default.addObserver(self, selector: #selector(timeZoneChanged),
                                                name: .NSSystemTimeZoneDidChange, object: nil)
         return true
+    }
+
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        guard RecurringNotificationRoute.opensSchedules(response.notification.request.content.userInfo) else { return }
+        await MainActor.run { RecurringNotificationRoute.shared.presented = true }
     }
 
     func applicationSignificantTimeChange(_ application: UIApplication) {

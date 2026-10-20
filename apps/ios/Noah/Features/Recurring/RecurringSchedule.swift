@@ -44,10 +44,12 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
     var createdAt: Double
     var updatedAt: Double
 
+    static let maximumAmount: UInt64 = 2_100_000_000_000_000
+    static let amountLimitMessage = "This amount exceeds 21 million BTC. Cancel this schedule and approve a new payment within the limit."
     static var now: Double { Date().timeIntervalSince1970 * 1000 }
     var validPolicy: Bool {
         !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && label.utf16.count <= 64
-            && amountSat > 0 && amountSat <= 9_007_199_254_740_991
+            && amountSat > 0
             && ["ark", "lnurl", "offer"].contains(destinationType) && !destination.isEmpty
             && ["active", "paused", "needs_attention", "needs_approval", "completed"].contains(status)
             && interval.valid && startAt.isFinite && abs(startAt) < 8.64e15
@@ -56,7 +58,7 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
     }
     func validateInput(now: Double) throws {
         guard !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, label.utf16.count <= 64 else { throw RecurringError.message("Give this payment a short name (max 64 characters).") }
-        guard amountSat > 0, amountSat <= 9_007_199_254_740_991 else { throw RecurringError.message("Enter a whole amount in sats.") }
+        guard amountSat > 0, amountSat <= Self.maximumAmount else { throw RecurringError.message("Enter a whole amount in sats, up to 21 million BTC.") }
         guard ["ark", "lnurl", "offer"].contains(destinationType), !destination.isEmpty else { throw RecurringError.message("Enter an Ark address, Lightning address or BOLT12 offer.") }
         guard interval.valid else { throw RecurringError.message("Custom intervals must be between 1 and 365 days.") }
         guard startAt.isFinite, startAt >= now - 300_000 else { throw RecurringError.message("The first payment can't be in the past.") }

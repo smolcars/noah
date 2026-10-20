@@ -1,3 +1,4 @@
+import CoreFoundation
 import Foundation
 
 /// Keeps RN's version-0 envelope and unknown fields. Corruption is never treated as an empty store.
@@ -33,7 +34,7 @@ final class RecurringStore: @unchecked Sendable {
             return ["version": 0, "state": ["schedules": [String: Any](), "serverSyncPending": false]]
         }
         guard let value = try JSONSerialization.jsonObject(with: Data(raw.utf8)) as? [String: Any],
-              (value["version"] as? Int ?? 0) == 0,
+              value["version"] == nil || (value["version"] as? NSNumber).map({ CFGetTypeID($0) != CFBooleanGetTypeID() && $0 == 0 }) == true,
               let state = value["state"] as? [String: Any], state["schedules"] is [String: Any]
         else { throw RecurringError.message("Recurring payment data couldn't be read. Your saved schedules have been preserved. Sending is stopped.") }
         return value
@@ -43,9 +44,15 @@ final class RecurringStore: @unchecked Sendable {
             guard !writeFailed else { throw RecurringError.message("Recurring payment storage failed. Restart Noah; sending is stopped.") }
             let state = try envelope()["state"] as! [String: Any]
             let raw = state["schedules"] as! [String: Any]
-            let schedules = try JSONDecoder().decode([String: RecurringPayment].self, from: JSONSerialization.data(withJSONObject: raw))
+            var schedules = try JSONDecoder().decode([String: RecurringPayment].self, from: JSONSerialization.data(withJSONObject: raw))
             guard schedules.allSatisfy({ $0.key == $0.value.id && $0.value.validPolicy }) else {
                 throw RecurringError.message("A saved recurring payment is invalid. Schedules have been preserved; sending is stopped.")
+            }
+            // RN can persist amounts above the native limit. Keep every policy visible and stopped.
+            for (id, var schedule) in schedules where schedule.amountSat > RecurringPayment.maximumAmount {
+                schedule.status = "needs_attention"
+                schedule.lastError = RecurringPayment.amountLimitMessage
+                schedules[id] = schedule
             }
             let binding = try state["nativeWalletBinding"].map {
                 try JSONDecoder().decode(Binding.self, from: JSONSerialization.data(withJSONObject: $0))
