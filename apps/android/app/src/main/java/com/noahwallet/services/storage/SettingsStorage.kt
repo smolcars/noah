@@ -78,7 +78,7 @@ class SettingsStorage(context: Context) {
     fun sync() = requireHealthy()
     fun takeUpgradeNotices(): List<String> = synchronized(openLock) {
         val state = load()
-        val notices = listOfNotNull(settingsNotice.takeIf { state.settingsNoticePending }, recurringNotice.takeIf { state.recurringNoticePending })
+        val notices = listOfNotNull(settingsNotice(state.values).takeIf { state.settingsNoticePending }, recurringNotice.takeIf { state.recurringNoticePending })
         if (notices.isNotEmpty()) {
             val consumed = state.copy(settingsNoticePending = false, recurringNoticePending = false)
             fallback = consumed
@@ -117,6 +117,18 @@ class SettingsStorage(context: Context) {
     companion object {
         const val instanceID = "noah-wallet-storage"
         const val settingsNotice = "Some settings couldn't be carried over from the previous version, so they're back to their defaults: biometric lock is off, balances are visible, and currency and display settings are reset. Please review Settings."
+        internal fun settingsNotice(values: Map<String, String>): String {
+            val wallet = values[PersistedWalletState.key]?.let { PersistedStateCodec.decode<PersistedWalletState>(it) }
+            val privacy = values["privacy-storage"]?.let { runCatching { Json.parseToJsonElement(it).jsonObject["state"]?.jsonObject?.get("isHomeBalanceHidden")?.jsonPrimitive?.booleanOrNull }.getOrNull() }
+            val defaults = mutableListOf<String>()
+            if (wallet?.isBiometricsEnabled == null) defaults += "biometric lock is off"
+            if (privacy == null) defaults += "balances are visible"
+            if (defaults.isEmpty()) return "Some display settings couldn't be carried over from the previous version and were reset. Please review Settings."
+            if ("profile-storage" !in values) defaults += "currency and display settings are reset"
+            val descriptions = if (defaults.size == 1) defaults.single() else defaults.dropLast(1).joinToString(", ") +
+                (if (defaults.size > 2) ", and " else " and ") + defaults.last()
+            return "Some settings couldn't be carried over from the previous version, so they're back to their defaults: $descriptions. Please review Settings."
+        }
         const val recurringNotice = "Recurring payments need to be set up again after this update."
         const val emptyRecurring = """{"state":{"schedules":{},"serverSyncPending":true},"version":0}"""
         private val openLock = Any()
