@@ -114,6 +114,24 @@ struct MMKVRecoveryTests {
         #expect(!MMKVUpgradeBackup(root: root, instanceID: Self.id).restored)
     }
 
+    @Test func rejectedOlderSuspensionStaysBlockedAcrossRetries() throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        let store = try SettingsStorage(rootPath: root.path)
+        var wallet = try #require(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key))
+        wallet.isWalletSuspended = true
+        try store.setPersistedState(wallet, key: PersistedWalletState.key, version: 0)
+        Self.close(root)
+        let file = root.appending(path: Self.id)
+        var bytes = try Data(contentsOf: file)
+        let record = try #require(bytes.range(of: Data(PersistedWalletState.key.utf8), options: .backwards))
+        bytes[record.upperBound - 1] = Character("X").asciiValue!
+        try bytes.write(to: file); try Self.corrupt(root, mode: "crc")
+        for _ in 0..<2 {
+            #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path).requireCompatibleRNStores() }
+            Self.close(root)
+        }
+    }
+
     @Test(arguments: ["undecodable", "missing"])
     func recurringEnvelopeAndAdmittedKeyLossBlock(mode: String) throws {
         let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
@@ -137,6 +155,31 @@ struct MMKVRecoveryTests {
         try store.requireCompatibleRNStores()
         let row = try #require(RecurringStore(settings: store).load().schedules["future"])
         #expect(row.unsupportedStorage && row.status == "needs_attention")
+    }
+
+    @Test func foregroundAcknowledgementIsDurableAndDoesNotRestoreRNState() throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        let store = try SettingsStorage(rootPath: root.path)
+        try store.setPersistedState(PersistedWalletState(isInitialized: true, isWalletSuspended: true), key: PersistedWalletState.key, version: 0)
+        Self.close(root); try Self.corrupt(root, mode: "crc")
+        #expect(throws: SettingsStorage.RecoveryRequired.self) { try SettingsStorage(rootPath: root.path) }
+        let admitted = try SettingsStorage.acknowledgeRecovery(rootPath: root.path)
+        try admitted.requireCompatibleRNStores()
+        #expect(admitted.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == true)
+        Self.close(root)
+        try SettingsStorage(rootPath: root.path).requireCompatibleRNStores()
+        #expect(!MMKVQuarantine(root: root, store: Self.id).exists)
+        #expect(!MMKVUpgradeBackup(root: root, instanceID: Self.id).restored)
+    }
+
+    @Test func quarantineWriteFailureBlocksWithoutAcknowledgement() throws {
+        let root = try Self.copyFixture(); defer { Self.close(root); Self.clean(root) }
+        _ = try SettingsStorage(rootPath: root.path); Self.close(root)
+        let marker = MMKVQuarantine(root: root, store: Self.id)
+        try FileManager.default.createDirectory(at: marker.file, withIntermediateDirectories: false)
+        try Self.corrupt(root, mode: "crc")
+        #expect(throws: (any Error).self) { try SettingsStorage(rootPath: root.path) }
+        #expect(throws: (any Error).self) { try SettingsStorage.acknowledgeRecovery(rootPath: root.path) }
     }
 
     @Test func laterCRCRecoveryBlocksEvenWhenRNKeysSurvive() throws {

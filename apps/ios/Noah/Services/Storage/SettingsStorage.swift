@@ -10,9 +10,13 @@ import MMKV
 /// Not for secrets: those live in the Keychain.
 final class SettingsStorage: @unchecked Sendable {
     // MMKV instances are internally synchronized.
-    private let mmkv: MMKV?
+    private var mmkv: MMKV?
     private static let access = NSRecursiveLock()
-    private let backup: MMKVUpgradeBackup?
+    private var backup: MMKVUpgradeBackup?
+    private let rootPath: String
+    private let storeID: String
+    private let quarantine: MMKVQuarantine
+    private var recoveryPending = false
 
     static let instanceID = "noah-wallet-storage"
 
@@ -24,6 +28,8 @@ final class SettingsStorage: @unchecked Sendable {
     static let shared: SettingsStorage = {
         do {
             return try SettingsStorage(rootPath: defaultRootPath)
+        } catch is RecoveryRequired {
+            return SettingsStorage(unavailable: (), recoveryPending: true)
         } catch {
             AppLog("mmkv").e("Settings unavailable; original files preserved. Restart Noah to retry or contact support.")
             return SettingsStorage(unavailable: ())
@@ -31,7 +37,13 @@ final class SettingsStorage: @unchecked Sendable {
     }()
 
     struct OpenError: Error {}
-    private init(unavailable: Void) { mmkv = nil; backup = nil }
+    struct RecoveryRequired: Error {}
+    private init(unavailable: Void, recoveryPending: Bool = false) {
+        mmkv = nil; backup = nil
+        rootPath = Self.defaultRootPath; storeID = Self.instanceID
+        quarantine = MMKVQuarantine(root: URL(fileURLWithPath: rootPath), store: storeID)
+        self.recoveryPending = recoveryPending
+    }
     private static let handler = RecoveryHandler()
 
     nonisolated(unsafe) private static var isBootstrapped = false
@@ -48,20 +60,26 @@ final class SettingsStorage: @unchecked Sendable {
         isBootstrapped = true
     }
 
-    init(rootPath: String, instanceID: String = SettingsStorage.instanceID) throws {
+    convenience init(rootPath: String, instanceID: String = SettingsStorage.instanceID) throws {
+        try self.init(rootPath: rootPath, instanceID: instanceID, acknowledgingRecovery: false)
+    }
+    private init(rootPath: String, instanceID: String, acknowledgingRecovery: Bool) throws {
         Self.access.lock(); defer { Self.access.unlock() }
         precondition(Self.isBootstrapped, "SettingsStorage.bootstrap() must run first")
         try FileManager.default.createDirectory(
             atPath: rootPath, withIntermediateDirectories: true)
         let backup = MMKVUpgradeBackup(root: URL(fileURLWithPath: rootPath), instanceID: instanceID)
         try backup.prepare()
+        let quarantine = MMKVQuarantine(root: URL(fileURLWithPath: rootPath), store: instanceID)
+        try quarantine.requireDurable()
+        Self.handler.begin(quarantine)
+        defer { Self.handler.end() }
         let retiredKeys = try backup.retiredKeys
         let expectedContent = retiredKeys == nil ? try backup.hasContent : false
-        let recoveryGeneration = Self.handler.generation
         guard var opened = MMKV(mmapID: instanceID, rootPath: rootPath) else {
             throw OpenError()
         }
-        if expectedContent, !Self.hasRNKeys(opened) {
+        if retiredKeys == nil, (expectedContent && !Self.hasRNKeys(opened)) || quarantine.exists {
             opened.close()
             guard !backup.restored else { throw OpenError() }
             try backup.restore()
@@ -72,11 +90,31 @@ final class SettingsStorage: @unchecked Sendable {
         }
         do {
             try Self.validate(opened, requiredKeys: retiredKeys ?? [])
-            if retiredKeys != nil, Self.handler.generation != recoveryGeneration { throw OpenError() }
+            try quarantine.requireDurable()
+            if retiredKeys != nil, quarantine.exists, !acknowledgingRecovery { throw RecoveryRequired() }
             try backup.retire(keys: Self.rnKeys(opened))
+            try quarantine.clear()
         } catch { opened.close(); throw error }
         self.mmkv = opened
         self.backup = backup
+        self.quarantine = quarantine
+        self.rootPath = rootPath; self.storeID = instanceID
+    }
+
+    /// Called only by the foreground launch gate after the user chooses Continue.
+    @MainActor
+    static func acknowledgeRecovery(rootPath: String, instanceID: String = SettingsStorage.instanceID) throws -> SettingsStorage {
+        let marker = MMKVQuarantine(root: URL(fileURLWithPath: rootPath), store: instanceID)
+        let backup = MMKVUpgradeBackup(root: URL(fileURLWithPath: rootPath), instanceID: instanceID)
+        guard marker.exists, try backup.retiredKeys != nil else { throw OpenError() }
+        return try SettingsStorage(rootPath: rootPath, instanceID: instanceID, acknowledgingRecovery: true)
+    }
+
+    @MainActor
+    func acknowledgeRecovery() throws {
+        let admitted = try Self.acknowledgeRecovery(rootPath: rootPath, instanceID: storeID)
+        Self.access.lock(); defer { Self.access.unlock() }
+        mmkv = admitted.mmkv; backup = admitted.backup; recoveryPending = false
     }
 
     private static func rnKeys(_ store: MMKV) -> [String] {
@@ -105,12 +143,17 @@ final class SettingsStorage: @unchecked Sendable {
 
     func requireHealthy() throws {
         Self.access.lock(); defer { Self.access.unlock() }
-        guard let mmkv else { throw OpenError() }
+        guard let mmkv else {
+            if recoveryPending { throw RecoveryRequired() }
+            throw OpenError()
+        }
         try Self.validate(mmkv, requiredKeys: backup?.retiredKeys ?? [])
+        try quarantine.requireDurable()
+        if quarantine.exists { throw RecoveryRequired() }
     }
 
     func string(forKey key: String) -> String? {
-        mmkv?.string(forKey: key)
+        quarantine.exists ? nil : mmkv?.string(forKey: key)
     }
 
     func set(_ value: String, forKey key: String) {
@@ -172,24 +215,21 @@ final class SettingsStorage: @unchecked Sendable {
 
     /// An unreadable consumed store blocks startup and headless wallet work;
     /// defaults must never overwrite a future or corrupt RN envelope.
-    func requireCompatibleRNStores() throws {
-        Self.access.lock(); defer { Self.access.unlock() }
-        guard let mmkv else { throw OpenError() }
-        try Self.validate(mmkv, requiredKeys: backup?.retiredKeys ?? [])
-    }
+    func requireCompatibleRNStores() throws { try requireHealthy() }
 }
 
 private final class RecoveryHandler: NSObject, MMKVHandler, @unchecked Sendable {
     private let lock = NSLock()
-    private var recoveries: UInt64 = 0
-    var generation: UInt64 { lock.withLock { recoveries } }
+    private var active: MMKVQuarantine?
+    func begin(_ quarantine: MMKVQuarantine) { lock.withLock { active = quarantine } }
+    func end() { lock.withLock { active = nil } }
     func onMMKVCRCCheckFail(_ mmapID: String) -> MMKVRecoverStrategic {
-        lock.withLock { recoveries &+= 1 }
+        lock.withLock { active?.recordRecovery() }
         AppLog("mmkv").w("CRC check failed; recovering settings")
         return .onErrorRecover
     }
     func onMMKVFileLengthError(_ mmapID: String) -> MMKVRecoverStrategic {
-        lock.withLock { recoveries &+= 1 }
+        lock.withLock { active?.recordRecovery() }
         AppLog("mmkv").w("File length check failed; recovering settings")
         return .onErrorRecover
     }

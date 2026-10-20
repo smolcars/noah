@@ -93,6 +93,7 @@ final class AppModel {
         await session.waitForBackgroundAccess()
         started = true
         do { try settings.requireCompatibleRNStores() }
+        catch is SettingsStorage.RecoveryRequired { phase = .blocked(.settingsRecovered); return }
         catch { phase = .blocked(.incompatibleStorage); return }
         let initialState = readLaunchState()
         if initialState == .invalidSeed || initialState == .seedConflict {
@@ -127,13 +128,14 @@ final class AppModel {
             // Unreadable stores block; a missing wallet-storage (RN Delete Wallet unlinked
             // the MMKV folder while open) resumes onboarding for the existing wallet.
             do { try settings.requireCompatibleRNStores() }
+            catch is SettingsStorage.RecoveryRequired { phase = .blocked(.settingsRecovered); return }
             catch { phase = .blocked(.incompatibleStorage); return }
             resumeOnboarding = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized != true
             await openExistingWallet()
             if phase == .launching { phase = resumeOnboarding ? .onboarding : .wallet }
         case .onboarding:
             phase = .onboarding
-        case .seedWithoutWalletData, .walletDataWithoutSeed, .secureStorageUnavailable, .invalidSeed, .seedConflict, .incompatibleStorage:
+        case .seedWithoutWalletData, .walletDataWithoutSeed, .secureStorageUnavailable, .invalidSeed, .seedConflict, .incompatibleStorage, .settingsRecovered:
             phase = .blocked(state)
         }
     }
@@ -383,6 +385,16 @@ final class AppModel {
             }
         }
         backupTriggers = (id, task)
+    }
+
+    func acknowledgeRecoveredSettings() async {
+        guard phase == .blocked(.settingsRecovered), !starting,
+              UIApplication.shared.applicationState == .active else { return }
+        do {
+            try settings.acknowledgeRecovery()
+            started = false; phase = .launching
+            await start()
+        } catch { phase = .blocked(.incompatibleStorage) }
     }
 
     /// Unavailable is retryable; it must never become an absent seed/default wallet.
